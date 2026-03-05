@@ -48,3 +48,19 @@ nul
 
 # ルートレベルの一時ログ
 _logs/
+
+# logs: keep notes only (tracked), ignore others
+logs/run/
+logs/error/
+logs/artifacts/
+logs/*.log
+
+# root artifacts (debug reports etc.)
+artifacts/
+# logs: ignore all, but keep notes tracked
+logs/
+!logs/notes/
+!logs/notes/**
+
+# root artifacts (debug reports etc.)
+artifacts/

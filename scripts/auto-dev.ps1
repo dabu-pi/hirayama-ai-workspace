@@ -206,14 +206,27 @@ if ($exitCode -ne 0) {
         Write-Host "  (failure note saved with tag:bug)"
     }
 
-    # Show error snippet from analyze-error if available
+    # Call analyze-error and show AI report path
     if (Test-Path $aerrScript) {
         Write-Host ""
-        Write-Host "  --- Error snippet ---"
+        Write-Host "  --- analyze-error output ---"
         & $aerrScript -LogDir $LogDir -Lines 20
+
+        # Surface the artifacts/ report path prominently
+        $artifactDir = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) "artifacts"))
+        if (Test-Path $artifactDir) {
+            $latestReport = Get-ChildItem $artifactDir -Filter "debug_*.txt" -ErrorAction SilentlyContinue |
+                            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($latestReport) {
+                Write-Host ""
+                Write-Host ("=" * 68)
+                Write-Host "  [AI REPORT] $($latestReport.FullName)"
+                Write-Host "  Paste this file to Claude for diagnosis."
+                Write-Host ("=" * 68)
+            }
+        }
     }
 
-    Write-Host ("=" * 68)
     exit $exitCode
 }
 
@@ -262,7 +275,13 @@ if ($Commit) {
             $commitHash  = (git rev-parse --short HEAD 2>&1).Trim()
             $commitDone  = $true
         } else {
-            Write-Host "  [WARN] git-safe-commit failed. Cycle complete without commit."
+            Write-Host ""
+            Write-Host ("=" * 68)
+            Write-Host "  ## STOP -- git-safe-commit failed (exit $LASTEXITCODE)"
+            Write-Host "  Note was saved. Fix the issue and run gsc manually:"
+            Write-Host "    gsc -Message `"$CommitMsg`"$(if ($Push) { ' -Push' } else { '' })"
+            Write-Host ("=" * 68)
+            exit 1
         }
     }
 } else {
