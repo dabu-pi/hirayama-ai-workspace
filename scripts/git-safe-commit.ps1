@@ -1,42 +1,28 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    安全確認付き git コミット & push スクリプト。
-    秘密情報ファイルの誤コミットを自動検出してブロックします。
-
-.DESCRIPTION
-    コミット前に以下のチェックを実施します:
-    - 禁止ファイル（.env / token.json / service_account.json 等）が含まれていないか
-    - logs/run/ や logs/error/ の実行ログが含まれていないか
-    - git add . の痕跡（大量ファイルの一括ステージング）を警告
-
-    制約:
-    - git push --force は使用しません
-    - git reset --hard は使用しません
-    - Co-Authored-By を自動付与します
+    Safe git commit with pre-flight security checks and optional push.
+    Detects secrets, log files, and direct main/master commits before proceeding.
 
 .PARAMETER Message
-    コミットメッセージ（必須）。例: "feat: freee 見積書POST実装"
+    Commit message (required). Prefix with feat/fix/docs/refactor/test/chore.
 
 .PARAMETER Files
-    コミットするファイルのリスト。省略時は既にステージされているファイルを使用。
-    例: @("src/main.py", "tests/test_main.py")
+    Files to stage. Omit to use already-staged files.
 
 .PARAMETER Push
-    コミット後に git push を実行するかどうか。
+    Push to remote after commit.
 
 .PARAMETER Remote
-    push 先のリモート名（省略時: origin）。
+    Remote name (default: origin).
+
+.PARAMETER SkipBranchWarn
+    Suppress the direct-main/master commit warning.
 
 .EXAMPLE
-    # ファイル指定 + push
-    .\git-safe-commit.ps1 -Message "feat: 見積書POST実装" -Files @("src/main.py") -Push
-
-    # ステージ済みファイルのみコミット（-Files 省略）
-    .\git-safe-commit.ps1 -Message "docs: README 更新" -Push
-
-    # push なしコミット
-    .\git-safe-commit.ps1 -Message "chore: .gitignore 更新" -Files @(".gitignore")
+    .\git-safe-commit.ps1 -Message "feat: add quotation POST" -Files @("src/main.py") -Push
+    .\git-safe-commit.ps1 -Message "docs: update README" -Push
+    .\git-safe-commit.ps1 -Message "chore: update .gitignore" -Files @(".gitignore")
 #>
 
 param(
@@ -48,230 +34,259 @@ param(
 
     [switch]$Push,
 
-    [string]$Remote = "origin"
+    [string]$Remote = "origin",
+
+    [switch]$SkipBranchWarn
 )
 
 Set-StrictMode -Version Latest
 
-# --- 定数定義 -------------------------------------------------------------------
-
-# コミット禁止ファイルパターン（部分マッチ）
+# -------------------------------------------------------------------------
+# Constants
+# -------------------------------------------------------------------------
 $FORBIDDEN_PATTERNS = @(
     '\.env$',
     '\.env\.',
-    'token\.json',
-    'token_.*\.json',
-    'service_account\.json',
-    'credentials\.json',
-    'client_secret.*\.json',
+    'token\.json$',
+    'token_.*\.json$',
+    'service_account\.json$',
+    'credentials\.json$',
+    'client_secret.*\.json$',
     '\.pem$',
     '\.p12$',
     '\.pfx$',
-    'id_rsa',
-    'id_ed25519'
+    'id_rsa$',
+    'id_ed25519$'
 )
 
-# ログディレクトリパターン（含まれていたら警告）
 $LOG_DIR_PATTERNS = @(
     'logs[/\\]run[/\\]',
     'logs[/\\]error[/\\]',
     'artifacts[/\\]'
 )
 
+$VALID_PREFIXES = @('feat', 'fix', 'docs', 'refactor', 'test', 'chore', 'hotfix', 'style', 'perf', 'ci')
+
 $CO_AUTHOR = "Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
-# --- ヘルパー関数 ---------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------------
+function Write-Sep { Write-Host ("=" * 60) }
 
-function Write-Header {
-    param([string]$Title)
-    Write-Host ""
-    Write-Host ("=" * 60) -ForegroundColor Cyan
-    Write-Host "  $Title" -ForegroundColor Cyan
-    Write-Host ("=" * 60) -ForegroundColor Cyan
+function Show-Check {
+    param([string]$Label, [bool]$Pass, [string]$Detail = "")
+    $mark = if ($Pass) { "[PASS]" } else { "[FAIL]" }
+    Write-Host ("  {0} {1}" -f $mark, $Label)
+    if (-not $Pass -and $Detail) {
+        Write-Host "       $Detail"
+    }
+    return $Pass
 }
 
-function Write-Check {
-    param([string]$Label, [bool]$Pass, [string]$Detail = "")
-    if ($Pass) {
-        Write-Host "  [PASS] $Label" -ForegroundColor Green
-    } else {
-        Write-Host "  [FAIL] $Label" -ForegroundColor Red
-        if ($Detail) {
-            Write-Host "         $Detail" -ForegroundColor Yellow
-        }
+# -------------------------------------------------------------------------
+# Verify git is available
+# -------------------------------------------------------------------------
+try { $null = git --version 2>&1 }
+catch {
+    Write-Error "git not found. Install git and add it to PATH."
+    exit 1
+}
+
+$gitRoot = git rev-parse --show-toplevel 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Not a git repository: $(Get-Location)"
+    exit 1
+}
+
+# -------------------------------------------------------------------------
+# Header
+# -------------------------------------------------------------------------
+Write-Host ""
+Write-Sep
+Write-Host "  git-safe-commit"
+Write-Sep
+
+# -------------------------------------------------------------------------
+# Current branch check (warn if on main/master)
+# -------------------------------------------------------------------------
+$currentBranch = (git rev-parse --abbrev-ref HEAD 2>&1).Trim()
+Write-Host "  Branch  : $currentBranch"
+
+if (-not $SkipBranchWarn -and ($currentBranch -eq "master" -or $currentBranch -eq "main")) {
+    Write-Host ""
+    Write-Host "  [WARN] Direct commit to '$currentBranch' detected."
+    Write-Host "  Recommended: create a feature/fix branch first."
+    Write-Host "    git checkout -b feature/your-feature"
+    Write-Host ""
+    $ans = Read-Host "  Continue commit to '$currentBranch'? [y/N]"
+    if ($ans -notmatch '^[yY]') {
+        Write-Host "  Aborted."
+        exit 1
     }
 }
 
-# --- git が利用可能か確認 -------------------------------------------------------
-try {
-    $null = git --version 2>&1
-} catch {
-    Write-Error "git が見つかりません。git をインストールしてパスを通してください。"
-    exit 1
-}
-
-# --- git リポジトリ確認 ---------------------------------------------------------
-$gitRoot = git rev-parse --show-toplevel 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "git リポジトリではありません: $(Get-Location)"
-    exit 1
-}
-
-# --- ファイルのステージング（-Files 指定時）--------------------------------------
-Write-Header "git-safe-commit : 安全コミット"
-
+# -------------------------------------------------------------------------
+# Stage files (if -Files specified)
+# -------------------------------------------------------------------------
 if ($Files.Count -gt 0) {
     Write-Host ""
-    Write-Host "  ステージング:" -ForegroundColor White
+    Write-Host "  Staging files:"
     foreach ($f in $Files) {
         if (Test-Path $f) {
             git add $f
-            Write-Host "    git add $f" -ForegroundColor DarkGray
+            Write-Host "    + $f"
         } else {
-            Write-Host "  [WARN] ファイルが存在しません: $f" -ForegroundColor Yellow
+            Write-Host "    [WARN] Not found: $f"
         }
     }
 }
 
-# --- ステージされているファイルを取得 -------------------------------------------
-$stagedFiles = @(git diff --cached --name-only 2>&1)
+# -------------------------------------------------------------------------
+# Get list of staged files
+# -------------------------------------------------------------------------
+$stagedFiles = @(git diff --cached --name-only 2>&1 | Where-Object { $_ -ne "" })
 
 if ($stagedFiles.Count -eq 0) {
     Write-Host ""
-    Write-Host "  ステージされているファイルがありません。" -ForegroundColor Yellow
-    Write-Host "  git add <files> を実行するか -Files オプションでファイルを指定してください。" -ForegroundColor Yellow
+    Write-Host "  No staged files. Use -Files or git add manually."
     exit 1
 }
 
+# -------------------------------------------------------------------------
+# Show git status summary
+# -------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  コミット対象ファイル ($($stagedFiles.Count) 件):" -ForegroundColor White
+Write-Host "  Staged files ($($stagedFiles.Count)):"
 foreach ($f in $stagedFiles) {
-    Write-Host "    - $f" -ForegroundColor DarkGray
+    $stat = (git diff --cached --stat -- $f 2>&1 | Select-String '\d+ insertion' | Select-Object -First 1)
+    Write-Host "    $f"
 }
 
-# --- セキュリティチェック -------------------------------------------------------
+# Show diff stat summary
 Write-Host ""
-Write-Host "  セキュリティチェック:" -ForegroundColor White
-
-$checkPassed = $true
-
-# 禁止ファイルチェック
-$forbiddenFound = @()
-foreach ($f in $stagedFiles) {
-    foreach ($pattern in $FORBIDDEN_PATTERNS) {
-        if ($f -match $pattern) {
-            $forbiddenFound += $f
-            break
-        }
-    }
+Write-Host "  Diff summary:"
+$diffStat = git diff --cached --stat 2>&1
+foreach ($line in $diffStat) {
+    Write-Host "    $line"
 }
 
-if ($forbiddenFound.Count -gt 0) {
-    $checkPassed = $false
-    Write-Check "禁止ファイルなし" $false "以下のファイルはコミット禁止です:"
-    foreach ($f in $forbiddenFound) {
-        Write-Host "         ⛔ $f" -ForegroundColor Red
-    }
-    Write-Host "         → git restore --staged <file> でアンステージしてください" -ForegroundColor Yellow
-} else {
-    Write-Check "禁止ファイルなし" $true
+# -------------------------------------------------------------------------
+# Security checks
+# -------------------------------------------------------------------------
+Write-Host ""
+Write-Host "  Security checks:"
+
+$allClear = $true
+
+# Forbidden files
+$forbidden = @($stagedFiles | Where-Object {
+    $f = $_
+    $FORBIDDEN_PATTERNS | Where-Object { $f -match $_ }
+})
+
+$allClear = (Show-Check "No secret files" ($forbidden.Count -eq 0) `
+    "BLOCKED: $($forbidden -join ', ')  -> git restore --staged <file>") -and $allClear
+
+if ($forbidden.Count -gt 0) {
+    foreach ($f in $forbidden) { Write-Host "       -> $f" }
 }
 
-# ログディレクトリチェック
-$logFilesFound = @()
-foreach ($f in $stagedFiles) {
-    foreach ($pattern in $LOG_DIR_PATTERNS) {
-        if ($f -match $pattern) {
-            $logFilesFound += $f
-            break
-        }
-    }
-}
+# Log directory files
+$logFiles = @($stagedFiles | Where-Object {
+    $f = $_
+    $LOG_DIR_PATTERNS | Where-Object { $f -match $_ }
+})
 
-if ($logFilesFound.Count -gt 0) {
-    $checkPassed = $false
-    Write-Check "ログファイルなし" $false "以下のファイルは gitignore 対象です:"
-    foreach ($f in $logFilesFound) {
-        Write-Host "         ⚠ $f" -ForegroundColor Yellow
-    }
-    Write-Host "         → .gitignore を確認し git restore --staged <file> でアンステージしてください" -ForegroundColor Yellow
-} else {
-    Write-Check "ログファイルなし" $true
-}
+$allClear = (Show-Check "No log/artifact files" ($logFiles.Count -eq 0) `
+    "These should be in .gitignore: $($logFiles -join ', ')") -and $allClear
 
-# 大量ファイル警告（30件超）
+# Large batch warning (>30 files)
 if ($stagedFiles.Count -gt 30) {
-    Write-Host "  [WARN] ステージされているファイルが $($stagedFiles.Count) 件あります。" -ForegroundColor Yellow
-    Write-Host "         git add . を使った可能性があります。意図通りか確認してください。" -ForegroundColor Yellow
+    Write-Host "  [WARN] $($stagedFiles.Count) files staged. Verify git add . was not used."
 }
 
-# コミットメッセージ形式確認（prefix: で始まるか）
-$validPrefixes = @('feat', 'fix', 'docs', 'refactor', 'test', 'chore', 'hotfix', 'style', 'perf', 'ci')
-$hasValidPrefix = $false
-foreach ($prefix in $validPrefixes) {
-    if ($Message -match "^${prefix}[:\(]") {
-        $hasValidPrefix = $true
-        break
-    }
-}
-if (-not $hasValidPrefix) {
-    Write-Host "  [WARN] コミットメッセージの推奨プレフィックスが見つかりません。" -ForegroundColor Yellow
-    Write-Host "         推奨: feat / fix / docs / refactor / test / chore / hotfix" -ForegroundColor DarkGray
-}
-
-# --- チェック失敗時は中断 -------------------------------------------------------
-if (-not $checkPassed) {
+# Commit message prefix
+$hasPrefix = $VALID_PREFIXES | Where-Object { $Message -match "^$_[:\(]" }
+if (-not $hasPrefix) {
+    Write-Host "  [WARN] No conventional prefix detected."
+    Write-Host "         Suggest: feat / fix / docs / refactor / test / chore / hotfix"
     Write-Host ""
-    Write-Host ("=" * 60) -ForegroundColor Red
-    Write-Host "  ABORT: セキュリティチェックに失敗しました。コミットを中止します。" -ForegroundColor Red
-    Write-Host ("=" * 60) -ForegroundColor Red
+    # Suggest prefix based on file extensions
+    $hasPy   = $stagedFiles | Where-Object { $_ -match '\.py$' }
+    $hasMd   = $stagedFiles | Where-Object { $_ -match '\.md$' }
+    $hasPs1  = $stagedFiles | Where-Object { $_ -match '\.ps1$' }
+    $hasTest = $stagedFiles | Where-Object { $_ -match 'test' }
+    $suggest = if ($hasTest)    { "test" }
+               elseif ($hasMd)  { "docs" }
+               elseif ($hasPs1) { "chore" }
+               elseif ($hasPy)  { "feat" }
+               else             { "chore" }
+    Write-Host "         Suggested prefix for this change: '${suggest}:'"
+}
+
+# -------------------------------------------------------------------------
+# Abort if checks failed
+# -------------------------------------------------------------------------
+if (-not $allClear) {
+    Write-Host ""
+    Write-Sep
+    Write-Host "  ABORT: security check failed. Commit cancelled."
+    Write-Sep
     Write-Host ""
     exit 1
 }
 
-# --- コミット -------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Confirm commit
+# -------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  コミット実行:" -ForegroundColor White
+Write-Host "  Commit message:"
+Write-Host "    $Message"
+Write-Host ""
+$confirm = Read-Host "  Proceed with commit? [Y/n]"
+if ($confirm -match '^[nN]') {
+    Write-Host "  Cancelled."
+    exit 0
+}
 
-$fullMessage = "${Message}`n`n${CO_AUTHOR}"
-
+# -------------------------------------------------------------------------
+# Commit
+# -------------------------------------------------------------------------
+$fullMessage = "$Message`n`n$CO_AUTHOR"
 git commit -m $fullMessage
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
-    Write-Host "  [ERROR] git commit に失敗しました (exit $LASTEXITCODE)" -ForegroundColor Red
+    Write-Host "  [ERROR] git commit failed (exit $LASTEXITCODE)"
     exit 1
 }
 
-# コミットハッシュを取得
-$commitHash = git rev-parse --short HEAD 2>&1
+$commitHash = (git rev-parse --short HEAD 2>&1).Trim()
 Write-Host ""
-Write-Host "  COMMIT: $commitHash — $Message" -ForegroundColor Green
+Write-Host "  [OK] Committed: $commitHash -- $Message"
 
-# --- Push（オプション）----------------------------------------------------------
+# -------------------------------------------------------------------------
+# Push (optional)
+# -------------------------------------------------------------------------
 if ($Push) {
     Write-Host ""
-    Write-Host "  push 実行:" -ForegroundColor White
-
-    # 現在のブランチを取得
-    $currentBranch = git rev-parse --abbrev-ref HEAD 2>&1
-
+    Write-Host "  Pushing to $Remote/$currentBranch ..."
     git push $Remote $currentBranch
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "  [ERROR] git push に失敗しました (exit $LASTEXITCODE)" -ForegroundColor Red
-        Write-Host "  TIP: git pull $Remote $currentBranch で最新を取得してから再実行してください" -ForegroundColor Yellow
+        Write-Host "  [ERROR] git push failed."
+        Write-Host "  TIP: run 'git pull $Remote $currentBranch' then retry."
         exit 1
     }
 
-    Write-Host "  PUSH  : $Remote/$currentBranch へ push 完了" -ForegroundColor Green
+    Write-Host "  [OK] Pushed to $Remote/$currentBranch"
 }
 
 Write-Host ""
-Write-Host ("=" * 60) -ForegroundColor Green
-Write-Host "  完了: コミット$(if ($Push) { '& push' } else { '' }) が成功しました" -ForegroundColor Green
-Write-Host ("=" * 60) -ForegroundColor Green
+Write-Sep
+Write-Host "  Done: commit$(if ($Push) { ' + push' } else { '' }) succeeded ($commitHash)"
+Write-Sep
 Write-Host ""
 
 exit 0

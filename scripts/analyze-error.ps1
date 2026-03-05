@@ -1,40 +1,25 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    最新のエラーログを整形表示します。
-    失敗した auto-dev-run の直後に呼び出して根本原因を確認するのに使います。
-
-.DESCRIPTION
-    logs/error/ ディレクトリ内の最新 error_*.log を読み込み、
-    - ファイル情報（名前・サイズ・日時）
-    - STDERR 行のみ抽出（[STDERR] プレフィックス）
-    - ログ末尾 N 行（コマンドの終了付近）
-    - 終了コード・ステータス
-    をハイライト付きで表示します。
+    Reads the latest error log, formats it for human/AI review,
+    and saves a ready-to-paste debug report to artifacts/.
 
 .PARAMETER LogDir
-    ログ保存先ルート（省略時: ./logs）。
+    Log root directory (default: ./logs).
 
 .PARAMETER Lines
-    末尾から表示する行数（省略時: 50）。
+    Tail lines to show (default: 50).
 
 .PARAMETER All
-    全行を表示します（-Lines より優先）。
+    Show all lines (overrides -Lines).
 
 .PARAMETER ListAll
-    error ログの一覧を表示します（最新10件）。
+    List recent error logs instead of analyzing the latest.
 
 .EXAMPLE
-    # 最新エラーログを確認
     .\analyze-error.ps1
-
-    # 表示行数を増やす
     .\analyze-error.ps1 -Lines 100
-
-    # 全行表示
     .\analyze-error.ps1 -All
-
-    # エラーログ一覧を確認
     .\analyze-error.ps1 -ListAll
 #>
 
@@ -47,29 +32,27 @@ param(
 
 Set-StrictMode -Version Latest
 
-# --- ヘルパー ---------------------------------------------------------------
-function Write-Header {
-    param([string]$Title, [string]$Color = "Cyan")
-    Write-Host ""
-    Write-Host ("=" * 62) -ForegroundColor $Color
-    Write-Host "  $Title" -ForegroundColor $Color
-    Write-Host ("=" * 62) -ForegroundColor $Color
+# -------------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------------
+function Format-Bytes {
+    param([long]$B)
+    if ($B -ge 1MB) { return "{0:N1} MB" -f ($B / 1MB) }
+    if ($B -ge 1KB) { return "{0:N1} KB" -f ($B / 1KB) }
+    return "$B B"
 }
 
-function Format-FileSize {
-    param([long]$Bytes)
-    if ($Bytes -ge 1MB) { return "{0:N1} MB" -f ($Bytes / 1MB) }
-    if ($Bytes -ge 1KB) { return "{0:N1} KB" -f ($Bytes / 1KB) }
-    return "$Bytes B"
-}
+function Write-Sep { param([string]$C = "White"); Write-Host ("=" * 64) }
 
-# --- エラーログディレクトリ確認 ------------------------------------------------
+# -------------------------------------------------------------------------
+# Check error log directory
+# -------------------------------------------------------------------------
 $errorLogDir = Join-Path $LogDir "error"
 
 if (-not (Test-Path $errorLogDir)) {
     Write-Host ""
-    Write-Host "  エラーログディレクトリが存在しません: $errorLogDir" -ForegroundColor Yellow
-    Write-Host "  logs/error/ はエラー発生時に run-with-log.ps1 が自動生成します。" -ForegroundColor DarkGray
+    Write-Host "  No error log directory found: $errorLogDir"
+    Write-Host "  errors/run/ are created automatically when a command fails via rwl."
     Write-Host ""
     exit 0
 }
@@ -81,133 +64,194 @@ $errorLogs = @(
 
 if ($errorLogs.Count -eq 0) {
     Write-Host ""
-    Write-Host "  エラーログが見つかりません。" -ForegroundColor Green
-    Write-Host "  logs/error/ にファイルがない = 直近の実行でエラーなし。" -ForegroundColor DarkGray
+    Write-Host "  [OK] No error logs found -- no recent failures."
     Write-Host ""
     exit 0
 }
 
-# --- 一覧表示モード ------------------------------------------------------------
+# -------------------------------------------------------------------------
+# List mode
+# -------------------------------------------------------------------------
 if ($ListAll) {
-    Write-Header "エラーログ一覧 (直近 10 件)"
     Write-Host ""
-    $recent = $errorLogs | Select-Object -First 10
+    Write-Sep
+    Write-Host "  Error log list (last 10)"
+    Write-Sep
+    Write-Host ""
     $i = 1
-    foreach ($log in $recent) {
-        $size = Format-FileSize $log.Length
+    foreach ($log in ($errorLogs | Select-Object -First 10)) {
+        $sz   = Format-Bytes $log.Length
         $time = $log.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
-        $prefix = if ($i -eq 1) { "  * [最新]" } else { "    [$i]   " }
-        Write-Host "${prefix} $($log.Name)  ($size)  $time" -ForegroundColor $(if ($i -eq 1) { "Yellow" } else { "DarkGray" })
+        $mark = if ($i -eq 1) { "[latest]" } else { "        " }
+        Write-Host ("  {0} {1}  {2}  {3}" -f $mark, $log.Name, $sz, $time)
         $i++
     }
     Write-Host ""
     exit 0
 }
 
-# --- 最新エラーログを解析 -------------------------------------------------------
-$targetLog = $errorLogs[0]
-$logContent = Get-Content $targetLog.FullName -Encoding UTF8 -ErrorAction SilentlyContinue
+# -------------------------------------------------------------------------
+# Analyze latest error log
+# -------------------------------------------------------------------------
+$target     = $errorLogs[0]
+$logContent = Get-Content $target.FullName -Encoding UTF8 -ErrorAction SilentlyContinue
 
-Write-Header "analyze-error : エラーログ解析" "Yellow"
 Write-Host ""
-Write-Host "  ファイル  : $($targetLog.Name)" -ForegroundColor White
-Write-Host "  パス      : $($targetLog.FullName)" -ForegroundColor DarkGray
-Write-Host "  サイズ    : $(Format-FileSize $targetLog.Length)" -ForegroundColor DarkGray
-Write-Host "  更新日時  : $($targetLog.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor DarkGray
+Write-Sep
+Write-Host "  analyze-error : latest error report"
+Write-Sep
+Write-Host ""
+Write-Host "  File    : $($target.Name)"
+Write-Host "  Path    : $($target.FullName)"
+Write-Host "  Size    : $(Format-Bytes $target.Length)"
+Write-Host "  Time    : $($target.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))"
 
-# ログが空の場合
 if (-not $logContent -or $logContent.Count -eq 0) {
-    Write-Host ""
-    Write-Host "  ログが空です。" -ForegroundColor Yellow
+    Write-Host "  (empty log)"
     Write-Host ""
     exit 0
 }
 
-# --- ヘッダ情報（コマンド・開始時刻）を抽出 ------------------------------------
-Write-Host ""
-Write-Host ("  " + "-" * 58) -ForegroundColor DarkGray
-Write-Host "  ログヘッダ:" -ForegroundColor White
+# -------------------------------------------------------------------------
+# Find corresponding run log (nearest timestamp before error)
+# -------------------------------------------------------------------------
+$runLogDir  = Join-Path $LogDir "run"
+$linkedRunLog = $null
 
-$headerLines = $logContent | Where-Object { $_ -match '^#' } | Select-Object -First 8
-foreach ($line in $headerLines) {
-    if ($line -match 'Command|Start|WorkDir|ExitCode|Status') {
-        $color = if ($line -match 'ExitCode.*[^0]$' -or $line -match 'Status.*FAIL') { "Red" }
-                 elseif ($line -match 'Status.*SUCCESS') { "Green" }
-                 else { "DarkGray" }
-        Write-Host "  $line" -ForegroundColor $color
+if (Test-Path $runLogDir) {
+    # error log name: error_YYYYMMDD_HHmmss.log
+    # run log name  : run_YYYYMMDD_HHmmss.log
+    # Try to match same timestamp first, then find nearest before
+    $errBase = $target.Name -replace '^error_', '' -replace '\.log$', ''
+    $sameTs  = Get-ChildItem $runLogDir -Filter "run_${errBase}.log" -ErrorAction SilentlyContinue
+
+    if ($sameTs) {
+        $linkedRunLog = $sameTs
+    } else {
+        # Find the most recent run log that is earlier than the error log
+        $linkedRunLog = Get-ChildItem $runLogDir -Filter "run_*.log" -ErrorAction SilentlyContinue |
+                        Where-Object { $_.LastWriteTime -le $target.LastWriteTime } |
+                        Sort-Object LastWriteTime -Descending |
+                        Select-Object -First 1
     }
 }
 
-# --- STDERR 行を抽出 -----------------------------------------------------------
+if ($linkedRunLog) {
+    Write-Host "  Run log : $($linkedRunLog.Name)"
+} else {
+    Write-Host "  Run log : (not found)"
+}
+
+# -------------------------------------------------------------------------
+# Extract header info from log
+# -------------------------------------------------------------------------
+$headerLines = @($logContent | Where-Object { $_ -match '^#' } | Select-Object -First 10)
+$bodyLines   = @($logContent | Where-Object { $_ -notmatch '^#' })
+
+Write-Host ""
+Write-Host ("  " + "-" * 60)
+Write-Host "  Log header:"
+foreach ($h in $headerLines) {
+    Write-Host "    $h"
+}
+
+# -------------------------------------------------------------------------
+# STDERR lines
+# -------------------------------------------------------------------------
 $stderrLines = @($logContent | Where-Object { $_ -match '^\[STDERR\]' })
 
 if ($stderrLines.Count -gt 0) {
     Write-Host ""
-    Write-Host ("  " + "-" * 58) -ForegroundColor DarkGray
-    Write-Host "  STDERR 行 ($($stderrLines.Count) 件):" -ForegroundColor Red
+    Write-Host ("  " + "-" * 60)
+    Write-Host "  STDERR ($($stderrLines.Count) lines):"
     Write-Host ""
-
-    $displayLines = if ($stderrLines.Count -gt 30) {
-        Write-Host "  ※ 多数あるため最初の30件のみ表示" -ForegroundColor DarkGray
+    $displayStderr = if ($stderrLines.Count -gt 30) {
+        Write-Host "  (showing first 30 of $($stderrLines.Count))"
         $stderrLines | Select-Object -First 30
-    } else {
-        $stderrLines
-    }
+    } else { $stderrLines }
 
-    foreach ($line in $displayLines) {
-        # エラーキーワードをハイライト
-        if ($line -match 'Error|Exception|Traceback|FAILED|fatal') {
-            Write-Host "  $line" -ForegroundColor Red
-        } elseif ($line -match 'Warning|warn') {
-            Write-Host "  $line" -ForegroundColor Yellow
-        } else {
-            Write-Host "  $line" -ForegroundColor DarkGray
-        }
-    }
+    foreach ($l in $displayStderr) { Write-Host "    $l" }
 }
 
-# --- 末尾 N 行（実行結果の末尾を確認）------------------------------------------
-$bodyLines = @($logContent | Where-Object { $_ -notmatch '^#' })
-
-$displayCount = if ($All) { $bodyLines.Count } else { [Math]::Min($Lines, $bodyLines.Count) }
-$startIndex   = [Math]::Max(0, $bodyLines.Count - $displayCount)
-$tailLines    = $bodyLines[$startIndex..($bodyLines.Count - 1)]
+# -------------------------------------------------------------------------
+# Tail lines
+# -------------------------------------------------------------------------
+$showCount  = if ($All) { $bodyLines.Count } else { [Math]::Min($Lines, $bodyLines.Count) }
+$startIdx   = [Math]::Max(0, $bodyLines.Count - $showCount)
+$tailLines  = $bodyLines[$startIdx..($bodyLines.Count - 1)]
 
 Write-Host ""
-Write-Host ("  " + "-" * 58) -ForegroundColor DarkGray
-
-$label = if ($All) {
-    "全ログ ($($bodyLines.Count) 行):"
-} else {
-    "末尾 $displayCount 行 (全 $($bodyLines.Count) 行中):"
-}
-Write-Host "  $label" -ForegroundColor White
+Write-Host ("  " + "-" * 60)
+$label = if ($All) { "All $($bodyLines.Count) lines" } else { "Last $showCount of $($bodyLines.Count) lines" }
+Write-Host "  $label :"
 Write-Host ""
+foreach ($l in $tailLines) { Write-Host "    $l" }
 
-foreach ($line in $tailLines) {
-    if ($line -match 'Error|Exception|Traceback|FAILED|fatal') {
-        Write-Host "  $line" -ForegroundColor Red
-    } elseif ($line -match 'Warning|warn|WARN') {
-        Write-Host "  $line" -ForegroundColor Yellow
-    } elseif ($line -match 'PASSED|SUCCESS|OK|passed') {
-        Write-Host "  $line" -ForegroundColor Green
-    } elseif ($line -match '^\[STDERR\]') {
-        Write-Host "  $line" -ForegroundColor DarkGray
-    } else {
-        Write-Host "  $line"
-    }
+# -------------------------------------------------------------------------
+# Build AI-ready debug report and save to artifacts/
+# -------------------------------------------------------------------------
+$now         = Get-Date
+$ts          = $now.ToString("yyyyMMdd_HHmmss")
+$artifactDir = Join-Path $LogDir "..\artifacts"
+
+# Resolve artifacts path relative to working dir
+$artifactDir = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) "artifacts"))
+
+if (-not (Test-Path $artifactDir)) {
+    New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
 }
 
-# --- 複数エラーログの警告 -------------------------------------------------------
+$reportPath = Join-Path $artifactDir "debug_${ts}.txt"
+
+# Extract command from header
+$cmdLine   = ($headerLines | Where-Object { $_ -match '# Command:' } | Select-Object -First 1) -replace '# Command:\s*', ''
+$exitLine  = ($headerLines | Where-Object { $_ -match '# ExitCode:' } | Select-Object -First 1) -replace '# ExitCode:\s*', ''
+$startLine = ($headerLines | Where-Object { $_ -match '# Start:' } | Select-Object -First 1) -replace '# Start:\s*', ''
+
+$reportLines = @(
+    "=== AI Debug Report ===",
+    "Generated : $($now.ToString('yyyy-MM-dd HH:mm:ss'))",
+    "Project   : $(Split-Path (Get-Location) -Leaf)",
+    "Error log : $($target.Name)",
+    "Run log   : $(if ($linkedRunLog) { $linkedRunLog.Name } else { '(none)' })",
+    "Command   : $cmdLine",
+    "Exit code : $exitLine",
+    "Run start : $startLine",
+    "",
+    "=== STDERR (error lines) ===",
+    ($stderrLines | ForEach-Object { $_ -replace '^\[STDERR\] ', '' }),
+    "",
+    "=== LAST $showCount LINES OF OUTPUT ===",
+    $tailLines,
+    "",
+    "=== PLEASE HELP ===",
+    "The above error occurred when running: $cmdLine",
+    "What is the likely cause and how can I fix it?"
+)
+
+$reportContent = $reportLines | ForEach-Object {
+    if ($_ -is [array]) { $_ -join "`n" } else { $_ }
+}
+
+[System.IO.File]::WriteAllLines($reportPath, ($reportContent | Where-Object { $null -ne $_ }), [System.Text.Encoding]::UTF8)
+
+# -------------------------------------------------------------------------
+# Summary + artifact path
+# -------------------------------------------------------------------------
+Write-Host ""
+Write-Sep
+Write-Host "  AI debug report saved:"
+Write-Host "  $reportPath"
+Write-Host ""
+Write-Host "  Copy-paste the report into Claude or any AI chat for analysis."
+
 if ($errorLogs.Count -gt 1) {
     Write-Host ""
-    Write-Host ("  " + "-" * 58) -ForegroundColor DarkGray
-    Write-Host "  他に $($errorLogs.Count - 1) 件のエラーログがあります。" -ForegroundColor DarkGray
-    Write-Host "  一覧を見るには: analyze-error -ListAll" -ForegroundColor DarkGray
+    Write-Host "  ($($errorLogs.Count - 1) more error log(s) -- use -ListAll to see all)"
 }
 
 Write-Host ""
-Write-Host ("=" * 62) -ForegroundColor Yellow
+Write-Sep
 Write-Host ""
 
 exit 0

@@ -1,41 +1,24 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Auto Dev Mode Phase2 — 司令塔スクリプト。
-    1サイクルの「実行コマンド」を run-with-log.ps1 経由で実行し、
-    結果を判定してオプションで note を自動生成します。
-
-.DESCRIPTION
-    - 実行は必ず run-with-log.ps1 (rwl) を経由します
-    - 成功 (exit 0): 指定した -Tag でメモを保存
-    - 失敗 (exit != 0): "bug" タグでエラー情報を自動メモ保存
-    - 実行後、ログファイルのパスを表示します
+    Phase2 commander: runs a command via run-with-log.ps1 and optionally auto-saves a note.
 
 .PARAMETER Cmd
-    実行するコマンド文字列。例: "python -m pytest tests/ -v"
-    ※ 引数内にスペース区切りを含むクォート付き引数は -Args で渡してください。
+    Command string to run. Example: "python -m pytest tests/ -v"
 
 .PARAMETER AutoNote
-    自動 note に使うメッセージ。省略すると note は生成されません。
+    Note message to save. Omit to skip note. Success saves with -Tag, failure saves as "bug".
 
 .PARAMETER Tag
-    成功時の note タグ（省略時: done）。失敗時は常に "bug" になります。
+    Note tag on success (default: done). On failure always uses "bug".
 
 .PARAMETER LogDir
-    ログ保存先ルート（省略時: ./logs）。run-with-log.ps1 と note.ps1 両方に渡します。
+    Log root directory (default: ./logs).
 
 .EXAMPLE
-    # 基本実行
     .\auto-dev-run.ps1 -Cmd "python -m pytest tests/ -v"
-
-    # 自動 note 付き（成功→done、失敗→bug で自動保存）
-    .\auto-dev-run.ps1 -Cmd "python main.py" -AutoNote "メイン処理実行" -Tag done
-
-    # テスト実行 + note
-    .\auto-dev-run.ps1 -Cmd "python -m pytest tests/ -v" -AutoNote "テスト実行" -Tag test
-
-    # ログディレクトリ指定
-    .\auto-dev-run.ps1 -Cmd "node src/index.js" -AutoNote "起動確認" -Tag test -LogDir "logs"
+    .\auto-dev-run.ps1 -Cmd "python main.py" -AutoNote "main process" -Tag done
+    .\auto-dev-run.ps1 -Cmd "python -m pytest" -AutoNote "tests" -Tag test -LogDir "logs"
 #>
 
 param(
@@ -52,10 +35,8 @@ param(
 
 Set-StrictMode -Version Latest
 
-# --- スクリプトディレクトリの解決 -----------------------------------------------
-$scriptDir = if ($PSScriptRoot) {
-    $PSScriptRoot
-} else {
+# --- Resolve script directory ---
+$scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else {
     Split-Path -Parent $MyInvocation.MyCommand.Path
 }
 
@@ -63,18 +44,17 @@ $rwlScript  = Join-Path $scriptDir "run-with-log.ps1"
 $noteScript = Join-Path $scriptDir "note.ps1"
 
 if (-not (Test-Path $rwlScript)) {
-    Write-Error "run-with-log.ps1 が見つかりません: $rwlScript"
+    Write-Error "run-with-log.ps1 not found: $rwlScript"
     exit 1
 }
 
-# --- コマンドを Executable + Arguments に分割 ------------------------------------
-# シンプルなスペース分割（引数内にスペースを含む場合は -Args オプションを推奨）
+# --- Split command into executable + arguments ---
 $parts      = $Cmd.Trim() -split '\s+', 2
 $executable = $parts[0]
 $argsStr    = if ($parts.Length -gt 1) { $parts[1] } else { "" }
 $argsArray  = if ($argsStr) { $argsStr -split '\s+' } else { @() }
 
-# --- 実行前の状態を記録（新規ログを後で特定するため）----------------------------
+# --- Snapshot existing run logs (to detect newly created log) ---
 $runLogDir     = Join-Path $LogDir "run"
 $errorLogDir   = Join-Path $LogDir "error"
 $beforeRunLogs = @()
@@ -86,17 +66,17 @@ if (Test-Path $runLogDir) {
     )
 }
 
-# --- ヘッダ出力 -----------------------------------------------------------------
+# --- Header ---
 Write-Host ""
-Write-Host ("=" * 62) -ForegroundColor Cyan
-Write-Host "  auto-dev-run : Phase2 サイクル実行" -ForegroundColor Cyan
-Write-Host ("=" * 62) -ForegroundColor Cyan
-Write-Host "  Command : $Cmd" -ForegroundColor White
-Write-Host "  LogDir  : $LogDir" -ForegroundColor DarkGray
-Write-Host ("=" * 62) -ForegroundColor Cyan
+Write-Host ("=" * 62)
+Write-Host "  auto-dev-run : Phase2 cycle execution"
+Write-Host ("=" * 62)
+Write-Host "  Command : $Cmd"
+Write-Host "  LogDir  : $LogDir"
+Write-Host ("=" * 62)
 Write-Host ""
 
-# --- rwl 経由で実行 -------------------------------------------------------------
+# --- Execute via rwl ---
 $exitCode = 0
 
 try {
@@ -105,31 +85,27 @@ try {
     } else {
         & $rwlScript $executable -LogDir $LogDir
     }
-    $exitCode = if ($LASTEXITCODE -ne $null) { $LASTEXITCODE } else { 0 }
+    $exitCode = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { 0 }
 } catch {
     Write-Host ""
-    Write-Host "  [ERROR] rwl の呼び出しに失敗しました: $_" -ForegroundColor Red
+    Write-Host "  [ERROR] Failed to invoke rwl: $_"
     $exitCode = 1
 }
 
-# --- 生成されたログファイルを特定 -----------------------------------------------
+# --- Find generated log files ---
 $latestRunLog   = $null
 $latestErrorLog = $null
 
 if (Test-Path $runLogDir) {
-    # 実行前には存在しなかった新規ログを優先
     $newLogs = @(
         Get-ChildItem $runLogDir -Filter "run_*.log" -ErrorAction SilentlyContinue |
         Where-Object { $_.FullName -notin $beforeRunLogs } |
         Sort-Object LastWriteTime -Descending
     )
-    if ($newLogs.Count -gt 0) {
-        $latestRunLog = $newLogs[0]
-    } else {
-        # フォールバック: 最新のログ
-        $latestRunLog = Get-ChildItem $runLogDir -Filter "run_*.log" -ErrorAction SilentlyContinue |
-                        Sort-Object LastWriteTime -Descending |
-                        Select-Object -First 1
+    $latestRunLog = if ($newLogs.Count -gt 0) { $newLogs[0] } else {
+        Get-ChildItem $runLogDir -Filter "run_*.log" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
     }
 }
 
@@ -139,45 +115,44 @@ if (Test-Path $errorLogDir) {
                      Select-Object -First 1
 }
 
-# --- 結果サマリー ---------------------------------------------------------------
+# --- Result summary ---
 Write-Host ""
-Write-Host ("=" * 62) -ForegroundColor Cyan
-Write-Host "  RESULT" -ForegroundColor Cyan
-Write-Host ("=" * 62) -ForegroundColor Cyan
+Write-Host ("=" * 62)
+Write-Host "  RESULT"
+Write-Host ("=" * 62)
 
 if ($exitCode -eq 0) {
-    Write-Host "  STATUS   : SUCCESS (exit 0)" -ForegroundColor Green
+    Write-Host "  STATUS  : [OK] SUCCESS (exit 0)"
 } else {
-    Write-Host "  STATUS   : FAILED  (exit $exitCode)" -ForegroundColor Red
+    Write-Host "  STATUS  : [FAIL] FAILED (exit $exitCode)"
 }
 
 if ($latestRunLog) {
-    Write-Host "  RUN LOG  : $($latestRunLog.FullName)" -ForegroundColor DarkGray
+    Write-Host "  RUN LOG : $($latestRunLog.FullName)"
 } else {
-    Write-Host "  RUN LOG  : (生成されませんでした)" -ForegroundColor DarkGray
+    Write-Host "  RUN LOG : (not generated)"
 }
 
 if ($exitCode -ne 0 -and $latestErrorLog) {
-    Write-Host "  ERR LOG  : $($latestErrorLog.FullName)" -ForegroundColor Yellow
-    Write-Host "  TIP      : analyze-error.ps1 でエラー内容を確認してください" -ForegroundColor Yellow
+    Write-Host "  ERR LOG : $($latestErrorLog.FullName)"
+    Write-Host "  TIP     : run analyze-error.ps1 to inspect the error"
 }
 
-Write-Host ("=" * 62) -ForegroundColor Cyan
+Write-Host ("=" * 62)
 Write-Host ""
 
-# --- AutoNote 処理 --------------------------------------------------------------
+# --- AutoNote ---
 if ($AutoNote -and (Test-Path $noteScript)) {
     $noteTag = if ($exitCode -eq 0) { $Tag } else { "bug" }
 
-    if ($exitCode -eq 0) {
-        $noteMessage = "${AutoNote} — 成功 (exit 0)"
+    $noteMessage = if ($exitCode -eq 0) {
+        "${AutoNote} -- OK (exit 0)"
     } else {
         $errLogName = if ($latestErrorLog) { " / errlog: $($latestErrorLog.Name)" } else { "" }
-        $noteMessage = "${AutoNote} — 失敗 (exit ${exitCode})${errLogName}"
+        "${AutoNote} -- FAILED (exit ${exitCode})${errLogName}"
     }
 
     & $noteScript $noteMessage -Tag $noteTag -LogDir $LogDir
 }
 
-# --- 終了 -----------------------------------------------------------------------
 exit $exitCode
