@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>患者管理システム</title>
+</head>
+<body>
+    <h1>患者管理システム</h1>
+    <a href="/register">新規患者登録</a>
+    <h2>住所録</h2>
+    <table border="1">
+        <tr>
+            <th>患者ID</th>
+            <th>患者名</th>
+            <th>性別</th>
+            <th>生年月日</th>
+            <th>年齢</th>
+            <th>郵便番号</th>
+            <th>住所</th>
+            <th>電話番号</th>
+            <th>操作</th>
+        </tr>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['患者ID'] }}</td>
+            <td>{{ record['患者名'] }}</td>
+            <td>{{ record['性別'] }}</td>
+            <td>{{ record['生年月日'] }}</td>
+            <td>{{ record['年齢'] }}</td>
+            <td>{{ record['郵便番号'] }}</td>
+            <td>{{ record['住所'] }}</td>
+            <td>{{ record['電話番号'] }}</td>
+            <td>
+                <a href="/patient/{{ record['患者ID'] }}">詳細</a>
+                <a href="/edit/{{ record['患者ID'] }}">編集</a>
+                <form method="POST" action="/delete" style="display:inline;">
+                    <input type="hidden" name="patient_id" value="{{ record['患者ID'] }}">
+                    <button type="submit">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

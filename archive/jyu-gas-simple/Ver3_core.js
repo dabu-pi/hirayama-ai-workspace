@@ -1,0 +1,1885 @@
+/****************************************************
+ * 柔整 Ver3.1 統合版（保存＋金額＋ヘッダ追記を一括実行）
+ *
+ * ★主要変更（統合版）
+ * - saveVisit_V3() で ①来院ケース保存 → ②金額計算 → ③来院ヘッダ追記 を一括
+ * - visitKey = 患者ID + "_" + yyyy-MM-dd（旧"|"から変更）
+ * - 同日二重登録禁止（来院ヘッダに同一visitKeyがあればエラー停止）
+ * - 上書き禁止（修正は別機能で行う前提）
+ *
+ * ★既存仕様（維持）
+ * - 30日ルール（エピソード連結＋終了境界で打ち切り）
+ * - 安全弁（コアなし行のチェック強制FALSE等）
+ * - 終了日セルに何か入っていれば終了扱い
+ * - 終了は「コア補完を止める」だけ（治療チェックは消さない）
+ *
+ * ★金額計算
+ * - 来院ケースの部位データから直接算定
+ * - 来院合計 = 初検料 + 再検料 + 相談支援料 + 明細合計
+ * - 窓口負担額 = 来院合計 × 負担割合（roundToUnit_で丸め）
+ * - 保険請求額 = 来院合計 - 窓口負担額（丸めない）
+ ****************************************************/
+
+/** ===== シート名 ===== */
+const SHEETS = {
+  settings: "設定",
+  cases: "来院ケース",
+  master: "患者マスタ",
+  ui: "患者画面",
+  detail: "施術明細",
+  header: "来院ヘッダ",
+  history: "初検情報履歴",
+  insurer: "保険者情報",
+};
+
+/** ===== 患者画面 UIセル ===== */
+const UI = {
+  patientId: "B2",
+  treatDate: "B4",
+  kubun: "B5",
+
+  // 表示専用：区分（ユーザー指定）
+  case1_kubunView: "C10",
+  case2_kubunView: "C25",
+
+  // Case1（入力2行）※ A〜G（G=終了日）
+  case1_rows: ["A12:G12", "A13:G13"],
+  // G列を終了日に使うため、所見/経過/履歴は1列右へ（H〜）
+  case1_shoken: "H11:M13",
+  case1_keikaNow: "H16:M17",
+  case1_keikaHistory: "H19:M23",
+
+  // Case2（入力2行）※ A〜G（G=終了日）
+  case2_rows: ["A27:G27", "A28:G28"],
+  case2_shoken: "H26:M28",
+  case2_keikaNow: "H31:M32",
+  case2_keikaHistory: "H34:M38",
+
+  // 終了日入力（明示）
+  case1_endHeader: "G11",
+  case2_endHeader: "G26",
+
+  // 会計ブロック（表示専用）
+  billing_visitTotal: "D2",
+  billing_windowPay: "D3",
+  billing_claimPay: "D4",
+  billing_needCheck: "D5",
+  billing_needCheckReason: "D6",
+};
+
+/** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
+const CASE_COLS = {
+  visitKey: "visitKey",
+  treatDate: "施術日",
+  patientId: "患者ID",
+  caseNo: "caseNo",
+  injuryFixed: "受傷日_確定",
+  kubun: "区分",
+  initFee: "初検料",
+  reFee: "再検料",
+  supportFee: "相談支援料",
+  detailSum: "明細合計(case)",
+  caseTotal: "case合計",
+  createdAt: "作成日時",
+  caseKey: "caseKey",
+
+  // 部位1
+  p1: "部位_部位1",
+  d1: "傷病_部位1",
+  inj1: "受傷日_部位1",
+  cold1: "冷罨法_部位1",
+  warm1: "温罨法_部位1",
+  elec1: "電療_部位1",
+
+  // 部位2
+  p2: "部位_部位2",
+  d2: "傷病_部位2",
+  inj2: "受傷日_部位2",
+  cold2: "冷罨法_部位2",
+  warm2: "温罨法_部位2",
+  elec2: "電療_部位2",
+
+  // 施術開始日/終了日（部位ごと）
+  start1: "施術開始日_部位1",
+  end1: "施術終了日_部位1",
+  start2: "施術開始日_部位2",
+  end2: "施術終了日_部位2",
+
+  shoken: "所見",
+  keikaNow: "経過_今回",
+};
+
+/** ===== 来院ヘッダ列名 ===== */
+const HEADER_COLS = {
+  visitKey: "visitKey",
+  treatDate: "施術日",
+  patientId: "患者ID",
+  kubun: "区分",
+  injuryVisit: "受傷日_確定(来院)",
+  initFee: "初検料",
+  reFee: "再検料",
+  supportFee: "相談支援料",
+  detailSum: "明細合計",
+  visitTotal: "来院合計",
+  lastVisit: "最終来院日",
+  gapDays: "前回から日数",
+  needCheck: "要確認",
+  needCheckReason: "要確認理由",
+  createdAt: "作成日時",
+  windowPay: "窓口負担額",
+  claimPay: "保険請求額",
+  caseKey: "caseKey",
+  caseIndex: "caseIndex",
+};
+
+/** ===== 患者マスタ列名 ===== */
+const MASTER_COLS = {
+  patientId: "患者ID",
+  burden: "負担割合",
+};
+
+
+
+/** ===== メニュー ===== */
+function onOpen() {
+  try {
+    SpreadsheetApp.getUi()
+      .createMenu("柔整ツール")
+      .addItem("来院ケースへ保存（統合：保存＋金額＋ヘッダ）", "saveVisit_V3")
+      .addItem("経過履歴を更新（患者画面）", "refreshKeikaHistoryUI_V3")
+      .addItem("自動引継ぎを実行（2回目以降）", "autofillFromPreviousVisit_V3")
+      .addSeparator()
+      .addItem("来院ケース → 来院ヘッダへ出力（高速）", "exportHeaderFromCases_V3")
+      .addSeparator()
+      .addItem("患者画面クリア（入力のみ）", "clearEntryUI_V3")
+      .addSeparator()
+      .addItem("ヘッダー確認（デバッグ）", "checkHeaders_V3")
+      .addItem("金額再計算（施術明細→ヘッダ）", "menuRecalcAmounts_V3")
+      .addItem("申請書_転記データ作成（患者×月）", "V3TR_menuBuildTransferData")
+      .addItem("入力バリデーション設定（傷病名プルダウン）", "setupValidation_V3")
+      .addToUi();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/** ===== onEdit ===== */
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+
+    var sh = e.range.getSheet();
+    if (sh.getName() !== SHEETS.ui) return;
+
+    var a1 = e.range.getA1Notation();
+    if (a1 !== UI.patientId && a1 !== UI.treatDate) return;
+
+    var lock = LockService.getScriptLock();
+    if (!lock.tryLock(500)) return;
+
+    try {
+      var props = PropertiesService.getScriptProperties();
+      var now = Date.now();
+      var last = Number(props.getProperty("V3_ONEDIT_LAST") || 0);
+      if (now - last < 1200) return;
+      props.setProperty("V3_ONEDIT_LAST", String(now));
+
+      refreshKeikaHistoryUI_V3();
+      autofillFromPreviousVisit_V3();
+    } finally {
+      lock.releaseLock();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/** ===== ヘッダー名正規化（trim＋全角空白→半角＋連続空白圧縮＋英字小文字） ===== */
+function normalizeHeaderName_(s) {
+  return String(s || "")
+    .trim()
+    .replace(/\u3000/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+/** ===== 別名辞書（正式名 → 別名リスト） ===== */
+const HEADER_ALIASES_ = {
+  "患者ID":    ["患者ＩＤ", "patientId", "PATIENT_ID", "patient_id"],
+  "施術日":    ["施術日付", "treatDate", "treatmentDate", "treatment_date"],
+  "visitKey":  ["訪問キー", "来院キー", "キー", "visitkey"],
+  "区分":      ["kubun", "種別"],
+  "受傷日_確定": ["受傷日", "負傷日", "injuryDate", "injury_date"],
+  "受傷日_部位1": ["受傷日1"],
+  "受傷日_部位2": ["受傷日2"],
+  "傷病_部位1": ["傷病1", "傷病名_部位1"],
+  "傷病_部位2": ["傷病2", "傷病名_部位2"],
+  "部位_部位1": ["部位1", "患部_部位1", "site1"],
+  "部位_部位2": ["部位2", "患部_部位2", "site2"],
+  "caseNo":    ["caseno", "ケース番号"],
+  "caseKey":   ["casekey", "ケースキー"],
+};
+
+var _aliasToCanonical_ = null;
+function getAliasToCanonicalMap_() {
+  if (_aliasToCanonical_) return _aliasToCanonical_;
+  _aliasToCanonical_ = {};
+  for (var canonical in HEADER_ALIASES_) {
+    var aliases = HEADER_ALIASES_[canonical];
+    for (var j = 0; j < aliases.length; j++) {
+      _aliasToCanonical_[normalizeHeaderName_(aliases[j])] = canonical;
+    }
+  }
+  return _aliasToCanonical_;
+}
+
+/** ===== 1行目ヘッダー名→列番号（1-based）＋正規化＋別名吸収 ===== */
+function buildHeaderColMap_(sh) {
+  var lastCol = sh.getLastColumn();
+  if (lastCol < 1) return {};
+  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  var aliasMap = getAliasToCanonicalMap_();
+  var map = {};
+
+  headers.forEach(function(raw, i) {
+    var trimmed = String(raw || "").trim();
+    if (!trimmed) return;
+
+    var col1 = i + 1;
+
+    if (!map[trimmed]) map[trimmed] = col1;
+
+    var norm = normalizeHeaderName_(trimmed);
+    if (norm !== trimmed && !map[norm]) map[norm] = col1;
+
+    var canonical = aliasMap[norm];
+    if (canonical && !map[canonical]) map[canonical] = col1;
+  });
+
+  return map;
+}
+
+/** ===== 結合セル（左上） ===== */
+function getMergedValue_(sheet, a1Range) {
+  return sheet.getRange(a1Range).getCell(1, 1).getValue();
+}
+function setMergedValue_(sheet, a1Range, value) {
+  var cell = sheet.getRange(a1Range).getCell(1, 1);
+  cell.setValue(value);
+  cell.setWrap(true);
+}
+
+/** ===== 日付ユーティリティ ===== */
+function fmt_(d, pat) {
+  return Utilities.formatDate(d, "Asia/Tokyo", pat);
+}
+function daysBetween_(fromDate, toDate) {
+  var a = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  var b = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+  return Math.round((b.getTime() - a.getTime()) / (24 * 3600 * 1000));
+}
+function minDate_(d1, d2) {
+  var a = (d1 instanceof Date) ? d1 : null;
+  var b = (d2 instanceof Date) ? d2 : null;
+  if (!a && !b) return "";
+  if (a && !b) return a;
+  if (!a && b) return b;
+  return (a.getTime() <= b.getTime()) ? a : b;
+}
+
+/** ===== visitKey / caseKey 構築 ===== */
+function buildVisitKey_(patientId, treatDate) {
+  return patientId + "_" + fmt_(treatDate, "yyyy-MM-dd");
+}
+/**
+ * caseKey = エピソードID（初検日ベース、エピソード中は不変）
+ * 形式: 患者ID_エピソード開始日_C{caseNo}
+ */
+function buildCaseKey_(patientId, episodeStartDate, caseNo) {
+  var dateStr = (episodeStartDate instanceof Date)
+    ? fmt_(episodeStartDate, "yyyy-MM-dd")
+    : String(episodeStartDate || "");
+  return patientId + "_" + dateStr + "_C" + caseNo;
+}
+
+/** ===== 必須列チェック（シート名・実ヘッダー付きエラー） ===== */
+function ensureRequiredCols_(map, requiredList, sheetName) {
+  var missing = requiredList.filter(function(n) { return !map[n]; });
+  if (!missing.length) return;
+
+  var actualHeaders = Object.keys(map).slice(0, 30);
+  var label = sheetName ? ("【" + sheetName + "】") : "【対象シート】";
+
+  throw new Error(
+    label + " ヘッダー不足：\n" +
+    "- " + missing.join("\n- ") + "\n\n" +
+    label + " 実ヘッダー（先頭30件）：\n" +
+    actualHeaders.join(", ")
+  );
+}
+
+/** ===== キー列で行検索 ===== */
+function findRowByKey_(sheet, map, keyHeaderName, keyValue) {
+  var c = map[keyHeaderName];
+  if (!c) throw new Error("キー列がありません: " + keyHeaderName);
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+  var vals = sheet.getRange(2, c, lastRow - 1, 1).getValues().flat();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i] || "").trim() === String(keyValue)) return i + 2;
+  }
+  return 0;
+}
+
+/** ===== visitKey + caseNo 複合キーで来院ケース行を検索 ===== */
+function findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, caseNo) {
+  var lastRow = caseSh.getLastRow();
+  if (lastRow < 2) return 0;
+  var n = lastRow - 1;
+  var cVk = caseMap[CASE_COLS.visitKey];
+  var cNo = caseMap[CASE_COLS.caseNo];
+  if (!cVk || !cNo) return 0;
+  var vkVals = caseSh.getRange(2, cVk, n, 1).getValues().flat();
+  var noVals = caseSh.getRange(2, cNo, n, 1).getValues().flat();
+  for (var i = 0; i < n; i++) {
+    if (String(vkVals[i] || "").trim() === visitKey && Number(noVals[i] || 0) === caseNo) {
+      return i + 2;
+    }
+  }
+  return 0;
+}
+
+/** ===== rowArrへ列名でセット ===== */
+function setByName_(rowArr, headerMap, name, value, opt) {
+  opt = opt || {};
+  var col = headerMap[name];
+  if (!col) throw new Error("対象シートに列がありません: " + name);
+  var idx = col - 1;
+  if (opt.preserveIfExists && rowArr[idx] !== "" && rowArr[idx] != null) return;
+  rowArr[idx] = value;
+}
+
+/** ===== チェック安全弁 ===== */
+function coreHasAny_(rowVals) {
+  var part = String(rowVals[0] || "").trim();
+  var dis  = String(rowVals[1] || "").trim();
+  var inj  = rowVals[2] instanceof Date;
+  return !!(part || dis || inj);
+}
+function forceChecksFalse_(rowVals) {
+  rowVals[3] = false;
+  rowVals[4] = false;
+  rowVals[5] = false;
+}
+function forceWarmElecTrue_(rowVals) {
+  rowVals[4] = true;
+  rowVals[5] = true;
+}
+
+/** ===== 終了判定 ===== */
+function isEnded_(endVal, treatDate) {
+  if (endVal === "" || endVal == null) return false;
+  if (!(endVal instanceof Date)) return true;
+  if (!(treatDate instanceof Date)) return true;
+  return endVal.getTime() <= treatDate.getTime();
+}
+
+/** ===== UIの2行入力を読む ===== */
+function readRowNewUI_(uiSh, a1) {
+  var v = uiSh.getRange(a1).getValues()[0];
+
+  var part = String(v[0] || "").trim();
+  var disease = String(v[1] || "").trim();
+  var injuryDate = (v[2] instanceof Date) ? v[2] : "";
+
+  var cold = v[3] === true;
+  var warm = v[4] === true;
+  var elec = v[5] === true;
+
+  var endRaw = v[6];
+  var endVal =
+    (endRaw instanceof Date) ? endRaw :
+    (String(endRaw || "").trim() ? String(endRaw) : "");
+
+  var hasCore = !!(part || disease || injuryDate);
+
+  return { part: part, disease: disease, injuryDate: injuryDate, cold: cold, warm: warm, elec: elec, endVal: endVal, hasCore: hasCore };
+}
+
+/** ===== UIにケースデータがあるか判定（部位・傷病・受傷日のいずれか） ===== */
+function hasCaseDataInUI_(uiSh, caseNo) {
+  var rows = (caseNo === 1) ? UI.case1_rows : UI.case2_rows;
+  for (var i = 0; i < rows.length; i++) {
+    var line = readRowNewUI_(uiSh, rows[i]);
+    if (line.hasCore) return true;
+  }
+  return false;
+}
+
+/** ===== 来院ケースから患者の来院日一覧 ===== */
+function getPatientVisitDatesFromCases_(caseSh, caseMap, patientId) {
+  var lastRow = caseSh.getLastRow();
+  if (lastRow < 2) return [];
+
+  var n = lastRow - 1;
+  var cPid = caseMap[CASE_COLS.patientId];
+  var cDt  = caseMap[CASE_COLS.treatDate];
+
+  var pidVals = caseSh.getRange(2, cPid, n, 1).getValues().flat();
+  var dtVals  = caseSh.getRange(2, cDt,  n, 1).getValues().flat();
+
+  var set = new Map();
+  for (var i = 0; i < n; i++) {
+    if (String(pidVals[i] || "").trim() !== patientId) continue;
+    var d = dtVals[i];
+    if (!(d instanceof Date)) continue;
+    var k = fmt_(d, "yyyy-MM-dd");
+    if (!set.has(k)) set.set(k, d);
+  }
+  return Array.from(set.values()).sort(function(a,b){ return a.getTime()-b.getTime(); });
+}
+
+
+/* =======================================================================
+   saveVisit_V3  ―  統合保存（ケース保存＋金額計算＋ヘッダ追記）
+   ======================================================================= */
+function saveVisit_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  var headSh = ss.getSheetByName(SHEETS.header);
+  if (!uiSh || !caseSh || !headSh) throw new Error("必要シートが見つかりません（患者画面/来院ケース/来院ヘッダ）");
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+  if (!patientId) throw new Error("患者ID（B2）が空です。");
+  if (!(treatDate instanceof Date)) throw new Error("来院日（B4）が日付になっていません。");
+
+  var visitKey = buildVisitKey_(patientId, treatDate);
+  var now = new Date();
+
+  var caseMap = buildHeaderColMap_(caseSh);
+  var headMap = buildHeaderColMap_(headSh);
+  ensureRequiredCols_(caseMap, Object.values(CASE_COLS), SHEETS.cases);
+  ensureRequiredCols_(headMap, Object.values(HEADER_COLS), SHEETS.header);
+
+  // ★二重登録禁止チェック（来院ヘッダに同一visitKeyがあれば停止）
+  var existingHeaderRow = findRowByKey_(headSh, headMap, HEADER_COLS.visitKey, visitKey);
+  if (existingHeaderRow > 0) {
+    throw new Error(
+      "同日二重登録禁止：来院ヘッダに同一visitKeyが存在します。\n" +
+      "visitKey: " + visitKey + "（行 " + existingHeaderRow + "）\n" +
+      "修正は別機能で行ってください。"
+    );
+  }
+
+  // ① 来院ケースへ保存
+  // UIに実データがあるケースのみ区分を有効にする（空ケースの"初検"誤判定を防止）
+  var case1HasData = hasCaseDataInUI_(uiSh, 1);
+  var case2HasData = hasCaseDataInUI_(uiSh, 2);
+
+  var ep1 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 1);
+  var ep2 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 2);
+
+  var kubun1 = case1HasData ? ep1.kubun : "";
+  var kubun2 = case2HasData ? ep2.kubun : "";
+
+  upsertOneCase_(uiSh, caseSh, caseMap, {
+    visitKey: visitKey, patientId: patientId, treatDate: treatDate,
+    kubun: ep1.kubun,
+    caseNo: 1,
+    now: now,
+    episodeStartDate: ep1.episodeStartDate
+  });
+
+  upsertOneCase_(uiSh, caseSh, caseMap, {
+    visitKey: visitKey, patientId: patientId, treatDate: treatDate,
+    kubun: ep2.kubun,
+    caseNo: 2,
+    now: now,
+    episodeStartDate: ep2.episodeStartDate
+  });
+
+  // ② 金額計算（来院ケースベース）
+  // ※ upsertOneCase_ はデータ無しなら早期returnするが、
+  //    金額計算には「UIに実データがあるケースの区分のみ」を渡す
+  var amounts = calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kubun1, kubun2);
+
+  // ③ 来院ヘッダへ1行追記
+  var injuryFixed = null;
+  var row1idx = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, 1);
+  if (row1idx > 0) {
+    var v = caseSh.getRange(row1idx, caseMap[CASE_COLS.injuryFixed], 1, 1).getValue();
+    if (v instanceof Date) injuryFixed = v;
+  }
+  if (!injuryFixed) {
+    var row2idx = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, 2);
+    if (row2idx > 0) {
+      var v2 = caseSh.getRange(row2idx, caseMap[CASE_COLS.injuryFixed], 1, 1).getValue();
+      if (v2 instanceof Date) injuryFixed = v2;
+    }
+  }
+
+  var lastVisit = findLastVisitDateInHeader_(headSh, headMap, patientId, treatDate);
+  var gapDays = (lastVisit instanceof Date) ? daysBetween_(lastVisit, treatDate) : "";
+
+  var kubunLabel = kubun1 || kubun2 || "";
+
+  appendHeaderRow_V3_(headSh, headMap, {
+    visitKey: visitKey,
+    treatDate: treatDate,
+    patientId: patientId,
+    kubun: kubunLabel,
+    injuryVisit: injuryFixed,
+    initFee: amounts.initFee,
+    reFee: amounts.reFee,
+    supportFee: amounts.supportFee,
+    detailSum: amounts.detailSum,
+    visitTotal: amounts.visitTotal,
+    windowPay: amounts.windowPay,
+    claimPay: amounts.claimPay,
+    lastVisit: lastVisit || "",
+    gapDays: gapDays,
+    needCheck: amounts.needCheck ? true : false,
+    needCheckReason: amounts.needCheckReason || "",
+    createdAt: now,
+    caseKey: case1HasData
+      ? buildCaseKey_(patientId, ep1.episodeStartDate, 1)
+      : buildCaseKey_(patientId, ep2.episodeStartDate, 2),
+    caseIndex: case1HasData ? 1 : 2
+  });
+
+  // ④ 施術明細upsert
+  var detailSh = ss.getSheetByName(SHEETS.detail);
+  if (detailSh) {
+    var detailMap = buildHeaderColMap_(detailSh);
+    upsertDetailRows_V3_(detailSh, detailMap, {
+      visitKey: visitKey,
+      patientId: patientId,
+      treatDate: treatDate,
+      kubun1: kubun1,
+      kubun2: kubun2,
+      amounts: amounts,
+      ep1: ep1,
+      ep2: ep2,
+      now: now,
+    });
+  }
+
+  // ⑤ UI会計ブロック更新
+  writeAmountsToUI_V3_(uiSh, amounts);
+
+  // ⑥ 経過履歴更新 / UIクリア
+  refreshKeikaHistoryUI_V3();
+  clearAfterSaveUI_V3_(uiSh);
+  SpreadsheetApp.getUi().alert(
+    "保存完了（統合：ケース＋金額＋ヘッダ）\n" +
+    "visitKey: " + visitKey + "\n" +
+    "来院合計: " + amounts.visitTotal + "\n" +
+    "窓口負担: " + amounts.windowPay + "\n" +
+    "保険請求: " + amounts.claimPay
+  );
+}
+
+
+/* =======================================================================
+   calcHeaderAmountsByVisitKey_V3_  ―  金額計算（来院ケースベース）
+   SPEC.md 完全準拠版
+   - 患者×月上限（初検料/再検料/相談支援料 各月1回）
+   - 30日ルール（区分はcalcEpisodeForCase_で確定済み）
+   - 再検料は当月初検の次回来院日のみ
+   - 後療料は初検日以外の施術日（再検日は再検＋後療）
+   - 冷温電は傷病種別×受傷日経過で算定可否判定
+   - 安全弁：算定不可→金額0＋要確認TRUE＋理由記録
+   ======================================================================= */
+function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kubun1, kubun2) {
+  var settings = loadSettings_V3_(ss);
+
+  var masterSh = ss.getSheetByName(SHEETS.master);
+  var masterMap = buildHeaderColMap_(masterSh);
+  var burden = loadBurdenRatio_V3_(masterSh, masterMap, patientId);
+
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  var caseMap = buildHeaderColMap_(caseSh);
+  var headSh = ss.getSheetByName(SHEETS.header);
+  var headMap = buildHeaderColMap_(headSh);
+
+  var reasons = [];  // 要確認理由を蓄積
+
+  // --- 患者×月 上限チェック ---
+  var monthKey = fmt_(treatDate, "yyyy-MM");
+  var monthlyStatus = getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, visitKey);
+
+  var hasInit = (kubun1 === "初検" || kubun2 === "初検");
+  var hasKoryo = (kubun1 === "再検" || kubun1 === "後療" || kubun2 === "再検" || kubun2 === "後療");
+
+  // --- 初検料 ---
+  var initFee = 0;
+  if (hasInit) {
+    if (monthlyStatus.initBilled) {
+      initFee = 0;
+      reasons.push("同月別ケース初回 初検抑制");
+    } else {
+      initFee = settings.initFee;
+    }
+  }
+
+  // --- 相談支援料（初検料を算定する日のみ） ---
+  var supportFee = 0;
+  if (initFee > 0) {
+    if (monthlyStatus.supportBilled) {
+      supportFee = 0;
+    } else {
+      supportFee = settings.initSupport;
+    }
+  }
+
+  // --- 再検料（当月初検の次回来院日のみ＋月1回上限） ---
+  var reFee = 0;
+  if (hasKoryo && !hasInit) {
+    if (monthlyStatus.reBilled) {
+      reFee = 0;
+    } else {
+      var isNextVisitAfterInit = checkIsNextVisitAfterMonthlyInit_(
+        headSh, headMap, caseSh, caseMap, patientId, monthKey, treatDate
+      );
+      if (isNextVisitAfterInit) {
+        reFee = settings.reFee;
+      }
+    }
+  }
+
+  // --- 後療料（初検日以外に算定、再検日も算定） ---
+  // 初検料算定日 → 後療なし、それ以外 → 後療あり
+  var isInitDay = (initFee > 0);
+  // 同月別ケース初回で初検抑制された場合も後療を算定（SPEC §7: 同月別ケース抑制初回日は区分=後療）
+  var isSuppressedInit = (hasInit && monthlyStatus.initBilled);
+
+  // --- 部位別明細金額（後療料＋冷温電） ---
+  var calcKoryoOnThisDay = !isInitDay || isSuppressedInit;
+  var effectiveKubun1 = calcKoryoOnThisDay ? (kubun1 === "初検" ? "後療" : kubun1) : kubun1;
+  var effectiveKubun2 = calcKoryoOnThisDay ? (kubun2 === "初検" ? "後療" : kubun2) : kubun2;
+
+  var detail1 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 1, effectiveKubun1, treatDate, settings, reasons);
+  var detail2 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 2, effectiveKubun2, treatDate, settings, reasons);
+  var detailSum = detail1.total + detail2.total;
+
+  // --- 来院合計 = 初検料 + 再検料 + 相談支援料 + 明細合計 ---
+  var visitTotal = initFee + reFee + supportFee + detailSum;
+
+  var unit = settings.roundUnit || 1;
+  var windowPay = roundToUnit_V3_(visitTotal * burden, unit);
+  var claimPay = visitTotal - windowPay;
+
+  var needCheck = (reasons.length > 0);
+  var needCheckReason = reasons.join(";");
+
+  return {
+    initFee: initFee,
+    reFee: reFee,
+    supportFee: supportFee,
+    detailSum: detailSum,
+    visitTotal: visitTotal,
+    windowPay: windowPay,
+    claimPay: claimPay,
+    needCheck: needCheck,
+    needCheckReason: needCheckReason,
+    details: { case1Parts: detail1.parts, case2Parts: detail2.parts }
+  };
+}
+
+/** 当月の既算定状況を来院ヘッダから取得（自分自身のvisitKeyは除外） */
+function getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, excludeVisitKey) {
+  var result = { initBilled: false, reBilled: false, supportBilled: false, initDate: null };
+  var lastRow = headSh.getLastRow();
+  if (lastRow < 2) return result;
+
+  var n = lastRow - 1;
+  var cPid  = headMap[HEADER_COLS.patientId];
+  var cDt   = headMap[HEADER_COLS.treatDate];
+  var cVk   = headMap[HEADER_COLS.visitKey];
+  var cInit = headMap[HEADER_COLS.initFee];
+  var cRe   = headMap[HEADER_COLS.reFee];
+  var cSup  = headMap[HEADER_COLS.supportFee];
+  if (!cPid || !cDt || !cVk || !cInit || !cRe || !cSup) return result;
+
+  var pidVals  = headSh.getRange(2, cPid, n, 1).getValues().flat();
+  var dtVals   = headSh.getRange(2, cDt,  n, 1).getValues().flat();
+  var vkVals   = headSh.getRange(2, cVk,  n, 1).getValues().flat();
+  var initVals = headSh.getRange(2, cInit, n, 1).getValues().flat();
+  var reVals   = headSh.getRange(2, cRe,   n, 1).getValues().flat();
+  var supVals  = headSh.getRange(2, cSup,  n, 1).getValues().flat();
+
+  for (var i = 0; i < n; i++) {
+    if (String(pidVals[i] || "").trim() !== patientId) continue;
+    var d = dtVals[i];
+    if (!(d instanceof Date)) continue;
+    if (fmt_(d, "yyyy-MM") !== monthKey) continue;
+    if (String(vkVals[i] || "").trim() === excludeVisitKey) continue;
+
+    var iv = Number(initVals[i] || 0);
+    var rv = Number(reVals[i] || 0);
+    var sv = Number(supVals[i] || 0);
+
+    if (iv > 0) {
+      result.initBilled = true;
+      result.initDate = d;
+    }
+    if (rv > 0) result.reBilled = true;
+    if (sv > 0) result.supportBilled = true;
+  }
+  return result;
+}
+
+/** 当月初検の次回来院日かどうか判定 */
+function checkIsNextVisitAfterMonthlyInit_(headSh, headMap, caseSh, caseMap, patientId, monthKey, treatDate) {
+  // 当月の初検日を探す
+  var lastRow = headSh.getLastRow();
+  if (lastRow < 2) return false;
+
+  var n = lastRow - 1;
+  var cPid  = headMap[HEADER_COLS.patientId];
+  var cDt   = headMap[HEADER_COLS.treatDate];
+  var cInit = headMap[HEADER_COLS.initFee];
+  if (!cPid || !cDt || !cInit) return false;
+
+  var pidVals  = headSh.getRange(2, cPid, n, 1).getValues().flat();
+  var dtVals   = headSh.getRange(2, cDt,  n, 1).getValues().flat();
+  var initVals = headSh.getRange(2, cInit, n, 1).getValues().flat();
+
+  var initDate = null;
+  for (var i = 0; i < n; i++) {
+    if (String(pidVals[i] || "").trim() !== patientId) continue;
+    var d = dtVals[i];
+    if (!(d instanceof Date)) continue;
+    if (fmt_(d, "yyyy-MM") !== monthKey) continue;
+    if (Number(initVals[i] || 0) > 0) {
+      initDate = d;
+      break;  // 当月最初の初検日
+    }
+  }
+  if (!initDate) return false;
+
+  // 当月の初検日以降の来院日を収集（初検日自体は除く）
+  var visitDates = getPatientVisitDatesFromCases_(caseSh, caseMap, patientId);
+  var afterInitDates = visitDates.filter(function(d) {
+    return d.getTime() > initDate.getTime() && fmt_(d, "yyyy-MM") === monthKey;
+  }).sort(function(a, b) { return a.getTime() - b.getTime(); });
+
+  if (!afterInitDates.length) return false;
+
+  // 次回来院日 = 初検日の直後の来院日
+  var nextVisitDate = afterInitDates[0];
+  return sameDateKey_(nextVisitDate) === sameDateKey_(treatDate);
+}
+
+/** 1ケース分の明細金額を来院ケースの部位データから算定（SPEC準拠版）
+ *  @return {{ total: number, parts: Object[] }} 合計と部位別内訳配列
+ */
+function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, treatDate, settings, reasons) {
+  // 来院ケース行は visitKey + caseNo で検索
+  var rowIndex = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, caseNo);
+  if (rowIndex === 0) return { total: 0, parts: [] };
+
+  var row = caseSh.getRange(rowIndex, 1, 1, caseSh.getLastColumn()).getValues()[0];
+  var get = function(name) { return row[caseMap[name] - 1]; };
+
+  var total = 0;
+  var partCount = 0;
+  var parts = [];
+
+  // 部位1
+  var p1 = String(get(CASE_COLS.p1) || "").trim();
+  var d1 = String(get(CASE_COLS.d1) || "").trim();
+  var inj1 = get(CASE_COLS.inj1);
+  if (p1 || d1 || (inj1 instanceof Date)) {
+    partCount++;
+    var part1 = calcOnePartAmount_V3_(settings, kubun, d1, inj1, treatDate,
+      get(CASE_COLS.cold1) === true,
+      get(CASE_COLS.warm1) === true,
+      get(CASE_COLS.elec1) === true,
+      partCount, reasons);
+    part1.bui = p1;
+    total += part1.total;
+    parts.push(part1);
+  }
+
+  // 部位2
+  var p2 = String(get(CASE_COLS.p2) || "").trim();
+  var d2 = String(get(CASE_COLS.d2) || "").trim();
+  var inj2 = get(CASE_COLS.inj2);
+  if (p2 || d2 || (inj2 instanceof Date)) {
+    partCount++;
+    var part2 = calcOnePartAmount_V3_(settings, kubun, d2, inj2, treatDate,
+      get(CASE_COLS.cold2) === true,
+      get(CASE_COLS.warm2) === true,
+      get(CASE_COLS.elec2) === true,
+      partCount, reasons);
+    part2.bui = p2;
+    total += part2.total;
+    parts.push(part2);
+  }
+
+  return { total: total, parts: parts };
+}
+
+/**
+ * 1部位分の金額算定（SPEC.md §9 完全準拠）
+ *
+ * 明細合計 = 部位別基本料（施療料 or 後療料）+ 冷罨法 + 温罨法 + 電療
+ * 初検日は施療料、再検/後療日は後療料がcalcBaseFee_V3_で自動切替
+ *
+ * 冷罨法ルール（§9.1）:
+ *   打撲/捻挫: 受傷日or翌日（dayDiff≤1）
+ *   脱臼: 受傷日から5日以内（dayDiff≤4）
+ *   骨折/不全骨折: 受傷日から7日以内（dayDiff≤6）
+ *
+ * 温罨法/電療ルール（§9.2）:
+ *   打撲/捻挫/脱臼: 受傷後5日間不可→6日目以降可（dayDiff≥5）
+ *   骨折/不全骨折: 受傷後7日間不可→8日目以降可（dayDiff≥7）
+ */
+function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons) {
+  var injuryType = detectInjuryType_V3_(byomei);
+
+  // 部位別基本料（施療料 or 後療料）
+  // 初検日 → 施療料、再検/後療日 → 後療料（calcBaseFee_V3_が区分で分岐）
+  var base = calcBaseFee_V3_(settings, kubun, injuryType);
+
+  var dayDiff = null;
+  if (injuryDate instanceof Date && treatDate instanceof Date) {
+    dayDiff = daysBetween_(injuryDate, treatDate);
+  }
+
+  // 拡張された傷病種別判定（脱臼・骨折対応）
+  var extType = detectExtendedInjuryType_V3_(byomei);
+
+  // --- 冷罨法 §9.1 ---
+  var cold = 0;
+  if (coldChk) {
+    var coldAllowed = false;
+    if (dayDiff != null) {
+      if (extType === "骨折" || extType === "不全骨折") {
+        coldAllowed = (dayDiff <= 6);
+      } else if (extType === "脱臼") {
+        coldAllowed = (dayDiff <= 4);
+      } else {
+        // 打撲/捻挫/挫傷: 受傷日or翌日のみ
+        coldAllowed = (dayDiff <= 1);
+      }
+    }
+    if (coldAllowed) {
+      cold = settings.cold;
+    } else {
+      // 安全弁：チェックは残す、金額0、理由記録
+      var reasonText = "冷罨法 算定不可（" + (byomei || "不明") + "：受傷後" + (dayDiff != null ? dayDiff : "?") + "日）";
+      reasons.push(reasonText);
+    }
+  }
+
+  // --- 温罨法 §9.2 ---
+  var warm = 0;
+  if (warmChk) {
+    var warmAllowed = false;
+    if (dayDiff != null) {
+      if (extType === "骨折" || extType === "不全骨折") {
+        warmAllowed = (dayDiff >= 7);
+      } else {
+        // 打撲/捻挫/脱臼/挫傷: 6日目以降
+        warmAllowed = (dayDiff >= 5);
+      }
+    }
+    if (warmAllowed) {
+      warm = settings.warm;
+    } else {
+      var reasonText = "温罨法 算定不可（" + (byomei || "不明") + "：受傷後" + (dayDiff != null ? dayDiff : "?") + "日）";
+      reasons.push(reasonText);
+    }
+  }
+
+  // --- 電療 §9.2（温罨法と同じルール） ---
+  var electro = 0;
+  if (elecChk) {
+    var elecAllowed = false;
+    if (dayDiff != null) {
+      if (extType === "骨折" || extType === "不全骨折") {
+        elecAllowed = (dayDiff >= 7);
+      } else {
+        elecAllowed = (dayDiff >= 5);
+      }
+    }
+    if (elecAllowed) {
+      electro = settings.electro;
+    } else {
+      var reasonText = "電療 算定不可（" + (byomei || "不明") + "：受傷後" + (dayDiff != null ? dayDiff : "?") + "日）";
+      reasons.push(reasonText);
+    }
+  }
+
+  // 待機料（温/電いずれかが算定可のとき）
+  var taiki = (warm > 0 || electro > 0) ? settings.taiki : 0;
+
+  // 多部位逓減 §10
+  var coef = (partOrder >= 3) ? Number(settings.multiCoef3 || 0.6) : 1.0;
+
+  return {
+    base: base,
+    cold: cold,
+    warm: warm,
+    electro: electro,
+    taiki: taiki,
+    coef: coef,
+    total: (base + cold + warm + electro + taiki) * coef,
+    byomei: byomei,
+    partOrder: partOrder,
+    injuryDate: injuryDate,
+    coldChk: coldChk,
+    warmChk: warmChk,
+    electroChk: elecChk,
+  };
+}
+
+/** 拡張傷病種別判定（脱臼・骨折・不全骨折を含む） */
+function detectExtendedInjuryType_V3_(byomei) {
+  if (!byomei) return null;
+  if (byomei.indexOf("不全骨折") !== -1) return "不全骨折";
+  if (byomei.indexOf("骨折") !== -1) return "骨折";
+  if (byomei.indexOf("脱臼") !== -1) return "脱臼";
+  if (byomei.indexOf("打撲") !== -1) return "打撲";
+  if (byomei.indexOf("捻挫") !== -1) return "捻挫";
+  if (byomei.indexOf("挫傷") !== -1) return "挫傷";
+  return null;
+}
+
+
+/* =======================================================================
+   appendHeaderRow_V3_  ―  来院ヘッダへ1行追記（visitKey重複時throw）
+   ======================================================================= */
+function appendHeaderRow_V3_(headSh, headMap, obj) {
+  // 二重登録禁止チェック（念のため再チェック）
+  var existingRow = findRowByKey_(headSh, headMap, HEADER_COLS.visitKey, obj.visitKey);
+  if (existingRow > 0) {
+    throw new Error(
+      "来院ヘッダに同一visitKeyが存在します（二重登録禁止）。\n" +
+      "visitKey: " + obj.visitKey + "（行 " + existingRow + "）"
+    );
+  }
+
+  var rowArr = new Array(headSh.getLastColumn()).fill("");
+
+  setByName_(rowArr, headMap, HEADER_COLS.visitKey, obj.visitKey);
+  setByName_(rowArr, headMap, HEADER_COLS.treatDate, obj.treatDate);
+  setByName_(rowArr, headMap, HEADER_COLS.patientId, obj.patientId);
+  setByName_(rowArr, headMap, HEADER_COLS.kubun, obj.kubun);
+  if (obj.injuryVisit instanceof Date) {
+    setByName_(rowArr, headMap, HEADER_COLS.injuryVisit, obj.injuryVisit);
+  }
+  setByName_(rowArr, headMap, HEADER_COLS.initFee, obj.initFee);
+  setByName_(rowArr, headMap, HEADER_COLS.reFee, obj.reFee);
+  setByName_(rowArr, headMap, HEADER_COLS.supportFee, obj.supportFee);
+  setByName_(rowArr, headMap, HEADER_COLS.detailSum, obj.detailSum);
+  setByName_(rowArr, headMap, HEADER_COLS.visitTotal, obj.visitTotal);
+  setByName_(rowArr, headMap, HEADER_COLS.windowPay, obj.windowPay);
+  setByName_(rowArr, headMap, HEADER_COLS.claimPay, obj.claimPay);
+  setByName_(rowArr, headMap, HEADER_COLS.lastVisit, obj.lastVisit);
+  setByName_(rowArr, headMap, HEADER_COLS.gapDays, obj.gapDays);
+  setByName_(rowArr, headMap, HEADER_COLS.needCheck, obj.needCheck);
+  if (headMap[HEADER_COLS.needCheckReason]) {
+    setByName_(rowArr, headMap, HEADER_COLS.needCheckReason, obj.needCheckReason || "");
+  }
+  setByName_(rowArr, headMap, HEADER_COLS.createdAt, obj.createdAt);
+  setByName_(rowArr, headMap, HEADER_COLS.caseKey, obj.caseKey);
+  setByName_(rowArr, headMap, HEADER_COLS.caseIndex, obj.caseIndex);
+
+  headSh.getRange(headSh.getLastRow() + 1, 1, 1, headSh.getLastColumn()).setValues([rowArr]);
+}
+
+
+/* =======================================================================
+   upsertDetailRows_V3_  ―  施術明細シートへ部位行をupsert
+   detailID = visitKey + "_C" + caseNo + "_P" + partOrder
+   ======================================================================= */
+function upsertDetailRows_V3_(detailSh, detailMap, ctx) {
+  var visitKey = ctx.visitKey;
+  var amounts = ctx.amounts;
+  if (!amounts.details) return;
+
+  var allParts = [];
+
+  // caseKey生成
+  var caseKey1 = buildCaseKey_(ctx.patientId, ctx.ep1.episodeStartDate, 1);
+  var caseKey2 = buildCaseKey_(ctx.patientId, ctx.ep2.episodeStartDate, 2);
+
+  // case1
+  var c1Parts = amounts.details.case1Parts || [];
+  for (var i = 0; i < c1Parts.length; i++) {
+    allParts.push({ caseNo: 1, part: c1Parts[i], kubun: ctx.kubun1, caseKey: caseKey1 });
+  }
+
+  // case2
+  var c2Parts = amounts.details.case2Parts || [];
+  for (var j = 0; j < c2Parts.length; j++) {
+    allParts.push({ caseNo: 2, part: c2Parts[j], kubun: ctx.kubun2, caseKey: caseKey2 });
+  }
+
+  var colCount = detailSh.getLastColumn();
+
+  for (var k = 0; k < allParts.length; k++) {
+    var entry = allParts[k];
+    var p = entry.part;
+    var detailID = visitKey + "_C" + entry.caseNo + "_P" + p.partOrder;
+
+    // 既存行検索
+    var existingRow = 0;
+    if (detailMap[AM_DETAIL_COLS.detailID]) {
+      existingRow = findRowByKey_(detailSh, detailMap, AM_DETAIL_COLS.detailID, detailID);
+    }
+
+    var rowArr;
+    if (existingRow > 0) {
+      // 既存行を読み込んで上書き
+      rowArr = detailSh.getRange(existingRow, 1, 1, colCount).getValues()[0];
+    } else {
+      rowArr = new Array(colCount).fill("");
+    }
+
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.detailID, detailID);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.visitKey, visitKey);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.patientId, ctx.patientId);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.treatDate, ctx.treatDate);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.kubun, entry.kubun);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.caseNo, entry.caseNo);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.caseKey, entry.caseKey);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.bui, p.bui || "");
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.byomei, p.byomei || "");
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.partOrder, p.partOrder);
+    if (p.injuryDate instanceof Date) {
+      setByName_(rowArr, detailMap, AM_DETAIL_COLS.injuryDateFixed, p.injuryDate);
+    }
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.coldChk, p.coldChk);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.warmChk, p.warmChk);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.electroChk, p.electroChk);
+
+    // 確定金額
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.coefOut, p.coef);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.baseOut, p.base);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.supportOut, 0);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.coldOut, p.cold);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.warmOut, p.warm);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.electroOut, p.electro);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.taikiOut, p.taiki);
+    setByName_(rowArr, detailMap, AM_DETAIL_COLS.rowTotalOut, p.total);
+
+    if (existingRow > 0) {
+      detailSh.getRange(existingRow, 1, 1, colCount).setValues([rowArr]);
+    } else {
+      detailSh.getRange(detailSh.getLastRow() + 1, 1, 1, colCount).setValues([rowArr]);
+    }
+  }
+}
+
+
+/* =====================================================
+   upsertOneCase_（来院ケースへ1ケース保存）
+   ===================================================== */
+function upsertOneCase_(uiSh, caseSh, caseMap, base) {
+  var visitKey = base.visitKey;
+  var patientId = base.patientId;
+  var treatDate = base.treatDate;
+  var kubun = base.kubun;
+  var caseNo = base.caseNo;
+  var now = base.now;
+  var episodeStartDate = base.episodeStartDate;
+
+  var rows = (caseNo === 1) ? UI.case1_rows : UI.case2_rows;
+  var shokenRange = (caseNo === 1) ? UI.case1_shoken : UI.case2_shoken;
+  var keikaRange  = (caseNo === 1) ? UI.case1_keikaNow : UI.case2_keikaNow;
+
+  var line1 = readRowNewUI_(uiSh, rows[0]);
+  var line2 = readRowNewUI_(uiSh, rows[1]);
+
+  var shoken = String(getMergedValue_(uiSh, shokenRange) || "").trim();
+  var keikaNow = String(getMergedValue_(uiSh, keikaRange) || "").trim();
+
+  var hasAny = line1.hasCore || line2.hasCore || !!shoken || !!keikaNow || !!line1.endVal || !!line2.endVal;
+  if (!hasAny) return;
+
+  var injuryFixed = minDate_(line1.injuryDate, line2.injuryDate);
+  // caseKey = エピソードID（初検日ベース）
+  var caseKey = buildCaseKey_(patientId, episodeStartDate, caseNo);
+  // 来院ケース行の検索は visitKey + caseNo 複合キー
+  var rowIndex = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, caseNo);
+
+  if (rowIndex === 0) {
+    var rowArr = new Array(caseSh.getLastColumn()).fill("");
+
+    setByName_(rowArr, caseMap, CASE_COLS.visitKey, visitKey);
+    setByName_(rowArr, caseMap, CASE_COLS.treatDate, treatDate);
+    setByName_(rowArr, caseMap, CASE_COLS.patientId, patientId);
+    setByName_(rowArr, caseMap, CASE_COLS.caseNo, caseNo);
+    setByName_(rowArr, caseMap, CASE_COLS.caseKey, caseKey);
+    setByName_(rowArr, caseMap, CASE_COLS.kubun, kubun);
+
+    if (injuryFixed) setByName_(rowArr, caseMap, CASE_COLS.injuryFixed, injuryFixed);
+
+    writeLinesToCaseRow_(rowArr, caseMap, line1, line2);
+
+    if (line1.hasCore) setByName_(rowArr, caseMap, CASE_COLS.start1, (kubun === "初検") ? treatDate : episodeStartDate);
+    if (line2.hasCore) setByName_(rowArr, caseMap, CASE_COLS.start2, (kubun === "初検") ? treatDate : episodeStartDate);
+
+    if (line1.endVal !== "" && line1.endVal != null) setByName_(rowArr, caseMap, CASE_COLS.end1, line1.endVal);
+    if (line2.endVal !== "" && line2.endVal != null) setByName_(rowArr, caseMap, CASE_COLS.end2, line2.endVal);
+
+    if (shoken) setByName_(rowArr, caseMap, CASE_COLS.shoken, shoken);
+    if (keikaNow) setByName_(rowArr, caseMap, CASE_COLS.keikaNow, keikaNow);
+
+    setByName_(rowArr, caseMap, CASE_COLS.initFee, "");
+    setByName_(rowArr, caseMap, CASE_COLS.reFee, "");
+    setByName_(rowArr, caseMap, CASE_COLS.supportFee, "");
+    setByName_(rowArr, caseMap, CASE_COLS.detailSum, "");
+    setByName_(rowArr, caseMap, CASE_COLS.caseTotal, "");
+    setByName_(rowArr, caseMap, CASE_COLS.createdAt, now);
+
+    caseSh.appendRow(rowArr);
+  } else {
+    var lastCol = caseSh.getLastColumn();
+    var rowArr2 = caseSh.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+
+    setByName_(rowArr2, caseMap, CASE_COLS.visitKey, visitKey);
+    setByName_(rowArr2, caseMap, CASE_COLS.treatDate, treatDate);
+    setByName_(rowArr2, caseMap, CASE_COLS.patientId, patientId);
+    setByName_(rowArr2, caseMap, CASE_COLS.caseNo, caseNo);
+    setByName_(rowArr2, caseMap, CASE_COLS.caseKey, caseKey);
+    setByName_(rowArr2, caseMap, CASE_COLS.kubun, kubun);
+
+    if (injuryFixed) setByName_(rowArr2, caseMap, CASE_COLS.injuryFixed, injuryFixed, { preserveIfExists: true });
+
+    writeLinesToCaseRow_(rowArr2, caseMap, line1, line2);
+
+    if (line1.hasCore) {
+      if (kubun === "初検") {
+        setByName_(rowArr2, caseMap, CASE_COLS.start1, treatDate);
+      } else {
+        setByName_(rowArr2, caseMap, CASE_COLS.start1, episodeStartDate, { preserveIfExists: true });
+      }
+    }
+    if (line2.hasCore) {
+      if (kubun === "初検") {
+        setByName_(rowArr2, caseMap, CASE_COLS.start2, treatDate);
+      } else {
+        setByName_(rowArr2, caseMap, CASE_COLS.start2, episodeStartDate, { preserveIfExists: true });
+      }
+    }
+
+    if (line1.endVal !== "" && line1.endVal != null) setByName_(rowArr2, caseMap, CASE_COLS.end1, line1.endVal);
+    if (line2.endVal !== "" && line2.endVal != null) setByName_(rowArr2, caseMap, CASE_COLS.end2, line2.endVal);
+
+    if (shoken) setByName_(rowArr2, caseMap, CASE_COLS.shoken, shoken);
+    if (keikaNow) setByName_(rowArr2, caseMap, CASE_COLS.keikaNow, keikaNow);
+
+    caseSh.getRange(rowIndex, 1, 1, lastCol).setValues([rowArr2]);
+  }
+}
+
+function writeLinesToCaseRow_(rowArr, caseMap, line1, line2) {
+  setByName_(rowArr, caseMap, CASE_COLS.p1, line1.part || "");
+  setByName_(rowArr, caseMap, CASE_COLS.d1, line1.disease || "");
+  setByName_(rowArr, caseMap, CASE_COLS.inj1, line1.injuryDate || "");
+  setByName_(rowArr, caseMap, CASE_COLS.cold1, line1.cold);
+  setByName_(rowArr, caseMap, CASE_COLS.warm1, line1.warm);
+  setByName_(rowArr, caseMap, CASE_COLS.elec1, line1.elec);
+
+  setByName_(rowArr, caseMap, CASE_COLS.p2, line2.part || "");
+  setByName_(rowArr, caseMap, CASE_COLS.d2, line2.disease || "");
+  setByName_(rowArr, caseMap, CASE_COLS.inj2, line2.injuryDate || "");
+  setByName_(rowArr, caseMap, CASE_COLS.cold2, line2.cold);
+  setByName_(rowArr, caseMap, CASE_COLS.warm2, line2.warm);
+  setByName_(rowArr, caseMap, CASE_COLS.elec2, line2.elec);
+}
+
+/** ===== 経過履歴（最新5件） ===== */
+function refreshKeikaHistoryUI_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  if (!uiSh || !caseSh) return;
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  if (!patientId) {
+    setMergedValue_(uiSh, UI.case1_keikaHistory, "");
+    setMergedValue_(uiSh, UI.case2_keikaHistory, "");
+    return;
+  }
+
+  var caseMap = buildHeaderColMap_(caseSh);
+  ensureRequiredCols_(caseMap, [CASE_COLS.patientId, CASE_COLS.caseNo, CASE_COLS.treatDate, CASE_COLS.keikaNow], SHEETS.cases);
+
+  var hist1 = buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, 1, 5);
+  var hist2 = buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, 2, 5);
+
+  setMergedValue_(uiSh, UI.case1_keikaHistory, hist1);
+  setMergedValue_(uiSh, UI.case2_keikaHistory, hist2);
+}
+
+function buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, caseNo, limit) {
+  var cPid = caseMap[CASE_COLS.patientId];
+  var cNo  = caseMap[CASE_COLS.caseNo];
+  var cDt  = caseMap[CASE_COLS.treatDate];
+  var cK   = caseMap[CASE_COLS.keikaNow];
+
+  var lastRow = caseSh.getLastRow();
+  if (lastRow < 2) return "";
+
+  var pidVals = caseSh.getRange(2, cPid, lastRow - 1, 1).getValues().flat();
+  var noVals  = caseSh.getRange(2, cNo,  lastRow - 1, 1).getValues().flat();
+  var dtVals  = caseSh.getRange(2, cDt,  lastRow - 1, 1).getValues().flat();
+  var kVals   = caseSh.getRange(2, cK,   lastRow - 1, 1).getValues().flat();
+
+  var rows = [];
+  for (var i = 0; i < pidVals.length; i++) {
+    if (String(pidVals[i] || "").trim() !== patientId) continue;
+    if (Number(noVals[i] || 0) !== caseNo) continue;
+
+    var d = dtVals[i];
+    var kv = String(kVals[i] || "").trim();
+    if (!(d instanceof Date)) continue;
+    if (!kv) continue;
+    rows.push({ d: d, k: kv });
+  }
+
+  rows.sort(function(a, b) { return b.d.getTime() - a.d.getTime(); });
+  return rows.slice(0, limit).map(function(x) { return fmt_(x.d, "M/d") + "：" + x.k; }).join("\n");
+}
+
+/** ===== 自動引継ぎ ===== */
+function autofillFromPreviousVisit_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  if (!uiSh || !caseSh) return;
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+  if (!patientId || !(treatDate instanceof Date)) {
+    uiSh.getRange(UI.case1_kubunView).setValue("");
+    uiSh.getRange(UI.case2_kubunView).setValue("");
+    return;
+  }
+
+  var caseMap = buildHeaderColMap_(caseSh);
+  ensureRequiredCols_(caseMap, [
+    CASE_COLS.patientId, CASE_COLS.treatDate, CASE_COLS.caseNo,
+    CASE_COLS.p1, CASE_COLS.d1, CASE_COLS.inj1,
+    CASE_COLS.p2, CASE_COLS.d2, CASE_COLS.inj2,
+    CASE_COLS.start1, CASE_COLS.end1,
+    CASE_COLS.start2, CASE_COLS.end2,
+    CASE_COLS.shoken
+  ], SHEETS.cases);
+
+  var ep1 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 1);
+  var ep2 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 2);
+
+  var latest1 = findLatestCaseRowDateInEpisode_(caseSh, caseMap, patientId, treatDate, 1);
+  var latest2 = findLatestCaseRowDateInEpisode_(caseSh, caseMap, patientId, treatDate, 2);
+
+  var src1 = latest1 ? findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, latest1, 1) : null;
+  var src2 = latest2 ? findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, latest2, 2) : null;
+
+  // case1
+  (function() {
+    var caseClosed = isCaseClosedAsOf_(src1, treatDate);
+    if (caseClosed) {
+      uiSh.getRange(UI.case1_kubunView).setValue("初検");
+      setMergedValue_(uiSh, UI.case1_shoken, "");
+      applyCaseRowToUI_Safe_(uiSh, null, 1, treatDate, { forceWarmElec: false });
+    } else {
+      uiSh.getRange(UI.case1_kubunView).setValue(ep1.kubun || "");
+      applyCaseRowToUI_Safe_(uiSh, src1, 1, treatDate, { forceWarmElec: true });
+      var curShoken = String(getMergedValue_(uiSh, UI.case1_shoken) || "").trim();
+      if (!curShoken && src1) {
+        var startForShoken = minDate_(src1.start1, src1.start2);
+        var shokenDate = (startForShoken instanceof Date) ? startForShoken : ep1.episodeStartDate;
+        var shokenSrc = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, shokenDate, 1);
+        if (shokenSrc) {
+          var srcText = String(shokenSrc.shoken || "").trim();
+          if (srcText) setMergedValue_(uiSh, UI.case1_shoken, srcText);
+        }
+      }
+    }
+  })();
+
+  // case2
+  (function() {
+    var caseClosed = isCaseClosedAsOf_(src2, treatDate);
+    if (caseClosed) {
+      uiSh.getRange(UI.case2_kubunView).setValue("初検");
+      setMergedValue_(uiSh, UI.case2_shoken, "");
+      applyCaseRowToUI_Safe_(uiSh, null, 2, treatDate, { forceWarmElec: false });
+    } else {
+      uiSh.getRange(UI.case2_kubunView).setValue(ep2.kubun || "");
+      applyCaseRowToUI_Safe_(uiSh, src2, 2, treatDate, { forceWarmElec: true });
+      var curShoken = String(getMergedValue_(uiSh, UI.case2_shoken) || "").trim();
+      if (!curShoken && src2) {
+        var startForShoken = minDate_(src2.start1, src2.start2);
+        var shokenDate = (startForShoken instanceof Date) ? startForShoken : ep2.episodeStartDate;
+        var shokenSrc = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, shokenDate, 2);
+        if (shokenSrc) {
+          var srcText = String(shokenSrc.shoken || "").trim();
+          if (srcText) setMergedValue_(uiSh, UI.case2_shoken, srcText);
+        }
+      }
+    }
+  })();
+}
+
+function sameDateKey_(d) {
+  return (d instanceof Date) ? fmt_(d, "yyyy-MM-dd") : "";
+}
+
+function findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, dateObj, caseNo) {
+  if (!dateObj) return null;
+  var lastRow = caseSh.getLastRow();
+  if (lastRow < 2) return null;
+
+  var n = lastRow - 1;
+  var cPid = caseMap[CASE_COLS.patientId];
+  var cDt  = caseMap[CASE_COLS.treatDate];
+  var cNo  = caseMap[CASE_COLS.caseNo];
+
+  var pidVals = caseSh.getRange(2, cPid, n, 1).getValues().flat();
+  var dtVals  = caseSh.getRange(2, cDt,  n, 1).getValues().flat();
+  var noVals  = caseSh.getRange(2, cNo,  n, 1).getValues().flat();
+
+  var targetKey = sameDateKey_(dateObj);
+
+  for (var i = 0; i < n; i++) {
+    if (String(pidVals[i] || "").trim() !== patientId) continue;
+    if (Number(noVals[i] || 0) !== caseNo) continue;
+    var d = dtVals[i];
+    if (!(d instanceof Date)) continue;
+    if (sameDateKey_(d) !== targetKey) continue;
+
+    var rowIndex = i + 2;
+    var row = caseSh.getRange(rowIndex, 1, 1, caseSh.getLastColumn()).getValues()[0];
+    var get = function(name) { return row[caseMap[name] - 1]; };
+
+    return {
+      p1: String(get(CASE_COLS.p1) || ""),
+      d1: String(get(CASE_COLS.d1) || ""),
+      inj1: (get(CASE_COLS.inj1) instanceof Date) ? get(CASE_COLS.inj1) : "",
+      cold1: get(CASE_COLS.cold1) === true,
+      warm1: get(CASE_COLS.warm1) === true,
+      elec1: get(CASE_COLS.elec1) === true,
+      start1: (get(CASE_COLS.start1) instanceof Date) ? get(CASE_COLS.start1) : "",
+      end1: get(CASE_COLS.end1),
+
+      p2: String(get(CASE_COLS.p2) || ""),
+      d2: String(get(CASE_COLS.d2) || ""),
+      inj2: (get(CASE_COLS.inj2) instanceof Date) ? get(CASE_COLS.inj2) : "",
+      cold2: get(CASE_COLS.cold2) === true,
+      warm2: get(CASE_COLS.warm2) === true,
+      elec2: get(CASE_COLS.elec2) === true,
+      start2: (get(CASE_COLS.start2) instanceof Date) ? get(CASE_COLS.start2) : "",
+      end2: get(CASE_COLS.end2),
+
+      shoken: String(get(CASE_COLS.shoken) || ""),
+    };
+  }
+  return null;
+}
+
+/** ===== UIへ安全に適用 ===== */
+function applyCaseRowToUI_Safe_(uiSh, src, caseNo, treatDate, opt) {
+  opt = opt || {};
+  var rows = (caseNo === 1) ? UI.case1_rows : UI.case2_rows;
+
+  var rng1 = uiSh.getRange(rows[0]);
+  var rng2 = uiSh.getRange(rows[1]);
+
+  var v1 = rng1.getValues()[0];
+  var v2 = rng2.getValues()[0];
+
+  if (!src) {
+    if (!coreHasAny_(v1)) forceChecksFalse_(v1);
+    if (!coreHasAny_(v2)) forceChecksFalse_(v2);
+    rng1.setValues([v1]);
+    rng2.setValues([v2]);
+    return;
+  }
+
+  var ended1 = isEnded_(src.end1, treatDate);
+  var ended2 = isEnded_(src.end2, treatDate);
+
+  var hasSrc1 = !!(String(src.p1||"").trim() || String(src.d1||"").trim() || (src.inj1 instanceof Date));
+  var hasSrc2 = !!(String(src.p2||"").trim() || String(src.d2||"").trim() || (src.inj2 instanceof Date));
+
+  if (hasSrc1 && (v1[6] === "" || v1[6] == null)) {
+    if (src.end1 !== "" && src.end1 != null) v1[6] = src.end1;
+  }
+  if (hasSrc2 && (v2[6] === "" || v2[6] == null)) {
+    if (src.end2 !== "" && src.end2 != null) v2[6] = src.end2;
+  }
+
+  if (!ended1) {
+    if (!coreHasAny_(v1)) {
+      v1[0] = src.p1 || "";
+      v1[1] = src.d1 || "";
+      v1[2] = src.inj1 || "";
+    }
+  }
+
+  if (!ended2) {
+    if (!coreHasAny_(v2)) {
+      v2[0] = src.p2 || "";
+      v2[1] = src.d2 || "";
+      v2[2] = src.inj2 || "";
+    }
+  }
+
+  var row1HasCore = coreHasAny_(v1);
+  var row2HasCore = coreHasAny_(v2);
+
+  if (!row1HasCore) forceChecksFalse_(v1);
+  if (!row2HasCore) forceChecksFalse_(v2);
+
+  if (opt.forceWarmElec) {
+    if (row1HasCore) forceWarmElecTrue_(v1);
+    if (row2HasCore) forceWarmElecTrue_(v2);
+  }
+
+  rng1.setValues([v1]);
+  rng2.setValues([v2]);
+}
+
+/** ===== 来院ケース → 来院ヘッダへ一括出力（高速） ===== */
+function exportHeaderFromCases_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  var headSh = ss.getSheetByName(SHEETS.header);
+  if (!caseSh || !headSh) throw new Error("必要シートが見つかりません（来院ケース/来院ヘッダ）");
+
+  var caseMap = buildHeaderColMap_(caseSh);
+  var headMap = buildHeaderColMap_(headSh);
+
+  ensureRequiredCols_(caseMap, [CASE_COLS.visitKey, CASE_COLS.treatDate, CASE_COLS.patientId, CASE_COLS.kubun, CASE_COLS.injuryFixed, CASE_COLS.caseKey, CASE_COLS.caseNo], SHEETS.cases);
+  ensureRequiredCols_(headMap, Object.values(HEADER_COLS), SHEETS.header);
+
+  var lastRow = caseSh.getLastRow();
+  if (lastRow < 2) {
+    SpreadsheetApp.getUi().alert("来院ケースにデータがありません。");
+    return;
+  }
+
+  var n = lastRow - 1;
+  var visitKeyVals = caseSh.getRange(2, caseMap[CASE_COLS.visitKey], n, 1).getValues().flat();
+  var treatVals    = caseSh.getRange(2, caseMap[CASE_COLS.treatDate], n, 1).getValues().flat();
+  var pidVals      = caseSh.getRange(2, caseMap[CASE_COLS.patientId], n, 1).getValues().flat();
+  var kubunVals    = caseSh.getRange(2, caseMap[CASE_COLS.kubun], n, 1).getValues().flat();
+  var injFixVals   = caseSh.getRange(2, caseMap[CASE_COLS.injuryFixed], n, 1).getValues().flat();
+  var caseKeyVals  = caseSh.getRange(2, caseMap[CASE_COLS.caseKey], n, 1).getValues().flat();
+  var caseNoVals   = caseSh.getRange(2, caseMap[CASE_COLS.caseNo], n, 1).getValues().flat();
+
+  var existed = buildExistingHeaderKeySet_(headSh, headMap);
+
+  var out = [];
+  var now = new Date();
+
+  for (var i = 0; i < n; i++) {
+    var visitKey = String(visitKeyVals[i] || "").trim();
+    var patientId = String(pidVals[i] || "").trim();
+    var treatDate = treatVals[i];
+    var kubun = String(kubunVals[i] || "").trim();
+    var inj = injFixVals[i];
+    var caseKey = String(caseKeyVals[i] || "").trim();
+    var caseIndex = Number(caseNoVals[i] || 0);
+
+    if (!visitKey || !patientId || !(treatDate instanceof Date) || !caseKey || !caseIndex) continue;
+
+    // 重複チェックは visitKey 単位（来院ヘッダは1来院日1行）
+    if (existed.has(visitKey)) continue;
+
+    var rowArr = new Array(headSh.getLastColumn()).fill("");
+
+    setByName_(rowArr, headMap, HEADER_COLS.visitKey, visitKey);
+    setByName_(rowArr, headMap, HEADER_COLS.treatDate, treatDate);
+    setByName_(rowArr, headMap, HEADER_COLS.patientId, patientId);
+    setByName_(rowArr, headMap, HEADER_COLS.kubun, kubun);
+    if (inj instanceof Date) setByName_(rowArr, headMap, HEADER_COLS.injuryVisit, inj);
+
+    setByName_(rowArr, headMap, HEADER_COLS.initFee, "");
+    setByName_(rowArr, headMap, HEADER_COLS.reFee, "");
+    setByName_(rowArr, headMap, HEADER_COLS.supportFee, "");
+    setByName_(rowArr, headMap, HEADER_COLS.detailSum, "");
+    setByName_(rowArr, headMap, HEADER_COLS.visitTotal, "");
+    setByName_(rowArr, headMap, HEADER_COLS.windowPay, "");
+
+    var last = findLastVisitDateInHeader_(headSh, headMap, patientId, treatDate);
+    setByName_(rowArr, headMap, HEADER_COLS.lastVisit, (last instanceof Date) ? last : "");
+    setByName_(rowArr, headMap, HEADER_COLS.gapDays, (last instanceof Date) ? daysBetween_(last, treatDate) : "");
+
+    setByName_(rowArr, headMap, HEADER_COLS.needCheck, "");
+    setByName_(rowArr, headMap, HEADER_COLS.createdAt, now);
+    setByName_(rowArr, headMap, HEADER_COLS.caseKey, caseKey);
+    setByName_(rowArr, headMap, HEADER_COLS.caseIndex, caseIndex);
+
+    out.push(rowArr);
+    existed.add(visitKey);
+  }
+
+  if (!out.length) {
+    SpreadsheetApp.getUi().alert("出力対象がありません（すでに出力済み or データ不足）");
+    return;
+  }
+
+  headSh.getRange(headSh.getLastRow() + 1, 1, out.length, headSh.getLastColumn()).setValues(out);
+  SpreadsheetApp.getUi().alert("来院ヘッダへ出力しました：" + out.length + " 行");
+}
+
+function buildExistingHeaderKeySet_(headSh, headMap) {
+  var set = new Set();
+  var lastRow = headSh.getLastRow();
+  if (lastRow < 2) return set;
+
+  var cVisitKey = headMap[HEADER_COLS.visitKey];
+  if (!cVisitKey) return set;
+
+  var keys = headSh.getRange(2, cVisitKey, lastRow - 1, 1).getValues().flat();
+
+  for (var i = 0; i < keys.length; i++) {
+    var k = String(keys[i] || "").trim();
+    if (k) set.add(k);
+  }
+  return set;
+}
+
+function findLastVisitDateInHeader_(headSh, headMap, patientId, treatDate) {
+  var lastRow = headSh.getLastRow();
+  if (lastRow < 2) return null;
+
+  var cPid = headMap[HEADER_COLS.patientId];
+  var cDt  = headMap[HEADER_COLS.treatDate];
+  if (!cPid || !cDt) return null;
+
+  var pidVals = headSh.getRange(2, cPid, lastRow - 1, 1).getValues().flat();
+  var dtVals  = headSh.getRange(2, cDt,  lastRow - 1, 1).getValues().flat();
+
+  var best = null;
+  for (var i = 0; i < pidVals.length; i++) {
+    if (String(pidVals[i] || "").trim() !== patientId) continue;
+    var d = dtVals[i];
+    if (!(d instanceof Date)) continue;
+    if (d.getTime() >= treatDate.getTime()) continue;
+    if (!best || d.getTime() > best.getTime()) best = d;
+  }
+  return best;
+}
+
+/** ===== クリア（入力だけ） ===== */
+function clearEntryUI_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+
+  uiSh.getRange("B2").clearContent();
+  uiSh.getRange("F2:F4").clearContent();
+  uiSh.getRange("B5:B7").clearContent();
+
+  uiSh.getRange("A12:G13").clearContent();
+  uiSh.getRange("H11:M14").clearContent();
+  uiSh.getRange("H16:M17").clearContent();
+  uiSh.getRange("H19:M23").clearContent();
+
+  uiSh.getRange("A27:G28").clearContent();
+  uiSh.getRange("H26:M29").clearContent();
+  uiSh.getRange("H31:M32").clearContent();
+  uiSh.getRange("H34:M38").clearContent();
+
+  uiSh.getRange("D12:F13").setValues([
+    [false, false, false],
+    [false, false, false]
+  ]);
+  uiSh.getRange("D27:F28").setValues([
+    [false, false, false],
+    [false, false, false]
+  ]);
+
+  uiSh.getRange(UI.case1_kubunView).clearContent();
+  uiSh.getRange(UI.case2_kubunView).clearContent();
+
+  clearAmountsUI_V3_(uiSh);
+
+  SpreadsheetApp.getUi().alert("自動入力エリアをクリアしました（B4は保持・書式は保持）。");
+}
+
+/** ===== UI会計ブロック書き込み ===== */
+function writeAmountsToUI_V3_(uiSh, amounts) {
+  uiSh.getRange(UI.billing_visitTotal).setValue(amounts.visitTotal);
+  uiSh.getRange(UI.billing_windowPay).setValue(amounts.windowPay);
+  uiSh.getRange(UI.billing_claimPay).setValue(amounts.claimPay);
+  uiSh.getRange(UI.billing_needCheck).setValue(amounts.needCheck ? true : false);
+
+  // 要確認理由: 内部";"区切り → UI表示時"\n"に変換、wrap有効
+  var reasonDisplay = (amounts.needCheckReason || "").replace(/;/g, "\n");
+  var reasonCell = uiSh.getRange(UI.billing_needCheckReason);
+  reasonCell.setValue(reasonDisplay);
+  reasonCell.setWrap(true);
+}
+
+/** ===== UI会計ブロッククリア ===== */
+function clearAmountsUI_V3_(uiSh) {
+  uiSh.getRange(UI.billing_visitTotal).clearContent();
+  uiSh.getRange(UI.billing_windowPay).clearContent();
+  uiSh.getRange(UI.billing_claimPay).clearContent();
+  uiSh.getRange(UI.billing_needCheck).clearContent();
+  uiSh.getRange(UI.billing_needCheckReason).clearContent();
+}
+
+/** ===== 保存後クリア ===== */
+function clearAfterSaveUI_V3_(uiSh) {
+  uiSh.getRange(UI.patientId).setValue("");
+  uiSh.getRange(UI.kubun).setValue("");
+
+  UI.case1_rows.forEach(function(r) { uiSh.getRange(r).clearContent(); });
+  UI.case2_rows.forEach(function(r) { uiSh.getRange(r).clearContent(); });
+
+  uiSh.getRange("D12:F13").setValues([[false,false,false],[false,false,false]]);
+  uiSh.getRange("D27:F28").setValues([[false,false,false],[false,false,false]]);
+
+  setMergedValue_(uiSh, UI.case1_shoken, "");
+  setMergedValue_(uiSh, UI.case1_keikaNow, "");
+  setMergedValue_(uiSh, UI.case2_shoken, "");
+  setMergedValue_(uiSh, UI.case2_keikaNow, "");
+
+  setMergedValue_(uiSh, UI.case1_keikaHistory, "");
+  setMergedValue_(uiSh, UI.case2_keikaHistory, "");
+
+  uiSh.getRange(UI.case1_kubunView).setValue("");
+  uiSh.getRange(UI.case2_kubunView).setValue("");
+
+  // 会計ブロックは保存直後の確認用に残す（clearEntryUI_V3で初めてクリア）
+}
+
+/** ===== ヘッダー確認 ===== */
+function checkHeaders_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  var headSh = ss.getSheetByName(SHEETS.header);
+  if (!caseSh || !headSh) throw new Error("来院ケース または 来院ヘッダ が見つかりません。");
+
+  var caseMap = buildHeaderColMap_(caseSh);
+  var headMap = buildHeaderColMap_(headSh);
+
+  var needCase = Object.values(CASE_COLS);
+  var needHead = Object.values(HEADER_COLS);
+
+  var missCase = needCase.filter(function(h) { return !caseMap[h]; });
+  var missHead = needHead.filter(function(h) { return !headMap[h]; });
+
+  var caseActual = Object.keys(caseMap).slice(0, 30).join(", ");
+  var headActual = Object.keys(headMap).slice(0, 30).join(", ");
+
+  SpreadsheetApp.getUi().alert(
+    "ヘッダーチェック結果\n\n" +
+    (missCase.length
+      ? "【来院ケース 不足】\n- " + missCase.join("\n- ") + "\n\n実ヘッダー：" + caseActual + "\n\n"
+      : "【来院ケース 不足】なし\n\n") +
+    (missHead.length
+      ? "【来院ヘッダ 不足】\n- " + missHead.join("\n- ") + "\n\n実ヘッダー：" + headActual
+      : "【来院ヘッダ 不足】なし")
+  );
+}
+
+/** ===== caseNo別の来院日（コアがある日だけ） ===== */
+function getPatientVisitDatesFromCasesByCase_(caseSh, caseMap, patientId, caseNo) {
+  var lastRow = caseSh.getLastRow();
+  if (lastRow < 2) return [];
+
+  var n = lastRow - 1;
+  var cPid = caseMap[CASE_COLS.patientId];
+  var cDt  = caseMap[CASE_COLS.treatDate];
+  var cNo  = caseMap[CASE_COLS.caseNo];
+
+  var cP1 = caseMap[CASE_COLS.p1];
+  var cD1 = caseMap[CASE_COLS.d1];
+  var cI1 = caseMap[CASE_COLS.inj1];
+  var cP2 = caseMap[CASE_COLS.p2];
+  var cD2 = caseMap[CASE_COLS.d2];
+  var cI2 = caseMap[CASE_COLS.inj2];
+
+  var pidVals = caseSh.getRange(2, cPid, n, 1).getValues().flat();
+  var dtVals  = caseSh.getRange(2, cDt,  n, 1).getValues().flat();
+  var noVals  = caseSh.getRange(2, cNo,  n, 1).getValues().flat();
+
+  var p1Vals = caseSh.getRange(2, cP1, n, 1).getValues().flat();
+  var d1Vals = caseSh.getRange(2, cD1, n, 1).getValues().flat();
+  var i1Vals = caseSh.getRange(2, cI1, n, 1).getValues().flat();
+  var p2Vals = caseSh.getRange(2, cP2, n, 1).getValues().flat();
+  var d2Vals = caseSh.getRange(2, cD2, n, 1).getValues().flat();
+  var i2Vals = caseSh.getRange(2, cI2, n, 1).getValues().flat();
+
+  var uniq = new Map();
+
+  for (var i = 0; i < n; i++) {
+    if (String(pidVals[i] || "").trim() !== patientId) continue;
+    if (Number(noVals[i] || 0) !== caseNo) continue;
+
+    var d = dtVals[i];
+    if (!(d instanceof Date)) continue;
+
+    var hasCore =
+      String(p1Vals[i] || "").trim() ||
+      String(d1Vals[i] || "").trim() ||
+      (i1Vals[i] instanceof Date) ||
+      String(p2Vals[i] || "").trim() ||
+      String(d2Vals[i] || "").trim() ||
+      (i2Vals[i] instanceof Date);
+
+    if (!hasCore) continue;
+
+    var key = fmt_(d, "yyyy-MM-dd");
+    if (!uniq.has(key)) uniq.set(key, d);
+  }
+
+  return Array.from(uniq.values()).sort(function(a, b) { return a.getTime() - b.getTime(); });
+}
+
+/** ===== エピソード計算（30日ルール＋終了境界で打ち切り） ===== */
+function calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, caseNo) {
+  var dates = getPatientVisitDatesFromCasesByCase_(caseSh, caseMap, patientId, caseNo);
+
+  if (!dates.length) {
+    return { episodeStartDate: treatDate, kubun: "初検", priorCountInEpisode: 0 };
+  }
+
+  var prevDates = dates
+    .filter(function(d) { return d.getTime() < treatDate.getTime(); })
+    .sort(function(a, b) { return a.getTime() - b.getTime(); });
+
+  if (!prevDates.length) {
+    return { episodeStartDate: treatDate, kubun: "初検", priorCountInEpisode: 0 };
+  }
+
+  var lastDate = prevDates[prevDates.length - 1];
+  var gap = daysBetween_(lastDate, treatDate);
+  if (gap > 30) {
+    return { episodeStartDate: treatDate, kubun: "初検", priorCountInEpisode: 0 };
+  }
+
+  var episode = buildEpisodeDatesBackwards_StopAtClosed_(
+    caseSh, caseMap, patientId, caseNo, prevDates, treatDate, 30
+  );
+
+  if (!episode.length) {
+    return { episodeStartDate: treatDate, kubun: "初検", priorCountInEpisode: 0 };
+  }
+
+  var episodeStartDate = episode[0];
+  var priorCountInEpisode = episode.length;
+
+  var kubun =
+    (priorCountInEpisode === 0) ? "初検" :
+    (priorCountInEpisode === 1) ? "再検" : "後療";
+
+  return { episodeStartDate: episodeStartDate, kubun: kubun, priorCountInEpisode: priorCountInEpisode };
+}
+
+function findLatestCaseRowDateInEpisode_(caseSh, caseMap, patientId, treatDate, caseNo) {
+  var dates = getPatientVisitDatesFromCasesByCase_(caseSh, caseMap, patientId, caseNo);
+  if (!dates.length) return null;
+
+  var prevDates = dates.filter(function(d) { return d.getTime() < treatDate.getTime(); }).sort(function(a,b){ return a.getTime()-b.getTime(); });
+  if (!prevDates.length) return null;
+
+  var lastDate = prevDates[prevDates.length - 1];
+  var gap = daysBetween_(lastDate, treatDate);
+  if (gap > 30) return null;
+
+  return lastDate;
+}
+
+function isCaseClosedAsOf_(caseRowObj, treatDate) {
+  if (!caseRowObj) return false;
+
+  var has1 = partExists_(caseRowObj, 1);
+  var has2 = partExists_(caseRowObj, 2);
+
+  var e1 = has1 ? isEnded_(caseRowObj.end1, treatDate) : true;
+  var e2 = has2 ? isEnded_(caseRowObj.end2, treatDate) : true;
+
+  return e1 && e2;
+}
+
+function buildEpisodeDatesBackwards_StopAtClosed_(caseSh, caseMap, patientId, caseNo, prevDatesAsc, currentDate, maxGap) {
+  var episode = [];
+  var pivot = currentDate;
+
+  for (var i = prevDatesAsc.length - 1; i >= 0; i--) {
+    var d = prevDatesAsc[i];
+    var gap = daysBetween_(d, pivot);
+    if (gap > maxGap) break;
+
+    var row = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, d, caseNo);
+    if (isCaseClosedAsOf_(row, pivot)) {
+      break;
+    }
+
+    episode.unshift(d);
+    pivot = d;
+  }
+  return episode;
+}
+
+function partExists_(src, idx) {
+  if (!src) return false;
+  if (idx === 1) return !!(String(src.p1||"").trim() || String(src.d1||"").trim() || (src.inj1 instanceof Date));
+  return !!(String(src.p2||"").trim() || String(src.d2||"").trim() || (src.inj2 instanceof Date));
+}
+
+/* =====================================================
+   setupValidation_V3（傷病名プルダウン設定）
+   設定シートC列の傷病名一覧を読み取り、
+   患者画面のB12, B13, B27, B28にプルダウンを設定する。
+   ===================================================== */
+function setupValidation_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var settingsSh = ss.getSheetByName(SHEETS.settings);
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  if (!settingsSh) throw new Error("設定シートが見つかりません");
+  if (!uiSh) throw new Error("患者画面シートが見つかりません");
+
+  // 設定シートC列から傷病名一覧を取得（C2以降、空セルまで）
+  var lastRow = settingsSh.getLastRow();
+  if (lastRow < 2) {
+    SpreadsheetApp.getUi().alert("設定シートC列に傷病名一覧がありません。C2以降に傷病名を入力してください。");
+    return;
+  }
+
+  var values = settingsSh.getRange(2, 3, lastRow - 1, 1).getValues().flat();
+  var names = [];
+  for (var i = 0; i < values.length; i++) {
+    var v = String(values[i] || "").trim();
+    if (!v) break;
+    names.push(v);
+  }
+
+  if (!names.length) {
+    SpreadsheetApp.getUi().alert("設定シートC列に傷病名が見つかりません。C2以降に傷病名を入力してください。");
+    return;
+  }
+
+  // プルダウン設定対象セル: B12, B13, B27, B28
+  var targetCells = ["B12", "B13", "B27", "B28"];
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(names, true)
+    .setAllowInvalid(false)
+    .build();
+
+  for (var j = 0; j < targetCells.length; j++) {
+    uiSh.getRange(targetCells[j]).setDataValidation(rule);
+  }
+
+  SpreadsheetApp.getUi().alert(
+    "傷病名プルダウンを設定しました。\n対象: " + targetCells.join(", ") +
+    "\n選択肢: " + names.join(", ")
+  );
+}

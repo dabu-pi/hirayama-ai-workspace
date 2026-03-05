@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>新規患者登録</title>
+</head>
+<body>
+    <h1>新規患者登録</h1>
+    <form method="POST" action="/register">
+        <label for="zipcode">郵便番号:</label>
+        <input type="text" id="zipcode" name="zipcode" maxlength="7" required>
+        <button type="button" id="fetch_address">住所を取得</button>
+        <br>
+        <label for="address">住所:</label>
+        <input type="text" id="address" name="address" required>
+        <br>
+        <label for="patient_name">患者名:</label>
+        <input type="text" id="patient_name" name="patient_name" required>
+        <br>
+        
+        <!-- 性別のラジオボタン -->
+        <label>性別:</label>
+        <input type="radio" id="male" name="gender" value="男" required>
+        <label for="male">男</label>
+        <input type="radio" id="female" name="gender" value="女">
+        <label for="female">女</label>
+        <br>
+        
+        <label for="birth_date">生年月日 (例: 19731010):</label>
+        <input type="text" id="birth_date" name="birth_date" pattern="\d{8}" maxlength="8" required title="生年月日は8桁の数字で入力してください (例: 19731010)">
+        <br>
+        <label for="phone_number">電話番号:</label>
+        <input type="text" id="phone_number" name="phone_number" required>
+        <br>
+        <button type="submit">登録</button>
+    </form>
+    <a href="/">戻る</a>
+</body>
+
+<script>
+    document.getElementById('fetch_address').addEventListener('click', function () {
+        const zipcode = document.getElementById('zipcode').value;
+        if (!zipcode) {
+            alert("郵便番号を入力してください。");
+            return;
+        }
+
+        fetch(`/get_address?zipcode=${zipcode}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.getElementById('address').value = `${data.prefecture} ${data.city} ${data.town}`;
+                }
+            })
+            .catch(error => {
+                alert("住所の取得に失敗しました。");
+                console.error(error);
+            });
+    });
+</script>
+</html>

@@ -1,0 +1,29 @@
+# 認証情報・秘密情報
+.env
+*.env
+service_account.json
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+
+# Node.js
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ログ・一時ファイル
+flask_log.txt
+*.log
+nul
+
+# GAS clasp
+.clasp.json

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ name }}の詳細</title>
+</head>
+<body>
+    <h1>{{ name }} の詳細</h1>
+    <p>患者ID: {{ patient_id }}</p>
+    <table border="1">
+        <tr>
+            <th>診療日</th>
+            <th>症状の経過</th>
+            <th>治療内容</th>
+            <th>備考</th>
+        </tr>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['診療日'] }}</td>
+            <td>{{ record['症状の経過'] }}</td>
+            <td>{{ record['治療内容'] }}</td>
+            <td>{{ record['備考'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/">戻る</a>
+</body>
+</html>

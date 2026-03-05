@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>患者情報の編集</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">患者情報の編集</h1>
+        <form method="POST" action="/edit/{{ patient['患者ID'] }}">
+            <div class="mb-3">
+                <label for="patient_name" class="form-label">患者名</label>
+                <input type="text" class="form-control" id="patient_name" name="patient_name" value="{{ patient['患者名'] }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="gender" class="form-label">性別</label>
+                <select class="form-select" id="gender" name="gender" required>
+                    <option value="男性" {% if patient['性別'] == '男性' %}selected{% endif %}>男性</option>
+                    <option value="女性" {% if patient['性別'] == '女性' %}selected{% endif %}>女性</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="birth_date" class="form-label">生年月日</label>
+                <input type="text" class="form-control" id="birth_date" name="birth_date" value="{{ patient['生年月日'] }}" placeholder="YYYYMMDD" required>
+            </div>
+            <div class="mb-3">
+                <label for="zipcode" class="form-label">郵便番号</label>
+                <input type="text" class="form-control" id="zipcode" name="zipcode" value="{{ patient['郵便番号'] }}" placeholder="1234567" required>
+            </div>
+            <div class="mb-3">
+                <label for="address" class="form-label">住所</label>
+                <input type="text" class="form-control" id="address" name="address" value="{{ patient['住所'] }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="phone_number" class="form-label">電話番号</label>
+                <input type="text" class="form-control" id="phone_number" name="phone_number" value="{{ patient['電話番号'] }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="/" class="btn btn-secondary">キャンセル</a>
+        </form>
+    </div>
+</body>
+</html>

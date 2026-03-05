@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ patient_name }} さんのカルテ</title>
+</head>
+<body>
+    <h1>{{ patient_name }} さんのカルテ (ID: {{ patient_id }})</h1>
+    <a href="{{ url_for('add_record', patient_id=patient_id) }}">診療記録を追加</a>
+
+    <h2>診療記録</h2>
+    <table border="1">
+        <tr>
+            <th>診療日</th>
+            <th>症状の経過</th>
+            <th>治療内容</th>
+            <th>備考</th>
+        </tr>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['診療日'] }}</td>
+            <td>{{ record['症状の経過'] }}</td>
+            <td>{{ record['治療内容'] }}</td>
+            <td>{{ record['備考'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <a href="{{ url_for('index') }}">戻る</a>
+</body>
+</html>
