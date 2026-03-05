@@ -110,6 +110,41 @@ Claude APIを用いた分析・提案自動生成の実装が次フェーズ。
 
 ---
 
+## workspace と claude-sandbox の運用ルール
+
+このワークスペースは2つのディレクトリで構成されている。Claudeはどちらで作業するかを常に明確にする。
+
+```
+C:\hirayama-ai-workspace\
+├── workspace\        ← 本番開発（このリポジトリ）
+└── claude-sandbox\   ← 実験・プロトタイプ専用（別リポジトリ）
+```
+
+### workspace（本番）で行うこと
+
+- プロジェクトのソースコード実装・修正
+- ドキュメントの更新（CLAUDE.md / PROJECTS.md / ROADMAP.md 等）
+- 仕様が固まった機能の実装
+- commit & push まで実施する
+
+### claude-sandbox（実験）で行うこと
+
+- 新技術・新APIの動作確認
+- 仕様が未確定のプロトタイプ
+- workspace に影響を与えたくない試行錯誤
+- **commit は任意。push 不要**
+
+### 判断基準
+
+| 状況 | 作業場所 |
+|---|---|
+| 既存プロジェクトのバグ修正・機能追加 | `workspace/` |
+| 「試しにやってみる」「動くか確認する」 | `claude-sandbox/` |
+| claude-sandbox で動作確認済みのコードを本番化 | `workspace/` に移植 |
+| 仕様が不明・要件が曖昧 | 先に質問。claude-sandbox で試作後に本番化 |
+
+---
+
 ## Claudeへの行動指針
 
 ### 作業開始時に必ず実行

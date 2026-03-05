@@ -15,10 +15,19 @@ venv/
 # Node.js
 node_modules/
 
+# IDE・エディタ
+.vscode/
+.idea/
+
 # OS
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 一時ファイル
+~$*
+*.tmp
+*.bak
 
 # ログ・一時ファイル
 flask_log.txt

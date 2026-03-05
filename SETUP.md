@@ -7,31 +7,33 @@
 ## 前提・注意事項
 
 - **OneDrive管理下のフォルダにクローンしない**（同期競合やファイルロックが発生する）
-- 作業フォルダは `C:\hirayama-ai-workspace\` を使う
-- 認証情報ファイル（`service_account.json`、`.env` 等）はGitに含まれていない。別途配置が必要
+- 作業フォルダは `C:\hirayama-ai-workspace\` 固定で使う
+- 認証情報ファイル（`service_account.json`、`.env` 等）はGitに含まれていないため別途配置が必要
 
 ---
 
 ## Step 1 — ツールのインストール
 
-以下を順番にインストールする。
+以下を順番にインストールする。インストール後は新しいターミナルを開いてパスを反映させる。
 
 ### Git
 
+公式サイトからインストール（Windows用インストーラー）:
 ```
 https://git-scm.com/download/win
 ```
 
-インストール後、Git Bash または PowerShell で確認:
-
+確認:
 ```bash
 git --version
+# git version 2.x.x
 ```
 
 ### Node.js（clasp用）
 
+LTS版をインストール:
 ```
-https://nodejs.org/  （LTS版を選ぶ）
+https://nodejs.org/
 ```
 
 ### clasp（GAS用CLIツール）
@@ -42,18 +44,22 @@ npm install -g @google/clasp
 
 ### Python（patient-management用）
 
+3.11以上をインストール:
 ```
-https://www.python.org/downloads/  （3.11以上を選ぶ）
+https://www.python.org/downloads/
 ```
+
+インストール時に「Add Python to PATH」にチェックを入れる。
 
 ---
 
 ## Step 2 — リポジトリのクローン
 
+Git Bash または PowerShell で実行:
+
 ```bash
-cd C:\
-mkdir hirayama-ai-workspace
-cd hirayama-ai-workspace
+mkdir -p /c/hirayama-ai-workspace
+cd /c/hirayama-ai-workspace
 git clone https://github.com/dabu-pi/hirayama-ai-workspace.git workspace
 ```
 
@@ -61,7 +67,7 @@ git clone https://github.com/dabu-pi/hirayama-ai-workspace.git workspace
 
 ```
 C:\hirayama-ai-workspace\
-└── workspace\   ← ここが開発ディレクトリ
+└── workspace\   ← ここが本番開発ディレクトリ
 ```
 
 ---
@@ -70,7 +76,16 @@ C:\hirayama-ai-workspace\
 
 ```bash
 git config --global user.name "Katsushi Hirayama"
-git config --global user.email "your-email@example.com"
+git config --global user.email "ここに自分のGitHubメールアドレスを入力"
+# 例: git config --global user.email "dabu-pi@users.noreply.github.com"
+```
+
+設定確認:
+
+```bash
+git config --global --list
+# user.name=Katsushi Hirayama
+# user.email=...
 ```
 
 ---
@@ -85,14 +100,20 @@ claspのGoogle認証:
 clasp login
 ```
 
-ブラウザが開くので、Googleアカウントでログインして認証を完了させる。
+ブラウザが開くのでGoogleアカウントでログインして認証を完了させる。
 
-各GASプロジェクトの `.clasp.json` は**gitに含まれていない**（PC固有設定）。
-スプレッドシートのエディタで「拡張機能 → Apps Script」を開き、スクリプトIDを確認して以下を作成する:
+認証確認:
 
 ```bash
-# gas-projects/jyu-gas-ver3.1/ に作成
-cd workspace/gas-projects/jyu-gas-ver3.1
+clasp whoami
+# Logged in as: xxxx@gmail.com
+```
+
+各GASプロジェクトの `.clasp.json` は **gitに含まれていない**（PC固有設定）。
+スプレッドシートのエディタで「拡張機能 → Apps Script」を開き、スクリプトIDを確認して作成する。
+
+```bash
+cd /c/hirayama-ai-workspace/workspace/gas-projects/jyu-gas-ver3.1
 ```
 
 `.clasp.json`（各自作成・コミット不可）:
@@ -106,19 +127,17 @@ cd workspace/gas-projects/jyu-gas-ver3.1
 
 ### 4-2. patient-management（Flask Webアプリ）
 
-仮想環境の作成とパッケージインストール:
-
 ```bash
-cd workspace/patient-management
+cd /c/hirayama-ai-workspace/workspace/patient-management
 python -m venv venv
-venv\Scripts\activate
+source venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
 `service_account.json` を配置する（gitに含まれていないため別途入手）:
 
 ```
-workspace/patient-management/service_account.json
+C:\hirayama-ai-workspace\workspace\patient-management\service_account.json
 ```
 
 `.env` ファイルを作成（gitに含まれていないため自分で作成）:
@@ -132,7 +151,7 @@ FLASK_SECRET_KEY=任意のランダム文字列
 
 ```bash
 python app.py
-# → http://localhost:5000 で動作確認
+# → ブラウザで http://localhost:5000 にアクセスして動作確認
 ```
 
 ---
@@ -142,14 +161,14 @@ python app.py
 ### 作業開始時（毎回必ず実行）
 
 ```bash
-cd C:\hirayama-ai-workspace\workspace
+cd /c/hirayama-ai-workspace/workspace
 git pull origin master
 ```
 
 ### 作業後
 
 ```bash
-git add <変更したファイル>
+git add <変更したファイル名>
 git commit -m "変更内容の説明"
 git push origin master
 ```
@@ -163,6 +182,7 @@ git push origin master
 | 項目 | 確認コマンド | 期待結果 |
 |---|---|---|
 | Git | `git status` | `On branch master` と表示される |
+| Git設定 | `git config --global --list` | name / email が表示される |
 | clasp認証 | `clasp whoami` | Googleアカウントのメールが表示される |
 | Python仮想環境 | `python --version`（venv内） | 3.11以上 |
 | Flaskアプリ | `python app.py` | localhost:5000 でアクセス可能 |
@@ -182,9 +202,9 @@ clasp login --no-localhost
 ### `git pull` でコンフリクトが発生した
 
 ```bash
-git status          # コンフリクト対象ファイルを確認
+git status                     # コンフリクト対象ファイルを確認
 # ファイルを手動で編集してコンフリクトを解消
-git add <ファイル>
+git add <ファイル名>
 git commit -m "Resolve merge conflict"
 ```
 
@@ -192,3 +212,12 @@ git commit -m "Resolve merge conflict"
 
 `patient-management/` に `service_account.json` が配置されているか確認する。
 gitには含まれていないため、別のPCから直接コピーするか、Google Cloud Consoleで再発行する。
+
+### Python仮想環境が見つからない / activate できない
+
+```bash
+cd /c/hirayama-ai-workspace/workspace/patient-management
+python -m venv venv          # 再作成
+source venv/Scripts/activate
+pip install -r requirements.txt
+```
