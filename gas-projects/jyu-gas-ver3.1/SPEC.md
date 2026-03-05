@@ -318,6 +318,8 @@
 saveVisit_V3 の金額計算結果を施術明細シートへ部位単位で書き込む。
 申請書_転記データ（Ver3_transferData.js）が施術明細を参照するため必須。
 
+### 実装済み（Ver3_core.js: upsertDetailRows_V3_）
+
 ### detailID
 
 ```
@@ -325,46 +327,74 @@ detailID = visitKey + "_C" + caseNo + "_P" + partOrder
 ```
 
 - 例: `P0001_2026-02-15_C1_P1`
-- 既存行があれば上書き、なければ末尾追記
+- `caseNo` = UIのケーススロット番号（1または2）
+- `partOrder` = 同一ケース内の部位順（1始まり、多部位逓減に使用）
+- 既存行があれば上書き、なければ末尾追記（冪等）
 
-### 施術明細シート列
+### 施術明細シート列（全23列）
 
-| 列名 | 内容 | 備考 |
-|------|------|------|
-| detailID | 一意キー | visitKey_C{n}_P{n} |
-| visitKey | 来院キー | |
-| 患者ID | | |
-| 施術日 | | |
-| 区分 | 初検/再検/後療 | |
-| caseNo | ケース番号(1/2) | |
-| 部位 | 部位名 | |
-| 傷病 | 傷病名 | |
-| 部位順位 | 1,2,3... | 多部位逓減に使用 |
-| 冷 | チェックボックス | |
-| 温 | チェックボックス | |
-| 電 | チェックボックス | |
-| 受傷日_確定 | Date | |
-| 係数 | 逓減係数 | 確定値 |
-| 基本料_確定 | 施療料or後療料 | 確定値 |
-| 初検相談_確定 | 0固定 | 確定値 |
-| 冷_確定 | 冷罨法金額 | 確定値 |
-| 温_確定 | 温罨法金額 | 確定値 |
-| 電_確定 | 電療金額 | 確定値 |
-| 待機_確定 | 待機料金額 | 確定値 |
-| 行合計_確定 | (基本+冷+温+電+待機)*係数 | 確定値 |
+| 列名 | 内容 | データソース |
+|------|------|------------|
+| detailID | 一意キー（主キー） | visitKey_C{n}_P{n} で生成 |
+| visitKey | 来院キー | ctx.visitKey |
+| 患者ID | | ctx.patientId |
+| 施術日 | | ctx.treatDate |
+| 区分 | 初検/再検/後療 | ctx.kubun1 or kubun2 |
+| caseNo | ケーススロット番号(1/2) | 1=ケース1, 2=ケース2 |
+| caseKey | エピソードキー | buildCaseKey_() で生成 |
+| 受傷日_確定 | Date | calcOnePartAmount_V3_ の injuryDate |
+| 受傷日(入力) | ※未書込（将来用） | — |
+| 部位 | 部位名 | calcCaseDetailAmount_V3_ が part.bui に追加 |
+| 傷病 | 傷病名 | calcOnePartAmount_V3_ の byomei |
+| 部位順位 | 1,2,3... | calcOnePartAmount_V3_ の partOrder |
+| 冷 | チェックON/OFF | coldChk |
+| 温 | チェックON/OFF | warmChk |
+| 電 | チェックON/OFF | electroChk |
+| 係数 | 多部位逓減係数 | coef (1.0 or 0.6) |
+| 基本料_確定 | 施療料/後療料/整復料/固定料 | base（長期減額前） |
+| 初検相談_確定 | 0固定（明細行には分配しない） | 0 |
+| 冷_確定 | 冷罨法金額（算定不可は0） | cold |
+| 温_確定 | 温罨法金額（算定不可は0） | warm |
+| 電_確定 | 電療金額（算定不可は0） | electro |
+| 待機_確定 | 待機料金額 | taiki |
+| 行合計_確定 | (ltBase+冷+温+電+待機)×coef | total |
 
-### データソース
+> **注意**: `基本料_確定` は長期減額前の raw base。長期減額（ltCoef）は `行合計_確定` の計算に組み込まれている。
 
-`calcHeaderAmountsByVisitKey_V3_` の返り値 `amounts.details`:
-- `case1Parts`: ケース1の部位別内訳配列
-- `case2Parts`: ケース2の部位別内訳配列
+### データフロー
 
-各要素は `calcOnePartAmount_V3_` が返すオブジェクト:
-`{ base, cold, warm, electro, taiki, coef, total, byomei, bui, partOrder, injuryDate, coldChk, warmChk, electroChk }`
+```
+saveVisit_V3
+  └─ calcHeaderAmountsByVisitKey_V3_()
+        └─ calcCaseDetailAmount_V3_(caseNo=1) → { total, parts: [part1, part2] }
+              └─ calcOnePartAmount_V3_() → { base, cold, warm, electro, taiki,
+                                              coef, longTermCoef, total,
+                                              byomei, partOrder, injuryDate,
+                                              coldChk, warmChk, electroChk }
+                ※ calcCaseDetailAmount_V3_ が part.bui = 部位名 を追加
+        └─ calcCaseDetailAmount_V3_(caseNo=2) → 同様
+        └─ amounts.details = { case1Parts: [...], case2Parts: [...] }
+  └─ upsertDetailRows_V3_(detailSh, detailMap, ctx)
+        ctx = {
+          visitKey, patientId, treatDate,
+          kubun1, kubun2,
+          amounts,   // amounts.details を使用
+          ep1, ep2,  // episodeStartDate で caseKey を生成
+          now
+        }
+```
 
-### 実装関数
+### 冪等性
 
-`upsertDetailRows_V3_(detailSh, detailMap, ctx)` — Ver3_core.js
+- `findRowByKey_` で `detailID` 列を検索
+- 既存行があれば `setValues` で上書き
+- なければ `lastRow + 1` に追記
+- 同一 visitKey に対して `saveVisit_V3` を再実行しても行は増えない
+  （ただし来院ヘッダの二重登録禁止チェックにより、saveVisit_V3 自体が再実行を禁止している）
+
+### シートセットアップ
+
+メニュー「施術明細ヘッダーセットアップ」(`ensureDetailHeaders_V3`) で全23列のヘッダを1行目に設定する。施術明細シートが存在することが前提。
 
 ---
 
