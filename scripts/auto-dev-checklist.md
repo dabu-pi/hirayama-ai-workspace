@@ -33,9 +33,17 @@ git checkout -b [feature|fix|docs|refactor|hotfix]/[短い説明]
 
 ## Phase 2: 実装中（DO フェーズ）
 
-### 実行ルール
+### 実行ルール（Phase によって使うコマンドが異なる）
+
+**Phase1（rwl 直接）:**
 - [ ] スクリプト・テストの実行は `rwl` を経由している
 - [ ] `python main.py` を直接実行していない
+
+**Phase2（adr 経由）:**
+- [ ] スクリプト・テストの実行は `adr -Cmd "..."` を経由している
+- [ ] `-AutoNote` で自動 note が生成されている（手動 note は補足のみ）
+
+**共通:**
 - [ ] 変更は1ファイルずつ `git diff` で差分確認している
 
 ### 進捗チェック（1ファイル変更ごと）
@@ -55,13 +63,27 @@ git checkout -b [feature|fix|docs|refactor|hotfix]/[短い説明]
 
 ### ログ確認
 - [ ] `logs/run/` に実行ログが生成された
-- [ ] `logs/error/` にエラーファイルが存在しない（存在する場合は内容確認）
+- [ ] `logs/error/` にエラーファイルが存在しない（存在する場合: `aerr` で確認）
 - [ ] テストが存在する場合、すべてパスした
+
+**Phase2 補足:**
+```powershell
+dstat       # ログ件数・エラー件数・最新メモを一覧表示
+aerr        # エラー内容を整形表示（失敗時）
+aerr -ListAll  # 全エラーログの一覧表示
+```
 
 ### git 確認
 - [ ] `git diff` で変更差分が意図通りである
 - [ ] コミット対象に認証情報が含まれていない
+
+**Phase1:**
 - [ ] `git add .` を使わず、ファイルを個別指定した
+- [ ] `git commit -m "..."` でコミットした
+
+**Phase2（gsc 経由）:**
+- [ ] `gsc -Message "..." -Files @(...) -Push` で安全コミットした
+- [ ] `gsc` のセキュリティチェックが全て PASS した
 
 ### コミットメッセージ確認
 ```
@@ -109,7 +131,9 @@ chore    設定・依存・整理
 
 | ドキュメント | 内容 |
 |---|---|
-| `docs/AUTO_DEV_MODE.md` | 自動開発モード全体仕様 |
+| `docs/AUTO_DEV_MODE.md` | Phase1 自動開発モード全体仕様 |
+| `docs/AUTO_DEV_MODE_PHASE2.md` | Phase2 仕様（DoD・巻き戻し・STOP条件） |
+| `docs/PROMPTS/auto-dev-phase2.md` | Phase2 開始プロンプト |
 | `CLAUDE.md` | プロジェクト仕様・禁止事項 |
 | `ROADMAP.md` | タスク一覧・優先順位 |
 | `docs/AI_DEV_ENV.md` | 環境構成・スクリプト使い方 |

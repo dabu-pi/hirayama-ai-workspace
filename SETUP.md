@@ -156,7 +156,60 @@ python app.py
 
 ---
 
-## Step 5 — 日常の開発フロー
+## Step 5 — PowerShell エイリアスの設定
+
+PowerShell でショートコマンドを使えるようにします。
+Git Bash でなく **PowerShell (5.1 または 7)** で実行してください。
+
+### 5-1. 実行ポリシーの変更（初回のみ）
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### 5-2. エイリアスの自動登録
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace\scripts
+.\setup-aliases.ps1
+```
+
+確認だけしたい場合（DryRun）:
+
+```powershell
+.\setup-aliases.ps1 -DryRun
+```
+
+### 5-3. $PROFILE の即時反映
+
+```powershell
+. $PROFILE
+```
+
+新しいターミナルを開いても自動で反映されます。
+
+### 登録されるコマンド
+
+| コマンド | 役割 | フェーズ |
+|---|---|---|
+| `cap` | 新規プロジェクト作成 | Phase1 |
+| `rwl` | ログ付き実行（直接） | Phase1 |
+| `note` | 開発メモ保存 | Phase1 |
+| `adr` | 司令塔：rwl 経由実行 + 自動 note | Phase2 |
+| `gsc` | 安全確認付き commit & push | Phase2 |
+| `aerr` | 最新エラーログ整形表示 | Phase2 |
+| `dstat` | プロジェクト状態ダッシュボード | Phase2 |
+
+動作確認:
+
+```powershell
+dstat         # プロジェクト状態を表示
+note "セットアップ完了" -Tag done
+```
+
+---
+
+## Step 6 — 日常の開発フロー
 
 ### 作業開始時（毎回必ず実行）
 
@@ -177,7 +230,7 @@ git push origin master
 
 ---
 
-## Step 6 — 動作確認チェックリスト
+## Step 7 — 動作確認チェックリスト
 
 | 項目 | 確認コマンド | 期待結果 |
 |---|---|---|
@@ -186,6 +239,8 @@ git push origin master
 | clasp認証 | `clasp whoami` | Googleアカウントのメールが表示される |
 | Python仮想環境 | `python --version`（venv内） | 3.11以上 |
 | Flaskアプリ | `python app.py` | localhost:5000 でアクセス可能 |
+| エイリアス（PS） | `dstat` | プロジェクト状態が表示される |
+| エイリアス（PS） | `note "test" -Tag done` | logs/notes/ にメモが保存される |
 
 ---
 
