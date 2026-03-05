@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 平山克司ワークスペースのAIアシスタント（Claude Code）向けガイド。
-このファイルはClaude Codeがワークスペースを理解するための参照ドキュメントです。
+このファイルはClaude Codeがワークスペースを理解するための一次情報です。
 
 ---
 
@@ -19,47 +19,49 @@
 
 ```
 workspace/
-├── CLAUDE.md                        # このファイル
-├── README.md                        # ワークスペース概要
+├── CLAUDE.md                        # このファイル（AI向け一次ガイド）
+├── README.md                        # GitHub表示用・ナビゲーションのみ
 ├── PROJECTS.md                      # 全プロジェクト詳細設計
+├── ROADMAP.md                       # 開発計画・タスクとステータス管理
+├── SETUP.md                         # 新PCセットアップ手順
 ├── .gitignore
 │
 ├── gas-projects/
 │   └── jyu-gas-ver3.1/              # 柔整GASシステム（稼働中）
-│       ├── Ver3_core.js             # 来院登録・区分判定
+│       ├── Ver3_core.js             # 来院登録・区分判定・算定ロジック
 │       ├── Ver3_amounts.js          # 金額計算
 │       ├── Ver3_transferData.js     # 申請書データ転記
 │       ├── Ver3_patientPicker.js    # 患者選択UI
-│       ├── write_application.py     # 療養費支給申請書生成
+│       ├── write_application.py     # 療養費支給申請書生成（ローカル実行）
 │       ├── SPEC.md                  # 金額計算仕様書
 │       ├── PLAN.md                  # 開発計画
-│       └── TESTCASES.md             # テストケース
+│       └── TESTCASES.md             # テストケース（TC01〜TC10）
 │
 ├── freee-automation/                # freee見積自動化（開発中）
-│   ├── spec.md                      # 仕様書
+│   ├── spec.md
 │   └── src/
 │       ├── freee請求書作成.js
 │       ├── hawkメール自動貼り付け.js
 │       └── phase3_下書き作成.js
 │
 ├── patient-management/              # 患者管理Webアプリ（開発中）
-│   ├── app.py                       # Flask本体
+│   ├── app.py
 │   ├── requirements.txt
 │   └── templates/
 │
 ├── hirayama-jyusei-strategy/        # 接骨院戦略AIドキュメント
-│   ├── strategy/                    # ビジネスモデル・KPI・患者フロー
-│   ├── menu/                        # 施術メニュー・料金・会員プラン
-│   ├── operations/                  # 日次業務・スケジュール
-│   ├── marketing/                   # 集客・ポジショニング
-│   └── finance/                     # コスト・利益シミュレーション
-│
-├── waste-report-system/             # 廃棄物日報GAS（未作成・企画段階）
+│   ├── strategy/
+│   ├── menu/
+│   ├── operations/
+│   ├── marketing/
+│   └── finance/
 │
 └── archive/                         # 不使用・旧バージョンの保管庫
-    ├── sandbox-flask-test/          # Flaskテスト用スケルトン
-    └── jyu-gas-simple/              # jyu-gas旧簡易版
+    ├── sandbox-flask-test/
+    └── jyu-gas-simple/
 ```
+
+> `waste-report-system/` は**企画段階・ディレクトリ未作成**。PROJECTS.md の企画メモを参照。
 
 ---
 
@@ -100,11 +102,41 @@ Google スプレッドシートをDBとして使うFlask製患者住所録管理
 慢性疼痛特化の整骨院×トレーニングジムモデルの経営戦略ドキュメント群。
 Claude APIを用いた分析・提案自動生成の実装が次フェーズ。
 
-### 5. `waste-report-system/` — 廃棄物日報GAS
+### 5. 廃棄物日報GASシステム
 
 **ステータス:** 企画段階（ディレクトリ未作成）
 
-廃棄物収集業務の日報作成・月次集計を自動化するGASシステム。
+企画メモは PROJECTS.md を参照。ディレクトリ作成・開発着手後にここへ追記する。
+
+---
+
+## Claudeへの行動指針
+
+### 作業開始時に必ず実行
+
+```bash
+git pull origin master
+```
+
+コンフリクト防止のため、毎回の作業開始前に必ず実行する。
+
+### 判断基準
+
+- **仕様が不明な場合は実装せず、質問してから進める**
+- GASコードはローカル実行不可。テストは `TESTCASES.md` のケースをもとにコードレビューで行い、スプレッドシート上の動作確認は人間が行う
+- freee API の仕様は `freee-automation/spec.md` を参照し、エンドポイントを推測で実装しない
+- 認証情報ファイルが必要な場合は「このパスに配置してください」と指示するにとどめ、内容を生成・提案しない
+
+### やってはいけないこと
+
+| 禁止事項 | 理由 |
+|---|---|
+| freee APIへの本番POST自動実行 | 下書き確認ステップが必須 |
+| Gmail・メールの自動送信 | 不可逆操作 |
+| `_backup/` への新規ファイル追加 | gitが代替。不要 |
+| 単価・料金のコード内ハードコード | 設定シートで一元管理 |
+| `service_account.json` 等の認証情報を生成・コミット | 絶対禁止 |
+| OneDriveフォルダ内での作業・ファイル保存 | 同期競合の原因になる |
 
 ---
 
@@ -125,15 +157,15 @@ Claude APIを用いた分析・提案自動生成の実装が次フェーズ。
 ### ファイル管理
 
 - 不要になったファイルはすぐ削除せず `archive/` に移動する
-- プロジェクトごとに `README.md` を置く
-- 実験・テスト用コードは本番ディレクトリに混在させない
+- `_backup/` フォルダはgitが代替するため新規作成・追加不可
+- 実験・テスト用コードは本番ディレクトリに混在させず `claude-sandbox/` を使う
 
 ### Git運用
 
 - **Claude Codeは作業完了後、基本的にcommitとpushまで行う**
 - コミット前に認証情報が含まれていないか確認する
 - `venv/`、`__pycache__/`、ログファイルはコミットしない
-- コミットメッセージは変更内容が明確にわかる英語または日本語で記述する
+- コミットメッセージは変更内容が明確にわかる日本語または英語で記述する
 
 ---
 
@@ -150,10 +182,12 @@ Claude APIを用いた分析・提案自動生成の実装が次フェーズ。
 
 ---
 
-## 詳細設計
+## 参照ドキュメント
 
-各プロジェクトの詳細仕様は以下を参照:
-
-- [PROJECTS.md](./PROJECTS.md) — 全プロジェクトの設計図
-- [gas-projects/jyu-gas-ver3.1/SPEC.md](./gas-projects/jyu-gas-ver3.1/SPEC.md) — 柔整金額計算仕様
-- [freee-automation/spec.md](./freee-automation/spec.md) — freee自動化仕様
+| ドキュメント | 内容 |
+|---|---|
+| [PROJECTS.md](./PROJECTS.md) | 全プロジェクトの詳細設計・仕様 |
+| [ROADMAP.md](./ROADMAP.md) | 開発計画・タスクとステータス |
+| [SETUP.md](./SETUP.md) | 新PCセットアップ手順 |
+| [gas-projects/jyu-gas-ver3.1/SPEC.md](./gas-projects/jyu-gas-ver3.1/SPEC.md) | 柔整金額計算仕様 |
+| [freee-automation/spec.md](./freee-automation/spec.md) | freee自動化仕様 |
