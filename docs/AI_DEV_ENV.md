@@ -14,6 +14,7 @@
 5. [AI開発フロー](#5-ai開発フロー)
 6. [Claudeとの役割分担](#6-claudeとの役割分担)
 7. [PATH設定・初回セットアップ](#7-path設定初回セットアップ)
+8. [Auto Dev Mode（Claude 自動開発ループ）](#8-auto-dev-modeclaude-自動開発ループ)
 
 ---
 
@@ -347,6 +348,47 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 create-ai-project.ps1 test-project -Path $env:TEMP
 note.ps1 "セットアップ完了"
 ```
+
+---
+
+## 8. Auto Dev Mode（Claude 自動開発ループ）
+
+### 概要
+
+Claude Code を「指示待ち」ではなく、PDCA ループで自律的に前進させる運用モードです。
+詳細仕様は [`docs/AUTO_DEV_MODE.md`](AUTO_DEV_MODE.md) を参照してください。
+
+### プロンプトファイルの使い方
+
+| ファイル | 用途 | タイミング |
+|---|---|---|
+| `docs/PROMPTS/auto-dev-start.md` | セッション開始・初回サイクル | 新しい Claude Code セッションの冒頭 |
+| `docs/PROMPTS/auto-dev-loop.md` | 2サイクル目以降 | 前サイクルの NEXT を受けて次サイクルへ |
+| `docs/PROMPTS/auto-dev-hotfix.md` | 障害対応・バグ修正専用 | 本番障害・緊急バグ発生時 |
+
+使い方: 各ファイルの内容をコピーして Claude Code のチャットに貼り付ける。
+`[プレースホルダー]` の部分は状況に応じて書き換える。
+
+### チェックリスト
+
+着手前・実装中・仕上げの各フェーズで確認すべき項目は
+[`scripts/auto-dev-checklist.md`](../scripts/auto-dev-checklist.md) にまとめています。
+
+### 1サイクルの流れ
+
+```
+PLAN  → git pull / ROADMAP確認 / ブランチ作成 / 方針出力
+DO    → 実装 / rwl で実行確認
+CHECK → ログ確認 / git diff / テスト
+ACT   → note 保存 / commit / ROADMAP更新 / NEXT 出力
+```
+
+### STOP 条件（即時中断）
+
+| 種類 | 条件 |
+|---|---|
+| 絶対STOP | 認証情報操作 / 本番 API POST / 破壊的 git 操作 |
+| REPORT & STOP | 仕様不明 / 同じエラー3回 / 変更範囲が想定外に拡大 / テスト失敗 |
 
 ---
 
