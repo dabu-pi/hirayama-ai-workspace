@@ -14,7 +14,8 @@
 5. [AI開発フロー](#5-ai開発フロー)
 6. [Claudeとの役割分担](#6-claudeとの役割分担)
 7. [PATH設定・初回セットアップ](#7-path設定初回セットアップ)
-8. [Auto Dev Mode（Claude 自動開発ループ）](#8-auto-dev-modeclaude-自動開発ループ)
+8. [Auto Dev Mode Phase1（Claude 自動開発ループ）](#8-auto-dev-mode-phase1claude-自動開発ループ)
+9. [Auto Dev Mode Phase2（スクリプト固定ループ）](#9-auto-dev-mode-phase2スクリプト固定ループ)
 
 ---
 
@@ -351,7 +352,7 @@ note.ps1 "セットアップ完了"
 
 ---
 
-## 8. Auto Dev Mode（Claude 自動開発ループ）
+## 8. Auto Dev Mode Phase1（Claude 自動開発ループ）
 
 ### 概要
 
@@ -392,22 +393,85 @@ ACT   → note 保存 / commit / ROADMAP更新 / NEXT 出力
 
 ---
 
+## 9. Auto Dev Mode Phase2（スクリプト固定ループ）
+
+### 概要
+
+Phase1 の「手動ループ」を Phase2 で **スクリプト固定ループ** に昇格させます。
+詳細仕様は [`docs/AUTO_DEV_MODE_PHASE2.md`](AUTO_DEV_MODE_PHASE2.md) を参照してください。
+
+### Phase2 入口プロンプト
+
+`docs/PROMPTS/auto-dev-phase2.md` をコピーしてチャットに貼り付けると
+Phase2 ルールでセッションが開始されます。
+
+### Phase2 追加スクリプト
+
+| スクリプト | 役割 | 呼び出し例 |
+|---|---|---|
+| `scripts/auto-dev-run.ps1` | **司令塔** — rwl 経由実行 + 自動 note | `auto-dev-run -Cmd "python -m pytest" -AutoNote "テスト" -Tag test` |
+| `scripts/git-safe-commit.ps1` | 安全確認付き commit & push | `git-safe-commit -Message "feat: 〇〇" -Files @("src/main.py") -Push` |
+| `scripts/analyze-error.ps1` | 最新エラーログ整形表示 | `analyze-error` / `analyze-error -Lines 100` |
+| `scripts/dev-status.ps1` | プロジェクト状態ダッシュボード | `dev-status` |
+
+### $PROFILE への追加（Phase2 用エイリアス）
+
+```powershell
+function adr   { & "C:\hirayama-ai-workspace\workspace\scripts\auto-dev-run.ps1" @args }
+function gsc   { & "C:\hirayama-ai-workspace\workspace\scripts\git-safe-commit.ps1" @args }
+function aerr  { & "C:\hirayama-ai-workspace\workspace\scripts\analyze-error.ps1" @args }
+function dstat { & "C:\hirayama-ai-workspace\workspace\scripts\dev-status.ps1" @args }
+```
+
+### Phase2 の1サイクルフロー
+
+```
+PLAN  → git pull / dev-status で状態確認 / ブランチ作成
+DO    → 実装 / auto-dev-run -Cmd "..." -AutoNote "..." -Tag ...
+CHECK → exit コード確認 / 失敗時: analyze-error / git diff
+ACT   → git-safe-commit -Message "..." -Files @(...) -Push
+        ROADMAP更新 / NEXT 出力
+```
+
+### Phase2 出力フォーマット（6セクション）
+
+```
+## PLAN / ## CHANGES / ## COMMANDS / ## NOTES / ## GIT / ## NEXT
+```
+
+---
+
 ## 付録: よく使うコマンド一覧
 
 ```powershell
 # プロジェクト作成
 create-ai-project.ps1 <project-name>
 
-# ログ付き実行
+# --- Phase1 ---
+# ログ付き実行（直接）
 run-with-log.ps1 python main.py
 run-with-log.ps1 python -m pytest tests/
 
+# --- Phase2 ---
+# ログ付き実行（司令塔経由）
+auto-dev-run.ps1 -Cmd "python -m pytest tests/ -v" -AutoNote "テスト" -Tag test
+
+# 安全コミット & push
+git-safe-commit.ps1 -Message "feat: 〇〇" -Files @("src/main.py") -Push
+
+# エラー解析
+analyze-error.ps1
+analyze-error.ps1 -ListAll
+
+# 状態確認
+dev-status.ps1
+
+# --- 共通 ---
 # メモ保存
 note.ps1 "メモ内容"
 note.ps1 "メモ内容" -Tag bug|done|todo|idea|warn
 
 # Git 日常操作
-git pull origin master                    # 作業開始前に必ず
-git add <files> && git commit -m "..."    # 変更をコミット
-git push origin master                    # プッシュ
+git pull origin master
+git push origin master
 ```
