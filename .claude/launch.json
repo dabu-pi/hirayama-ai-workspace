@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "patient-management",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["patient-management/app.py"],
+      "port": 5000
+    },
+    {
+      "name": "sandbox-flask-test",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["archive/sandbox-flask-test/app.py"],
+      "port": 5000
+    }
+  ]
+}
