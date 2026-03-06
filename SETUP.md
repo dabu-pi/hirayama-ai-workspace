@@ -192,6 +192,8 @@ cd C:\hirayama-ai-workspace\workspace\scripts
 
 | コマンド | 役割 | フェーズ |
 |---|---|---|
+| `ds` | 作業開始：git pull + 状態確認 | **Phase3** |
+| `de` | 作業終了：commit + push | **Phase3** |
 | `cap` | 新規プロジェクト作成 | Phase1 |
 | `rwl` | ログ付き実行（直接） | Phase1 |
 | `note` | 開発メモ保存 | Phase1 |
@@ -203,6 +205,7 @@ cd C:\hirayama-ai-workspace\workspace\scripts
 動作確認:
 
 ```powershell
+ds            # 最新コードを取得
 dstat         # プロジェクト状態を表示
 note "セットアップ完了" -Tag done
 ```
@@ -213,20 +216,33 @@ note "セットアップ完了" -Tag done
 
 ### 作業開始時（毎回必ず実行）
 
-```bash
-cd /c/hirayama-ai-workspace/workspace
-git pull origin master
+PowerShell で実行する:
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+ds
 ```
 
-### 作業後
+- GitHubから最新コードを自動取得
+- ブランチ・変更の有無を表示
+- 未コミット変更があれば確認を求める
 
-```bash
-git add <変更したファイル名>
-git commit -m "変更内容の説明"
-git push origin master
+### 作業終了時（毎回必ず実行）
+
+```powershell
+de "変更内容の説明"
 ```
 
-> `git add .` は使わず、変更したファイルを個別に指定する（認証情報の誤コミット防止）
+- 全変更をまとめてコミット・GitHubにプッシュ
+- `.env` などの危険ファイルが含まれていたら自動で止まる
+
+push せずコミットだけしたいとき:
+
+```powershell
+de -NoPush "作業中・続きは後で"
+```
+
+> **Git コマンドを直接使う必要はありません。** `ds` と `de` だけ覚えれば OK です。
 
 ---
 
@@ -239,6 +255,8 @@ git push origin master
 | clasp認証 | `clasp whoami` | Googleアカウントのメールが表示される |
 | Python仮想環境 | `python --version`（venv内） | 3.11以上 |
 | Flaskアプリ | `python app.py` | localhost:5000 でアクセス可能 |
+| エイリアス（PS）ds | `ds` | git pull + 状態表示が出る |
+| エイリアス（PS）de | `de "テスト"` | コミット・push 完了と表示される |
 | エイリアス（PS） | `dstat` | プロジェクト状態が表示される |
 | エイリアス（PS） | `note "test" -Tag done` | logs/notes/ にメモが保存される |
 
