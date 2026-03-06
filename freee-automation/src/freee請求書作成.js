@@ -30,6 +30,7 @@ const CFG = {
   COL_LINES_JSON: 17,         // Q：見積明細JSON（現状は手入力想定）
   COL_FREEE_QUOTATION_ID: 18, // R：freee quotation_id（成功時に保存）
   COL_GMAIL_MESSAGE_ID: 19,   // S：予備（旧冪等キー列・現在はA列を正として使用）
+  COL_CHECK_REQUIRED: 20,     // T：要確認フラグ + 不足理由（2-5確定）
 
   // 見積設定
   PARTNER_TITLE_DEFAULT: '御中',   // '御中' or '様'
@@ -449,14 +450,21 @@ function freee_phase2_processPendingQuotations() {
         partnerId = String(resolveOrCreatePartnerId_(customerName));
         sheet.getRange(rowIndex, CFG.COL_FREEE_PARTNER_ID).setValue(partnerId);
       } catch (err) {
+        // 2-5確定：取引先未解決 → 要確認記録してスキップ
+        const reason = `要確認（取引先未解決：${err && err.message ? err.message.split('\n')[0] : err}）`;
+        sheet.getRange(rowIndex, CFG.COL_CHECK_REQUIRED).setValue(reason);
         console.error(`Row ${rowIndex} partner resolve failed:`, err && err.stack ? err.stack : err);
-        continue; // partnerが作れないなら見積作成は止める
+        continue;
       }
     }
 
     // ---- lines_json（現状は手入力前提）
     const linesJson = row[CFG.COL_LINES_JSON - 1];
-    if (!linesJson) continue;
+    // 2-5確定：明細不足 → 要確認記録してスキップ（freee POST しない・下書きも作成しない）
+    if (!linesJson) {
+      sheet.getRange(rowIndex, CFG.COL_CHECK_REQUIRED).setValue('要確認（明細不足：Q列にlines_jsonを入力してください）');
+      continue;
+    }
 
     const subject = String(row[CFG.COL_DESC - 1] || '').trim();
     const quotationDate = normalizeDateYmd_(row[CFG.COL_EVENT_DATE - 1]) || todayYmd_();
@@ -488,6 +496,9 @@ function freee_phase2_processPendingQuotations() {
 
       // S列が空なら冪等キーを保存（Message-IDが取れない運用の保険）
       if (!gmailMsgId) sheet.getRange(rowIndex, CFG.COL_GMAIL_MESSAGE_ID).setValue(String(idempotencyKey));
+
+      // T列：見積作成成功 → 要確認フラグをクリア
+      sheet.getRange(rowIndex, CFG.COL_CHECK_REQUIRED).setValue('');
 
     } catch (err) {
       console.error(`Row ${rowIndex} quotation failed:`, err && err.stack ? err.stack : err);

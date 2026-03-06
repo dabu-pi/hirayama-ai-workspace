@@ -27,7 +27,13 @@ const CONFIG = {
   PROCESSED_LABEL: 'processed_hawk_estimate',
   SEARCH_DAYS: 60,
   MAX_THREADS_PER_RUN: 50,
-  START_ROW: 2
+  START_ROW: 2,
+
+  // 2-5確定：件名キーワードフィルタ（いずれか1つ以上含む件名のみ処理）
+  SUBJECT_KEYWORDS: ['見積', '見積依頼', '作成お願いします'],
+
+  // T列：要確認フラグ + 不足理由
+  COL_CHECK_REQUIRED: 20,
 };
 
 function phase1_recordHawkMailsToSheet() {
@@ -65,6 +71,12 @@ function phase1_recordHawkMailsToSheet() {
     const subject = msg.getSubject() || '';
     const body = msg.getPlainBody() || '';
 
+    // 2-5確定：件名キーワードフィルタ（対象外はラベルのみ付与してスキップ）
+    if (!hasEstimateKeyword_(subject)) {
+      thread.addLabel(label);
+      continue;
+    }
+
     // ★B列：顧客名（強化）
     const customerName = extractCustomerNameV2_(subject, body) || '要確認';
 
@@ -74,6 +86,9 @@ function phase1_recordHawkMailsToSheet() {
 
     // ★Q列：見積明細JSON（自動抽出。抽出失敗時は空文字＝手入力）
     const linesJson = extractLinesJsonFromBody_(body);
+
+    // T列：要確認フラグ（必須情報が不足している場合に記録）
+    const checkRequired = buildCheckRequiredReason_(customerName, linesJson);
 
     // O列：メール1通直リンク
     const gmailInternalId = String(msg.getId());
@@ -87,6 +102,7 @@ function phase1_recordHawkMailsToSheet() {
       personFixed: '長谷川',
       linkUrl: messageUrl,
       linesJson,
+      checkRequired,
     });
 
     existingIdSet.add(messageId);
@@ -129,6 +145,9 @@ function phase1_rebuildFromProcessedLabel() {
     const subject = msg.getSubject() || '';
     const body = msg.getPlainBody() || '';
 
+    // 2-5確定：件名キーワードフィルタ
+    if (!hasEstimateKeyword_(subject)) continue;
+
     const customerName = extractCustomerNameV2_(subject, body) || '要確認';
 
     const itemName = extractMainItemFromBody_(body);
@@ -136,6 +155,9 @@ function phase1_rebuildFromProcessedLabel() {
 
     // ★Q列：見積明細JSON（自動抽出）
     const linesJson = extractLinesJsonFromBody_(body);
+
+    // T列：要確認フラグ
+    const checkRequired = buildCheckRequiredReason_(customerName, linesJson);
 
     const gmailInternalId = String(msg.getId());
     const messageUrl = buildGmailMessageUrl_(gmailInternalId);
@@ -148,6 +170,7 @@ function phase1_rebuildFromProcessedLabel() {
       personFixed: '長谷川',
       linkUrl: messageUrl,
       linesJson,
+      checkRequired,
     });
 
     existingIdSet.add(messageId);
@@ -619,5 +642,34 @@ function appendRow_(sheet, data) {
   const safeUrl = String(data.linkUrl).replace(/"/g, '""');
   sheet.getRange(row, 15).setFormula(`=HYPERLINK("${safeUrl}","長谷川")`);
 
+  // T列：要確認フラグ（2-5確定：必須情報不足時に記録）
+  if (data.checkRequired) {
+    sheet.getRange(row, CONFIG.COL_CHECK_REQUIRED).setValue(data.checkRequired); // T
+  }
+
   sheet.getRange(row, 3).setNumberFormat('yyyy/MM/dd');
+}
+
+/**
+ * 2-5確定：件名に見積キーワードが含まれるか判定
+ * 対象: 「見積」「見積依頼」「作成お願いします」のいずれか
+ */
+function hasEstimateKeyword_(subject) {
+  const s = String(subject || '');
+  return CONFIG.SUBJECT_KEYWORDS.some(kw => s.includes(kw));
+}
+
+/**
+ * 2-5確定：要確認フラグと不足理由を生成
+ * - 顧客名不明 or 明細なしの場合に T列へ書き込む文字列を返す
+ * - 問題なしの場合は空文字を返す
+ */
+function buildCheckRequiredReason_(customerName, linesJson) {
+  const nameMissing = customerName === '要確認';
+  const linesMissing = !linesJson;
+
+  if (nameMissing && linesMissing) return '要確認（顧客名不明・明細なし）';
+  if (nameMissing)                 return '要確認（顧客名不明：B列確認要）';
+  if (linesMissing)                return '要確認（明細なし：Q列手入力要）';
+  return '';
 }
