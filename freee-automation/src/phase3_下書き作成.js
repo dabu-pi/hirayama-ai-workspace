@@ -54,19 +54,10 @@ function phase3_createDraftsForQuotedRows() {
       continue;
     }
 
-    // PDF取得（失敗してもURL本文貼り付けで続行）
-    let pdfBlob = null;
-    try {
-      pdfBlob = p3_downloadPdf_(quotationId);
-    } catch (err) {
-      console.warn(`行${rowIndex}: PDF取得失敗（URL本文記載に切り替え）: ${err.message || err}`);
-    }
-
-    const freeeUrl = `https://app.freee.co.jp/invoice/quotations/${quotationId}`;
-    const body = p3_buildBody_(customerName, subject, freeeUrl, /* isUrlFallback= */ !pdfBlob);
+    const body = p3_buildBody_(customerName);
 
     try {
-      p3_createDraftReply_(gmailMessageId, body, pdfBlob);
+      p3_createDraftReply_(gmailMessageId, body);
       sheet.getRange(rowIndex, P3.COL_DRAFT_CREATED_AT)
         .setValue(new Date())
         .setNumberFormat('yyyy/MM/dd HH:mm');
@@ -120,20 +111,11 @@ function phase3_testDraft() {
     return;
   }
 
-  let pdfBlob = null;
-  try {
-    pdfBlob = p3_downloadPdf_(quotationId);
-    console.log(`PDF取得成功: ${pdfBlob.getBytes().length} bytes`);
-  } catch (err) {
-    console.warn('PDF取得失敗（URL本文記載に切り替え）:', err.message || err);
-  }
-
-  const freeeUrl = `https://app.freee.co.jp/invoice/quotations/${quotationId}`;
-  const body = p3_buildBody_(customerName, subject, freeeUrl, !pdfBlob);
+  const body = p3_buildBody_(customerName);
   console.log('--- 下書き本文 ---\n' + body + '\n---');
 
   try {
-    p3_createDraftReply_(gmailMessageId, body, pdfBlob);
+    p3_createDraftReply_(gmailMessageId, body);
     console.log('✅ 下書き作成成功（テストなのでU列は更新していません）');
     console.log('Gmail の下書きボックスに保存されました。確認後、不要なら削除してください。');
   } catch (err) {
@@ -295,35 +277,27 @@ function p3_createDraftReply_(gmailMessageId, body, pdfBlob) {
 }
 
 /**
+ * 顧客名を「〇〇様」形式に正規化する（末尾の様を重複させない）
+ */
+function p3_normalizeName_(name) {
+  const n = String(name || '').trim();
+  return n.endsWith('様') ? n : n + '様';
+}
+
+/**
  * 下書き返信本文を生成する
  * @param {string} customerName  B列のお客様名
- * @param {string} subject       D列の案件内容
- * @param {string} freeeUrl      freee見積書のアプリURL
- * @param {boolean} isUrlFallback PDF添付なし（URL貼り付けモード）のとき true
  */
-function p3_buildBody_(customerName, subject, freeeUrl, isUrlFallback) {
-  const lines = [
+function p3_buildBody_(customerName) {
+  const salutation = p3_normalizeName_(customerName);
+  return [
+    salutation,
+    '',
     'お世話になっております。',
     '',
-  ];
-
-  if (isUrlFallback) {
-    lines.push(`${customerName}様の見積書を作成しました。`);
-    lines.push('');
-    lines.push('■ freee 見積書URL');
-    lines.push(freeeUrl);
-    lines.push('');
-    lines.push('※ PDFの確認・送付はこちらのURLからお願いいたします。');
-  } else {
-    lines.push(`${customerName}様の見積書をPDFにて添付いたします。`);
-    if (subject) {
-      lines.push('');
-      lines.push(`【件名】${subject}`);
-    }
-  }
-
-  lines.push('');
-  lines.push('よろしくお願いいたします。');
-
-  return lines.join('\n');
+    '見積書を作成しましたのでお送りします。',
+    '見積書PDFを添付しておりますのでご確認ください。',
+    '',
+    'よろしくお願いいたします。',
+  ].join('\n');
 }
