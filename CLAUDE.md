@@ -197,6 +197,7 @@ C:\hirayama-ai-workspace\
 
 ### Git運用
 
+- **通常作業ブランチは `feature/auto-dev-phase3-loop`** とする。新しいPCで作業を始めるときは `git checkout feature/auto-dev-phase3-loop` → `ds` の順で実行する。
 - **Claude Codeは作業完了後、基本的に `de` でcommitとpushまで行う**
 - 人間がやること: 作業開始 → `ds`、作業終了 → `de "説明"`（これだけ）
 - コミット前に認証情報が含まれていないか確認する（`gsc` / `de` が自動チェック）
