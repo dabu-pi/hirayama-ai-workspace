@@ -214,35 +214,13 @@ note "セットアップ完了" -Tag done
 
 ## Step 6 — 日常の開発フロー
 
-### 作業開始時（毎回必ず実行）
-
-PowerShell で実行する:
-
 ```powershell
 cd C:\hirayama-ai-workspace\workspace
-ds
+ds                        # 作業開始（git pull）
+de "変更内容の説明"        # 作業終了（commit + push）
 ```
 
-- GitHubから最新コードを自動取得
-- ブランチ・変更の有無を表示
-- 未コミット変更があれば確認を求める
-
-### 作業終了時（毎回必ず実行）
-
-```powershell
-de "変更内容の説明"
-```
-
-- 全変更をまとめてコミット・GitHubにプッシュ
-- `.env` などの危険ファイルが含まれていたら自動で止まる
-
-push せずコミットだけしたいとき:
-
-```powershell
-de -NoPush "作業中・続きは後で"
-```
-
-> **Git コマンドを直接使う必要はありません。** `ds` と `de` だけ覚えれば OK です。
+詳細ルールは [CLAUDE.md](./CLAUDE.md) を参照。
 
 ---
 

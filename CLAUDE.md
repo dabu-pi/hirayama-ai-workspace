@@ -149,39 +149,11 @@ C:\hirayama-ai-workspace\
 
 ### 毎日の作業ルール（人間がやること）
 
-作業は PowerShell で **2コマンドだけ**。あとは自動でやってくれます。
-
-| タイミング | コマンド | やること |
-|---|---|---|
-| 作業を始めるとき | `ds` | GitHubから最新コードを取得・状態確認 |
-| 作業が終わったとき | `de "説明"` | 変更を保存してGitHubに送る |
-
-#### `ds`（dev-start）— 作業開始時に実行
-
-```powershell
-cd C:\hirayama-ai-workspace\workspace
-ds
-```
-
-- GitHubから最新コードを自動取得（git pull）
-- ブランチ名・変更の有無を画面に表示
-- 未コミットの変更がある場合は確認を求める
-
-#### `de`（dev-end）— 作業終了時に実行
-
-```powershell
-de "freee Phase3 テスト完了"
-```
-
-- 全変更をステージング（git add -A）
-- コミット・GitHubにプッシュ（git push）
-- `.env` などの危険ファイルが含まれていたら**自動で止まる**（誤コミット防止）
-
-コミットせずに一時保存したいとき（push しない）:
-
-```powershell
-de -NoPush "作業中・続きは明日"
-```
+| タイミング | コマンド |
+|---|---|
+| 作業開始 | `ds`（git pull + 状態確認） |
+| 作業終了 | `de "説明"`（commit + push） |
+| push せず一時保存 | `de -NoPush "説明"` |
 
 ### 判断基準
 
@@ -243,76 +215,6 @@ de -NoPush "作業中・続きは明日"
 | Claude API (claude-sonnet-4-6) | AI分析・文書生成 |
 | clasp | GASのバージョン管理 |
 | gspread | PythonからGoogle Sheets操作 |
-
----
-
-## 実際の運用例
-
-### ケース①：自宅PCで作業を始める
-
-```powershell
-# 1. ワークスペースに移動（最初だけ）
-cd C:\hirayama-ai-workspace\workspace
-
-# 2. 最新コードを取得（毎回）
-ds
-# → "pull 完了！最新コードを取得しました" と表示されればOK
-
-# 3. 作業する（Claude Codeを使ってコーディング）
-
-# 4. 終わったらGitHubに送る
-de "freee Phase3 テスト完了・U列書き込み確認"
-# → "GitHub に push 済みです" と表示されればOK
-```
-
-### ケース②：ジムPCで続きをやる
-
-```powershell
-# 1. 最新コードを取得（前回の自宅PCの作業が入ってくる）
-cd C:\hirayama-ai-workspace\workspace
-ds
-
-# 2. 作業する
-
-# 3. 終わったらGitHubに送る
-de "hawkメール動作確認完了"
-```
-
-### ケース③：今日中に終わらないので一時保存
-
-```powershell
-# push せずコミットだけする（翌日続きを push できる）
-de -NoPush "作業中断・明日続きから"
-
-# 翌日、push も含めてまとめてやる
-de "昨日の続き + 今日分まとめ"
-```
-
-### ケース④：claude-sandbox で試作してから workspace に反映
-
-```powershell
-# 試作（claude-sandbox）
-cd C:\hirayama-ai-workspace\claude-sandbox
-# ... 試行錯誤 ...
-
-# 動いたら workspace にコードをコピーして本番化
-cd C:\hirayama-ai-workspace\workspace
-# （Claude Codeに「claude-sandboxの○○を移植して」と依頼）
-
-de "○○機能を claude-sandbox から移植"
-```
-
-### workspace と claude-sandbox の使い分け早見表
-
-```
-やりたいこと                              どこで作業する
-─────────────────────────────────────────────────────────
-既存プロジェクトのバグ修正・機能追加     workspace/
-新しいAPIやライブラリを試してみる         claude-sandbox/
-「これ動くかな？」という実験             claude-sandbox/
-claude-sandbox で動いた → 本番化         workspace/ に移植
-仕様が曖昧・要件が決まっていない         先に質問してから
-```
 
 ---
 
