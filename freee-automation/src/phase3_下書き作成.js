@@ -7,10 +7,10 @@
  *   - hawkメール自動貼り付け.js の CONFIG が利用可能
  *
  * 処理:
- *   - R列（quotation_id）あり かつ T列（下書き作成日）空 の行を対象
+ *   - R列（quotation_id）あり かつ U列（下書き作成日）空 の行を対象
  *   - freee IV APIからPDFを取得して添付（失敗時は見積URLを本文に貼る）
  *   - 元スレッドへの返信下書きをGmailに保存（絶対に送信しない）
- *   - T列に下書き作成日時を記録
+ *   - U列に下書き作成日時を記録
  *******************************************************/
 
 const P3 = {
@@ -40,7 +40,7 @@ function phase3_createDraftsForQuotedRows() {
     const quotationId = String(row[CFG.COL_FREEE_QUOTATION_ID - 1] || '').trim();
     if (!quotationId) continue;
 
-    // T列が埋まっていれば処理済み
+    // U列が埋まっていれば処理済み
     const draftCreatedAt = row[P3.COL_DRAFT_CREATED_AT - 1];
     if (draftCreatedAt) continue;
 
@@ -101,7 +101,7 @@ function phase3_testDraft() {
   }
 
   if (!targetRow) {
-    console.log('処理対象行なし（R列あり・T列空 の行がありません）');
+    console.log('処理対象行なし（R列あり・U列空 の行がありません）');
     return;
   }
 
@@ -134,7 +134,7 @@ function phase3_testDraft() {
 
   try {
     p3_createDraftReply_(gmailMessageId, body, pdfBlob);
-    console.log('✅ 下書き作成成功（テストなのでT列は更新していません）');
+    console.log('✅ 下書き作成成功（テストなのでU列は更新していません）');
     console.log('Gmail の下書きボックスに保存されました。確認後、不要なら削除してください。');
   } catch (err) {
     console.error('❌ 下書き作成失敗:', err.message || err);
