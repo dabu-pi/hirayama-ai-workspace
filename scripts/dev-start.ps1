@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     作業開始スクリプト。git pull で最新コードを取得し、状態を表示します。
@@ -68,8 +68,8 @@ Write-Row "ブランチ" $branch
 Write-Row "リモート" $remote
 
 # ─── ahead / behind の確認（fetch は行わず現在の情報で判定）
-$ahead  = (git rev-list --count "@{u}..HEAD" 2>&1).Trim()
-$behind = (git rev-list --count "HEAD..@{u}" 2>&1).Trim()
+$ahead  = (git rev-list --count '@{u}..HEAD' 2>&1).Trim()
+$behind = (git rev-list --count 'HEAD..@{u}' 2>&1).Trim()
 if ($LASTEXITCODE -eq 0 -and $ahead -match '^\d+$' -and $behind -match '^\d+$') {
     $aheadN  = [int]$ahead
     $behindN = [int]$behind
