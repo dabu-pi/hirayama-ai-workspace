@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-03-05（AI開発環境 E-1〜E-5 完了）
+作成: 2026-03-05 / 最終更新: 2026-03-06（AI開発環境 E-1〜E-8 完了・Phase3.1 完成）
 
 ---
 
@@ -50,6 +50,9 @@
 | E-3 | 統合コマンダー `auto-dev.ps1` | 1コマンドで rwl→note→gsc の PDCA サイクルを完走 | ✅ 完了 |
 | E-4 | `docs/PROJECT_STATUS.md` テンプレート | 現在地・STOP理由・NEXTの引き継ぎ用テンプレ | ✅ 完了 |
 | E-5 | `.gitignore` 調整 | `artifacts/`, `logs/` を除外 | ✅ 完了 |
+| E-6 | Phase3 Claude 自動開発モード | `auto-dev-phase3.ps1`, `AUTO_DEV_MODE_PHASE3.md`, `auto-dev-phase3.md` | ✅ 完了 |
+| E-7 | Phase3.1 自走ループプロンプト | `auto-dev-phase3-loop.md`（入力一本化・AI REPORT 優先・20ファイル閾値） | ✅ 完了 |
+| E-8 | エラー解析システム仕様書 | `docs/ERROR_ANALYSIS.md`（ログ構造・AI レポート形式・Phase3 連携） | ✅ 完了 |
 
 ---
 
@@ -249,4 +252,4 @@
 
 ---
 
-最終更新: 2026-03-05
+最終更新: 2026-03-06
