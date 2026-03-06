@@ -53,7 +53,7 @@
 | E-6 | Phase3 Claude 自動開発モード | `auto-dev-phase3.ps1`, `AUTO_DEV_MODE_PHASE3.md`, `auto-dev-phase3.md` | ✅ 完了 |
 | E-7 | Phase3.1 自走ループプロンプト | `auto-dev-phase3-loop.md`（入力一本化・AI REPORT 優先・20ファイル閾値） | ✅ 完了 |
 | E-8 | エラー解析システム仕様書 | `docs/ERROR_ANALYSIS.md`（ログ構造・AI レポート形式・Phase3 連携） | ✅ 完了 |
-| E-9 | AI開発自動ループ | `scripts/auto-loop.ps1`（STOP検知・結果分類・サイクルサマリー・構造化出力） + `docs/AUTO_LOOP.md` | ✅ 完了 |
+| E-9 | AI開発自動ループ v2 | `scripts/auto-loop.ps1`（多タスクループ・STOP検知・リトライ・AI REPORT・ループサマリー）+ `scripts/tasks.json.example` + `docs/AUTO_LOOP.md` | ✅ 完了 |
 
 ---
 

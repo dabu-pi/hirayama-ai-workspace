@@ -1,0 +1,24 @@
+[
+  {
+    "cmd": "python -m pytest tests/ -v",
+    "plan": "Run full test suite",
+    "note": "all tests pass",
+    "tag": "test",
+    "commitMsg": "test: all tests pass",
+    "commitFiles": []
+  },
+  {
+    "cmd": "python validate_inputs.py",
+    "plan": "Validate input data format",
+    "note": "validation OK",
+    "tag": "done"
+  },
+  {
+    "cmd": "python build_report.py --output report.html",
+    "plan": "Generate HTML report",
+    "note": "report generated",
+    "tag": "done",
+    "commitMsg": "feat: add HTML report output",
+    "commitFiles": ["report.html", "src/build_report.py"]
+  }
+]
