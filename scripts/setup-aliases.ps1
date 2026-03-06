@@ -1,12 +1,13 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Adds Phase1+Phase2 workspace aliases to PowerShell $PROFILE.
+    Adds Phase1+Phase2+Phase3 workspace aliases to PowerShell $PROFILE.
 
 .DESCRIPTION
     Registers the following function aliases:
       Phase1: cap (create-ai-project)  rwl (run-with-log)  note (note)
       Phase2: adr (auto-dev-run)  gsc (git-safe-commit)  aerr (analyze-error)  dstat (dev-status)
+      Phase3: ds (dev-start)  de (dev-end)
 
 .PARAMETER WorkspaceRoot
     Path to workspace/. Auto-detected from script location if omitted.
@@ -66,6 +67,8 @@ $aliases = [ordered]@{
     "gsc"   = @{ Script = "git-safe-commit.ps1";   Desc = "safe commit + push (Phase2)" }
     "aerr"  = @{ Script = "analyze-error.ps1";     Desc = "error log analysis (Phase2)" }
     "dstat" = @{ Script = "dev-status.ps1";        Desc = "project dashboard (Phase2)" }
+    "ds"    = @{ Script = "dev-start.ps1";          Desc = "git pull + status (Phase3)" }
+    "de"    = @{ Script = "dev-end.ps1";            Desc = "commit + push (Phase3)" }
 }
 
 # --- Header ---
@@ -170,6 +173,7 @@ Write-Host ""
 Write-Host "  Reload now:  . `$PROFILE"
 Write-Host "  Commands  :  Phase1: cap / rwl / note"
 Write-Host "               Phase2: adr / gsc / aerr / dstat"
+    Write-Host "               Phase3: ds (dev-start) / de (dev-end)"
 Write-Host ""
 
 exit 0
