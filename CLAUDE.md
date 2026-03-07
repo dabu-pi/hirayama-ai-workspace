@@ -120,6 +120,15 @@ C:\hirayama-ai-workspace\
 └── claude-sandbox\   ← 実験・プロトタイプ専用（別リポジトリ）
 ```
 
+### 3台PC共通の運用方針（2026-03-07 決定）
+
+| 項目 | 方針 |
+|---|---|
+| 通常作業フォルダ | `C:\hirayama-ai-workspace\workspace`（3台統一） |
+| 通常作業スコープ | `workspace` 配下のみ。`sandbox`・`logs` は必要時に明示して扱う |
+| 常用ブランチ | `feature/auto-dev-phase3-loop`（master ではなくこちらを使う） |
+| 他PCの適用 | 次回使用時に同じ方針へそろえる |
+
 ### workspace（本番）で行うこと
 
 - プロジェクトのソースコード実装・修正
@@ -154,6 +163,8 @@ C:\hirayama-ai-workspace\
 | 作業開始 | `ds`（git pull + 状態確認） |
 | 作業終了 | `de "説明"`（commit + push） |
 | push せず一時保存 | `de -NoPush "説明"` |
+
+> **注意:** `ds` / `de` は PowerShell 用ショートカット。Claude Code / Claude Desktop の会話欄に入力してもコマンドとしては実行されない。
 
 ### 判断基準
 
