@@ -228,7 +228,7 @@ de "変更内容の説明"        # 作業終了（commit + push）
 
 | 項目 | 確認コマンド | 期待結果 |
 |---|---|---|
-| Git | `git status` | `On branch master` と表示される |
+| Git | `git status` | `On branch feature/auto-dev-phase3-loop` と表示される |
 | Git設定 | `git config --global --list` | name / email が表示される |
 | clasp認証 | `clasp whoami` | Googleアカウントのメールが表示される |
 | Python仮想環境 | `python --version`（venv内） | 3.11以上 |
