@@ -193,8 +193,8 @@ function setupDashboard(ss, sheet) {
       `=IFERROR(TEXT('${SHEET.KPI}'!B6,"#,##0")&"円","要入力")`,
       'KPI目標シートを参照'],
     ['必要成約件数/月（逆算）',
-      `=IFERROR(TEXT('${SHEET.KPI}'!C19,"0.0")&"件","要入力")`,
-      'KPI目標シートで逆算'],
+      `=IFERROR('${SHEET.KPI}'!B24&"件","要入力")`,
+      'KPI目標シートで逆算（ブロックC・B24）'],
   ];
   summary.forEach(([label, formula, note], i) => {
     const row = 7 + i;
@@ -384,62 +384,160 @@ function setupNumeric(ss) {
 }
 
 // ============================================================
-// 4. 価格設定
+// 4. 価格設定（メニューマスタ）
 // ============================================================
 function setupPricing(ss) {
   const sheet = ss.insertSheet(SHEET.PRICING);
-  setColWidths(sheet, [220, 80, 110, 110, 80, 110, 120, 180]);
-  addWarning(sheet, 8);
-  addTitle(sheet, 8, '価格設定（自費施術・ジム会費）');
+  // 13列: 表示順/大区分/小区分/メニュー名/内容/時間/一般料金/ジム会員料金/保険適用/回数単位/KPI集計/確定状況/備考
+  setColWidths(sheet, [40, 160, 90, 160, 200, 75, 90, 105, 65, 70, 75, 75, 200]);
+  addWarning(sheet, 13);
+  addTitle(sheet, 13, 'メニューマスタ（価格設定）');
 
-  ['商品名', '商品役割', '仮価格（円）', '正式価格（円）', '確定フラグ',
-   '1回あたり単価', '月4件試算額', '備考']
+  // ヘッダ行（行3）
+  ['表示順', '大区分', '小区分', 'メニュー名', '内容', '時間',
+   '一般料金\n（円）', 'ジム会員\n料金（円）', '保険\n適用', '回数/単位',
+   'KPI集計\n対象', '確定状況', '備考']
     .forEach((h, i) => hdr(sheet, 3, i + 1, h));
+  sheet.setRowHeight(3, 45);
 
-  // 行4〜8: 商品一覧
-  // [商品名, 役割, 仮価格, 回数, 備考]
-  const products = [
-    ['慢性疼痛改善プログラム（8回）', '主力',  58000, 8, ''],
-    ['単回セッション',                '主力',   7700, 1, ''],
-    ['運動療法パーソナル（4回）',     '継続',  35200, 4, ''],
-    ['ジム会員 スタンダード（月額）', '継続',  '',   1, '近隣ジム相場: 5,000〜8,000円'],
-    ['ジム会員 プレミアム（月額）',   '継続',  '',   1, 'スタンダード+パーソナル1回付き'],
+  // 区分ごとの背景色
+  const catColors = {
+    '保険施術（急性期対応）':   '#D9EAD3',
+    '保険施術オプション':       '#EAD1DC',
+    '午前限定 自費メニュー':    '#FCE5CD',
+    '慢性専門施術（根本改善）': '#CFE2F3',
+    '運動再教育（再発防止）':   '#E6D0DE',
+    '併設ジム':                 '#FFF2CC',
+  };
+
+  // メニューデータ
+  // [表示順, 大区分, 小区分, メニュー名, 内容, 時間, 一般料金(null=保険適用), ジム会員料金(null=なし),
+  //  保険適用, 回数/単位, KPI集計対象, 確定状況, 備考]
+  const menus = [
+    [1,  '保険施術（急性期対応）',  '', '保険施術',
+     '検査＋電気治療（約15分）＋手技（約5分）', '約20分',
+     null,  null,  '○', '1回',   '×', '確定', '急な痛みや日常の不調に対応します。'],
+    [2,  '保険施術オプション',      '', '手技延長',
+     '10分延長', '10分',
+     1100,   935,  '×', '1回',   '○', '確定', ''],
+    [3,  '保険施術オプション',      '', '筋膜リリース（マッサージガン）',
+     '5分追加', '5分',
+     880,    748,  '×', '1回',   '○', '確定', ''],
+    [4,  '保険施術オプション',      '', '温熱追加',
+     '5分追加', '5分',
+     550,  467.5,  '×', '1回',   '○', '確定', ''],
+    [5,  '午前限定 自費メニュー',   '', '深部コンディショニング',
+     '深部電気＋軽調整', '約30分',
+     4400,  3740,  '×', '1回',   '○', '確定', '通常の電気では届かない深部へアプローチします。'],
+    [6,  '午前限定 自費メニュー',   '', '電気治療1回',
+     '干渉波電気治療', '約15分',
+     1200,  1020,  '×', '1回',   '○', '確定', ''],
+    [7,  '午前限定 自費メニュー',   '', '電気治療午前限定通い放題',
+     '干渉波電気治療', '約15分',
+     5500,  4675,  '×', '月額',  '○', '確定', ''],
+    [8,  '慢性専門施術（根本改善）', '', '慢性疼痛改善（単発）',
+     '深部高電圧＋可動域改善', '約45分',
+     7700,  6545,  '×', '1回',   '○', '確定', '慢性腰痛・首肩こりの方はこちらをおすすめします。'],
+    [9,  '慢性専門施術（根本改善）', '', '慢性疼痛改善 8回プログラム',
+     '根本改善＋再発予防設計', '45分×8回',
+     58000, 49300, '×', '8回',   '○', '確定', '慢性腰痛・首肩こりの方はこちらをおすすめします。'],
+    [10, '運動再教育（再発防止）',  '', 'パーソナルトレーニング',
+     '痛まない身体の使い方習得', '約60分',
+     8800,  7480,  '×', '1回',   '○', '確定', ''],
+    [11, '運動再教育（再発防止）',  '', '4回集中コース',
+     'フォーム再教育・卒業設計', '60分×4回',
+     35200, 29920, '×', '4回',   '○', '確定', ''],
+    [12, '併設ジム',               '', '月会員',
+     '併設ジム利用', '月額',
+     7480,  null,  '×', '月額',  '○', '確定', ''],
   ];
 
-  products.forEach(([name, role, tempPrice, sessions, note], i) => {
+  menus.forEach((m, i) => {
     const row = 4 + i;
-    lbl(sheet, row, 1, name);
-    sheet.getRange(row, 2).setValue(role).setBackground(C.HEADER).setHorizontalAlignment('center');
-    inp(sheet, row, 3, tempPrice !== '' ? tempPrice : '', '#,##0');
-    inp(sheet, row, 4, '', '#,##0');
-    const flagCell = inp(sheet, row, 5, tempPrice !== '' ? '仮' : '未設定');
-    dropdown(flagCell, ['確定', '仮', '未設定']);
-    // 1回あたり単価
-    calc(sheet, row, 6,
-      `=IFERROR(IF(D${row}<>"",D${row},IF(C${row}<>"",C${row},"要入力"))/${sessions},"要入力")`,
-      '#,##0');
-    // 月4件試算
-    calc(sheet, row, 7,
-      `=IFERROR(IF(D${row}<>"",D${row},IF(C${row}<>"",C${row},"要入力"))*4,"要入力")`,
-      '#,##0');
-    sheet.getRange(row, 8).setValue(note).setBackground('#F9F9F9').setFontColor('#888888').setWrap(true);
+    const [order, cat, subcat, name, content, time,
+           price, memberPrice, insurance, unit, kpi, status, note] = m;
+    const catColor = catColors[cat] || '#F9F9F9';
+
+    // 表示順（1列）
+    sheet.getRange(row, 1).setValue(order)
+      .setBackground(catColor).setHorizontalAlignment('center').setFontWeight('bold');
+    // 大区分（2列）
+    sheet.getRange(row, 2).setValue(cat)
+      .setBackground(catColor).setFontWeight('bold').setWrap(true);
+    // 小区分（3列）
+    sheet.getRange(row, 3).setValue(subcat).setBackground('#F9F9F9');
+    // メニュー名（4列）
+    sheet.getRange(row, 4).setValue(name)
+      .setBackground(C.HEADER).setFontWeight('bold');
+    // 内容（5列）
+    sheet.getRange(row, 5).setValue(content)
+      .setBackground('#F9F9F9').setWrap(true);
+    // 時間（6列）
+    sheet.getRange(row, 6).setValue(time)
+      .setBackground('#F9F9F9').setHorizontalAlignment('center');
+    // 一般料金（7列）: null = 保険適用
+    if (price !== null) {
+      inp(sheet, row, 7, price, '#,##0').setHorizontalAlignment('right');
+    } else {
+      sheet.getRange(row, 7).setValue('保険適用')
+        .setBackground(C.CONFIRMED).setHorizontalAlignment('center')
+        .setFontColor('#006600').setFontStyle('italic');
+    }
+    // ジム会員料金（8列）: null = 対象外
+    if (memberPrice !== null) {
+      inp(sheet, row, 8, memberPrice, '#,##0').setHorizontalAlignment('right');
+    } else {
+      sheet.getRange(row, 8).setValue('—')
+        .setBackground('#F9F9F9').setHorizontalAlignment('center').setFontColor('#888888');
+    }
+    // 保険適用（9列）
+    sheet.getRange(row, 9).setValue(insurance)
+      .setBackground('#F9F9F9').setHorizontalAlignment('center')
+      .setFontColor(insurance === '○' ? '#006600' : '#888888').setFontWeight('bold');
+    // 回数/単位（10列）
+    sheet.getRange(row, 10).setValue(unit)
+      .setBackground('#F9F9F9').setHorizontalAlignment('center');
+    // KPI集計対象（11列）
+    const kpiCell = inp(sheet, row, 11, kpi);
+    kpiCell.setHorizontalAlignment('center');
+    dropdown(kpiCell, ['○', '×']);
+    // 確定状況（12列）
+    const statusCell = inp(sheet, row, 12, status);
+    statusCell.setHorizontalAlignment('center');
+    dropdown(statusCell, ['確定', '仮', '未設定']);
+    // 備考（13列）
+    inp(sheet, row, 13, note).setWrap(true);
   });
 
-  // 条件付き書式（確定フラグ列）
-  const flagRange = sheet.getRange(4, 5, 5, 1);
+  // 条件付き書式: 確定状況（12列目）
+  const statusRange = sheet.getRange(4, 12, 12, 1);
   const rules = [];
   rules.push(SpreadsheetApp.newConditionalFormatRule()
     .whenTextEqualTo('未設定').setBackground(C.UNCONFIRMED).setFontColor('#CC0000')
-    .setRanges([flagRange]).build());
+    .setRanges([statusRange]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule()
     .whenTextEqualTo('確定').setBackground(C.CONFIRMED).setFontColor('#006600')
-    .setRanges([flagRange]).build());
+    .setRanges([statusRange]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('仮').setBackground('#FFF3CD').setFontColor('#7F6000')
+    .setRanges([statusRange]).build());
+  // 条件付き書式: KPI集計対象（11列目）
+  const kpiRange = sheet.getRange(4, 11, 12, 1);
+  rules.push(SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('○').setBackground(C.CONFIRMED).setFontColor('#006600')
+    .setRanges([kpiRange]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('×').setBackground(C.HEADER).setFontColor('#888888')
+    .setRanges([kpiRange]).build());
   sheet.setConditionalFormatRules(rules);
 
-  // 集計行
-  lbl(sheet, 10, 1, '未確定・仮の件数');
-  calc(sheet, 10, 2,
-    '=COUNTIF(E4:E8,"未設定")&"件が未設定、"&COUNTIF(E4:E8,"仮")&"件が仮値"');
+  // 集計行（行17）
+  lbl(sheet, 17, 1, '集計');
+  lbl(sheet, 17, 2, 'KPI集計対象数');
+  calc(sheet, 17, 3, '=COUNTIF(K4:K15,"○")&"件 / 12件"');
+  lbl(sheet, 17, 7, '未確定件数');
+  calc(sheet, 17, 8,
+    '=COUNTIF(L4:L15,"未設定")&"件が未設定、"&COUNTIF(L4:L15,"仮")&"件が仮値"');
 }
 
 // ============================================================
@@ -447,7 +545,7 @@ function setupPricing(ss) {
 // ============================================================
 function setupKPI(ss) {
   const sheet = ss.insertSheet(SHEET.KPI);
-  setColWidths(sheet, [220, 130, 90, 210]);
+  setColWidths(sheet, [240, 140, 90, 210]);
   addWarning(sheet, 4);
   addTitle(sheet, 4, 'KPI目標・逆算シミュレーション');
 
@@ -456,14 +554,14 @@ function setupKPI(ss) {
   ['項目名', '目標値', '単位', '備考'].forEach((h, i) => hdr(sheet, 5, i + 1, h));
 
   const targets = [
-    ['月次自費収益目標',         200000, '円/月',  '+20万円が当面のKPI'],
-    ['月次来院患者数（目標）',   '',     '人/月',  '数値前提シートの現状値を参考に'],
-    ['慢性疼痛患者の割合',       '',     '%',      '来院患者のうち慢性対象の割合'],
-    ['自費提案率',               '',     '%',      '慢性患者のうち何%に提案するか'],
-    ['自費成約率',               '',     '%',      '提案患者のうち何%が成約'],
-    ['ジム体験案内率',           '',     '%',      '自費患者のうち何%にジム体験を案内'],
-    ['ジム体験→入会率',         '',     '%',      '体験者のうち何%が入会'],
-    ['月次退会率',               '',     '%',      '在籍会員のうち月何%が退会'],
+    ['月次自費収益目標',       200000, '円/月', '月+20万円が当面のKPI'],
+    ['保険来院患者数（月次）', '',     '人/月', '「数値前提」シートの現状値を参考に'],
+    ['慢性疼痛患者の割合',     '',     '%',     '来院患者のうち慢性対象の割合'],
+    ['自費提案率',             '',     '%',     '慢性患者のうち何%に提案するか'],
+    ['自費成約率',             '',     '%',     '提案患者のうち何%が成約'],
+    ['ジム体験案内率',         '',     '%',     '自費患者のうち何%にジム体験を案内'],
+    ['ジム体験→入会率',       '',     '%',     '体験者のうち何%が入会'],
+    ['月次退会率',             '',     '%',     '在籍会員のうち月何%が退会'],
   ];
   targets.forEach(([name, val, unit, note], i) => {
     const row = 6 + i;
@@ -473,55 +571,80 @@ function setupKPI(ss) {
     sheet.getRange(row, 4).setValue(note).setBackground('#F9F9F9').setFontColor('#888888');
   });
 
-  // ---- ブロックB: 自動逆算 ----
-  addSection(sheet, 15, 4, '■ ブロックB: 自動逆算（入力不要・自動計算）');
-  ['逆算項目', '計算結果', '単位', '計算根拠'].forEach((h, i) => hdr(sheet, 16, i + 1, h));
+  // ---- ブロックB: 主力メニュー単価（価格設定シートから自動参照）----
+  addSection(sheet, 15, 4, '■ ブロックB: 主力メニュー単価（価格設定シートから自動参照）');
+  ['メニュー名', '一般料金', 'ジム会員料金', '備考'].forEach((h, i) => hdr(sheet, 16, i + 1, h));
 
-  // 主力商品価格（価格設定シート 行4 D or C）
-  const priceFormula =
-    `IF('${SHEET.PRICING}'!D4<>"",'${SHEET.PRICING}'!D4,IF('${SHEET.PRICING}'!C4<>"","要入力: 価格設定シート","要入力: 価格設定シート"))`;
-  // ジムスタンダード月額（価格設定シート 行7 D or C）
-  const gymPriceFormula =
-    `IF('${SHEET.PRICING}'!D7<>"",'${SHEET.PRICING}'!D7,IF('${SHEET.PRICING}'!C7<>"","要入力: 価格設定シート","要入力"))`;
-
-  const calcRows = [
-    ['慢性疼痛候補数/月',
-      '=IFERROR(B7*B8/100,"要入力")',
-      '人/月', '来院数 × 慢性割合'],
-    ['自費提案件数/月',
-      '=IFERROR(C17*B9/100,"要入力")',
-      '件/月', '候補数 × 提案率'],
-    ['自費成約件数/月',
-      '=IFERROR(C18*B10/100,"要入力")',
-      '件/月', '提案件数 × 成約率'],
-    ['見込み自費収益/月',
-      `=IFERROR(C19*${priceFormula},"要入力")`,
-      '円/月', '成約件数 × 主力商品価格'],
-    ['目標達成ギャップ',
-      '=IFERROR(B6-C20,"要入力")',
-      '円/月', 'マイナスなら目標達成'],
-    ['ジム新規入会数/月',
-      '=IFERROR(C19*B11/100*B12/100,"要入力")',
-      '人/月', '成約 × 体験案内率 × 入会率'],
-    ['ジム会員数（6ヶ月後・概算）',
-      '=IFERROR(IF(B13=0,C22*6,C22/B13*100*(1-(1-B13/100)^6)),"要入力")',
-      '人', '月次入会者の積み上げ（退会考慮）'],
-    ['ジム月次収益（6ヶ月後）',
-      `=IFERROR(C23*(${gymPriceFormula}),"要入力")`,
-      '円/月', '会員数 × スタンダード月額'],
+  // 価格設定シートの列G=一般料金 / 列H=ジム会員料金
+  // 行12=慢性疼痛改善8回 / 行11=慢性疼痛改善単発 / 行13=パーソナル / 行15=月会員
+  const priceRefs = [
+    ['慢性疼痛改善 8回プログラム',
+      `='${SHEET.PRICING}'!G12`, `='${SHEET.PRICING}'!H12`, '主力商品（逆算の基準）'],
+    ['慢性疼痛改善（単発）',
+      `='${SHEET.PRICING}'!G11`, `='${SHEET.PRICING}'!H11`, '単発利用者向け'],
+    ['パーソナルトレーニング',
+      `='${SHEET.PRICING}'!G13`, `='${SHEET.PRICING}'!H13`, ''],
+    ['月会員（月額）',
+      `='${SHEET.PRICING}'!G15`, '', 'ジム継続収益'],
   ];
-
-  calcRows.forEach(([name, formula, unit, basis], i) => {
+  priceRefs.forEach(([name, priceF, memberF, note], i) => {
     const row = 17 + i;
     lbl(sheet, row, 1, name);
-    calc(sheet, row, 2, formula,
-      name.includes('円') ? '#,##0' : '0.0');
+    calc(sheet, row, 2, priceF, '#,##0');
+    if (memberF) {
+      calc(sheet, row, 3, memberF, '#,##0');
+    } else {
+      sheet.getRange(row, 3).setValue('—')
+        .setBackground('#F9F9F9').setHorizontalAlignment('center').setFontColor('#888888');
+    }
+    sheet.getRange(row, 4).setValue(note).setBackground('#F9F9F9').setFontColor('#888888');
+  });
+
+  // ---- ブロックC: 逆算シミュレーション ----
+  addSection(sheet, 22, 4, '■ ブロックC: 逆算シミュレーション（入力不要・自動計算）');
+  ['逆算項目', '計算結果', '単位', '計算根拠'].forEach((h, i) => hdr(sheet, 23, i + 1, h));
+
+  // [項目名, 数式, 単位, 根拠, 数値フォーマット]
+  // ※ 計算結果はすべてB列（col 2）に配置。チェーン参照は Bxx を使用
+  const calcRows = [
+    ['必要成約件数/月（逆算）',
+      '=IFERROR(CEILING(B6/B17,1),"要入力")',
+      '件/月', '月次自費目標 ÷ 8回プログラム単価（切り上げ）', '0'],
+    ['慢性疼痛候補数/月',
+      '=IFERROR(B7*B8/100,"要入力")',
+      '人/月', '保険来院数 × 慢性割合', '0.0'],
+    ['自費提案件数/月',
+      '=IFERROR(B25*B9/100,"要入力")',
+      '件/月', '候補数 × 提案率', '0.0'],
+    ['自費成約件数/月',
+      '=IFERROR(B26*B10/100,"要入力")',
+      '件/月', '提案件数 × 成約率', '0.0'],
+    ['見込み自費収益/月',
+      '=IFERROR(B27*B17,"要入力")',
+      '円/月', '成約件数 × 8回プログラム単価', '#,##0'],
+    ['目標との差額',
+      '=IFERROR(B6-B28,"要入力")',
+      '円/月', 'マイナスなら目標達成', '#,##0'],
+    ['ジム新規入会数/月',
+      '=IFERROR(B27*B11/100*B12/100,"要入力")',
+      '人/月', '成約件数 × 体験案内率 × 入会率', '0.0'],
+    ['ジム会員数（6ヶ月後・概算）',
+      '=IFERROR(IF(B13=0,B30*6,B30/B13*100*(1-(1-B13/100)^6)),"要入力")',
+      '人', '月次入会者の積み上げ（退会考慮）', '0.0'],
+    ['ジム月次収益（6ヶ月後）',
+      '=IFERROR(B31*B20,"要入力")',
+      '円/月', '会員数 × 月会員料金', '#,##0'],
+  ];
+  calcRows.forEach(([name, formula, unit, basis, fmt], i) => {
+    const row = 24 + i;
+    lbl(sheet, row, 1, name);
+    calc(sheet, row, 2, formula, fmt);
     sheet.getRange(row, 3).setValue(unit).setBackground('#F9F9F9').setHorizontalAlignment('center');
     sheet.getRange(row, 4).setValue(basis).setBackground('#F9F9F9').setFontColor('#888888');
   });
 
-  // ギャップ行の条件付き書式（マイナスなら緑・プラスなら赤）
-  const gapCell = sheet.getRange(21, 2);
+  // 目標との差額（行29）の条件付き書式（マイナス=緑・プラス=赤）
+  const gapCell = sheet.getRange(29, 2);
   const gapRules = [];
   gapRules.push(SpreadsheetApp.newConditionalFormatRule()
     .whenNumberLessThan(0).setBackground(C.CONFIRMED).setFontColor('#006600')
