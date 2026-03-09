@@ -207,6 +207,13 @@ function setupDashboard(ss, sheet) {
   addSection(sheet, 14, 3, '■ 次にやること Top3（高優先度・未確定 上位3件）');
   for (let i = 0; i < 3; i++) {
     lbl(sheet, 15 + i, 1, `Top${i + 1}`);
+    // FILTER関数を使用（Google Sheets 新エディタで利用可能）
+    // ▼ FILTER が "#NAME?" エラーになる場合の代替数式（Ctrl+Shift+Enter で配列数式として入力）:
+    //   =IFERROR(INDEX('未確定項目'!B$4:B$12,
+    //     SMALL(IF(('未確定項目'!D$4:D$12="高")*('未確定項目'!F$4:F$12="未確定"),
+    //       ROW('未確定項目'!B$4:B$12)-ROW('未確定項目'!B$4)+1), <N>)), "（なし）")
+    //   <N> には Top1=1, Top2=2, Top3=3 を入れる
+    //   ※ Ctrl+Shift+Enter で確定すると { } で囲まれた配列数式になる
     calc(sheet, 15 + i, 2,
       `=IFERROR(INDEX(FILTER('${SHEET.OPEN_ITEMS}'!B4:B12,` +
       `('${SHEET.OPEN_ITEMS}'!D4:D12="高")*('${SHEET.OPEN_ITEMS}'!F4:F12="未確定")),${i + 1}),"（なし）")`
