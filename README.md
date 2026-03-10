@@ -13,6 +13,9 @@
 | [PROJECTS.md](./PROJECTS.md) | 全プロジェクトの詳細設計・仕様 |
 | [ROADMAP.md](./ROADMAP.md) | 開発計画・タスクとステータス管理 |
 | [SETUP.md](./SETUP.md) | 新PCでの環境セットアップ手順 |
+| [慢性疼痛_管理表_STATUS.md](./慢性疼痛_管理表_STATUS.md) | 慢性疼痛プロジェクト — 管理表の現状・列定義・変更履歴・再開キュー |
+| [hirayama-jyusei-strategy/README_SHEETS.md](./hirayama-jyusei-strategy/README_SHEETS.md) | スプレッドシート使い方ガイド・Claude Code 運用分担ルール |
+| [hirayama-jyusei-strategy/SHEET_DESIGN.md](./hirayama-jyusei-strategy/SHEET_DESIGN.md) | スプレッドシート設計書（列定義・数式・シート間参照） |
 
 ---
 
@@ -34,7 +37,7 @@
 
 - OS: Windows 11
 - ワークスペースルート: `C:\hirayama-ai-workspace\workspace`
-- バージョン管理: Git / GitHub（`master` ブランチ運用）
+- バージョン管理: Git / GitHub（通常作業ブランチ: `feature/auto-dev-phase3-loop`）
 - 新PC環境構築: [SETUP.md](./SETUP.md) を参照
 
 ---
