@@ -12,6 +12,8 @@
 次は16銘柄の初回スクリーニングを実施し、条件を通過した候補でペーパートレードを開始する。
 実資金はまだ投入しない。
 
+> **Claude 運用方針:** 低トークン運用仕組みを導入済み。スプレッドシート構成は `docs/SPREADSHEET_SCHEMA_COMPACT.md`（compact schema v1.0）を基準とし、変更時のみ `docs/sheet_design.md` を詳細再確認する。
+
 ---
 
 ## フェーズ定義
@@ -89,6 +91,7 @@
 | 2026-03-10 | docs/sheet_design.md v1.3：チャート型記録シート（④）設計・AI連携最小構成（Phase 1〜3）を追加 |
 | 2026-03-10 | setup_sheets.gs（GASスクリプト）・templates/AI投資管理シート_テンプレート.xlsx を生成。4シート構成、ドロップダウン・条件付き書式・列幅・16銘柄プリセット入力済み |
 | 2026-03-10 | 分類表記を日本語化（A→A_内需安定、B→B_IT・DX、C→C_製造・精密、D→D_医療、E→E_金融）。UNIVERSE.md v1.1・sheet_design.md・setup_sheets.gs・create_template.py・xlsx・Google Sheets本体をすべて更新 |
+| 2026-03-10 | Claude 低トークン運用仕組みを導入。`CLAUDE.md`（起動ルール）と `docs/SPREADSHEET_SCHEMA_COMPACT.md`（compact schema v1.0）を新規作成。スプレッドシート構成は compact schema を基準とし、変更時のみ詳細再確認する運用に移行 |
 
 ---
 
