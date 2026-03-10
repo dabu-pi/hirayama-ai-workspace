@@ -107,7 +107,7 @@ function setupSheet1_候補管理(ss) {
   sheet.getRange(1, 1, 1, headers.length).createFilter();
 
   // ドロップダウン
-  setDropdown(sheet, 2, 4,  DATA_ROWS, ['A', 'B', 'C', 'D', 'E', 'TBD']); // 分類
+  setDropdown(sheet, 2, 4,  DATA_ROWS, ['A_内需安定', 'B_IT・DX', 'C_製造・精密', 'D_医療', 'E_金融', 'TBD']); // 分類
   setDropdown(sheet, 2, 5,  DATA_ROWS, ['AI_UNIVERSE', 'AI_SCREENING', 'AI_NEWS', 'MANUAL_USER']); // 登録元
   setDropdown(sheet, 2, 7,  DATA_ROWS, ['UNIVERSE登録済み', 'SCREENING条件通過', '決算材料', 'ニュース材料', 'ユーザー注目銘柄']); // AI根拠ソース
   setDropdown(sheet, 2, 9,  DATA_ROWS, ['未判定', '判定済み']); // 判定ステータス
@@ -117,22 +117,22 @@ function setupSheet1_候補管理(ss) {
   const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
   const universeStocks = [
     // [コード, 銘柄名, 分類]
-    ['9843', 'ニトリHD',                    'A'],
-    ['3064', 'MonotaRO',                   'A'],
-    ['9432', '日本電信電話（NTT）',          'A'],
-    ['4684', 'オービック',                   'B'],
-    ['3769', 'GMOペイメントゲートウェイ',    'B'],
-    ['4776', 'サイボウズ',                   'B'],
-    ['4307', '野村総合研究所（NRI）',        'B'],
-    ['6861', 'キーエンス',                   'C'],
-    ['6954', 'ファナック',                   'C'],
-    ['6273', 'SMC',                        'C'],
-    ['6146', 'ディスコ',                    'C'],
-    ['6869', 'シスメックス',                'D'],
-    ['2413', 'エムスリー',                  'D'],
-    ['4901', '富士フイルムHD',              'D'],
-    ['8766', '東京海上HD',                  'E'],
-    ['8473', 'SBIホールディングス',         'E'],
+    ['9843', 'ニトリHD',                    'A_内需安定'],
+    ['3064', 'MonotaRO',                   'A_内需安定'],
+    ['9432', '日本電信電話（NTT）',          'A_内需安定'],
+    ['4684', 'オービック',                   'B_IT・DX'],
+    ['3769', 'GMOペイメントゲートウェイ',    'B_IT・DX'],
+    ['4776', 'サイボウズ',                   'B_IT・DX'],
+    ['4307', '野村総合研究所（NRI）',        'B_IT・DX'],
+    ['6861', 'キーエンス',                   'C_製造・精密'],
+    ['6954', 'ファナック',                   'C_製造・精密'],
+    ['6273', 'SMC',                        'C_製造・精密'],
+    ['6146', 'ディスコ',                    'C_製造・精密'],
+    ['6869', 'シスメックス',                'D_医療'],
+    ['2413', 'エムスリー',                  'D_医療'],
+    ['4901', '富士フイルムHD',              'D_医療'],
+    ['8766', '東京海上HD',                  'E_金融'],
+    ['8473', 'SBIホールディングス',         'E_金融'],
   ];
 
   const rowData = universeStocks.map(([code, name, category]) => [
@@ -153,7 +153,7 @@ function setupSheet1_候補管理(ss) {
   sheet.setColumnWidth(1,  110); // 登録日
   sheet.setColumnWidth(2,   70); // コード
   sheet.setColumnWidth(3,  160); // 銘柄名
-  sheet.setColumnWidth(4,   60); // 分類
+  sheet.setColumnWidth(4,  130); // 分類
   sheet.setColumnWidth(5,  140); // 登録元
   sheet.setColumnWidth(6,  180); // 登録理由
   sheet.setColumnWidth(7,  180); // AI根拠ソース
@@ -184,7 +184,7 @@ function setupSheet2_スクリーニング記録(ss) {
   sheet.getRange(1, 1, 1, headers.length).createFilter();
 
   // ドロップダウン
-  setDropdown(sheet, 2, 4, DATA_ROWS, ['A', 'B', 'C', 'D', 'E']); // 分類
+  setDropdown(sheet, 2, 4, DATA_ROWS, ['A_内需安定', 'B_IT・DX', 'C_製造・精密', 'D_医療', 'E_金融']); // 分類
   const maruBatu = ['○', '✕'];
   for (let col = 5; col <= 12; col++) {
     setDropdown(sheet, 2, col, DATA_ROWS, maruBatu); // テクニカル+ファンダ 8条件
@@ -208,7 +208,7 @@ function setupSheet2_スクリーニング記録(ss) {
   sheet.setColumnWidth(1,  110); // 確認日
   sheet.setColumnWidth(2,   70); // コード
   sheet.setColumnWidth(3,  140); // 銘柄名
-  sheet.setColumnWidth(4,   60); // 分類
+  sheet.setColumnWidth(4,  130); // 分類
   for (let col = 5; col <= 12; col++) {
     sheet.setColumnWidth(col, 85); // 条件列8本
   }
@@ -297,7 +297,7 @@ function setupSheet4_チャート型記録(ss) {
   sheet.getRange(1, 1, 1, headers.length).createFilter();
 
   // ドロップダウン
-  setDropdown(sheet, 2, 4, DATA_ROWS, ['A', 'B', 'C', 'D', 'E']); // 分類
+  setDropdown(sheet, 2, 4, DATA_ROWS, ['A_内需安定', 'B_IT・DX', 'C_製造・精密', 'D_医療', 'E_金融']); // 分類
   setDropdown(sheet, 2, 5, DATA_ROWS, [ // チャート型
     '25日線上の押し目',
     '75日線上抜け後の初押し',
@@ -332,7 +332,7 @@ function setupSheet4_チャート型記録(ss) {
   sheet.setColumnWidth(1,  110); // 記録日
   sheet.setColumnWidth(2,   70); // コード
   sheet.setColumnWidth(3,  140); // 銘柄名
-  sheet.setColumnWidth(4,   60); // 分類
+  sheet.setColumnWidth(4,  130); // 分類
   sheet.setColumnWidth(5,  200); // チャート型
   sheet.setColumnWidth(6,  200); // エントリー理由
   sheet.setColumnWidth(7,  120); // ルール通過状況

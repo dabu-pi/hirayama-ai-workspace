@@ -32,7 +32,7 @@
 |---|---|---|
 | `INVESTMENT_POLICY.md` | **v1.1** | 損切り-5%・段階的利確・追加買い条件・期間利確トリガーを数値確定 |
 | `SCREENING_RULES.md` | **v1.1** | テクニカル4条件・ファンダ3条件を数値確定。決算データ有効期限・暗号資産時間足ルールを追加 |
-| `UNIVERSE.md` | **v1.0** | 日本株16銘柄（A〜E分類）＋暗号資産監視メモを整備。各銘柄に選定理由・監視ポイントを記載 |
+| `UNIVERSE.md` | **v1.1** | 日本株16銘柄（A_内需安定〜E_金融）＋暗号資産監視メモを整備。各銘柄に選定理由・監視ポイントを記載 |
 | `docs/sheet_design.md` | v1.3 | チャート型記録シート設計・AI連携最小構成（Phase 1〜3）を追加 |
 | `docs/ai_design.md` | v1.0 | AI活用方針・自動化ロードマップを記載 |
 | `REVIEW_LOG.md` | v1.1 | 週次・月次振り返りフォーマットを整備 |
@@ -69,7 +69,7 @@
 |---|---|
 | INVESTMENT_POLICY.md（数値ルール確定） | ✅ 完了（v1.1） |
 | SCREENING_RULES.md（スクリーニング条件確定） | ✅ 完了（v1.1） |
-| UNIVERSE.md（銘柄リスト整備） | ✅ 完了（v1.0・16銘柄） |
+| UNIVERSE.md（銘柄リスト整備） | ✅ 完了（v1.1・16銘柄） |
 | Google Sheets 管理シートの作成 | ✅ テンプレート整備完了（GAS or xlsx で即適用可） |
 | 16銘柄の初回スクリーニング | ⬜ 未実施 |
 
@@ -88,6 +88,7 @@
 | 2026-03-10 | docs/sheet_design.md v1.2：候補管理シート設計・AI連携方針追加。スクリーニング記録をA-R列に拡張 |
 | 2026-03-10 | docs/sheet_design.md v1.3：チャート型記録シート（④）設計・AI連携最小構成（Phase 1〜3）を追加 |
 | 2026-03-10 | setup_sheets.gs（GASスクリプト）・templates/AI投資管理シート_テンプレート.xlsx を生成。4シート構成、ドロップダウン・条件付き書式・列幅・16銘柄プリセット入力済み |
+| 2026-03-10 | 分類表記を日本語化（A→A_内需安定、B→B_IT・DX、C→C_製造・精密、D→D_医療、E→E_金融）。UNIVERSE.md v1.1・sheet_design.md・setup_sheets.gs・create_template.py・xlsx・Google Sheets本体をすべて更新 |
 
 ---
 
