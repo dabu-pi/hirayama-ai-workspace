@@ -391,4 +391,4 @@
 | 2026-03-10 | 2d775ad | STATUS.md | シート注意文テキスト追加・menu_idバリデーション強化（NG例・Sheets入力規則式）・新メニュー追加テスト手順と期待結果を追記 |
 | 2026-03-10 | 9b63fbc | STATUS.md | 現物反映: J列を会計区分（旧:保険適用）に変更・K=1回単価/L=状態/M=使用フラグ（新規）/N=確定状況/O=備考に列構成を更新。XLOOKUP・集計・テスト手順の列参照を全修正。会計区分別集計数式を追加 |
 | 2026-03-10 | —（本コミット） | STATUS.md / CLAUDE.md | 価格設定シートの実態列構成（A-N）を現物ベースで全面再記録。J列変更・M列挿入の正式候補案を記録。CLAUDE.md にスプレッドシート構造変更の実施者ルール・完了報告項目・差分禁止ルールを追記。記録テンプレートを追加 |
-| 2026-03-10 | —（本コミット） | README.md / CLAUDE.md / README_SHEETS.md / SHEET_DESIGN.md / STATUS.md | 運用ルール全体強化。README.mdブランチ名修正・ドキュメント表拡充。CLAUDE.mdに作業開始前7項目確認・作業終了後5項目同期・完了報告テンプレ11項目・STATUS系配置ルールを追記。README_SHEETS.mdにセクション7「Claude Code運用分担ルール」追加。SHEET_DESIGN.mdに変更管理ルール注記を追加。STATUS.md再開キューを4ステップ読込順序に更新 |
+| 2026-03-10 | 842f58c | README.md / CLAUDE.md / README_SHEETS.md / SHEET_DESIGN.md / STATUS.md | 運用ルール全体強化。README.mdブランチ名修正・ドキュメント表拡充。CLAUDE.mdに作業開始前7項目確認・作業終了後5項目同期・完了報告テンプレ11項目・STATUS系配置ルールを追記。README_SHEETS.mdにセクション7「Claude Code運用分担ルール」追加。SHEET_DESIGN.mdに変更管理ルール注記を追加。STATUS.md再開キューを4ステップ読込順序に更新 |
