@@ -1,6 +1,7 @@
-# SETUP.md — 新PCセットアップ手順
+﻿# SETUP.md — 新PCセットアップ手順
 
-このドキュメントは新しいPC（ジムPCなど）でこのワークスペースを使い始めるための手順書です。
+このドキュメントは新しいPC（ジムPC・自宅PC・ノートPC）でこのワークスペースを使い始めるための手順書です。
+Codex / Claude Code のどちらを使う場合も、この手順を共通で使います。
 
 ---
 
@@ -8,7 +9,9 @@
 
 - **OneDrive管理下のフォルダにクローンしない**（同期競合やファイルロックが発生する）
 - 作業フォルダは `C:\hirayama-ai-workspace\` 固定で使う
+- GitHub を正本とし、ローカルの未push状態を基準にしない
 - 認証情報ファイル（`service_account.json`、`.env` 等）はGitに含まれていないため別途配置が必要
+- PC固有ファイルは GitHub に上げない
 
 ---
 
@@ -86,6 +89,14 @@ git config --global user.email "ここに自分のGitHubメールアドレスを
 git config --global --list
 # user.name=Katsushi Hirayama
 # user.email=...
+```
+
+リモート確認:
+
+```bash
+cd /c/hirayama-ai-workspace/workspace
+git remote -v
+# origin https://github.com/dabu-pi/hirayama-ai-workspace.git
 ```
 
 ---
@@ -212,24 +223,87 @@ note "セットアップ完了" -Tag done
 
 ---
 
-## Step 6 — 日常の開発フロー
+## Step 6 — Codex / Claude 共通の起動ルール
+
+AI に作業を依頼する前に、次を確認する。
 
 ```powershell
 cd C:\hirayama-ai-workspace\workspace
-ds                        # 作業開始（git pull）
-de "変更内容の説明"        # 作業終了（commit + push）
+git status
+git pull
 ```
 
-詳細ルールは [CLAUDE.md](./CLAUDE.md) を参照。
+AI には、まず次を読むように指示する。
+
+1. `README.md`
+2. `PROJECTS.md`
+3. `ROADMAP.md`
+4. `docs/PROJECT_STATUS.md`
+5. 対象プロジェクトの `README.md`
+6. 対象プロジェクトの `PROJECT_STATUS.md`
+7. 必要に応じて `spec.md` / `SPEC.md`
+
+定型指示例:
+
+```text
+まず README.md、PROJECTS.md、ROADMAP.md、docs/PROJECT_STATUS.md と、
+今回触るプロジェクトの README / PROJECT_STATUS / spec を読んでから作業してください。
+作業前に git status を確認し、最後に変更点・検証結果・次の作業を整理してください。
+```
 
 ---
 
-## Step 7 — 動作確認チェックリスト
+## Step 7 — 3台のPCを切り替える日常運用
+
+### 7-1. 作業開始時
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+git status
+git pull
+```
+
+確認ポイント:
+
+- 今のPCに未コミット差分が残っていないか
+- 別PCで push 済みの変更を取得できたか
+- 対象プロジェクトの `PROJECT_STATUS.md` を読んだか
+
+### 7-2. 作業終了時
+
+最低限、次をやる。
+
+- `PROJECT_STATUS.md` または関連メモを更新する
+- 必要なテスト・確認を実行する
+- `git status` で差分を確認する
+- `git add` → `git commit` → `git push`
+
+例:
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+git status
+git add .
+git commit -m "docs: update project status"
+git push origin feature/auto-dev-phase3-loop
+```
+
+### 7-3. PC を切り替える前の禁止事項
+
+- push 前の変更を残したまま他のPCで続きを始めない
+- AIとの会話だけに重要判断を残さない
+- 同じファイルを複数PCで同時に編集しない
+- `.env` や `service_account.json` をコミットしない
+
+---
+
+## Step 8 — 動作確認チェックリスト
 
 | 項目 | 確認コマンド | 期待結果 |
 |---|---|---|
-| Git | `git status` | `On branch feature/auto-dev-phase3-loop` と表示される |
+| Git | `git status` | ブランチ名と作業状態が表示される |
 | Git設定 | `git config --global --list` | name / email が表示される |
+| GitHubリモート | `git remote -v` | `origin` が `dabu-pi/hirayama-ai-workspace.git` を指す |
 | clasp認証 | `clasp whoami` | Googleアカウントのメールが表示される |
 | Python仮想環境 | `python --version`（venv内） | 3.11以上 |
 | Flaskアプリ | `python app.py` | localhost:5000 でアクセス可能 |
@@ -272,3 +346,12 @@ python -m venv venv          # 再作成
 source venv/Scripts/activate
 pip install -r requirements.txt
 ```
+
+---
+
+## 関連ドキュメント
+
+- `AGENTS.md`
+- `docs/CODEX_MIGRATION_CHECKLIST.md`
+- `CLAUDE.md`
+- `docs/AI_DEV_ENV.md`
