@@ -12,7 +12,7 @@
 | ディレクトリ | `workspace/ai-os/` |
 | 目的 | Claude・ChatGPT・GAS・GitHub・ダッシュボードを横断管理するコマンドセンター |
 | 開始日 | 2026-03-06 |
-| 最終更新 | 2026-03-12（Run_Log 10列正本を確定） |
+| 最終更新 | 2026-03-12 (Run_Log live append and one full handoff loop verified) |
 
 ---
 
@@ -21,19 +21,19 @@
 | 項目 | 状態 |
 |---|---|
 | 分類 | In Progress |
-| フェーズ | Phase 2 - 最小自動化（Run_Log 自動追記から開始） |
-| 実装 | 7シート整備済み・Phase 1 構造整備完了・手動運用は未定着 |
-| コード | `de` の Run_Log JSON / TSV 10列出力まで実装済み |
-| ランタイム | 未起動 |
+| フェーズ | Phase 2 - minimum automation (Run_Log / Ideas->Task / Task_Queue guard) |
+| 実装 | One full live operating loop has been verified end-to-end. |
+| コード | `de` now covers commit/push + Run_Log export/live append; Ideas->Task helper and Task_Queue validator are in place. |
+| ランタイム | Operating manually with live sheet verification. |
 
 ---
 
 ## 現状認識
 
 - Phase 1 の構造整備タスクは完了済み
-- Run_Log の手動記録フローは開始したが、習慣としては定着していない
-- 「手動で定着するまで待つ」より、「続かない部分だけ最小自動化する」方針へ切り替える
-- Phase 2 の対象はまず `Run_Log` への 1行自動追記に限定する
+- One `de`-based loop has already verified live Run_Log append and Dashboard Latest Run refresh.
+- The current policy remains: automate only the parts that tend to be missed in manual operation.
+- Phase 2 now includes Run_Log append, Ideas -> Task_Queue promotion, and incomplete Task_Queue row detection.
 - 実シート確認の結果、ローカル設計を正本として実シートを順に寄せる方針に決定
 - 実シートには `*_backup_20260308` タブが残っており、2026-03-08 時点で移行作業が行われた痕跡がある
 - `Run_Log` の正本は `system` ベース 10列に確定した
@@ -45,8 +45,8 @@
 
 | タスク | 内容 |
 |---|---|
-| 実シート整合の具体化 | `SHEET_ALIGNMENT_PLAN.md` を基準に Lists / Run_Log / Projects / Task_Queue の修正順を固める |
-| Run_Log 実シート反映準備 | 10列正本に合わせてシート側列を直す前提が固まった |
+| end-to-end operation | The loop `change -> commit/push -> de -> Run_Log -> Dashboard Latest Run` has been verified once. |
+| manual cleanup | The known incomplete Task_Queue row was removed from the live sheet; validator should now stay at zero. |
 
 ---
 
@@ -65,10 +65,10 @@
 
 ## 次のアクション
 
-1. `ai-os/SHEET_ALIGNMENT_PLAN.md` を基準に Lists の現物語彙を確定する
-2. 実シート Run_Log を 10列正本へ修正する
-3. `de` で出る TSV を実シート列に1回貼って確認する
-4. その後に Projects / Task_Queue の列整理に入る
+1. Run `de` and `node scripts/validate-task-queue.mjs --warn-only` several more times to confirm the handoff flow stays stable.
+2. Increase real usage of `Ideas -> Task_Queue -> Projects`, then revisit allowlist expansion only if it becomes necessary.
+3. Expand Projects status/phase auto-reflection only when the current operating loop is stable enough to justify it.
+4. Keep KPI definitions unchanged and prioritize live-sheet operating stability over helper expansion.
 
 ---
 
@@ -295,4 +295,11 @@
   - if a commit changes dashboard automation behavior or live-sheet operation, append a `Run_Log` row before ending the session
   - if you intentionally keep `Dashboard` Latest Run pinned to an older commit, leave that reason in `PROJECT_STATUS.md`
 - Added `scripts/validate-task-queue.mjs` as a read-only check for manual `Task_Queue` drift.
-- Current known manual incomplete row remains in `Task_Queue` and should be either completed or cleared before relying on hand-entered queue counts.
+- The previously known manual incomplete `Task_Queue` row has now been removed from the live sheet.
+
+
+## 2026-03-12 end-to-end handoff loop memo
+
+- Deleted the known manual incomplete row from live `Task_Queue` after confirming there was no reliable metadata to fill it safely.
+- Verified `node scripts/validate-task-queue.mjs --warn-only` returns 0 findings after the cleanup.
+- The remaining Phase 2 priority is stable handoff operation: change, commit/push, `de`, live `Run_Log`, and `Dashboard Latest Run`.
