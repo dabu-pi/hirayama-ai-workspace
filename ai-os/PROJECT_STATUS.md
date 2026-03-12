@@ -304,6 +304,31 @@
 - Verified `node scripts/validate-task-queue.mjs --warn-only` returns 0 findings after the cleanup.
 - The remaining Phase 2 priority is stable handoff operation: change, commit/push, `de`, live `Run_Log`, and `Dashboard Latest Run`.
 
+## 2026-03-12 de minimum implementation split
+
+- Ready to implement first inside `de`:
+  - treat inspect / read-only / validator / help / `node --check` / `git status`-class commands as no-pause operations
+  - add opt-in cleanup flags around the existing handoff flow, not inside the commit core
+  - keep cleanup scope to one known incomplete row only
+- Proposed minimum `de` flow with opt-in cleanup:
+  1. run `node scripts/validate-task-queue.mjs --warn-only`
+  2. if `-AutoCleanupKnownTaskQueueRow` is set and the validator finds exactly one known row, save a backup under `logs/taskqueue/`
+  3. delete that one row
+  4. rerun `node scripts/validate-task-queue.mjs --warn-only` and require 0 findings
+  5. continue the existing `de` path: commit / push / Run_Log export / live Run_Log append
+  6. finish with inspect-only confirmation of `Run_Log` and `Dashboard Latest Run`
+- Feasibility split:
+  - backup: easy, can be added first with local JSON output only
+  - delete: feasible, but should stay opt-in and single-row only
+  - revalidate: easy, already supported by `validate-task-queue.mjs`
+  - Run_Log: already implemented in `de`
+  - Dashboard Latest Run inspect: easy, but still separate from `de` unless we add a small inspect helper call
+- Keep as documentation-only for now:
+  - cleanup of multiple incomplete rows
+  - auto-filling a row from guessed project/type metadata
+  - automatic cleanup without backup
+  - any cleanup touching Projects or external systems
+
 ## 2026-03-12 Auto approval rule memo
 
 - Added `ai-os/AUTO_APPROVAL_RULES.md` to reduce confirmation branching for the AIOS auto-loop.
