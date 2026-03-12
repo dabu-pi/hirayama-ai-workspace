@@ -109,3 +109,16 @@
 - 実シート `Run_Log` は 2026-03-12 に `log_id / datetime / system / project / summary / result / commit_hash / tasks_done / stop_reason / next_action` へ更新済み
 - 旧ログ 5件は `LEGACY-*` 形式の `log_id` で保持し、既存の Codex 追記行もそのまま維持した
 - 今後の `de` 追記はこの10列前提でそのまま整合する
+
+## 2026-03-12 Projects 次段メモ
+
+- live `Projects` タブは旧14列のまま継続していることを確認
+- `scripts/preview-projects-migration.mjs` を追加し、旧14列を正本10列へどう写すかを JSON プレビューで出せるようにした
+- `Projects` は Dashboard 数式依存の可能性が高いため、Run_Log のような即時 live 移行はまだ行っていない
+- 次に live 変更する前に、Dashboard が `Projects` のどの列を参照しているか確認する
+
+## 2026-03-12 Projects formula dependency note
+
+- Dashboard rows 12-16 reference `Projects!A`, `D`, `E`, `F`, `G`, `I`, `M` directly
+- Because of that, the live `Projects` tab cannot be migrated to the canonical schema yet without first rewriting Dashboard formulas
+- `scripts/preview-projects-migration.mjs` is safe to use because it only exports a preview and does not touch the live sheet
