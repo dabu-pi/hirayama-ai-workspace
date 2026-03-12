@@ -26,6 +26,7 @@ $sd = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocati
 $gscPath = Join-Path $sd 'git-safe-commit.ps1'
 $runLogExportPath = Join-Path $sd 'export-run-log-entry.ps1'
 $runLogSheetWritePath = Join-Path $sd 'append-runlog-to-sheet.mjs'
+$projectRunLogSyncPath = Join-Path $sd 'sync-project-from-runlog.mjs'
 $taskQueueCleanupPath = Join-Path $sd 'cleanup-known-taskqueue-row.mjs'
 
 if (-not (Test-Path $gscPath)) {
@@ -113,7 +114,7 @@ if ($AutoCleanupKnownTaskQueueRow) {
     }
 }
 
-$statusRaw = @(git status --short 2>&1)
+$statusRaw = @(cmd /c "git status --short 2>&1")
 $dirty = @($statusRaw | Where-Object { $_ -and $_ -notmatch '^warning:' })
 
 if ($dirty.Count -eq 0) {
@@ -179,7 +180,9 @@ try {
 
 $runLogExit = 0
 $runLogSheetExit = 0
+$projectRunLogSyncExit = 0
 $commitHash = ''
+$jsonPath = ''
 if ($exitCode -eq 0) {
     $commitHash = (git rev-parse --short HEAD 2>&1).Trim()
     if (-not $SkipRunLogExport) {
@@ -205,6 +208,16 @@ if ($exitCode -eq 0) {
         } else {
             Write-Warn 'Run_Log JSON が見つからないためシート書き込みをスキップしました。'
             $runLogSheetExit = 1
+        }
+    }
+
+    if ($runLogSheetExit -eq 0 -and $Result -eq 'SUCCESS' -and $ProjectId -eq 'AIOS-06' -and $jsonPath -and (Test-Path $projectRunLogSyncPath)) {
+        try {
+            & node $projectRunLogSyncPath --json $jsonPath --project-id $ProjectId --expected-commit $commitHash --write
+            $projectRunLogSyncExit = $LASTEXITCODE
+        } catch {
+            Write-Warn $_.Exception.Message
+            $projectRunLogSyncExit = 1
         }
     }
 }
@@ -233,4 +246,6 @@ if ($exitCode -eq 0) {
 }
 Write-Host ''
 exit $exitCode
+
+
 

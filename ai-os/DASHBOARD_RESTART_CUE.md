@@ -253,3 +253,20 @@
   3. if the same single known row remains, run `node scripts/cleanup-known-taskqueue-row.mjs --write`
   4. require validator 0 before retrying `de`
 - Verified once on live with `AUTO CLEANUP FAILURE TEST` and then restored the sheet to a clean state.
+
+## 2026-03-13 Projects handoff snapshot cue
+
+- `scripts/sync-project-from-runlog.mjs` is the new minimal bridge from latest `Run_Log` to `Projects`.
+- `de` now attempts the sync only when all of these are true:
+  - `Result = SUCCESS`
+  - `ProjectId = AIOS-06`
+  - live `Run_Log` append succeeded
+  - latest live `Run_Log` commit matches the current handoff commit
+- Current write scope:
+  - `Projects.last_updated`
+  - `Projects.next_action`
+  - `Projects.notes` latest_handoff block
+- Current skip scope:
+  - no `status / phase / blocker / priority` writes
+  - no non-AIOS project writes
+  - skip silently on latest-commit mismatch or missing row

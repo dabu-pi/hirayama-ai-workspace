@@ -382,3 +382,14 @@
   - reran normal cleanup and saved `logs/taskqueue/taskqueue_cleanup_backup_20260313_052308.json`
   - deleted `Task_Queue!A16:K16`
   - revalidated back to 0 findings before resuming the normal handoff path
+
+## 2026-03-13 Projects handoff snapshot memo
+
+- Added `scripts/sync-project-from-runlog.mjs` for the minimum AIOS-only handoff snapshot sync.
+- Current scope is intentionally narrow:
+  - target project: `AIOS-06` only
+  - required latest live `Run_Log` match on the same commit hash
+  - updates only `last_updated`, `next_action`, and a `latest_handoff=...` block inside `notes`
+  - never touches `status`, `phase`, `blocker`, or `priority`
+- Verified manual dry-run and live write against `Run_Log!A21:J21` (`c4a620b`) and `Projects!A9:J9`.
+- `scripts/dev-end.ps1` now calls this helper after a successful live `Run_Log` append when `ProjectId = AIOS-06` and `Result = SUCCESS`.
