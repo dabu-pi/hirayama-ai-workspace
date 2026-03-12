@@ -393,3 +393,13 @@
   - never touches `status`, `phase`, `blocker`, or `priority`
 - Verified manual dry-run and live write against `Run_Log!A21:J21` (`c4a620b`) and `Projects!A9:J9`.
 - `scripts/dev-end.ps1` now calls this helper after a successful live `Run_Log` append when `ProjectId = AIOS-06` and `Result = SUCCESS`.
+
+## 2026-03-13 Next-task suggestion helper memo
+
+- Added `scripts/suggest-next-task.mjs` as a read-only recommendation helper for the live `Task_Queue`.
+- Scope is intentionally small:
+  - complete rows only
+  - excludes `完了`
+  - ranks by `進行中`, priority, planned date, score, and row age
+  - prints one suggested task plus human-readable reasons and the source row range
+- Optional `--project` filter is supported for scoped inspection, but the helper never writes to any sheet.

@@ -270,3 +270,15 @@
   - no `status / phase / blocker / priority` writes
   - no non-AIOS project writes
   - skip silently on latest-commit mismatch or missing row
+
+## 2026-03-13 Next-task suggestion cue
+
+- `scripts/suggest-next-task.mjs` is now the read-only helper for choosing one next task from live `Task_Queue`.
+- It never writes to `Task_Queue`, `Projects`, `Ideas`, `Run_Log`, or `Dashboard`.
+- Current ranking order:
+  1. `進行中`
+  2. `高 > 中 > 低`
+  3. earlier planned date
+  4. higher score
+  5. older row
+- Optional `--project` can narrow the recommendation pool when you want to inspect one project only.
