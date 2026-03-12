@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
 import {
   batchUpdateSpreadsheet,
@@ -16,8 +16,8 @@ const METRICS_VALUES = [
   ['Projects Parked', '=COUNTIF(Projects!D4:D200,"保留")', '', '完了', '=COUNTIF(Projects!D4:D200,"完了")'],
   ['Projects Complete', '=COUNTIF(Projects!D4:D200,"完了")', '', '稼働中', '=COUNTIF(Projects!D4:D200,"稼働中")'],
   ['Average Progress', '=IFERROR(AVERAGE(ArrayFormula(IFERROR(VALUE(REGEXEXTRACT(Projects!J4:J200,"progress=(\\d+)%"))/100,))),0)'],
-  ['Open Tasks', '=COUNTIFS(Task_Queue!A4:A300,"<>",Task_Queue!E4:E300,"<>完了")'],
-  ['High Priority Open Tasks', '=COUNTIFS(Task_Queue!A4:A300,"<>",Task_Queue!D4:D300,"高",Task_Queue!E4:E300,"<>完了")'],
+  ['Open Tasks', '=COUNTIFS(Task_Queue!A4:A300,"<>",Task_Queue!B4:B300,"<>",Task_Queue!E4:E300,"<>",Task_Queue!E4:E300,"<>完了")'],
+  ['High Priority Open Tasks', '=COUNTIFS(Task_Queue!A4:A300,"<>",Task_Queue!B4:B300,"<>",Task_Queue!D4:D300,"高",Task_Queue!E4:E300,"<>",Task_Queue!E4:E300,"<>完了")'],
   ['Idea Count', '=COUNTA(Ideas!A4:A200)'],
 ];
 
@@ -103,7 +103,7 @@ async function main() {
   const latestRunValues = buildLatestRunValues();
 
   console.log('[INFO] Metrics target   : Metrics!A2:E11');
-  console.log(`[INFO] Metrics sample   : ${JSON.stringify(METRICS_VALUES[1])}`);
+  console.log(`[INFO] Metrics sample   : ${JSON.stringify(METRICS_VALUES[7])}`);
   console.log('[INFO] Dashboard target : Dashboard!H21:N26');
   console.log(`[INFO] Latest run head  : ${JSON.stringify(LATEST_RUN_HEADERS)}`);
   console.log(`[INFO] Latest run expr  : ${LATEST_RUN_FORMULA}`);

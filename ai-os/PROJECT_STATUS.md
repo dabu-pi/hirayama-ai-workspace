@@ -242,3 +242,12 @@
   - `Task_Queue!A15:K15` appended `要件定義たたき台作成 / 廃棄物日報GAS / 設計 / 進行中`
   - `Projects!A8:J8` updated to `status = 進行中`, `phase = 設計`, `last_updated = 2026-03-12`, `next_action = 要件定義たたき台作成`
 - Next design choice: keep the tracked allowlist at `WST-05` only, or add one more low-risk project after a short observation period.
+## 2026-03-12 Metrics task-queue hardening memo
+
+- Hardened `scripts/apply-dashboard-metrics-fixes.mjs` so `Open Tasks` and `High Priority Open Tasks` ignore incomplete `Task_Queue` rows.
+- The new formulas require nonblank `Task`, nonblank `Project`, and nonblank `Status` before a row is counted as open.
+- Reason: the live sheet currently contains at least one partial row with a title but no project/status, which should not inflate KPI counts.
+- Verified live after reapplying metrics fixes:
+  - `Dashboard!A6:K6` now shows `Open Tasks = 11`
+  - `Metrics!A2:E11` now shows `Open Tasks = 11`, `High Priority Open Tasks = 6`, `Projects In Progress = 3`
+- The partial row still exists in `Task_Queue`; the fix is formula-side hardening, not data deletion.

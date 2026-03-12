@@ -185,3 +185,11 @@
   - `Projects!A8:J8`
   - `廃棄物日報GAS` moved from `保留 / 構想` to `進行中 / 設計`
 - If expanding lifecycle apply later, add projects to the tracked file deliberately instead of relying on ad hoc CLI flags.
+## 2026-03-12 Metrics task-queue hardening cue
+
+- `scripts/apply-dashboard-metrics-fixes.mjs` now counts open tasks only when `Task`, `Project`, and `Status` are all present.
+- This was added because the live `Task_Queue` contains a partial row that should not count as an open task.
+- Verified live values after reapplying the formulas:
+  - `Dashboard` summary shows `Open Tasks = 11`
+  - `Metrics` shows `Open Tasks = 11`, `High Priority Open Tasks = 6`, `Projects In Progress = 3`
+- The hardening is formula-side only; no live `Task_Queue` rows were deleted.
