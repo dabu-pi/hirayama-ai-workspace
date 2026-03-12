@@ -1,4 +1,4 @@
-# 認証情報・秘密情報
+﻿# 認証情報・秘密情報
 .env
 *.env
 service_account.json
@@ -50,17 +50,18 @@ nul
 _logs/
 
 # logs: keep notes only (tracked), ignore others
+logs/
+!logs/notes/
+!logs/notes/**
+!logs/runlog/
 logs/run/
 logs/error/
 logs/artifacts/
+logs/runlog/**
 logs/*.log
 
 # root artifacts (debug reports etc.)
 artifacts/
-# logs: ignore all, but keep notes tracked
-logs/
-!logs/notes/
-!logs/notes/**
 
-# root artifacts (debug reports etc.)
-artifacts/
+# local-only settings
+.claude/settings.local.json
