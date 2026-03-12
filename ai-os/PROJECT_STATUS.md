@@ -151,3 +151,24 @@
 - Cleared the stale extra values that had remained in columns `J:L` from the earlier mixed-layout sheet.
 - Verified live `Lists!A1:I13` now contains the intended Japanese vocabulary plus `Codex` in `system`.
 - Remaining follow-up: inspect Dashboard / Metrics formulas that still reflect old numeric progress assumptions.
+
+## 2026-03-12 Dashboard metrics repair memo
+
+- Added `scripts/apply-dashboard-metrics-fixes.mjs` to rewrite the live `Metrics` formulas and the `Dashboard` latest run block in one step.
+- Verified live `Metrics!A1:F12` now shows stable values on the canonical schema:
+  - `Total Projects = 6`
+  - `Production Systems = 1`
+  - `Projects In Progress = 2`
+  - `Average Progress = 45%`
+  - `Open Tasks = 11`
+  - `Idea Count = 7`
+- Verified live `Dashboard!H21:N26` now points at canonical `Run_Log` columns (`datetime / project / system / summary / result / commit_hash / next_action`) and sorts by latest date descending.
+- `Average Progress` now comes from `progress=NN%` parsed out of `Projects!J` notes instead of the old numeric column assumption.
+
+## 2026-03-12 Projects helper memo
+
+- Added `scripts/upsert-projects.mjs` to update or append canonical `Projects` rows by `project_id` or `directory`.
+- Added `scripts/project-entry.example.json` as a sample payload for live project updates.
+- Verified a live update against `Projects!A9:J9` for `AIOS-06`.
+- The helper preserved the structured `notes` metadata while updating the visible project fields (`project_name / phase / last_updated / next_action`).
+- `AIOS-06` is now labeled `Hirayama AI OS` in the live `Projects` sheet and has `Phase2` recorded on `2026-03-12`.

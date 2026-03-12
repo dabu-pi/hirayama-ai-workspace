@@ -103,3 +103,19 @@
 - Live headers now match `status / phase / type / system / assigned_to / task_status / task_type / priority / idea_status`.
 - Stale columns `J:L` were cleared so the sheet no longer mixes old `impact/size` leftovers with the active vocabulary range.
 - Verified live range: `Lists!A1:I13`.
+
+## 2026-03-12 Dashboard metrics repair cue
+
+- `scripts/apply-dashboard-metrics-fixes.mjs` has already been applied to the live sheet.
+- Verified live values:
+  - `Metrics!A1:F12` shows `Total Projects = 6`, `Production Systems = 1`, `Projects In Progress = 2`, `Average Progress = 45%`, `Open Tasks = 11`, `Idea Count = 7`.
+  - `Dashboard!H21:N26` now reads from canonical `Run_Log` fields and sorts by latest date descending.
+- `Average Progress` is no longer tied to the old `Projects!G` numeric assumption; it now parses `progress=NN%` out of `Projects!J`.
+
+## 2026-03-12 Projects helper cue
+
+- Added `scripts/upsert-projects.mjs` for safe live updates on the canonical `Projects` sheet.
+- The helper matches rows by `project_id` first and falls back to `directory`.
+- Verified live write: `Projects!A9:J9`.
+- `AIOS-06` is now normalized to `Hirayama AI OS`, with `Phase2`, `2026-03-12`, and a fresh next action recorded.
+- Natural next step: decide whether to automate `Ideas` next or deepen `Task_Queue` / `Projects` sync logic.
