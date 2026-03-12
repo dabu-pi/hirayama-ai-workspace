@@ -403,3 +403,5 @@
   - ranks by `進行中`, priority, planned date, score, and row age
   - prints one suggested task plus human-readable reasons and the source row range
 - Optional `--project` filter is supported for scoped inspection, but the helper never writes to any sheet.
+
+- `--project AIOS-06` returns a clearer fallback message when no canonical AIOS-linked Task_Queue row exists yet.

@@ -11,22 +11,29 @@ import {
   SHEET_NAME,
 } from './task-queue-validation-lib.mjs';
 
+const STATUS_IN_PROGRESS = '\u9032\u884c\u4e2d';
+const STATUS_DONE = '\u5b8c\u4e86';
+const PRIORITY_HIGH = '\u9ad8';
+const PRIORITY_MEDIUM = '\u4e2d';
+const PRIORITY_LOW = '\u4f4e';
+const AIOS_PROJECT_ID = 'AIOS-06';
+
 const PRIORITY_WEIGHT = new Map([
-  ['高', 3],
-  ['中', 2],
-  ['低', 1],
+  [PRIORITY_HIGH, 3],
+  [PRIORITY_MEDIUM, 2],
+  [PRIORITY_LOW, 1],
   ['High', 3],
   ['Medium', 2],
   ['Low', 1],
 ]);
 
 const PROJECT_ALIASES = new Map([
-  ['FREEE-02', ['FREEE-02', 'freee見積自動化', 'freee-automation']],
-  ['GAS-01', ['GAS-01', '柔整GASシステム', 'gas-projects/jyu-gas-ver3.1']],
-  ['WEB-03', ['WEB-03', '患者管理Webアプリ', 'patient-management']],
-  ['STR-04', ['STR-04', '接骨院戦略AI', 'hirayama-jyusei-strategy']],
-  ['WST-05', ['WST-05', '廃棄物日報GAS', 'waste-report-system']],
-  ['AIOS-06', ['AIOS-06', 'Hirayama AI OS', 'ai-os']],
+  ['FREEE-02', ['FREEE-02', 'freee\u898b\u7a4d\u81ea\u52d5\u5316', 'freee-automation']],
+  ['GAS-01', ['GAS-01', '\u67d4\u6574GAS\u30b7\u30b9\u30c6\u30e0', 'gas-projects/jyu-gas-ver3.1']],
+  ['WEB-03', ['WEB-03', '\u60a3\u8005\u7ba1\u7406Web\u30a2\u30d7\u30ea', 'patient-management']],
+  ['STR-04', ['STR-04', '\u63a5\u9aa8\u9662\u6226\u7565AI', 'hirayama-jyusei-strategy']],
+  ['WST-05', ['WST-05', '\u5ec3\u68c4\u7269\u65e5\u5831GAS', 'waste-report-system']],
+  [AIOS_PROJECT_ID, [AIOS_PROJECT_ID, 'Hirayama AI OS', 'ai-os']],
 ]);
 
 function printHelp() {
@@ -39,8 +46,8 @@ Usage:
 
 Notes:
   - Read-only helper. It never writes to Task_Queue, Projects, Ideas, Run_Log, or Dashboard.
-  - Eligible rows must have Task / Project / Type / Priority / Status and must not be 完了.
-  - Ranking order: 進行中, priority, earlier planned date, higher score, older row.
+  - Eligible rows must have Task / Project / Type / Priority / Status and must not be ${STATUS_DONE}.
+  - Ranking order: ${STATUS_IN_PROGRESS}, priority, earlier planned date, higher score, older row.
 `);
 }
 
@@ -75,7 +82,7 @@ function parseScore(value) {
 }
 
 function statusWeight(status) {
-  return String(status || '').trim() === '進行中' ? 1 : 0;
+  return String(status || '').trim() === STATUS_IN_PROGRESS ? 1 : 0;
 }
 
 function priorityWeight(priority) {
@@ -85,7 +92,6 @@ function priorityWeight(priority) {
 function buildEntry(rowNumber, row) {
   return {
     rowNumber,
-    row,
     task: String(row[0] || '').trim(),
     project: String(row[1] || '').trim(),
     priority: String(row[3] || '').trim(),
@@ -110,10 +116,10 @@ function compareEntries(left, right) {
 function buildReasons(selected, pool) {
   const reasons = [];
 
-  if (selected.status === '進行中') {
-    reasons.push('status=進行中 is ranked ahead of every non-active task.');
+  if (selected.status === STATUS_IN_PROGRESS) {
+    reasons.push(`status=${STATUS_IN_PROGRESS} is ranked ahead of every non-active task.`);
   } else {
-    reasons.push('No 進行中 rows outranked this task, so the helper fell back to the best queued item.');
+    reasons.push(`No ${STATUS_IN_PROGRESS} rows outranked this task, so the helper fell back to the best queued item.`);
   }
 
   reasons.push(`priority=${selected.priority || '(blank)'} keeps this task ahead of lower-priority candidates.`);
@@ -129,6 +135,27 @@ function buildReasons(selected, pool) {
   return reasons.slice(0, 3);
 }
 
+function printNoMatchFallback(projectArg, aliases) {
+  console.log('[INFO] No eligible task matched the current filter.');
+
+  if (!projectArg) {
+    return;
+  }
+
+  const aliasLabel = aliases.length === 0 ? projectArg : aliases.join(', ');
+  console.log(`[INFO] Filter      : ${projectArg}`);
+  console.log(`[INFO] Aliases     : ${aliasLabel}`);
+
+  if (projectArg === AIOS_PROJECT_ID) {
+    console.log(`[INFO] AIOS-06 note: no complete Task_Queue row is currently linked to ${AIOS_PROJECT_ID} / Hirayama AI OS / ai-os.`);
+    console.log('[INFO] Hint 1      : current AIOS work is still tracked mainly under workspace-level rows such as workspace全体.');
+    console.log('[INFO] Hint 2      : try the helper without --project, or move the next AIOS task onto a canonical AIOS-linked row first.');
+    return;
+  }
+
+  console.log('[INFO] Hint        : check whether this project currently has complete Task_Queue rows, or rerun without --project.');
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help === 'true') {
@@ -138,7 +165,8 @@ async function main() {
 
   const context = await getAuthorizedContext(args);
   const range = args.range || DEFAULT_RANGE;
-  const projectAliases = normalizeProjectFilter(args.project || '');
+  const projectArg = String(args.project || '').trim();
+  const projectAliases = normalizeProjectFilter(projectArg);
   const response = await getSheetValues({
     spreadsheetId: context.spreadsheetId,
     sheetName: SHEET_NAME,
@@ -163,7 +191,7 @@ async function main() {
     .filter((entry) => hasAnyValue(entry.row))
     .filter((entry) => entry.missing.length === 0)
     .map((entry) => buildEntry(entry.rowNumber, entry.row))
-    .filter((entry) => entry.status !== '完了')
+    .filter((entry) => entry.status !== STATUS_DONE)
     .filter((entry) => matchesProjectFilter(entry.project, projectAliases))
     .sort(compareEntries);
 
@@ -173,7 +201,7 @@ async function main() {
   console.log(`[INFO] Eligible rows : ${candidates.length}`);
 
   if (candidates.length === 0) {
-    console.log('[INFO] No eligible task matched the current filter.');
+    printNoMatchFallback(projectArg, projectAliases);
     return;
   }
 

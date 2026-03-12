@@ -282,3 +282,5 @@
   4. higher score
   5. older row
 - Optional `--project` can narrow the recommendation pool when you want to inspect one project only.
+
+- `--project AIOS-06` now explains that zero matches can be expected while AIOS work still lives under `workspace全体` rows.
