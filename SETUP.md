@@ -355,3 +355,17 @@ pip install -r requirements.txt
 - `docs/CODEX_MIGRATION_CHECKLIST.md`
 - `CLAUDE.md`
 - `docs/AI_DEV_ENV.md`
+
+## ai-os 直接書き込み補足
+
+`Codex` から `Run_Log` を直接 Google Sheets へ追記する場合は、サービスアカウント JSON と環境変数が必要です。
+詳しくは [ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md](C:/hirayama-ai-workspace/workspace/ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md) を参照してください。
+
+最小設定:
+
+```powershell
+[Environment]::SetEnvironmentVariable('AIOS_SERVICE_ACCOUNT_PATH', 'C:\hirayama-ai-workspace\secrets\aios-service-account.json', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_DASHBOARD_SPREADSHEET_ID', '1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_NAME', 'Run_Log', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_WRITE', '1', 'User')
+```

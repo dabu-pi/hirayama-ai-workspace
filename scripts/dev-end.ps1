@@ -13,6 +13,7 @@ param(
     [string]$Result = 'SUCCESS',
     [string]$NextAction = '',
     [switch]$SkipRunLogExport,
+    [switch]$SkipRunLogSheetWrite,
     [switch]$Yes
 )
 
@@ -22,6 +23,7 @@ $ErrorActionPreference = 'Stop'
 $sd = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $gscPath = Join-Path $sd 'git-safe-commit.ps1'
 $runLogExportPath = Join-Path $sd 'export-run-log-entry.ps1'
+$runLogSheetWritePath = Join-Path $sd 'append-runlog-to-sheet.mjs'
 
 if (-not (Test-Path $gscPath)) {
     Write-Host "  [ERR] git-safe-commit.ps1 が見つかりません:" -ForegroundColor Red
@@ -34,10 +36,30 @@ if (-not $SkipRunLogExport -and -not (Test-Path $runLogExportPath)) {
     $SkipRunLogExport = $true
 }
 
+$canWriteRunLogSheet = $false
+if (-not $SkipRunLogExport -and -not $SkipRunLogSheetWrite -and (Test-Path $runLogSheetWritePath)) {
+    if ($env:AIOS_DASHBOARD_SPREADSHEET_ID -and $env:AIOS_SERVICE_ACCOUNT_PATH) {
+        $canWriteRunLogSheet = $true
+    }
+}
+
 function Write-Line { Write-Host ('=' * 62) }
 function Write-Ok   { param([string]$msg) Write-Host "  [OK]   $msg" -ForegroundColor Green }
 function Write-Warn { param([string]$msg) Write-Host "  [WARN] $msg" -ForegroundColor Yellow }
 function Write-Err  { param([string]$msg) Write-Host "  [ERR]  $msg" -ForegroundColor Red }
+function Get-LatestRunLogJsonPath {
+    param([string]$LogRoot = 'logs')
+
+    $runlogDir = Join-Path $LogRoot 'runlog'
+    if (-not (Test-Path $runlogDir)) { return '' }
+
+    $latest = Get-ChildItem -Path $runlogDir -Filter 'runlog_*.json' -File |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $latest) { return '' }
+    return $latest.FullName
+}
 
 try { $null = git rev-parse --is-inside-work-tree 2>&1 } catch {}
 if ($LASTEXITCODE -ne 0) {
@@ -88,6 +110,7 @@ if (-not $NextAction.Trim() -and -not $Yes) {
 Write-Host "  コミットメッセージ: $Message"
 Write-Host "  push する　　　　: $(if ($NoPush) { 'いいえ（コミットのみ）' } else { 'はい（GitHub にアップロード）' })"
 Write-Host "  Run_Log 出力　  : $(if ($SkipRunLogExport) { 'スキップ' } else { '生成する' })"
+Write-Host "  Run_Log シート : $(if ($canWriteRunLogSheet) { '直接書き込む（Codex）' } elseif ($SkipRunLogSheetWrite) { 'スキップ' } else { '未設定（ローカル出力のみ）' })"
 Write-Host ''
 
 Write-Host '  変更をステージング中（git add -A）...'
@@ -118,6 +141,7 @@ try {
 }
 
 $runLogExit = 0
+$runLogSheetExit = 0
 $commitHash = ''
 if ($exitCode -eq 0) {
     $commitHash = (git rev-parse --short HEAD 2>&1).Trim()
@@ -130,12 +154,28 @@ if ($exitCode -eq 0) {
             $runLogExit = 1
         }
     }
+
+    if ($runLogExit -eq 0 -and $canWriteRunLogSheet) {
+        $jsonPath = Get-LatestRunLogJsonPath
+        if ($jsonPath) {
+            try {
+                & node $runLogSheetWritePath --json $jsonPath --write
+                $runLogSheetExit = $LASTEXITCODE
+            } catch {
+                Write-Warn $_.Exception.Message
+                $runLogSheetExit = 1
+            }
+        } else {
+            Write-Warn 'Run_Log JSON が見つからないためシート書き込みをスキップしました。'
+            $runLogSheetExit = 1
+        }
+    }
 }
 
 Write-Host ''
 Write-Line
 if ($exitCode -eq 0) {
-    Write-Ok 'お疲れ様でした！作業終了処理が完了しました。'
+    Write-Ok 'お疲れ様でした。作業終了処理が完了しました。'
     Write-Ok "Commit: $commitHash"
     if (-not $NoPush) {
         Write-Ok 'GitHub に push 済みです。'
@@ -147,11 +187,13 @@ if ($exitCode -eq 0) {
         if ($runLogExit -eq 0) { Write-Ok 'Run_Log 用 JSON / TSV を生成しました。' }
         else { Write-Warn "Run_Log 出力に失敗しました（終了コード: $runLogExit）" }
     }
+    if ($canWriteRunLogSheet) {
+        if ($runLogSheetExit -eq 0) { Write-Ok 'Run_Log シートへ直接追記しました。' }
+        else { Write-Warn "Run_Log シート書き込みに失敗しました（終了コード: $runLogSheetExit）" }
+    }
 } else {
     Write-Err "コミットまたは push に失敗しました（終了コード: $exitCode）"
 }
 Write-Host ''
 exit $exitCode
-
-
 

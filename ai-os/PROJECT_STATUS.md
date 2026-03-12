@@ -84,3 +84,17 @@
 - `ai-os/DASHBOARD_RESTART_CUE.md`
 - `ai-os/SHEET_ALIGNMENT_PLAN.md`
 - `ai-os/PHASE2_MIN_AUTOMATION_SPEC.md`
+
+---
+
+## Codex 直接書き込みメモ
+
+- 2026-03-12 に `scripts/append-runlog-to-sheet.mjs` を追加
+- `de` 実行後、`AIOS_SERVICE_ACCOUNT_PATH` と `AIOS_DASHBOARD_SPREADSHEET_ID` がある PC では `Run_Log` へ直接 1 行追記できる構成にした
+- 認証情報がない PC では従来どおりローカル JSON / TSV 出力のみ
+- 実運用前に、サービスアカウントを `Hirayama AI OS Dashboard` の編集者として共有する必要がある
+
+追加参照:
+
+- `ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md`
+- `scripts/append-runlog-to-sheet.mjs`
