@@ -1,4 +1,4 @@
-﻿# Codex Sheets Direct Write Setup
+# Codex Sheets Direct Write Setup
 
 `Codex` から `Hirayama AI OS Dashboard` の `Run_Log` シートへ直接 1 行追記するためのセットアップ手順です。
 
@@ -26,7 +26,7 @@ GitHub には含めず、各 PC に手動配置します。
 推奨例:
 
 ```text
-C:\hirayama-ai-workspace\secrets\aios-service-account.json
+C:\hirayama-ai-workspace\workspace\secrets\aios-service-account.json
 ```
 
 ## 2. ダッシュボードをサービスアカウントへ共有
@@ -42,7 +42,7 @@ C:\hirayama-ai-workspace\secrets\aios-service-account.json
 PowerShell で実行:
 
 ```powershell
-[Environment]::SetEnvironmentVariable('AIOS_SERVICE_ACCOUNT_PATH', 'C:\hirayama-ai-workspace\secrets\aios-service-account.json', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_SERVICE_ACCOUNT_PATH', 'C:\hirayama-ai-workspace\workspace\secrets\aios-service-account.json', 'User')
 [Environment]::SetEnvironmentVariable('AIOS_DASHBOARD_SPREADSHEET_ID', '1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk', 'User')
 [Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_NAME', 'Run_Log', 'User')
 [Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_WRITE', '1', 'User')
@@ -90,3 +90,21 @@ de "docs: update ai-os notes"
 - 認証情報がない PC では、自動的にローカル JSON / TSV だけを生成します
 - 直接書き込みの対象は今のところ `Run_Log` のみです
 - `Projects` や `Task_Queue` の更新はまだ自動化しません
+
+## いまこのPCでやる最短手順
+
+1. `service_account.json` を次へ配置する
+
+```text
+C:\hirayama-ai-workspace\workspace\secrets\aios-service-account.json
+```
+
+2. 次を実行する
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-aios-sheet-write.ps1
+```
+
+3. 表示された `client_email` を `Hirayama AI OS Dashboard` の編集者として共有する
+
+4. 新しい PowerShell を開いて `de "test: live append"` を実行する
