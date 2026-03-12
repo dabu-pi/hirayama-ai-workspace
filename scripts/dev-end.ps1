@@ -8,6 +8,7 @@ param(
     [Parameter(Position = 0)]
     [string]$Message = '',
     [switch]$NoPush,
+    [switch]$AutoCleanupKnownTaskQueueRow,
     [string]$ProjectId = '',
     [ValidateSet('SUCCESS', 'STOP', 'ERROR', 'PARTIAL')]
     [string]$Result = 'SUCCESS',
@@ -24,6 +25,7 @@ $sd = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocati
 $gscPath = Join-Path $sd 'git-safe-commit.ps1'
 $runLogExportPath = Join-Path $sd 'export-run-log-entry.ps1'
 $runLogSheetWritePath = Join-Path $sd 'append-runlog-to-sheet.mjs'
+$taskQueueCleanupPath = Join-Path $sd 'cleanup-known-taskqueue-row.mjs'
 
 if (-not (Test-Path $gscPath)) {
     Write-Host "  [ERR] git-safe-commit.ps1 が見つかりません:" -ForegroundColor Red
@@ -75,6 +77,35 @@ Write-Line
 Write-Host "  dev-end  |  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 Write-Host "  Branch   |  $branch"
 Write-Line
+
+$taskQueueCleanupExit = 0
+if ($AutoCleanupKnownTaskQueueRow) {
+    Write-Host ''
+    Write-Host '  known incomplete row cleanup (opt-in)...'
+
+    if (-not (Test-Path $taskQueueCleanupPath)) {
+        Write-Err "cleanup-known-taskqueue-row.mjs was not found: $taskQueueCleanupPath"
+        exit 1
+    }
+
+    if (-not $env:AIOS_DASHBOARD_SPREADSHEET_ID -or -not $env:AIOS_SERVICE_ACCOUNT_PATH) {
+        Write-Err 'AIOS_DASHBOARD_SPREADSHEET_ID / AIOS_SERVICE_ACCOUNT_PATH is required for known-row cleanup.'
+        exit 1
+    }
+
+    try {
+        & node $taskQueueCleanupPath --write
+        $taskQueueCleanupExit = $LASTEXITCODE
+    } catch {
+        Write-Err $_.Exception.Message
+        $taskQueueCleanupExit = 1
+    }
+
+    if ($taskQueueCleanupExit -ne 0) {
+        Write-Err "known incomplete row cleanup failed (exit code: $taskQueueCleanupExit)"
+        exit $taskQueueCleanupExit
+    }
+}
 
 $statusRaw = @(git status --short 2>&1)
 $dirty = @($statusRaw | Where-Object { $_ -and $_ -notmatch '^warning:' })

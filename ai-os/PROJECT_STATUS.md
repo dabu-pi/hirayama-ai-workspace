@@ -345,3 +345,14 @@
   - revalidate
   - `Run_Log`
   - `Dashboard Latest Run`
+
+## 2026-03-12 ?????? -> de??????
+
+- `scripts/dev-end.ps1` now accepts `-AutoCleanupKnownTaskQueueRow` as an opt-in cleanup flag.
+- `scripts/cleanup-known-taskqueue-row.mjs` was added for the minimum `backup -> delete -> revalidate` path.
+- `scripts/task-queue-validation-lib.mjs` now centralizes the validator logic so cleanup and validator use the same rule set.
+- The current implementation scope is intentionally narrow:
+  - no-pause operations: inspect / read-only / validator / help / `node --check` / `git status`-class commands
+  - cleanup only when exactly one known incomplete row is found
+  - multiple-row cleanup, auto-fill, and Projects linkage are still out of scope
+- Current live baseline before the first `de` test: `validate-task-queue --warn-only` returns 0 findings, so the opt-in cleanup path should safely no-op.
