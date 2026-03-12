@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
 import { readFileSync } from 'node:fs';
 import {
@@ -65,6 +65,18 @@ const ASSIGNED_TO_MAP = new Map([
 function loadJson(path) {
   const raw = readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
   return JSON.parse(raw);
+}
+
+function parseAllowlist(value) {
+  if (!value) {
+    return new Set();
+  }
+  return new Set(
+    String(value)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
 }
 
 function ensureLiveHeaders(row = []) {
@@ -159,12 +171,15 @@ function findExistingRow(bodyRows, entry) {
   });
 }
 
-async function logProjectSyncPreview(context, projectName, eventDate, shouldWrite) {
+async function logProjectSyncPreview(context, projectName, eventDate, shouldWrite, applyStatusPhase, lifecycleProjectAllowlist, taskQueueRowOverride = null) {
   const syncResult = await syncProjectFromTaskQueue({
     context,
     projectRef: projectName,
     eventDate,
     shouldWrite,
+    applyLifecycle: applyStatusPhase,
+    lifecycleProjectAllowlist,
+    taskQueueRowOverride,
   });
 
   if (syncResult.skipped) {
@@ -176,8 +191,35 @@ async function logProjectSyncPreview(context, projectName, eventDate, shouldWrit
   console.log(`[INFO] Project progress   : ${syncResult.computedProgress}%`);
   console.log(`[INFO] Project next action: ${syncResult.nextRow[7]}`);
   console.log(`[INFO] Project blocker    : ${syncResult.nextRow[8]}`);
+
+  if (syncResult.lifecycle.changed) {
+    if (syncResult.lifecycle.statusChanged) {
+      console.log(`[INFO] Status preview    : ${syncResult.project.status} -> ${syncResult.lifecycle.status}`);
+    }
+    if (syncResult.lifecycle.phaseChanged) {
+      console.log(`[INFO] Phase preview     : ${syncResult.project.phase} -> ${syncResult.lifecycle.phase}`);
+    }
+    console.log(`[INFO] Lifecycle note    : ${syncResult.lifecycle.reasons.join(' | ')}`);
+    if (!applyStatusPhase) {
+      console.log('[INFO] Lifecycle apply   : preview only. Pass --apply-status-phase and --lifecycle-projects to include status/phase in Projects writes.');
+    } else if (!syncResult.lifecyclePermission.enabled) {
+      console.log(`[INFO] Lifecycle apply   : blocked (${syncResult.lifecyclePermission.reason}).`);
+    } else if (!shouldWrite) {
+      console.log('[INFO] Lifecycle apply   : previewing status/phase because allowlist matched.');
+    }
+  } else {
+    console.log('[INFO] Lifecycle preview : no guarded status/phase change suggested.');
+  }
+
   if (shouldWrite) {
     console.log(`[OK] Project sync succeeded: ${syncResult.updateResult.updatedRange ?? syncResult.targetRange}`);
+    if (applyStatusPhase && syncResult.lifecycle.changed) {
+      if (syncResult.lifecycleWriteEnabled) {
+        console.log('[OK] Lifecycle apply   : status/phase changes were included in the Projects write.');
+      } else {
+        console.log(`[INFO] Lifecycle apply   : status/phase write was skipped (${syncResult.lifecyclePermission.reason}).`);
+      }
+    }
   } else {
     console.log('[INFO] Dry run mode. Project sync was previewed only.');
   }
@@ -188,6 +230,8 @@ async function main() {
   const context = await getAuthorizedContext(args);
   const entry = pickEntry(args);
   const isWrite = args.write === 'true';
+  const applyStatusPhase = args['apply-status-phase'] === 'true';
+  const lifecycleProjectAllowlist = parseAllowlist(args['lifecycle-projects'] || process.env.AIOS_LIFECYCLE_PROJECTS || '');
 
   if (!entry.title) {
     throw new Error('Task title is required. Pass --title or --json.');
@@ -222,7 +266,10 @@ async function main() {
 
   if (!isWrite) {
     console.log('[INFO] Dry run mode. Pass --write to update the live Task_Queue sheet.');
-    await logProjectSyncPreview(context, liveRow[1], eventDate, false);
+    await logProjectSyncPreview(context, liveRow[1], eventDate, false, applyStatusPhase, lifecycleProjectAllowlist, {
+      rowNumber: targetRowNumber,
+      values: liveRow,
+    });
     return;
   }
 
@@ -235,12 +282,10 @@ async function main() {
   });
 
   console.log(`[OK] Task_Queue ${action} succeeded: ${result.updatedRange ?? `Task_Queue!A${targetRowNumber}:K${targetRowNumber}`}`);
-  await logProjectSyncPreview(context, liveRow[1], eventDate, true);
+  await logProjectSyncPreview(context, liveRow[1], eventDate, true, applyStatusPhase, lifecycleProjectAllowlist);
 }
 
 main().catch((error) => {
   console.error(`[ERR] ${error.message}`);
   process.exit(1);
 });
-
-

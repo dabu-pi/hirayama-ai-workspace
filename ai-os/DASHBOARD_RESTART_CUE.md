@@ -1,4 +1,4 @@
-﻿# DASHBOARD_RESTART_CUE.md - ダッシュボード作業 再開キュー
+# DASHBOARD_RESTART_CUE.md - ダッシュボード作業 再開キュー
 
 > このファイルは「次回のAIセッションがここから迷わず再開できる」ことを目的とする。
 > セッションをまたぐたびに更新する。
@@ -136,3 +136,42 @@
   - `Projects!A6:J6`
 - Example verified outcome: `患者管理Webアプリ` now shows `last_updated = 2026-03-12` and `next_action = requirements.txt整備` after the linked task update.
 - Next design choice after reopening: automate `Ideas`, or decide whether `Projects.status / phase` should also be updated from task signals.
+## 2026-03-12 Ideas helper cue
+
+- Added `scripts/upsert-ideas.mjs` for safe live updates on the current `Ideas` sheet layout (`Idea / Domain / Status / Impact / Effort / Owner / Related Project / Why It Matters / Next Review / Notes`).
+- The helper accepts `--json` or CLI flags, normalizes English vocabulary to the current Japanese live values, and maps project IDs like `AIOS-06` to the live project labels.
+- Added `scripts/idea-entry.example.json` as a reusable sample payload.
+- Verified dry-run append target: `Ideas!A11:J11`.
+- Verified live no-op update: `Ideas!A9:J9`.
+- Natural next step: decide whether `Projects.status / phase` can be promoted from task signals under strict guardrails.
+## 2026-03-12 Projects lifecycle guardrail cue
+
+- Added guarded lifecycle suggestions to `scripts/sync-project-from-taskqueue.mjs` and surfaced them through `scripts/upsert-task-queue.mjs`.
+- Default behavior is still preview-only; `status / phase` are written back to `Projects` only when `--apply-status-phase` is passed.
+- Current guardrails are intentionally narrow:
+  - only `保留 -> 進行中`
+  - only standard phase promotions from active task types (`設計 / 開発 / テスト / 実行`)
+  - never downgrade and never rewrite custom phases like `Phase2` or `Phase3`
+- Verified dry-run lifecycle preview:
+  - `Task_Queue!A15:K15`
+  - `Projects!A8:J8`
+  - suggested `保留 -> 進行中`, `構想 -> 設計`
+- Verified normal no-op sync path still works:
+  - `Task_Queue!A9:K9`
+  - `Projects!A6:J6`
+- Natural next step: decide whether `--apply-status-phase` should stay operator-only, or be enabled for a small safe subset of projects.
+## 2026-03-12 Lifecycle allowlist hardening cue
+
+- `--apply-status-phase` is now gated by `--lifecycle-projects`.
+- A lifecycle write is allowed only when the allowlist matches the target `project_id`, `project_name`, or `directory`.
+- Verified blocked preview with no allowlist:
+  - `Task_Queue!A15:K15`
+  - `Projects!A8:J8`
+  - `blocked (no lifecycle allowlist configured)`
+- Verified allowed preview with `--lifecycle-projects WST-05`:
+  - same suggestion (`保留 -> 進行中`, `構想 -> 設計`)
+  - `previewing status/phase because allowlist matched`
+- Normal non-lifecycle sync still works on the existing path:
+  - `Task_Queue!A9:K9`
+  - `Projects!A6:J6`
+- Natural next step: decide whether to formalize a tiny default allowlist, or keep explicit per-run allowlists only.

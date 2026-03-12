@@ -1,4 +1,4 @@
-﻿# PROJECT_STATUS.md - Hirayama AI OS 進捗トラッキング
+# PROJECT_STATUS.md - Hirayama AI OS 進捗トラッキング
 
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
@@ -186,3 +186,46 @@
   - `Task_Queue!A9:K9` was updated to `requirements.txt整備 / 進行中`
   - `Projects!A6:J6` now reflects `last_updated = 2026-03-12` and `next_action = requirements.txt整備`
 - Status / phase の自動変更はまだ行わず、誤更新リスクの低い範囲に限定している.
+## 2026-03-12 Ideas helper memo
+
+- Added `scripts/upsert-ideas.mjs` to upsert live `Ideas` rows without migrating the sheet schema first.
+- The helper targets the current 10-column live layout and matches rows by `title + related project` when possible.
+- English input is normalized for `domain / status / impact`, and project IDs like `AIOS-06` are mapped to the live project labels.
+- Added `scripts/idea-entry.example.json` as a sample payload for future Codex runs.
+- Verified dry-run append target: `Ideas!A11:J11`.
+- Verified a live no-op update against `Ideas!A9:J9` for `freee Phase4 エラー通知`.
+- With `Ideas` automation in place, the next design choice is whether `Projects.status / phase` should remain manual or move to guarded task-signal rules.
+## 2026-03-12 Projects lifecycle guardrail memo
+
+- Added guarded `status / phase` suggestions to `scripts/sync-project-from-taskqueue.mjs`.
+- Default behavior remains preview-only; `Projects` writes include lifecycle changes only when `--apply-status-phase` is explicitly passed.
+- Current guarded rules are intentionally narrow:
+  - `status`: only `保留 -> 進行中` when the project has an active task (`進行中 / 待機 / 停止中`)
+  - `phase`: only for standard phases (`構想 / 設計 / 実装 / テスト / 運用 / 安定運用`), promoted forward from active task types (`設計 / 開発 / テスト / 実行`)
+  - no downgrades, no custom-phase rewrites (`Phase1-4`, `PhaseB`, `Ops`)
+- `scripts/upsert-task-queue.mjs` dry-run now passes the pending Task row into the sync preview, so lifecycle suggestions can be inspected before writing.
+- Verified guarded dry-run preview with `廃棄物日報GAS`:
+  - preview task target `Task_Queue!A15:K15`
+  - preview project target `Projects!A8:J8`
+  - suggested `保留 -> 進行中`, `構想 -> 設計`
+- Verified normal no-op write path still works with `患者管理Webアプリ`:
+  - `Task_Queue!A9:K9`
+  - `Projects!A6:J6`
+- Next design choice: keep lifecycle changes preview-only, or allow `--apply-status-phase` on a limited project subset after human review.
+## 2026-03-12 Lifecycle allowlist hardening memo
+
+- `--apply-status-phase` alone is no longer enough to write lifecycle changes.
+- Lifecycle writes now require both:
+  - `--apply-status-phase`
+  - `--lifecycle-projects` matching the target `project_id`, `project_name`, or `directory`
+- Verified blocked preview with no allowlist:
+  - `Task_Queue!A15:K15`
+  - `Projects!A8:J8`
+  - message: `blocked (no lifecycle allowlist configured)`
+- Verified allowed preview with `--lifecycle-projects WST-05`:
+  - same guarded suggestion (`保留 -> 進行中`, `構想 -> 設計`)
+  - message: `previewing status/phase because allowlist matched`
+- Verified ordinary write path still works unchanged for non-lifecycle sync:
+  - `Task_Queue!A9:K9`
+  - `Projects!A6:J6`
+- Recommended operational stance for now: keep lifecycle apply as operator-only and pass `--lifecycle-projects` explicitly per run.

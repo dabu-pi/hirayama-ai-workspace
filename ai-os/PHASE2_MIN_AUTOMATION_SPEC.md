@@ -1,4 +1,4 @@
-﻿# PHASE2_MIN_AUTOMATION_SPEC.md - ai-os Phase 2 最小自動化仕様
+# PHASE2_MIN_AUTOMATION_SPEC.md - ai-os Phase 2 最小自動化仕様
 
 最終更新: 2026-03-12
 
@@ -129,3 +129,18 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
 - `Task_Queue` 更新時に、同一プロジェクトの `Projects` 行を安全に補助更新できるようにした
 - 更新対象は `last_updated / next_action / blocker / notes.progress` に限定する
 - `status / phase` の自動変更はまだ行わない
+## 2026-03-12 Ideas helper follow-up
+
+- `Ideas` can now be updated safely on the current live 10-column layout via `scripts/upsert-ideas.mjs`.
+- The helper is intentionally scoped to the existing live schema so dashboard formulas do not need to change first.
+- `Projects.status / phase` remains manual until guarded promotion rules are explicitly defined.
+## 2026-03-12 Lifecycle guardrail follow-up
+
+- `scripts/sync-project-from-taskqueue.mjs` now computes guarded `status / phase` suggestions from Task signals.
+- The default remains preview-only so existing Task_Queue writes do not silently change project lifecycle fields.
+- Lifecycle writes require an explicit `--apply-status-phase` flag.
+- Guardrails are limited to forward-only changes and skip custom project phases.
+## 2026-03-12 Lifecycle allowlist follow-up
+
+- Even when `--apply-status-phase` is requested, lifecycle writes stay disabled unless `--lifecycle-projects` explicitly matches the target project.
+- This keeps the default behavior preview-first and avoids accidental cross-project lifecycle updates.
