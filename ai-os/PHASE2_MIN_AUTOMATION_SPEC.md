@@ -1,4 +1,4 @@
-﻿# PHASE2_MIN_AUTOMATION_SPEC.md — ai-os Phase 2 最小自動化仕様
+﻿# PHASE2_MIN_AUTOMATION_SPEC.md - ai-os Phase 2 最小自動化仕様
 
 最終更新: 2026-03-12
 
@@ -6,24 +6,20 @@
 
 ## 目的
 
-Hirayama AI OS ダッシュボードの `Run_Log` を、手動で続けられない問題を解消するために、
-まずは **作業終了時に貼り付け用の 1 行データを自動生成する** ところから始める。
+Hirayama AI OS ダッシュボードの `Run_Log` を、手動で続けられない問題を解消するために、まずは **作業終了時に貼り付け用の 1 行データを自動生成する** ところから始める。
 
-この段階では、Google スプレッドシートへの直接書き込みは行わない。
-認証情報や接続方式が未確定でも運用改善できる最小単位を優先する。
+この段階では Google スプレッドシートへの直接書き込みは行わない。認証情報や接続方式が未確定でも運用改善できる最小単位を優先する。
 
 ---
 
 ## Phase 2 初期スコープ
 
 対象:
-
 - `scripts/dev-end.ps1` 実行後に Run_Log 用のデータを自動生成する
-- JSON と TSV の2形式で保存する
-- 画面に貼り付け用の行を表示する
+- JSON と TSV の 2 形式で保存する
+- 画面に貼り付け用の 1 行を表示する
 
 対象外:
-
 - Google スプレッドシートへの自動書き込み
 - `Task_Queue` / `Projects` への自動更新
 - KPI 分析やサマリ生成
@@ -32,15 +28,33 @@ Hirayama AI OS ダッシュボードの `Run_Log` を、手動で続けられな
 
 ## 出力先
 
-ローカルファイル:
-
 - `logs/runlog/runlog_YYYYMMDD_HHmmss.json`
 - `logs/runlog/runlog_YYYYMMDD_HHmmss.tsv`
 
 用途:
-
 - JSON は将来の自動連携用
-- TSV は `Run_Log` シートへ手貼りするときの即用データ
+- TSV は `Run_Log` シートへ手貼りするための即用データ
+
+---
+
+## 採用する Run_Log 列構成
+
+Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい 10 列を採用する。
+
+- `log_id`
+- `datetime`
+- `system`
+- `project`
+- `summary`
+- `result`
+- `commit_hash`
+- `tasks_done`
+- `stop_reason`
+- `next_action`
+
+補足:
+- `system` は `Lists.system` を参照し、当面の Codex 実行では `Codex` を出力する
+- `tasks_done` と `stop_reason` は初期段階では空欄許容とする
 
 ---
 
@@ -48,22 +62,24 @@ Hirayama AI OS ダッシュボードの `Run_Log` を、手動で続けられな
 
 | 項目 | 内容 |
 |---|---|
+| `log_id` | `LOG-YYYYMMDD-HHMMSS` 形式 |
 | `datetime` | 実行日時 |
-| `project_id` | 対象プロジェクトID |
+| `system` | `Codex` 固定 |
+| `project` | 対象プロジェクトID |
 | `summary` | 作業要約（基本はコミットメッセージ） |
 | `result` | `SUCCESS` / `STOP` / `ERROR` / `PARTIAL` |
 | `commit_hash` | 直近コミット短縮ハッシュ |
+| `tasks_done` | 完了タスクID群（初期は空欄可） |
+| `stop_reason` | STOP / ERROR 時の理由（初期は空欄可） |
 | `next_action` | 次の作業 1 行 |
-| `branch` | 現在ブランチ |
-| `source` | `dev-end.ps1` 固定 |
 
 ---
 
-## project_id の決め方
+## project の決め方
 
 `dev-end.ps1` 実行位置から推定する。
 
-| パス | project_id |
+| パス | project |
 |---|---|
 | `ai-os/` | `AIOS-06` |
 | `freee-automation/` | `FREEE-02` |
@@ -89,14 +105,12 @@ Hirayama AI OS ダッシュボードの `Run_Log` を、手動で続けられな
 
 - スプレッドシート認証が未整備でもすぐ始められる
 - `Run_Log` の記録漏れを減らせる
-- 将来、GAS や API 連携に切り替えるときも JSON を再利用できる
+- 将来、GAS や API 連携へ切り替えるときも JSON を再利用できる
 - 初期自動化の書き込み先をローカルファイルに限定でき、安全性が高い
 
 ---
 
 ## 次の段階
-
-この最小自動化が運用に乗ったら、次に検討する。
 
 1. TSV をクリップボードへ自動コピー
 2. スプレッドシート Web App / GAS への自動送信

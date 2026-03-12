@@ -1,29 +1,11 @@
 ﻿#Requires -Version 5.1
-<#+
+<#
 .SYNOPSIS
     dev-end 実行後の Run_Log 用エントリを JSON / TSV で生成します。
 
 .DESCRIPTION
     Google スプレッドシートへ直接書き込まず、貼り付け用の 1 行データを
     logs/runlog/ に保存します。将来の自動連携用に JSON も同時出力します。
-
-.PARAMETER Summary
-    作業要約。通常はコミットメッセージを渡します。
-
-.PARAMETER Result
-    実行結果。SUCCESS / STOP / ERROR / PARTIAL を想定します。
-
-.PARAMETER CommitHash
-    関連コミットの短縮ハッシュ。
-
-.PARAMETER NextAction
-    次の作業 1 行。
-
-.PARAMETER ProjectId
-    明示指定する project_id。省略時はカレントディレクトリから推定します。
-
-.PARAMETER LogDir
-    ログ保存ルート。
 #>
 
 param(
@@ -34,6 +16,8 @@ param(
     [string]$CommitHash = "",
     [string]$NextAction = "",
     [string]$ProjectId = "",
+    [string]$TasksDone = "",
+    [string]$StopReason = "",
     [string]$LogDir = "logs"
 )
 
@@ -57,21 +41,23 @@ New-Item -ItemType Directory -Force -Path $runlogDir | Out-Null
 
 $now = Get-Date
 $stamp = $now.ToString('yyyyMMdd_HHmmss')
-$branch = (git rev-parse --abbrev-ref HEAD 2>&1).Trim()
+$logId = 'LOG-{0}' -f $now.ToString('yyyyMMdd-HHmmss')
 
 if (-not $ProjectId) {
     $ProjectId = Resolve-ProjectId -Path (Get-Location).Path
 }
 
 $entry = [ordered]@{
+    log_id      = $logId
     datetime    = $now.ToString('yyyy-MM-dd HH:mm:ss')
-    project_id  = $ProjectId
+    system      = 'Codex'
+    project     = $ProjectId
     summary     = $Summary
     result      = $Result
     commit_hash = $CommitHash
+    tasks_done  = $TasksDone
+    stop_reason = $StopReason
     next_action = $NextAction
-    branch      = $branch
-    source      = 'dev-end.ps1'
 }
 
 $jsonPath = Join-Path $runlogDir ("runlog_{0}.json" -f $stamp)
@@ -79,16 +65,18 @@ $tsvPath  = Join-Path $runlogDir ("runlog_{0}.tsv" -f $stamp)
 
 $entry | ConvertTo-Json -Depth 4 | Set-Content -Encoding UTF8 -Path $jsonPath
 
-$tsvHeader = 'datetime	project_id	summary	result	commit_hash	next_action	branch	source'
+$tsvHeader = 'log_id	datetime	system	project	summary	result	commit_hash	tasks_done	stop_reason	next_action'
 $tsvRow = @(
+    $entry.log_id,
     $entry.datetime,
-    $entry.project_id,
+    $entry.system,
+    $entry.project,
     $entry.summary,
     $entry.result,
     $entry.commit_hash,
-    $entry.next_action,
-    $entry.branch,
-    $entry.source
+    $entry.tasks_done,
+    $entry.stop_reason,
+    $entry.next_action
 ) -join "`t"
 
 @($tsvHeader, $tsvRow) | Set-Content -Encoding UTF8 -Path $tsvPath
