@@ -356,3 +356,11 @@
   - cleanup only when exactly one known incomplete row is found
   - multiple-row cleanup, auto-fill, and Projects linkage are still out of scope
 - Current live baseline before the first `de` test: `validate-task-queue --warn-only` returns 0 findings, so the opt-in cleanup path should safely no-op.
+
+## 2026-03-12 Task_Queue cleanup verification
+
+- no-op確認済み:
+  - `de -AutoCleanupKnownTaskQueueRow` was run once against a clean live `Task_Queue`.
+  - Result: no candidate row was found, cleanup stayed no-op, and the handoff loop still completed through `Run_Log` and `Dashboard Latest Run`.
+- positive path確認:
+  - pending controlled live test with exactly one injected known incomplete row.
