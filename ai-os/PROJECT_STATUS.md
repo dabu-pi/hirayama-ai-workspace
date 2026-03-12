@@ -271,4 +271,20 @@
   - linked `Projects` sync was skipped intentionally because `workspace全体` has no canonical Projects row
   - `Dashboard!A6:K6` now shows `Open Tasks = 12`
   - `Metrics!A2:E11` now shows `Open Tasks = 12`, `High Priority Open Tasks = 6`, `Idea Count = 7`
-- Added `scripts/idea-to-task.example.json` as a reusable promotion sample payload.
+- Split the reusable promotion sample payload into `scripts/idea-to-task-workspace.example.json` and `scripts/idea-to-task-aios.example.json`.
+## 2026-03-12 Ideas override rule memo
+
+- `workspace全体` is intentionally not being added as a canonical `Projects` row.
+- `scripts/promote-idea-to-task.mjs` now has an explicit operator rule:
+  - default: keep the Task `Project` aligned to the source idea's `Related Project`
+  - override only when needed: pass `project=AIOS-06` (or `--project AIOS-06`) so the Task points at the canonical `Hirayama AI OS` project row
+- The source `Ideas` row stays unchanged except for status/note trace updates.
+- The single generic promotion sample has been split into:
+  - `scripts/idea-to-task-workspace.example.json`
+  - `scripts/idea-to-task-aios.example.json`
+- Verified dry-run behavior:
+  - workspace sample keeps `Project = workspace全体` and skips `Projects` sync
+  - AIOS sample overrides to `Project = Hirayama AI OS` and previews sync against `Projects!A9:J9`
+- Appended the missing `26b9cec` Run_Log entry:
+  - `Run_Log!A15:J15`
+  - `Dashboard` Latest Run now shows `commit = 26b9cec`, `project = AIOS-06`

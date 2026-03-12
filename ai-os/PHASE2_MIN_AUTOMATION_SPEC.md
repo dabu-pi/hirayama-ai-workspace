@@ -163,3 +163,10 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
   - leave a trace note back on the idea row
 - `scripts/upsert-task-queue.mjs` now fails fast if an automation run would leave required Task fields blank.
 - This keeps Phase 1 manual operation intact while reducing the chance that future automation creates more incomplete `Task_Queue` rows.
+## 2026-03-12 Ideas override follow-up
+
+- The minimum Ideas-to-Task path keeps its default behavior: use the source idea's related project unless an operator explicitly overrides it.
+- `workspace全体` remains non-canonical, so KPI definitions and `Projects` row counts stay unchanged.
+- Explicit canonical targeting is still possible by passing `AIOS-06` to `scripts/promote-idea-to-task.mjs`.
+- The promotion samples are now split into a workspace-preserving version and an AIOS override version.
+- `26b9cec` has been added to the live `Run_Log`, and `Dashboard Latest Run` now reflects that commit.

@@ -1,0 +1,12 @@
+{
+  "idea_title": "Hirayama AI OS ダッシュボード",
+  "related_project": "workspace全体",
+  "task_title": "AIOS ダッシュボード運用入口の見直し",
+  "project": "AIOS-06",
+  "type": "Research",
+  "priority": "Medium",
+  "status": "Pending",
+  "assigned_to": "AI",
+  "planned_date": "2026-03-12",
+  "notes": "Override the Task project to AIOS-06 while keeping the source idea linked to workspace全体."
+}

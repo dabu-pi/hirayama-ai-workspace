@@ -208,3 +208,16 @@
   - `Dashboard` summary shows `Open Tasks = 12`
   - `Metrics` shows `Open Tasks = 12`, `High Priority Open Tasks = 6`, `Idea Count = 7`
 - The old partial `Task_Queue` row still exists, but the new promotion path does not create more incomplete rows.
+## 2026-03-12 Ideas override cue
+
+- Keep `workspace全体` as an idea-side label only; do not create a canonical `Projects` row for it.
+- Operational rule for `scripts/promote-idea-to-task.mjs`:
+  - default: keep the Task project aligned to the source idea relation
+  - explicit override only: pass `AIOS-06` when the Task should attach to the canonical `Hirayama AI OS` row
+- The promotion samples are now split into two files:
+  - `scripts/idea-to-task-workspace.example.json`
+  - `scripts/idea-to-task-aios.example.json`
+- Verified dry-run outcomes:
+  - workspace sample skips `Projects` sync because `workspace全体` has no canonical row
+  - AIOS sample previews sync to `Projects!A9:J9`
+- `26b9cec` has now been appended to `Run_Log!A15:J15`, and `Dashboard` Latest Run reflects it.

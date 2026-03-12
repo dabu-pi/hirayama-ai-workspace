@@ -7,5 +7,5 @@
   "status": "Pending",
   "assigned_to": "AI",
   "planned_date": "2026-03-12",
-  "notes": "Promote a dashboard idea into the execution queue without leaving incomplete Task_Queue fields."
+  "notes": "Keep the Task project aligned to the source idea relation without forcing a canonical project override."
 }

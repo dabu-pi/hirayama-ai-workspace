@@ -11,6 +11,20 @@ import {
 } from './lib-sheets.mjs';
 import { syncProjectFromTaskQueue } from './sync-project-from-taskqueue.mjs';
 
+function printHelp() {
+  console.log(`promote-idea-to-task.mjs
+
+Usage:
+  node scripts/promote-idea-to-task.mjs --json <path> [--write]
+  node scripts/promote-idea-to-task.mjs --idea-title <title> [--project AIOS-06] [--write]
+
+Notes:
+  - Default behavior keeps the Task project aligned to the source idea's Related Project.
+  - Pass --project (or set json.project) only when you want the Task row to point at a canonical Projects row such as AIOS-06.
+  - The source Ideas row is preserved; only its status/note trace is updated.
+`);
+}
+
 const IDEAS_HEADERS = [
   'Idea',
   'Domain',
@@ -415,6 +429,10 @@ async function logProjectSyncPreview(context, projectName, eventDate, shouldWrit
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.help === 'true') {
+    printHelp();
+    return;
+  }
   const context = await getAuthorizedContext(args);
   const entry = pickEntry(args);
   const isWrite = args.write === 'true';
@@ -471,6 +489,7 @@ async function main() {
   console.log(`[INFO] Idea title    : ${currentIdeaRow[0]}`);
   console.log(`[INFO] Task title    : ${taskRow[0]}`);
   console.log(`[INFO] Task project  : ${taskRow[1]}`);
+  console.log(`[INFO] Project mode  : ${entry.project ? `override from idea -> ${taskRow[1]}` : 'use source idea related project'}`);
   console.log(`[INFO] Task payload  : ${JSON.stringify(taskRow)}`);
   console.log(`[INFO] Idea status   : ${currentIdeaRow[2]} -> ${ideaUpdateRow[2]}`);
   console.log(`[INFO] Idea notes    : ${ideaUpdateRow[9]}`);
