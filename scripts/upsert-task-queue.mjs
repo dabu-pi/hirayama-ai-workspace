@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   getAuthorizedContext,
   getSheetValues,
@@ -62,6 +63,8 @@ const ASSIGNED_TO_MAP = new Map([
   ['AI+Human', 'AI+人'],
 ]);
 
+const DEFAULT_LIFECYCLE_ALLOWLIST_FILE = 'ai-os/lifecycle-projects.json';
+
 function loadJson(path) {
   const raw = readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
   return JSON.parse(raw);
@@ -77,6 +80,40 @@ function parseAllowlist(value) {
       .map((item) => item.trim())
       .filter(Boolean),
   );
+}
+
+function loadAllowlistFile(filePath) {
+  if (!filePath) {
+    return new Set();
+  }
+
+  const resolvedPath = resolve(filePath);
+  if (!existsSync(resolvedPath)) {
+    throw new Error(`Lifecycle allowlist file not found: ${resolvedPath}`);
+  }
+
+  const raw = readFileSync(resolvedPath, 'utf8').replace(/^\uFEFF/, '');
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Lifecycle allowlist file must be a JSON array: ${resolvedPath}`);
+  }
+
+  return new Set(parsed.map((item) => String(item || '').trim()).filter(Boolean));
+}
+
+function resolveLifecycleAllowlist(args) {
+  const argValue = args['lifecycle-projects'];
+  if (argValue) {
+    return parseAllowlist(argValue);
+  }
+
+  const envValue = process.env.AIOS_LIFECYCLE_PROJECTS || '';
+  if (envValue) {
+    return parseAllowlist(envValue);
+  }
+
+  const allowlistPath = args['lifecycle-projects-file'] || DEFAULT_LIFECYCLE_ALLOWLIST_FILE;
+  return loadAllowlistFile(allowlistPath);
 }
 
 function ensureLiveHeaders(row = []) {
@@ -201,11 +238,11 @@ async function logProjectSyncPreview(context, projectName, eventDate, shouldWrit
     }
     console.log(`[INFO] Lifecycle note    : ${syncResult.lifecycle.reasons.join(' | ')}`);
     if (!applyStatusPhase) {
-      console.log('[INFO] Lifecycle apply   : preview only. Pass --apply-status-phase and --lifecycle-projects to include status/phase in Projects writes.');
+      console.log('[INFO] Lifecycle apply   : preview only. Pass --apply-status-phase and use the lifecycle allowlist to include status/phase in Projects writes.');
     } else if (!syncResult.lifecyclePermission.enabled) {
       console.log(`[INFO] Lifecycle apply   : blocked (${syncResult.lifecyclePermission.reason}).`);
     } else if (!shouldWrite) {
-      console.log('[INFO] Lifecycle apply   : previewing status/phase because allowlist matched.');
+      console.log('[INFO] Lifecycle apply   : previewing status/phase because the lifecycle allowlist matched.');
     }
   } else {
     console.log('[INFO] Lifecycle preview : no guarded status/phase change suggested.');
@@ -231,7 +268,7 @@ async function main() {
   const entry = pickEntry(args);
   const isWrite = args.write === 'true';
   const applyStatusPhase = args['apply-status-phase'] === 'true';
-  const lifecycleProjectAllowlist = parseAllowlist(args['lifecycle-projects'] || process.env.AIOS_LIFECYCLE_PROJECTS || '');
+  const lifecycleProjectAllowlist = resolveLifecycleAllowlist(args);
 
   if (!entry.title) {
     throw new Error('Task title is required. Pass --title or --json.');

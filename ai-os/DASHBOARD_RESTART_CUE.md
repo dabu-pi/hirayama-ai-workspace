@@ -175,3 +175,13 @@
   - `Task_Queue!A9:K9`
   - `Projects!A6:J6`
 - Natural next step: decide whether to formalize a tiny default allowlist, or keep explicit per-run allowlists only.
+## 2026-03-12 Lifecycle default allowlist cue
+
+- Added tracked default allowlist file: `ai-os/lifecycle-projects.json`.
+- Current default allowlist contains only `WST-05`.
+- `scripts/sync-project-from-taskqueue.mjs` and `scripts/upsert-task-queue.mjs` now read that file automatically when no CLI/env allowlist is passed.
+- Verified default-allowlist live apply:
+  - `Task_Queue!A15:K15`
+  - `Projects!A8:J8`
+  - `廃棄物日報GAS` moved from `保留 / 構想` to `進行中 / 設計`
+- If expanding lifecycle apply later, add projects to the tracked file deliberately instead of relying on ad hoc CLI flags.

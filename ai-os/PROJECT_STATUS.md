@@ -229,3 +229,16 @@
   - `Task_Queue!A9:K9`
   - `Projects!A6:J6`
 - Recommended operational stance for now: keep lifecycle apply as operator-only and pass `--lifecycle-projects` explicitly per run.
+## 2026-03-12 Lifecycle default allowlist memo
+
+- Added tracked default allowlist file: `ai-os/lifecycle-projects.json`.
+- Initial allowed project set is intentionally tiny: `WST-05` only.
+- `scripts/sync-project-from-taskqueue.mjs` and `scripts/upsert-task-queue.mjs` now read that file by default when no CLI/env allowlist is provided.
+- Verified default-file dry-run with no explicit allowlist args:
+  - preview task target `Task_Queue!A15:K15`
+  - preview project target `Projects!A8:J8`
+  - lifecycle apply became available because the default allowlist matched `WST-05`
+- Verified live end-to-end apply with the default allowlist:
+  - `Task_Queue!A15:K15` appended `要件定義たたき台作成 / 廃棄物日報GAS / 設計 / 進行中`
+  - `Projects!A8:J8` updated to `status = 進行中`, `phase = 設計`, `last_updated = 2026-03-12`, `next_action = 要件定義たたき台作成`
+- Next design choice: keep the tracked allowlist at `WST-05` only, or add one more low-risk project after a short observation period.
