@@ -40,6 +40,7 @@ Notes:
   - Reads the live Task_Queue sheet and reports rows that have any content but are missing Task / Project / Type / Priority / Status.
   - Default behavior exits with code 1 when incomplete rows are found.
   - Pass --warn-only to keep the command informational during routine checks.
+  - Known-row cleanup rules are documented in ai-os/AUTO_APPROVAL_RULES.md.
 `);
 }
 

@@ -303,3 +303,20 @@
 - Deleted the known manual incomplete row from live `Task_Queue` after confirming there was no reliable metadata to fill it safely.
 - Verified `node scripts/validate-task-queue.mjs --warn-only` returns 0 findings after the cleanup.
 - The remaining Phase 2 priority is stable handoff operation: change, commit/push, `de`, live `Run_Log`, and `Dashboard Latest Run`.
+
+## 2026-03-12 Auto approval rule memo
+
+- Added `ai-os/AUTO_APPROVAL_RULES.md` to reduce confirmation branching for the AIOS auto-loop.
+- inspect / read-only / validator / help / `node --check` / `git status`-class commands are now treated as auto-approved.
+- known incomplete row deletion is only conditionally auto-approved:
+  - validator finds exactly one row
+  - the row has no safe reconstruction path
+  - backup is taken first
+  - validator is rerun after delete
+  - the cleanup is written to `Run_Log`
+- Proposed `de` integration stays opt-in:
+  - backup
+  - delete
+  - revalidate
+  - `Run_Log`
+  - `Dashboard Latest Run`

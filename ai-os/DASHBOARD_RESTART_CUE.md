@@ -227,3 +227,15 @@
 - If you need to keep `Dashboard` Latest Run on an older commit on purpose, state that explicitly in `PROJECT_STATUS.md`.
 - Use `node scripts/validate-task-queue.mjs --warn-only` to detect manual incomplete rows without changing the sheet.
 - The validator currently catches the known hand-entered incomplete `Task_Queue` row.
+
+## 2026-03-12 Auto approval cue
+
+- `ai-os/AUTO_APPROVAL_RULES.md` is now the source of truth for what the AIOS auto-loop may run without pausing.
+- inspect / read-only / validator / help / `node --check` / `git status`-class commands should now proceed without confirmation.
+- known incomplete row cleanup is conditionally auto-approved only when the validator finds exactly one reconstruct-unfriendly row and a backup is taken first.
+- cleanup flow for future `de` integration:
+  - inspect backup
+  - delete one known row
+  - rerun validator
+  - append `Run_Log`
+  - inspect `Dashboard Latest Run`

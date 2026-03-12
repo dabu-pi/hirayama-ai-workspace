@@ -176,3 +176,20 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
 - Added a read-only `Task_Queue` validator (`scripts/validate-task-queue.mjs`) so manual incomplete rows can be detected without changing KPI formulas.
 - Added a minimum Run_Log handoff rule: append the newest dashboard-affecting commit to `Run_Log` before ending the session.
 - This keeps `Dashboard Latest Run` and operational reality closer together without changing `Projects` count or Metrics formulas.
+
+## 2026-03-12 Auto approval follow-up
+
+- Added `ai-os/AUTO_APPROVAL_RULES.md` for the AIOS auto-loop.
+- The default auto-approved set is intentionally narrow:
+  - inspect
+  - read-only
+  - validator
+  - help
+  - `node --check`
+  - `git status`-class commands
+- known incomplete row cleanup is only conditionally auto-approved, and only with:
+  - backup first
+  - delete second
+  - validator rerun third
+  - `Run_Log` record fourth
+- This keeps the loop fast for inspection while still stopping on secrets, billing, external deletion, or production data changes.
