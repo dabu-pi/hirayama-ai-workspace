@@ -22,6 +22,9 @@ Notes:
   - Default behavior keeps the Task project aligned to the source idea's Related Project.
   - Pass --project (or set json.project) only when you want the Task row to point at a canonical Projects row such as AIOS-06.
   - The source Ideas row is preserved; only its status/note trace is updated.
+  - Sample payloads:
+    - scripts/idea-to-task-workspace.example.json
+    - scripts/idea-to-task-aios.example.json
 `);
 }
 

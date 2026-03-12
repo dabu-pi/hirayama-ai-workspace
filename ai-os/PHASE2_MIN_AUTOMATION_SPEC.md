@@ -170,3 +170,9 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
 - Explicit canonical targeting is still possible by passing `AIOS-06` to `scripts/promote-idea-to-task.mjs`.
 - The promotion samples are now split into a workspace-preserving version and an AIOS override version.
 - `26b9cec` has been added to the live `Run_Log`, and `Dashboard Latest Run` now reflects that commit.
+
+## 2026-03-12 Validation follow-up
+
+- Added a read-only `Task_Queue` validator (`scripts/validate-task-queue.mjs`) so manual incomplete rows can be detected without changing KPI formulas.
+- Added a minimum Run_Log handoff rule: append the newest dashboard-affecting commit to `Run_Log` before ending the session.
+- This keeps `Dashboard Latest Run` and operational reality closer together without changing `Projects` count or Metrics formulas.

@@ -221,3 +221,9 @@
   - workspace sample skips `Projects` sync because `workspace全体` has no canonical row
   - AIOS sample previews sync to `Projects!A9:J9`
 - `26b9cec` has now been appended to `Run_Log!A15:J15`, and `Dashboard` Latest Run reflects it.
+## 2026-03-12 Run_Log + validation cue
+
+- New minimum handoff rule: append `Run_Log` for the newest dashboard-affecting commit before closing the session.
+- If you need to keep `Dashboard` Latest Run on an older commit on purpose, state that explicitly in `PROJECT_STATUS.md`.
+- Use `node scripts/validate-task-queue.mjs --warn-only` to detect manual incomplete rows without changing the sheet.
+- The validator currently catches the known hand-entered incomplete `Task_Queue` row.

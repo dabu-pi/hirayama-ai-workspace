@@ -288,3 +288,11 @@
 - Appended the missing `26b9cec` Run_Log entry:
   - `Run_Log!A15:J15`
   - `Dashboard` Latest Run now shows `commit = 26b9cec`, `project = AIOS-06`
+## 2026-03-12 Run_Log discipline + Task_Queue validation
+
+- Appended `14c86b4` to the live `Run_Log` so `Dashboard` Latest Run can move off the older `26b9cec` entry.
+- Minimum Run_Log rule for handoff:
+  - if a commit changes dashboard automation behavior or live-sheet operation, append a `Run_Log` row before ending the session
+  - if you intentionally keep `Dashboard` Latest Run pinned to an older commit, leave that reason in `PROJECT_STATUS.md`
+- Added `scripts/validate-task-queue.mjs` as a read-only check for manual `Task_Queue` drift.
+- Current known manual incomplete row remains in `Task_Queue` and should be either completed or cleared before relying on hand-entered queue counts.
