@@ -1,0 +1,11 @@
+{
+  "idea_title": "Hirayama AI OS ダッシュボード",
+  "related_project": "workspace全体",
+  "task_title": "ダッシュボード運用入口の見直し",
+  "type": "Research",
+  "priority": "Medium",
+  "status": "Pending",
+  "assigned_to": "AI",
+  "planned_date": "2026-03-12",
+  "notes": "Promote a dashboard idea into the execution queue without leaving incomplete Task_Queue fields."
+}

@@ -153,3 +153,13 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
 
 - Dashboard metrics now ignore incomplete `Task_Queue` rows when counting open tasks.
 - This keeps KPI counts stable even if a human leaves a partial task title in the live sheet.
+## 2026-03-12 Ideas to Task follow-up
+
+- Added a minimum `Ideas -> Task_Queue` promotion helper (`scripts/promote-idea-to-task.mjs`).
+- The promotion path is intentionally small:
+  - read one idea row
+  - fill `Project / Type / Priority / Status` before any Task write
+  - append/update one Task row
+  - leave a trace note back on the idea row
+- `scripts/upsert-task-queue.mjs` now fails fast if an automation run would leave required Task fields blank.
+- This keeps Phase 1 manual operation intact while reducing the chance that future automation creates more incomplete `Task_Queue` rows.

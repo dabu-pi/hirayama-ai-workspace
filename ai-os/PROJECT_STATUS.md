@@ -251,3 +251,24 @@
   - `Dashboard!A6:K6` now shows `Open Tasks = 11`
   - `Metrics!A2:E11` now shows `Open Tasks = 11`, `High Priority Open Tasks = 6`, `Projects In Progress = 3`
 - The partial row still exists in `Task_Queue`; the fix is formula-side hardening, not data deletion.
+## 2026-03-12 Ideas to Task helper memo
+
+- Added `scripts/promote-idea-to-task.mjs` as the light Ideas -> Task_Queue promotion entrypoint.
+- The helper reads one live `Ideas` row, builds a complete Task_Queue row with enforced defaults, and writes a trace note back to the source idea.
+- Default Task values are intentionally narrow and beginner-safe:
+  - `type = 調査`
+  - `priority` falls back from `Ideas.impact`
+  - `status = 未着手`
+  - `assigned_to` falls back from `Ideas.owner`
+  - `planned_date = today`
+- Hardened `scripts/upsert-task-queue.mjs` so automation-side writes now fail fast when `Task / Project / Type / Priority / Status` are missing.
+- Verified guardrail dry-run:
+  - `node scripts/upsert-task-queue.mjs --title "validation guard test" --project AIOS-06`
+  - result: `Task_Queue row is missing required fields: Type, Priority, Status`
+- Verified live apply with the safe workspace-level sample:
+  - `Ideas!A4:J4` updated with `Task化 2026-03-12: ダッシュボード運用入口の見直し`
+  - `Task_Queue!A16:K16` appended `ダッシュボード運用入口の見直し / workspace全体 / 調査 / 中 / 未着手`
+  - linked `Projects` sync was skipped intentionally because `workspace全体` has no canonical Projects row
+  - `Dashboard!A6:K6` now shows `Open Tasks = 12`
+  - `Metrics!A2:E11` now shows `Open Tasks = 12`, `High Priority Open Tasks = 6`, `Idea Count = 7`
+- Added `scripts/idea-to-task.example.json` as a reusable promotion sample payload.

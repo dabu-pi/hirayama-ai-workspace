@@ -193,3 +193,18 @@
   - `Dashboard` summary shows `Open Tasks = 11`
   - `Metrics` shows `Open Tasks = 11`, `High Priority Open Tasks = 6`, `Projects In Progress = 3`
 - The hardening is formula-side only; no live `Task_Queue` rows were deleted.
+## 2026-03-12 Ideas to Task cue
+
+- Added `scripts/promote-idea-to-task.mjs` for the minimum operational path from `Ideas` to `Task_Queue`.
+- The helper always writes a complete Task row and then leaves a trace note on the source idea, so the operator does not need to open `Task_Queue` manually just to avoid incomplete rows.
+- `scripts/upsert-task-queue.mjs` now rejects automation writes that would leave `Task / Project / Type / Priority / Status` blank.
+- Verified guard behavior with a dry-run missing-field call:
+  - `Task_Queue row is missing required fields: Type, Priority, Status`
+- Verified live sample apply:
+  - `Ideas!A4:J4`
+  - `Task_Queue!A16:K16`
+  - new task: `ダッシュボード運用入口の見直し / workspace全体 / 調査 / 中 / 未着手`
+- Verified dashboard consistency after the apply:
+  - `Dashboard` summary shows `Open Tasks = 12`
+  - `Metrics` shows `Open Tasks = 12`, `High Priority Open Tasks = 6`, `Idea Count = 7`
+- The old partial `Task_Queue` row still exists, but the new promotion path does not create more incomplete rows.

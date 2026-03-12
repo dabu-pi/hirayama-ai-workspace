@@ -175,6 +175,24 @@ function buildLiveRow(entry, existingRow = []) {
   ];
 }
 
+function ensureRequiredTaskFields(row = []) {
+  const required = [
+    ['Task', row[0]],
+    ['Project', row[1]],
+    ['Type', row[2]],
+    ['Priority', row[3]],
+    ['Status', row[4]],
+  ];
+
+  const missing = required
+    .filter(([, value]) => String(value || '').trim() === '')
+    .map(([label]) => label);
+
+  if (missing.length > 0) {
+    throw new Error(`Task_Queue row is missing required fields: ${missing.join(", ")}`);
+  }
+}
+
 function pickEntry(args) {
   if (args.json) {
     return loadJson(args.json);
@@ -292,6 +310,7 @@ async function main() {
   const targetRowNumber = existingIndex >= 0 ? existingIndex + 4 : bodyRows.length + 4;
   const existingRow = existingIndex >= 0 ? bodyRows[existingIndex] : [];
   const liveRow = buildLiveRow(entry, existingRow);
+  ensureRequiredTaskFields(liveRow);
   const action = existingIndex >= 0 ? 'update' : 'append';
   const eventDate = liveRow[7] || todayString();
 
