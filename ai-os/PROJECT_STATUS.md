@@ -366,3 +366,19 @@
   - Injected exactly one live known incomplete row at `Task_Queue!A16:K16` with only `Task = AUTO CLEANUP CONTROL TEST`.
   - Ran `de -AutoCleanupKnownTaskQueueRow` and confirmed `backup -> delete -> revalidate(0) -> commit/push -> Run_Log append`.
   - Verified live after the run: `Task_Queue` returned to 0 findings, `Run_Log!A20:J20` recorded `e767ace`, and `Dashboard Latest Run` refreshed to the same commit.
+
+## 2026-03-13 Cleanup failure-path verification
+
+- Tested one safe failure case only:
+  - injected `AUTO CLEANUP FAILURE TEST` at `Task_Queue!A16:K16`
+  - ran `de -AutoCleanupKnownTaskQueueRow -AutoCleanupFailAfterBackup`
+  - helper wrote `logs/taskqueue/taskqueue_cleanup_backup_20260313_052227.json`
+  - delete was skipped intentionally and `de` stopped before commit / push / Run_Log append
+- Verified stopped state:
+  - live validator still reported the same single known row
+  - `Dashboard Latest Run` stayed on `e767ace`
+  - no new `Run_Log` row was appended during the stopped run
+- Recovery verification:
+  - reran normal cleanup and saved `logs/taskqueue/taskqueue_cleanup_backup_20260313_052308.json`
+  - deleted `Task_Queue!A16:K16`
+  - revalidated back to 0 findings before resuming the normal handoff path

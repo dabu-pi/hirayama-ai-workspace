@@ -9,6 +9,7 @@ param(
     [string]$Message = '',
     [switch]$NoPush,
     [switch]$AutoCleanupKnownTaskQueueRow,
+    [switch]$AutoCleanupFailAfterBackup,
     [string]$ProjectId = '',
     [ValidateSet('SUCCESS', 'STOP', 'ERROR', 'PARTIAL')]
     [string]$Result = 'SUCCESS',
@@ -94,7 +95,12 @@ if ($AutoCleanupKnownTaskQueueRow) {
     }
 
     try {
-        & node $taskQueueCleanupPath --write
+        $cleanupArgs = @('--write')
+        if ($AutoCleanupFailAfterBackup) {
+            $cleanupArgs += '--fail-after-backup'
+        }
+
+        & node $taskQueueCleanupPath @cleanupArgs
         $taskQueueCleanupExit = $LASTEXITCODE
     } catch {
         Write-Err $_.Exception.Message

@@ -107,3 +107,27 @@ Hirayama AI OS ???????????????????????????????????
 - inspect ??????
 - cleanup ? known incomplete row ?????????
 - ??????????????
+
+## 2026-03-13 Failure-path guardrail addendum
+
+- Safe failure test:
+  - inject exactly one identifiable row such as `AUTO CLEANUP FAILURE TEST`
+  - run `node scripts/cleanup-known-taskqueue-row.mjs --write --fail-after-backup` through `de`
+- Backup keep condition:
+  - keep the failure backup JSON until recovery completes and `node scripts/validate-task-queue.mjs --warn-only` returns 0 again
+  - do not discard the last failure backup before confirming one successful cleanup backup exists after it
+- Delete stop conditions:
+  - backup write fails
+  - validator does not find exactly one known cleanup candidate
+  - `--fail-after-backup` is set for a controlled stop test
+  - required spreadsheet / service-account settings are missing
+  - post-delete revalidation is not 0
+- `de` STOP conditions:
+  - cleanup helper exits non-zero
+  - the stopped run must not be treated as a committed handoff
+  - `Run_Log` and `Dashboard Latest Run` stay unchanged until a later successful recovery commit
+- Recovery sequence:
+  1. inspect the backup JSON path
+  2. rerun validator and confirm the same single known row is still present
+  3. rerun normal cleanup with `node scripts/cleanup-known-taskqueue-row.mjs --write`
+  4. require validator 0 before resuming `de`

@@ -21,11 +21,13 @@ function printHelp() {
 Usage:
   node scripts/cleanup-known-taskqueue-row.mjs [--range 1:200]
   node scripts/cleanup-known-taskqueue-row.mjs [--range 1:200] --write
+  node scripts/cleanup-known-taskqueue-row.mjs [--range 1:200] --write --fail-after-backup
 
 Notes:
   - Deletes a Task_Queue row only when the validator logic finds exactly one known cleanup candidate.
   - A backup JSON is always written before delete when --write is used.
   - After delete, revalidation must return 0 findings or the command fails.
+  - --fail-after-backup is a safety test flag: it writes the backup, skips delete, and exits non-zero.
 `);
 }
 
@@ -87,6 +89,7 @@ async function main() {
   const context = await getAuthorizedContext(args);
   const range = args.range || DEFAULT_RANGE;
   const shouldWrite = args.write === 'true';
+  const failAfterBackup = args['fail-after-backup'] === 'true';
   const backupDir = resolve(args['backup-dir'] || 'logs/taskqueue');
   const analysis = await loadTaskQueueAnalysis({ context, range });
 
@@ -115,6 +118,12 @@ async function main() {
 
   mkdirSync(backupDir, { recursive: true });
   writeFileSync(backupPath, `${JSON.stringify(backupPayload, null, 2)}\n`, 'utf8');
+
+  if (failAfterBackup) {
+    console.error('[ERR] Simulated failure after backup. Delete was skipped on purpose.');
+    process.exit(2);
+  }
+
   await deleteRow(context, candidate.rowNumber);
 
   const revalidated = await loadTaskQueueAnalysis({ context, range });

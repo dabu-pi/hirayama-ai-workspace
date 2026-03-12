@@ -239,3 +239,17 @@
   - rerun validator
   - append `Run_Log`
   - inspect `Dashboard Latest Run`
+
+## 2026-03-13 Cleanup failure-path cue
+
+- Controlled failure test is now available through `de -AutoCleanupKnownTaskQueueRow -AutoCleanupFailAfterBackup`.
+- Expected stop behavior:
+  - backup JSON is written first
+  - live row is left in place
+  - `de` exits non-zero before commit / push / Run_Log append
+- Recovery after a stopped run:
+  1. inspect the latest `logs/taskqueue/taskqueue_cleanup_backup_*.json`
+  2. run `node scripts/validate-task-queue.mjs --warn-only`
+  3. if the same single known row remains, run `node scripts/cleanup-known-taskqueue-row.mjs --write`
+  4. require validator 0 before retrying `de`
+- Verified once on live with `AUTO CLEANUP FAILURE TEST` and then restored the sheet to a clean state.
