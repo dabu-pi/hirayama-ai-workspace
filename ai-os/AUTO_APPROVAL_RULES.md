@@ -131,3 +131,6 @@ Hirayama AI OS ???????????????????????????????????
   2. rerun validator and confirm the same single known row is still present
   3. rerun normal cleanup with `node scripts/cleanup-known-taskqueue-row.mjs --write`
   4. require validator 0 before resuming `de`
+
+- `node scripts/suggest-next-task.mjs` and `node scripts/suggest-next-task.mjs --project AIOS-06` are read-only inspect commands and can run without confirmation.
+- They are advisory only and must not be treated as a required gate before `de`.

@@ -405,3 +405,13 @@
 - Optional `--project` filter is supported for scoped inspection, but the helper never writes to any sheet.
 
 - `--project AIOS-06` returns a clearer fallback message when no canonical AIOS-linked Task_Queue row exists yet.
+
+## 2026-03-13 de guidance for read-only next-task helper
+
+- `scripts/suggest-next-task.mjs` is guidance-only around `de` / `dev-end`.
+- Current operator rule:
+  - optional before `de`: inspect the next likely task if you want a quick human-facing recommendation
+  - optional after `de`: inspect again only if you want to sanity-check what remains in `Task_Queue`
+- The helper is not part of the `de` execution path and should not block handoff.
+- `--project AIOS-06` is useful only when you expect a canonical AIOS-linked Task row.
+- Zero matches on `--project AIOS-06` are currently normal because some AIOS work still lives under `workspace全体` rows.

@@ -284,3 +284,12 @@
 - Optional `--project` can narrow the recommendation pool when you want to inspect one project only.
 
 - `--project AIOS-06` now explains that zero matches can be expected while AIOS work still lives under `workspace全体` rows.
+
+## 2026-03-13 dev-end guidance for next-task helper
+
+- `scripts/suggest-next-task.mjs` stays outside `de` for now.
+- Recommended use:
+  1. optional before `de` when you want a human-readable next-task recommendation
+  2. optional after `de` when you want to inspect what remains in `Task_Queue`
+- Do not treat the helper as a gate for commit / push / Run_Log.
+- `--project AIOS-06` may return 0 matches while AIOS work is still tracked under `workspace全体`; that is an expected advisory result, not a failure.
