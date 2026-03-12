@@ -128,3 +128,10 @@
 - `scripts/preview-dashboard-projects-remap.mjs` で、Projects 正本化後の Dashboard `Project Snapshot` ヘッダー/数式プレビューを生成できるようにした
 - `scripts/apply-dashboard-projects-remap.mjs` を追加し、Projects 移行後に `Dashboard!H11:N*` をまとめて更新できるようにした
 - ただし現在は `Projects` live 移行前なので、Dashboard への実適用はまだ行わない
+
+## 2026-03-12 Projects recovery memo
+
+- Restored the live `Projects` tab from `Projects_backup_20260308` after a bad re-migration corrupted the canonical rows.
+- `scripts/migrate-projects-schema.mjs` now defaults to the backup tab as the source sheet and can rebuild the canonical 10-column layout safely.
+- Verified live `Projects` rows 4-9 are back to canonical values and `Dashboard!H11:N16` now reads from the repaired project names and dates again.
+- Remaining follow-up: decide whether the AIOS row should keep `project_name=AIOS-06` or be normalized to `Hirayama AI OS` in a later cleanup pass.

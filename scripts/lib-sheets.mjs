@@ -202,6 +202,15 @@ export async function appendSheetRow({ spreadsheetId, sheetName, row, accessToke
   });
 }
 
+export async function batchUpdateSpreadsheet({ spreadsheetId, requests, accessToken }) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+  return sheetsFetch(url, {
+    accessToken,
+    method: 'POST',
+    body: { requests },
+  });
+}
+
 export {
   DEFAULT_ENV_ACCOUNT,
   DEFAULT_ENV_SPREADSHEET,

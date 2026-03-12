@@ -80,3 +80,12 @@
 - Run_Log 正本は `system` ベース 10列に確定済み
 - 実シートはまだ英語寄りの旧8列構成が残っている
 - 次は Lists の語彙確認と、Run_Log 実シートの列修正
+
+## 2026-03-12 Projects restore cue
+
+- `Projects` was temporarily corrupted by re-running the schema migration against already-migrated rows.
+- Recovery succeeded by rebuilding `Projects` from `Projects_backup_20260308` and then reapplying `scripts/apply-dashboard-projects-remap.mjs`.
+- Verified live ranges:
+  - `Projects!A1:J9`
+  - `Dashboard!H11:N16`
+- If `Projects` needs to be migrated again, use the backup tab or a clean old-layout source sheet instead of the already-canonical main tab.

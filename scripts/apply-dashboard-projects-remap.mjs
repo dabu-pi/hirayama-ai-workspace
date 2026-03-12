@@ -1,7 +1,9 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
 import {
+  batchUpdateSpreadsheet,
   getAuthorizedContext,
+  getSpreadsheetMetadata,
   parseArgs,
   updateSheetValues,
 } from './lib-sheets.mjs';
@@ -57,6 +59,37 @@ async function main() {
     values,
     accessToken: context.accessToken,
   });
+
+  const metadata = await getSpreadsheetMetadata(context);
+  const dashboardSheet = (metadata.sheets || []).find((sheet) => sheet.properties?.title === 'Dashboard');
+  if (dashboardSheet?.properties?.sheetId !== undefined) {
+    await batchUpdateSpreadsheet({
+      spreadsheetId: context.spreadsheetId,
+      accessToken: context.accessToken,
+      requests: [
+        {
+          repeatCell: {
+            range: {
+              sheetId: dashboardSheet.properties.sheetId,
+              startRowIndex: 11,
+              endRowIndex: 11 + rows,
+              startColumnIndex: 11,
+              endColumnIndex: 12,
+            },
+            cell: {
+              userEnteredFormat: {
+                numberFormat: {
+                  type: 'DATE',
+                  pattern: 'yyyy-mm-dd',
+                },
+              },
+            },
+            fields: 'userEnteredFormat.numberFormat',
+          },
+        },
+      ],
+    });
+  }
 
   console.log(`[OK] Updated Dashboard project snapshot: ${result.updatedRange ?? `Dashboard!H11:N${11 + rows}`}`);
 }
