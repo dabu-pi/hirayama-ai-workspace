@@ -98,3 +98,14 @@
 
 - `ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md`
 - `scripts/append-runlog-to-sheet.mjs`
+
+---
+
+## 2026-03-12 Run_Log 移行完了メモ
+
+- `scripts/lib-sheets.mjs` を追加して、service account でダッシュボードを読む共通処理を実装
+- `scripts/inspect-dashboard-sheet.mjs` で実シートの先頭行確認を自動化
+- `scripts/migrate-runlog-schema.mjs` で `Run_Log` を旧8列から正本10列へ移行
+- 実シート `Run_Log` は 2026-03-12 に `log_id / datetime / system / project / summary / result / commit_hash / tasks_done / stop_reason / next_action` へ更新済み
+- 旧ログ 5件は `LEGACY-*` 形式の `log_id` で保持し、既存の Codex 追記行もそのまま維持した
+- 今後の `de` 追記はこの10列前提でそのまま整合する

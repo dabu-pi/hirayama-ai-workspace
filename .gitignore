@@ -65,3 +65,7 @@ artifacts/
 
 # local-only settings
 .claude/settings.local.json
+
+# local secrets
+secrets/
+
