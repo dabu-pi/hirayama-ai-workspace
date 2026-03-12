@@ -362,5 +362,7 @@
 - no-op確認済み:
   - `de -AutoCleanupKnownTaskQueueRow` was run once against a clean live `Task_Queue`.
   - Result: no candidate row was found, cleanup stayed no-op, and the handoff loop still completed through `Run_Log` and `Dashboard Latest Run`.
-- positive path確認:
-  - pending controlled live test with exactly one injected known incomplete row.
+- positive path確認済み:
+  - Injected exactly one live known incomplete row at `Task_Queue!A16:K16` with only `Task = AUTO CLEANUP CONTROL TEST`.
+  - Ran `de -AutoCleanupKnownTaskQueueRow` and confirmed `backup -> delete -> revalidate(0) -> commit/push -> Run_Log append`.
+  - Verified live after the run: `Task_Queue` returned to 0 findings, `Run_Log!A20:J20` recorded `e767ace`, and `Dashboard Latest Run` refreshed to the same commit.
