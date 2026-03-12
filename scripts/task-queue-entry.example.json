@@ -1,0 +1,11 @@
+﻿{
+  "title": "Lists 語彙整合の確認",
+  "project": "AIOS-06",
+  "type": "Research",
+  "priority": "High",
+  "status": "Pending",
+  "assigned_to": "AI",
+  "planned_date": "2026-03-12",
+  "dependency": "Lists live header audit",
+  "notes": "Check current Lists values before Task_Queue schema migration"
+}

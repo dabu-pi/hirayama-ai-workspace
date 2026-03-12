@@ -135,3 +135,11 @@
 - `scripts/migrate-projects-schema.mjs` now defaults to the backup tab as the source sheet and can rebuild the canonical 10-column layout safely.
 - Verified live `Projects` rows 4-9 are back to canonical values and `Dashboard!H11:N16` now reads from the repaired project names and dates again.
 - Remaining follow-up: decide whether the AIOS row should keep `project_name=AIOS-06` or be normalized to `Hirayama AI OS` in a later cleanup pass.
+
+## 2026-03-12 Task_Queue automation memo
+
+- Added `scripts/upsert-task-queue.mjs` to upsert live `Task_Queue` rows without migrating the sheet schema first.
+- The helper targets the current 11-column live layout and matches rows by `title + project`.
+- English vocabulary input is normalized to the current Japanese live values (`Docs` -> `文書`, `Pending` -> `未着手`, `High` -> `高`, `Human` -> `人`).
+- Verified a live no-op update against `Task_Queue!A12:K12` for `PROJECT_STATUS.md 補完`.
+- Added `scripts/task-queue-entry.example.json` as a sample payload for future Codex runs.

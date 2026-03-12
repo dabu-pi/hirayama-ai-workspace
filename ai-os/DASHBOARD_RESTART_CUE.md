@@ -89,3 +89,10 @@
   - `Projects!A1:J9`
   - `Dashboard!H11:N16`
 - If `Projects` needs to be migrated again, use the backup tab or a clean old-layout source sheet instead of the already-canonical main tab.
+
+## 2026-03-12 Task_Queue helper cue
+
+- `Task_Queue` is still on the live 11-column layout (`Task / Project / Type / Priority / Status / Assigned To / Planned Date / Done Date / Dependency / Score / Notes`).
+- To avoid breaking the Dashboard, task automation now starts with `scripts/upsert-task-queue.mjs` instead of a schema migration.
+- The helper accepts `--json` or CLI flags, normalizes English input to the Japanese live vocabulary, and updates rows by `title + project`.
+- Verified live write: `Task_Queue!A12:K12`.
