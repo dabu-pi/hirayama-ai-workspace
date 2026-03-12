@@ -143,3 +143,11 @@
 - English vocabulary input is normalized to the current Japanese live values (`Docs` -> `文書`, `Pending` -> `未着手`, `High` -> `高`, `Human` -> `人`).
 - Verified a live no-op update against `Task_Queue!A12:K12` for `PROJECT_STATUS.md 補完`.
 - Added `scripts/task-queue-entry.example.json` as a sample payload for future Codex runs.
+
+## 2026-03-12 Lists alignment memo
+
+- Added `scripts/migrate-lists-schema.mjs` to rewrite the live `Lists` sheet to the canonical vocabulary layout from `dashboard-schema.md`.
+- Updated the live `Lists` tab to the canonical `A:I` headers (`status / phase / type / system / assigned_to / task_status / task_type / priority / idea_status`).
+- Cleared the stale extra values that had remained in columns `J:L` from the earlier mixed-layout sheet.
+- Verified live `Lists!A1:I13` now contains the intended Japanese vocabulary plus `Codex` in `system`.
+- Remaining follow-up: inspect Dashboard / Metrics formulas that still reflect old numeric progress assumptions.

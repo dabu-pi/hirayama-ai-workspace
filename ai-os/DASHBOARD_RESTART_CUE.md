@@ -96,3 +96,10 @@
 - To avoid breaking the Dashboard, task automation now starts with `scripts/upsert-task-queue.mjs` instead of a schema migration.
 - The helper accepts `--json` or CLI flags, normalizes English input to the Japanese live vocabulary, and updates rows by `title + project`.
 - Verified live write: `Task_Queue!A12:K12`.
+
+## 2026-03-12 Lists restore cue
+
+- `Lists` has been rewritten to the canonical vocabulary layout defined in `dashboard-schema.md`.
+- Live headers now match `status / phase / type / system / assigned_to / task_status / task_type / priority / idea_status`.
+- Stale columns `J:L` were cleared so the sheet no longer mixes old `impact/size` leftovers with the active vocabulary range.
+- Verified live range: `Lists!A1:I13`.
