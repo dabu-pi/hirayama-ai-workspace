@@ -122,3 +122,9 @@
 - Dashboard rows 12-16 reference `Projects!A`, `D`, `E`, `F`, `G`, `I`, `M` directly
 - Because of that, the live `Projects` tab cannot be migrated to the canonical schema yet without first rewriting Dashboard formulas
 - `scripts/preview-projects-migration.mjs` is safe to use because it only exports a preview and does not touch the live sheet
+
+## 2026-03-12 Dashboard remap prep
+
+- `scripts/preview-dashboard-projects-remap.mjs` で、Projects 正本化後の Dashboard `Project Snapshot` ヘッダー/数式プレビューを生成できるようにした
+- `scripts/apply-dashboard-projects-remap.mjs` を追加し、Projects 移行後に `Dashboard!H11:N*` をまとめて更新できるようにした
+- ただし現在は `Projects` live 移行前なので、Dashboard への実適用はまだ行わない

@@ -8,25 +8,26 @@ import {
   parseArgs,
 } from './lib-sheets.mjs';
 
-const PROJECT_ID_MAP = new Map([
-  ['freee見積自動化', 'FREEE-02'],
-  ['柔整GASシステム', 'GAS-01'],
-  ['患者管理Webアプリ', 'WEB-03'],
-  ['接骨院戦略AI', 'STR-04'],
-  ['廃棄物日報GAS', 'WST-05'],
-  ['AIOS-06', 'AIOS-06'],
+const DIRECTORY_ID_MAP = new Map([
+  ['freee-automation', 'FREEE-02'],
+  ['gas-projects/jyu-gas-ver3.1', 'GAS-01'],
+  ['patient-management', 'WEB-03'],
+  ['hirayama-jyusei-strategy', 'STR-04'],
+  ['waste-report-system', 'WST-05'],
+  ['ai-os', 'AIOS-06'],
 ]);
 
-function normalizePriority(projectName, rowIndex) {
-  const fixed = new Map([
-    ['AIOS-06', 1],
-    ['freee見積自動化', 2],
-    ['柔整GASシステム', 3],
-    ['患者管理Webアプリ', 4],
-    ['接骨院戦略AI', 5],
-    ['廃棄物日報GAS', 6],
-  ]);
-  return fixed.get(projectName) ?? rowIndex;
+const DIRECTORY_PRIORITY_MAP = new Map([
+  ['ai-os', 1],
+  ['freee-automation', 2],
+  ['gas-projects/jyu-gas-ver3.1', 3],
+  ['patient-management', 4],
+  ['hirayama-jyusei-strategy', 5],
+  ['waste-report-system', 6],
+]);
+
+function normalizePriority(directory, rowIndex) {
+  return DIRECTORY_PRIORITY_MAP.get(directory) ?? rowIndex;
 }
 
 function toCanonicalRow(row, rowIndex) {
@@ -59,12 +60,12 @@ function toCanonicalRow(row, rowIndex) {
   ].filter(Boolean);
 
   return {
-    project_id: PROJECT_ID_MAP.get(projectName) || `LEGACY-PROJECT-${String(rowIndex).padStart(2, '0')}`,
+    project_id: DIRECTORY_ID_MAP.get(directory) || `LEGACY-PROJECT-${String(rowIndex).padStart(2, '0')}`,
     project_name: projectName || '',
     directory: directory || '',
     status: status || '',
     phase: phase || '',
-    priority: normalizePriority(projectName, rowIndex),
+    priority: normalizePriority(directory, rowIndex),
     last_updated: lastUpdate || '',
     next_action: nextAction || '',
     blocker: '',
