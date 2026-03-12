@@ -119,3 +119,20 @@
 - Verified live write: `Projects!A9:J9`.
 - `AIOS-06` is now normalized to `Hirayama AI OS`, with `Phase2`, `2026-03-12`, and a fresh next action recorded.
 - Natural next step: decide whether to automate `Ideas` next or deepen `Task_Queue` / `Projects` sync logic.
+
+## 2026-03-12 Task_Queue to Projects sync cue
+
+- Added `scripts/sync-project-from-taskqueue.mjs` as the bridge from live `Task_Queue` rows to canonical `Projects` rows.
+- `scripts/upsert-task-queue.mjs` now does two things in one flow:
+  - update the target Task_Queue row
+  - preview/apply the linked Projects sync for the same project
+- Auto-reflected fields are intentionally narrow and safe:
+  - `last_updated`
+  - `next_action`
+  - `blocker`
+  - `notes.progress` (never decreases an existing progress percentage)
+- Verified live sync path:
+  - `Task_Queue!A9:K9`
+  - `Projects!A6:J6`
+- Example verified outcome: `患者管理Webアプリ` now shows `last_updated = 2026-03-12` and `next_action = requirements.txt整備` after the linked task update.
+- Next design choice after reopening: automate `Ideas`, or decide whether `Projects.status / phase` should also be updated from task signals.

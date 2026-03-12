@@ -7,6 +7,7 @@ import {
   parseArgs,
   updateSheetValues,
 } from './lib-sheets.mjs';
+import { syncProjectFromTaskQueue } from './sync-project-from-taskqueue.mjs';
 
 const LIVE_HEADERS = [
   'Task',
@@ -101,6 +102,14 @@ function toNumberString(value, fallback = '30') {
   return String(value);
 }
 
+function todayString() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function buildLiveRow(entry, existingRow = []) {
   return [
     entry.title || existingRow[0] || '',
@@ -122,17 +131,17 @@ function pickEntry(args) {
     return loadJson(args.json);
   }
   return {
-    title: args.title || '',
-    project: args.project || '',
-    type: args.type || '',
-    priority: args.priority || '',
-    status: args.status || '',
-    assigned_to: args['assigned-to'] || '',
-    planned_date: args['planned-date'] || '',
-    done_date: args['done-date'] || '',
-    dependency: args.dependency || '',
-    score: args.score || '',
-    notes: args.notes || '',
+    title: args.title,
+    project: args.project,
+    type: args.type,
+    priority: args.priority,
+    status: args.status,
+    assigned_to: args['assigned-to'],
+    planned_date: args['planned-date'],
+    done_date: args['done-date'],
+    dependency: args.dependency,
+    score: args.score,
+    notes: args.notes,
   };
 }
 
@@ -148,6 +157,30 @@ function findExistingRow(bodyRows, entry) {
     const project = String(row[1] || '').trim();
     return task === normalizedTitle && project === normalizedProject;
   });
+}
+
+async function logProjectSyncPreview(context, projectName, eventDate, shouldWrite) {
+  const syncResult = await syncProjectFromTaskQueue({
+    context,
+    projectRef: projectName,
+    eventDate,
+    shouldWrite,
+  });
+
+  if (syncResult.skipped) {
+    console.log(`[INFO] Project sync skipped: ${syncResult.reason}`);
+    return;
+  }
+
+  console.log(`[INFO] Project sync range : ${syncResult.targetRange}`);
+  console.log(`[INFO] Project progress   : ${syncResult.computedProgress}%`);
+  console.log(`[INFO] Project next action: ${syncResult.nextRow[7]}`);
+  console.log(`[INFO] Project blocker    : ${syncResult.nextRow[8]}`);
+  if (shouldWrite) {
+    console.log(`[OK] Project sync succeeded: ${syncResult.updateResult.updatedRange ?? syncResult.targetRange}`);
+  } else {
+    console.log('[INFO] Dry run mode. Project sync was previewed only.');
+  }
 }
 
 async function main() {
@@ -179,6 +212,7 @@ async function main() {
   const existingRow = existingIndex >= 0 ? bodyRows[existingIndex] : [];
   const liveRow = buildLiveRow(entry, existingRow);
   const action = existingIndex >= 0 ? 'update' : 'append';
+  const eventDate = liveRow[7] || todayString();
 
   console.log(`[INFO] Action      : ${action}`);
   console.log(`[INFO] Target row  : Task_Queue!A${targetRowNumber}:K${targetRowNumber}`);
@@ -188,6 +222,7 @@ async function main() {
 
   if (!isWrite) {
     console.log('[INFO] Dry run mode. Pass --write to update the live Task_Queue sheet.');
+    await logProjectSyncPreview(context, liveRow[1], eventDate, false);
     return;
   }
 
@@ -200,9 +235,12 @@ async function main() {
   });
 
   console.log(`[OK] Task_Queue ${action} succeeded: ${result.updatedRange ?? `Task_Queue!A${targetRowNumber}:K${targetRowNumber}`}`);
+  await logProjectSyncPreview(context, liveRow[1], eventDate, true);
 }
 
 main().catch((error) => {
   console.error(`[ERR] ${error.message}`);
   process.exit(1);
 });
+
+

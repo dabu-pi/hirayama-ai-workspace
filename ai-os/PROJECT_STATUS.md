@@ -172,3 +172,17 @@
 - Verified a live update against `Projects!A9:J9` for `AIOS-06`.
 - The helper preserved the structured `notes` metadata while updating the visible project fields (`project_name / phase / last_updated / next_action`).
 - `AIOS-06` is now labeled `Hirayama AI OS` in the live `Projects` sheet and has `Phase2` recorded on `2026-03-12`.
+
+## 2026-03-12 Task_Queue to Projects sync memo
+
+- Added `scripts/sync-project-from-taskqueue.mjs` to derive `Projects` updates from the live `Task_Queue` sheet.
+- Added deeper sync to `scripts/upsert-task-queue.mjs`, so task updates now preview or apply a linked `Projects` update in the same run.
+- Current auto-reflection scope is limited to safe fields:
+  - `Projects.last_updated`
+  - `Projects.next_action`
+  - `Projects.blocker`
+  - `Projects.notes` 内の `progress=NN%`（既存値を下げず、Task_Queue 完了率より大きい方を保持）
+- Verified live end-to-end sync with `患者管理Webアプリ`:
+  - `Task_Queue!A9:K9` was updated to `requirements.txt整備 / 進行中`
+  - `Projects!A6:J6` now reflects `last_updated = 2026-03-12` and `next_action = requirements.txt整備`
+- Status / phase の自動変更はまだ行わず、誤更新リスクの低い範囲に限定している.

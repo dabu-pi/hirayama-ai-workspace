@@ -123,3 +123,9 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
 - Row 3 を正本ヘッダーへ更新
 - Row 4 以降の旧8列ログは `LEGACY-*` 形式で10列へ正規化済み
 - 以後は `append-runlog-to-sheet.mjs` の直接追記で列ずれなく継続できる
+
+## 2026-03-12 拡張スコープ
+
+- `Task_Queue` 更新時に、同一プロジェクトの `Projects` 行を安全に補助更新できるようにした
+- 更新対象は `last_updated / next_action / blocker / notes.progress` に限定する
+- `status / phase` の自動変更はまだ行わない
