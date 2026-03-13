@@ -493,10 +493,9 @@ function freee_phase2_processPendingQuotations() {
         (res && res.id) ? res.id : '';
 
       // G列：見積作成日（freee請求書アプリの見積URLをリンクとして付与）
-      // IV API（/iv/quotations）で作成した見積書は invoice.freee.co.jp に属する
       const dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy/MM/dd');
       if (quotationId) {
-        const freeeUrl = `https://invoice.freee.co.jp/quotations/${quotationId}`;
+        const freeeUrl = `https://invoice.secure.freee.co.jp/reports/quotations/${quotationId}`;
         const safeUrl = freeeUrl.replace(/"/g, '""');
         sheet.getRange(rowIndex, CFG.COL_QUOTED_AT).setFormula(`=HYPERLINK("${safeUrl}","${dateStr}")`);
         console.log(`G列リンク設定: id=${quotationId} / url=${freeeUrl}`);
@@ -1007,16 +1006,22 @@ function isSummaryLine_(description) {
 }
 
 function parseLinesJson_(linesJson) {
+  // デバッグ：RAW JSON を先頭500文字だけ出力（Q列の実際の値を確認）
+  console.log(`parseLinesJson_ RAW(500): ${String(linesJson).slice(0, 500)}`);
+
   const arr = safeJsonParse_(String(linesJson));
   if (!Array.isArray(arr) || arr.length === 0) {
+    console.log(`parseLinesJson_ parseResult(not array): ${JSON.stringify(arr).slice(0, 200)}`);
     throw new Error('lines_json must be a non-empty JSON array.');
   }
 
-  // デバッグ：各行の description と除外判定を出力（集計行問題の調査用）
+  // デバッグ：各行の「全キー名」と description 値・除外判定を出力
+  // keys= が "description" 以外を示す場合、フィールド名不一致が集計行漏れの原因
   arr.forEach((line, i) => {
+    const keys = Object.keys(line || {}).join(',');
     const desc = String(line.description || '');
     const excluded = isSummaryLine_(desc);
-    console.log(`parseLinesJson_[${i}] desc="${desc}" → ${excluded ? '除外(集計行)' : '採用'}`);
+    console.log(`parseLinesJson_[${i}] keys=[${keys}] desc="${desc}" → ${excluded ? '除外(集計行)' : '採用'}`);
   });
 
   // 集計行（小計・消費税・合計・税込合計・税額・総額など）を freee 明細から除外する
