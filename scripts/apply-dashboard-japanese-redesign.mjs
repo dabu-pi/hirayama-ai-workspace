@@ -10,36 +10,32 @@ import {
 } from './lib-sheets.mjs';
 import {
   CANONICAL_PROJECTS,
-  IDEA_HEADERS_V2,
-  LISTS_HEADERS_V2,
-  PRIORITY_ADJUST_HEADERS,
+  IDEA_STAGE_VALUES,
+  PRIORITY_LABEL_VALUES,
   PROJECT_HEADERS_V2,
-  TASK_HEADERS_V2,
-  buildListsRows,
+  PROJECT_STAGE_VALUES,
+  PROJECT_STATUS_VALUES,
+  TASK_STATUS_VALUES,
   githubBlobUrl,
   githubTreeUrl,
-  mapProjectRefToId,
-  normalizeAssignee,
-  normalizeIdeaStage,
-  normalizeTaskPriorityLabel,
-  normalizeTaskStatus,
-  normalizeTaskType,
-  priorityLabelToScore,
-  projectById,
-  projectNameById,
   sheetUrl,
-  sortTasksForDisplay,
-  toIsoDate,
 } from './aios-dashboard-v2.mjs';
 
 const BACKUP_SUFFIX = 'backup_20260313_jp';
-const PROJECT_WIDTH = PROJECT_HEADERS_V2.length;
-const TASK_WIDTH = TASK_HEADERS_V2.length;
-const IDEA_WIDTH = IDEA_HEADERS_V2.length;
-const PRIORITY_WIDTH = PRIORITY_ADJUST_HEADERS.length;
-const LISTS_WIDTH = LISTS_HEADERS_V2.length;
 const PROJECT_WRITE_WIDTH = 18;
-const METRICS_WRITE_WIDTH = 8;
+const DASHBOARD_WIDTH = 14;
+const PROJECT_WRITE_ROWS = 120;
+const DASHBOARD_WRITE_ROWS = 200;
+const DASHBOARD_VISIBLE_ROWS = 26;
+const DASHBOARD_HIDDEN_START = 26;
+const CANONICAL_PATTERN = CANONICAL_PROJECTS.map((project) => project.project_id).join('|');
+
+const PRODUCTION_STATUS = PROJECT_STATUS_VALUES[0] ?? '';
+const ACTIVE_STATUS = PROJECT_STATUS_VALUES[1] ?? '';
+const PARKED_STATUS = PROJECT_STATUS_VALUES[2] ?? '';
+const CONCEPT_STATUS = PROJECT_STATUS_VALUES[3] ?? '';
+const PARKED_IDEA_STAGE = IDEA_STAGE_VALUES[8] ?? IDEA_STAGE_VALUES.at(-2) ?? '';
+const DONE_TASK_STATUS = TASK_STATUS_VALUES.at(-1) ?? '';
 
 function blankRow(width) {
   return Array.from({ length: width }, () => '');
@@ -47,11 +43,11 @@ function blankRow(width) {
 
 function padRows(rows, width, totalRows) {
   const padded = rows.map((row) => {
-    const nextRow = [...row];
-    while (nextRow.length < width) {
-      nextRow.push('');
+    const next = [...row];
+    while (next.length < width) {
+      next.push('');
     }
-    return nextRow.slice(0, width);
+    return next.slice(0, width);
   });
 
   while (padded.length < totalRows) {
@@ -61,216 +57,211 @@ function padRows(rows, width, totalRows) {
   return padded;
 }
 
-function firstNonEmpty(...candidates) {
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate) && candidate.length > 0) {
-      return candidate;
-    }
-  }
-  return [];
+function isNonEmptyRow(row) {
+  return row.some((cell) => String(cell || '').trim() !== '');
 }
 
-function normalizeImportance(value) {
+function toIsoDate(value) {
+  if (!value) {
+    return '';
+  }
+  return String(value).slice(0, 10);
+}
+
+function normalizeProjectStatus(value) {
   const raw = String(value || '').trim();
   if (!raw) {
-    return '中';
+    return CONCEPT_STATUS;
   }
-  if (raw === 'High' || raw === '高') {
-    return '高';
-  }
-  if (raw === 'Low' || raw === '低') {
-    return '低';
-  }
-  return '中';
+  const map = new Map([
+    ['Run', PRODUCTION_STATUS],
+    ['Stable', PRODUCTION_STATUS],
+    ['Production', PRODUCTION_STATUS],
+    ['In Progress', ACTIVE_STATUS],
+    ['Build', ACTIVE_STATUS],
+    ['Implementation', ACTIVE_STATUS],
+    ['Hold', PARKED_STATUS],
+    ['Waiting', PARKED_STATUS],
+    ['Parked', PARKED_STATUS],
+    ['Concept', CONCEPT_STATUS],
+    ['Idea', CONCEPT_STATUS],
+  ]);
+  return map.get(raw) ?? raw;
 }
 
-function normalizeEffort(value) {
+function normalizeProjectStage(value) {
   const raw = String(value || '').trim();
   if (!raw) {
-    return 'M';
+    return '';
   }
-  if (raw === 'Small') {
-    return 'S';
-  }
-  if (raw === 'Medium') {
-    return 'M';
-  }
-  if (raw === 'Large') {
-    return 'L';
-  }
-  if (raw === 'Extra Large') {
-    return 'XL';
-  }
-  return raw;
+  const map = new Map([
+    ['Concept', PROJECT_STAGE_VALUES[0] ?? raw],
+    ['Design', PROJECT_STAGE_VALUES[1] ?? raw],
+    ['SPEC', PROJECT_STAGE_VALUES[2] ?? raw],
+    ['Build', PROJECT_STAGE_VALUES[3] ?? raw],
+    ['Implementation', PROJECT_STAGE_VALUES[3] ?? raw],
+    ['Prototype', PROJECT_STAGE_VALUES[4] ?? raw],
+    ['Test', PROJECT_STAGE_VALUES[5] ?? raw],
+    ['Run', PROJECT_STAGE_VALUES[6] ?? raw],
+    ['Stable', PROJECT_STAGE_VALUES[6] ?? raw],
+  ]);
+  return map.get(raw) ?? raw;
 }
 
-function latestRunMap(runLogRows) {
-  const result = new Map();
-  for (const row of runLogRows) {
-    const projectId = mapProjectRefToId(row[3]);
-    const when = toIsoDate(row[1]);
-    if (!projectId || !when) {
-      continue;
-    }
-    if (!result.has(projectId) || result.get(projectId) < when) {
-      result.set(projectId, when);
-    }
+function normalizeProjectPriority(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return PRIORITY_LABEL_VALUES[2] ?? '';
   }
-  return result;
+  if (/^\d+$/.test(raw)) {
+    const score = Number(raw);
+    if (score <= 2) {
+      return PRIORITY_LABEL_VALUES[0] ?? raw;
+    }
+    if (score <= 4) {
+      return PRIORITY_LABEL_VALUES[1] ?? raw;
+    }
+    if (score <= 6) {
+      return PRIORITY_LABEL_VALUES[2] ?? raw;
+    }
+    return PRIORITY_LABEL_VALUES[3] ?? raw;
+  }
+  const map = new Map([
+    ['High', PRIORITY_LABEL_VALUES[1] ?? raw],
+    ['Medium', PRIORITY_LABEL_VALUES[2] ?? raw],
+    ['Low', PRIORITY_LABEL_VALUES[3] ?? raw],
+  ]);
+  return map.get(raw) ?? raw;
 }
 
-function existingProjectMap(rows) {
-  const map = new Map();
-  if ((rows[2] ?? [])[0] !== 'project_id') {
-    return map;
-  }
-  for (const row of rows.slice(3)) {
-    const projectId = String(row[0] || '').trim();
-    if (!projectId) {
-      continue;
-    }
-    map.set(projectId, row);
-  }
-  return map;
-}
-
-function parseLegacyTasks(rows) {
+function parseProjectSeedRows(rows) {
   const header = rows[2] ?? [];
-  if (header[0] !== 'Task') {
+  if (header[0] !== 'project_id') {
+    return [];
+  }
+
+  const isCurrentV2 = header.length >= 13 && header[7] !== undefined;
+  const isLegacyV1 = header.includes('project_name');
+  if (!isCurrentV2 && !isLegacyV1) {
     return [];
   }
 
   return rows.slice(3)
-    .filter((row) => row.some((cell) => String(cell || '').trim() !== ''))
-    .map((row) => ({
-      title: row[0] || '',
-      project_ref: row[1] || '',
-      type: normalizeTaskType(row[2]),
-      priority_label: normalizeTaskPriorityLabel(row[3]),
-      status: normalizeTaskStatus(row[4]),
-      assignee: normalizeAssignee(row[5]),
-      due_date: toIsoDate(row[6]),
-      completed_at: toIsoDate(row[7]),
-      dependency: row[8] || '',
-      notes: row[10] || '',
-    }));
+    .filter(isNonEmptyRow)
+    .map((row) => {
+      if (isLegacyV1) {
+        return {
+          project_id: String(row[0] || '').trim(),
+          project_name: row[1] || '',
+          status: normalizeProjectStatus(row[3]),
+          stage: normalizeProjectStage(row[4]),
+          priority: normalizeProjectPriority(row[5]),
+          next_action: row[7] || '',
+          last_updated: toIsoDate(row[6]),
+          main_sheet_url: sheetUrl(row[12], row[11]),
+          spec_url: '',
+          folder_url: '',
+          github_url: row[2] ? githubTreeUrl(row[2]) : '',
+          local_path: row[10] || row[2] || '',
+          notes: row[17] || row[9] || '',
+        };
+      }
+
+      return {
+        project_id: String(row[0] || '').trim(),
+        project_name: row[1] || '',
+        status: row[2] || '',
+        stage: row[3] || '',
+        priority: row[4] || '',
+        next_action: row[5] || '',
+        last_updated: row[6] || '',
+        main_sheet_url: row[7] || '',
+        spec_url: row[8] || '',
+        folder_url: row[9] || '',
+        github_url: row[10] || '',
+        local_path: row[11] || '',
+        notes: row[12] || '',
+      };
+    })
+    .filter((row) => row.project_id);
 }
 
-function parseCurrentTasks(rows) {
-  const header = rows[2] ?? [];
-  if (header[0] !== 'task_id') {
-    return [];
-  }
-
-  return rows.slice(3)
-    .filter((row) => row.some((cell) => String(cell || '').trim() !== ''))
-    .map((row) => ({
-      title: row[1] || '',
-      project_ref: row[2] || row[3] || '',
-      type: normalizeTaskType(row[4]),
-      priority_label: normalizeTaskPriorityLabel(row[5]),
-      status: normalizeTaskStatus(row[9]),
-      assignee: normalizeAssignee(row[10]),
-      due_date: toIsoDate(row[11]),
-      completed_at: toIsoDate(row[12]),
-      dependency: row[13] || '',
-      notes: row[14] || '',
-    }));
-}
-
-function existingPriorityRows(rows) {
-  const byKey = new Map();
-  if ((rows[2] ?? [])[0] === 'task_id') {
-    for (const row of rows.slice(3)) {
-      const key = `${row[1] || ''}|${row[2] || ''}`;
-      if (!row[1] || !row[2]) {
+function mergeProjectSeeds(...seedGroups) {
+  const merged = new Map();
+  for (const seedGroup of seedGroups) {
+    for (const seed of seedGroup) {
+      if (!seed?.project_id) {
         continue;
       }
-      byKey.set(key, {
-        today: row[3] || '',
-        adjust: row[4] || 0,
-        reason: row[5] || '',
-        notes: row[6] || '',
+      const previous = merged.get(seed.project_id) ?? {};
+      merged.set(seed.project_id, {
+        ...previous,
+        ...seed,
+        project_id: seed.project_id,
+        project_name: seed.project_name || previous.project_name || '',
+        status: seed.status || previous.status || '',
+        stage: seed.stage || previous.stage || '',
+        priority: seed.priority || previous.priority || '',
+        next_action: seed.next_action || previous.next_action || '',
+        last_updated: seed.last_updated || previous.last_updated || '',
+        main_sheet_url: seed.main_sheet_url || previous.main_sheet_url || '',
+        spec_url: seed.spec_url || previous.spec_url || '',
+        folder_url: seed.folder_url || previous.folder_url || '',
+        github_url: seed.github_url || previous.github_url || '',
+        local_path: seed.local_path || previous.local_path || '',
+        notes: seed.notes || previous.notes || '',
       });
     }
   }
-  return byKey;
+  return merged;
 }
 
-function taskId(index) {
-  return `TASK-${String(index).padStart(3, '0')}`;
-}
-
-function ideaId(index) {
-  return `IDEA-${String(index).padStart(3, '0')}`;
-}
-
-function buildTaskRecords(taskRows, priorityMap) {
-  const mapped = [];
-  let index = 1;
-
-  for (const row of taskRows) {
-    const projectId = mapProjectRefToId(row.project_ref);
-    if (!projectId) {
-      continue;
-    }
-    const project = projectById(projectId);
-    const key = `${row.title}|${projectId}`;
-    const preserved = priorityMap.get(key) ?? { today: '', adjust: 0, reason: '', notes: '' };
-    const adjustment = Number.parseInt(String(preserved.adjust || 0), 10) || 0;
-    const todayBoost = String(preserved.today || '') === 'はい' ? 100 : 0;
-    const base = priorityLabelToScore(row.priority_label);
-    mapped.push({
-      task_id: taskId(index),
-      title: row.title,
-      project_id: projectId,
-      project_name: project?.project_name ?? '',
-      type: row.type,
-      priority_label: row.priority_label,
-      base_priority: base,
-      adjustment,
-      final_priority: base + adjustment + todayBoost,
-      status: row.status,
-      assignee: row.assignee,
-      due_date: row.due_date,
-      completed_at: row.completed_at,
-      dependency: row.dependency,
-      notes: row.notes,
-      today_priority: preserved.today || '',
-      adjust_reason: preserved.reason || '',
-      adjust_notes: preserved.notes || '',
-    });
-    index += 1;
-  }
-
-  return sortTasksForDisplay(mapped);
-}
-
-function buildProjectsRows(projectMap, runLogMap, tasks) {
+function buildProjectsRows(seedMap) {
   const rows = [
-    ['平山 AI OS - 案件マスター'],
-    ['案件名・リンクの正本。Dashboard はこの表だけを参照して表示する。'],
+    ['å¹³å±± AI OS - æ¡ˆä»¶ãƒžã‚¹ã‚¿ãƒ¼'],
+    ['æ¡ˆä»¶åãƒ»ãƒªãƒ³ã‚¯ã®æ­£æœ¬ã€‚canonical 4æ¡ˆä»¶ã ã‘ã§ãªãã€�ç®¡ç†å¯¾è±¡ã¯ Projects ã«æ®‹ã™ã€‚'],
     PROJECT_HEADERS_V2,
   ];
 
+  const canonicalIds = new Set(CANONICAL_PROJECTS.map((project) => project.project_id));
+
   for (const project of CANONICAL_PROJECTS) {
-    const existing = projectMap.get(project.project_id) ?? [];
-    const projectTasks = tasks.filter((task) => task.project_id === project.project_id && task.status !== '完了');
-    const nextAction = projectTasks[0]?.title || existing[5] || '';
-    const lastUpdated = existing[6] || runLogMap.get(project.project_id) || '';
+    const seed = seedMap.get(project.project_id) ?? {};
+    rows.push([
+      project.project_id,
+      project.project_name,
+      seed.status || project.status,
+      seed.stage || project.stage,
+      seed.priority || project.priority,
+      seed.next_action || '',
+      seed.last_updated || '',
+      sheetUrl(seed.main_sheet_url || project.main_sheet_url || project.main_sheet_id, project.main_sheet_name),
+      seed.spec_url || githubBlobUrl(project.spec_path),
+      seed.folder_url || project.folder_url || '',
+      seed.github_url || githubTreeUrl(project.directory),
+      seed.local_path || `workspace/${project.directory}`,
+      seed.notes || project.notes,
+    ]);
+  }
+
+  const extraRows = [...seedMap.values()]
+    .filter((project) => !canonicalIds.has(project.project_id))
+    .sort((left, right) => left.project_id.localeCompare(right.project_id, 'en'));
+
+  for (const project of extraRows) {
     rows.push([
       project.project_id,
       project.project_name,
       project.status,
       project.stage,
       project.priority,
-      nextAction,
-      lastUpdated,
-      sheetUrl(project.main_sheet_url || project.main_sheet_id, project.main_sheet_name),
-      githubBlobUrl(project.spec_path),
+      project.next_action,
+      project.last_updated,
+      project.main_sheet_url,
+      project.spec_url,
       project.folder_url,
-      githubTreeUrl(project.directory),
-      `workspace/${project.directory}`,
+      project.github_url,
+      project.local_path,
       project.notes,
     ]);
   }
@@ -278,200 +269,88 @@ function buildProjectsRows(projectMap, runLogMap, tasks) {
   return rows;
 }
 
-function buildTaskRows(tasks) {
+function projectIdFormula(rowNumber) {
+  const index = rowNumber - 10;
+  return `=IFERROR(INDEX(FILTER(Projects!$A$4:$A$200,Projects!$A$4:$A$200<>""),${index}),"")`;
+}
+
+function projectLookupFormula(rowNumber, columnIndex) {
+  return `=IF($H${rowNumber}="","",IFNA(VLOOKUP($H${rowNumber},Projects!$A$4:$L$200,${columnIndex},FALSE),""))`;
+}
+
+function projectLinkFormula(rowNumber, columnIndex, label) {
+  return `=IF($H${rowNumber}="","",IFNA(IF(VLOOKUP($H${rowNumber},Projects!$A$4:$I$200,${columnIndex},FALSE)="","æœªè¨­å®š",HYPERLINK(VLOOKUP($H${rowNumber},Projects!$A$4:$I$200,${columnIndex},FALSE),"${label}")),"æœªè¨­å®š"))`;
+}
+
+function buildDashboardRows({ spreadsheetId, projectsSheetId }) {
+  const projectsUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${projectsSheetId}`;
   const rows = [
-    ['平山 AI OS - 今日のタスク'],
-    ['project_id を正本キーにし、優先度調整を加味した最終優先度で扱う。'],
-    TASK_HEADERS_V2,
+    ['å¹³å±± AI OS ãƒ€ãƒƒã‚·ãƒ¥ãƒœãƒ¼ãƒ‰'],
+    ['', '', '', '', '', '', '', '', '', '', '', '=HYPERLINK("' + projectsUrl + '","Projects ã‚’é–‹ã")', '', ''],
+    ['è¡¨ç¤ºå°‚ç”¨ã€‚æ¡ˆä»¶åãƒ»ãƒªãƒ³ã‚¯ã¯ Projects æ­£æœ¬ã‚’å‚ç…§ã—ã€�ä»Šæ—¥ã®å„ªå…ˆé †ä½ã¯ å„ªå…ˆåº¦èª¿æ•´ ã‚’åæ˜ ã™ã‚‹ã€‚'],
+    [''],
+    ['ç·æ¡ˆä»¶æ•°', '', 'æœ¬ç•ªé‹ç”¨ä¸­', '', 'é€²è¡Œä¸­', '', 'æœªå®Œäº†ã‚¿ã‚¹ã‚¯', '', 'ä¿ç•™ã‚¢ã‚¤ãƒ‡ã‚¢æ•°', ''],
+    [
+      '=COUNTA(Projects!A4:A200)',
+      '',
+      `=COUNTIF(Projects!C4:C200,"${PRODUCTION_STATUS}")`,
+      '',
+      `=COUNTIF(Projects!C4:C200,"${ACTIVE_STATUS}")`,
+      '',
+      `=COUNTIFS(Task_Queue!A4:A200,"<>",Task_Queue!J4:J200,"<>${DONE_TASK_STATUS}")`,
+      '',
+      `=COUNTIF(Ideas!E4:E200,"${PARKED_IDEA_STAGE}")`,
+      '',
+    ],
+    [''],
+    [''],
+    ['ä»Šæ—¥ã®å„ªå…ˆã‚¿ã‚¹ã‚¯', '', '', '', '', '', '', 'æ¡ˆä»¶ã®ç¾æ³', '', '', '', '', '', ''],
+    ['ã‚¿ã‚¹ã‚¯', 'æ¡ˆä»¶', 'çŠ¶æ…‹', 'æœ€çµ‚å„ªå…ˆåº¦', 'æœŸé™', '', '', 'project_id', 'æ¡ˆä»¶', 'çŠ¶æ…‹', 'æ®µéšŽ', 'æ¬¡ã‚¢ã‚¯ã‚·ãƒ§ãƒ³', 'é–‹ã', 'SPEC'],
+    ['=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({Task_Queue!B4:B,Task_Queue!D4:D,Task_Queue!J4:J,Task_Queue!I4:I,Task_Queue!L4:L},Task_Queue!A4:A<>"",Task_Queue!J4:J<>"' + DONE_TASK_STATUS + '"),4,FALSE,5,TRUE),5,5),"")', '', '', '', '', '', '', projectIdFormula(11), projectLookupFormula(11, 2), projectLookupFormula(11, 3), projectLookupFormula(11, 4), projectLookupFormula(11, 6), projectLinkFormula(11, 8, 'é–‹ã'), projectLinkFormula(11, 9, 'SPEC')],
   ];
 
-  for (let index = 0; index < tasks.length; index += 1) {
-    const task = tasks[index];
-    const rowNumber = index + 4;
-    rows.push([
-      task.task_id,
-      task.title,
-      task.project_id,
-      `=IF($C${rowNumber}="","",IFNA(VLOOKUP($C${rowNumber},Projects!$A$4:$B$20,2,FALSE),"未登録"))`,
-      task.type,
-      task.priority_label,
-      String(task.base_priority),
-      `=IF($A${rowNumber}="","",N(IFNA(VLOOKUP($A${rowNumber},'優先度調整'!$A$4:$G$200,5,FALSE),0))+IF(IFNA(VLOOKUP($A${rowNumber},'優先度調整'!$A$4:$G$200,4,FALSE),"")="はい",100,0))`,
-      `=IF($A${rowNumber}="","",$G${rowNumber}+$H${rowNumber})`,
-      task.status,
-      task.assignee,
-      task.due_date,
-      task.completed_at,
-      task.dependency,
-      task.notes,
-    ]);
+  for (let rowNumber = 12; rowNumber <= 20; rowNumber += 1) {
+    rows.push(['', '', '', '', '', '', '', projectIdFormula(rowNumber), projectLookupFormula(rowNumber, 2), projectLookupFormula(rowNumber, 3), projectLookupFormula(rowNumber, 4), projectLookupFormula(rowNumber, 6), projectLinkFormula(rowNumber, 8, 'é–‹ã'), projectLinkFormula(rowNumber, 9, 'SPEC')]);
+  }
+
+  rows.push(['æœ€è¿‘ã®æ›´æ–°', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+  rows.push(['æ—¥æ™‚', 'æ¡ˆä»¶', 'å®Ÿè¡Œå…ƒ', 'å†…å®¹', 'çµæžœ', 'æ¬¡ã‚¢ã‚¯ã‚·ãƒ§ãƒ³', '', '', '', '', '', '', '', '']);
+  rows.push([`=IFERROR(ARRAY_CONSTRAIN(QUERY(FILTER({Run_Log!B4:B,Run_Log!D4:D,Run_Log!C4:C,Run_Log!E4:E,Run_Log!F4:F,Run_Log!J4:J},Run_Log!B4:B<>"",REGEXMATCH(Run_Log!D4:D,"^(${CANONICAL_PATTERN})$")),"select Col1,Col2,Col3,Col4,Col5,Col6 order by Col1 desc",0),6,6),"")`, '', '', '', '', '', '', '', '', '', '', '', '', '']);
+
+  while (rows.length < DASHBOARD_VISIBLE_ROWS) {
+    rows.push(blankRow(DASHBOARD_WIDTH));
   }
 
   return rows;
-}
-
-function buildPriorityRows(tasks) {
-  const rows = [
-    ['優先度調整'],
-    ['「今日は最優先」に「はい」を入れると +100 点で最上位候補になる。元に戻すときは空欄へ戻し、細かい前後は「加点」を使う。'],
-    PRIORITY_ADJUST_HEADERS,
-  ];
-
-  for (const task of tasks) {
-    rows.push([
-      task.task_id,
-      task.title,
-      task.project_id,
-      task.today_priority,
-      String(task.adjustment || 0),
-      task.adjust_reason,
-      task.adjust_notes,
-    ]);
-  }
-
-  return rows;
-}
-
-function parseLegacyIdeas(rows) {
-  const header = rows[2] ?? [];
-  if (header[0] !== 'Idea') {
-    return [];
-  }
-
-  return rows.slice(3)
-    .filter((row) => row.some((cell) => String(cell || '').trim() !== ''))
-    .map((row) => ({
-      title: row[0] || '',
-      project_id: mapProjectRefToId(row[6]),
-      stage: normalizeIdeaStage(row[2], row[0], row[9]),
-      impact: normalizeImportance(row[3]),
-      effort: normalizeEffort(row[4]),
-      summary: row[7] || '',
-      next_review: toIsoDate(row[8]),
-      notes: row[9] || '',
-    }));
-}
-
-function parseCurrentIdeas(rows) {
-  const header = rows[2] ?? [];
-  if (header[0] !== 'idea_id') {
-    return [];
-  }
-
-  return rows.slice(3)
-    .filter((row) => row.some((cell) => String(cell || '').trim() !== ''))
-    .map((row) => ({
-      title: row[1] || '',
-      project_id: mapProjectRefToId(row[2] || row[3]),
-      stage: normalizeIdeaStage(row[4], row[1], row[9]),
-      impact: normalizeImportance(row[5]),
-      effort: normalizeEffort(row[6]),
-      summary: row[7] || '',
-      next_review: toIsoDate(row[8]),
-      notes: row[9] || '',
-    }));
-}
-
-function buildIdeaRows(ideas) {
-  const rows = [
-    ['平山 AI OS - アイデア管理'],
-    ['メモから案件化までを段階で管理する。project_id は案件に紐づく場合のみ入れる。'],
-    IDEA_HEADERS_V2,
-  ];
-
-  ideas.forEach((idea, index) => {
-    rows.push([
-      ideaId(index + 1),
-      idea.title,
-      idea.project_id,
-      projectNameById(idea.project_id),
-      idea.stage,
-      idea.impact,
-      idea.effort,
-      idea.summary,
-      idea.next_review,
-      idea.notes,
-    ]);
-  });
-
-  return rows;
-}
-
-function buildMetricsRows() {
-  return [
-    ['運用指標', '値'],
-    ['総案件数', '=COUNTA(Projects!A4:A20)'],
-    ['本番運用中', '=COUNTIF(Projects!C4:C20,"本番運用中")'],
-    ['進行中', '=COUNTIF(Projects!C4:C20,"進行中")'],
-    ['未完了タスク', '=COUNTIFS(Task_Queue!A4:A200,"<>",Task_Queue!J4:J200,"<>完了")'],
-    ['保留アイデア数', '=COUNTIF(Ideas!E4:E200,"保留")'],
-    ['今日優先タスク数', '=COUNTIF(\'優先度調整\'!D4:D200,"はい")'],
-  ];
-}
-
-function buildDashboardRows() {
-  const canonicalPattern = CANONICAL_PROJECTS.map((project) => project.project_id).join('|');
-
-  return [
-    ['平山 AI OS ダッシュボード'],
-    [''],
-    ['表示専用。案件名・リンクは Projects、今日の優先順位は 優先度調整 を正本にする。'],
-    [''],
-    ['総案件数', '', '本番運用中', '', '進行中', '', '未完了タスク', '', '保留アイデア数'],
-    ['=COUNTA(Projects!A4:A20)', '', '=COUNTIF(Projects!C4:C20,"本番運用中")', '', '=COUNTIF(Projects!C4:C20,"進行中")', '', '=COUNTIFS(Task_Queue!A4:A200,"<>",Task_Queue!J4:J200,"<>完了")', '', '=COUNTIF(Ideas!E4:E200,"保留")'],
-    [''],
-    [''],
-    ['今日の優先タスク', '', '', '', '', '', '', '案件の現況'],
-    ['タスク', '案件', '状態', '最終優先度', '期限', '', '', 'project_id', '案件', '状態', '段階', '次アクション', '開く', 'SPEC'],
-    ['=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({Task_Queue!B4:B,Task_Queue!D4:D,Task_Queue!J4:J,Task_Queue!I4:I,Task_Queue!L4:L},Task_Queue!A4:A<>"",Task_Queue!J4:J<>"完了"),4,FALSE,5,TRUE),5,5),"")', '', '', '', '', '', '', '=IFERROR(ARRAY_CONSTRAIN(FILTER({Projects!A4:A,Projects!B4:B,Projects!C4:C,Projects!D4:D,Projects!F4:F,IF(Projects!H4:H<>"",HYPERLINK(Projects!H4:H,"開く"),"未設定"),IF(Projects!I4:I<>"",HYPERLINK(Projects!I4:I,"SPEC"),"未設定")},Projects!A4:A<>""),10,7),"")', '', '', '', '', '', ''],
-    [''],
-    [''],
-    [''],
-    [''],
-    [''],
-    [''],
-    ['最近の更新'],
-    ['日時', '案件', '実行元', '内容', '結果', '次アクション'],
-    [`=IFERROR(ARRAY_CONSTRAIN(QUERY(FILTER({Run_Log!B4:B,Run_Log!D4:D,Run_Log!C4:C,Run_Log!E4:E,Run_Log!F4:F,Run_Log!J4:J},Run_Log!B4:B<>"",REGEXMATCH(Run_Log!D4:D,"^(${canonicalPattern})$")),"select Col1,Col2,Col3,Col4,Col5,Col6 order by Col1 desc",0),6,6),"")`, '', '', '', '', ''],
-  ];
 }
 
 function rgb(r, g, b) {
-  return {
-    red: r / 255,
-    green: g / 255,
-    blue: b / 255,
-  };
+  return { red: r / 255, green: g / 255, blue: b / 255 };
 }
 
-function dashboardCellRange(sheetId, startRowIndex, endRowIndex, startColumnIndex, endColumnIndex) {
-  return {
-    sheetId,
-    startRowIndex,
-    endRowIndex,
-    startColumnIndex,
-    endColumnIndex,
-  };
+function cellRange(sheetId, startRowIndex, endRowIndex, startColumnIndex, endColumnIndex) {
+  return { sheetId, startRowIndex, endRowIndex, startColumnIndex, endColumnIndex };
 }
 
-function dashboardMergeRequests(sheetId) {
-  return [
-    dashboardCellRange(sheetId, 0, 1, 0, 14),
-    dashboardCellRange(sheetId, 2, 3, 0, 14),
-    dashboardCellRange(sheetId, 4, 5, 0, 2),
-    dashboardCellRange(sheetId, 5, 6, 0, 2),
-    dashboardCellRange(sheetId, 4, 5, 2, 4),
-    dashboardCellRange(sheetId, 5, 6, 2, 4),
-    dashboardCellRange(sheetId, 4, 5, 4, 6),
-    dashboardCellRange(sheetId, 5, 6, 4, 6),
-    dashboardCellRange(sheetId, 4, 5, 6, 8),
-    dashboardCellRange(sheetId, 5, 6, 6, 8),
-    dashboardCellRange(sheetId, 4, 5, 8, 10),
-    dashboardCellRange(sheetId, 5, 6, 8, 10),
-    dashboardCellRange(sheetId, 8, 9, 0, 5),
-    dashboardCellRange(sheetId, 8, 9, 7, 14),
-    dashboardCellRange(sheetId, 17, 18, 0, 6),
-  ].map((range) => ({
+function mergeRequests(sheetId) {
+  const ranges = [
+    cellRange(sheetId, 0, 1, 0, 14),
+    cellRange(sheetId, 2, 3, 0, 14),
+    cellRange(sheetId, 4, 5, 0, 2),
+    cellRange(sheetId, 5, 6, 0, 2),
+    cellRange(sheetId, 4, 5, 2, 4),
+    cellRange(sheetId, 5, 6, 2, 4),
+    cellRange(sheetId, 4, 5, 4, 6),
+    cellRange(sheetId, 5, 6, 4, 6),
+    cellRange(sheetId, 4, 5, 6, 8),
+    cellRange(sheetId, 5, 6, 6, 8),
+    cellRange(sheetId, 4, 5, 8, 10),
+    cellRange(sheetId, 5, 6, 8, 10),
+    cellRange(sheetId, 8, 9, 0, 5),
+    cellRange(sheetId, 8, 9, 7, 14),
+    cellRange(sheetId, 20, 21, 0, 6),
+  ];
+  return ranges.map((range) => ({
     mergeCells: {
       range,
       mergeType: 'MERGE_ALL',
@@ -479,29 +358,25 @@ function dashboardMergeRequests(sheetId) {
   }));
 }
 
-function dashboardDimensionRequests(sheetId) {
-  const columnWidths = [170, 170, 110, 110, 110, 220, 24, 110, 190, 110, 110, 220, 90, 90];
+function dimensionRequests(sheetId) {
+  const columnWidths = [180, 140, 98, 110, 108, 20, 20, 108, 220, 96, 108, 220, 80, 80];
   const rowHeights = [
     [0, 1, 42],
-    [2, 3, 52],
-    [4, 5, 28],
+    [1, 2, 28],
+    [2, 3, 46],
+    [4, 5, 30],
     [5, 6, 42],
-    [8, 9, 30],
+    [8, 9, 32],
     [9, 10, 34],
-    [10, 16, 34],
-    [17, 18, 30],
-    [18, 19, 34],
-    [19, 26, 40],
+    [10, 20, 36],
+    [20, 21, 32],
+    [21, 22, 34],
+    [22, 26, 42],
   ];
 
   const requests = columnWidths.map((pixelSize, index) => ({
     updateDimensionProperties: {
-      range: {
-        sheetId,
-        dimension: 'COLUMNS',
-        startIndex: index,
-        endIndex: index + 1,
-      },
+      range: { sheetId, dimension: 'COLUMNS', startIndex: index, endIndex: index + 1 },
       properties: { pixelSize },
       fields: 'pixelSize',
     },
@@ -510,287 +385,242 @@ function dashboardDimensionRequests(sheetId) {
   for (const [startIndex, endIndex, pixelSize] of rowHeights) {
     requests.push({
       updateDimensionProperties: {
-        range: {
-          sheetId,
-          dimension: 'ROWS',
-          startIndex,
-          endIndex,
-        },
-        properties: { pixelSize },
-        fields: 'pixelSize',
+        range: { sheetId, dimension: 'ROWS', startIndex, endIndex },
+        properties: { pixelSize, hiddenByUser: false },
+        fields: 'pixelSize,hiddenByUser',
       },
     });
   }
 
+  requests.push({
+    updateDimensionProperties: {
+      range: { sheetId, dimension: 'ROWS', startIndex: DASHBOARD_HIDDEN_START, endIndex: DASHBOARD_WRITE_ROWS },
+      properties: { hiddenByUser: true },
+      fields: 'hiddenByUser',
+    },
+  });
+
   return requests;
 }
 
-function dashboardFormatRequests(sheetId) {
-  const ink = rgb(15, 23, 42);
-  const panel = rgb(241, 245, 249);
-  const accent = rgb(226, 232, 240);
-  const section = rgb(203, 213, 225);
-  const white = rgb(255, 255, 255);
-  const border = { style: 'SOLID', color: rgb(148, 163, 184) };
+function repeatCell(range, userEnteredFormat, fields) {
+  return {
+    repeatCell: {
+      range,
+      cell: { userEnteredFormat },
+      fields,
+    },
+  };
+}
 
-  return [
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 0, 30, 0, 14),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: white,
-            horizontalAlignment: 'LEFT',
-            verticalAlignment: 'MIDDLE',
-            wrapStrategy: 'WRAP',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 10,
-              foregroundColor: ink,
-            },
-          },
+function borderStyle(color) {
+  return { style: 'SOLID', color };
+}
+
+function formatRequests(sheetId) {
+  const text = rgb(55, 65, 81);
+  const white = rgb(255, 255, 255);
+  const titleBlue = rgb(219, 234, 254);
+  const panelBlue = rgb(239, 246, 255);
+  const headerBlue = rgb(241, 245, 249);
+  const paleGreen = rgb(220, 252, 231);
+  const paleBlue = rgb(219, 234, 254);
+  const paleYellow = rgb(254, 249, 195);
+  const palePurple = rgb(243, 232, 255);
+  const border = borderStyle(rgb(203, 213, 225));
+
+  const requests = [
+    repeatCell(
+      cellRange(sheetId, 0, DASHBOARD_VISIBLE_ROWS, 0, 14),
+      {
+        backgroundColor: white,
+        horizontalAlignment: 'LEFT',
+        verticalAlignment: 'MIDDLE',
+        wrapStrategy: 'WRAP',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 0, 1, 0, 14),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: ink,
-            horizontalAlignment: 'CENTER',
-            verticalAlignment: 'MIDDLE',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 16,
-              bold: true,
-              foregroundColor: white,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 0, 1, 0, 14),
+      {
+        backgroundColor: titleBlue,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 16,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 2, 3, 0, 14),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: panel,
-            horizontalAlignment: 'LEFT',
-            verticalAlignment: 'MIDDLE',
-            wrapStrategy: 'WRAP',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 10,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 1, 2, 11, 14),
+      {
+        backgroundColor: white,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 4, 5, 0, 10),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: accent,
-            horizontalAlignment: 'CENTER',
-            verticalAlignment: 'MIDDLE',
-            wrapStrategy: 'WRAP',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 10,
-              bold: true,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 2, 3, 0, 14),
+      {
+        backgroundColor: panelBlue,
+        horizontalAlignment: 'LEFT',
+        verticalAlignment: 'MIDDLE',
+        wrapStrategy: 'WRAP',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 5, 6, 0, 10),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: white,
-            horizontalAlignment: 'CENTER',
-            verticalAlignment: 'MIDDLE',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 16,
-              bold: true,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 4, 5, 0, 2),
+      {
+        backgroundColor: headerBlue,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 8, 9, 0, 14),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: section,
-            horizontalAlignment: 'CENTER',
-            verticalAlignment: 'MIDDLE',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 11,
-              bold: true,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+    ),
+    repeatCell(cellRange(sheetId, 4, 5, 2, 4), { backgroundColor: paleGreen, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', textFormat: { fontFamily: 'Noto Sans JP', fontSize: 10, bold: true, foregroundColor: text } }, 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)'),
+    repeatCell(cellRange(sheetId, 4, 5, 4, 6), { backgroundColor: paleBlue, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', textFormat: { fontFamily: 'Noto Sans JP', fontSize: 10, bold: true, foregroundColor: text } }, 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)'),
+    repeatCell(cellRange(sheetId, 4, 5, 6, 8), { backgroundColor: headerBlue, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', textFormat: { fontFamily: 'Noto Sans JP', fontSize: 10, bold: true, foregroundColor: text } }, 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)'),
+    repeatCell(cellRange(sheetId, 4, 5, 8, 10), { backgroundColor: palePurple, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', textFormat: { fontFamily: 'Noto Sans JP', fontSize: 10, bold: true, foregroundColor: text } }, 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)'),
+    repeatCell(
+      cellRange(sheetId, 5, 6, 0, 10),
+      {
+        backgroundColor: white,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 16,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 17, 18, 0, 6),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: section,
-            horizontalAlignment: 'CENTER',
-            verticalAlignment: 'MIDDLE',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 11,
-              bold: true,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 8, 9, 0, 14),
+      {
+        backgroundColor: panelBlue,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 11,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 9, 10, 0, 14),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: accent,
-            horizontalAlignment: 'CENTER',
-            verticalAlignment: 'MIDDLE',
-            wrapStrategy: 'WRAP',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 10,
-              bold: true,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 9, 10, 0, 14),
+      {
+        backgroundColor: headerBlue,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        wrapStrategy: 'WRAP',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 18, 19, 0, 6),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: accent,
-            horizontalAlignment: 'CENTER',
-            verticalAlignment: 'MIDDLE',
-            wrapStrategy: 'WRAP',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 10,
-              bold: true,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 10, 20, 0, 14),
+      {
+        backgroundColor: white,
+        verticalAlignment: 'MIDDLE',
+        wrapStrategy: 'WRAP',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 10, 16, 0, 14),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'LEFT',
-            verticalAlignment: 'MIDDLE',
-            wrapStrategy: 'WRAP',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 10,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,verticalAlignment,wrapStrategy,textFormat)',
+    ),
+    repeatCell(cellRange(sheetId, 10, 20, 3, 5), { horizontalAlignment: 'CENTER' }, 'userEnteredFormat.horizontalAlignment'),
+    repeatCell(cellRange(sheetId, 10, 20, 7, 8), { horizontalAlignment: 'CENTER' }, 'userEnteredFormat.horizontalAlignment'),
+    repeatCell(cellRange(sheetId, 10, 20, 9, 11), { horizontalAlignment: 'CENTER' }, 'userEnteredFormat.horizontalAlignment'),
+    repeatCell(cellRange(sheetId, 10, 20, 12, 14), { horizontalAlignment: 'CENTER' }, 'userEnteredFormat.horizontalAlignment'),
+    repeatCell(
+      cellRange(sheetId, 20, 21, 0, 6),
+      {
+        backgroundColor: panelBlue,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 11,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 19, 26, 0, 6),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'LEFT',
-            verticalAlignment: 'MIDDLE',
-            wrapStrategy: 'WRAP',
-            textFormat: {
-              fontFamily: 'Noto Sans JP',
-              fontSize: 10,
-              foregroundColor: ink,
-            },
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 21, 22, 0, 6),
+      {
+        backgroundColor: headerBlue,
+        horizontalAlignment: 'CENTER',
+        verticalAlignment: 'MIDDLE',
+        wrapStrategy: 'WRAP',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          bold: true,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat(horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 10, 16, 3, 5),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'CENTER',
-          },
+      'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+    ),
+    repeatCell(
+      cellRange(sheetId, 22, 26, 0, 6),
+      {
+        backgroundColor: white,
+        verticalAlignment: 'MIDDLE',
+        wrapStrategy: 'WRAP',
+        textFormat: {
+          fontFamily: 'Noto Sans JP',
+          fontSize: 10,
+          foregroundColor: text,
         },
-        fields: 'userEnteredFormat.horizontalAlignment',
       },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 10, 16, 7, 8),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'CENTER',
-          },
-        },
-        fields: 'userEnteredFormat.horizontalAlignment',
-      },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 10, 16, 9, 11),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'CENTER',
-          },
-        },
-        fields: 'userEnteredFormat.horizontalAlignment',
-      },
-    },
-    {
-      repeatCell: {
-        range: dashboardCellRange(sheetId, 10, 16, 12, 14),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'CENTER',
-          },
-        },
-        fields: 'userEnteredFormat.horizontalAlignment',
-      },
-    },
+      'userEnteredFormat(backgroundColor,verticalAlignment,wrapStrategy,textFormat)',
+    ),
     {
       updateBorders: {
-        range: dashboardCellRange(sheetId, 4, 6, 0, 10),
+        range: cellRange(sheetId, 4, 6, 0, 10),
         top: border,
         bottom: border,
         left: border,
@@ -801,7 +631,7 @@ function dashboardFormatRequests(sheetId) {
     },
     {
       updateBorders: {
-        range: dashboardCellRange(sheetId, 9, 16, 0, 5),
+        range: cellRange(sheetId, 9, 20, 0, 5),
         top: border,
         bottom: border,
         left: border,
@@ -812,7 +642,7 @@ function dashboardFormatRequests(sheetId) {
     },
     {
       updateBorders: {
-        range: dashboardCellRange(sheetId, 9, 16, 7, 14),
+        range: cellRange(sheetId, 9, 20, 7, 14),
         top: border,
         bottom: border,
         left: border,
@@ -823,7 +653,7 @@ function dashboardFormatRequests(sheetId) {
     },
     {
       updateBorders: {
-        range: dashboardCellRange(sheetId, 18, 26, 0, 6),
+        range: cellRange(sheetId, 21, 26, 0, 6),
         top: border,
         bottom: border,
         left: border,
@@ -833,59 +663,134 @@ function dashboardFormatRequests(sheetId) {
       },
     },
   ];
-}
 
-async function ensureSheetExists(context, metadata, title) {
-  const found = (metadata.sheets || []).find((sheet) => sheet.properties?.title === title);
-  if (found) {
-    return found.properties.sheetId;
-  }
+  const statusRules = [
+    { text: PRODUCTION_STATUS, color: paleGreen },
+    { text: ACTIVE_STATUS, color: paleBlue },
+    { text: PARKED_STATUS, color: paleYellow },
+    { text: CONCEPT_STATUS, color: palePurple },
+  ].filter((rule) => rule.text);
 
-  await batchUpdateSpreadsheet({
-    spreadsheetId: context.spreadsheetId,
-    accessToken: context.accessToken,
-    requests: [
-      {
-        addSheet: {
-          properties: {
-            title,
+  for (const rule of statusRules) {
+    requests.push({
+      addConditionalFormatRule: {
+        index: 0,
+        rule: {
+          ranges: [cellRange(sheetId, 10, 20, 9, 10)],
+          booleanRule: {
+            condition: {
+              type: 'TEXT_EQ',
+              values: [{ userEnteredValue: rule.text }],
+            },
+            format: {
+              backgroundColor: rule.color,
+              textFormat: {
+                bold: true,
+                foregroundColor: text,
+              },
+            },
           },
         },
       },
-    ],
-  });
+    });
+  }
 
-  const refreshed = await getSpreadsheetMetadata(context);
-  return (refreshed.sheets || []).find((sheet) => sheet.properties?.title === title)?.properties?.sheetId;
+  return requests;
 }
 
-async function backupSheets(context, metadata, titles) {
+async function fetchDashboardDecorations({ spreadsheetId, accessToken, dashboardSheetId }) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets(properties(sheetId,title),charts(chartId),conditionalFormats)&includeGridData=false`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    return { charts: [], conditionalFormatCount: 0 };
+  }
+
+  const metadata = await response.json();
+  const dashboard = (metadata.sheets || []).find((sheet) => sheet.properties?.sheetId === dashboardSheetId);
+  return {
+    charts: (dashboard?.charts || []).map((chart) => chart.chartId).filter((chartId) => chartId !== undefined),
+    conditionalFormatCount: (dashboard?.conditionalFormats || []).length || 0,
+  };
+}
+
+function cleanupRequests(sheetId, chartIds, conditionalFormatCount) {
   const requests = [];
-  for (const title of titles) {
-    const source = (metadata.sheets || []).find((sheet) => sheet.properties?.title === title);
-    if (!source?.properties?.sheetId && source?.properties?.sheetId !== 0) {
-      continue;
-    }
-    const backupTitle = `${title}_${BACKUP_SUFFIX}`;
-    const exists = (metadata.sheets || []).some((sheet) => sheet.properties?.title === backupTitle);
-    if (exists) {
-      continue;
-    }
+
+  requests.push({
+    unmergeCells: {
+      range: cellRange(sheetId, 0, DASHBOARD_WRITE_ROWS, 0, 14),
+    },
+  });
+
+  for (const chartId of chartIds) {
     requests.push({
-      duplicateSheet: {
-        sourceSheetId: source.properties.sheetId,
-        newSheetName: backupTitle,
+      deleteEmbeddedObject: {
+        objectId: chartId,
       },
     });
   }
 
-  if (requests.length > 0) {
-    await batchUpdateSpreadsheet({
-      spreadsheetId: context.spreadsheetId,
-      accessToken: context.accessToken,
-      requests,
+  for (let index = conditionalFormatCount - 1; index >= 0; index -= 1) {
+    requests.push({
+      deleteConditionalFormatRule: {
+        sheetId,
+        index,
+      },
     });
   }
+
+  requests.push(
+    {
+      repeatCell: {
+        range: cellRange(sheetId, 5, 6, 0, 10),
+        cell: {
+          userEnteredFormat: {
+            numberFormat: {
+              type: 'NUMBER',
+              pattern: '0',
+            },
+          },
+        },
+        fields: 'userEnteredFormat.numberFormat',
+      },
+    },
+    {
+      repeatCell: {
+        range: cellRange(sheetId, 10, 20, 4, 5),
+        cell: {
+          userEnteredFormat: {
+            numberFormat: {
+              type: 'DATE',
+              pattern: 'yyyy-mm-dd',
+            },
+          },
+        },
+        fields: 'userEnteredFormat.numberFormat',
+      },
+    },
+    {
+      repeatCell: {
+        range: cellRange(sheetId, 22, 26, 0, 1),
+        cell: {
+          userEnteredFormat: {
+            numberFormat: {
+              type: 'DATE_TIME',
+              pattern: 'yyyy-mm-dd hh:mm:ss',
+            },
+          },
+        },
+        fields: 'userEnteredFormat.numberFormat',
+      },
+    },
+  );
+
+  return requests;
 }
 
 async function main() {
@@ -894,228 +799,74 @@ async function main() {
   const isWrite = args.write === 'true';
 
   const metadata = await getSpreadsheetMetadata(context);
-  const prioritySheetId = await ensureSheetExists(context, metadata, '優先度調整');
-  const refreshedMetadata = await getSpreadsheetMetadata(context);
+  const dashboardSheet = (metadata.sheets || []).find((sheet) => sheet.properties?.title === 'Dashboard');
+  const projectsSheet = (metadata.sheets || []).find((sheet) => sheet.properties?.title === 'Projects');
 
-  const [projectsData, tasksData, ideasData, runLogData, priorityData, taskBackupData, ideaBackupData] = await Promise.all([
+  if (!dashboardSheet?.properties?.sheetId || !projectsSheet?.properties?.sheetId) {
+    throw new Error('Dashboard or Projects sheet was not found.');
+  }
+
+  const [projectsData, projectsBackupData] = await Promise.all([
     getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: 'Projects', range: '1:300', accessToken: context.accessToken }),
-    getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: 'Task_Queue', range: '1:300', accessToken: context.accessToken }),
-    getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: 'Ideas', range: '1:300', accessToken: context.accessToken }),
-    getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: 'Run_Log', range: '1:300', accessToken: context.accessToken }),
-    getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: '優先度調整', range: '1:300', accessToken: context.accessToken }).catch(() => ({ values: [] })),
-    getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: `Task_Queue_${BACKUP_SUFFIX}`, range: '1:300', accessToken: context.accessToken }).catch(() => ({ values: [] })),
-    getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: `Ideas_${BACKUP_SUFFIX}`, range: '1:300', accessToken: context.accessToken }).catch(() => ({ values: [] })),
+    getSheetValues({ spreadsheetId: context.spreadsheetId, sheetName: `Projects_${BACKUP_SUFFIX}`, range: '1:300', accessToken: context.accessToken }).catch(() => ({ values: [] })),
   ]);
 
-  const priorityMap = existingPriorityRows(priorityData.values ?? []);
-  const parsedTasks = firstNonEmpty(
-    parseLegacyTasks(tasksData.values ?? []),
-    parseCurrentTasks(tasksData.values ?? []),
-    parseLegacyTasks(taskBackupData.values ?? []),
-    parseCurrentTasks(taskBackupData.values ?? []),
-  );
-  const taskRecords = buildTaskRecords(parsedTasks, priorityMap);
-  const runMap = latestRunMap((runLogData.values ?? []).slice(3));
-  const projectRows = buildProjectsRows(existingProjectMap(projectsData.values ?? []), runMap, taskRecords);
-  const taskRows = buildTaskRows(taskRecords);
-  const priorityRows = buildPriorityRows(taskRecords);
-  const parsedIdeas = firstNonEmpty(
-    parseLegacyIdeas(ideasData.values ?? []),
-    parseCurrentIdeas(ideasData.values ?? []),
-    parseLegacyIdeas(ideaBackupData.values ?? []),
-    parseCurrentIdeas(ideaBackupData.values ?? []),
-  );
-  const ideaRows = buildIdeaRows(parsedIdeas);
-  const listsRows = buildListsRows();
-  const metricsRows = buildMetricsRows();
-  const dashboardRows = buildDashboardRows();
+  const currentSeeds = parseProjectSeedRows(projectsData.values ?? []);
+  const backupSeeds = parseProjectSeedRows(projectsBackupData.values ?? []);
+  const seedMap = mergeProjectSeeds(backupSeeds, currentSeeds);
+  const projectRows = buildProjectsRows(seedMap);
+  const dashboardRows = buildDashboardRows({
+    spreadsheetId: context.spreadsheetId,
+    projectsSheetId: projectsSheet.properties.sheetId,
+  });
 
-  console.log('[INFO] Canonical projects :', CANONICAL_PROJECTS.map((project) => project.project_id).join(', '));
-  console.log('[INFO] Migrated task rows :', taskRecords.length);
-  console.log('[INFO] Migrated idea rows :', Math.max(ideaRows.length - 3, 0));
-  console.log('[INFO] Backup suffix       :', BACKUP_SUFFIX);
-  if (taskRecords[0]) {
-    console.log('[INFO] Top task preview   :', JSON.stringify(taskRecords[0]));
-  }
+  console.log('[INFO] Current Projects rows:', currentSeeds.length);
+  console.log('[INFO] Backup Projects rows :', backupSeeds.length);
+  console.log('[INFO] Final Projects rows  :', Math.max(projectRows.length - 3, 0));
 
   if (!isWrite) {
-    console.log('[INFO] Dry run mode. Pass --write to back up and rewrite the live Dashboard sheets.');
+    console.log('[INFO] Dry run mode. Pass --write true to apply the dashboard polish.');
     return;
   }
-
-  await backupSheets(context, refreshedMetadata, ['Dashboard', 'Projects', 'Task_Queue', 'Ideas', 'Lists', 'Metrics']);
-
-  const dashboardSheetId = (refreshedMetadata.sheets || []).find((sheet) => sheet.properties?.title === 'Dashboard')?.properties?.sheetId;
-
-  await batchUpdateSpreadsheet({
-    spreadsheetId: context.spreadsheetId,
-    accessToken: context.accessToken,
-    requests: [
-      ...(dashboardSheetId === undefined ? [] : [
-        {
-          unmergeCells: {
-            range: {
-              sheetId: dashboardSheetId,
-              startRowIndex: 0,
-              endRowIndex: 30,
-              startColumnIndex: 0,
-              endColumnIndex: 14,
-            },
-          },
-        },
-        {
-          repeatCell: {
-            range: {
-              sheetId: dashboardSheetId,
-              startRowIndex: 5,
-              endRowIndex: 6,
-              startColumnIndex: 0,
-              endColumnIndex: 9,
-            },
-            cell: {
-              userEnteredFormat: {
-                numberFormat: {
-                  type: 'NUMBER',
-                  pattern: '0',
-                },
-              },
-            },
-            fields: 'userEnteredFormat.numberFormat',
-          },
-        },
-        {
-          repeatCell: {
-            range: {
-              sheetId: dashboardSheetId,
-              startRowIndex: 10,
-              endRowIndex: 30,
-              startColumnIndex: 4,
-              endColumnIndex: 5,
-            },
-            cell: {
-              userEnteredFormat: {
-                numberFormat: {
-                  type: 'DATE',
-                  pattern: 'yyyy-mm-dd',
-                },
-              },
-            },
-            fields: 'userEnteredFormat.numberFormat',
-          },
-        },
-        {
-          repeatCell: {
-            range: {
-              sheetId: dashboardSheetId,
-              startRowIndex: 19,
-              endRowIndex: 30,
-              startColumnIndex: 0,
-              endColumnIndex: 1,
-            },
-            cell: {
-              userEnteredFormat: {
-                numberFormat: {
-                  type: 'DATE_TIME',
-                  pattern: 'yyyy-mm-dd hh:mm:ss',
-                },
-              },
-            },
-            fields: 'userEnteredFormat.numberFormat',
-          },
-        },
-      ]),
-    ],
-  });
 
   await Promise.all([
     updateSheetValues({
       spreadsheetId: context.spreadsheetId,
       sheetName: 'Projects',
-      range: 'A1:R20',
-      values: padRows(projectRows.map((row) => [...row, '', '', '', '', '']), PROJECT_WRITE_WIDTH, 20),
-      accessToken: context.accessToken,
-    }),
-    updateSheetValues({
-      spreadsheetId: context.spreadsheetId,
-      sheetName: 'Task_Queue',
-      range: 'A1:O40',
-      values: padRows(taskRows, TASK_WIDTH, 40),
-      accessToken: context.accessToken,
-    }),
-    updateSheetValues({
-      spreadsheetId: context.spreadsheetId,
-      sheetName: 'Ideas',
-      range: 'A1:J40',
-      values: padRows(ideaRows, IDEA_WIDTH, 40),
-      accessToken: context.accessToken,
-    }),
-    updateSheetValues({
-      spreadsheetId: context.spreadsheetId,
-      sheetName: '優先度調整',
-      range: 'A1:G40',
-      values: padRows(priorityRows, PRIORITY_WIDTH, 40),
-      accessToken: context.accessToken,
-    }),
-    updateSheetValues({
-      spreadsheetId: context.spreadsheetId,
-      sheetName: 'Lists',
-      range: 'A1:I20',
-      values: padRows(listsRows, LISTS_WIDTH, 20),
-      accessToken: context.accessToken,
-    }),
-    updateSheetValues({
-      spreadsheetId: context.spreadsheetId,
-      sheetName: 'Metrics',
-      range: 'A1:H20',
-      values: padRows(metricsRows.map((row) => [...row, '', '', '', '', '', '']), METRICS_WRITE_WIDTH, 20),
+      range: 'A1:R120',
+      values: padRows(projectRows.map((row) => [...row, '', '', '', '', '']), PROJECT_WRITE_WIDTH, PROJECT_WRITE_ROWS),
       accessToken: context.accessToken,
     }),
     updateSheetValues({
       spreadsheetId: context.spreadsheetId,
       sheetName: 'Dashboard',
-      range: 'A1:N30',
-      values: padRows(dashboardRows, 14, 30),
+      range: 'A1:N200',
+      values: padRows([
+        ...dashboardRows,
+        ...Array.from({ length: DASHBOARD_WRITE_ROWS - dashboardRows.length }, () => blankRow(DASHBOARD_WIDTH)),
+      ], DASHBOARD_WIDTH, DASHBOARD_WRITE_ROWS),
       accessToken: context.accessToken,
     }),
   ]);
 
-  if (prioritySheetId !== undefined) {
-    await batchUpdateSpreadsheet({
-      spreadsheetId: context.spreadsheetId,
-      accessToken: context.accessToken,
-      requests: [
-        {
-          sortRange: {
-            range: {
-              sheetId: (refreshedMetadata.sheets || []).find((sheet) => sheet.properties?.title === 'Task_Queue')?.properties?.sheetId,
-              startRowIndex: 3,
-              endRowIndex: 40,
-              startColumnIndex: 0,
-              endColumnIndex: 15,
-            },
-            sortSpecs: [
-              { dimensionIndex: 8, sortOrder: 'DESCENDING' },
-              { dimensionIndex: 11, sortOrder: 'ASCENDING' },
-            ],
-          },
-        },
-      ],
-    });
-  }
+  const decorations = await fetchDashboardDecorations({
+    spreadsheetId: context.spreadsheetId,
+    accessToken: context.accessToken,
+    dashboardSheetId: dashboardSheet.properties.sheetId,
+  });
 
-  if (dashboardSheetId !== undefined) {
-    await batchUpdateSpreadsheet({
-      spreadsheetId: context.spreadsheetId,
-      accessToken: context.accessToken,
-      requests: [
-        ...dashboardDimensionRequests(dashboardSheetId),
-        ...dashboardMergeRequests(dashboardSheetId),
-        ...dashboardFormatRequests(dashboardSheetId),
-      ],
-    });
-  }
+  await batchUpdateSpreadsheet({
+    spreadsheetId: context.spreadsheetId,
+    accessToken: context.accessToken,
+    requests: [
+      ...cleanupRequests(dashboardSheet.properties.sheetId, decorations.charts, decorations.conditionalFormatCount),
+      ...dimensionRequests(dashboardSheet.properties.sheetId),
+      ...mergeRequests(dashboardSheet.properties.sheetId),
+      ...formatRequests(dashboardSheet.properties.sheetId),
+    ],
+  });
 
-  console.log('[OK] Dashboard redesign applied to live sheets.');
+  console.log('[OK] Dashboard links, layout, palette, and Projects registry have been updated.');
 }
 
 main().catch((error) => {
