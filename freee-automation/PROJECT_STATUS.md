@@ -178,6 +178,9 @@ freee-automation/
 
 | 日付 | 決定事項 |
 |---|---|
+| 2026-03-13 | 集計行除外ロジック追加: `isSummaryLine_()` を実装し `parseLinesJson_()` でフィルタ（小計・消費税・合計・税込合計・税額・総額など） |
+| 2026-03-13 | G列リンク化: 見積作成成功時に `HYPERLINK("https://secure.freee.co.jp/quotations/{id}","yyyy/MM/dd")` 形式で書き込み |
+| 2026-03-13 | Phase1 skipWords 追加: `extractLinesJsonFromBody_()` に `税込合計`・`総額`・`税込`・`税抜`・`内税`・`外税` を追加 |
 | 2026-03-06 | PDF 自動取得廃止（freee IV API は PDF 非対応: status 200 だが Content-Type が JSON） |
 | 2026-03-06 | 返信本文テンプレートを刷新（freee URL 記載なし、PDF 手動添付の運用に変更） |
 | 2026-03-06 | 宛名正規化 `p3_normalizeName_()` を実装（「様」の重複防止） |
