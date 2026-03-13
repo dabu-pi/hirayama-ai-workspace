@@ -24,7 +24,7 @@ const LIVE_HEADERS = [
 const DIRECTORY_ID_MAP = new Map([
   ['ai-invest', 'AINV-07'],
   ['freee-automation', 'FREEE-02'],
-  ['gas-projects/jyu-gas-ver3.1', 'GAS-01'],
+  ['gas-projects/jyu-gas-ver3.1', 'JREC-01'],
   ['patient-management', 'WEB-03'],
   ['hirayama-jyusei-strategy', 'JBIZ-04'],
   ['waste-report-system', 'WST-05'],
@@ -34,7 +34,7 @@ const DIRECTORY_ID_MAP = new Map([
 const ID_NAME_MAP = new Map([
   ['AINV-07', 'AI投資プロジェクト'],
   ['FREEE-02', 'freee見積自動化'],
-  ['GAS-01', '柔整GASシステム'],
+  ['JREC-01', '柔整毎日記録システム'],
   ['WEB-03', '患者管理Webアプリ'],
   ['JBIZ-04', '接骨院経営戦略AI'],
   ['WST-05', '廃棄物日報GAS'],
@@ -44,7 +44,7 @@ const ID_NAME_MAP = new Map([
 const DIRECTORY_NAME_MAP = new Map([
   ['ai-invest', 'AI投資プロジェクト'],
   ['freee-automation', 'freee見積自動化'],
-  ['gas-projects/jyu-gas-ver3.1', '柔整GASシステム'],
+  ['gas-projects/jyu-gas-ver3.1', '柔整毎日記録システム'],
   ['patient-management', '患者管理Webアプリ'],
   ['hirayama-jyusei-strategy', '接骨院経営戦略AI'],
   ['waste-report-system', '廃棄物日報GAS'],

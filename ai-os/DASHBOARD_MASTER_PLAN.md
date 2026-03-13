@@ -163,10 +163,10 @@ Google スプレッドシート「Hirayama_AI_OS_Dashboard」は **Hirayama AI O
 毎朝ダッシュボードを開いて「どのプロジェクトが何の状態にあり、今日何をすべきか」が **30秒以内に判断できる** こと。
 ## 2026-03-13 Projects Handling Update
 
-- `GAS-01` is the current center project for patient / visit operations and its
+- `JREC-01` is the current center project for patient / visit operations and its
   main sheet is `【毎日記録】来店管理施術録ver3.1`.
 - `WEB-03` is no longer treated as an active project. Keep it visible only as a
-  migration target to `GAS-01` and as an archive candidate.
+  migration target to `JREC-01` and as an archive candidate.
 - `WST-05` should be managed with `workspace/waste-report-system` as the
   canonical local folder path.
 - `AINV-07` remains a registration candidate until the Dashboard Projects row is

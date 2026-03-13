@@ -30,7 +30,7 @@ function Resolve-ProjectId {
 
     if ($normalized -match '\\ai-os(\\|$)') { return 'AIOS-06' }
     if ($normalized -match '\\freee-automation(\\|$)') { return 'FREEE-02' }
-    if ($normalized -match '\\gas-projects\\jyu-gas-ver3\.1(\\|$)') { return 'GAS-01' }
+    if ($normalized -match '\\gas-projects\\jyu-gas-ver3\.1(\\|$)') { return 'JREC-01' }
     if ($normalized -match '\\patient-management(\\|$)') { return 'WEB-03' }
     if ($normalized -match '\\hirayama-jyusei-strategy(\\|$)') { return 'JBIZ-04' }
     return 'COMMON'

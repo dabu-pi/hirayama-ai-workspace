@@ -28,7 +28,7 @@ workspace/
 ├── .gitignore
 │
 ├── gas-projects/
-│   └── jyu-gas-ver3.1/              # 柔整GASシステム（稼働中）
+│   └── jyu-gas-ver3.1/              # 柔整毎日記録システム（稼働中）
 │       ├── Ver3_core.js             # 来院登録・区分判定・算定ロジック
 │       ├── Ver3_amounts.js          # 金額計算
 │       ├── Ver3_transferData.js     # 申請書データ転記
@@ -68,7 +68,7 @@ workspace/
 
 ## 各プロジェクトの役割
 
-### 1. `gas-projects/jyu-gas-ver3.1/` — 柔整GASシステム
+### 1. `gas-projects/jyu-gas-ver3.1/` — 柔整毎日記録システム
 
 **ステータス:** 稼働中（最優先）
 

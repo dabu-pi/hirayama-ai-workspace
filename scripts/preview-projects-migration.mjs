@@ -10,7 +10,7 @@ import {
 
 const DIRECTORY_ID_MAP = new Map([
   ['freee-automation', 'FREEE-02'],
-  ['gas-projects/jyu-gas-ver3.1', 'GAS-01'],
+  ['gas-projects/jyu-gas-ver3.1', 'JREC-01'],
   ['patient-management', 'WEB-03'],
   ['hirayama-jyusei-strategy', 'JBIZ-04'],
   ['waste-report-system', 'WST-05'],

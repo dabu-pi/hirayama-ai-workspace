@@ -22,7 +22,7 @@ const RUN_LOG_HEADERS = [
 
 const PROJECT_MAP = new Map([
   ['freee見積自動化', 'FREEE-02'],
-  ['柔整GASシステム', 'GAS-01'],
+  ['柔整毎日記録システム', 'JREC-01'],
   ['患者管理Webアプリ', 'WEB-03'],
   ['接骨院経営戦略AI', 'JBIZ-04'],
   ['AIOS-06', 'AIOS-06'],

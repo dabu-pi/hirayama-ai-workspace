@@ -154,7 +154,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 
 ### 今後の拡張
 
-- 柔整GASシステムとの患者IDスキーマ共通化
+- 柔整毎日記録システムとの患者IDスキーマ共通化
 - 患者検索・フィルタリング機能
 - 来院履歴の可視化
 
@@ -184,7 +184,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 |---|---|
 | 言語 | Python |
 | AI | Claude API (`claude-sonnet-4-6`) |
-| データソース | Google スプレッドシート（柔整GASシステム） |
+| データソース | Google スプレッドシート（柔整毎日記録システム） |
 | 出力形式 | Markdown レポート / PDF |
 
 ### ドキュメント構成
@@ -241,7 +241,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 ## プロジェクト間の連携
 
 ```
-柔整GASシステム
+柔整毎日記録システム
   └─ 患者数・売上データ ──→ 接骨院経営戦略AI（分析・提案）
   └─ 患者データ ──────→ 患者管理Webアプリ（将来連携）
 
@@ -272,7 +272,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 | project_id | project_name | local_folder | main_sheet_name | sheet_status | cleanup_status |
 |------------|--------------|--------------|-----------------|--------------|----------------|
 | AIOS-06 | Hirayama AI OS | `workspace/ai-os` | `Hirayama_AI_OS_Dashboard` | active | keep |
-| GAS-01 | 柔整GASシステム | `workspace/gas-projects/jyu-gas-ver3.1` | `【毎日記録】来店管理施術録ver3.1` | source_of_truth | keep |
+| JREC-01 | 柔整毎日記録システム | `workspace/gas-projects/jyu-gas-ver3.1` | `【毎日記録】来店管理施術録ver3.1` | source_of_truth | keep |
 | FREEE-02 | freee見積自動化 | `workspace/freee-automation` | `2024長谷川さん管理シート` | active | keep |
 | WEB-03 | 患者管理Webアプリ | `workspace/patient-management` | `整骨院 電子カルテ` | migration_target | archive_candidate |
 | JBIZ-04 | 接骨院経営戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
@@ -280,7 +280,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 | AINV-07 | AI投資プロジェクト | `workspace/ai-invest` | `AI投資用スプレッドシート` | registration_candidate | keep |
 
 Notes:
-- `GAS-01` is the current operational center project and its main sheet is the
+- `JREC-01` is the current operational center project and its main sheet is the
   current source of truth.
 - `WEB-03` is no longer a current source of truth. Keep it as a migration /
   archive candidate until the remaining data handling is confirmed.

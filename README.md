@@ -23,7 +23,7 @@
 
 | プロジェクト | ディレクトリ | ステータス |
 |---|---|---|
-| 柔整GASシステム | `gas-projects/jyu-gas-ver3.1/` | 稼働中 |
+| 柔整毎日記録システム | `gas-projects/jyu-gas-ver3.1/` | 稼働中 |
 | freee見積自動化 | `freee-automation/` | 開発中 |
 | 患者管理Webアプリ | `patient-management/` | 開発中（プロトタイプ） |
 | 接骨院経営戦略AI | `hirayama-jyusei-strategy/` | ドキュメント整備済み・実装予定 |

@@ -27,7 +27,7 @@ const LIVE_HEADERS = [
 const PROJECT_NAME_MAP = new Map([
   ['AINV-07', 'AI投資プロジェクト'],
   ['FREEE-02', 'freee見積自動化'],
-  ['GAS-01', '柔整GASシステム'],
+  ['JREC-01', '柔整毎日記録システム'],
   ['WEB-03', '患者管理Webアプリ'],
   ['JBIZ-04', '接骨院経営戦略AI'],
   ['WST-05', '廃棄物日報GAS'],

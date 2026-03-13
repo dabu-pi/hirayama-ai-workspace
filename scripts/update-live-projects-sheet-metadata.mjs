@@ -46,8 +46,8 @@ const PROJECT_METADATA = [
     evidence_note: 'main_sheet_name and id are confirmed from local docs/code. current_folder is still unverified.',
   },
   {
-    project_id: 'GAS-01',
-    project_name: '柔整GASシステム',
+    project_id: 'JREC-01',
+    project_name: '柔整毎日記録システム',
     directory: 'gas-projects/jyu-gas-ver3.1',
     local_folder: 'workspace/gas-projects/jyu-gas-ver3.1',
     main_sheet_name: '【毎日記録】来店管理施術録ver3.1',
@@ -69,7 +69,7 @@ const PROJECT_METADATA = [
     target_folder: 'hirayama-ai-workspace/archive',
     sheet_status: 'migration_target',
     cleanup_status: 'needs_migration',
-    evidence_note: 'Stopped project. Migrate remaining handling to GAS-01, then keep this sheet as an archive candidate.',
+    evidence_note: 'Stopped project. Migrate remaining handling to JREC-01, then keep this sheet as an archive candidate.',
   },
   {
     project_id: 'JBIZ-04',

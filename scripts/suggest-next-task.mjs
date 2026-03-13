@@ -29,7 +29,7 @@ const PRIORITY_WEIGHT = new Map([
 
 const PROJECT_ALIASES = new Map([
   ['FREEE-02', ['FREEE-02', 'freee\u898b\u7a4d\u81ea\u52d5\u5316', 'freee-automation']],
-  ['GAS-01', ['GAS-01', '\u67d4\u6574GAS\u30b7\u30b9\u30c6\u30e0', 'gas-projects/jyu-gas-ver3.1']],
+  ['JREC-01', ['JREC-01', '\u67d4\u6574\u6bce\u65e5\u8a18\u9332\u30b7\u30b9\u30c6\u30e0', 'gas-projects/jyu-gas-ver3.1']],
   ['WEB-03', ['WEB-03', '\u60a3\u8005\u7ba1\u7406Web\u30a2\u30d7\u30ea', 'patient-management']],
   ['JBIZ-04', ['JBIZ-04', '\u63a5\u9aa8\u9662\u7d4c\u55b6\u6226\u7565AI', 'hirayama-jyusei-strategy']],
   ['WST-05', ['WST-05', '\u5ec3\u68c4\u7269\u65e5\u5831GAS', 'waste-report-system']],

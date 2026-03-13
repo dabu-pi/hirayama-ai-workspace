@@ -417,7 +417,7 @@
 - Zero matches on `--project AIOS-06` are currently normal because some AIOS work still lives under `workspace全体` rows.
 ## 2026-03-13 Projects / Sheets alignment memo
 
-- `GAS-01` is the current operational source of truth and uses
+- `JREC-01` is the current operational source of truth and uses
   `【毎日記録】来店管理施術録ver3.1` as `main_sheet_name`.
 - `WEB-03` is no longer an active source-of-truth project. It should stay in the
   management view only as `migration_target` / `archive_candidate` until data
@@ -452,7 +452,7 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
 - Wrote known values for the existing live project rows and added a minimal
   `AINV-07` row as a `registration_candidate`.
 - `WEB-03` now carries `migration_target` plus archive intent in
-  `evidence_note`, while `GAS-01` is explicitly marked as the operational
+  `evidence_note`, while `JREC-01` is explicitly marked as the operational
   source of truth.
 - Verified after the write that `Dashboard!H11:N17` formulas and
   `Metrics!A1:F15` formulas were unchanged.
@@ -460,7 +460,7 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
 ## 2026-03-13 WEB-03 archive completion memo
 
 - `WEB-03` can move from `migration_target` to archive-ready only when:
-  - remaining operational handling is confirmed to live in `GAS-01`
+  - remaining operational handling is confirmed to live in `JREC-01`
   - no active workflow depends on `整骨院 電子カルテ` as the source of truth
   - any data that must be retained is preserved before archive handling
 

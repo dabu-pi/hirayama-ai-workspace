@@ -220,7 +220,7 @@
 | テスト | カタカナ定着語（「Test」との表記ゆれを防ぐためカタカナ統一）|
 | run_result: SUCCESS / STOP / ERROR / PARTIAL | GAS が参照する可能性。変更禁止 |
 | system 列: Sheets / GitHub / GAS / Claude 等 | 固有サービス名。英語維持 |
-| project_id: GAS-01 / FREEE-02 等 | 識別子。変更すると全参照が壊れる |
+| project_id: JREC-01 / FREEE-02 等 | 識別子。変更すると全参照が壊れる |
 
 ---
 
