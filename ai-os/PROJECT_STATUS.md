@@ -456,3 +456,21 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
   source of truth.
 - Verified after the write that `Dashboard!H11:N17` formulas and
   `Metrics!A1:F15` formulas were unchanged.
+
+## 2026-03-13 WEB-03 archive completion memo
+
+- `WEB-03` can move from `migration_target` to archive-ready only when:
+  - remaining operational handling is confirmed to live in `GAS-01`
+  - no active workflow depends on `整骨院 電子カルテ` as the source of truth
+  - any data that must be retained is preserved before archive handling
+
+## 2026-03-13 Dashboard project snapshot expansion memo
+
+- The live `Dashboard` project snapshot was showing only rows linked to
+  `Projects!4:8`, so `AIOS-06` and `AINV-07` were not visible there.
+- Because `AINV-07` is now a live `Projects` registration candidate, the
+  snapshot was expanded to show all current project rows through
+  `Projects!10`.
+- Verified live snapshot range after the change: `Dashboard!H11:N18`.
+- `STR-04` main sheet candidate was also confirmed on Drive as
+  `1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc` in `My Drive`.

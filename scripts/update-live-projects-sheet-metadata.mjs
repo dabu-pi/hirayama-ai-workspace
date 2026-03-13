@@ -56,7 +56,7 @@ const PROJECT_METADATA = [
     target_folder: 'hirayama-ai-workspace',
     sheet_status: 'active',
     cleanup_status: 'clean',
-    evidence_note: 'Current operational source of truth. Do not treat 整骨院 電子カルテ as the live main sheet.',
+    evidence_note: 'Current operational source of truth. Do not treat 整骨院 電子カルテ as the live main sheet. main_sheet_id and current_folder still need Drive confirmation.',
   },
   {
     project_id: 'WEB-03',
@@ -77,12 +77,12 @@ const PROJECT_METADATA = [
     directory: 'hirayama-jyusei-strategy',
     local_folder: 'workspace/hirayama-jyusei-strategy',
     main_sheet_name: '平山接骨院 慢性疼痛強化プロジェクト 管理表',
-    main_sheet_id: '',
-    current_folder: '',
+    main_sheet_id: '1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc',
+    current_folder: 'My Drive',
     target_folder: 'hirayama-ai-workspace',
     sheet_status: 'active',
     cleanup_status: 'needs_review',
-    evidence_note: 'Main sheet name is the leading candidate, but the live source sheet still needs one-file confirmation.',
+    evidence_note: 'Drive lookup confirmed this candidate sheet id and current_folder=My Drive. Duplicate check and target-folder move are still pending.',
   },
   {
     project_id: 'WST-05',
@@ -95,7 +95,7 @@ const PROJECT_METADATA = [
     target_folder: 'hirayama-ai-workspace',
     sheet_status: 'active',
     cleanup_status: 'needs_review',
-    evidence_note: 'Canonical local_folder is fixed. Drive folder and main_sheet_id are still pending verification.',
+    evidence_note: 'Canonical local_folder is fixed. Drive search did not yet expose the live sheet to the current service account.',
   },
   {
     project_id: 'AIOS-06',
@@ -121,7 +121,7 @@ const PROJECT_METADATA = [
     target_folder: 'hirayama-ai-workspace',
     sheet_status: 'registration_candidate',
     cleanup_status: 'needs_review',
-    evidence_note: 'Operational sheet exists, but the Projects row is being added as a registration candidate first.',
+    evidence_note: 'Operational sheet id is recorded, but Drive current_folder is still unverified because the current service account cannot read the file yet.',
   },
 ];
 
@@ -217,7 +217,7 @@ async function main() {
   const beforeDashboard = await getFormulaRange({
     spreadsheetId: context.spreadsheetId,
     accessToken: context.accessToken,
-    range: 'Dashboard!H11:N17',
+    range: 'Dashboard!H11:N18',
   });
   const beforeMetrics = await getFormulaRange({
     spreadsheetId: context.spreadsheetId,
@@ -303,7 +303,7 @@ async function main() {
   const afterDashboard = await getFormulaRange({
     spreadsheetId: context.spreadsheetId,
     accessToken: context.accessToken,
-    range: 'Dashboard!H11:N17',
+    range: 'Dashboard!H11:N18',
   });
   const afterMetrics = await getFormulaRange({
     spreadsheetId: context.spreadsheetId,
