@@ -415,3 +415,25 @@
 - The helper is not part of the `de` execution path and should not block handoff.
 - `--project AIOS-06` is useful only when you expect a canonical AIOS-linked Task row.
 - Zero matches on `--project AIOS-06` are currently normal because some AIOS work still lives under `workspace全体` rows.
+## 2026-03-13 Projects / Sheets alignment memo
+
+- `GAS-01` is the current operational source of truth and uses
+  `【毎日記録】来店管理施術録ver3.1` as `main_sheet_name`.
+- `WEB-03` is no longer an active source-of-truth project. It should stay in the
+  management view only as `migration_target` / `archive_candidate` until data
+  handling is closed.
+- `WST-05` now uses `workspace/waste-report-system` as the canonical
+  `local_folder`, even before full implementation files are added.
+- `AINV-07` should remain visible as a Dashboard registration candidate.
+
+Minimal Projects metadata set to carry in Dashboard-facing docs:
+- `project_id`
+- `project_name`
+- `local_folder`
+- `main_sheet_name`
+- `main_sheet_id`
+- `current_folder`
+- `target_folder`
+- `sheet_status`
+- `cleanup_status`
+- `evidence_note`
