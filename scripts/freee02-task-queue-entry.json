@@ -1,0 +1,11 @@
+{
+  "title": "Phase3本番実行: phase3_createDraftsForQuotedRows",
+  "project": "FREEE-02",
+  "type": "実行",
+  "priority": "High",
+  "status": "Pending",
+  "assigned_to": "Human",
+  "planned_date": "2026-03-13",
+  "dependency": "Phase2 GAS反映済み",
+  "notes": "GASエディタで phase3_createDraftsForQuotedRows を実行 → U列に日時書き込み確認 → Gmail下書きボックス確認"
+}

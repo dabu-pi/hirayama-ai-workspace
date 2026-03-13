@@ -1,0 +1,10 @@
+{
+  "project_id": "FREEE-02",
+  "project_name": "freee見積自動化",
+  "directory": "freee-automation",
+  "status": "In Progress",
+  "phase": "Phase3",
+  "last_updated": "2026-03-13",
+  "next_action": "phase3_createDraftsForQuotedRows を GAS エディタで本番実行し U列書き込みを確認",
+  "note_text": "2026-03-13: Phase2完了。集計行除外（半角スペース正規化）修正・G列HYPERLINKリンク修正（URL: invoice.secure.freee.co.jp/reports/quotations/{id}）・live GAS反映済み・実テストOK。次はPhase3本番実行。"
+}
