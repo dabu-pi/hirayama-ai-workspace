@@ -59,7 +59,7 @@ const PROJECT_METADATA = [
     evidence_note: 'Current operational source of truth. Do not treat 整骨院 電子カルテ as the live main sheet. main_sheet_id and current_folder still need Drive confirmation.',
   },
   {
-    project_id: 'WEB-03',
+    project_id: 'JWEB-03',
     project_name: '患者管理Webアプリ',
     directory: 'patient-management',
     local_folder: 'workspace/patient-management',

@@ -274,7 +274,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 | AIOS-06 | Hirayama AI OS | `workspace/ai-os` | `Hirayama_AI_OS_Dashboard` | active | keep |
 | JREC-01 | 柔整毎日記録システム | `workspace/gas-projects/jyu-gas-ver3.1` | `【毎日記録】来店管理施術録ver3.1` | source_of_truth | keep |
 | FREEE-02 | freee見積自動化 | `workspace/freee-automation` | `2024長谷川さん管理シート` | active | keep |
-| WEB-03 | 患者管理Webアプリ | `workspace/patient-management` | `整骨院 電子カルテ` | migration_target | archive_candidate |
+| JWEB-03 | 患者管理Webアプリ | `workspace/patient-management` | `整骨院 電子カルテ` | migration_target | archive_candidate |
 | JBIZ-04 | 接骨院経営戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
 | HAIKI-05 | 廃棄物日報システム | `workspace/waste-report-system` | `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）` | active_setup_pending | keep |
 | AINV-07 | AI投資プロジェクト | `workspace/ai-invest` | `AI投資用スプレッドシート` | registration_candidate | keep |
@@ -282,7 +282,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 Notes:
 - `JREC-01` is the current operational center project and its main sheet is the
   current source of truth.
-- `WEB-03` is no longer a current source of truth. Keep it as a migration /
+- `JWEB-03` is no longer a current source of truth. Keep it as a migration /
   archive candidate until the remaining data handling is confirmed.
 - `HAIKI-05` now adopts `workspace/waste-report-system` as the canonical local
   folder path, even if the local implementation is still being prepared.

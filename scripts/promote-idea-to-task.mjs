@@ -62,7 +62,7 @@ const PROJECT_NAME_MAP = new Map([
   ['freee-automation', 'freee見積自動化'],
   ['JREC-01', '柔整毎日記録システム'],
   ['gas-projects/jyu-gas-ver3.1', '柔整毎日記録システム'],
-  ['WEB-03', '患者管理Webアプリ'],
+  ['JWEB-03', '患者管理Webアプリ'],
   ['patient-management', '患者管理Webアプリ'],
   ['JBIZ-04', '接骨院経営戦略AI'],
   ['hirayama-jyusei-strategy', '接骨院経営戦略AI'],

@@ -419,7 +419,7 @@
 
 - `JREC-01` is the current operational source of truth and uses
   `【毎日記録】来店管理施術録ver3.1` as `main_sheet_name`.
-- `WEB-03` is no longer an active source-of-truth project. It should stay in the
+- `JWEB-03` is no longer an active source-of-truth project. It should stay in the
   management view only as `migration_target` / `archive_candidate` until data
   handling is closed.
 - `HAIKI-05` now uses `workspace/waste-report-system` as the canonical
@@ -451,15 +451,15 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
   - `evidence_note`
 - Wrote known values for the existing live project rows and added a minimal
   `AINV-07` row as a `registration_candidate`.
-- `WEB-03` now carries `migration_target` plus archive intent in
+- `JWEB-03` now carries `migration_target` plus archive intent in
   `evidence_note`, while `JREC-01` is explicitly marked as the operational
   source of truth.
 - Verified after the write that `Dashboard!H11:N17` formulas and
   `Metrics!A1:F15` formulas were unchanged.
 
-## 2026-03-13 WEB-03 archive completion memo
+## 2026-03-13 JWEB-03 archive completion memo
 
-- `WEB-03` can move from `migration_target` to archive-ready only when:
+- `JWEB-03` can move from `migration_target` to archive-ready only when:
   - remaining operational handling is confirmed to live in `JREC-01`
   - no active workflow depends on `整骨院 電子カルテ` as the source of truth
   - any data that must be retained is preserved before archive handling

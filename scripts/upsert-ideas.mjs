@@ -63,7 +63,7 @@ const RELATED_PROJECT_MAP = new Map([
   ['AINV-07', 'AI投資プロジェクト'],
   ['FREEE-02', 'freee見積自動化'],
   ['JREC-01', '柔整毎日記録システム'],
-  ['WEB-03', '患者管理Webアプリ'],
+  ['JWEB-03', '患者管理Webアプリ'],
   ['JBIZ-04', '接骨院経営戦略AI'],
   ['HAIKI-05', '廃棄物日報システム'],
   ['AIOS-06', 'Hirayama AI OS'],
