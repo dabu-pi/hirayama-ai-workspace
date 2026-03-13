@@ -472,5 +472,5 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
   snapshot was expanded to show all current project rows through
   `Projects!10`.
 - Verified live snapshot range after the change: `Dashboard!H11:N18`.
-- `STR-04` main sheet candidate was also confirmed on Drive as
+- `JBIZ-04` main sheet candidate was also confirmed on Drive as
   `1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc` in `My Drive`.

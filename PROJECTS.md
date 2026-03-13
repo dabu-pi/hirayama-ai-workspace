@@ -10,7 +10,7 @@
 1. [柔整GASプロジェクト](#1-柔整gasプロジェクト)
 2. [freee見積自動化プロジェクト](#2-freee見積自動化プロジェクト)
 3. [患者管理Webアプリ](#3-患者管理webアプリ)
-4. [hirayama接骨院戦略AI](#4-hirayama接骨院戦略ai)
+4. [hirayama接骨院経営戦略AI](#4-hirayama接骨院戦略ai)
 5. [廃棄物日報GASシステム（企画段階）](#5-廃棄物日報gasシステム企画段階)
 
 ---
@@ -160,7 +160,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 
 ---
 
-## 4. hirayama接骨院戦略AI
+## 4. hirayama接骨院経営戦略AI
 
 **ディレクトリ:** `hirayama-jyusei-strategy/`
 **ステータス:** ドキュメント作成済み・実装予定
@@ -242,7 +242,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 
 ```
 柔整GASシステム
-  └─ 患者数・売上データ ──→ 接骨院戦略AI（分析・提案）
+  └─ 患者数・売上データ ──→ 接骨院経営戦略AI（分析・提案）
   └─ 患者データ ──────→ 患者管理Webアプリ（将来連携）
 
 freee見積自動化
@@ -261,7 +261,7 @@ freee見積自動化
 | 1 | 柔整GASプロジェクト | 稼働中・テスト通過で完成 |
 | 2 | freee見積自動化 | 業務効率化の即効性が高い |
 | 3 | 患者管理Webアプリ | 柔整GASとの連携基盤 |
-| 4 | 接骨院戦略AI | 中長期の経営強化 |
+| 4 | 接骨院経営戦略AI | 中長期の経営強化 |
 | 5 | 廃棄物日報GAS | 要件定義待ち |
 ## 2026-03-13 Projects / Sheets Management Update
 
@@ -275,7 +275,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 | GAS-01 | 柔整GASシステム | `workspace/gas-projects/jyu-gas-ver3.1` | `【毎日記録】来店管理施術録ver3.1` | source_of_truth | keep |
 | FREEE-02 | freee見積自動化 | `workspace/freee-automation` | `2024長谷川さん管理シート` | active | keep |
 | WEB-03 | 患者管理Webアプリ | `workspace/patient-management` | `整骨院 電子カルテ` | migration_target | archive_candidate |
-| STR-04 | 接骨院戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
+| JBIZ-04 | 接骨院経営戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
 | WST-05 | 廃棄物日報GAS | `workspace/waste-report-system` | `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）` | active_setup_pending | keep |
 | AINV-07 | AI投資プロジェクト | `workspace/ai-invest` | `AI投資用スプレッドシート` | registration_candidate | keep |
 

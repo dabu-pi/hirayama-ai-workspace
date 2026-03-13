@@ -26,7 +26,7 @@ const DIRECTORY_ID_MAP = new Map([
   ['freee-automation', 'FREEE-02'],
   ['gas-projects/jyu-gas-ver3.1', 'GAS-01'],
   ['patient-management', 'WEB-03'],
-  ['hirayama-jyusei-strategy', 'STR-04'],
+  ['hirayama-jyusei-strategy', 'JBIZ-04'],
   ['waste-report-system', 'WST-05'],
   ['ai-os', 'AIOS-06'],
 ]);
@@ -36,7 +36,7 @@ const ID_NAME_MAP = new Map([
   ['FREEE-02', 'freee見積自動化'],
   ['GAS-01', '柔整GASシステム'],
   ['WEB-03', '患者管理Webアプリ'],
-  ['STR-04', '接骨院戦略AI'],
+  ['JBIZ-04', '接骨院経営戦略AI'],
   ['WST-05', '廃棄物日報GAS'],
   ['AIOS-06', 'Hirayama AI OS'],
 ]);
@@ -46,7 +46,7 @@ const DIRECTORY_NAME_MAP = new Map([
   ['freee-automation', 'freee見積自動化'],
   ['gas-projects/jyu-gas-ver3.1', '柔整GASシステム'],
   ['patient-management', '患者管理Webアプリ'],
-  ['hirayama-jyusei-strategy', '接骨院戦略AI'],
+  ['hirayama-jyusei-strategy', '接骨院経営戦略AI'],
   ['waste-report-system', '廃棄物日報GAS'],
   ['ai-os', 'Hirayama AI OS'],
 ]);

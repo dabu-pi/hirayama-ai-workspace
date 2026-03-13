@@ -85,7 +85,7 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
 | `freee-automation/` | `FREEE-02` |
 | `gas-projects/jyu-gas-ver3.1/` | `GAS-01` |
 | `patient-management/` | `WEB-03` |
-| `hirayama-jyusei-strategy/` | `STR-04` |
+| `hirayama-jyusei-strategy/` | `JBIZ-04` |
 | その他 | `COMMON` |
 
 必要なら `-ProjectId` で明示指定できるようにする。

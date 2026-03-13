@@ -72,8 +72,8 @@ const PROJECT_METADATA = [
     evidence_note: 'Stopped project. Migrate remaining handling to GAS-01, then keep this sheet as an archive candidate.',
   },
   {
-    project_id: 'STR-04',
-    project_name: '接骨院戦略AI',
+    project_id: 'JBIZ-04',
+    project_name: '接骨院経営戦略AI',
     directory: 'hirayama-jyusei-strategy',
     local_folder: 'workspace/hirayama-jyusei-strategy',
     main_sheet_name: '平山接骨院 慢性疼痛強化プロジェクト 管理表',

@@ -64,7 +64,7 @@ const RELATED_PROJECT_MAP = new Map([
   ['FREEE-02', 'freee見積自動化'],
   ['GAS-01', '柔整GASシステム'],
   ['WEB-03', '患者管理Webアプリ'],
-  ['STR-04', '接骨院戦略AI'],
+  ['JBIZ-04', '接骨院経営戦略AI'],
   ['WST-05', 'waste-report-system'],
   ['AIOS-06', 'Hirayama AI OS'],
   ['COMMON', 'workspace全体'],
