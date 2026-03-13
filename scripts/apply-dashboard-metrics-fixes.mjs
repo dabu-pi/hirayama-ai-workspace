@@ -2,6 +2,8 @@
 
 import { getAuthorizedContext, parseArgs, updateSheetValues } from './lib-sheets.mjs';
 
+const CANONICAL_PROJECT_PATTERN = 'JREC-01|JBIZ-04|HAIKI-05|JWEB-03';
+
 const METRICS_VALUES = [
   ['運用指標', '値'],
   ['総案件数', '=COUNTA(Projects!A4:A20)'],
@@ -20,7 +22,7 @@ const DASHBOARD_SUMMARY = [
 const DASHBOARD_RECENT = [
   ['最近の更新'],
   ['日時', '案件', '実行元', '内容', '結果', '次アクション'],
-  ['=ARRAY_CONSTRAIN(QUERY({Run_Log!B4:B,Run_Log!D4:D,Run_Log!C4:C,Run_Log!E4:E,Run_Log!F4:F,Run_Log!J4:J},"select Col1,Col2,Col3,Col4,Col5,Col6 where Col1 is not null order by Col1 desc",0),6,6)', '', '', '', '', ''],
+  [`=IFERROR(ARRAY_CONSTRAIN(QUERY(FILTER({Run_Log!B4:B,Run_Log!D4:D,Run_Log!C4:C,Run_Log!E4:E,Run_Log!F4:F,Run_Log!J4:J},Run_Log!B4:B<>"",REGEXMATCH(Run_Log!D4:D,"^(${CANONICAL_PROJECT_PATTERN})$")),"select Col1,Col2,Col3,Col4,Col5,Col6 order by Col1 desc",0),6,6),"")`, '', '', '', '', ''],
 ];
 
 async function main() {

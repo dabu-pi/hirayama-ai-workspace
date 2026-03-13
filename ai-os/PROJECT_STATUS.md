@@ -12,7 +12,7 @@
 | ディレクトリ | `workspace/ai-os/` |
 | 目的 | Claude・ChatGPT・GAS・GitHub・ダッシュボードを横断管理するコマンドセンター |
 | 開始日 | 2026-03-06 |
-| 最終更新 | 2026-03-13 (Dashboard を日本語中心の表示専用操作盤へ再設計) |
+| 最終更新 | 2026-03-13 (Dashboard の運用仕上げ: canonical URL 確定 / 優先度調整確認 / 最近の更新整理) |
 
 ---
 
@@ -46,6 +46,9 @@
 | dashboard redesign | Dashboard / Projects / Task_Queue / Ideas / Metrics / Lists を日本語中心の daily-use layout へ移行した。 |
 | live verification | live sheet で `総案件数=4 / 本番運用中=1 / 進行中=3 / 未完了タスク=7 / 保留アイデア数=1` を確認した。 |
 | rerun safety | 再適用時に Task_Queue / Ideas を current v2 または backup から復元できるようにした。 |
+| direct URLs | canonical 4案件の `メインシートURL` を直接 URL へ確定し、Dashboard `開く` は `Projects!H` 参照であることを live 数式で確認した。 |
+| priority flow | `優先度調整` で `TASK-003` に「はい」を入れると `最終優先度 70 -> 170` となり Dashboard 先頭へ上がることを確認し、空欄へ戻して復元した。 |
+| latest updates | Dashboard `最近の更新` は `JREC-01 / JBIZ-04 / HAIKI-05 / JWEB-03` のみを表示する式へ更新し、FREEE-02 混在を解消した。 |
 
 ---
 
@@ -66,8 +69,8 @@
 
 1. Run `de` and `node scripts/validate-task-queue.mjs --warn-only` several more times to confirm the handoff flow stays stable.
 2. Increase real usage of `優先度調整` and `Ideas -> Task_Queue -> Projects`, then revisit automation scope only if it becomes necessary.
-3. Replace Drive search fallback URLs with direct sheet URLs for canonical projects when the remaining IDs become available.
-4. Consider narrowing Dashboard `最近の更新` to canonical project IDs only after observing daily use.
+3. If daily use exposes friction, add presets or validation guidance for `優先度調整` rather than widening automation first.
+4. Keep Dashboard `最近の更新` canonical-only unless a cross-project operations need appears later.
 
 ---
 

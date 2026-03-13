@@ -68,7 +68,7 @@ function buildDefaultRow(projectId) {
     project.priority,
     '',
     '',
-    sheetUrl(project.main_sheet_id, project.main_sheet_name),
+    sheetUrl(project.main_sheet_url || project.main_sheet_id, project.main_sheet_name),
     githubBlobUrl(project.spec_path),
     project.folder_url || '',
     githubTreeUrl(project.directory),

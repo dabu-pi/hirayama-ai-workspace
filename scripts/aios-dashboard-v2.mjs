@@ -54,8 +54,8 @@ export const PRIORITY_ADJUST_HEADERS = [
   'task_id',
   'タスク',
   'project_id',
-  '今日優先',
-  '調整値',
+  '今日は最優先',
+  '加点',
   '理由',
   'メモ',
 ];
@@ -171,11 +171,12 @@ export const CANONICAL_PROJECTS = [
     status: '本番運用中',
     stage: 'テスト',
     priority: '最優先',
+    main_sheet_url: 'https://docs.google.com/spreadsheets/d/1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM/edit?gid=1963942012#gid=1963942012',
     main_sheet_name: '【毎日記録】来店管理施術録ver3.1',
     main_sheet_id: '',
     folder_url: '',
     spec_path: 'gas-projects/jyu-gas-ver3.1/SPEC.md',
-    notes: 'Projects を案件名・リンクの正本にする。メインシートURLは Drive 検索フォールバック。',
+    notes: 'Projects を案件名・リンクの正本にする。メインシートURLは直接 URL で確定済み。',
     aliases: ['柔整GASシステム', '柔整毎日記録システム', 'gas-projects/jyu-gas-ver3.1'],
   },
   {
@@ -185,11 +186,12 @@ export const CANONICAL_PROJECTS = [
     status: '進行中',
     stage: '設計',
     priority: '高',
+    main_sheet_url: 'https://docs.google.com/spreadsheets/d/1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc/edit?gid=1145527781#gid=1145527781',
     main_sheet_name: '平山接骨院 慢性疼痛強化プロジェクト 管理表',
     main_sheet_id: '1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc',
     folder_url: '',
     spec_path: 'hirayama-jyusei-strategy/SPEC.md',
-    notes: '数値入力と実装開始待ち。Spreadsheet URL は確定済み。',
+    notes: '数値入力と実装開始待ち。メインシートURLは直接 URL で確定済み。',
     aliases: ['接骨院戦略AI', '接骨院経営戦略AI', 'hirayama-jyusei-strategy'],
   },
   {
@@ -199,11 +201,12 @@ export const CANONICAL_PROJECTS = [
     status: '進行中',
     stage: '設計',
     priority: '高',
+    main_sheet_url: 'https://docs.google.com/spreadsheets/d/1QS-WXy692GrnHERAAZ2ZMX0b1bR-O1No7kqgPh7yBwQ/edit?gid=1665437722#gid=1665437722',
     main_sheet_name: '【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）',
     main_sheet_id: '',
     folder_url: '',
     spec_path: 'waste-report-system/SPEC.md',
-    notes: '仕様整理を優先。メインシートURLは Drive 検索フォールバック。',
+    notes: '仕様整理を優先。メインシートURLは直接 URL で確定済み。',
     aliases: ['廃棄物日報GAS', '廃棄物日報システム', 'waste-report-system'],
   },
   {
@@ -213,11 +216,12 @@ export const CANONICAL_PROJECTS = [
     status: '進行中',
     stage: '実装',
     priority: '高',
+    main_sheet_url: 'https://docs.google.com/spreadsheets/d/1epXPSyNbgxigDv7KAEd7xYgrlg6J_yx_Ov_c--HAbGQ/edit?gid=0#gid=0',
     main_sheet_name: '整骨院 電子カルテ',
     main_sheet_id: '1rASJV_j8pGmXY5NhQrw4FKJY_eRy-iSPoGSh08gdLk0',
     folder_url: '',
     spec_path: 'patient-management/spec.md',
-    notes: 'プロトタイプを整理しながら本番寄せ。Spreadsheet URL は確定済み。',
+    notes: 'プロトタイプを整理しながら本番寄せ。メインシートURLは直接 URL で確定済み。',
     aliases: ['患者管理Webアプリ', 'patient-management'],
   },
 ];
@@ -245,6 +249,9 @@ export function driveSearchUrl(name) {
 }
 
 export function sheetUrl(sheetId, sheetName = '') {
+  if (String(sheetId || '').startsWith('http')) {
+    return String(sheetId);
+  }
   if (sheetId) {
     return `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
   }

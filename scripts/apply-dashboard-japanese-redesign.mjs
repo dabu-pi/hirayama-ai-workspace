@@ -266,7 +266,7 @@ function buildProjectsRows(projectMap, runLogMap, tasks) {
       project.priority,
       nextAction,
       lastUpdated,
-      sheetUrl(project.main_sheet_id, project.main_sheet_name),
+      sheetUrl(project.main_sheet_url || project.main_sheet_id, project.main_sheet_name),
       githubBlobUrl(project.spec_path),
       project.folder_url,
       githubTreeUrl(project.directory),
@@ -313,7 +313,7 @@ function buildTaskRows(tasks) {
 function buildPriorityRows(tasks) {
   const rows = [
     ['優先度調整'],
-    ['今日だけ優先したいタスクは「はい」または調整値を入れる。Task_Queue はこの表を参照する。'],
+    ['「今日は最優先」に「はい」を入れると +100 点で最上位候補になる。元に戻すときは空欄へ戻し、細かい前後は「加点」を使う。'],
     PRIORITY_ADJUST_HEADERS,
   ];
 
@@ -410,6 +410,8 @@ function buildMetricsRows() {
 }
 
 function buildDashboardRows() {
+  const canonicalPattern = CANONICAL_PROJECTS.map((project) => project.project_id).join('|');
+
   return [
     ['平山 AI OS ダッシュボード'],
     [''],
@@ -430,7 +432,7 @@ function buildDashboardRows() {
     [''],
     ['最近の更新'],
     ['日時', '案件', '実行元', '内容', '結果', '次アクション'],
-    ['=ARRAY_CONSTRAIN(QUERY({Run_Log!B4:B,Run_Log!D4:D,Run_Log!C4:C,Run_Log!E4:E,Run_Log!F4:F,Run_Log!J4:J},"select Col1,Col2,Col3,Col4,Col5,Col6 where Col1 is not null order by Col1 desc",0),6,6)', '', '', '', '', ''],
+    [`=IFERROR(ARRAY_CONSTRAIN(QUERY(FILTER({Run_Log!B4:B,Run_Log!D4:D,Run_Log!C4:C,Run_Log!E4:E,Run_Log!F4:F,Run_Log!J4:J},Run_Log!B4:B<>"",REGEXMATCH(Run_Log!D4:D,"^(${canonicalPattern})$")),"select Col1,Col2,Col3,Col4,Col5,Col6 order by Col1 desc",0),6,6),"")`, '', '', '', '', ''],
   ];
 }
 
@@ -596,6 +598,26 @@ async function main() {
                 numberFormat: {
                   type: 'DATE',
                   pattern: 'yyyy-mm-dd',
+                },
+              },
+            },
+            fields: 'userEnteredFormat.numberFormat',
+          },
+        },
+        {
+          repeatCell: {
+            range: {
+              sheetId: dashboardSheetId,
+              startRowIndex: 19,
+              endRowIndex: 30,
+              startColumnIndex: 0,
+              endColumnIndex: 1,
+            },
+            cell: {
+              userEnteredFormat: {
+                numberFormat: {
+                  type: 'DATE_TIME',
+                  pattern: 'yyyy-mm-dd hh:mm:ss',
                 },
               },
             },

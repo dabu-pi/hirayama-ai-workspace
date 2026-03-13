@@ -45,16 +45,19 @@
     - 今日の優先タスクの期限表示を `yyyy-mm-dd` に修正済み
     - Projects の案件リンク / SPEC リンクを Dashboard から直接開ける構成へ更新
     - Task_Queue / Ideas は backup から再構築できる再実行安全なスクリプトに修正済み
+    - canonical 4案件の `メインシートURL` を直接 URL へ確定済み
+    - Dashboard `最近の更新` は canonical project_id のみ表示する式へ更新済み
+    - `優先度調整` で `TASK-003` を一時的に `はい` にすると `70 -> 170` となり Dashboard 先頭へ移動、空欄へ戻すと元へ復元されることを確認済み
 ```
 
 ---
 
 ## 次のアクション (NEXT)
 
-1. `優先度調整` の実運用ルールを固め、今日優先フラグと調整値の使い分けを定着させる
+1. `優先度調整` の運用ルールを固め、`今日は最優先` と `加点` の使い分けを日次運用へ落とし込む
 2. `Ideas -> Task_Queue -> Projects` の日次運用を 4 案件で回し、必要なら段階遷移ルールを微調整する
-3. Projects の `メインシートURL / SPEC URL / フォルダURL / GitHub URL` を不足分から順に実 URL へ確定する
-4. recent updates ブロックを canonical project IDs 中心に絞るかは、実運用を見て次回判断する
+3. Projects の `フォルダURL` 不足分を、必要になった案件から順に実 URL へ確定する
+4. Run_Log の記録粒度を見直す場合も、Dashboard は canonical 4案件中心の表示を維持する
 
 ---
 
