@@ -437,3 +437,22 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
 - `sheet_status`
 - `cleanup_status`
 - `evidence_note`
+
+## 2026-03-13 live Projects metadata write memo
+
+- Added live `Projects` metadata columns at the sheet tail:
+  - `local_folder`
+  - `main_sheet_name`
+  - `main_sheet_id`
+  - `current_folder`
+  - `target_folder`
+  - `sheet_status`
+  - `cleanup_status`
+  - `evidence_note`
+- Wrote known values for the existing live project rows and added a minimal
+  `AINV-07` row as a `registration_candidate`.
+- `WEB-03` now carries `migration_target` plus archive intent in
+  `evidence_note`, while `GAS-01` is explicitly marked as the operational
+  source of truth.
+- Verified after the write that `Dashboard!H11:N17` formulas and
+  `Metrics!A1:F15` formulas were unchanged.
