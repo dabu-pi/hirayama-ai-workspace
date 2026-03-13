@@ -12,16 +12,16 @@
 | プロジェクト | workspace インフラ（AI 開発環境） |
 | ブランチ | feature/auto-dev-phase3-loop |
 | フェーズ | Phase3.1 完成（AI 開発環境 E-1〜E-8 すべて完了） |
-| 最終更新 | 2026-03-06 |
+| 最終更新 | 2026-03-13 |
 
 ---
 
 ## 最後の実行 (Last Execution)
 
 ```
-コマンド  : docs/ERROR_ANALYSIS.md 新規作成
+コマンド  : Hirayama AI OS Dashboard 日本語再設計
 終了コード: 0
-コミット  : 6445a33  docs: ERROR_ANALYSIS.md — エラー解析システム仕様書を追加
+コミット  : このファイル更新後に commit / push
 ステータス: SUCCESS
 ```
 
@@ -29,25 +29,32 @@
 
 ```
 ## COMMANDS
-  docs/ERROR_ANALYSIS.md 新規作成
-    - analyze-error.ps1 の仕様・ログ構造・AI REPORT 形式を網羅
-    - auto-dev.ps1 との統合説明
-    - Phase3 ループとの連携手順を記載
+  Hirayama AI OS Dashboard を日本語中心の表示専用操作盤へ再設計
+    - Dashboard / Projects / Task_Queue / Ideas / Metrics / Lists を新スキーマへ更新
+    - `優先度調整` シートを追加し、`project_id` 正本運用へ移行
+    - live sheet へ反映後、Task_Queue / Ideas / Dashboard / Projects / Metrics を再確認
 
-## GIT
-  gsc -Message "docs: ERROR_ANALYSIS.md — エラー解析システム仕様書を追加" -Push
-  -> pushed to origin/feature/auto-dev-phase3-loop (6445a33)
+## LIVE RESULT
+  Dashboard 指標
+    - 総案件数 = 4
+    - 本番運用中 = 1
+    - 進行中 = 3
+    - 未完了タスク = 7
+    - 保留アイデア数 = 1
+  確認事項
+    - 今日の優先タスクの期限表示を `yyyy-mm-dd` に修正済み
+    - Projects の案件リンク / SPEC リンクを Dashboard から直接開ける構成へ更新
+    - Task_Queue / Ideas は backup から再構築できる再実行安全なスクリプトに修正済み
 ```
 
 ---
 
 ## 次のアクション (NEXT)
 
-1. **AI 開発環境 E-1〜E-8 すべて完了。次は本開発タスクへ移行**
-2. 柔整GAS: B-1〜B-3 テスト通過確認（最優先・実装は完了済み）
-3. freee自動化: OAuth 再構築（2-1）
-4. ROADMAP の `🔴 今すぐ` 2項目をクリアすることが現時点のゴール
-5. master へのマージ: feature/auto-dev-phase3-loop を master に PR またはマージ
+1. `優先度調整` の実運用ルールを固め、今日優先フラグと調整値の使い分けを定着させる
+2. `Ideas -> Task_Queue -> Projects` の日次運用を 4 案件で回し、必要なら段階遷移ルールを微調整する
+3. Projects の `メインシートURL / SPEC URL / フォルダURL / GitHub URL` を不足分から順に実 URL へ確定する
+4. recent updates ブロックを canonical project IDs 中心に絞るかは、実運用を見て次回判断する
 
 ---
 

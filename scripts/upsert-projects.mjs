@@ -7,266 +7,92 @@ import {
   parseArgs,
   updateSheetValues,
 } from './lib-sheets.mjs';
-
-const LIVE_HEADERS = [
-  'project_id',
-  'project_name',
-  'directory',
-  'status',
-  'phase',
-  'priority',
-  'last_updated',
-  'next_action',
-  'blocker',
-  'notes',
-];
-
-const DIRECTORY_ID_MAP = new Map([
-  ['ai-invest', 'AINV-07'],
-  ['freee-automation', 'FREEE-02'],
-  ['gas-projects/jyu-gas-ver3.1', 'JREC-01'],
-  ['patient-management', 'JWEB-03'],
-  ['hirayama-jyusei-strategy', 'JBIZ-04'],
-  ['waste-report-system', 'HAIKI-05'],
-  ['ai-os', 'AIOS-06'],
-]);
-
-const ID_NAME_MAP = new Map([
-  ['AINV-07', 'AI投資プロジェクト'],
-  ['FREEE-02', 'freee見積自動化'],
-  ['JREC-01', '柔整毎日記録システム'],
-  ['JWEB-03', '患者管理Webアプリ'],
-  ['JBIZ-04', '接骨院経営戦略AI'],
-  ['HAIKI-05', '廃棄物日報システム'],
-  ['AIOS-06', 'Hirayama AI OS'],
-]);
-
-const DIRECTORY_NAME_MAP = new Map([
-  ['ai-invest', 'AI投資プロジェクト'],
-  ['freee-automation', 'freee見積自動化'],
-  ['gas-projects/jyu-gas-ver3.1', '柔整毎日記録システム'],
-  ['patient-management', '患者管理Webアプリ'],
-  ['hirayama-jyusei-strategy', '接骨院経営戦略AI'],
-  ['waste-report-system', '廃棄物日報システム'],
-  ['ai-os', 'Hirayama AI OS'],
-]);
-
-const STATUS_MAP = new Map([
-  ['Active', '稼働中'],
-  ['In Progress', '進行中'],
-  ['Prototype', '試作'],
-  ['Parked', '保留'],
-  ['Complete', '完了'],
-]);
-
-const PHASE_MAP = new Map([
-  ['Concept', '構想'],
-  ['Design', '設計'],
-  ['Build', '実装'],
-  ['Test', 'テスト'],
-  ['Run', '運用'],
-  ['Stable', '安定運用'],
-  ['Phase 1', 'Phase1'],
-  ['Phase 2', 'Phase2'],
-  ['Phase 3', 'Phase3'],
-  ['Phase 4', 'Phase4'],
-  ['Phase B', 'PhaseB'],
-]);
-
-const NOTE_KEYS = ['legacy_type', 'runtime', 'progress', 'completion', 'owner', 'repo', 'risk'];
+import {
+  CANONICAL_PROJECTS,
+  PROJECT_HEADERS_V2,
+  githubBlobUrl,
+  githubTreeUrl,
+  projectById,
+  sheetUrl,
+  toIsoDate,
+} from './aios-dashboard-v2.mjs';
 
 function loadJson(path) {
   const raw = readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
   return JSON.parse(raw);
 }
 
-function has(entry, key) {
-  return Object.prototype.hasOwnProperty.call(entry, key);
-}
-
-function ensureLiveHeaders(row = []) {
-  const matches = LIVE_HEADERS.every((value, index) => row[index] === value);
+function ensureHeaders(row = []) {
+  const matches = PROJECT_HEADERS_V2.every((value, index) => row[index] === value);
   if (!matches) {
     throw new Error(`Projects header mismatch: ${JSON.stringify(row)}`);
   }
-}
-
-function normalizeMappedValue(value, map) {
-  if (value === undefined || value === null || value === '') {
-    return '';
-  }
-  return map.get(value) ?? value;
-}
-
-function normalizeProjectId(value, directory) {
-  if (value) {
-    return value;
-  }
-  return DIRECTORY_ID_MAP.get(directory) ?? '';
-}
-
-function normalizeProjectName(value, projectId, directory, existingValue = '') {
-  if (value) {
-    return value;
-  }
-  return ID_NAME_MAP.get(projectId) ?? DIRECTORY_NAME_MAP.get(directory) ?? existingValue;
-}
-
-function normalizeDate(value) {
-  if (value === undefined || value === null || value === '') {
-    return '';
-  }
-  return String(value).slice(0, 10);
-}
-
-function normalizePriority(value, fallback = '') {
-  if (value === undefined || value === null || value === '') {
-    return fallback;
-  }
-  const parsed = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsed) ? String(parsed) : String(value);
-}
-
-function normalizeProgress(value) {
-  if (value === undefined || value === null || value === '') {
-    return '';
-  }
-  const raw = String(value).trim();
-  if (/^\d+%$/.test(raw)) {
-    return raw;
-  }
-  if (/^\d+$/.test(raw)) {
-    return `${raw}%`;
-  }
-  return raw;
-}
-
-function parseNotes(value = '') {
-  const parts = String(value || '')
-    .split(' | ')
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const keyed = new Map();
-  const freeText = [];
-
-  for (const part of parts) {
-    const delimiter = part.indexOf('=');
-    if (delimiter > 0) {
-      const key = part.slice(0, delimiter);
-      const noteValue = part.slice(delimiter + 1);
-      if (NOTE_KEYS.includes(key) && !keyed.has(key)) {
-        keyed.set(key, noteValue);
-        continue;
-      }
-    }
-    freeText.push(part);
-  }
-
-  return { keyed, freeText };
-}
-
-function buildNotes(entry, existingNotes = '') {
-  if (has(entry, 'notes')) {
-    return entry.notes ?? '';
-  }
-
-  const { keyed, freeText } = parseNotes(existingNotes);
-
-  for (const key of NOTE_KEYS) {
-    if (!has(entry, key)) {
-      continue;
-    }
-    const value = key === 'progress' ? normalizeProgress(entry[key]) : entry[key];
-    if (value === undefined || value === null || value === '') {
-      keyed.delete(key);
-    } else {
-      keyed.set(key, String(value));
-    }
-  }
-
-  const textParts = has(entry, 'note_text')
-    ? (entry.note_text ? [String(entry.note_text)] : [])
-    : freeText;
-
-  const ordered = NOTE_KEYS
-    .map((key) => (keyed.has(key) ? `${key}=${keyed.get(key)}` : ''))
-    .filter(Boolean);
-
-  return [...ordered, ...textParts].join(' | ');
 }
 
 function loadEntry(args) {
   if (args.json) {
     return loadJson(args.json);
   }
-
   return {
     project_id: args['project-id'],
     project_name: args['project-name'],
-    directory: args.directory,
     status: args.status,
-    phase: args.phase,
+    stage: args.stage,
     priority: args.priority,
-    last_updated: args['last-updated'],
     next_action: args['next-action'],
-    blocker: args.blocker,
+    last_updated: args['last-updated'],
+    main_sheet_url: args['main-sheet-url'],
+    spec_url: args['spec-url'],
+    folder_url: args['folder-url'],
+    github_url: args['github-url'],
+    local_path: args['local-path'],
     notes: args.notes,
-    note_text: args['note-text'],
-    legacy_type: args['legacy-type'],
-    runtime: args.runtime,
-    progress: args.progress,
-    completion: args.completion,
-    owner: args.owner,
-    repo: args.repo,
-    risk: args.risk,
   };
 }
 
-function findExistingRow(bodyRows, entry) {
-  const projectId = String(entry.project_id || '').trim();
-  const directory = String(entry.directory || '').trim();
-
-  if (projectId) {
-    const idIndex = bodyRows.findIndex((row) => String(row[0] || '').trim() === projectId);
-    if (idIndex >= 0) {
-      return idIndex;
-    }
-  }
-
-  if (directory) {
-    return bodyRows.findIndex((row) => String(row[2] || '').trim() === directory);
-  }
-
-  return -1;
+function findRow(bodyRows, projectId) {
+  return bodyRows.findIndex((row) => String(row[0] || '').trim() === projectId);
 }
 
-function buildLiveRow(entry, existingRow = []) {
-  const directory = has(entry, 'directory') ? (entry.directory ?? '') : (existingRow[2] ?? '');
-  const projectId = normalizeProjectId(
-    has(entry, 'project_id') ? entry.project_id : existingRow[0],
-    directory,
-  );
-
-  if (!projectId) {
-    throw new Error('project_id could not be resolved. Pass --project-id or a known --directory.');
+function buildDefaultRow(projectId) {
+  const project = projectById(projectId);
+  if (!project) {
+    throw new Error(`Unknown canonical project_id: ${projectId}`);
   }
 
   return [
-    projectId,
-    normalizeProjectName(
-      has(entry, 'project_name') ? entry.project_name : existingRow[1],
-      projectId,
-      directory,
-      existingRow[1] ?? '',
-    ),
-    directory,
-    normalizeMappedValue(has(entry, 'status') ? entry.status : existingRow[3], STATUS_MAP) || existingRow[3] || '',
-    normalizeMappedValue(has(entry, 'phase') ? entry.phase : existingRow[4], PHASE_MAP) || existingRow[4] || '',
-    normalizePriority(has(entry, 'priority') ? entry.priority : existingRow[5], existingRow[5] ?? ''),
-    normalizeDate(has(entry, 'last_updated') ? entry.last_updated : existingRow[6]),
-    has(entry, 'next_action') ? (entry.next_action ?? '') : (existingRow[7] ?? ''),
-    has(entry, 'blocker') ? (entry.blocker ?? '') : (existingRow[8] ?? ''),
-    buildNotes(entry, existingRow[9] ?? ''),
+    project.project_id,
+    project.project_name,
+    project.status,
+    project.stage,
+    project.priority,
+    '',
+    '',
+    sheetUrl(project.main_sheet_id, project.main_sheet_name),
+    githubBlobUrl(project.spec_path),
+    project.folder_url || '',
+    githubTreeUrl(project.directory),
+    `workspace/${project.directory}`,
+    project.notes,
+  ];
+}
+
+function buildRow(entry, existingRow = []) {
+  const baseRow = existingRow.length > 0 ? [...existingRow.slice(0, PROJECT_HEADERS_V2.length)] : buildDefaultRow(entry.project_id);
+  return [
+    entry.project_id,
+    entry.project_name ?? baseRow[1],
+    entry.status ?? baseRow[2],
+    entry.stage ?? baseRow[3],
+    entry.priority ?? baseRow[4],
+    entry.next_action ?? baseRow[5],
+    toIsoDate(entry.last_updated ?? baseRow[6]),
+    entry.main_sheet_url ?? baseRow[7],
+    entry.spec_url ?? baseRow[8],
+    entry.folder_url ?? baseRow[9],
+    entry.github_url ?? baseRow[10],
+    entry.local_path ?? baseRow[11],
+    entry.notes ?? baseRow[12],
   ];
 }
 
@@ -276,32 +102,30 @@ async function main() {
   const entry = loadEntry(args);
   const isWrite = args.write === 'true';
 
-  if (!entry.project_id && !entry.directory) {
-    throw new Error('Pass --project-id or --directory, or provide one of them in --json.');
+  if (!entry.project_id) {
+    throw new Error('Pass --project-id or provide project_id in --json.');
+  }
+  if (!CANONICAL_PROJECTS.some((project) => project.project_id === entry.project_id)) {
+    throw new Error(`project_id must be one of: ${CANONICAL_PROJECTS.map((project) => project.project_id).join(', ')}`);
   }
 
   const data = await getSheetValues({
     spreadsheetId: context.spreadsheetId,
     sheetName: 'Projects',
-    range: '1:300',
+    range: '1:100',
     accessToken: context.accessToken,
   });
 
   const rows = data.values ?? [];
-  ensureLiveHeaders(rows[2] ?? []);
+  ensureHeaders(rows[2] ?? []);
 
   const bodyRows = rows.slice(3).filter((row) => row.some((cell) => String(cell || '').trim() !== ''));
-  const existingIndex = findExistingRow(bodyRows, entry);
-  const targetRowNumber = existingIndex >= 0 ? existingIndex + 4 : bodyRows.length + 4;
-  const existingRow = existingIndex >= 0 ? bodyRows[existingIndex] : [];
-  const liveRow = buildLiveRow(entry, existingRow);
-  const action = existingIndex >= 0 ? 'update' : 'append';
+  const index = findRow(bodyRows, entry.project_id);
+  const targetRow = index >= 0 ? index + 4 : bodyRows.length + 4;
+  const row = buildRow(entry, index >= 0 ? bodyRows[index] : []);
 
-  console.log(`[INFO] Action      : ${action}`);
-  console.log(`[INFO] Target row  : Projects!A${targetRowNumber}:J${targetRowNumber}`);
-  console.log(`[INFO] Project ID  : ${liveRow[0]}`);
-  console.log(`[INFO] Directory   : ${liveRow[2]}`);
-  console.log(`[INFO] Row payload : ${JSON.stringify(liveRow)}`);
+  console.log(`[INFO] Target row  : Projects!A${targetRow}:M${targetRow}`);
+  console.log(`[INFO] Payload     : ${JSON.stringify(row)}`);
 
   if (!isWrite) {
     console.log('[INFO] Dry run mode. Pass --write to update the live Projects sheet.');
@@ -311,12 +135,12 @@ async function main() {
   const result = await updateSheetValues({
     spreadsheetId: context.spreadsheetId,
     sheetName: 'Projects',
-    range: `A${targetRowNumber}:J${targetRowNumber}`,
-    values: [liveRow],
+    range: `A${targetRow}:M${targetRow}`,
+    values: [row],
     accessToken: context.accessToken,
   });
 
-  console.log(`[OK] Projects ${action} succeeded: ${result.updatedRange ?? `Projects!A${targetRowNumber}:J${targetRowNumber}`}`);
+  console.log(`[OK] Projects row updated: ${result.updatedRange ?? `Projects!A${targetRow}:M${targetRow}`}`);
 }
 
 main().catch((error) => {

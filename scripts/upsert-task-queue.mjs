@@ -1,300 +1,118 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import {
   getAuthorizedContext,
   getSheetValues,
   parseArgs,
   updateSheetValues,
 } from './lib-sheets.mjs';
+import {
+  CANONICAL_PROJECTS,
+  TASK_HEADERS_V2,
+  normalizeAssignee,
+  normalizeTaskPriorityLabel,
+  normalizeTaskStatus,
+  normalizeTaskType,
+  priorityLabelToScore,
+  toIsoDate,
+} from './aios-dashboard-v2.mjs';
 import { syncProjectFromTaskQueue } from './sync-project-from-taskqueue.mjs';
-
-const LIVE_HEADERS = [
-  'Task',
-  'Project',
-  'Type',
-  'Priority',
-  'Status',
-  'Assigned To',
-  'Planned Date',
-  'Done Date',
-  'Dependency',
-  'Score',
-  'Notes',
-];
-
-const PROJECT_NAME_MAP = new Map([
-  ['AINV-07', 'AI投資プロジェクト'],
-  ['FREEE-02', 'freee見積自動化'],
-  ['JREC-01', '柔整毎日記録システム'],
-  ['JWEB-03', '患者管理Webアプリ'],
-  ['JBIZ-04', '接骨院経営戦略AI'],
-  ['HAIKI-05', '廃棄物日報システム'],
-  ['AIOS-06', 'Hirayama AI OS'],
-  ['COMMON', 'workspace全体'],
-]);
-
-const TYPE_MAP = new Map([
-  ['Run', '実行'],
-  ['Ops', '運用'],
-  ['Test', 'テスト'],
-  ['Dev', '開発'],
-  ['Docs', '文書'],
-  ['Research', '調査'],
-  ['Design', '設計'],
-]);
-
-const PRIORITY_MAP = new Map([
-  ['High', '高'],
-  ['Medium', '中'],
-  ['Low', '低'],
-]);
-
-const STATUS_MAP = new Map([
-  ['Pending', '未着手'],
-  ['In Progress', '進行中'],
-  ['Waiting', '待機'],
-  ['Blocked', '停止中'],
-  ['Done', '完了'],
-]);
-
-const ASSIGNED_TO_MAP = new Map([
-  ['Human', '人'],
-  ['AI+Human', 'AI+人'],
-]);
-
-const DEFAULT_LIFECYCLE_ALLOWLIST_FILE = 'ai-os/lifecycle-projects.json';
 
 function loadJson(path) {
   const raw = readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
   return JSON.parse(raw);
 }
 
-function parseAllowlist(value) {
-  if (!value) {
-    return new Set();
-  }
-  return new Set(
-    String(value)
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-  );
-}
-
-function loadAllowlistFile(filePath) {
-  if (!filePath) {
-    return new Set();
-  }
-
-  const resolvedPath = resolve(filePath);
-  if (!existsSync(resolvedPath)) {
-    throw new Error(`Lifecycle allowlist file not found: ${resolvedPath}`);
-  }
-
-  const raw = readFileSync(resolvedPath, 'utf8').replace(/^\uFEFF/, '');
-  const parsed = JSON.parse(raw);
-  if (!Array.isArray(parsed)) {
-    throw new Error(`Lifecycle allowlist file must be a JSON array: ${resolvedPath}`);
-  }
-
-  return new Set(parsed.map((item) => String(item || '').trim()).filter(Boolean));
-}
-
-function resolveLifecycleAllowlist(args) {
-  const argValue = args['lifecycle-projects'];
-  if (argValue) {
-    return parseAllowlist(argValue);
-  }
-
-  const envValue = process.env.AIOS_LIFECYCLE_PROJECTS || '';
-  if (envValue) {
-    return parseAllowlist(envValue);
-  }
-
-  const allowlistPath = args['lifecycle-projects-file'] || DEFAULT_LIFECYCLE_ALLOWLIST_FILE;
-  return loadAllowlistFile(allowlistPath);
-}
-
-function ensureLiveHeaders(row = []) {
-  const matches = LIVE_HEADERS.every((value, index) => row[index] === value);
+function ensureHeaders(row = []) {
+  const matches = TASK_HEADERS_V2.every((value, index) => row[index] === value);
   if (!matches) {
     throw new Error(`Task_Queue header mismatch: ${JSON.stringify(row)}`);
   }
 }
 
-function normalizeProject(value) {
-  if (!value) {
-    return '';
-  }
-  return PROJECT_NAME_MAP.get(value) ?? value;
-}
-
-function normalizeMappedValue(value, map) {
-  if (!value) {
-    return '';
-  }
-  return map.get(value) ?? value;
-}
-
-function normalizeDate(value) {
-  if (!value) {
-    return '';
-  }
-  return String(value).slice(0, 10);
-}
-
-function toNumberString(value, fallback = '30') {
-  if (value === undefined || value === null || value === '') {
-    return fallback;
-  }
-  return String(value);
-}
-
-function todayString() {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function buildLiveRow(entry, existingRow = []) {
-  return [
-    entry.title || existingRow[0] || '',
-    normalizeProject(entry.project || existingRow[1] || ''),
-    normalizeMappedValue(entry.type || existingRow[2] || '', TYPE_MAP),
-    normalizeMappedValue(entry.priority || existingRow[3] || '', PRIORITY_MAP),
-    normalizeMappedValue(entry.status || existingRow[4] || '', STATUS_MAP),
-    normalizeMappedValue(entry.assigned_to || existingRow[5] || '', ASSIGNED_TO_MAP),
-    normalizeDate(entry.planned_date || existingRow[6] || ''),
-    normalizeDate(entry.done_date || existingRow[7] || ''),
-    entry.dependency ?? existingRow[8] ?? '',
-    toNumberString(entry.score ?? existingRow[9] ?? '', '30'),
-    entry.notes ?? existingRow[10] ?? '',
-  ];
-}
-
-function ensureRequiredTaskFields(row = []) {
-  const required = [
-    ['Task', row[0]],
-    ['Project', row[1]],
-    ['Type', row[2]],
-    ['Priority', row[3]],
-    ['Status', row[4]],
-  ];
-
-  const missing = required
-    .filter(([, value]) => String(value || '').trim() === '')
-    .map(([label]) => label);
-
-  if (missing.length > 0) {
-    throw new Error(`Task_Queue row is missing required fields: ${missing.join(", ")}`);
-  }
-}
-
-function pickEntry(args) {
+function loadEntry(args) {
   if (args.json) {
     return loadJson(args.json);
   }
   return {
+    task_id: args['task-id'],
     title: args.title,
-    project: args.project,
+    project_id: args['project-id'],
     type: args.type,
     priority: args.priority,
     status: args.status,
     assigned_to: args['assigned-to'],
-    planned_date: args['planned-date'],
-    done_date: args['done-date'],
+    due_date: args['due-date'],
+    completed_at: args['completed-at'],
     dependency: args.dependency,
-    score: args.score,
     notes: args.notes,
   };
 }
 
-function findExistingRow(bodyRows, entry) {
-  const normalizedTitle = String(entry.title || '').trim();
-  const normalizedProject = normalizeProject(String(entry.project || '').trim());
-  if (!normalizedTitle || !normalizedProject) {
-    return -1;
+function findRow(bodyRows, entry) {
+  if (entry.task_id) {
+    const taskIdIndex = bodyRows.findIndex((row) => String(row[0] || '').trim() === entry.task_id);
+    if (taskIdIndex >= 0) {
+      return taskIdIndex;
+    }
   }
 
-  return bodyRows.findIndex((row) => {
-    const task = String(row[0] || '').trim();
-    const project = String(row[1] || '').trim();
-    return task === normalizedTitle && project === normalizedProject;
-  });
+  if (entry.title && entry.project_id) {
+    return bodyRows.findIndex((row) => String(row[1] || '').trim() === entry.title.trim() && String(row[2] || '').trim() === entry.project_id.trim());
+  }
+
+  return -1;
 }
 
-async function logProjectSyncPreview(context, projectName, eventDate, shouldWrite, applyStatusPhase, lifecycleProjectAllowlist, taskQueueRowOverride = null) {
-  const syncResult = await syncProjectFromTaskQueue({
-    context,
-    projectRef: projectName,
-    eventDate,
-    shouldWrite,
-    applyLifecycle: applyStatusPhase,
-    lifecycleProjectAllowlist,
-    taskQueueRowOverride,
-  });
+function nextTaskId(bodyRows) {
+  const ids = bodyRows
+    .map((row) => String(row[0] || ''))
+    .map((value) => /^TASK-(\d+)$/.exec(value))
+    .filter(Boolean)
+    .map((match) => Number.parseInt(match[1], 10));
+  const next = (ids.length > 0 ? Math.max(...ids) : 0) + 1;
+  return `TASK-${String(next).padStart(3, '0')}`;
+}
 
-  if (syncResult.skipped) {
-    console.log(`[INFO] Project sync skipped: ${syncResult.reason}`);
-    return;
+function buildRow(entry, rowNumber, existingRow = []) {
+  const taskId = entry.task_id || existingRow[0] || '';
+  const title = entry.title ?? existingRow[1] ?? '';
+  const projectId = entry.project_id ?? existingRow[2] ?? '';
+  if (!title || !projectId) {
+    throw new Error('Task title and project_id are required.');
+  }
+  if (!CANONICAL_PROJECTS.some((project) => project.project_id === projectId)) {
+    throw new Error(`project_id must be one of: ${CANONICAL_PROJECTS.map((project) => project.project_id).join(', ')}`);
   }
 
-  console.log(`[INFO] Project sync range : ${syncResult.targetRange}`);
-  console.log(`[INFO] Project progress   : ${syncResult.computedProgress}%`);
-  console.log(`[INFO] Project next action: ${syncResult.nextRow[7]}`);
-  console.log(`[INFO] Project blocker    : ${syncResult.nextRow[8]}`);
+  const priorityLabel = normalizeTaskPriorityLabel(entry.priority ?? existingRow[5] ?? '中');
+  const basePriority = priorityLabelToScore(priorityLabel);
 
-  if (syncResult.lifecycle.changed) {
-    if (syncResult.lifecycle.statusChanged) {
-      console.log(`[INFO] Status preview    : ${syncResult.project.status} -> ${syncResult.lifecycle.status}`);
-    }
-    if (syncResult.lifecycle.phaseChanged) {
-      console.log(`[INFO] Phase preview     : ${syncResult.project.phase} -> ${syncResult.lifecycle.phase}`);
-    }
-    console.log(`[INFO] Lifecycle note    : ${syncResult.lifecycle.reasons.join(' | ')}`);
-    if (!applyStatusPhase) {
-      console.log('[INFO] Lifecycle apply   : preview only. Pass --apply-status-phase and use the lifecycle allowlist to include status/phase in Projects writes.');
-    } else if (!syncResult.lifecyclePermission.enabled) {
-      console.log(`[INFO] Lifecycle apply   : blocked (${syncResult.lifecyclePermission.reason}).`);
-    } else if (!shouldWrite) {
-      console.log('[INFO] Lifecycle apply   : previewing status/phase because the lifecycle allowlist matched.');
-    }
-  } else {
-    console.log('[INFO] Lifecycle preview : no guarded status/phase change suggested.');
-  }
-
-  if (shouldWrite) {
-    console.log(`[OK] Project sync succeeded: ${syncResult.updateResult.updatedRange ?? syncResult.targetRange}`);
-    if (applyStatusPhase && syncResult.lifecycle.changed) {
-      if (syncResult.lifecycleWriteEnabled) {
-        console.log('[OK] Lifecycle apply   : status/phase changes were included in the Projects write.');
-      } else {
-        console.log(`[INFO] Lifecycle apply   : status/phase write was skipped (${syncResult.lifecyclePermission.reason}).`);
-      }
-    }
-  } else {
-    console.log('[INFO] Dry run mode. Project sync was previewed only.');
-  }
+  return [
+    taskId,
+    title,
+    projectId,
+    `=IF($C${rowNumber}="","",IFNA(VLOOKUP($C${rowNumber},Projects!$A$4:$B$20,2,FALSE),"未登録"))`,
+    normalizeTaskType(entry.type ?? existingRow[4] ?? '調査'),
+    priorityLabel,
+    String(basePriority),
+    `=IF($A${rowNumber}="","",N(IFNA(VLOOKUP($A${rowNumber},'優先度調整'!$A$4:$G$200,5,FALSE),0))+IF(IFNA(VLOOKUP($A${rowNumber},'優先度調整'!$A$4:$G$200,4,FALSE),"")="はい",100,0))`,
+    `=IF($A${rowNumber}="","",$G${rowNumber}+$H${rowNumber})`,
+    normalizeTaskStatus(entry.status ?? existingRow[9] ?? '未着手'),
+    normalizeAssignee(entry.assigned_to ?? existingRow[10] ?? 'AI'),
+    toIsoDate(entry.due_date ?? existingRow[11]),
+    toIsoDate(entry.completed_at ?? existingRow[12]),
+    entry.dependency ?? existingRow[13] ?? '',
+    entry.notes ?? existingRow[14] ?? '',
+  ];
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const context = await getAuthorizedContext(args);
-  const entry = pickEntry(args);
+  const entry = loadEntry(args);
   const isWrite = args.write === 'true';
-  const applyStatusPhase = args['apply-status-phase'] === 'true';
-  const lifecycleProjectAllowlist = resolveLifecycleAllowlist(args);
-
-  if (!entry.title) {
-    throw new Error('Task title is required. Pass --title or --json.');
-  }
-  if (!entry.project) {
-    throw new Error('Project is required. Pass --project or --json.');
-  }
 
   const data = await getSheetValues({
     spreadsheetId: context.spreadsheetId,
@@ -304,42 +122,51 @@ async function main() {
   });
 
   const rows = data.values ?? [];
-  ensureLiveHeaders(rows[2] ?? []);
+  ensureHeaders(rows[2] ?? []);
 
   const bodyRows = rows.slice(3).filter((row) => row.some((cell) => String(cell || '').trim() !== ''));
-  const existingIndex = findExistingRow(bodyRows, entry);
-  const targetRowNumber = existingIndex >= 0 ? existingIndex + 4 : bodyRows.length + 4;
-  const existingRow = existingIndex >= 0 ? bodyRows[existingIndex] : [];
-  const liveRow = buildLiveRow(entry, existingRow);
-  ensureRequiredTaskFields(liveRow);
-  const action = existingIndex >= 0 ? 'update' : 'append';
-  const eventDate = liveRow[7] || todayString();
+  const index = findRow(bodyRows, entry);
+  const targetRow = index >= 0 ? index + 4 : bodyRows.length + 4;
+  if (!entry.task_id && index < 0) {
+    entry.task_id = nextTaskId(bodyRows);
+  }
+  const row = buildRow(entry, targetRow, index >= 0 ? bodyRows[index] : []);
 
-  console.log(`[INFO] Action      : ${action}`);
-  console.log(`[INFO] Target row  : Task_Queue!A${targetRowNumber}:K${targetRowNumber}`);
-  console.log(`[INFO] Task        : ${liveRow[0]}`);
-  console.log(`[INFO] Project     : ${liveRow[1]}`);
-  console.log(`[INFO] Row payload : ${JSON.stringify(liveRow)}`);
+  console.log(`[INFO] Target row  : Task_Queue!A${targetRow}:O${targetRow}`);
+  console.log(`[INFO] Payload     : ${JSON.stringify(row)}`);
 
   if (!isWrite) {
-    console.log('[INFO] Dry run mode. Pass --write to update the live Task_Queue sheet.');
-    await logProjectSyncPreview(context, liveRow[1], eventDate, false, applyStatusPhase, lifecycleProjectAllowlist, {
-      rowNumber: targetRowNumber,
-      values: liveRow,
+    const preview = await syncProjectFromTaskQueue({
+      context,
+      projectRef: row[2],
+      eventDate: row[12] || row[11],
+      shouldWrite: false,
+      applyLifecycle: args['apply-status-phase'] === 'true',
     });
+    if (!preview.skipped) {
+      console.log(`[INFO] Project sync preview: ${JSON.stringify(preview.nextRow)}`);
+    }
+    console.log('[INFO] Dry run mode. Pass --write to update the live Task_Queue sheet.');
     return;
   }
 
   const result = await updateSheetValues({
     spreadsheetId: context.spreadsheetId,
     sheetName: 'Task_Queue',
-    range: `A${targetRowNumber}:K${targetRowNumber}`,
-    values: [liveRow],
+    range: `A${targetRow}:O${targetRow}`,
+    values: [row],
     accessToken: context.accessToken,
   });
 
-  console.log(`[OK] Task_Queue ${action} succeeded: ${result.updatedRange ?? `Task_Queue!A${targetRowNumber}:K${targetRowNumber}`}`);
-  await logProjectSyncPreview(context, liveRow[1], eventDate, true, applyStatusPhase, lifecycleProjectAllowlist);
+  await syncProjectFromTaskQueue({
+    context,
+    projectRef: row[2],
+    eventDate: row[12] || row[11],
+    shouldWrite: true,
+    applyLifecycle: args['apply-status-phase'] === 'true',
+  });
+
+  console.log(`[OK] Task_Queue row updated: ${result.updatedRange ?? `Task_Queue!A${targetRow}:O${targetRow}`}`);
 }
 
 main().catch((error) => {

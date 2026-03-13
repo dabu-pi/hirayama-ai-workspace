@@ -12,7 +12,7 @@
 | ディレクトリ | `workspace/ai-os/` |
 | 目的 | Claude・ChatGPT・GAS・GitHub・ダッシュボードを横断管理するコマンドセンター |
 | 開始日 | 2026-03-06 |
-| 最終更新 | 2026-03-12 (Run_Log live append and one full handoff loop verified) |
+| 最終更新 | 2026-03-13 (Dashboard を日本語中心の表示専用操作盤へ再設計) |
 
 ---
 
@@ -21,32 +21,31 @@
 | 項目 | 状態 |
 |---|---|
 | 分類 | In Progress |
-| フェーズ | Phase 2 - minimum automation (Run_Log / Ideas->Task / Task_Queue guard) |
-| 実装 | One full live operating loop has been verified end-to-end. |
-| コード | `de` now covers commit/push + Run_Log export/live append; Ideas->Task helper and Task_Queue validator are in place. |
-| ランタイム | Operating manually with live sheet verification. |
+| フェーズ | Phase 2 - Japanese daily operations dashboard |
+| 実装 | Dashboard / Projects / Task_Queue / Ideas / 優先度調整 の live 再設計を完了。 |
+| コード | `scripts/apply-dashboard-japanese-redesign.mjs` と `scripts/aios-dashboard-v2.mjs` で新スキーマ適用と再実行安全な復元を一括化。 |
+| ランタイム | Dashboard は表示専用。priority overrides are handled in `優先度調整`. |
 
 ---
 
 ## 現状認識
 
-- Phase 1 の構造整備タスクは完了済み
-- One `de`-based loop has already verified live Run_Log append and Dashboard Latest Run refresh.
-- The current policy remains: automate only the parts that tend to be missed in manual operation.
-- Phase 2 now includes Run_Log append, Ideas -> Task_Queue promotion, and incomplete Task_Queue row detection.
-- 実シート確認の結果、ローカル設計を正本として実シートを順に寄せる方針に決定
-- 実シートには `*_backup_20260308` タブが残っており、2026-03-08 時点で移行作業が行われた痕跡がある
-- `Run_Log` の正本は `system` ベース 10列に確定した
-- `de` から生成する TSV / JSON もこの 10列正本へ合わせた
+- Dashboard は `Projects` を案件名・リンクの正本にする表示専用シートへ寄せる
+- canonical project IDs は `JREC-01 / JBIZ-04 / HAIKI-05 / JWEB-03` の4件に絞る
+- `Task_Queue` は project 名直書きをやめ、`project_id` + 参照表示の案件名へ変更する
+- `優先度調整` シートを追加し、人が今日の優先順位を上書きできるようにする
+- `Ideas` は 10段階の段階管理へ更新する
+- 既存の英語 UI はバックアップタブへ退避し、日本語中心の daily-use layout へ移行する
 
 ---
 
-## 進行中
+## 完了済み
 
 | タスク | 内容 |
 |---|---|
-| end-to-end operation | The loop `change -> commit/push -> de -> Run_Log -> Dashboard Latest Run` has been verified once. |
-| manual cleanup | The known incomplete Task_Queue row was removed from the live sheet; validator should now stay at zero. |
+| dashboard redesign | Dashboard / Projects / Task_Queue / Ideas / Metrics / Lists を日本語中心の daily-use layout へ移行した。 |
+| live verification | live sheet で `総案件数=4 / 本番運用中=1 / 進行中=3 / 未完了タスク=7 / 保留アイデア数=1` を確認した。 |
+| rerun safety | 再適用時に Task_Queue / Ideas を current v2 または backup から復元できるようにした。 |
 
 ---
 
@@ -66,9 +65,9 @@
 ## 次のアクション
 
 1. Run `de` and `node scripts/validate-task-queue.mjs --warn-only` several more times to confirm the handoff flow stays stable.
-2. Increase real usage of `Ideas -> Task_Queue -> Projects`, then revisit allowlist expansion only if it becomes necessary.
-3. Expand Projects status/phase auto-reflection only when the current operating loop is stable enough to justify it.
-4. Keep KPI definitions unchanged and prioritize live-sheet operating stability over helper expansion.
+2. Increase real usage of `優先度調整` and `Ideas -> Task_Queue -> Projects`, then revisit automation scope only if it becomes necessary.
+3. Replace Drive search fallback URLs with direct sheet URLs for canonical projects when the remaining IDs become available.
+4. Consider narrowing Dashboard `最近の更新` to canonical project IDs only after observing daily use.
 
 ---
 
