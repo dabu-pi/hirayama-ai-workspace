@@ -1000,8 +1000,9 @@ function isSummaryLine_(description) {
     '小計', '消費税', '合計', '税込合計', '税額', '総額',
     '税込', '税抜', '内税', '外税',
   ];
-  // 全角スペース・ノーブレークスペースも除去してから部分一致
-  const d = String(description || '').replace(/[\u3000\u00a0]/g, ' ').trim();
+  // 半角スペース・全角スペース・ノーブレークスペース・タブ・コロン類を全除去してから部分一致
+  // 例: "消 費 税" → "消費税" / "小　　計" → "小計" / "合計：" → "合計"
+  const d = String(description || '').replace(/[\s\u3000\u00a0：:]/g, '');
   return SUMMARY_KEYWORDS.some(kw => d.includes(kw));
 }
 
@@ -1015,13 +1016,13 @@ function parseLinesJson_(linesJson) {
     throw new Error('lines_json must be a non-empty JSON array.');
   }
 
-  // デバッグ：各行の「全キー名」と description 値・除外判定を出力
-  // keys= が "description" 以外を示す場合、フィールド名不一致が集計行漏れの原因
+  // デバッグ：raw と normalized を並べて出力（空白混入による判定漏れを可視化）
   arr.forEach((line, i) => {
     const keys = Object.keys(line || {}).join(',');
-    const desc = String(line.description || '');
-    const excluded = isSummaryLine_(desc);
-    console.log(`parseLinesJson_[${i}] keys=[${keys}] desc="${desc}" → ${excluded ? '除外(集計行)' : '採用'}`);
+    const raw = String(line.description || '');
+    const normalized = raw.replace(/[\s\u3000\u00a0：:]/g, '');
+    const excluded = isSummaryLine_(raw);
+    console.log(`parseLinesJson_[${i}] keys=[${keys}] raw="${raw}" normalized="${normalized}" → ${excluded ? '除外(集計行)' : '採用'}`);
   });
 
   // 集計行（小計・消費税・合計・税込合計・税額・総額など）を freee 明細から除外する
