@@ -5,6 +5,7 @@
 
 > この文書を `project_id` / `project_name` / `main_sheet_name` / `local_folder` の命名ルールの正本として扱う。
 > 実システムへの反映は別フェーズで行い、今回はルール確定のみを扱う。
+> 2026-03-13 時点で対象4案件の命名 migration は local / live / push まで完了している。
 
 ---
 
@@ -86,7 +87,7 @@
 | `AIOS-06` | Hirayama AI OS | `Hirayama_AI_OS_Dashboard` | `workspace/ai-os` |
 | `AINV-07` | AI投資プロジェクト | `AI投資用スプレッドシート` | `workspace/ai-invest` |
 
-この基準表は命名ルールの正本であり、実システムへの反映順は別フェーズで管理する。
+この基準表は命名ルールの正本であり、2026-03-13 時点で対象4案件の実システム反映は完了している。
 
 ---
 
@@ -133,3 +134,15 @@
 - local folder 名変更
 - live data の `project_id` 変更
 - 既存ドキュメントの一括書換え
+
+---
+
+## Migration Status
+
+- Completed at: 2026-03-13
+- Completed commits:
+  - `560485b` `refactor: rename STR-04 to JBIZ-04`
+  - `8d2f81b` `refactor: rename GAS-01 to JREC-01`
+  - `d0f3343` `refactor: rename WST-05 to HAIKI-05`
+  - `be025f1` `refactor: rename WEB-03 to JWEB-03`
+- Detail log: `docs/PROJECT_NAMING_MIGRATION_LOG_2026-03-13.md`

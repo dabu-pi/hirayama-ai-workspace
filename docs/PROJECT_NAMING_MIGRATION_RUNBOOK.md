@@ -1,10 +1,20 @@
 ﻿# PROJECT_NAMING_MIGRATION_RUNBOOK.md
 
 最終更新: 2026-03-13
-ステータス: Prepared
+ステータス: Executed
 
 > `docs/PROJECT_NAMING_RULE.md` を正本とし、命名実変更フェーズへ入る直前に使う手順書。
-> 今回は手順整理のみを行い、コード・sheet・folder・live data の実変更は行わない。
+> 2026-03-13 にこの手順で 4 案件の命名移行を実施済み。詳細は `docs/PROJECT_NAMING_MIGRATION_LOG_2026-03-13.md` を参照する。
+
+---
+
+## 実施済みメモ
+
+- 実施日: 2026-03-13
+- local / live / push: 完了
+- `WST-05 -> HAIKI-05` では `ai-os/lifecycle-projects.json` の allowlist も更新済み
+- `WEB-03 -> JWEB-03` は完全一致置換で実施し、live `Run_Log` の残存1セルも補正済み
+- 実績詳細: `docs/PROJECT_NAMING_MIGRATION_LOG_2026-03-13.md`
 
 ---
 
