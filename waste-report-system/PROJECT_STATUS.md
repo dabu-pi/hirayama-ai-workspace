@@ -2,7 +2,7 @@
 
 ## 現在地
 
-- `WST-05` の正規ローカルフォルダを `workspace/waste-report-system` として作成済み
+- `HAIKI-05` の正規ローカルフォルダを `workspace/waste-report-system` として作成済み
 - 実装内容は未着手
 
 ## 完了済み
@@ -26,5 +26,5 @@
 
 ## 直近の重要判断
 
-- `workspace/waste-report-system` を `WST-05` の正規パスとして先に固定する
+- `workspace/waste-report-system` を `HAIKI-05` の正規パスとして先に固定する
 - 実データ移動や rename は後続フェーズで扱う

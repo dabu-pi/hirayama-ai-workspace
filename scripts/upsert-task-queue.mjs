@@ -30,7 +30,7 @@ const PROJECT_NAME_MAP = new Map([
   ['JREC-01', '柔整毎日記録システム'],
   ['WEB-03', '患者管理Webアプリ'],
   ['JBIZ-04', '接骨院経営戦略AI'],
-  ['WST-05', '廃棄物日報GAS'],
+  ['HAIKI-05', '廃棄物日報システム'],
   ['AIOS-06', 'Hirayama AI OS'],
   ['COMMON', 'workspace全体'],
 ]);

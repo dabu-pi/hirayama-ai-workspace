@@ -168,7 +168,7 @@
   - `Task_Queue!A15:K15`
   - `Projects!A8:J8`
   - `blocked (no lifecycle allowlist configured)`
-- Verified allowed preview with `--lifecycle-projects WST-05`:
+- Verified allowed preview with `--lifecycle-projects HAIKI-05`:
   - same suggestion (`保留 -> 進行中`, `構想 -> 設計`)
   - `previewing status/phase because allowlist matched`
 - Normal non-lifecycle sync still works on the existing path:
@@ -178,12 +178,12 @@
 ## 2026-03-12 Lifecycle default allowlist cue
 
 - Added tracked default allowlist file: `ai-os/lifecycle-projects.json`.
-- Current default allowlist contains only `WST-05`.
+- Current default allowlist contains only `HAIKI-05`.
 - `scripts/sync-project-from-taskqueue.mjs` and `scripts/upsert-task-queue.mjs` now read that file automatically when no CLI/env allowlist is passed.
 - Verified default-allowlist live apply:
   - `Task_Queue!A15:K15`
   - `Projects!A8:J8`
-  - `廃棄物日報GAS` moved from `保留 / 構想` to `進行中 / 設計`
+  - `廃棄物日報システム` moved from `保留 / 構想` to `進行中 / 設計`
 - If expanding lifecycle apply later, add projects to the tracked file deliberately instead of relying on ad hoc CLI flags.
 ## 2026-03-12 Metrics task-queue hardening cue
 

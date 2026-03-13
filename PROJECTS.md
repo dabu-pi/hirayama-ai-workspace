@@ -11,7 +11,7 @@
 2. [freee見積自動化プロジェクト](#2-freee見積自動化プロジェクト)
 3. [患者管理Webアプリ](#3-患者管理webアプリ)
 4. [hirayama接骨院経営戦略AI](#4-hirayama接骨院戦略ai)
-5. [廃棄物日報GASシステム（企画段階）](#5-廃棄物日報gasシステム企画段階)
+5. [廃棄物日報システム（企画段階）](#5-廃棄物日報システム企画段階)
 
 ---
 
@@ -203,7 +203,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 
 ---
 
-## 5. 廃棄物日報GASシステム（企画段階）
+## 5. 廃棄物日報システム（企画段階）
 
 **ディレクトリ:** `waste-report-system/`（**未作成**）
 **ステータス:** 企画段階 — 要件定義から着手
@@ -248,7 +248,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 freee見積自動化
   └─ 請求データ ──→ freee会計
 
-廃棄物日報GAS
+廃棄物日報システム
   └─ 独立システム（将来 freee連携の可能性）
 ```
 
@@ -262,7 +262,7 @@ freee見積自動化
 | 2 | freee見積自動化 | 業務効率化の即効性が高い |
 | 3 | 患者管理Webアプリ | 柔整GASとの連携基盤 |
 | 4 | 接骨院経営戦略AI | 中長期の経営強化 |
-| 5 | 廃棄物日報GAS | 要件定義待ち |
+| 5 | 廃棄物日報システム | 要件定義待ち |
 ## 2026-03-13 Projects / Sheets Management Update
 
 This section is the current management override for project-to-sheet alignment.
@@ -276,7 +276,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 | FREEE-02 | freee見積自動化 | `workspace/freee-automation` | `2024長谷川さん管理シート` | active | keep |
 | WEB-03 | 患者管理Webアプリ | `workspace/patient-management` | `整骨院 電子カルテ` | migration_target | archive_candidate |
 | JBIZ-04 | 接骨院経営戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
-| WST-05 | 廃棄物日報GAS | `workspace/waste-report-system` | `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）` | active_setup_pending | keep |
+| HAIKI-05 | 廃棄物日報システム | `workspace/waste-report-system` | `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）` | active_setup_pending | keep |
 | AINV-07 | AI投資プロジェクト | `workspace/ai-invest` | `AI投資用スプレッドシート` | registration_candidate | keep |
 
 Notes:
@@ -284,5 +284,5 @@ Notes:
   current source of truth.
 - `WEB-03` is no longer a current source of truth. Keep it as a migration /
   archive candidate until the remaining data handling is confirmed.
-- `WST-05` now adopts `workspace/waste-report-system` as the canonical local
+- `HAIKI-05` now adopts `workspace/waste-report-system` as the canonical local
   folder path, even if the local implementation is still being prepared.

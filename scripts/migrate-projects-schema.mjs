@@ -38,7 +38,7 @@ const DIRECTORY_ID_MAP = new Map([
   ['gas-projects/jyu-gas-ver3.1', 'JREC-01'],
   ['patient-management', 'WEB-03'],
   ['hirayama-jyusei-strategy', 'JBIZ-04'],
-  ['waste-report-system', 'WST-05'],
+  ['waste-report-system', 'HAIKI-05'],
   ['ai-os', 'AIOS-06'],
 ]);
 

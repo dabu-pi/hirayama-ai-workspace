@@ -167,7 +167,7 @@ Google スプレッドシート「Hirayama_AI_OS_Dashboard」は **Hirayama AI O
   main sheet is `【毎日記録】来店管理施術録ver3.1`.
 - `WEB-03` is no longer treated as an active project. Keep it visible only as a
   migration target to `JREC-01` and as an archive candidate.
-- `WST-05` should be managed with `workspace/waste-report-system` as the
+- `HAIKI-05` should be managed with `workspace/waste-report-system` as the
   canonical local folder path.
 - `AINV-07` remains a registration candidate until the Dashboard Projects row is
   added or confirmed.

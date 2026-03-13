@@ -1,11 +1,11 @@
-# WST-05 / 廃棄物日報GAS
+# HAIKI-05 / 廃棄物日報システム
 
-This folder is the canonical local workspace for `WST-05`.
+This folder is the canonical local workspace for `HAIKI-05`.
 
 ## Management baseline
 
-- `project_id`: `WST-05`
-- `project_name`: `廃棄物日報GAS`
+- `project_id`: `HAIKI-05`
+- `project_name`: `廃棄物日報システム`
 - `local_folder`: `workspace/waste-report-system`
 - `main_sheet_name`: `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）`
 - `sheet_status`: `active_setup_pending`

@@ -85,8 +85,8 @@ const PROJECT_METADATA = [
     evidence_note: 'Drive lookup confirmed this candidate sheet id and current_folder=My Drive. Duplicate check and target-folder move are still pending.',
   },
   {
-    project_id: 'WST-05',
-    project_name: '廃棄物日報GAS',
+    project_id: 'HAIKI-05',
+    project_name: '廃棄物日報システム',
     directory: 'waste-report-system',
     local_folder: 'workspace/waste-report-system',
     main_sheet_name: '【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）',

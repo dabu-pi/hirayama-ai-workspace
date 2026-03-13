@@ -147,7 +147,7 @@ Phase 2 では、ローカル設計を正本にしつつ、実運用しやすい
 ## 2026-03-12 Lifecycle default allowlist follow-up
 
 - Lifecycle apply can now be enabled by a tracked allowlist file (`ai-os/lifecycle-projects.json`) rather than only ad hoc CLI flags.
-- The initial tracked allowlist is intentionally limited to `WST-05`.
+- The initial tracked allowlist is intentionally limited to `HAIKI-05`.
 - This keeps the default behavior narrow while still allowing one real end-to-end lifecycle path to run without per-command allowlist typing.
 ## 2026-03-12 Metrics task-queue hardening follow-up
 

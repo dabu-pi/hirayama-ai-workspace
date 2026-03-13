@@ -204,7 +204,7 @@
   - `phase`: only for standard phases (`構想 / 設計 / 実装 / テスト / 運用 / 安定運用`), promoted forward from active task types (`設計 / 開発 / テスト / 実行`)
   - no downgrades, no custom-phase rewrites (`Phase1-4`, `PhaseB`, `Ops`)
 - `scripts/upsert-task-queue.mjs` dry-run now passes the pending Task row into the sync preview, so lifecycle suggestions can be inspected before writing.
-- Verified guarded dry-run preview with `廃棄物日報GAS`:
+- Verified guarded dry-run preview with `廃棄物日報システム`:
   - preview task target `Task_Queue!A15:K15`
   - preview project target `Projects!A8:J8`
   - suggested `保留 -> 進行中`, `構想 -> 設計`
@@ -222,7 +222,7 @@
   - `Task_Queue!A15:K15`
   - `Projects!A8:J8`
   - message: `blocked (no lifecycle allowlist configured)`
-- Verified allowed preview with `--lifecycle-projects WST-05`:
+- Verified allowed preview with `--lifecycle-projects HAIKI-05`:
   - same guarded suggestion (`保留 -> 進行中`, `構想 -> 設計`)
   - message: `previewing status/phase because allowlist matched`
 - Verified ordinary write path still works unchanged for non-lifecycle sync:
@@ -232,16 +232,16 @@
 ## 2026-03-12 Lifecycle default allowlist memo
 
 - Added tracked default allowlist file: `ai-os/lifecycle-projects.json`.
-- Initial allowed project set is intentionally tiny: `WST-05` only.
+- Initial allowed project set is intentionally tiny: `HAIKI-05` only.
 - `scripts/sync-project-from-taskqueue.mjs` and `scripts/upsert-task-queue.mjs` now read that file by default when no CLI/env allowlist is provided.
 - Verified default-file dry-run with no explicit allowlist args:
   - preview task target `Task_Queue!A15:K15`
   - preview project target `Projects!A8:J8`
-  - lifecycle apply became available because the default allowlist matched `WST-05`
+  - lifecycle apply became available because the default allowlist matched `HAIKI-05`
 - Verified live end-to-end apply with the default allowlist:
-  - `Task_Queue!A15:K15` appended `要件定義たたき台作成 / 廃棄物日報GAS / 設計 / 進行中`
+  - `Task_Queue!A15:K15` appended `要件定義たたき台作成 / 廃棄物日報システム / 設計 / 進行中`
   - `Projects!A8:J8` updated to `status = 進行中`, `phase = 設計`, `last_updated = 2026-03-12`, `next_action = 要件定義たたき台作成`
-- Next design choice: keep the tracked allowlist at `WST-05` only, or add one more low-risk project after a short observation period.
+- Next design choice: keep the tracked allowlist at `HAIKI-05` only, or add one more low-risk project after a short observation period.
 ## 2026-03-12 Metrics task-queue hardening memo
 
 - Hardened `scripts/apply-dashboard-metrics-fixes.mjs` so `Open Tasks` and `High Priority Open Tasks` ignore incomplete `Task_Queue` rows.
@@ -422,7 +422,7 @@
 - `WEB-03` is no longer an active source-of-truth project. It should stay in the
   management view only as `migration_target` / `archive_candidate` until data
   handling is closed.
-- `WST-05` now uses `workspace/waste-report-system` as the canonical
+- `HAIKI-05` now uses `workspace/waste-report-system` as the canonical
   `local_folder`, even before full implementation files are added.
 - `AINV-07` should remain visible as a Dashboard registration candidate.
 
