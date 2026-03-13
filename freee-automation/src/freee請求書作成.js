@@ -492,13 +492,14 @@ function freee_phase2_processPendingQuotations() {
         (res && res.quotation && res.quotation.id) ? res.quotation.id :
         (res && res.id) ? res.id : '';
 
-      // G列：見積作成日（freee見積URLをリンクとして付与）
+      // G列：見積作成日（freee請求書アプリの見積URLをリンクとして付与）
+      // IV API（/iv/quotations）で作成した見積書は invoice.freee.co.jp に属する
       const dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy/MM/dd');
       if (quotationId) {
-        // freee見積URL（https://secure.freee.co.jp/quotations/{id}）をHYPERLINKで設定
-        const freeeUrl = `https://secure.freee.co.jp/quotations/${quotationId}`;
+        const freeeUrl = `https://invoice.freee.co.jp/quotations/${quotationId}`;
         const safeUrl = freeeUrl.replace(/"/g, '""');
         sheet.getRange(rowIndex, CFG.COL_QUOTED_AT).setFormula(`=HYPERLINK("${safeUrl}","${dateStr}")`);
+        console.log(`G列リンク設定: id=${quotationId} / url=${freeeUrl}`);
       } else {
         sheet.getRange(rowIndex, CFG.COL_QUOTED_AT).setValue(dateStr);
       }
@@ -989,6 +990,9 @@ function getCompanyId_() {
 
 /**
  * 集計行判定：小計・消費税・合計などの集計項目を freee 明細から除外する
+ *
+ * 正規化：ASCII trim に加え全角スペース（U+3000）・ノーブレークスペース（U+00A0）も除去。
+ * マッチ：部分一致（includes）。前後に金額・括弧・空白が付いていても検出する。
  * @param {string} description 品目名
  * @returns {boolean} true なら集計行（除外対象）
  */
@@ -997,7 +1001,8 @@ function isSummaryLine_(description) {
     '小計', '消費税', '合計', '税込合計', '税額', '総額',
     '税込', '税抜', '内税', '外税',
   ];
-  const d = String(description || '').trim();
+  // 全角スペース・ノーブレークスペースも除去してから部分一致
+  const d = String(description || '').replace(/[\u3000\u00a0]/g, ' ').trim();
   return SUMMARY_KEYWORDS.some(kw => d.includes(kw));
 }
 
@@ -1007,8 +1012,17 @@ function parseLinesJson_(linesJson) {
     throw new Error('lines_json must be a non-empty JSON array.');
   }
 
+  // デバッグ：各行の description と除外判定を出力（集計行問題の調査用）
+  arr.forEach((line, i) => {
+    const desc = String(line.description || '');
+    const excluded = isSummaryLine_(desc);
+    console.log(`parseLinesJson_[${i}] desc="${desc}" → ${excluded ? '除外(集計行)' : '採用'}`);
+  });
+
   // 集計行（小計・消費税・合計・税込合計・税額・総額など）を freee 明細から除外する
   const filtered = arr.filter(line => !isSummaryLine_(String(line.description || '')));
+  console.log(`parseLinesJson_: ${arr.length}行 → 集計行除外後 ${filtered.length}行`);
+
   if (filtered.length === 0) {
     throw new Error('lines_json に有効な明細行がありません（集計行のみのため除外されました）。Q列を確認してください。');
   }
