@@ -12,7 +12,7 @@
 | ディレクトリ | `workspace/ai-os/` |
 | 目的 | Claude・ChatGPT・GAS・GitHub・ダッシュボードを横断管理するコマンドセンター |
 | 開始日 | 2026-03-06 |
-| 最終更新 | 2026-03-13 (Dashboard の運用仕上げ: canonical URL 確定 / 優先度調整確認 / 最近の更新整理) |
+| 最終更新 | 2026-03-13 (Dashboard の運用仕上げ: canonical URL 確定 / 優先度調整確認 / 最近の更新整理 / 表示レイアウト整形) |
 
 ---
 
@@ -49,6 +49,7 @@
 | direct URLs | canonical 4案件の `メインシートURL` を直接 URL へ確定し、Dashboard `開く` は `Projects!H` 参照であることを live 数式で確認した。 |
 | priority flow | `優先度調整` で `TASK-003` に「はい」を入れると `最終優先度 70 -> 170` となり Dashboard 先頭へ上がることを確認し、空欄へ戻して復元した。 |
 | latest updates | Dashboard `最近の更新` は `JREC-01 / JBIZ-04 / HAIKI-05 / JWEB-03` のみを表示する式へ更新し、FREEE-02 混在を解消した。 |
+| dashboard layout | Dashboard のみタイトル・説明・KPI・セクション見出しを結合し、一覧本体は非結合のまま列幅・行高・折り返し・配置・背景色・罫線を整えた。 |
 
 ---
 

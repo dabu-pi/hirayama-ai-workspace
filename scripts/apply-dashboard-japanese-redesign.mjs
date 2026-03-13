@@ -436,6 +436,405 @@ function buildDashboardRows() {
   ];
 }
 
+function rgb(r, g, b) {
+  return {
+    red: r / 255,
+    green: g / 255,
+    blue: b / 255,
+  };
+}
+
+function dashboardCellRange(sheetId, startRowIndex, endRowIndex, startColumnIndex, endColumnIndex) {
+  return {
+    sheetId,
+    startRowIndex,
+    endRowIndex,
+    startColumnIndex,
+    endColumnIndex,
+  };
+}
+
+function dashboardMergeRequests(sheetId) {
+  return [
+    dashboardCellRange(sheetId, 0, 1, 0, 14),
+    dashboardCellRange(sheetId, 2, 3, 0, 14),
+    dashboardCellRange(sheetId, 4, 5, 0, 2),
+    dashboardCellRange(sheetId, 5, 6, 0, 2),
+    dashboardCellRange(sheetId, 4, 5, 2, 4),
+    dashboardCellRange(sheetId, 5, 6, 2, 4),
+    dashboardCellRange(sheetId, 4, 5, 4, 6),
+    dashboardCellRange(sheetId, 5, 6, 4, 6),
+    dashboardCellRange(sheetId, 4, 5, 6, 8),
+    dashboardCellRange(sheetId, 5, 6, 6, 8),
+    dashboardCellRange(sheetId, 4, 5, 8, 10),
+    dashboardCellRange(sheetId, 5, 6, 8, 10),
+    dashboardCellRange(sheetId, 8, 9, 0, 5),
+    dashboardCellRange(sheetId, 8, 9, 7, 14),
+    dashboardCellRange(sheetId, 17, 18, 0, 6),
+  ].map((range) => ({
+    mergeCells: {
+      range,
+      mergeType: 'MERGE_ALL',
+    },
+  }));
+}
+
+function dashboardDimensionRequests(sheetId) {
+  const columnWidths = [170, 170, 110, 110, 110, 220, 24, 110, 190, 110, 110, 220, 90, 90];
+  const rowHeights = [
+    [0, 1, 42],
+    [2, 3, 52],
+    [4, 5, 28],
+    [5, 6, 42],
+    [8, 9, 30],
+    [9, 10, 34],
+    [10, 16, 34],
+    [17, 18, 30],
+    [18, 19, 34],
+    [19, 26, 40],
+  ];
+
+  const requests = columnWidths.map((pixelSize, index) => ({
+    updateDimensionProperties: {
+      range: {
+        sheetId,
+        dimension: 'COLUMNS',
+        startIndex: index,
+        endIndex: index + 1,
+      },
+      properties: { pixelSize },
+      fields: 'pixelSize',
+    },
+  }));
+
+  for (const [startIndex, endIndex, pixelSize] of rowHeights) {
+    requests.push({
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: 'ROWS',
+          startIndex,
+          endIndex,
+        },
+        properties: { pixelSize },
+        fields: 'pixelSize',
+      },
+    });
+  }
+
+  return requests;
+}
+
+function dashboardFormatRequests(sheetId) {
+  const ink = rgb(15, 23, 42);
+  const panel = rgb(241, 245, 249);
+  const accent = rgb(226, 232, 240);
+  const section = rgb(203, 213, 225);
+  const white = rgb(255, 255, 255);
+  const border = { style: 'SOLID', color: rgb(148, 163, 184) };
+
+  return [
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 0, 30, 0, 14),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: white,
+            horizontalAlignment: 'LEFT',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 10,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 0, 1, 0, 14),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: ink,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 16,
+              bold: true,
+              foregroundColor: white,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 2, 3, 0, 14),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: panel,
+            horizontalAlignment: 'LEFT',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 10,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 4, 5, 0, 10),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: accent,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 10,
+              bold: true,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 5, 6, 0, 10),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: white,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 16,
+              bold: true,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 8, 9, 0, 14),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: section,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 11,
+              bold: true,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 17, 18, 0, 6),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: section,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 11,
+              bold: true,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 9, 10, 0, 14),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: accent,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 10,
+              bold: true,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 18, 19, 0, 6),
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: accent,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 10,
+              bold: true,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 10, 16, 0, 14),
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: 'LEFT',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 10,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 19, 26, 0, 6),
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: 'LEFT',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP',
+            textFormat: {
+              fontFamily: 'Noto Sans JP',
+              fontSize: 10,
+              foregroundColor: ink,
+            },
+          },
+        },
+        fields: 'userEnteredFormat(horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 10, 16, 3, 5),
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: 'CENTER',
+          },
+        },
+        fields: 'userEnteredFormat.horizontalAlignment',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 10, 16, 7, 8),
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: 'CENTER',
+          },
+        },
+        fields: 'userEnteredFormat.horizontalAlignment',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 10, 16, 9, 11),
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: 'CENTER',
+          },
+        },
+        fields: 'userEnteredFormat.horizontalAlignment',
+      },
+    },
+    {
+      repeatCell: {
+        range: dashboardCellRange(sheetId, 10, 16, 12, 14),
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: 'CENTER',
+          },
+        },
+        fields: 'userEnteredFormat.horizontalAlignment',
+      },
+    },
+    {
+      updateBorders: {
+        range: dashboardCellRange(sheetId, 4, 6, 0, 10),
+        top: border,
+        bottom: border,
+        left: border,
+        right: border,
+        innerHorizontal: border,
+        innerVertical: border,
+      },
+    },
+    {
+      updateBorders: {
+        range: dashboardCellRange(sheetId, 9, 16, 0, 5),
+        top: border,
+        bottom: border,
+        left: border,
+        right: border,
+        innerHorizontal: border,
+        innerVertical: border,
+      },
+    },
+    {
+      updateBorders: {
+        range: dashboardCellRange(sheetId, 9, 16, 7, 14),
+        top: border,
+        bottom: border,
+        left: border,
+        right: border,
+        innerHorizontal: border,
+        innerVertical: border,
+      },
+    },
+    {
+      updateBorders: {
+        range: dashboardCellRange(sheetId, 18, 26, 0, 6),
+        top: border,
+        bottom: border,
+        left: border,
+        right: border,
+        innerHorizontal: border,
+        innerVertical: border,
+      },
+    },
+  ];
+}
+
 async function ensureSheetExists(context, metadata, title) {
   const found = (metadata.sheets || []).find((sheet) => sheet.properties?.title === title);
   if (found) {
@@ -700,6 +1099,18 @@ async function main() {
             ],
           },
         },
+      ],
+    });
+  }
+
+  if (dashboardSheetId !== undefined) {
+    await batchUpdateSpreadsheet({
+      spreadsheetId: context.spreadsheetId,
+      accessToken: context.accessToken,
+      requests: [
+        ...dashboardDimensionRequests(dashboardSheetId),
+        ...dashboardMergeRequests(dashboardSheetId),
+        ...dashboardFormatRequests(dashboardSheetId),
       ],
     });
   }
