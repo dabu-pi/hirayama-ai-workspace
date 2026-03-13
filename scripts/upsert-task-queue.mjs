@@ -25,6 +25,7 @@ const LIVE_HEADERS = [
 ];
 
 const PROJECT_NAME_MAP = new Map([
+  ['AINV-07', 'AI投資プロジェクト'],
   ['FREEE-02', 'freee見積自動化'],
   ['GAS-01', '柔整GASシステム'],
   ['WEB-03', '患者管理Webアプリ'],

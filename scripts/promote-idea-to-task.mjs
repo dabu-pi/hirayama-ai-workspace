@@ -56,6 +56,8 @@ const TASK_HEADERS = [
 ];
 
 const PROJECT_NAME_MAP = new Map([
+  ['AINV-07', 'AI投資プロジェクト'],
+  ['ai-invest', 'AI投資プロジェクト'],
   ['FREEE-02', 'freee見積自動化'],
   ['freee-automation', 'freee見積自動化'],
   ['GAS-01', '柔整GASシステム'],
