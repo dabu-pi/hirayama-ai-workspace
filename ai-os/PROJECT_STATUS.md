@@ -23,6 +23,24 @@
   - header cell hits = 0
   - formula hits = 0
 
+## 2026-03-14 Japanese dashboard label repair memo
+
+- live `Dashboard` シートの日本語ダッシュボード表示に文字化けが残っていたため、
+  `Dashboard!A1:N26` の式込みセルを直接監査した。
+- `Projects` シートは更新対象から除外し、live 読み戻しでも
+  `平山 AI OS - 案件マスター` の先頭行が未変更であることを確認した。
+- `Dashboard` 側で正常化した表示:
+  - `総案件数 / 本番運用中 / 進行中 / 未完了タスク / 保留アイデア数`
+  - `今日の優先タスク / 案件の現況`
+  - `タスク / 案件 / 状態 / 最終優先度 / 期限 / 段階 / 次アクション / 開く`
+  - `未設定`
+  - `最近の更新 / 日時 / 案件 / 実行元 / 内容 / 結果 / 次アクション`
+- live 読み戻し確認:
+  - `Dashboard!A5:I5` は日本語見出しで表示
+  - `Dashboard!M11:M17` は `開く`
+  - `Dashboard!N15:N17` は `未設定`
+- 再利用用に `scripts/repair-dashboard-japanese-labels.mjs` を追加した。
+
 ## 2026-03-13 Dashboard final polish memo
 
 - `Dashboard` の `開く / SPEC` は `Projects` 正本参照の `HYPERLINK()` に更新済み。
