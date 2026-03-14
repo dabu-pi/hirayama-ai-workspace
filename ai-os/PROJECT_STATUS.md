@@ -38,8 +38,30 @@
 - live 読み戻し確認:
   - `Dashboard!A5:I5` は日本語見出しで表示
   - `Dashboard!M11:M17` は `開く`
-  - `Dashboard!N15:N17` は `未設定`
+- `Dashboard!N15:N17` は `未設定`
 - 再利用用に `scripts/repair-dashboard-japanese-labels.mjs` を追加した。
+
+## 2026-03-14 Extra Projects metadata alignment memo
+
+- live `Projects` の extra 案件 3 件を canonical 日本語語彙へそろえた。
+  - `AINV-07`: `状態=構想`, `段階=構想`
+  - `AIOS-06`: `状態=進行中`, `段階=運用`
+  - `FREEE-02`: `状態=本番運用中`, `段階=運用`
+- `Projects` の `SPEC URL` を補完した。
+  - `AINV-07` → `ai-invest/INVESTMENT_POLICY.md`
+  - `AIOS-06` → `ai-os/spec.md`
+  - `FREEE-02` → `freee-automation/spec.md`
+- `AINV-07` は専用 `spec.md` が未整備のため、現時点では
+  `INVESTMENT_POLICY.md` を仕様相当ドキュメントとして `SPEC URL` に採用した。
+- live 読み戻し確認:
+  - `Projects!A8:M10` で 3 件の `状態 / 段階 / SPEC URL` を確認
+  - `Dashboard!H15:N17` で 3 件とも `開く / SPEC` 表示へ更新されたことを確認
+  - `Dashboard!M15:N17` の式は `Projects!H:I` 参照の `HYPERLINK()` のまま維持
+- `Metrics` 影響:
+  - `本番運用中` は `1 -> 2`
+  - `進行中` は `4` のまま
+  - `総案件数 / 未完了タスク / 保留アイデア数` は変更なし
+- 再利用用に `scripts/update-extra-projects-metadata.mjs` を追加した。
 
 ## 2026-03-13 Dashboard final polish memo
 
