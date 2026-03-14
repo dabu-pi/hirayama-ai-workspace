@@ -649,3 +649,22 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
   start with append-only GAS for `Run_Log`, keep other sheets out of scope, and
   treat `Projects` sync / auto-aggregation as follow-on decisions after the
   append path is stable.
+
+## 2026-03-14 Continuity window monitoring memo
+
+- Continuity-window mode is now active through `2026-03-22`.
+- Remaining human task is now narrow:
+  keep end-of-session `Run_Log` append coverage for every dashboard-affecting
+  session through `2026-03-22`, and if any session is intentionally excluded,
+  record that exception in `PROJECT_STATUS.md` the same day.
+- Current Phase 1 gate no longer needs a backfill decision for 2026-03-14
+  because the maintenance commit was already appended to live `Run_Log`.
+- Prepared docs update proposal for the `2026-03-22` switch:
+  - `DASHBOARD_MASTER_PLAN.md`: change Phase 1 from `進行中` to `完了`
+  - `spec.md`: mark the manual-flow establishment item complete
+  - `PROJECT_STATUS.md`: collapse the Phase 1 gate memo into a short completion
+    record with the continuity window outcome and the Phase 2 starting point
+- Phase 2 design memo stays intentionally small:
+  start with append-only GAS for `Run_Log`, require no writes to `Projects /
+  Task_Queue / Dashboard / Lists`, and treat automatic refresh/aggregation as a
+  later design step after append reliability is proven.
