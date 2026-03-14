@@ -631,3 +631,21 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
     current AIOS-only `Projects` handoff snapshot sync
   - auto-aggregation: formulas already cover current KPI totals, so the next
     automation value is scheduled refresh/alerting rather than more sheet writes
+
+## 2026-03-14 Run_Log backfill + gate update memo
+
+- Backfilled the 2026-03-14 dashboard/docs maintenance handoff to live
+  `Run_Log!A24:J24` as:
+  `AIOS-06 / docs: sync ai-os dashboard operations manuals / 5df7e44 / SUCCESS`.
+- Run_Log rule:
+  every dashboard-affecting commit must leave either one live `Run_Log` row in
+  the same session or an explicit documented exception in `PROJECT_STATUS.md`.
+- Phase 1 may switch from `進行中` to complete only after the continuity window
+  passes `2026-03-22` and all of these remain true:
+  live `Run_Log` stays on the 10-column schema, no unresolved docs-vs-live
+  mismatch remains, and recent dashboard-affecting sessions are all accounted
+  for by append or explicit exception.
+- Phase 2 starting assumption:
+  start with append-only GAS for `Run_Log`, keep other sheets out of scope, and
+  treat `Projects` sync / auto-aggregation as follow-on decisions after the
+  append path is stable.
