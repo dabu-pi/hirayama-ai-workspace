@@ -165,14 +165,43 @@ async function sheetsFetch(url, { accessToken, method = 'GET', body } = {}) {
   return response.json();
 }
 
-export async function getSpreadsheetMetadata({ spreadsheetId, accessToken }) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets(properties(sheetId,title,index,gridProperties))`;
+export async function getSpreadsheetMetadata({ spreadsheetId, accessToken, fields } = {}) {
+  const queryFields = fields || 'sheets(properties(sheetId,title,index,gridProperties))';
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=${encodeURIComponent(queryFields)}`;
   return sheetsFetch(url, { accessToken });
 }
 
-export async function getSheetValues({ spreadsheetId, sheetName, range = '1:3', accessToken }) {
+export async function getSheetValues({
+  spreadsheetId,
+  sheetName,
+  range = '1:3',
+  accessToken,
+  valueRenderOption,
+} = {}) {
   const encodedRange = encodeURIComponent(`${sheetName}!${range}`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}`;
+  const params = new URLSearchParams();
+  if (valueRenderOption) {
+    params.set('valueRenderOption', valueRenderOption);
+  }
+  const query = params.toString();
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}${query ? `?${query}` : ''}`;
+  return sheetsFetch(url, { accessToken });
+}
+
+export async function batchGetSheetValues({
+  spreadsheetId,
+  ranges,
+  accessToken,
+  valueRenderOption,
+} = {}) {
+  const params = new URLSearchParams();
+  for (const range of ranges || []) {
+    params.append('ranges', range);
+  }
+  if (valueRenderOption) {
+    params.set('valueRenderOption', valueRenderOption);
+  }
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params.toString()}`;
   return sheetsFetch(url, { accessToken });
 }
 

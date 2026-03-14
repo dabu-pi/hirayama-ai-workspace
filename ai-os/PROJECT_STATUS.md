@@ -3,6 +3,26 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-14 Mojibake tab cleanup memo
+
+- live `Hirayama AI OS Dashboard` を監査した結果、指定されていた
+  `å¹³å±± AI OS ãƒ€ãƒƒã‚·ãƒ¥ãƒœãƒ¼ãƒ‰` と
+  `å¹³å±± AI OS - æ¡ˆä»¶ãƒžã‚¹ã‚¿ãƒ¼`
+  は実タブ名ではなく、canonical `Dashboard` / `Projects` の `A1` 見出しセルの文字化けだった。
+- 正本タブは引き続き
+  `Dashboard / Projects / Task_Queue / Ideas / Run_Log / Metrics / Lists`
+  とする。
+- `Dashboard / Projects / Task_Queue / Ideas / Run_Log / Metrics` の監査範囲で、
+  上記文字化け文字列を参照する数式は 0 件だった。
+- 削除対象の実タブは存在しなかったため、
+  `archive_mojibake_*` への退避やタブ削除は未実施。
+- live 修正として `Dashboard!A1:N3` と `Projects!A1:M3` の
+  文字化け見出しだけを正常な日本語へ更新した。
+- 再確認結果:
+  - direct tab hits = 0
+  - header cell hits = 0
+  - formula hits = 0
+
 ## 2026-03-13 Dashboard final polish memo
 
 - `Dashboard` の `開く / SPEC` は `Projects` 正本参照の `HYPERLINK()` に更新済み。
