@@ -546,3 +546,23 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
 - Verified live snapshot range after the change: `Dashboard!H11:N18`.
 - `JBIZ-04` main sheet candidate was also confirmed on Drive as
   `1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc` in `My Drive`.
+
+## 2026-03-14 Projects vocabulary final alignment audit
+
+- Read back live `Projects!C4:D10` and confirmed all 7 rows use canonical
+  Japanese vocabulary for `状態 / 段階`:
+  `本番運用中 / 進行中 / 構想` and `構想 / 設計 / 実装 / テスト / 運用`.
+- Cross-checked live `Lists!A1:B8` as the source vocabulary and found no
+  `Projects` value outside the defined `案件状態 / 作業段階` set.
+- Audited live `Metrics!A1:B7` formulas. The counts use canonical labels only:
+  `COUNTIF(Projects!C4:C20,"本番運用中")`,
+  `COUNTIF(Projects!C4:C20,"進行中")`,
+  `COUNTIFS(Task_Queue!J4:J200,"<>完了")`,
+  `COUNTIF(Ideas!E4:E200,"保留")`.
+- Audited live `Dashboard!A5:I6` and `Dashboard!H10:N18` formulas and labels.
+  KPI labels, project snapshot `状態 / 段階`, and link fallback text
+  `開く / SPEC / 未設定` are aligned with the current canonical Japanese terms.
+- No live sheet value or formula update was needed in this pass.
+- Updated `scripts/apply-dashboard-japanese-redesign.mjs` so rerunning the
+  dashboard rebuild will keep the same correct Japanese labels instead of
+  reintroducing mojibake in `Projects` / `Dashboard` headings and link text.

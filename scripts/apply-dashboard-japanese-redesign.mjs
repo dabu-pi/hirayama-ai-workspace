@@ -218,8 +218,8 @@ function mergeProjectSeeds(...seedGroups) {
 
 function buildProjectsRows(seedMap) {
   const rows = [
-    ['å¹³å±± AI OS - æ¡ˆä»¶ãƒžã‚¹ã‚¿ãƒ¼'],
-    ['æ¡ˆä»¶åãƒ»ãƒªãƒ³ã‚¯ã®æ­£æœ¬ã€‚canonical 4æ¡ˆä»¶ã ã‘ã§ãªãã€�ç®¡ç†å¯¾è±¡ã¯ Projects ã«æ®‹ã™ã€‚'],
+    ['平山 AI OS - 案件マスター'],
+    ['案件名・リンクの正本。canonical 4案件だけでなく、管理対象は Projects に残す。'],
     PROJECT_HEADERS_V2,
   ];
 
@@ -279,17 +279,17 @@ function projectLookupFormula(rowNumber, columnIndex) {
 }
 
 function projectLinkFormula(rowNumber, columnIndex, label) {
-  return `=IF($H${rowNumber}="","",IFNA(IF(VLOOKUP($H${rowNumber},Projects!$A$4:$I$200,${columnIndex},FALSE)="","æœªè¨­å®š",HYPERLINK(VLOOKUP($H${rowNumber},Projects!$A$4:$I$200,${columnIndex},FALSE),"${label}")),"æœªè¨­å®š"))`;
+  return `=IF($H${rowNumber}="","",IFNA(IF(VLOOKUP($H${rowNumber},Projects!$A$4:$I$200,${columnIndex},FALSE)="","未設定",HYPERLINK(VLOOKUP($H${rowNumber},Projects!$A$4:$I$200,${columnIndex},FALSE),"${label}")),"未設定"))`;
 }
 
 function buildDashboardRows({ spreadsheetId, projectsSheetId }) {
   const projectsUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${projectsSheetId}`;
   const rows = [
-    ['å¹³å±± AI OS ãƒ€ãƒƒã‚·ãƒ¥ãƒœãƒ¼ãƒ‰'],
-    ['', '', '', '', '', '', '', '', '', '', '', '=HYPERLINK("' + projectsUrl + '","Projects ã‚’é–‹ã")', '', ''],
-    ['è¡¨ç¤ºå°‚ç”¨ã€‚æ¡ˆä»¶åãƒ»ãƒªãƒ³ã‚¯ã¯ Projects æ­£æœ¬ã‚’å‚ç…§ã—ã€�ä»Šæ—¥ã®å„ªå…ˆé †ä½ã¯ å„ªå…ˆåº¦èª¿æ•´ ã‚’åæ˜ ã™ã‚‹ã€‚'],
+    ['平山 AI OS ダッシュボード'],
+    ['', '', '', '', '', '', '', '', '', '', '', '=HYPERLINK("' + projectsUrl + '","Projects を開く")', '', ''],
+    ['表示専用。案件名・リンクは Projects 正本を参照し、今日の優先順位は 優先度調整 を反映する。'],
     [''],
-    ['ç·æ¡ˆä»¶æ•°', '', 'æœ¬ç•ªé‹ç”¨ä¸­', '', 'é€²è¡Œä¸­', '', 'æœªå®Œäº†ã‚¿ã‚¹ã‚¯', '', 'ä¿ç•™ã‚¢ã‚¤ãƒ‡ã‚¢æ•°', ''],
+    ['総案件数', '', '本番運用中', '', '進行中', '', '未完了タスク', '', '保留アイデア数', ''],
     [
       '=COUNTA(Projects!A4:A200)',
       '',
@@ -304,17 +304,17 @@ function buildDashboardRows({ spreadsheetId, projectsSheetId }) {
     ],
     [''],
     [''],
-    ['ä»Šæ—¥ã®å„ªå…ˆã‚¿ã‚¹ã‚¯', '', '', '', '', '', '', 'æ¡ˆä»¶ã®ç¾æ³', '', '', '', '', '', ''],
-    ['ã‚¿ã‚¹ã‚¯', 'æ¡ˆä»¶', 'çŠ¶æ…‹', 'æœ€çµ‚å„ªå…ˆåº¦', 'æœŸé™', '', '', 'project_id', 'æ¡ˆä»¶', 'çŠ¶æ…‹', 'æ®µéšŽ', 'æ¬¡ã‚¢ã‚¯ã‚·ãƒ§ãƒ³', 'é–‹ã', 'SPEC'],
-    ['=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({Task_Queue!B4:B,Task_Queue!D4:D,Task_Queue!J4:J,Task_Queue!I4:I,Task_Queue!L4:L},Task_Queue!A4:A<>"",Task_Queue!J4:J<>"' + DONE_TASK_STATUS + '"),4,FALSE,5,TRUE),5,5),"")', '', '', '', '', '', '', projectIdFormula(11), projectLookupFormula(11, 2), projectLookupFormula(11, 3), projectLookupFormula(11, 4), projectLookupFormula(11, 6), projectLinkFormula(11, 8, 'é–‹ã'), projectLinkFormula(11, 9, 'SPEC')],
+    ['今日の優先タスク', '', '', '', '', '', '', '案件の現況', '', '', '', '', '', ''],
+    ['タスク', '案件', '状態', '最終優先度', '期限', '', '', 'project_id', '案件', '状態', '段階', '次アクション', '開く', 'SPEC'],
+    ['=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({Task_Queue!B4:B,Task_Queue!D4:D,Task_Queue!J4:J,Task_Queue!I4:I,Task_Queue!L4:L},Task_Queue!A4:A<>"",Task_Queue!J4:J<>"' + DONE_TASK_STATUS + '"),4,FALSE,5,TRUE),5,5),"")', '', '', '', '', '', '', projectIdFormula(11), projectLookupFormula(11, 2), projectLookupFormula(11, 3), projectLookupFormula(11, 4), projectLookupFormula(11, 6), projectLinkFormula(11, 8, '開く'), projectLinkFormula(11, 9, 'SPEC')],
   ];
 
   for (let rowNumber = 12; rowNumber <= 20; rowNumber += 1) {
-    rows.push(['', '', '', '', '', '', '', projectIdFormula(rowNumber), projectLookupFormula(rowNumber, 2), projectLookupFormula(rowNumber, 3), projectLookupFormula(rowNumber, 4), projectLookupFormula(rowNumber, 6), projectLinkFormula(rowNumber, 8, 'é–‹ã'), projectLinkFormula(rowNumber, 9, 'SPEC')]);
+    rows.push(['', '', '', '', '', '', '', projectIdFormula(rowNumber), projectLookupFormula(rowNumber, 2), projectLookupFormula(rowNumber, 3), projectLookupFormula(rowNumber, 4), projectLookupFormula(rowNumber, 6), projectLinkFormula(rowNumber, 8, '開く'), projectLinkFormula(rowNumber, 9, 'SPEC')]);
   }
 
-  rows.push(['æœ€è¿‘ã®æ›´æ–°', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-  rows.push(['æ—¥æ™‚', 'æ¡ˆä»¶', 'å®Ÿè¡Œå…ƒ', 'å†…å®¹', 'çµæžœ', 'æ¬¡ã‚¢ã‚¯ã‚·ãƒ§ãƒ³', '', '', '', '', '', '', '', '']);
+  rows.push(['最近の更新', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+  rows.push(['日時', '案件', '実行元', '内容', '結果', '次アクション', '', '', '', '', '', '', '', '']);
   rows.push([`=IFERROR(ARRAY_CONSTRAIN(QUERY(FILTER({Run_Log!B4:B,Run_Log!D4:D,Run_Log!C4:C,Run_Log!E4:E,Run_Log!F4:F,Run_Log!J4:J},Run_Log!B4:B<>"",REGEXMATCH(Run_Log!D4:D,"^(${CANONICAL_PATTERN})$")),"select Col1,Col2,Col3,Col4,Col5,Col6 order by Col1 desc",0),6,6),"")`, '', '', '', '', '', '', '', '', '', '', '', '', '']);
 
   while (rows.length < DASHBOARD_VISIBLE_ROWS) {
