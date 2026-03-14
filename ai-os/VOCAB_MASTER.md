@@ -258,3 +258,39 @@
 |---|---|---|
 | 2026-03-08 | 初版作成。英語中心 → 日本語中心語彙への移行方針を定義。全9グループの対応表を作成 | Claude |
 | 2026-03-08 | **語彙移行完了。** Lists/Projects/Ideas/Task_Queue の全データを日本語に一括変換（GAS スクリプト v2 実行）。個別修正: Ideas B7 "Strategy AI" → "戦略"。Metrics シートの COUNTIF 数式・基準値ラベル（B3〜B10・D3〜D7・E3〜E7・G3〜G7・H3〜H7）を英語 → 日本語に更新。Dashboard サマリー（Production Systems・In Progress 等）が正常カウントされることを確認 | Claude |
+
+## 2026-03-14 Live canonical vocabulary snapshot
+
+The current live `Lists` sheet is the operational source of truth for the
+following values.
+
+### Projects / Dashboard
+
+- `案件状態`: `本番運用中 / 進行中 / 保留 / 構想 / アーカイブ`
+- `作業段階`: `構想 / 設計 / SPEC作成 / 実装 / 試作 / テスト / 運用`
+
+### Task_Queue
+
+- `担当`: `AI / 人 / AI+人`
+- `タスク状態`: `未着手 / 進行中 / 待機 / 保留 / 完了`
+- `タスク種別`: `実装 / テスト / 設計 / 調査 / 文書 / 運用 / 確認`
+- `優先度区分`: `最優先 / 高 / 中 / 低`
+
+### Ideas
+
+- `アイデア段階`:
+  `メモ / 概要あり / 検討中 / SPEC作成中 / SPEC完成 / フォルダ作成済み /
+  試作中 / 案件化済み / 保留 / アーカイブ`
+
+### Run_Log
+
+- `実行元`: `Codex / GitHub / GAS / Google Sheets / 人`
+- `result` remains English in live `Run_Log`:
+  `SUCCESS / PARTIAL / STOP / ERROR`
+
+### Alignment rule
+
+- `Projects.状態` must stay within `Lists.案件状態`
+- `Projects.段階` must stay within `Lists.作業段階`
+- `Dashboard` and `Metrics` formulas currently count the canonical labels
+  `本番運用中 / 進行中 / 完了 / 保留`

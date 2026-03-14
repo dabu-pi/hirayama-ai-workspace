@@ -566,3 +566,23 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
 - Updated `scripts/apply-dashboard-japanese-redesign.mjs` so rerunning the
   dashboard rebuild will keep the same correct Japanese labels instead of
   reintroducing mojibake in `Projects` / `Dashboard` headings and link text.
+
+## 2026-03-14 Operations manual sync memo
+
+- Read back live `Dashboard / Projects / Task_Queue / Metrics / Run_Log / Lists`
+  and synced the operator-facing docs to the current sheet state.
+- Updated `dashboard-schema.md` with the live rules for:
+  - `Projects` as the source ledger
+  - `Dashboard` as read-only reference view
+  - `開く / SPEC / 未設定` link behavior
+  - canonical Japanese status / phase / task vocabulary
+  - current `Metrics` counting conditions
+- Updated `spec.md` to clarify the current operating model:
+  `Projects` / `Task_Queue` / `Run_Log` may be maintained by curated helper
+  scripts, while `Dashboard` remains direct-edit prohibited and `Lists` remains
+  the vocabulary source sheet.
+- Updated `VOCAB_MASTER.md` with a clean live vocabulary snapshot derived from
+  `Lists!A1:I13` and the current `Run_Log` result conventions.
+- Updated `DASHBOARD_RESTART_CUE.md` with the latest verified live ranges,
+  current KPI values, current `Projects` status/phase rows, and the current
+  Dashboard link policy.
