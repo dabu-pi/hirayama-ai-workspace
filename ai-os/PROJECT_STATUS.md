@@ -3,6 +3,62 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-16 CURRENT BLOCKER — validate-task-queue スキーマ不一致
+
+### Google 疎通確認（コード変更なし・最小コマンドで切り分け）
+
+```
+node -e "import('./scripts/lib-sheets.mjs').then(async ({ getAuthorizedContext, getSpreadsheetMetadata }) => {
+  const ctx = await getAuthorizedContext({});
+  console.log('[OK] auth');
+  const meta = await getSpreadsheetMetadata({ spreadsheetId: ctx.spreadsheetId, accessToken: ctx.accessToken });
+  console.log('[OK] sheets:', (meta.sheets||[]).map(s=>s.properties.title));
+});"
+```
+
+**結果:**
+- `[OK] auth: access token obtained`
+- `[OK] spreadsheet reached`
+- `Task_Queue` タブ: **存在確認済み**
+- Google 側の問題は **なし**
+
+### ブロッカー根本原因
+
+`scripts/task-queue-validation-lib.mjs` の `LIVE_HEADERS` が旧英語スキーマを期待している:
+
+```js
+// task-queue-validation-lib.mjs（現行コード）
+LIVE_HEADERS = ['Task', 'Project', 'Type', 'Priority', 'Status', 'Assigned To', ...]
+```
+
+ライブ `Task_Queue` は 2026-03-13 再設計で日本語スキーマに変更済み:
+
+```
+// ライブシート 実際のヘッダー（行3）
+['task_id', 'タスク', 'project_id', '案件名', '種別', '優先度区分', '基本優先度', '優先度調整', '最終優先度', '状態', '担当', '期限', '完了日', '依存', 'メモ']
+```
+
+加えて、行1〜2 がタイトル・説明行であり、ヘッダーが行3 にある。
+
+### エラーメッセージ
+
+```
+[ERR] Task_Queue header row was not found inside Task_Queue!1:200
+```
+
+### 対応方針（コード変更を許可されたときに実施）
+
+1. `task-queue-validation-lib.mjs` の `LIVE_HEADERS` を現行日本語スキーマへ更新
+2. `REQUIRED_FIELDS` の列インデックスをライブ列順に合わせる（`タスク=1, 状態=9` 等）
+3. ヘッダー検索ロジックは `findHeaderRowIndex` が既にスキャン方式のため変更不要
+
+### 現在の運用上の扱い
+
+- `validate-task-queue.mjs --warn-only` は現時点では **常に ERR で終了** する
+- `de` フローでバリデーションを呼ぶ場合は、このブロッカーを解消してから統合すること
+- Google 疎通・認証・スプレッドシートアクセスは正常のため、他のスクリプトは影響なし
+
+---
 ## 2026-03-15 AIOS sheet notes live apply memo
 
 - `ai-os/config/aios06-sheet-notes.json` を使い、共通 engine で `Dashboard / Ideas / Lists` に live 反映を実施した。
