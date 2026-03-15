@@ -110,3 +110,9 @@
 - [SPEC.md](./SPEC.md) — 金額計算仕様
 - [PLAN.md](./PLAN.md) — 開発計画
 - [TESTCASES.md](./TESTCASES.md) — テストケース
+
+## 2026-03-15 完了メモ
+
+- 来院ヘッダ6列追加の最小実装は完了
+- `ensureSettingsRows_V3` の Apps Script エディタ手動実行で、`設定!E:I` 候補反映と来院ヘッダ6列反映を live 確認済み
+- `clasp run` / Execution API はコード不具合ではなく実行条件側の課題として別タスク保留
