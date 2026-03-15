@@ -136,7 +136,32 @@ const HEADER_COLS = {
   claimPay: "保険請求額",
   caseKey: "caseKey",
   caseIndex: "caseIndex",
+  accountingType: "会計区分",
+  selfPayMenuType: "自費メニュー区分",
+  selfPayAmount: "自費売上額",
+  chronicCandidateFlag: "慢性候補フラグ",
+  nextReservation: "次回予約あり",
+  firstVisitType: "新規区分",
 };
+
+/** ===== 設定シートの選択肢マスタ（E:I） ===== */
+const SETTINGS_CHOICE_MASTERS = [
+  { col: 5, label: "会計区分", values: ["保険のみ", "保険+自費", "自費のみ"] },
+  { col: 6, label: "自費メニュー区分", values: ["手技50分", "運動療法", "セルフケア", "ジム体験", "その他"] },
+  { col: 7, label: "慢性候補フラグ", values: ["TRUE", "FALSE"] },
+  { col: 8, label: "次回予約あり", values: ["TRUE", "FALSE"] },
+  // 新規区分は空欄運用を許容するため、マスタには実値のみ置く。
+  { col: 9, label: "新規区分", values: ["保険新規", "自費直新規", "再来"] },
+];
+
+/** ===== 来院ヘッダ入力候補（設定シート E:I を参照） ===== */
+const HEADER_CHOICE_VALIDATIONS = [
+  { headerName: HEADER_COLS.accountingType, settingsCol: 5, helpText: "設定シートE列の候補から選択します。" },
+  { headerName: HEADER_COLS.selfPayMenuType, settingsCol: 6, helpText: "設定シートF列の候補から選択します。" },
+  { headerName: HEADER_COLS.chronicCandidateFlag, settingsCol: 7, helpText: "設定シートG列の TRUE / FALSE を使います。" },
+  { headerName: HEADER_COLS.nextReservation, settingsCol: 8, helpText: "設定シートH列の TRUE / FALSE を使います。" },
+  { headerName: HEADER_COLS.firstVisitType, settingsCol: 9, helpText: "設定シートI列の候補から選択します。空欄のままでも保持できます。" },
+];
 
 /** ===== 患者マスタ列名 ===== */
 const MASTER_COLS = {
@@ -395,6 +420,68 @@ function ensureHeaderCols_(sheet, map, requiredList) {
   return buildHeaderColMap_(sheet);
 }
 
+function findLastFilledRowInColumn_(sheet, col, startRow) {
+  startRow = startRow || 1;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < startRow) return startRow - 1;
+
+  var vals = sheet.getRange(startRow, col, lastRow - startRow + 1, 1).getValues().flat();
+  for (var i = vals.length - 1; i >= 0; i--) {
+    if (String(vals[i] || "").trim()) return startRow + i;
+  }
+  return startRow - 1;
+}
+
+function ensureSettingsListColumn_(sheet, col, label, values) {
+  var currentLabel = String(sheet.getRange(1, col).getValue() || "").trim();
+  if (currentLabel !== label) {
+    sheet.getRange(1, col).setValue(label);
+  }
+
+  var lastFilled = findLastFilledRowInColumn_(sheet, col, 2);
+  var existing = new Set();
+  if (lastFilled >= 2) {
+    var currentValues = sheet.getRange(2, col, lastFilled - 1, 1).getValues().flat();
+    for (var i = 0; i < currentValues.length; i++) {
+      var v = String(currentValues[i] || "").trim();
+      if (v) existing.add(v);
+    }
+  }
+
+  var added = [];
+  for (var j = 0; j < values.length; j++) {
+    if (existing.has(values[j])) continue;
+    lastFilled = Math.max(lastFilled, 1) + 1;
+    sheet.getRange(lastFilled, col).setValue(values[j]);
+    added.push(values[j]);
+    existing.add(values[j]);
+  }
+  return added;
+}
+
+function setupHeaderChoiceValidation_V3_(settingsSh, headSh, headMap) {
+  if (!settingsSh || !headSh) return;
+
+  var targetRows = Math.max(headSh.getMaxRows() - 1, 1);
+  for (var i = 0; i < HEADER_CHOICE_VALIDATIONS.length; i++) {
+    var def = HEADER_CHOICE_VALIDATIONS[i];
+    var targetCol = headMap[def.headerName];
+    if (!targetCol) continue;
+
+    var lastFilled = findLastFilledRowInColumn_(settingsSh, def.settingsCol, 2);
+    if (lastFilled < 2) continue;
+
+    var sourceRange = settingsSh.getRange(2, def.settingsCol, lastFilled - 1, 1);
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInRange(sourceRange, true)
+      .setAllowInvalid(true)
+      .setHelpText(def.helpText)
+      .build();
+
+    headSh.getRange(2, targetCol, targetRows, 1).setDataValidation(rule);
+  }
+}
+
 /** ===== キー列で行検索 ===== */
 function findRowByKey_(sheet, map, keyHeaderName, keyValue) {
   var c = map[keyHeaderName];
@@ -602,6 +689,9 @@ function saveVisit_V3() {
   // 不足ヘッダーを自動追加（転帰列など新規追加列への対応）
   caseMap = ensureHeaderCols_(caseSh, caseMap, Object.values(CASE_COLS));
   var headMap = buildHeaderColMap_(headSh);
+  headMap = ensureHeaderCols_(headSh, headMap, Object.values(HEADER_COLS));
+  var settingsSh = ss.getSheetByName(SHEETS.settings);
+  if (settingsSh) setupHeaderChoiceValidation_V3_(settingsSh, headSh, headMap);
   ensureRequiredCols_(caseMap, Object.values(CASE_COLS), SHEETS.cases);
   ensureRequiredCols_(headMap, Object.values(HEADER_COLS), SHEETS.header);
 
@@ -867,6 +957,13 @@ function appendHeaderRow_V3_(headSh, headMap, obj) {
   setByName_(rowArr, headMap, HEADER_COLS.createdAt, obj.createdAt);
   setByName_(rowArr, headMap, HEADER_COLS.caseKey, obj.caseKey);
   setByName_(rowArr, headMap, HEADER_COLS.caseIndex, obj.caseIndex);
+  // 保険算定の「区分」とは別に、経営KPI用の会計区分を保持する。
+  setByName_(rowArr, headMap, HEADER_COLS.accountingType, obj.accountingType != null ? obj.accountingType : "");
+  setByName_(rowArr, headMap, HEADER_COLS.selfPayMenuType, obj.selfPayMenuType != null ? obj.selfPayMenuType : "");
+  setByName_(rowArr, headMap, HEADER_COLS.selfPayAmount, obj.selfPayAmount != null ? obj.selfPayAmount : "");
+  setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, obj.chronicCandidateFlag != null ? obj.chronicCandidateFlag : "");
+  setByName_(rowArr, headMap, HEADER_COLS.nextReservation, obj.nextReservation != null ? obj.nextReservation : "");
+  setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, obj.firstVisitType != null ? obj.firstVisitType : "");
 
   headSh.getRange(headSh.getLastRow() + 1, 1, 1, headSh.getLastColumn()).setValues([rowArr]);
 }
@@ -1434,6 +1531,9 @@ function exportHeaderFromCases_V3() {
 
   var caseMap = buildHeaderColMap_(caseSh);
   var headMap = buildHeaderColMap_(headSh);
+  headMap = ensureHeaderCols_(headSh, headMap, Object.values(HEADER_COLS));
+  var settingsSh = ss.getSheetByName(SHEETS.settings);
+  if (settingsSh) setupHeaderChoiceValidation_V3_(settingsSh, headSh, headMap);
 
   ensureRequiredCols_(caseMap, [CASE_COLS.visitKey, CASE_COLS.treatDate, CASE_COLS.patientId, CASE_COLS.kubun, CASE_COLS.injuryFixed, CASE_COLS.caseKey, CASE_COLS.caseNo], SHEETS.cases);
   ensureRequiredCols_(headMap, Object.values(HEADER_COLS), SHEETS.header);
@@ -1495,6 +1595,12 @@ function exportHeaderFromCases_V3() {
     setByName_(rowArr, headMap, HEADER_COLS.createdAt, now);
     setByName_(rowArr, headMap, HEADER_COLS.caseKey, caseKey);
     setByName_(rowArr, headMap, HEADER_COLS.caseIndex, caseIndex);
+    setByName_(rowArr, headMap, HEADER_COLS.accountingType, "");
+    setByName_(rowArr, headMap, HEADER_COLS.selfPayMenuType, "");
+    setByName_(rowArr, headMap, HEADER_COLS.selfPayAmount, "");
+    setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, "");
+    setByName_(rowArr, headMap, HEADER_COLS.nextReservation, "");
+    setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, "");
 
     out.push(rowArr);
     existed.add(visitKey);
@@ -2213,6 +2319,26 @@ function ensureSettingsRows_V3() {
     }
   }
 
+  // ===== E:I列: 来院ヘッダ追加項目の選択肢マスタ =====
+  var addedChoiceMasters = [];
+  for (var u = 0; u < SETTINGS_CHOICE_MASTERS.length; u++) {
+    var master = SETTINGS_CHOICE_MASTERS[u];
+    var addedValues = ensureSettingsListColumn_(sh, master.col, master.label, master.values);
+    addedChoiceMasters.push({
+      label: master.label,
+      values: addedValues,
+    });
+  }
+
+  var headerSetupMsg = "";
+  var headSh = ss.getSheetByName(SHEETS.header);
+  if (headSh) {
+    var headMap = buildHeaderColMap_(headSh);
+    headMap = ensureHeaderCols_(headSh, headMap, Object.values(HEADER_COLS));
+    setupHeaderChoiceValidation_V3_(sh, headSh, headMap);
+    headerSetupMsg = "【来院ヘッダ】6列の末尾追加と入力候補設定を確認しました";
+  }
+
   // 結果表示
   var msg = "設定シート初期セットアップ完了\n\n";
   if (addedKeys.length) {
@@ -2229,6 +2355,23 @@ function ensureSettingsRows_V3() {
     msg += "【追加した部位名候補（D列）】\n" + addedParts.join(", ");
   } else {
     msg += "【部位名候補】すべて登録済み";
+  }
+  msg += "\n\n";
+
+  var addedChoiceMsgs = [];
+  for (var v = 0; v < addedChoiceMasters.length; v++) {
+    var item = addedChoiceMasters[v];
+    if (item.values.length) {
+      addedChoiceMsgs.push(item.label + ": " + item.values.join(", "));
+    }
+  }
+  if (addedChoiceMsgs.length) {
+    msg += "【追加した選択肢マスタ（E:I）】\n" + addedChoiceMsgs.join("\n");
+  } else {
+    msg += "【選択肢マスタ（E:I）】すべて登録済み";
+  }
+  if (headerSetupMsg) {
+    msg += "\n\n" + headerSetupMsg;
   }
   SpreadsheetApp.getUi().alert(msg);
 }
