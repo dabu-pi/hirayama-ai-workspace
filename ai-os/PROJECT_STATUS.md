@@ -3,6 +3,32 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-16 de -AutoCleanupKnownTaskQueueRow 試運転確認（完了）
+
+### 実施手順
+
+1. **ベースライン**: `cleanup-known-taskqueue-row.mjs` dry-run → findings 0、no candidate 確認
+2. **inject**: `Task_Queue!A11` に `task_id=AUTO CLEANUP CONTROL TEST`（他列空）を注入
+3. **validate**: `validate-task-queue.mjs --warn-only` → 1 finding、`[INFO] Known row: Task_Queue!A11:O11` 確認
+4. **fail-after-backup**: `--write --fail-after-backup` → backup JSON 生成 → delete skip → exit 2 → 行は残存確認
+5. **de 経由実 cleanup**: `de -AutoCleanupKnownTaskQueueRow` → cleanup → backup → delete → revalidate 0 → commit / push
+6. **最終確認**: `validate-task-queue.mjs --warn-only` → 0 findings
+
+### 確認結果
+
+| 確認項目 | 結果 |
+|---|---|
+| cleanup-known-taskqueue-row.mjs が `de` 経由で呼ばれるか | ✅ PASS |
+| backup JSON が削除前に生成されるか | ✅ PASS (`logs/taskqueue/taskqueue_cleanup_backup_*.json`) |
+| 対象 1 行だけ削除されるか | ✅ PASS (Task_Queue!A11 のみ) |
+| 削除後 revalidate で 0 件になるか | ✅ PASS |
+| Run_Log / Projects 同期に副作用なし | ✅ PASS (cleanup は commit 前処理のため sync には非依存) |
+
+### 残リスク（解消済みに更新）
+
+旧「残リスク」の cleanup パス未確認は本試運転で解消。
+
+---
 ## 2026-03-16 RESOLVED — validate-task-queue スキーマ不一致（解消済み）
 
 ### Google 疎通確認（コード変更なし・最小コマンドで切り分け）
