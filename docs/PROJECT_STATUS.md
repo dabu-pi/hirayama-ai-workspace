@@ -4,6 +4,13 @@
 > Claude への引き継ぎ・再開プロンプトの冒頭にこのファイルの内容を貼る。
 
 ---
+## 2026-03-16 Git operation rule update
+
+- ルート `AGENTS.md` に、全プロジェクト共通の commit / push 運用ルールを追記した。
+- 原則として作業終了時は commit / push まで実施し、途中でも別PCで再開価値がある状態は WIP commit / push 対象とする。
+- PC 切り替え前には `git status` / 現在ブランチ / 未push有無を必ず確認する運用を明文化した。
+
+---
 ## 2026-03-13 Dashboard final polish memo
 
 - `Dashboard` の `開く / SPEC` は `Projects` 正本参照の `HYPERLINK()` に更新済み。
