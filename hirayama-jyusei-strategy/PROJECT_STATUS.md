@@ -8,6 +8,7 @@
 - 毎日記録ver3.1 から JBIZ-04 へ渡す月次7項目の転記先と月末運用手順の文書整理まで完了
 - live 本体への反映と warning-only 保護の適用まで完了
 - live 手入力値を local へ pull 同期する仕組みまで完了
+- live 各シート右側へ「このシートの役割」説明と、保険売上参照整理メモを反映完了
 - 3案比較結果を反映し、基準仮説を案C・到達目標を案Aに更新
 - 次は未確定数値を埋めて月次運用に入る段階
 
@@ -24,6 +25,15 @@
 - live 反映用スクリプト `scripts/apply-hirayama-kpi-live-update.mjs` を追加
 - 入力セル / 自動計算セル / 固定説明 / 仮値 / 警告 の色分け方針を追加
 - live 本体へ入力セル色分け、短い入力メモ、主要セルの warning-only 保護を反映
+- live 追記:
+  `全体ダッシュボード!I2:I5`
+  `ロードマップ進捗!K2:K5`
+  `保険・来院前提!I2:I5`
+  `保険・来院前提!I8:I15`
+  `数値前提!I2:I5`
+  `価格設定!P2:P5`
+  `KPI目標!I2:I5`
+  `未確定項目!L2:L5`
 - `scripts/apply-hirayama-input-design.mjs` を追加
 - `scripts/sync-hirayama-inputs.mjs` と `scripts/hirayama-input-sync-config.mjs` を追加
 - live の手入力値を `hirayama-jyusei-strategy/data/inputs_snapshot.json` へ保存する pull 同期方針を追加
@@ -64,6 +74,7 @@
 - 再構築後の主要シート一覧:
   `全体ダッシュボード / ロードマップ進捗 / 保険・来院前提 / 数値前提 / 価格設定 / KPI逆算 / KPI目標 / KPI実績履歴 / KPI逆算履歴 / 未確定項目`
 - live 本体 ID `1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc` で入力設計を反映済み
+- live 本体で役割説明と保険売上参照整理メモの表示を確認済み
 - live 確認:
   `価格設定!B18 = OK`
   `KPI逆算!C7 = OK`
