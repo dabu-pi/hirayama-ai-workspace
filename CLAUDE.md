@@ -259,6 +259,8 @@ C:\hirayama-ai-workspace\
 
 スプレッドシート（Google Sheets）の列構成・シート追加・数式設計・入力規則・注意書きを変更するときは、必ず以下を行う。
 
+> 説明文・注釈・更新メモ追記は [`docs/SHEET_NOTES_STANDARD.md`](./docs/SHEET_NOTES_STANDARD.md) を優先し、`common engine + config + 薄い wrapper` 方式で実施すること。
+
 **実施者ルール:**
 
 | ルール | 内容 |
