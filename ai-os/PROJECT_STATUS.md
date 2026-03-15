@@ -3,7 +3,7 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
-## 2026-03-16 CURRENT BLOCKER — validate-task-queue スキーマ不一致
+## 2026-03-16 RESOLVED — validate-task-queue スキーマ不一致（解消済み）
 
 ### Google 疎通確認（コード変更なし・最小コマンドで切り分け）
 
@@ -52,11 +52,18 @@ LIVE_HEADERS = ['Task', 'Project', 'Type', 'Priority', 'Status', 'Assigned To', 
 2. `REQUIRED_FIELDS` の列インデックスをライブ列順に合わせる（`タスク=1, 状態=9` 等）
 3. ヘッダー検索ロジックは `findHeaderRowIndex` が既にスキャン方式のため変更不要
 
-### 現在の運用上の扱い
+### 解消済み（2026-03-16）
 
-- `validate-task-queue.mjs --warn-only` は現時点では **常に ERR で終了** する
-- `de` フローでバリデーションを呼ぶ場合は、このブロッカーを解消してから統合すること
-- Google 疎通・認証・スプレッドシートアクセスは正常のため、他のスクリプトは影響なし
+- `scripts/task-queue-validation-lib.mjs` の `LIVE_HEADERS` / `REQUIRED_FIELDS` / `KNOWN_CLEANUP_MISSING` を日本語スキーマへ更新
+- `validate-task-queue.mjs --warn-only` → `[OK] No incomplete Task_Queue rows detected.` (exit 0) 確認済み
+- `formatTaskQueueRowRange` は `LIVE_HEADERS.length` ベースのため自動で 15列（`A:O`）に対応済み
+- `cleanup-known-taskqueue-row.mjs` はライブラリ経由のため変更不要・整合済み
+- `de` フローでのバリデーション統合は引き続き利用可能
+
+### 残リスク
+
+- `cleanup-known-taskqueue-row.mjs` のテスト（`-AutoCleanupKnownTaskQueueRow` での de 試運転）は次回セッションで確認推奨
+- `KNOWN_CLEANUP_MISSING` パターンは「col 0（task_id）のみ入力で他が全空」の 1 パターンに限定。他の部分不完全行はfindings に上がるが known candidate にはならない（設計通り）
 
 ---
 ## 2026-03-15 AIOS sheet notes live apply memo

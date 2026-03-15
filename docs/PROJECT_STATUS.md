@@ -4,13 +4,11 @@
 > Claude への引き継ぎ・再開プロンプトの冒頭にこのファイルの内容を貼る。
 
 ---
-## 2026-03-16 AIOS current blocker — validate-task-queue
+## 2026-03-16 AIOS validate-task-queue スキーマ修正（解消済み）
 
-- `validate-task-queue.mjs --warn-only` が `[ERR] Task_Queue header row was not found` で終了する。
-- Google 疎通・認証・スプレッドシートアクセスは **正常**（最小コマンドで切り分け済み）。
-- 原因: `task-queue-validation-lib.mjs` の `LIVE_HEADERS` が旧英語スキーマを期待しているが、ライブ `Task_Queue` は 2026-03-13 に日本語スキーマ（`task_id / タスク / project_id / ...`、ヘッダー行3）へ再設計済み。
-- 対応: `task-queue-validation-lib.mjs` の `LIVE_HEADERS` / `REQUIRED_FIELDS` を日本語スキーマに合わせて更新する（コード変更許可後）。
-- 詳細: `ai-os/PROJECT_STATUS.md` の `2026-03-16 CURRENT BLOCKER` セクション参照。
+- `task-queue-validation-lib.mjs` の `LIVE_HEADERS` / `REQUIRED_FIELDS` / `KNOWN_CLEANUP_MISSING` を日本語スキーマへ更新。
+- `validate-task-queue.mjs --warn-only` → `[OK] No incomplete Task_Queue rows detected.` (exit 0) 確認済み。
+- 詳細: `ai-os/PROJECT_STATUS.md` の `2026-03-16 RESOLVED` セクション参照。
 
 ---
 ## 2026-03-16 Git operation rule update
