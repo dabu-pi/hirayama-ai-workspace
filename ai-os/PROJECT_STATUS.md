@@ -3,6 +3,17 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-15 SHEET_NOTES_STANDARD AIOS dry-run memo
+
+- `docs/SHEET_NOTES_STANDARD.md` の横展開確認として、AIOS-06 用 config を追加した。
+- 今回は live 書き込みは行わず、共通 engine `scripts/sheets/apply-sheet-notes.mjs` で dry-run のみ実施。
+- 候補配置:
+  - `Dashboard!P2:P5`
+  - `Ideas!L2:L5`
+  - `Lists!K2:K5`
+- 対象は説明・運用メモ系のみ。`Projects / Run_Log / Metrics` 本体や数式変更は未実施。
+
+---
 ## 2026-03-14 Mojibake tab cleanup memo
 
 - live `Hirayama AI OS Dashboard` を監査した結果、指定されていた

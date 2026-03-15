@@ -1,0 +1,51 @@
+{
+  "spreadsheetId": "1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk",
+  "scanRange": "A1:Z40",
+  "defaultMinColumn": 8,
+  "defaultWidth": 320,
+  "colors": {
+    "title": "#D9EAF7",
+    "body": "#F7F7F7",
+    "border": "#B7B7B7"
+  },
+  "notes": [
+    {
+      "id": "dashboard-role",
+      "sheetName": "Dashboard",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "title": "このシートの役割",
+      "lines": [
+        "AIOS 全体の状況を表示専用で見るシートです。",
+        "Projects / Task_Queue / Run_Log の集約結果を確認します。",
+        "直接入力せず、正本シートの確認入口として使います。"
+      ]
+    },
+    {
+      "id": "ideas-role",
+      "sheetName": "Ideas",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "title": "このシートの役割",
+      "lines": [
+        "案件化前のアイデアを整理するシートです。",
+        "段階と次回確認日を揃えて、Task 化前の候補を残します。",
+        "思いつきの置き場ではなく、案件化前の整列用として使います。"
+      ]
+    },
+    {
+      "id": "lists-ops-memo",
+      "sheetName": "Lists",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "title": "運用メモ",
+      "titleBackground": "#FCE5CD",
+      "bodyBackground": "#FFF9E6",
+      "lines": [
+        "このシートは語彙と候補値の正本です。",
+        "状態・段階・優先度の表記揺れはここで防ぎます。",
+        "日常更新は人が行い、他シートは参照側として扱います。"
+      ]
+    }
+  ]
+}
