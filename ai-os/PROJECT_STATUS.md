@@ -3,6 +3,17 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-15 AIOS sheet notes live apply memo
+
+- `ai-os/config/aios06-sheet-notes.json` を使い、共通 engine で `Dashboard / Ideas / Lists` に live 反映を実施した。
+- 反映セル:
+  - `Dashboard!P2:P5`
+  - `Ideas!L2:L5`
+  - `Lists!K2:K5`
+- write 後の再読込で文面一致を確認し、再 dry-run でも同じセルへ upsert されることを確認した。
+- `Projects / Run_Log / Metrics` 本体、数式、表構造の変更は未実施。
+
+---
 ## 2026-03-15 SHEET_NOTES_STANDARD AIOS dry-run memo
 
 - `docs/SHEET_NOTES_STANDARD.md` の横展開確認として、AIOS-06 用 config を追加した。
