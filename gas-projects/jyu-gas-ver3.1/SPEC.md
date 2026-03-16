@@ -293,12 +293,14 @@
 
 ### GAS実装
 
-- `calcLongTermCoef_V3_` が受傷日・施術日から起算月と経過月数を算出
+- `calcLongTermCoef_V3_(injuryType, injuryDate, treatDate, monthlyVisitCounts)` が起算月・経過月数・頻回判定を一括算出
 - **75%**: 実装済み。起算月から5か月超で後療料・冷・温・電に0.75を適用（四捨五入）
-- **50%**: 未実装（月別来院頻度の集計が必要、将来対応）
+- **50%**: **実装済み（2026-03-17）**。monthsElapsed≥5 かつ起算月1〜5が全て月10回以上 → ltCoef=0.50
+  - 月別来院回数は `buildMonthlyVisitCounts_V3_(headerValues, headMap, patientId, caseKey, injuryDate)` で来院ヘッダから集計（caseKey単位、1visit=1回）
+  - fixture テスト TC16a/b/c（31/31 PASS 2026-03-17確認済み）
 - **骨折・不全骨折除外**: 実装済み。`injuryType` が骨折/不全骨折なら `ltCoef=1.0`
 - 初検日の基本料（施療料/整復料/固定料）と待機料は長期減額の対象外
-- 多部位逓減（§10）との併用: 長期75%を各料金に先に適用 → 多部位逓減係数を合計に適用
+- 多部位逓減（§10）との併用: 長期75%/50%を各料金に先に適用 → 多部位逓減係数を合計に適用
 
 ---
 

@@ -38,27 +38,33 @@
 
 ## 次アクション
 
-> 最終更新: 2026-03-17（28/28 PASS 確認済み — fixture テスト基盤 完了）
+> 最終更新: 2026-03-17（31/31 PASS 確認済み — 長期50%逓減 実装完了）
 
-### ✅ GASテスト基盤 完了（2026-03-17）
+### ✅ 長期50%逓減 実装完了（2026-03-17）
 
-- **28/28 PASS 確認済み**（TC01〜TC15b + M01〜M05）
-- TC12/TC13: 多部位逓減、TC14a/b: 長期75%逓減、TC15a/b: 不全骨折冷罨法境界 — すべてPASS
+- **31/31 PASS 確認済み**（TC01〜TC16c + M01〜M05）
+- TC16a（50%適用）/ TC16b（75%維持・頻回未達）/ TC16c（4か月目・条件未達）すべてPASS
+- `buildMonthlyVisitCounts_V3_`: 来院ヘッダから caseKey 単位の月別来院数を集計
+- `calcLongTermCoef_V3_`: 4引数化。monthlyVisitCounts 全月≥10 → 0.50、そうでなければ 0.75
+- 起算月ルール: 初検日<16日→当月起算、≥16日→翌月起算（ユーザー確認済み 2026-03-17）
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
-- `runFixtureSuite()` で一括実行可能（28 件）
+- `runFixtureSuite()` で一括実行可能（31 件）
 
 ### 未実装制度論点（優先順）
 
 | 優先 | 項目 | 状況 |
 |---|---|---|
-| 最高 | 長期逓減 50%（5か月超かつ月10回以上×5か月連続） | 未実装。月別来院頻度集計が必要。§11参照 |
+| 高 | 温罨法 初検日特例 | 未実装（SPEC.md §9.2 注記あり）。初検日に整復/固定を行った場合は温罨法算定不可 |
+| 中 | 長期継続理由書アラート | 未実装。5か月超で要確認 or 通知を出す運用ルール |
+| 中 | 特殊骨折制限（3部位目以降の制限等） | 未調査。骨折+多部位の制限条件があれば fixture で境界確認が必要 |
 | 中 | transferData への新5列反映 | 申請書データへの反映可否を検討 |
 | 低 | 既存データ一括再計算メニュー | 過去来院ヘッダへの新5列遡及反映 |
 
-### 次フェーズ
+### 次フェーズ候補
 
-1. **長期逓減50%実装** — 月別来院頻度集計ロジック追加 + TC16 fixture作成
-2. **申請書フロー実運用確認** — write_application.py の動作確認
+1. **温罨法初検日特例** — 最小実装。初検日かつ骨折/脱臼/打撲/捻挫の場合に温罨法=0。TC17相当
+2. **長期継続理由書アラート** — needCheck+理由記録のみ（既存安全弁の延長）。新規コード少
+3. **申請書フロー実運用確認** — write_application.py の動作確認
 
 ### 中長期
 
@@ -93,10 +99,10 @@
 
 ## テスト状況
 
-- テストケース文書: `TESTCASES.md` あり（TC01〜TC15b、M01〜M05 計28ケース）
+- テストケース文書: `TESTCASES.md` あり（TC01〜TC16c、M01〜M05 計31ケース）
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 28件（TC01〜TC15b + M01〜M05）
-- **28/28 PASS 確認済み（2026-03-17）**
+- fixture 件数: 31件（TC01〜TC16c + M01〜M05）
+- **31/31 PASS 確認済み（2026-03-17）**
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
@@ -153,13 +159,11 @@ clasp push
 
 | ファイル | 最終 GitHub commit | Apps Script 反映 |
 |---|---|---|
-| Ver3_amounts.js | `f073d4f`（2026-03-17）| **要 clasp push** |
-| Ver3_core.js | `f073d4f`（2026-03-17）| **要 clasp push** |
-| Ver3_test.js（新規）| 本コミット | **要 clasp push** |
+| Ver3_amounts.js | `9fc4fbd`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_core.js | `f073d4f`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_test.js | `9fc4fbd`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_transferData.js | `20fc562`（2026-03-16）| 要確認 |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
-
-> **次回作業開始前に必ず `clasp push` を実行して Apps Script を GitHub 正本に揃えること。**
 
 ### clasp status について
 

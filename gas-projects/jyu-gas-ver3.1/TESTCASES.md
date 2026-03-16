@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 31/31 PASS 確認待ち（2026-03-17）— TC16a/b/c（長期50%逓減）追加済み**
-> 28/28 は確認済み。TC16a/b/c + `calcLongTermCoef_V3_` 50%実装 + `buildMonthlyVisitCounts_V3_` 追加。clasp push 後に確認。
+> **fixture テスト: 31/31 PASS 確認済み（2026-03-17）— 長期50%逓減 実装完了**
+> TC16a（50%）/ TC16b（75%維持）/ TC16c（条件未達）全て PASS。`buildMonthlyVisitCounts_V3_` + `calcLongTermCoef_V3_` 50%分岐 実装済み。
 
 ---
 
