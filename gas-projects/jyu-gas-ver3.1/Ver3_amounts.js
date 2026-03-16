@@ -451,10 +451,10 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
 
 /* =======================================================================
    calcHeaderAmountsByVisitKey_V3_  ―  金額計算（来院ケースベース）
-   SPEC.md 完全準拠版
-   - 患者×月上限（初検料/再検料/相談支援料 各月1回）
-   - 30日ルール（区分はcalcEpisodeForCase_で確定済み）
-   - 再検料は当月初検の次回来院日のみ
+   SPEC.md §4-1 混在来院日課金優先順位に準拠
+   - 患者×月上限（初検料/相談支援料 各月1回）
+   - 再検料: caseKey単位（初検後最初の後療日のみ / kubun===再検で自動判定）
+   - 混在visit課金優先: hasBillableInitial > hasReexam > 0
    - 後療料は初検日以外の施術日（再検日は再検＋後療）
    - 冷温電は傷病種別×受傷日経過で算定可否判定
    - 安全弁：算定不可→金額0＋要確認TRUE＋理由記録
@@ -478,6 +478,7 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
   var monthlyStatus = getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, visitKey);
 
   var hasInit = (kubun1 === "初検" || kubun2 === "初検");
+  var hasReexam = (kubun1 === "再検" || kubun2 === "再検");
   var hasKoryo = (kubun1 === "再検" || kubun1 === "後療" || kubun2 === "再検" || kubun2 === "後療");
 
   // --- 初検料 ---
@@ -491,9 +492,12 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
     }
   }
 
+  // 実際に算定される初検があるか（抑制された初検は含めない）
+  var hasBillableInitial = (initFee > 0);
+
   // --- 相談支援料（初検料を算定する日のみ） ---
   var supportFee = 0;
-  if (initFee > 0) {
+  if (hasBillableInitial) {
     if (monthlyStatus.supportBilled) {
       supportFee = 0;
     } else {
@@ -501,28 +505,18 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
     }
   }
 
-  // --- 再検料（当月初検の次回来院日のみ＋月1回上限） ---
+  // --- 再検料（caseKey単位：初検後最初の後療日のみ）---
+  // kubun===再検 は calcEpisodeForCase_ が「エピソード内priorCount===1」
+  // = 同一caseKeyの初検後・最初の後療日と判定した結果
+  // 初検が算定される日（hasBillableInitial）は初検優先で再検料は立てない
   var reFee = 0;
-  if (hasKoryo && !hasInit) {
-    if (monthlyStatus.reBilled) {
-      reFee = 0;
-      reasons.push("再検料 算定不可（当月既算定）");  // MEDIUM-1: 抑制理由を記録
-    } else {
-      var isNextVisitAfterInit = checkIsNextVisitAfterMonthlyInit_(
-        headSh, headMap, caseSh, caseMap, patientId, monthKey, treatDate
-      );
-      if (isNextVisitAfterInit) {
-        reFee = settings.reFee;
-      }
-    }
+  if (hasReexam && !hasBillableInitial) {
+    reFee = settings.reFee;
   }
 
-  // --- 後療料（初検日以外に算定、再検日も算定） ---
-  var isInitDay = (initFee > 0);
-  var isSuppressedInit = (hasInit && monthlyStatus.initBilled);
-
   // --- 部位別明細金額（後療料＋冷温電） ---
-  var calcKoryoOnThisDay = !isInitDay || isSuppressedInit;
+  // hasBillableInitial=true なら初検日扱い（施療料）、false なら後療日扱い（後療料）
+  var calcKoryoOnThisDay = !hasBillableInitial;
   var effectiveKubun1 = calcKoryoOnThisDay ? (kubun1 === "初検" ? "後療" : kubun1) : kubun1;
   var effectiveKubun2 = calcKoryoOnThisDay ? (kubun2 === "初検" ? "後療" : kubun2) : kubun2;
 

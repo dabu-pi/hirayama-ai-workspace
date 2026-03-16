@@ -33,6 +33,10 @@
 - TC08: 冷罨法（脱臼 0-4日のみ）
 - TC09: 月内上限の再検抑制（別ケースでも再検は月1回）
 - TC10: 複合（同月別ケース＋加算算定不可＋要確認理由複数）
+- M01: 混在（case1=再検 / case2=初検抑制）→ 再検料410 / 初検料0
+- M02: 混在（case1=再検 / case2=初検抑制なし）→ 初検料1550 / 再検料0
+- M03: 混在（case1=後療 / case2=初検抑制）→ 初検料0 / 再検料0
+- M04: 混在（case1=初検 / case2=初検）→ 初検料1回のみ / 両ケース施療料
 
 ---
 
@@ -284,3 +288,95 @@
     - 冷罨法 算定不可（捻挫：受傷後9日）
 
 ---
+
+## 混在来院日テストケース（M01〜M04）
+
+> 前提: SPEC.md §4-1「混在来院日の課金優先順位」参照
+
+---
+
+## M01: 混在（case1=再検 / case2=初検抑制）
+
+### 入力
+- 患者: P001
+- 2026/02/03 caseKey=A 新規（初検）、捻挫、腰部、受傷日=2/03
+- 2026/02/05 caseKey=A 継続（再検）
+- 2026/02/10 caseKey=A 継続（後療）、caseKey=B 新規（同月別ケース初回、打撲、肩関節、受傷日=2/10）
+
+### 期待値（2/05 の visit: case1=再検 のみ）
+- kubun1=再検、kubun2=なし
+- 初検料=0、相談支援料=0、再検料=410
+- case1 後療料_捻挫=505
+- visitTotal = 410 + 505 = 915
+- 要確認=FALSE
+
+### 期待値（2/10 の visit: case1=後療 + case2=初検抑制）
+- kubun1=後療、kubun2=初検（抑制: 同月別ケース）
+- hasBillableInitial=false、hasReexam=false
+- 初検料=0、相談支援料=0、再検料=0
+- effectiveKubun2: 初検→後療（抑制変換）
+- case1 後療料_捻挫=505、case2 後療料_打撲=505
+- detailSum = 1010
+- visitTotal = 0 + 0 + 0 + 1010 = 1010
+- 要確認=TRUE（「同月別ケース初回 初検抑制」あり）
+
+---
+
+## M02: 混在（case1=再検 / case2=初検抑制なし）
+
+### 入力
+- 患者: P001
+- 2026/01/20 caseKey=A 新規（1月初検）、捻挫、腰部、受傷日=1/20
+- 2026/02/03 caseKey=A 継続（再検）、caseKey=B 新規（2月初検・抑制なし）、打撲、肩関節、受傷日=2/03
+
+### 期待値（2/03 の visit: case1=再検 + case2=初検抑制なし）
+- kubun1=再検、kubun2=初検
+- hasBillableInitial=true（case2の初検が算定）→ 初検優先
+- 初検料=1550、相談支援料=100、再検料=0（初検優先で再検なし）
+- effectiveKubun1: 再検のまま（calcKoryoOnThisDay=false）
+- effectiveKubun2: 初検のまま
+- case1 後療料_捻挫=505（kubun=再検）、case2 施療料_打撲=760（kubun=初検）
+- detailSum = 505 + 760 = 1265
+- visitTotal = 1550 + 0 + 100 + 1265 = 2915
+- 要確認=FALSE
+
+---
+
+## M03: 混在（case1=後療 / case2=初検抑制）
+
+### 入力
+- 患者: P001
+- 2026/02/01 caseKey=A 新規（初検）
+- 2026/02/03 caseKey=A 継続（再検）
+- 2026/02/10 caseKey=A 継続（後療）、caseKey=B 新規（同月別ケース初回、打撲、肩関節）
+
+### 期待値（2/10 の visit: case1=後療 + case2=初検抑制）
+- kubun1=後療、kubun2=初検（抑制）
+- hasBillableInitial=false、hasReexam=false（再検区分なし）
+- 初検料=0、相談支援料=0、再検料=0
+- effectiveKubun2: 初検→後療（抑制変換）
+- case1 後療料_捻挫=505、case2 後療料_打撲=505
+- visitTotal = 0 + 0 + 0 + 1010 = 1010
+- 要確認=TRUE（「同月別ケース初回 初検抑制」あり）
+
+---
+
+## M04: 混在（case1=初検 / case2=初検）
+
+> 制度根拠: JREC-01 §3-4「現に施術継続中に他の負傷が発生して初検を行った場合、初検料は合わせて1回とし、1回目の初検時に算定する」
+
+### 入力
+- 患者: P001
+- 2026/02/10 caseKey=A 新規（初検）、捻挫、腰部、受傷日=2/10
+             caseKey=B 新規（初検）、打撲、肩関節、受傷日=2/10
+- 当月 initBilled=false（2/10が当月初）
+
+### 期待値（2/10 の visit: case1=初検 + case2=初検）
+- kubun1=初検、kubun2=初検
+- hasInit=true、monthlyStatus.initBilled=false
+- 初検料=1550（1回のみ）、相談支援料=100、再検料=0
+- hasBillableInitial=true → calcKoryoOnThisDay=false → 両ケース初検日扱い
+- case1 施療料_捻挫=760（kubun=初検）、case2 施療料_打撲=760（kubun=初検）
+- detailSum = 760 + 760 = 1520
+- visitTotal = 1550 + 0 + 100 + 1520 = 3170
+- 要確認=FALSE
