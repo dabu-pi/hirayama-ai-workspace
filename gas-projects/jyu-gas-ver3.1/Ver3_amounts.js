@@ -439,18 +439,23 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
   // --- 温罨法 §9.2 ---
   var warm = 0;
   if (warmChk) {
-    var warmAllowed = false;
-    if (dayDiff != null) {
-      if (extType === "骨折" || extType === "不全骨折") {
-        warmAllowed = (dayDiff >= 7);
-      } else {
-        warmAllowed = (dayDiff >= 5);
-      }
-    }
-    if (warmAllowed) {
-      warm = settings.warm;
+    // 初検日特例（厚労省通知 P43）: 整復/施療を行う初検日は温罨法算定不可
+    if (kubun === "初検") {
+      reasons.push("温罨法 算定不可（初検日特例：" + (byomei || "不明") + "）");
     } else {
-      reasons.push("温罨法 算定不可（" + (byomei || "不明") + "：受傷後" + (dayDiff != null ? dayDiff : "?") + "日）");
+      var warmAllowed = false;
+      if (dayDiff != null) {
+        if (extType === "骨折" || extType === "不全骨折") {
+          warmAllowed = (dayDiff >= 7);
+        } else {
+          warmAllowed = (dayDiff >= 5);
+        }
+      }
+      if (warmAllowed) {
+        warm = settings.warm;
+      } else {
+        reasons.push("温罨法 算定不可（" + (byomei || "不明") + "：受傷後" + (dayDiff != null ? dayDiff : "?") + "日）");
+      }
     }
   }
 

@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 31/31 PASS 確認済み（2026-03-17）— 長期50%逓減 実装完了**
-> TC16a（50%）/ TC16b（75%維持）/ TC16c（条件未達）全て PASS。`buildMonthlyVisitCounts_V3_` + `calcLongTermCoef_V3_` 50%分岐 実装済み。
+> **fixture テスト: 33/33 PASS 確認待ち（2026-03-17）— TC17a/b（温罨法初検日特例）追加済み**
+> 31/31 は確認済み。TC17a/b + `calcOnePartAmount_V3_` 初検日特例実装。clasp push 後に確認。
 
 ---
 
@@ -46,6 +46,8 @@
 - TC16a: 長期50%逓減（monthsElapsed=5 + 全月10回以上）→ 505×0.50=253
 - TC16b: 長期75%維持（monthsElapsed=5 だが月3=9回<10）→ 505×0.75=379
 - TC16c: 長期条件未達（monthsElapsed=4）→ 減額なし=505
+- TC17a: 温罨法 初検日特例（初検日+dayDiff=6+warm要求 → warm=0, visitTotal=2410）
+- TC17b: 温罨法 後療日・通常算定（後療日+dayDiff=6+warm要求 → warm=75, rowTotalOut=585）
 - M01: 混在（case1=再検 / case2=初検抑制）→ 再検料410 / 初検料0 ✅ 実シート確認済み
 - M02: 混在（case1=再検 / case2=初検抑制なし）→ 初検料1550 / 再検料0 ✅ 実シート確認済み
 - M03: 混在（case1=後療 / case2=初検抑制）→ 初検料0 / 再検料0 ✅ 実シート確認済み

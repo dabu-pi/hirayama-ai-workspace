@@ -439,6 +439,32 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC17: 温罨法 初検日特例 ────────────────────────────────────────────────
+  // injuryDate=2026-03-11, treatDate=2026-03-17 → dayDiff=6（≥5 → 通常なら warm 可）
+  // TC17a: kubun=初検 → 初検日特例で warm=0, needCheck=true
+  // TC17b: kubun=後療 → 通常算定で warm=75, taiki=5
+  "TC17a": {
+    testId: "TC17a",
+    context: { patientId: "P001", treatDate: "2026-03-17",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-03-11", cold: false, warm: true, electro: false }
+      ]}
+    ]
+  },
+
+  "TC17b": {
+    testId: "TC17b",
+    context: { patientId: "P001", treatDate: "2026-03-17",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-03-11", cold: false, warm: true, electro: false }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -791,6 +817,31 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  // ── TC17: 温罨法 初検日特例 ────────────────────────────────────────────────
+  // dayDiff=6（≥5 → 通常なら warm=75）。TC17a は初検日特例で warm=0。
+  // shoryoNenZa=760, initFee=1550, supportFee=100 → visitTotal=2410
+  "TC17a": {
+    // 初検日 + warm要求 → 初検日特例で warm=0, needCheck=true
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 760, visitTotal: 2410,
+      needCheck: true, needCheckReason: "温罨法 算定不可（初検日特例：捻挫）",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検あり" },
+    details: [
+      { detailID: "P001_2026-03-17_C1_P1", kubun: "初検", baseOut: 760, coldOut: 0, rowTotalOut: 760 }
+    ]
+  },
+
+  "TC17b": {
+    // 後療日 + dayDiff=6 → 通常算定 warm=75, taiki=5 → rowTotalOut=585
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 585, visitTotal: 585,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-03-17_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 585 }
+    ]
+  },
+
 };
 
 
@@ -1045,6 +1096,8 @@ function runFixtureTC15b()  { showFixtureResult_("TC15b"); }
 function runFixtureTC16a()  { showFixtureResult_("TC16a"); }
 function runFixtureTC16b()  { showFixtureResult_("TC16b"); }
 function runFixtureTC16c()  { showFixtureResult_("TC16c"); }
+function runFixtureTC17a()  { showFixtureResult_("TC17a"); }
+function runFixtureTC17b()  { showFixtureResult_("TC17b"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }
