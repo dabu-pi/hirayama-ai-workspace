@@ -69,3 +69,6 @@ artifacts/
 # local secrets
 secrets/
 
+# 参考資料PDF（制度資料など。Git管理対象外・ローカル保持）
+gas-projects/**/*.pdf
+
