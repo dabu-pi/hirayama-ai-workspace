@@ -319,6 +319,33 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC12: 多部位逓減 2部位（係数1.0×2） ─────────────────────────────────
+  "TC12": {
+    testId: "TC12",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部",   byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false },
+        { bui: "肩関節", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  // ── TC13: 多部位逓減 3部位（1,2部位目×1.0、3部位目×0.6） ────────────────
+  "TC13": {
+    testId: "TC13",
+    context: { patientId: "P001", treatDate: "2026-03-02",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部",   byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false },
+        { bui: "肩関節", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false },
+        { bui: "前腕",   byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -559,6 +586,32 @@ var JREC01_EXPECTED_ = {
       case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
     details: [
       { detailID: "P001_2026-02-01_C1_P1", kubun: "初検", baseOut: 5200, coldOut: 0, rowTotalOut: 5200 }
+    ]
+  },
+
+  // ── TC12 ──────────────────────────────────────────────────────────────
+  "TC12": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1010, visitTotal: 1010,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
+      { detailID: "P001_2026-03-01_C1_P2", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  // ── TC13 ──────────────────────────────────────────────────────────────
+  // 3部位目: 505 * 0.6 = 303（Math.round）
+  "TC13": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1313, visitTotal: 1313,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-03-02_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
+      { detailID: "P001_2026-03-02_C1_P2", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
+      { detailID: "P001_2026-03-02_C1_P3", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 303 }
     ]
   },
 
@@ -806,6 +859,8 @@ function runFixtureTC08b()  { showFixtureResult_("TC08b"); }
 function runFixtureTC09()   { showFixtureResult_("TC09"); }
 function runFixtureTC10()   { showFixtureResult_("TC10"); }
 function runFixtureTC11()   { showFixtureResult_("TC11"); }
+function runFixtureTC12()   { showFixtureResult_("TC12"); }
+function runFixtureTC13()   { showFixtureResult_("TC13"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

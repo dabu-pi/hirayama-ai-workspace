@@ -1,0 +1,16 @@
+{
+  "testId": "TC12",
+  "description": "多部位逓減 2部位（1,2部位目は係数1.0）",
+  "ref": "TESTCASES.md#TC12",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-03-01",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "腰部",   "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": false, "warm": false, "electro": false },
+      { "bui": "肩関節", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": false, "warm": false, "electro": false }
+    ]}
+  ]
+}
