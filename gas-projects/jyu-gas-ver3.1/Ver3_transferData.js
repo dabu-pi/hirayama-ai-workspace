@@ -476,6 +476,11 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
       row["請求金額"] = "";
     }
 
+    // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
+    // 空レコード（caseKey=""・全金額0）の出力を抑制する。
+    // cs.caseKey が非空 or visitDays>0 のいずれかがあれば不整合検出のため出力を維持する。
+    if (caseNo === 2 && !cs.caseKey && detailAgg.case2.visitDays === 0) continue;
+
     rowsOut.push(row);
   }
 
