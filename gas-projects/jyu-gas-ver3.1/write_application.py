@@ -412,15 +412,13 @@ def write_application(template_path: str, json_data: dict, output_path: str):
                  if safe_num(row1.get(k)) is not None)
 
     # ===== 施療料: ラベル内金額 =====
-    shoryo_data = build_shoryo_array(row1, row2)
+    # Fix-S: 非ゼロ値のみに詰めてから連番で書き込む（傷病名と同じ詰め寄せ方式）
+    shoryo_data = [v for v in build_shoryo_array(row1, row2) if safe_int(v) is not None]
     for i, val in enumerate(shoryo_data):
         if i >= len(SHORYO_CELLS):
             break
-        n = safe_int(val)
-        if n is None:
-            continue
         sc = SHORYO_CELLS[i]
-        ws[sc["cell"]] = f"({sc['no']}){n:>10,}円"
+        ws[sc["cell"]] = f"({sc['no']}){safe_int(val):>10,}円"
         count += 1
 
     # 施療料計
@@ -431,15 +429,18 @@ def write_application(template_path: str, json_data: dict, output_path: str):
         count += 1
 
     # ===== 部位別明細 =====
+    # Fix-P: has_data=True の行だけ display_idx を進め、PART_ROWS と labels を詰めて参照する
     part_data = build_part_detail_array(row1, row2)
     labels = "⑴⑵⑶⑷⑸"
-    for i, d in enumerate(part_data):
-        if i >= len(PART_ROWS):
+    display_idx = 0
+    for d in part_data:
+        if display_idx >= len(PART_ROWS):
             break
-        m = PART_ROWS[i]
         if not d.get("has_data"):
             continue
-        put(m["label"], labels[i] if i < len(labels) else "")
+        m = PART_ROWS[display_idx]
+        put(m["label"], labels[display_idx] if display_idx < len(labels) else "")
+        display_idx += 1
         put_num(m["teiRate"], d.get("tei_rate"))
         put_num(m["koryoUnit"], d.get("koryo_unit"))
         put_num(m["koryoCnt"], d.get("koryo_cnt"))
