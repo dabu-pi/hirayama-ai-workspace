@@ -1,0 +1,32 @@
+{
+  "testId": "TC02",
+  "description": "最初の後療日（再検算定・加算なし）",
+  "ref": "TESTCASES.md#TC02",
+
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-05",
+    "monthlyStatus": {
+      "initBilled": true,
+      "reBilled": false,
+      "supportBilled": true
+    }
+  },
+
+  "cases": [
+    {
+      "caseNo": 1,
+      "kubun": "再検",
+      "parts": [
+        {
+          "bui": "腰部",
+          "byomei": "捻挫",
+          "injuryDate": "2026-02-03",
+          "cold": false,
+          "warm": false,
+          "electro": false
+        }
+      ]
+    }
+  ]
+}

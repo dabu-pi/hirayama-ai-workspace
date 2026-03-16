@@ -1,0 +1,46 @@
+{
+  "testId": "M02",
+  "description": "mixed: case1=再検 / case2=初検（抑制なし） → 初検優先で再検料0",
+  "ref": "TESTCASES.md#M02",
+
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-03",
+    "monthlyStatus": {
+      "initBilled": false,
+      "reBilled": false,
+      "supportBilled": false
+    }
+  },
+
+  "cases": [
+    {
+      "caseNo": 1,
+      "kubun": "再検",
+      "parts": [
+        {
+          "bui": "腰部",
+          "byomei": "捻挫",
+          "injuryDate": "2026-01-20",
+          "cold": false,
+          "warm": false,
+          "electro": false
+        }
+      ]
+    },
+    {
+      "caseNo": 2,
+      "kubun": "初検",
+      "parts": [
+        {
+          "bui": "肩関節",
+          "byomei": "打撲",
+          "injuryDate": "2026-02-03",
+          "cold": false,
+          "warm": false,
+          "electro": false
+        }
+      ]
+    }
+  ]
+}

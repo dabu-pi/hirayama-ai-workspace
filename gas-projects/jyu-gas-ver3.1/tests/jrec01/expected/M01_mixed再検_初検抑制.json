@@ -1,0 +1,35 @@
+{
+  "testId": "M01",
+
+  "header": {
+    "initFee": 0,
+    "reFee": 0,
+    "supportFee": 0,
+    "detailSum": 1010,
+    "visitTotal": 1010,
+    "needCheck": true,
+    "needCheckReason": "同月別ケース初回 初検抑制",
+    "billedKubun": "後療",
+    "mixedFlag": "Mixed",
+    "case1Summary": "case1:後療",
+    "case2Summary": "case2:初検(抑制)",
+    "chargeReason": "初検抑制かつ再検対象なし"
+  },
+
+  "details": [
+    {
+      "detailID": "P001_2026-02-10_C1_P1",
+      "kubun": "後療",
+      "baseOut": 505,
+      "coldOut": 0,
+      "rowTotalOut": 505
+    },
+    {
+      "detailID": "P001_2026-02-10_C2_P1",
+      "kubun": "後療",
+      "baseOut": 505,
+      "coldOut": 0,
+      "rowTotalOut": 505
+    }
+  ]
+}
