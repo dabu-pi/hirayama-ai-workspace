@@ -110,6 +110,8 @@
 - [SPEC.md](./SPEC.md) — 金額計算仕様
 - [PLAN.md](./PLAN.md) — 開発計画
 - [TESTCASES.md](./TESTCASES.md) — テストケース
+- [PROJECT_STATUS.md](./PROJECT_STATUS.md) — 進捗・完了事項・再開メモ
+- [SETUP.md](./SETUP.md) — 別PCセットアップ手順（write_application.py 実行環境構築）
 
 ## 2026-03-15 完了メモ
 
