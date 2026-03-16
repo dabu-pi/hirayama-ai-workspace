@@ -1020,16 +1020,20 @@ function upsertDetailRows_V3_(detailSh, detailMap, ctx) {
   var caseKey1 = buildCaseKey_(ctx.patientId, ctx.ep1.episodeStartDate, 1);
   var caseKey2 = buildCaseKey_(ctx.patientId, ctx.ep2.episodeStartDate, 2);
 
+  // 抑制変換後の実効区分（amounts に含まれない場合は生の kubun にフォールバック）
+  var ek1 = (amounts.effectiveKubun1 != null) ? amounts.effectiveKubun1 : ctx.kubun1;
+  var ek2 = (amounts.effectiveKubun2 != null) ? amounts.effectiveKubun2 : ctx.kubun2;
+
   // case1
   var c1Parts = amounts.details.case1Parts || [];
   for (var i = 0; i < c1Parts.length; i++) {
-    allParts.push({ caseNo: 1, part: c1Parts[i], kubun: ctx.kubun1, caseKey: caseKey1 });
+    allParts.push({ caseNo: 1, part: c1Parts[i], kubun: ek1, caseKey: caseKey1 });
   }
 
   // case2
   var c2Parts = amounts.details.case2Parts || [];
   for (var j = 0; j < c2Parts.length; j++) {
-    allParts.push({ caseNo: 2, part: c2Parts[j], kubun: ctx.kubun2, caseKey: caseKey2 });
+    allParts.push({ caseNo: 2, part: c2Parts[j], kubun: ek2, caseKey: caseKey2 });
   }
 
   var colCount = detailSh.getLastColumn();

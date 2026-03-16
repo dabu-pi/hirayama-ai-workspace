@@ -620,6 +620,9 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
     case1Summary: case1Summary,
     case2Summary: case2Summary,
     chargeReason: chargeReason,
+    // 抑制変換後の実効区分（upsertDetailRows_V3_ で detail の区分列に反映する）
+    effectiveKubun1: effectiveKubun1,
+    effectiveKubun2: effectiveKubun2,
   };
 }
 
