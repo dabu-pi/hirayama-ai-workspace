@@ -4,6 +4,17 @@
 > Claude への引き継ぎ・再開プロンプトの冒頭にこのファイルの内容を貼る。
 
 ---
+## 2026-03-16 de を全プロジェクト共通 handoff コマンドとして明文化（完了）
+
+- `de` は AIOS-06 専用から workspace 全体の共通終了コマンドへ正式移行（commit `d7462e8`）
+- `de -ProjectId <id>` で任意の既存案件 ID を指定し `Projects` シートへ最小同期（次アクション・最終更新日・補足の 3 列）
+- JREC-01 実 write で AIOS-06 以外でも動作確認済み（commit `c7e48c2`・`949746a`）
+- `Projects` シートが全案件台帳の正本であることを `CLAUDE.md` に明文化
+- 未登録 project_id は `[WARN] Skip: no auto-append`（安全設計維持）
+- env vars（`AIOS_DASHBOARD_SPREADSHEET_ID` / `AIOS_SERVICE_ACCOUNT_PATH`）が設定済みなら `de` 1コマンドで commit→push→Run_Log シート追記→Projects 同期まで完結
+- WIP commit / push 方針（別 PC 再開前提）を `CLAUDE.md` の `### 毎日の作業ルール` に追記
+
+---
 ## 2026-03-16 AIOS validate-task-queue スキーマ修正（解消済み）
 
 - `task-queue-validation-lib.mjs` の `LIVE_HEADERS` / `REQUIRED_FIELDS` / `KNOWN_CLEANUP_MISSING` を日本語スキーマへ更新。

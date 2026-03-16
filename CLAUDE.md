@@ -162,10 +162,14 @@ C:\hirayama-ai-workspace\
 | タイミング | コマンド |
 |---|---|
 | 作業開始 | `ds`（git pull + 状態確認） |
-| 作業終了 | `de "説明"`（commit + push） |
+| 作業終了（案件明示） | `de -ProjectId JREC-01 "説明"`（commit + push + Projects 最小同期） |
+| 作業終了（案件なし） | `de "説明"`（commit + push のみ） |
+| PC切替前 WIP 保存 | `de "WIP: 途中状態の説明"`（別 PC で再開できるように push まで実施） |
 | push せず一時保存 | `de -NoPush "説明"` |
 
 > **注意:** `ds` / `de` は PowerShell 用ショートカット。Claude Code / Claude Desktop の会話欄に入力してもコマンドとしては実行されない。
+
+> **WIP commit について:** 途中状態でも別PCで再開できる価値がある変更は `de` で push まで行う。壊れた状態・機密情報を含む場合のみ push を保留する。
 
 ### 判断基準
 
@@ -301,10 +305,54 @@ C:\hirayama-ai-workspace\
 
 - **通常作業ブランチは `feature/auto-dev-phase3-loop`** とする。新しいPCで作業を始めるときは `git checkout feature/auto-dev-phase3-loop` → `ds` の順で実行する。
 - **Claude Codeは作業完了後、基本的に `de` でcommitとpushまで行う**
-- 人間がやること: 作業開始 → `ds`、作業終了 → `de "説明"`（これだけ）
+- 人間がやること: 作業開始 → `ds`、作業終了 → `de -ProjectId <id> "説明"`（これだけ）
 - コミット前に認証情報が含まれていないか確認する（`gsc` / `de` が自動チェック）
 - `venv/`、`__pycache__/`、ログファイルはコミットしない
 - コミットメッセージは変更内容が明確にわかる日本語または英語で記述する
+
+### de コマンド — workspace 全プロジェクト共通の終了コマンド
+
+`de` は AIOS-06 専用ではなく、**workspace 全体で使う全プロジェクト共通の handoff コマンド**である。
+
+```
+de -ProjectId <project_id> "メッセージ"
+```
+
+**de が担う処理（この順で実行）:**
+
+| ステップ | 内容 | 条件 |
+|---|---|---|
+| 1. cleanup | Task_Queue の known incomplete row を削除 | `-AutoCleanupKnownTaskQueueRow` 指定時 |
+| 2. commit | `gsc`（git-safe-commit）経由で認証情報チェック + commit | 常時 |
+| 3. push | GitHub に push | `-NoPush` なし |
+| 4. Run_Log JSON/TSV | ローカルに `logs/runlog/` へ出力 | 常時 |
+| 5. Run_Log シート追記 | Dashboard の `Run_Log` シートへ直接書き込み | env vars 設定済み時 |
+| 6. Projects 最小同期 | `次アクション` / `最終更新日` / `補足` の 3列を更新 | ステップ5 成功 + `-ProjectId` 指定時 |
+
+**Projects シートへの同期ルール:**
+
+| 条件 | 動作 |
+|---|---|
+| `-ProjectId` に既存案件 ID を指定 | `Projects` シートの該当行の 3 列のみ上書き |
+| `-ProjectId` 未指定 | 同期スキップ（commit / push は通常通り実施） |
+| 未登録 project_id を指定 | `[WARN] Skip: no auto-append`（行の自動追加はしない） |
+| `-Result SUCCESS` 以外 | 同期スキップ |
+
+**`Projects` シートは全案件台帳の正本（single source of truth）**
+URL・状態・段階などの固定情報は手動で管理し、`de` は `次アクション` / `最終更新日` / `補足` の 3 列だけを最小更新する。
+
+**1コマンド完結（ステップ 5〜6 を含む）には環境変数の設定が必要:**
+
+```
+AIOS_DASHBOARD_SPREADSHEET_ID=<スプレッドシートID>
+AIOS_SERVICE_ACCOUNT_PATH=<サービスアカウントJSONパス>
+```
+
+環境変数が未設定の場合、ステップ 1〜4 は通常通り動作し、ステップ 5〜6 はスキップされる（エラーにならない）。その場合は `append-runlog-to-sheet.mjs` + `sync-project-from-runlog.mjs` を別途実行する。
+
+**別 PC での再開を前提とした WIP push:**
+途中状態でも別PCで再開できる価値のある変更は `de` で push まで行う。
+PC 切り替え前に `git status` / ブランチ / 未 push 有無を必ず確認する。
 
 ### GitHub同期ルール（ChatGPT連携前提）
 

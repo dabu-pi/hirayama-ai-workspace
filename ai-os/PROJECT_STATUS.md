@@ -3,6 +3,15 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-16 de 全プロジェクト共通化・ドキュメント明文化（完了）
+
+- `CLAUDE.md` に `de コマンド — workspace 全プロジェクト共通の終了コマンド` セクションを追加
+- `de -ProjectId <id>` の書き方・Projects 同期ルール・env vars 要件・WIP push 方針を明文化
+- `Projects シートは全案件台帳の正本` を CLAUDE.md に明記
+- `docs/PROJECT_STATUS.md` に de 共通化完了の記録を追加
+- 詳細: 下記 JREC-01 実証セクション参照
+
+---
 ## 2026-03-16 JREC-01 Projects sync 実証（完了）
 
 ### 手順
