@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 21/21 PASS 確認済み（2026-03-17）**
-> `runFixtureSuite()` を Apps Script エディタから実行。TC08 は koryoDakkyu=720 反映後に PASS 確認。
+> **fixture テスト: 22/22 PASS 確認済み（2026-03-17）— GASテスト基盤 完了**
+> `runFixtureSuite()` を Apps Script エディタから実行。TC11（初検+脱臼 seifukuDakkyu=5200）追加後も全件 PASS。
 
 ---
 
