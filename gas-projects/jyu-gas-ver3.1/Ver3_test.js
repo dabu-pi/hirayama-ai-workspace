@@ -372,6 +372,32 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC15: 不全骨折冷罨法 dayDiff境界（骨折/不全骨折: dayDiff<=6 OK, >=7 NG） ──
+  // injuryDate=2026-03-01
+  // TC15a: treatDate=2026-03-07 → dayDiff=6 → coldAllowed=true → cold=85
+  // TC15b: treatDate=2026-03-08 → dayDiff=7 → coldAllowed=false → cold=0, needCheck=true
+  "TC15a": {
+    testId: "TC15a",
+    context: { patientId: "P001", treatDate: "2026-03-07",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "不全骨折", injuryDate: "2026-03-01", cold: true, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC15b": {
+    testId: "TC15b",
+    context: { patientId: "P001", treatDate: "2026-03-08",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "不全骨折", injuryDate: "2026-03-01", cold: true, warm: false, electro: false }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -664,6 +690,30 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  // ── TC15: 不全骨折冷罨法 dayDiff境界 ──────────────────────────────────────
+  // base=720（koryoFuzenKossetu）、cold=85（dayDiff<=6で許可）
+  // TC15a: dayDiff=6 → coldAllowed=true → cold=85, rowTotalOut=805
+  // TC15b: dayDiff=7 → coldAllowed=false → cold=0, rowTotalOut=720, needCheck=true
+  "TC15a": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 805, visitTotal: 805,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-03-07_C1_P1", kubun: "後療", baseOut: 720, coldOut: 85, rowTotalOut: 805 }
+    ]
+  },
+
+  "TC15b": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 720, visitTotal: 720,
+      needCheck: true, needCheckReason: "冷罨法 算定不可（不全骨折：受傷後7日）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-03-08_C1_P1", kubun: "後療", baseOut: 720, coldOut: 0, rowTotalOut: 720 }
+    ]
+  },
+
 };
 
 
@@ -912,6 +962,8 @@ function runFixtureTC12()   { showFixtureResult_("TC12"); }
 function runFixtureTC13()   { showFixtureResult_("TC13"); }
 function runFixtureTC14a()  { showFixtureResult_("TC14a"); }
 function runFixtureTC14b()  { showFixtureResult_("TC14b"); }
+function runFixtureTC15a()  { showFixtureResult_("TC15a"); }
+function runFixtureTC15b()  { showFixtureResult_("TC15b"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

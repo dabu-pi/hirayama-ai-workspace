@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 22/22 PASS 確認済み（2026-03-17）— GASテスト基盤 完了**
-> `runFixtureSuite()` を Apps Script エディタから実行。TC11（初検+脱臼 seifukuDakkyu=5200）追加後も全件 PASS。
+> **fixture テスト: 24/24 PASS 確認待ち（2026-03-17）— TC15a/b（不全骨折冷罨法dayDiff境界）追加済み**
+> `runFixtureSuite()` を Apps Script エディタから実行して確認すること。22/22 は 2026-03-17 確認済み。TC15a/b 追加分は clasp push 後に確認。
 
 ---
 
@@ -41,6 +41,8 @@
 - TC13: 多部位逓減 3部位（3部位目 係数0.6→303、合計1313）
 - TC14a: 長期逓減 境界（monthsElapsed=4、減額なし→505）
 - TC14b: 長期逓減 75%適用（monthsElapsed=5、505×0.75=379）★50%逓減は未実装
+- TC15a: 不全骨折冷罨法 dayDiff=6（境界OK）→ base=720+cold=85=805
+- TC15b: 不全骨折冷罨法 dayDiff=7（境界NG）→ cold=0、needCheck=true
 - M01: 混在（case1=再検 / case2=初検抑制）→ 再検料410 / 初検料0 ✅ 実シート確認済み
 - M02: 混在（case1=再検 / case2=初検抑制なし）→ 初検料1550 / 再検料0 ✅ 実シート確認済み
 - M03: 混在（case1=後療 / case2=初検抑制）→ 初検料0 / 再検料0 ✅ 実シート確認済み

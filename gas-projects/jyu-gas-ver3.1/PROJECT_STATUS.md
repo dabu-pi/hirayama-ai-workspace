@@ -38,29 +38,30 @@
 
 ## 次アクション
 
-> 最終更新: 2026-03-17（fixture 22/22 PASS 確認・GASテスト基盤 完了）
+> 最終更新: 2026-03-17（TC15a/b fixture追加 — 24件 clasp push 後に確認待ち）
 
-### ✅ GASテスト基盤 完了（2026-03-17）
+### ✅ GASテスト基盤（フェーズ1〜3）完了（2026-03-17）
 
-- 22/22 PASS（TC01〜TC11 サブケース + M01〜M05）
-- 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5
-- `runFixtureSuite()` で一括実行可能
+- 22/22 PASS 確認済み（TC01〜TC11 サブケース + M01〜M05）
+- TC12/TC13: 多部位逓減 fixture 追加・PASS確認済み
+- TC14a/b: 長期逓減 fixture 追加・PASS確認済み
+- TC15a/b: 不全骨折冷罨法dayDiff境界 fixture 追加（clasp push後に確認予定）
+- 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
+- `runFixtureSuite()` で一括実行可能（現在 24 件）
 
 ### 未実装制度論点（優先順）
 
 | 優先 | 項目 | 状況 |
 |---|---|---|
-| 高 | 多部位逓減（3部位以上で後療料×0.6）| 未テスト。SPEC.md §多部位に記載あり |
-| 高 | 長期逓減（受傷後180日超で後療料減額）| 未テスト |
-| 中 | 骨折/不全骨折 冷罨法算定条件 | koryoFuzenKossetu=720 は確認済み。冷罨法dayDiff条件のfixture未整備 |
-| 低 | transferData への新5列反映 | 申請書データへの反映可否を検討 |
+| 高 | 長期逓減 50%（長期かつ頻回） | 未実装。月別来院頻度集計が必要。§11参照 |
+| 中 | transferData への新5列反映 | 申請書データへの反映可否を検討 |
 | 低 | 既存データ一括再計算メニュー | 過去来院ヘッダへの新5列遡及反映 |
 
-### 次フェーズ 最小実装候補（2〜3件）
+### 次フェーズ 最小実装候補
 
-1. **多部位逓減テスト** — TC12（後療 2部位）+ TC13（後療 3部位、逓減後×0.6）をfixture追加。コード変更なし、テストのみ
-2. **長期逓減テスト** — TC14（受傷後181日、後療料が逓減後単価）をfixture追加。現行コードが正しく逓減するか確認
-3. **骨折冷罨法fixture** — TC15a/b（不全骨折+冷、dayDiff境界）を追加してkoryoFuzenKossetu確認
+1. **TC15a/b PASS確認** — clasp push 後に `runFixtureSuite()` で 24/24 PASS を確認する
+2. **長期逓減50%実装** — 月別来院頻度集計が必要。未実装制度論点の最優先
+3. **申請書フロー実運用確認** — write_application.py の動作確認
 
 ### 中長期
 
@@ -95,13 +96,13 @@
 
 ## テスト状況
 
-- テストケース文書: `TESTCASES.md` あり（TC01〜TC11、M01〜M05 計22ケース）
+- テストケース文書: `TESTCASES.md` あり（TC01〜TC15b、M01〜M05 計24ケース）
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 22件（TC01〜TC11サブケース + M01〜M05）
-- **22/22 PASS 確認済み（2026-03-17）**
+- fixture 件数: 24件（TC01〜TC15b + M01〜M05）
+- **22/22 PASS 確認済み（2026-03-17）、TC15a/b 追加 → 24/24 clasp push 後に確認待ち**
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
-- 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5
+- 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
 
 ---
 
