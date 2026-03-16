@@ -506,6 +506,7 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
   if (hasKoryo && !hasInit) {
     if (monthlyStatus.reBilled) {
       reFee = 0;
+      reasons.push("再検料 算定不可（当月既算定）");  // MEDIUM-1: 抑制理由を記録
     } else {
       var isNextVisitAfterInit = checkIsNextVisitAfterMonthlyInit_(
         headSh, headMap, caseSh, caseMap, patientId, monthKey, treatDate
@@ -726,6 +727,10 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
   ensureRequiredCols_(maps.detail, Object.values(AM_DETAIL_COLS), SHEETS.detail);
   ensureRequiredCols_(maps.header, [
     HEADER_COLS.visitKey,
+    HEADER_COLS.initFee,
+    HEADER_COLS.reFee,
+    HEADER_COLS.supportFee,
+    HEADER_COLS.detailSum,
     HEADER_COLS.visitTotal,
     HEADER_COLS.windowPay,
     HEADER_COLS.claimPay,
@@ -793,13 +798,7 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
     detailSh.getRange(row1, maps.detail[AM_DETAIL_COLS.rowTotalOut]).setValue(part.total);
   }
 
-  // 窓口・請求
-  var unit = settings.roundUnit || 1;
-  var copayRaw = total * burden;
-  var copay = roundToUnit_V3_(copayRaw, unit);
-  var claim = total - copay;
-
-  // ヘッダ行を探して更新
+  // ヘッダ行を探す（detailSum更新前に参照してinitFee/reFee/supportFeeを取得）
   var headerValues = headerSh.getDataRange().getValues();
   var hkCol0 = maps.header[HEADER_COLS.visitKey] - 1;
   var headerRow0 = -1;
@@ -811,8 +810,24 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
   }
   if (headerRow0 === -1) throw new Error("来院ヘッダで visitKey=" + visitKey + " が見つかりません。");
 
+  // HIGH-1修正: initFee/reFee/supportFee はヘッダの既存値を保持し、
+  // detailSum のみ再計算した上で visitTotal を再構成する。
+  // SPEC §13: visitTotal = initFee + reFee + supportFee + detailSum
+  var headerRow = headerValues[headerRow0];
+  var existingInitFee   = Number(headerRow[maps.header[HEADER_COLS.initFee]   - 1] || 0);
+  var existingReFee     = Number(headerRow[maps.header[HEADER_COLS.reFee]     - 1] || 0);
+  var existingSupportFee = Number(headerRow[maps.header[HEADER_COLS.supportFee] - 1] || 0);
+  var detailSum = total;  // total = 明細合計（部位計）
+  var visitTotal = existingInitFee + existingReFee + existingSupportFee + detailSum;
+
+  // 窓口・請求
+  var unit = settings.roundUnit || 1;
+  var copay = roundToUnit_V3_(visitTotal * burden, unit);
+  var claim = visitTotal - copay;
+
   var hr1 = headerRow0 + 1;
-  headerSh.getRange(hr1, maps.header[HEADER_COLS.visitTotal]).setValue(total);
+  headerSh.getRange(hr1, maps.header[HEADER_COLS.detailSum]).setValue(detailSum);
+  headerSh.getRange(hr1, maps.header[HEADER_COLS.visitTotal]).setValue(visitTotal);
   headerSh.getRange(hr1, maps.header[HEADER_COLS.windowPay]).setValue(copay);
   headerSh.getRange(hr1, maps.header[HEADER_COLS.claimPay]).setValue(claim);
 
@@ -824,5 +839,5 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
     headerSh.getRange(hr1, maps.header[HEADER_COLS.needCheckReason]).setValue(reasons.join(";"));
   }
 
-  return { updatedRows: rows0.length, total: total, copay: copay, claim: claim };
+  return { updatedRows: rows0.length, total: visitTotal, copay: copay, claim: claim };
 }

@@ -142,6 +142,8 @@ const HEADER_COLS = {
   chronicCandidateFlag: "慢性候補フラグ",
   nextReservation: "次回予約あり",
   firstVisitType: "新規区分",
+  // HIGH-2: 同日2ケース活性時の第2ケースキー（通常は空）
+  caseKey2: "caseKey2",
 };
 
 /** ===== 設定シートの選択肢マスタ（E:I） ===== */
@@ -883,7 +885,11 @@ function saveVisit_V3() {
     caseKey: case1HasData
       ? buildCaseKey_(patientId, ep1.episodeStartDate, 1)
       : buildCaseKey_(patientId, ep2.episodeStartDate, 2),
-    caseIndex: case1HasData ? 1 : 2
+    caseIndex: case1HasData ? 1 : 2,
+    // HIGH-2: 同日に case1/case2 が両方アクティブの場合に第2ケースキーを保存
+    caseKey2: (case1HasData && case2HasData)
+      ? buildCaseKey_(patientId, ep2.episodeStartDate, 2)
+      : ""
   });
 
   // ④ 施術明細upsert
@@ -964,6 +970,8 @@ function appendHeaderRow_V3_(headSh, headMap, obj) {
   setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, obj.chronicCandidateFlag != null ? obj.chronicCandidateFlag : "");
   setByName_(rowArr, headMap, HEADER_COLS.nextReservation, obj.nextReservation != null ? obj.nextReservation : "");
   setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, obj.firstVisitType != null ? obj.firstVisitType : "");
+  // HIGH-2: 同日2ケース活性時に第2ケースキーを記録（通常空）
+  setByName_(rowArr, headMap, HEADER_COLS.caseKey2, obj.caseKey2 != null ? obj.caseKey2 : "");
 
   headSh.getRange(headSh.getLastRow() + 1, 1, 1, headSh.getLastColumn()).setValues([rowArr]);
 }
