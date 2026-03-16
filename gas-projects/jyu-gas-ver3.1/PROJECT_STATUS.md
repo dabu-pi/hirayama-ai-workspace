@@ -128,8 +128,8 @@ clasp push
 
 | ファイル | 最終 GitHub commit | Apps Script 反映 |
 |---|---|---|
-| Ver3_amounts.js | `5313f51`（2026-03-16）| **要 clasp push** |
-| Ver3_core.js | `80f8b0e`（2026-03-16）| 要確認 |
+| Ver3_amounts.js | `e931fe5`（2026-03-16）| **要 clasp push** |
+| Ver3_core.js | `5077920`（2026-03-16）| **要 clasp push** |
 | Ver3_transferData.js | `20fc562`（2026-03-16）| 要確認 |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 
@@ -196,3 +196,50 @@ JBIZ-04 には日次入力を持たせず、このブックを現場入力の正
 ### 参考 commit
 
 - `93b228e` — fix(JREC-01): 施療料・部位明細の番号付けを詰め連番に修正 (Fix-S / Fix-P)
+
+---
+
+## 2026-03-16 mixed case 表示改善 完了
+
+### 対象
+
+- `Ver3_amounts.js`（calcHeaderAmountsByVisitKey_V3_ に新5列生成ロジック追加）
+- `Ver3_core.js`（HEADER_COLS / appendHeaderRow_V3_ に5列配線追加）
+- `docs/JREC-01_mixed_case_display_memo.md`（設計判断メモ追加）
+
+### 実装内容
+
+来院ヘッダに以下5列を追加し、mixed case の説明性を強化した。
+
+| 列名 | 内容 |
+|---|---|
+| 算定区分 | 実際に課金した区分（初検/再検/後療/算定なし） |
+| Mixed区分 | 複数ケース同日かどうか（Mixed/通常） |
+| case1要約 | case1 の区分を短縮表示 |
+| case2要約 | case2 の区分と抑制状況を短縮表示 |
+| 課金理由要約 | なぜその算定区分になったかを短文で説明 |
+
+### 実シート確認結果
+
+| パターン | 確認結果 |
+|---|---|
+| M01（case1=再検 / case2=初検抑制）| ✅ OK |
+| M03（case1=後療 / case2=初検抑制）| ✅ OK |
+| M05（case1=後療 / case2=再検）| ✅ OK（e931fe5 で課金理由要約バグ修正後） |
+
+### バグ修正（e931fe5）
+
+- 原因: case1=後療 / case2=再検 の mixed で `initSuppressed=false` のため M01 条件を通過できず `else → "算定なし"` に落ちていた
+- 修正: `!hasBillableInitial && reFee>0 && isMixed && !initSuppressed` 分岐を追加し `"再検ありのため再検採用"` を返すようにした
+
+### 未対応範囲（今回スコープ外）
+
+- transferData / 帳票反映への新5列反映
+- 既存データの一括再計算
+- 区分 → 表示区分へのリネーム
+
+### 参考 commit
+
+- `ff7d0ab` — docs(JREC-01): mixed case 表示改善メモ追加
+- `5077920` — feat(JREC-01): 来院ヘッダ新5列実装（算定区分/Mixed区分/case要約）
+- `e931fe5` — fix(JREC-01): chargeReason に「後療+再検 mixed」分岐を追加

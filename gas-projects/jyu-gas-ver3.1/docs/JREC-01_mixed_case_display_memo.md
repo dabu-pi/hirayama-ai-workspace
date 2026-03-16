@@ -287,3 +287,34 @@ caseNo=1 の区分（kubun1）をそのまま要約にする。
 - mixed case 行全体の視認性改善
 - ヘッダ要約から帳票連動する設計
 - 既存データの再生成メニュー追加
+
+---
+
+## 12. 実シート確認結果（2026-03-16）
+
+### 実装 commit
+
+| commit | 内容 |
+|---|---|
+| `5077920` | 新5列実装（Ver3_amounts.js / Ver3_core.js） |
+| `e931fe5` | chargeReason バグ修正（後療+再検 mixed が「算定なし」になる問題） |
+
+### 確認済みパターン
+
+| パターン | 算定区分 | Mixed区分 | case1要約 | case2要約 | 課金理由要約 | 判定 |
+|---|---|---|---|---|---|---|
+| M01（case1=再検/case2=初検抑制） | 再検 | Mixed | case1:再検 | case2:初検(抑制) | 初検抑制のため再検採用 | ✅ |
+| M03（case1=後療/case2=初検抑制） | 後療 | Mixed | case1:後療 | case2:初検(抑制) | 初検抑制かつ再検対象なし | ✅ |
+| M05（case1=後療/case2=再検）| 再検 | Mixed | case1:後療 | case2:再検 | 再検ありのため再検採用 | ✅ |
+
+### §5 補足: M05 パターン（e931fe5 で追加）
+
+§5-5 の課金理由要約に以下の分岐を追加済み:
+
+```
+3b. !hasBillableInitial && reFee > 0 && mixedCase && !initSuppressed
+    → "再検ありのため再検採用"  // M05: case1=後療/case2=再検 など
+```
+
+これは M01 条件（initSuppressed=true）と M02（hasBillableInitial=true）のいずれにも該当しない、
+「初検抑制なし・再検あり・混在」パターンに対応する。
