@@ -30,7 +30,7 @@ var TEST_SETTINGS_ = {
   koryoNenZa:           505,
   koryoZasyo:           505,
   seifukuDakkyu:        0,    // TODO: 設定シートから取得
-  koryoDakkyu:          0,    // TODO: 設定シートから取得
+  koryoDakkyu:          720,  // 2026-03-17 設定シート確認済み
   koryoKossetu:         850,
   koryoFuzenKossetu:    720,
   cold:                 85,
@@ -496,24 +496,23 @@ var JREC01_EXPECTED_ = {
   },
 
   // ── TC08 ──────────────────────────────────────────────────────────────
-  // ⚠️ baseOut=0 は koryoDakkyu 未確認のプレースホルダ。設定シート確認後に更新すること
   "TC08a": {
-    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 85, visitTotal: 85,
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 805, visitTotal: 805,
       needCheck: false, needCheckReason: "",
       billedKubun: "後療", mixedFlag: "通常",
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
-      { detailID: "P001_2026-02-05_C1_P1", kubun: "後療", baseOut: 0, coldOut: 85, rowTotalOut: 85 }
+      { detailID: "P001_2026-02-05_C1_P1", kubun: "後療", baseOut: 720, coldOut: 85, rowTotalOut: 805 }
     ]
   },
 
   "TC08b": {
-    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 0, visitTotal: 0,
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 720, visitTotal: 720,
       needCheck: true, needCheckReason: "冷罨法 算定不可（脱臼：受傷後5日）",
       billedKubun: "後療", mixedFlag: "通常",
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
-      { detailID: "P001_2026-02-06_C1_P1", kubun: "後療", baseOut: 0, coldOut: 0, rowTotalOut: 0 }
+      { detailID: "P001_2026-02-06_C1_P1", kubun: "後療", baseOut: 720, coldOut: 0, rowTotalOut: 720 }
     ]
   },
 

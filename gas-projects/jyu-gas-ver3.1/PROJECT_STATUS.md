@@ -92,7 +92,7 @@
 - fixture 件数: 21件（TC01〜TC10各サブケース + M01〜M05）
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
-- 残課題: 設定シートで koryoDakkyu 確認 → TC08 baseOut プレースホルダ更新
+- koryoDakkyu=720（2026-03-17 設定シート確認済み）→ TC08a/TC08b expected 更新済み・偽陽性解消
 
 ---
 
