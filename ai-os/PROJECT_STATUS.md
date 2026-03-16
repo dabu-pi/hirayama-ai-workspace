@@ -3,9 +3,33 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
-## 2026-03-16 JREC-01 Projects sync 実証（結果は下記）
+## 2026-03-16 JREC-01 Projects sync 実証（完了）
 
-> この commit hash を JREC-01 Run_Log entry に使用する試運転セッション。
+### 手順
+
+1. `de -ProjectId JREC-01 -Message "test: JREC-01 Projects sync trial run" -Yes` → commit `c7e48c2` + ローカル JSON 生成
+2. `append-runlog-to-sheet.mjs --write` → Run_Log!A25 に JREC-01 行追記
+3. `sync-project-from-runlog.mjs --project-id JREC-01 --expected-commit c7e48c2 --write` → Projects!A4:M4 更新
+
+### 確認結果
+
+| 確認項目 | 結果 |
+|---|---|
+| JREC-01 で Projects 同期が実際に走るか | ✅ PASS — Projects!A4:M4 |
+| 更新対象が想定列だけか（次アクション・最終更新日・補足） | ✅ PASS — 他列保持確認済み |
+| 他 project 行（JBIZ-04〜FREEE-02）に変更なし | ✅ PASS — rows 5-10 全て無変更 |
+| Run_Log / commit / push の通常フローが壊れていないか | ✅ PASS — c7e48c2 正常 push |
+| AIOS-06 行に副作用なし | ✅ PASS — row 9 変更なし |
+
+### 更新後の JREC-01 行（Projects!A4:M4 抜粋）
+
+- 次アクション: `JREC-01 de Projects sync verified — next: JREC-01 TC01 manual run`
+- 最終更新日: `2026-03-16 10:06:52`
+- 補足: `... | latest_handoff=commit:c7e48c2;summary:test: JREC-01 Projects sync trial run;result:SUCCESS`
+
+### 補足: de からの自動 sync 発火条件
+
+`de` から Projects sync が自動発火するには `$canWriteRunLogSheet=true`（`AIOS_DASHBOARD_SPREADSHEET_ID` / `AIOS_SERVICE_ACCOUNT_PATH` 環境変数設定必須）。現在の Codex 環境ではこの環境変数が PowerShell から参照できないため、sync は `append-runlog-to-sheet.mjs` + `sync-project-from-runlog.mjs` を直接実行するフローで確認済み。env vars が正しく設定された PC では `de` 一発で全フローが動く設計。
 
 ---
 ## 2026-03-16 de Projects sync 一般化（AIOS-06 固定 → 全 project_id 対応）
