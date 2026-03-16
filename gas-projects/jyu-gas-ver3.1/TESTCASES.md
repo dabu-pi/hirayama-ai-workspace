@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 33/33 PASS 確認待ち（2026-03-17）— TC17a/b（温罨法初検日特例）追加済み**
-> 31/31 は確認済み。TC17a/b + `calcOnePartAmount_V3_` 初検日特例実装。clasp push 後に確認。
+> **fixture テスト: 35/35 PASS 確認待ち（2026-03-17）— TC18a/b（長期継続理由書アラート）追加済み**
+> 33/33 は確認済み。TC18a/b + `calcMonthsElapsed_V3_` 3か月アラート実装。TC14a/b・TC16a/b/c expected 更新済み。clasp push 後に確認。
 
 ---
 
@@ -48,6 +48,8 @@
 - TC16c: 長期条件未達（monthsElapsed=4）→ 減額なし=505
 - TC17a: 温罨法 初検日特例（初検日+dayDiff=6+warm要求 → warm=0, visitTotal=2410）
 - TC17b: 温罨法 後療日・通常算定（後療日+dayDiff=6+warm要求 → warm=75, rowTotalOut=585）
+- TC18a: 長期継続理由書アラート（monthsElapsed=3 → needCheck=true, 理由追加）
+- TC18b: 長期継続理由書アラートなし（monthsElapsed=2 → needCheck=false）
 - M01: 混在（case1=再検 / case2=初検抑制）→ 再検料410 / 初検料0 ✅ 実シート確認済み
 - M02: 混在（case1=再検 / case2=初検抑制なし）→ 初検料1550 / 再検料0 ✅ 実シート確認済み
 - M03: 混在（case1=後療 / case2=初検抑制）→ 初検料0 / 再検料0 ✅ 実シート確認済み

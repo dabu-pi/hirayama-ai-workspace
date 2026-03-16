@@ -465,6 +465,32 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC18: 長期継続理由書アラート ──────────────────────────────────────────
+  // injuryDate=2026-02-01（day<16 → 2月起算）
+  // TC18a: treatDate=2026-05-15 → monthsElapsed=3 → アラートあり
+  // TC18b: treatDate=2026-04-15 → monthsElapsed=2 → アラートなし
+  "TC18a": {
+    testId: "TC18a",
+    context: { patientId: "P001", treatDate: "2026-05-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC18b": {
+    testId: "TC18b",
+    context: { patientId: "P001", treatDate: "2026-04-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -738,7 +764,7 @@ var JREC01_EXPECTED_ = {
   // 長期逓減は月数ベース。baseOut は生値（505のまま）、rowTotalOut に ltCoef が反映される。
   "TC14a": {
     header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
-      needCheck: false, needCheckReason: "",
+      needCheck: true, needCheckReason: "長期施術3か月超（継続理由書確認）",
       billedKubun: "後療", mixedFlag: "通常",
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
@@ -749,7 +775,7 @@ var JREC01_EXPECTED_ = {
   // TC14b: 505 * 0.75 = 378.75 → Math.round = 379
   "TC14b": {
     header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 379, visitTotal: 379,
-      needCheck: true, needCheckReason: "長期減額75%適用（捻挫）",
+      needCheck: true, needCheckReason: "長期減額75%適用（捻挫）;長期施術3か月超（継続理由書確認）",
       billedKubun: "後療", mixedFlag: "通常",
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
@@ -787,7 +813,7 @@ var JREC01_EXPECTED_ = {
   "TC16a": {
     // 50%適用: monthsElapsed=5 かつ全月10回以上 → ltCoef=0.50 → 253
     header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 253, visitTotal: 253,
-      needCheck: true, needCheckReason: "長期減額50%適用（捻挫）",
+      needCheck: true, needCheckReason: "長期減額50%適用（捻挫）;長期施術3か月超（継続理由書確認）",
       billedKubun: "後療", mixedFlag: "通常",
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
@@ -798,7 +824,7 @@ var JREC01_EXPECTED_ = {
   "TC16b": {
     // 75%のまま: monthsElapsed=5 だが月3=9回<10 → ltCoef=0.75 → 379
     header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 379, visitTotal: 379,
-      needCheck: true, needCheckReason: "長期減額75%適用（捻挫）",
+      needCheck: true, needCheckReason: "長期減額75%適用（捻挫）;長期施術3か月超（継続理由書確認）",
       billedKubun: "後療", mixedFlag: "通常",
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
@@ -807,9 +833,9 @@ var JREC01_EXPECTED_ = {
   },
 
   "TC16c": {
-    // 減額なし: monthsElapsed=4（長期条件未達）→ ltCoef=1.0 → 505
+    // 減額なし: monthsElapsed=4（長期条件未達）→ ltCoef=1.0 → 505、継続理由書あり
     header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
-      needCheck: false, needCheckReason: "",
+      needCheck: true, needCheckReason: "長期施術3か月超（継続理由書確認）",
       billedKubun: "後療", mixedFlag: "通常",
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
@@ -839,6 +865,29 @@ var JREC01_EXPECTED_ = {
       case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
     details: [
       { detailID: "P001_2026-03-17_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 585 }
+    ]
+  },
+
+  // ── TC18: 長期継続理由書アラート ──────────────────────────────────────────
+  "TC18a": {
+    // monthsElapsed=3 → アラートあり。ltCoef=1.0（減額なし）。base=505, rowTotalOut=505
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: true, needCheckReason: "長期施術3か月超（継続理由書確認）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-05-15_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  "TC18b": {
+    // monthsElapsed=2 → アラートなし。needCheck=false
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-04-15_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
     ]
   },
 
@@ -1098,6 +1147,8 @@ function runFixtureTC16b()  { showFixtureResult_("TC16b"); }
 function runFixtureTC16c()  { showFixtureResult_("TC16c"); }
 function runFixtureTC17a()  { showFixtureResult_("TC17a"); }
 function runFixtureTC17b()  { showFixtureResult_("TC17b"); }
+function runFixtureTC18a()  { showFixtureResult_("TC18a"); }
+function runFixtureTC18b()  { showFixtureResult_("TC18b"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

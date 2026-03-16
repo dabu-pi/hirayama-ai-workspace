@@ -1,5 +1,6 @@
 {
-  "testId": "TC14a",
+  "testId": "TC18a",
+  "note": "後療日・monthsElapsed=3: アラートあり。ltCoef=1.0（減額なし）。rowTotalOut=505。needCheck=true",
   "header": {
     "initFee": 0,
     "reFee": 0,
@@ -15,6 +16,6 @@
     "chargeReason": "後療のみ"
   },
   "details": [
-    { "detailID": "P001_2026-06-30_C1_P1", "kubun": "後療", "baseOut": 505, "coldOut": 0, "rowTotalOut": 505 }
+    { "detailID": "P001_2026-05-15_C1_P1", "kubun": "後療", "baseOut": 505, "coldOut": 0, "rowTotalOut": 505 }
   ]
 }

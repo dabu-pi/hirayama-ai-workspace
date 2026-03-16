@@ -304,6 +304,21 @@ function menuRecalcAmounts_V3() {
 }
 
 /**
+ * 起算月からの経過月数を算出（§11 長期判定共通ユーティリティ）
+ * 受傷日が16日以降なら翌月起算。Date でなければ -1 を返す。
+ * @return {number} 経過月数（0以上）または -1（日付不正）
+ */
+function calcMonthsElapsed_V3_(injuryDate, treatDate) {
+  if (!(injuryDate instanceof Date) || !(treatDate instanceof Date)) return -1;
+  var sy = injuryDate.getFullYear(), sm = injuryDate.getMonth();
+  if (injuryDate.getDate() >= 16) {
+    sm++;
+    if (sm > 11) { sm = 0; sy++; }
+  }
+  return (treatDate.getFullYear() - sy) * 12 + (treatDate.getMonth() - sm);
+}
+
+/**
  * 長期減額係数の算定（§11）
  * 骨折・不全骨折は対象外。受傷日の起算月から5か月超で75%。
  * 5か月超かつ月10回以上×5か月連続の場合は50%。
@@ -313,23 +328,8 @@ function menuRecalcAmounts_V3() {
 function calcLongTermCoef_V3_(injuryType, injuryDate, treatDate, monthlyVisitCounts) {
   // 骨折・不全骨折は長期減額の対象外
   if (injuryType === "骨折" || injuryType === "不全骨折") return 1.0;
-  // 受傷日・施術日が不明なら減額なし
-  if (!(injuryDate instanceof Date) || !(treatDate instanceof Date)) return 1.0;
-
-  // 起算月を計算（受傷日が16日以降なら翌月起算）
-  var startYear = injuryDate.getFullYear();
-  var startMonth = injuryDate.getMonth(); // 0-indexed
-  if (injuryDate.getDate() >= 16) {
-    startMonth++;
-    if (startMonth > 11) { startMonth = 0; startYear++; }
-  }
-
-  // 施術日の年月
-  var treatYear = treatDate.getFullYear();
-  var treatMonth = treatDate.getMonth();
-
-  // 起算月からの経過月数
-  var monthsElapsed = (treatYear - startYear) * 12 + (treatMonth - startMonth);
+  var monthsElapsed = calcMonthsElapsed_V3_(injuryDate, treatDate);
+  if (monthsElapsed < 0) return 1.0;
 
   // 5か月超（6か月目以降）→ 50% or 75%
   if (monthsElapsed >= 5) {
@@ -486,6 +486,11 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
     reasons.push("長期減額50%適用（" + byomei + "）");
   } else if (ltCoef < 1.0) {
     reasons.push("長期減額75%適用（" + byomei + "）");
+  }
+  // 継続理由書アラート: 受傷3か月超（長期減額有無を問わず）
+  var meAlert = calcMonthsElapsed_V3_(injuryDate, treatDate);
+  if (meAlert >= 3) {
+    reasons.push("長期施術3か月超（継続理由書確認）");
   }
   // 長期対象: 後療料(再検/後療時のbase)・冷・温・電。初検時のbaseと待機料は非対象
   var ltBase = (kubun === "初検") ? base : Math.round(base * ltCoef);
