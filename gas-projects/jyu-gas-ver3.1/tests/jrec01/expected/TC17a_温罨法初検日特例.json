@@ -13,7 +13,7 @@
     "mixedFlag": "通常",
     "case1Summary": "case1:初検",
     "case2Summary": "case2:なし",
-    "chargeReason": "初検あり"
+    "chargeReason": "初検のみ"
   },
   "details": [
     { "detailID": "P001_2026-03-17_C1_P1", "kubun": "初検", "baseOut": 760, "coldOut": 0, "rowTotalOut": 760 }

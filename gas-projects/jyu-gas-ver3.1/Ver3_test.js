@@ -825,7 +825,7 @@ var JREC01_EXPECTED_ = {
     header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 760, visitTotal: 2410,
       needCheck: true, needCheckReason: "温罨法 算定不可（初検日特例：捻挫）",
       billedKubun: "初検", mixedFlag: "通常",
-      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検あり" },
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
     details: [
       { detailID: "P001_2026-03-17_C1_P1", kubun: "初検", baseOut: 760, coldOut: 0, rowTotalOut: 760 }
     ]
