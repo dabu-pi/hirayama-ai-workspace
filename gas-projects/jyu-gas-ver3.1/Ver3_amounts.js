@@ -590,6 +590,8 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
     chargeReason = "算定可能な初検ありのため初検採用";       // M02
   } else if (!hasBillableInitial && reFee > 0 && isMixed && initSuppressed) {
     chargeReason = "初検抑制のため再検採用";                 // M01
+  } else if (!hasBillableInitial && reFee > 0 && isMixed && !initSuppressed) {
+    chargeReason = "再検ありのため再検採用";                 // 後療+再検 mixed など
   } else if (!hasBillableInitial && reFee > 0 && !isMixed) {
     chargeReason = "再検のみ";
   } else if (!hasBillableInitial && reFee === 0 && hasKoryo && isMixed && initSuppressed) {
