@@ -1465,6 +1465,13 @@ function V3TR_exportTransferJson_(ss, patientId, ym) {
     if (k === recordKey2) row2 = V3TR_rowToObj_(tData[r], tMap);
   }
 
+  // RC-1整合: シートに旧 case2 行が残っていても
+  // caseKey が空 かつ case計=0 ならデータなしとして null 扱いにする。
+  // V3TR_buildTransferDataForMonth_ の guard（空行追加抑制）と条件を統一する。
+  if (row2 && !String(row2["caseKey"] || "").trim() && Number(row2["case計"] || 0) === 0) {
+    row2 = null;
+  }
+
   // 通院日リスト（施術明細から取得）
   const visitDays = V3TR_collectVisitDays_(ss, patientId, ym);
 
