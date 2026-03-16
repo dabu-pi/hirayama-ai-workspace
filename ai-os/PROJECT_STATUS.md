@@ -3,6 +3,11 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-16 JREC-01 Projects sync 実証（結果は下記）
+
+> この commit hash を JREC-01 Run_Log entry に使用する試運転セッション。
+
+---
 ## 2026-03-16 de Projects sync 一般化（AIOS-06 固定 → 全 project_id 対応）
 
 ### 変更ファイル
