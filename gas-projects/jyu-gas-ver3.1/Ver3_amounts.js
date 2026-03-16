@@ -534,6 +534,73 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
   var needCheck = (reasons.length > 0);
   var needCheckReason = reasons.join(";");
 
+  // ─── 新5列生成ブロック ───────────────────────────────────────────────
+  // 使用する既存変数: initFee / reFee / hasBillableInitial / hasReexam /
+  //                  hasKoryo / kubun1 / kubun2 / reasons
+
+  // ── 補助フラグ ──
+  var isMixed = (kubun2 != null && String(kubun2).trim() !== "");
+  var initSuppressed = (reasons || []).some(function(r) {
+    return r.indexOf("初検抑制") !== -1;
+  });
+
+  // ── 算定区分: 課金実績の代表区分 ──
+  var billedKubun;
+  if (initFee > 0) {
+    billedKubun = "初検";
+  } else if (reFee > 0) {
+    billedKubun = "再検";
+  } else if (hasKoryo) {
+    billedKubun = "後療";
+  } else {
+    billedKubun = "算定なし";
+  }
+
+  // ── Mixed区分: 複数ケースの有無 ──
+  var mixedFlag = isMixed ? "Mixed" : "通常";
+
+  // ── case1要約 ──
+  var k1 = String(kubun1 || "").trim();
+  var case1Summary;
+  if      (k1 === "初検") { case1Summary = "case1:初検"; }
+  else if (k1 === "再検") { case1Summary = "case1:再検"; }
+  else if (k1 === "後療") { case1Summary = "case1:後療"; }
+  else                    { case1Summary = "case1:なし"; }
+
+  // ── case2要約: kubun2 × 初検抑制フラグ ──
+  var k2 = String(kubun2 || "").trim();
+  var case2Summary;
+  if (!k2) {
+    case2Summary = "case2:なし";
+  } else if (k2 === "初検") {
+    case2Summary = initSuppressed ? "case2:初検(抑制)" : "case2:初検";
+  } else if (k2 === "再検") {
+    case2Summary = "case2:再検";
+  } else if (k2 === "後療") {
+    case2Summary = "case2:後療";
+  } else {
+    case2Summary = "case2:" + k2;  // 想定外区分の安全弁
+  }
+
+  // ── 課金理由要約: 優先順位7パターン ──
+  var chargeReason;
+  if (hasBillableInitial && !isMixed) {
+    chargeReason = "初検のみ";
+  } else if (hasBillableInitial && isMixed) {
+    chargeReason = "算定可能な初検ありのため初検採用";       // M02
+  } else if (!hasBillableInitial && reFee > 0 && isMixed && initSuppressed) {
+    chargeReason = "初検抑制のため再検採用";                 // M01
+  } else if (!hasBillableInitial && reFee > 0 && !isMixed) {
+    chargeReason = "再検のみ";
+  } else if (!hasBillableInitial && reFee === 0 && hasKoryo && isMixed && initSuppressed) {
+    chargeReason = "初検抑制かつ再検対象なし";               // M03
+  } else if (!hasBillableInitial && reFee === 0 && hasKoryo) {
+    chargeReason = "後療のみ";                               // TC03
+  } else {
+    chargeReason = "算定なし";
+  }
+  // ──────────────────────────────────────────────────────────────────────
+
   return {
     initFee: initFee,
     reFee: reFee,
@@ -544,7 +611,13 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
     claimPay: claimPay,
     needCheck: needCheck,
     needCheckReason: needCheckReason,
-    details: { case1Parts: detail1.parts, case2Parts: detail2.parts }
+    details: { case1Parts: detail1.parts, case2Parts: detail2.parts },
+    // 新5列: mixed case 説明性列
+    billedKubun: billedKubun,
+    mixedFlag: mixedFlag,
+    case1Summary: case1Summary,
+    case2Summary: case2Summary,
+    chargeReason: chargeReason,
   };
 }
 

@@ -144,6 +144,12 @@ const HEADER_COLS = {
   firstVisitType: "新規区分",
   // HIGH-2: 同日2ケース活性時の第2ケースキー（通常は空）
   caseKey2: "caseKey2",
+  // mixed case 説明性列（来院ヘッダの監査・見返し用）
+  billedKubun: "算定区分",
+  mixedFlag: "Mixed区分",
+  case1Summary: "case1要約",
+  case2Summary: "case2要約",
+  chargeReason: "課金理由要約",
 };
 
 /** ===== 設定シートの選択肢マスタ（E:I） ===== */
@@ -889,7 +895,13 @@ function saveVisit_V3() {
     // HIGH-2: 同日に case1/case2 が両方アクティブの場合に第2ケースキーを保存
     caseKey2: (case1HasData && case2HasData)
       ? buildCaseKey_(patientId, ep2.episodeStartDate, 2)
-      : ""
+      : "",
+    // mixed case 説明性列
+    billedKubun: amounts.billedKubun || "",
+    mixedFlag: amounts.mixedFlag || "",
+    case1Summary: amounts.case1Summary || "",
+    case2Summary: amounts.case2Summary || "",
+    chargeReason: amounts.chargeReason || "",
   });
 
   // ④ 施術明細upsert
@@ -972,6 +984,22 @@ function appendHeaderRow_V3_(headSh, headMap, obj) {
   setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, obj.firstVisitType != null ? obj.firstVisitType : "");
   // HIGH-2: 同日2ケース活性時に第2ケースキーを記録（通常空）
   setByName_(rowArr, headMap, HEADER_COLS.caseKey2, obj.caseKey2 != null ? obj.caseKey2 : "");
+  // mixed case 説明性列（列が存在しない場合は setByName_ が無視する）
+  if (headMap[HEADER_COLS.billedKubun]) {
+    setByName_(rowArr, headMap, HEADER_COLS.billedKubun, obj.billedKubun != null ? obj.billedKubun : "");
+  }
+  if (headMap[HEADER_COLS.mixedFlag]) {
+    setByName_(rowArr, headMap, HEADER_COLS.mixedFlag, obj.mixedFlag != null ? obj.mixedFlag : "");
+  }
+  if (headMap[HEADER_COLS.case1Summary]) {
+    setByName_(rowArr, headMap, HEADER_COLS.case1Summary, obj.case1Summary != null ? obj.case1Summary : "");
+  }
+  if (headMap[HEADER_COLS.case2Summary]) {
+    setByName_(rowArr, headMap, HEADER_COLS.case2Summary, obj.case2Summary != null ? obj.case2Summary : "");
+  }
+  if (headMap[HEADER_COLS.chargeReason]) {
+    setByName_(rowArr, headMap, HEADER_COLS.chargeReason, obj.chargeReason != null ? obj.chargeReason : "");
+  }
 
   headSh.getRange(headSh.getLastRow() + 1, 1, 1, headSh.getLastColumn()).setValues([rowArr]);
 }
