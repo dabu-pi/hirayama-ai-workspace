@@ -465,3 +465,27 @@ function runFixtureSuite_() {
   Logger.log(summary + "\n\n" + log.join("\n"));
   SpreadsheetApp.getUi().alert(summary + "\n\n" + log.join("\n"));
 }
+
+
+/* =======================================================================
+   公開ラッパー関数（Apps Script 実行メニューに表示される）
+   末尾アンダースコアなし・引数なし
+   ======================================================================= */
+function runFixtureSuite()  { runFixtureSuite_(); }
+function runFixtureTC01()   { showFixtureResult_("TC01"); }
+function runFixtureTC02()   { showFixtureResult_("TC02"); }
+function runFixtureTC03()   { showFixtureResult_("TC03"); }
+function runFixtureM01()    { showFixtureResult_("M01"); }
+function runFixtureM02()    { showFixtureResult_("M02"); }
+function runFixtureM03()    { showFixtureResult_("M03"); }
+function runFixtureM04()    { showFixtureResult_("M04"); }
+function runFixtureM05()    { showFixtureResult_("M05"); }
+
+function showFixtureResult_(testId) {
+  var r = runFixtureTest_(testId);
+  var msg = r.pass
+    ? "[PASS] " + testId
+    : "[FAIL] " + testId + "\n\n" + r.diff;
+  Logger.log(msg);
+  SpreadsheetApp.getUi().alert(msg);
+}
