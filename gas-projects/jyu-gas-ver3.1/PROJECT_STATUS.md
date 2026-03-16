@@ -43,7 +43,8 @@
 ### 直近（次回作業開始時）
 
 1. `clasp push` で Apps Script を GitHub 正本に揃える（Ver3_amounts.js / Ver3_core.js 要反映）
-2. M02（case1=再検 / case2=初検抑制なし）の実シート確認 → 確認後 TESTCASES.md に ✅ 追記
+2. M01/M03 相当のvisitを新規登録し、detail `区分` が `後療` になることを実シートで確認
+3. M02（case1=再検 / case2=初検抑制なし）の実シート確認 → 確認後 TESTCASES.md に ✅ 追記
 
 ### 次スコープ候補
 
@@ -143,8 +144,8 @@ clasp push
 
 | ファイル | 最終 GitHub commit | Apps Script 反映 |
 |---|---|---|
-| Ver3_amounts.js | `e931fe5`（2026-03-16）| **要 clasp push** |
-| Ver3_core.js | `5077920`（2026-03-16）| **要 clasp push** |
+| Ver3_amounts.js | `f073d4f`（2026-03-17）| **要 clasp push** |
+| Ver3_core.js | `f073d4f`（2026-03-17）| **要 clasp push** |
 | Ver3_transferData.js | `20fc562`（2026-03-16）| 要確認 |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 
