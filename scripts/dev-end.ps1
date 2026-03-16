@@ -211,7 +211,7 @@ if ($exitCode -eq 0) {
         }
     }
 
-    if ($runLogSheetExit -eq 0 -and $Result -eq 'SUCCESS' -and $ProjectId -eq 'AIOS-06' -and $jsonPath -and (Test-Path $projectRunLogSyncPath)) {
+    if ($runLogSheetExit -eq 0 -and $Result -eq 'SUCCESS' -and $ProjectId -and $jsonPath -and (Test-Path $projectRunLogSyncPath)) {
         try {
             & node $projectRunLogSyncPath --json $jsonPath --project-id $ProjectId --expected-commit $commitHash --write
             $projectRunLogSyncExit = $LASTEXITCODE

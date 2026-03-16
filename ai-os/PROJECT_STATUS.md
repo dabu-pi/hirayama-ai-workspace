@@ -3,6 +3,48 @@
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
+## 2026-03-16 de Projects sync 一般化（AIOS-06 固定 → 全 project_id 対応）
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `scripts/sync-project-from-runlog.mjs` | AIOS-06 固定除去・Projects 13列日本語スキーマ対応・未登録 project_id はスキップ+警告 |
+| `scripts/dev-end.ps1` | L214 の `$ProjectId -eq 'AIOS-06'` 条件を `$ProjectId`（非空チェック）へ変更 |
+
+### スキーマ変更対応
+
+旧: 10列英語スキーマ（`project_name / directory / status / ...`）を期待
+新: 13列日本語スキーマ（`案件名 / 状態 / 段階 / 優先度 / 次アクション / 最終更新日 / ... / 補足`）へ対応
+
+sync で更新する列は最小限 3 列のみ:
+- col F (`次アクション`) ← Run_Log.next_action
+- col G (`最終更新日`) ← Run_Log.datetime
+- col M (`補足`) ← latest_handoff block を upsert
+
+その他の列（状態・段階・優先度・URL 系）は一切変更しない。
+
+### 確認結果
+
+| パターン | 結果 |
+|---|---|
+| AIOS-06 dry-run（commit 一致） | ✅ Projects!A9:M9 を正しく preview |
+| JREC-01 dry-run（latest Run_Log project=AIOS-06 で不一致） | ✅ skip（設計通り）|
+| UNKNOWN-99（未登録 project_id） | ✅ `[WARN] Skip: no auto-append` |
+| AIOS-06 --write（実書き込み） | ✅ Projects!A9:M9 更新・他 6 行無変更・URL 等保持確認済み |
+
+### 未登録 project_id の方針
+
+- **スキップ + 警告**を採用（auto-append なし）
+- 理由: Projects は手動で管理される台帳。自動 append は誤登録リスクが高い
+- 新 project_id を同期対象にするには、先に Projects シートへ手動で行を追加する
+
+### 残リスク
+
+- `de` で ProjectId を指定しないケース（従来通り `-ProjectId ''`）は sync をスキップ（変更なし）
+- `Run_Log` の latest project が同一セッション内でのみ一致するため、複数プロジェクトを 1 session で連続 de する場合は最後の Run_Log row のみが参照される（設計通り）
+
+---
 ## 2026-03-16 de -AutoCleanupKnownTaskQueueRow 試運転確認（完了）
 
 ### 実施手順
