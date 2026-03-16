@@ -29,7 +29,7 @@ var TEST_SETTINGS_ = {
   koryoDaboku:          505,
   koryoNenZa:           505,
   koryoZasyo:           505,
-  seifukuDakkyu:        0,    // TODO: 設定シートから取得
+  seifukuDakkyu:        5200, // 2026-03-17 設定シート確認済み
   koryoDakkyu:          720,  // 2026-03-17 設定シート確認済み
   koryoKossetu:         850,
   koryoFuzenKossetu:    720,
@@ -255,7 +255,6 @@ var JREC01_FIXTURES_ = {
   },
 
   // ── TC08: 冷罨法 脱臼 0-4日のみ ─────────────────────────────────────────
-  // ⚠️ koryoDakkyu=0（TODO: 設定シートから確認後 TEST_SETTINGS_ を更新すること）
   "TC08a": {
     testId: "TC08a",
     context: { patientId: "P001", treatDate: "2026-02-05",
@@ -304,6 +303,18 @@ var JREC01_FIXTURES_ = {
       ]},
       { caseNo: 2, kubun: "初検", parts: [
         { bui: "肩関節", byomei: "捻挫", injuryDate: "2026-02-01", cold: true, warm: true, electro: true }
+      ]}
+    ]
+  },
+
+  // ── TC11: 初検 脱臼（整復料算定） ────────────────────────────────────────
+  "TC11": {
+    testId: "TC11",
+    context: { patientId: "P001", treatDate: "2026-02-01",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "肩関節", byomei: "脱臼", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
       ]}
     ]
   },
@@ -537,6 +548,17 @@ var JREC01_EXPECTED_ = {
     details: [
       { detailID: "P001_2026-02-10_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
       { detailID: "P001_2026-02-10_C2_P1", kubun: "後療", baseOut: 505, coldOut: 0, warmOut: 75, electroOut: 33, rowTotalOut: 618 }
+    ]
+  },
+
+  // ── TC11 ──────────────────────────────────────────────────────────────
+  "TC11": {
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 5200, visitTotal: 6850,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-02-01_C1_P1", kubun: "初検", baseOut: 5200, coldOut: 0, rowTotalOut: 5200 }
     ]
   },
 
@@ -783,6 +805,7 @@ function runFixtureTC08a()  { showFixtureResult_("TC08a"); }
 function runFixtureTC08b()  { showFixtureResult_("TC08b"); }
 function runFixtureTC09()   { showFixtureResult_("TC09"); }
 function runFixtureTC10()   { showFixtureResult_("TC10"); }
+function runFixtureTC11()   { showFixtureResult_("TC11"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

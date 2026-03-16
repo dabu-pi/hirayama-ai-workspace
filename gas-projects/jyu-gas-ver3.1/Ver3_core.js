@@ -1562,7 +1562,12 @@ function applyCaseRowToUI_Safe_(uiSh, src, caseNo, treatDate, opt) {
   applyEndedProtection_(uiSh, rows[1], ended2 && hasSrc2);
 }
 
-/** ===== 来院ケース → 来院ヘッダへ一括出力（高速） ===== */
+/**
+ * ===== 来院ケース → 来院ヘッダへ一括出力（高速） =====
+ * ★設計方針: 基本項目（visitKey/日付/区分等）のみコピー。
+ *   算定区分/Mixed区分/case要約/課金理由の5列は空で出力する（calcHeaderAmountsByVisitKey_V3_ を呼ばない）。
+ *   5列を埋めるには出力後に「金額計算・保存」を別途実行すること。
+ */
 function exportHeaderFromCases_V3() {
   var ss = SpreadsheetApp.getActive();
   var caseSh = ss.getSheetByName(SHEETS.cases);
