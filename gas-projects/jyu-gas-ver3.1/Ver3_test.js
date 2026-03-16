@@ -346,6 +346,32 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC14: 長期逓減境界（月数ベース・受傷日1日起算） ──────────────────────
+  // injuryDate=2026-02-01（16日未満→2月起算）
+  // TC14a: treatDate=2026-06-30 → monthsElapsed=4 → ltCoef=1.0
+  // TC14b: treatDate=2026-07-01 → monthsElapsed=5 → ltCoef=0.75
+  "TC14a": {
+    testId: "TC14a",
+    context: { patientId: "P001", treatDate: "2026-06-30",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC14b": {
+    testId: "TC14b",
+    context: { patientId: "P001", treatDate: "2026-07-01",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -615,6 +641,29 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  // ── TC14 ──────────────────────────────────────────────────────────────
+  // 長期逓減は月数ベース。baseOut は生値（505のまま）、rowTotalOut に ltCoef が反映される。
+  "TC14a": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-06-30_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  // TC14b: 505 * 0.75 = 378.75 → Math.round = 379
+  "TC14b": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 379, visitTotal: 379,
+      needCheck: true, needCheckReason: "長期減額75%適用（捻挫）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-07-01_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 379 }
+    ]
+  },
+
 };
 
 
@@ -861,6 +910,8 @@ function runFixtureTC10()   { showFixtureResult_("TC10"); }
 function runFixtureTC11()   { showFixtureResult_("TC11"); }
 function runFixtureTC12()   { showFixtureResult_("TC12"); }
 function runFixtureTC13()   { showFixtureResult_("TC13"); }
+function runFixtureTC14a()  { showFixtureResult_("TC14a"); }
+function runFixtureTC14b()  { showFixtureResult_("TC14b"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

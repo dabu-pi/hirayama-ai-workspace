@@ -331,6 +331,7 @@ function calcLongTermCoef_V3_(injuryType, injuryDate, treatDate) {
 
   // 5か月超（6か月目以降）→ 75%
   if (monthsElapsed >= 5) return 0.75;
+  // ★ 50%逓減（長期かつ頻回）は未実装。月別来院頻度集計が必要で将来対応予定。§11参照
   return 1.0;
 }
 
