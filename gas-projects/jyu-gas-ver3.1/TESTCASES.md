@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 24/24 PASS 確認待ち（2026-03-17）— TC15a/b（不全骨折冷罨法dayDiff境界）追加済み**
-> `runFixtureSuite()` を Apps Script エディタから実行して確認すること。22/22 は 2026-03-17 確認済み。TC15a/b 追加分は clasp push 後に確認。
+> **fixture テスト: 28/28 PASS 確認済み（2026-03-17）— fixture テスト基盤 完了**
+> TC15a/b（不全骨折冷罨法dayDiff境界）追加後も全件 PASS。次フェーズは長期50%逓減実装へ。
 
 ---
 

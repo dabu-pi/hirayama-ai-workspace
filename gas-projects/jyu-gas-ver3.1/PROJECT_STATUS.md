@@ -38,30 +38,27 @@
 
 ## 次アクション
 
-> 最終更新: 2026-03-17（TC15a/b fixture追加 — 24件 clasp push 後に確認待ち）
+> 最終更新: 2026-03-17（28/28 PASS 確認済み — fixture テスト基盤 完了）
 
-### ✅ GASテスト基盤（フェーズ1〜3）完了（2026-03-17）
+### ✅ GASテスト基盤 完了（2026-03-17）
 
-- 22/22 PASS 確認済み（TC01〜TC11 サブケース + M01〜M05）
-- TC12/TC13: 多部位逓減 fixture 追加・PASS確認済み
-- TC14a/b: 長期逓減 fixture 追加・PASS確認済み
-- TC15a/b: 不全骨折冷罨法dayDiff境界 fixture 追加（clasp push後に確認予定）
+- **28/28 PASS 確認済み**（TC01〜TC15b + M01〜M05）
+- TC12/TC13: 多部位逓減、TC14a/b: 長期75%逓減、TC15a/b: 不全骨折冷罨法境界 — すべてPASS
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
-- `runFixtureSuite()` で一括実行可能（現在 24 件）
+- `runFixtureSuite()` で一括実行可能（28 件）
 
 ### 未実装制度論点（優先順）
 
 | 優先 | 項目 | 状況 |
 |---|---|---|
-| 高 | 長期逓減 50%（長期かつ頻回） | 未実装。月別来院頻度集計が必要。§11参照 |
+| 最高 | 長期逓減 50%（5か月超かつ月10回以上×5か月連続） | 未実装。月別来院頻度集計が必要。§11参照 |
 | 中 | transferData への新5列反映 | 申請書データへの反映可否を検討 |
 | 低 | 既存データ一括再計算メニュー | 過去来院ヘッダへの新5列遡及反映 |
 
-### 次フェーズ 最小実装候補
+### 次フェーズ
 
-1. **TC15a/b PASS確認** — clasp push 後に `runFixtureSuite()` で 24/24 PASS を確認する
-2. **長期逓減50%実装** — 月別来院頻度集計が必要。未実装制度論点の最優先
-3. **申請書フロー実運用確認** — write_application.py の動作確認
+1. **長期逓減50%実装** — 月別来院頻度集計ロジック追加 + TC16 fixture作成
+2. **申請書フロー実運用確認** — write_application.py の動作確認
 
 ### 中長期
 
@@ -96,10 +93,10 @@
 
 ## テスト状況
 
-- テストケース文書: `TESTCASES.md` あり（TC01〜TC15b、M01〜M05 計24ケース）
+- テストケース文書: `TESTCASES.md` あり（TC01〜TC15b、M01〜M05 計28ケース）
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 24件（TC01〜TC15b + M01〜M05）
-- **22/22 PASS 確認済み（2026-03-17）、TC15a/b 追加 → 24/24 clasp push 後に確認待ち**
+- fixture 件数: 28件（TC01〜TC15b + M01〜M05）
+- **28/28 PASS 確認済み（2026-03-17）**
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
