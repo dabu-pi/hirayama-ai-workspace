@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-15
+最終更新: 2026-03-16
 
 ---
 
@@ -91,11 +91,63 @@
 
 ---
 
+## コード正本と同期ルール（2026-03-16 確定）
+
+### 正本の定義
+
+| 対象 | 正本 | 参照元 |
+|---|---|---|
+| GAS コード（.js）| GitHub `feature/auto-dev-phase3-loop` | Claude Code / ChatGPT はここを読む |
+| 申請書スクリプト（.py）| GitHub 同上 | 同上 |
+| 療養費算定ルール | `SPEC.md` / `JREC-01_制度SPEC_v0.9.md` | GitHub |
+| 実運用データ | Google スプレッドシート | Apps Script で書き込み |
+
+**Apps Script エディタは編集場所ではなく実行場所**。コードの変更は必ず GitHub 経由で行い、その後 `clasp push` で Apps Script に反映する。
+
+### GAS 修正後の必須手順
+
+```
+1. ローカルでコードを編集
+2. git add / commit / push → GitHub に反映
+3. clasp push → Apps Script エディタに反映
+```
+
+```bash
+# 手順3のコマンド（jyu-gas-ver3.1 ディレクトリで実行）
+cd gas-projects/jyu-gas-ver3.1
+clasp push
+```
+
+### やってはいけないこと
+
+- Apps Script エディタで直接コードを編集する（GitHub と乖離する）
+- `clasp pull` でローカルを上書きする（GitHub の変更が失われる）
+- clasp push せずに GitHub だけ更新したまま放置する
+
+### 最終 clasp push 状況
+
+| ファイル | 最終 GitHub commit | Apps Script 反映 |
+|---|---|---|
+| Ver3_amounts.js | `5313f51`（2026-03-16）| **要 clasp push** |
+| Ver3_core.js | `80f8b0e`（2026-03-16）| 要確認 |
+| Ver3_transferData.js | `20fc562`（2026-03-16）| 要確認 |
+| Ver3_patientPicker.js | 変更なし | 問題なし |
+
+> **次回作業開始前に必ず `clasp push` を実行して Apps Script を GitHub 正本に揃えること。**
+
+### clasp status について
+
+`clasp status` はファイルの追跡状況のみ表示し、Apps Script との内容差分は表示しない。
+内容差分の確認には `clasp pull`（ローカル上書き）が必要だが、GitHub 正本運用下では原則使わない。
+
+---
+
 ## 再開メモ
 
 作業再開時は、まず `README.md`、`SPEC.md`、`TESTCASES.md` を確認し、次に対象ロジックの実装ファイルを読む。
 制度変更や単価変更に関わる作業では、コードより前に仕様との整合を確認する。
 JBIZ-04 には日次入力を持たせず、このブックを現場入力の正本として使う前提を崩さない。
+**コード修正後は必ず `clasp push` まで行うこと（上記「コード正本と同期ルール」参照）。**
 
 ---
 
