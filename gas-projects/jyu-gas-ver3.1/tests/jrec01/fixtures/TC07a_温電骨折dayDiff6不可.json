@@ -1,0 +1,15 @@
+{
+  "testId": "TC07a",
+  "description": "温/電 骨折 受傷後6日(dayDiff=6) — 算定不可（7日以上が条件）",
+  "ref": "TESTCASES.md#TC07",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-07",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "前腕", "byomei": "骨折", "injuryDate": "2026-02-01", "cold": false, "warm": true, "electro": true }
+    ]}
+  ]
+}

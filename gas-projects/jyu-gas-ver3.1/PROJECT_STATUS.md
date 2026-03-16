@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-16
+最終更新: 2026-03-17
 
 ---
 
@@ -38,13 +38,12 @@
 
 ## 次アクション
 
-> 最終更新: 2026-03-16（mixed case 表示改善完了後）
+> 最終更新: 2026-03-17（fixture TC04〜TC10 expected 作成完了）
 
 ### 直近（次回作業開始時）
 
-1. `clasp push` で Apps Script を GitHub 正本に揃える（Ver3_amounts.js / Ver3_core.js 要反映）
-2. M01/M03 相当のvisitを新規登録し、detail `区分` が `後療` になることを実シートで確認
-3. M02（case1=再検 / case2=初検抑制なし）の実シート確認 → 確認後 TESTCASES.md に ✅ 追記
+1. Apps Script エディタで `runFixtureSuite()` を実行し、21/21 PASS を確認する
+2. 設定シートで `koryoDakkyu`（脱臼の後療料単価）を確認 → TC08a/TC08b の `baseOut` プレースホルダ（現在=0）を更新する
 
 ### 次スコープ候補
 
@@ -88,9 +87,12 @@
 
 ## テスト状況
 
-- テストケース文書: `TESTCASES.md` あり
-- 自動テスト基盤: 明示なし
-- 実運用前提の人手確認が重要
+- テストケース文書: `TESTCASES.md` あり（TC01〜TC10、M01〜M05 計21ケース）
+- fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
+- fixture 件数: 21件（TC01〜TC10各サブケース + M01〜M05）
+- 実シート確認済み: M01 / M02 / M03 / M04 / M05
+- Apps Script メニューから `runFixtureSuite()` で一括実行可能
+- 残課題: 設定シートで koryoDakkyu 確認 → TC08 baseOut プレースホルダ更新
 
 ---
 
@@ -146,6 +148,7 @@ clasp push
 |---|---|---|
 | Ver3_amounts.js | `f073d4f`（2026-03-17）| **要 clasp push** |
 | Ver3_core.js | `f073d4f`（2026-03-17）| **要 clasp push** |
+| Ver3_test.js（新規）| 本コミット | **要 clasp push** |
 | Ver3_transferData.js | `20fc562`（2026-03-16）| 要確認 |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 
@@ -253,7 +256,7 @@ JBIZ-04 には日次入力を持たせず、このブックを現場入力の正
 | テストケース | 確認結果 |
 |---|---|
 | M01（case1=再検 / case2=初検抑制） | ✅ OK |
-| M02（case1=再検 / case2=初検抑制なし） | ⏸ 未確認 |
+| M02（case1=再検 / case2=初検抑制なし） | ✅ OK（2026-03-17 fixture PASS確認） |
 | M03（case1=後療 / case2=初検抑制） | ✅ OK |
 | M04（case1=初検 / case2=初検） | ✅ OK |
 | M05（case1=後療 / case2=再検） | ✅ OK（e931fe5 修正後） |

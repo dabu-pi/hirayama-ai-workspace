@@ -1,0 +1,18 @@
+{
+  "testId": "TC10",
+  "description": "複合（同月別ケース初検抑制 + 冷不可 + 温電可）",
+  "ref": "TESTCASES.md#TC10",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-10",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "腰部", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": false, "warm": false, "electro": false }
+    ]},
+    { "caseNo": 2, "kubun": "初検", "parts": [
+      { "bui": "肩関節", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": true, "warm": true, "electro": true }
+    ]}
+  ]
+}

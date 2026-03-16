@@ -18,7 +18,6 @@
 
 /* =======================================================================
    テスト設定単価（設定シートの値と同値に保つこと）
-   ⚠️ warm / electro / taiki は TC06〜TC08 追加時に設定シートから確認して更新
    ======================================================================= */
 var TEST_SETTINGS_ = {
   initFee:              1550,
@@ -35,9 +34,9 @@ var TEST_SETTINGS_ = {
   koryoKossetu:         850,
   koryoFuzenKossetu:    720,
   cold:                 85,
-  warm:                 70,   // ⚠️ 要確認
-  electro:              70,   // ⚠️ 要確認
-  taiki:                35,   // ⚠️ 要確認
+  warm:                 75,   // 2026-03-17 設定シート確認済み
+  electro:              33,   // 2026-03-17 設定シート確認済み
+  taiki:                5,    // 2026-03-17 設定シート確認済み
   multiCoef3:           0.6,
   roundUnit:            10,
   _rawMap:              {},
@@ -152,6 +151,163 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC04: 30日境界 ─────────────────────────────────────────────────────
+  "TC04a": {
+    testId: "TC04a",
+    context: { patientId: "P001", treatDate: "2026-02-04",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-01-05", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC04b": {
+    testId: "TC04b",
+    context: { patientId: "P001", treatDate: "2026-02-05",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-05", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  // ── TC05: 冷罨法 打撲/捻挫 0-1日のみ ────────────────────────────────────
+  "TC05a": {
+    testId: "TC05a",
+    context: { patientId: "P001", treatDate: "2026-02-01",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: true, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC05b": {
+    testId: "TC05b",
+    context: { patientId: "P001", treatDate: "2026-02-02",
+      monthlyStatus: { initBilled: true, reBilled: false, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "再検", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: true, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC05c": {
+    testId: "TC05c",
+    context: { patientId: "P001", treatDate: "2026-02-03",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: true, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  // ── TC06: 温/電 捻挫 5日以降 ─────────────────────────────────────────────
+  "TC06a": {
+    testId: "TC06a",
+    context: { patientId: "P001", treatDate: "2026-02-05",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: true, electro: true }
+      ]}
+    ]
+  },
+
+  "TC06b": {
+    testId: "TC06b",
+    context: { patientId: "P001", treatDate: "2026-02-06",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: true, electro: true }
+      ]}
+    ]
+  },
+
+  // ── TC07: 温/電 骨折 7日以降 ─────────────────────────────────────────────
+  "TC07a": {
+    testId: "TC07a",
+    context: { patientId: "P001", treatDate: "2026-02-07",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "前腕", byomei: "骨折", injuryDate: "2026-02-01", cold: false, warm: true, electro: true }
+      ]}
+    ]
+  },
+
+  "TC07b": {
+    testId: "TC07b",
+    context: { patientId: "P001", treatDate: "2026-02-08",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "前腕", byomei: "骨折", injuryDate: "2026-02-01", cold: false, warm: true, electro: true }
+      ]}
+    ]
+  },
+
+  // ── TC08: 冷罨法 脱臼 0-4日のみ ─────────────────────────────────────────
+  // ⚠️ koryoDakkyu=0（TODO: 設定シートから確認後 TEST_SETTINGS_ を更新すること）
+  "TC08a": {
+    testId: "TC08a",
+    context: { patientId: "P001", treatDate: "2026-02-05",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "肩関節", byomei: "脱臼", injuryDate: "2026-02-01", cold: true, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC08b": {
+    testId: "TC08b",
+    context: { patientId: "P001", treatDate: "2026-02-06",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "肩関節", byomei: "脱臼", injuryDate: "2026-02-01", cold: true, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  // ── TC09: 月内再検消化後（両ケース後療） ────────────────────────────────
+  "TC09": {
+    testId: "TC09",
+    context: { patientId: "P001", treatDate: "2026-02-12",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]},
+      { caseNo: 2, kubun: "後療", parts: [
+        { bui: "肩関節", byomei: "打撲", injuryDate: "2026-02-10", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  // ── TC10: 複合（初検抑制 + 冷不可 + 温電可） ────────────────────────────
+  "TC10": {
+    testId: "TC10",
+    context: { patientId: "P001", treatDate: "2026-02-10",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]},
+      { caseNo: 2, kubun: "初検", parts: [
+        { bui: "肩関節", byomei: "捻挫", injuryDate: "2026-02-01", cold: true, warm: true, electro: true }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -242,6 +398,146 @@ var JREC01_EXPECTED_ = {
     details: [
       { detailID: "P001_2026-02-12_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
       { detailID: "P001_2026-02-12_C2_P1", kubun: "再検", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  // ── TC04 ──────────────────────────────────────────────────────────────
+  "TC04a": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-04_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  "TC04b": {
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 760, visitTotal: 2410,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-02-05_C1_P1", kubun: "初検", baseOut: 760, coldOut: 0, rowTotalOut: 760 }
+    ]
+  },
+
+  // ── TC05 ──────────────────────────────────────────────────────────────
+  "TC05a": {
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 845, visitTotal: 2495,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-02-01_C1_P1", kubun: "初検", baseOut: 760, coldOut: 85, rowTotalOut: 845 }
+    ]
+  },
+
+  "TC05b": {
+    header: { initFee: 0, reFee: 410, supportFee: 0, detailSum: 590, visitTotal: 1000,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "再検", mixedFlag: "通常",
+      case1Summary: "case1:再検", case2Summary: "case2:なし", chargeReason: "再検のみ" },
+    details: [
+      { detailID: "P001_2026-02-02_C1_P1", kubun: "再検", baseOut: 505, coldOut: 85, rowTotalOut: 590 }
+    ]
+  },
+
+  "TC05c": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: true, needCheckReason: "冷罨法 算定不可（捻挫：受傷後2日）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-03_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  // ── TC06 ──────────────────────────────────────────────────────────────
+  "TC06a": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: true, needCheckReason: "温罨法 算定不可（捻挫：受傷後4日）;電療 算定不可（捻挫：受傷後4日）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-05_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, warmOut: 0, electroOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  "TC06b": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 618, visitTotal: 618,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-06_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, warmOut: 75, electroOut: 33, rowTotalOut: 618 }
+    ]
+  },
+
+  // ── TC07 ──────────────────────────────────────────────────────────────
+  "TC07a": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 850, visitTotal: 850,
+      needCheck: true, needCheckReason: "温罨法 算定不可（骨折：受傷後6日）;電療 算定不可（骨折：受傷後6日）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-07_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, warmOut: 0, electroOut: 0, rowTotalOut: 850 }
+    ]
+  },
+
+  "TC07b": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 963, visitTotal: 963,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-08_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, warmOut: 75, electroOut: 33, rowTotalOut: 963 }
+    ]
+  },
+
+  // ── TC08 ──────────────────────────────────────────────────────────────
+  // ⚠️ baseOut=0 は koryoDakkyu 未確認のプレースホルダ。設定シート確認後に更新すること
+  "TC08a": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 85, visitTotal: 85,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-05_C1_P1", kubun: "後療", baseOut: 0, coldOut: 85, rowTotalOut: 85 }
+    ]
+  },
+
+  "TC08b": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 0, visitTotal: 0,
+      needCheck: true, needCheckReason: "冷罨法 算定不可（脱臼：受傷後5日）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-06_C1_P1", kubun: "後療", baseOut: 0, coldOut: 0, rowTotalOut: 0 }
+    ]
+  },
+
+  // ── TC09 ──────────────────────────────────────────────────────────────
+  "TC09": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1010, visitTotal: 1010,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "Mixed",
+      case1Summary: "case1:後療", case2Summary: "case2:後療", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-12_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
+      { detailID: "P001_2026-02-12_C2_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  // ── TC10 ──────────────────────────────────────────────────────────────
+  "TC10": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1123, visitTotal: 1123,
+      needCheck: true, needCheckReason: "同月別ケース初回 初検抑制;冷罨法 算定不可（捻挫：受傷後9日）",
+      billedKubun: "後療", mixedFlag: "Mixed",
+      case1Summary: "case1:後療", case2Summary: "case2:初検(抑制)", chargeReason: "初検抑制かつ再検対象なし" },
+    details: [
+      { detailID: "P001_2026-02-10_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
+      { detailID: "P001_2026-02-10_C2_P1", kubun: "後療", baseOut: 505, coldOut: 0, warmOut: 75, electroOut: 33, rowTotalOut: 618 }
     ]
   },
 
@@ -475,6 +771,19 @@ function runFixtureSuite()  { runFixtureSuite_(); }
 function runFixtureTC01()   { showFixtureResult_("TC01"); }
 function runFixtureTC02()   { showFixtureResult_("TC02"); }
 function runFixtureTC03()   { showFixtureResult_("TC03"); }
+function runFixtureTC04a()  { showFixtureResult_("TC04a"); }
+function runFixtureTC04b()  { showFixtureResult_("TC04b"); }
+function runFixtureTC05a()  { showFixtureResult_("TC05a"); }
+function runFixtureTC05b()  { showFixtureResult_("TC05b"); }
+function runFixtureTC05c()  { showFixtureResult_("TC05c"); }
+function runFixtureTC06a()  { showFixtureResult_("TC06a"); }
+function runFixtureTC06b()  { showFixtureResult_("TC06b"); }
+function runFixtureTC07a()  { showFixtureResult_("TC07a"); }
+function runFixtureTC07b()  { showFixtureResult_("TC07b"); }
+function runFixtureTC08a()  { showFixtureResult_("TC08a"); }
+function runFixtureTC08b()  { showFixtureResult_("TC08b"); }
+function runFixtureTC09()   { showFixtureResult_("TC09"); }
+function runFixtureTC10()   { showFixtureResult_("TC10"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

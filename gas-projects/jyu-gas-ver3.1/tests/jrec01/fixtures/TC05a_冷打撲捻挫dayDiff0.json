@@ -1,0 +1,15 @@
+{
+  "testId": "TC05a",
+  "description": "冷罨法 打撲/捻挫 受傷当日(dayDiff=0) — 算定可",
+  "ref": "TESTCASES.md#TC05",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-01",
+    "monthlyStatus": { "initBilled": false, "reBilled": false, "supportBilled": false }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "初検", "parts": [
+      { "bui": "腰部", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": true, "warm": false, "electro": false }
+    ]}
+  ]
+}
