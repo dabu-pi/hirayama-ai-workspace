@@ -306,9 +306,11 @@ function menuRecalcAmounts_V3() {
 /**
  * 長期減額係数の算定（§11）
  * 骨折・不全骨折は対象外。受傷日の起算月から5か月超で75%。
- * @return {number} 1.0（減額なし）or 0.75（長期75%）
+ * 5か月超かつ月10回以上×5か月連続の場合は50%。
+ * @param {number[]|null} monthlyVisitCounts - 起算月1〜5の月別来院回数配列（省略可）
+ * @return {number} 1.0（減額なし）or 0.75（長期75%）or 0.50（長期50%）
  */
-function calcLongTermCoef_V3_(injuryType, injuryDate, treatDate) {
+function calcLongTermCoef_V3_(injuryType, injuryDate, treatDate, monthlyVisitCounts) {
   // 骨折・不全骨折は長期減額の対象外
   if (injuryType === "骨折" || injuryType === "不全骨折") return 1.0;
   // 受傷日・施術日が不明なら減額なし
@@ -329,10 +331,65 @@ function calcLongTermCoef_V3_(injuryType, injuryDate, treatDate) {
   // 起算月からの経過月数
   var monthsElapsed = (treatYear - startYear) * 12 + (treatMonth - startMonth);
 
-  // 5か月超（6か月目以降）→ 75%
-  if (monthsElapsed >= 5) return 0.75;
-  // ★ 50%逓減（長期かつ頻回）は未実装。月別来院頻度集計が必要で将来対応予定。§11参照
+  // 5か月超（6か月目以降）→ 50% or 75%
+  if (monthsElapsed >= 5) {
+    // 50%: 起算月1〜5が全て月10回以上（§11）
+    if (Array.isArray(monthlyVisitCounts) && monthlyVisitCounts.length >= 5) {
+      var allFrequent = true;
+      for (var m = 0; m < 5; m++) {
+        if (Number(monthlyVisitCounts[m] || 0) < 10) { allFrequent = false; break; }
+      }
+      if (allFrequent) return 0.50;
+    }
+    return 0.75;
+  }
   return 1.0;
+}
+
+/**
+ * 来院ヘッダデータから特定 caseKey の月別来院回数（起算月1〜5）を返す（§11 50%判定用）
+ * 来院ヘッダ 1行 = 1 visit として集計。部位数は無関係。
+ * @param {Array[][]} headerValues - 来院ヘッダ getDataRange().getValues()
+ * @param {Object} headMap - buildHeaderColMap_ の結果（HEADER_COLS キー）
+ * @param {string} patientId
+ * @param {string} caseKey
+ * @param {Date|null} injuryDate - 起算月計算用（null なら [0,0,0,0,0] を返す）
+ * @return {number[]} 長さ5の配列 [月1来院数, 月2来院数, ..., 月5来院数]
+ */
+function buildMonthlyVisitCounts_V3_(headerValues, headMap, patientId, caseKey, injuryDate) {
+  var empty = [0, 0, 0, 0, 0];
+  if (!headerValues || !headMap || !patientId || !caseKey) return empty;
+  if (!(injuryDate instanceof Date)) return empty;
+
+  // 起算月（受傷日が16日以降なら翌月起算）
+  var startYear  = injuryDate.getFullYear();
+  var startMonth = injuryDate.getMonth(); // 0-indexed
+  if (injuryDate.getDate() >= 16) {
+    startMonth++;
+    if (startMonth > 11) { startMonth = 0; startYear++; }
+  }
+
+  // 列インデックス（1-based → undefined なら早期リターン）
+  var pidIdx = headMap[HEADER_COLS.patientId];
+  var ckIdx  = headMap[HEADER_COLS.caseKey];
+  var dtIdx  = headMap[HEADER_COLS.treatDate];
+  if (!pidIdx || !ckIdx || !dtIdx) return empty;
+  var pidCol0 = pidIdx - 1;
+  var ckCol0  = ckIdx  - 1;
+  var dtCol0  = dtIdx  - 1;
+
+  var counts = [0, 0, 0, 0, 0];
+  for (var r = 1; r < headerValues.length; r++) {
+    var row = headerValues[r];
+    if (String(row[pidCol0] || "").trim() !== patientId) continue;
+    if (String(row[ckCol0]  || "").trim() !== caseKey)   continue;
+    var td = row[dtCol0];
+    if (!(td instanceof Date)) continue;
+    var idx = (td.getFullYear() - startYear) * 12 + (td.getMonth() - startMonth);
+    if (idx < 0 || idx > 4) continue;
+    counts[idx]++;
+  }
+  return counts;
 }
 
 /**
@@ -343,7 +400,7 @@ function calcLongTermCoef_V3_(injuryType, injuryDate, treatDate) {
  *
  * @return {Object} { base, cold, warm, electro, taiki, coef, longTermCoef, total, byomei, partOrder, coldChk, warmChk, electroChk, injuryDate }
  */
-function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui) {
+function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui, monthlyVisitCounts) {
   var injuryType = detectInjuryType_V3_(byomei);
   var base = calcBaseFee_V3_(settings, kubun, injuryType, bui);
 
@@ -419,8 +476,10 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
   var taiki = (warm > 0 || electro > 0) ? settings.taiki : 0;
 
   // 長期減額 §11（骨折・不全骨折は対象外）
-  var ltCoef = calcLongTermCoef_V3_(injuryType, injuryDate, treatDate);
-  if (ltCoef < 1.0) {
+  var ltCoef = calcLongTermCoef_V3_(injuryType, injuryDate, treatDate, monthlyVisitCounts);
+  if (ltCoef === 0.50) {
+    reasons.push("長期減額50%適用（" + byomei + "）");
+  } else if (ltCoef < 1.0) {
     reasons.push("長期減額75%適用（" + byomei + "）");
   }
   // 長期対象: 後療料(再検/後療時のbase)・冷・温・電。初検時のbaseと待機料は非対象
@@ -521,8 +580,9 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
   var effectiveKubun1 = calcKoryoOnThisDay ? (kubun1 === "初検" ? "後療" : kubun1) : kubun1;
   var effectiveKubun2 = calcKoryoOnThisDay ? (kubun2 === "初検" ? "後療" : kubun2) : kubun2;
 
-  var detail1 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 1, effectiveKubun1, treatDate, settings, reasons);
-  var detail2 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 2, effectiveKubun2, treatDate, settings, reasons);
+  var headerValuesForMvc = headSh.getDataRange().getValues();
+  var detail1 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 1, effectiveKubun1, treatDate, settings, reasons, headerValuesForMvc, headMap);
+  var detail2 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 2, effectiveKubun2, treatDate, settings, reasons, headerValuesForMvc, headMap);
   var detailSum = detail1.total + detail2.total;
 
   // --- 来院合計 = 初検料 + 再検料 + 相談支援料 + 明細合計 ---
@@ -715,13 +775,16 @@ function checkIsNextVisitAfterMonthlyInit_(headSh, headMap, caseSh, caseMap, pat
 /** 1ケース分の明細金額を来院ケースの部位データから算定（SPEC準拠版）
  *  @return {{ total: number, parts: Object[] }} 合計と部位別内訳配列
  */
-function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, treatDate, settings, reasons) {
+function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, treatDate, settings, reasons, headerValues, headMap) {
   // 来院ケース行は visitKey + caseNo で検索
   var rowIndex = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, caseNo);
   if (rowIndex === 0) return { total: 0, parts: [] };
 
   var row = caseSh.getRange(rowIndex, 1, 1, caseSh.getLastColumn()).getValues()[0];
   var get = function(name) { return row[caseMap[name] - 1]; };
+
+  var patientIdVal = String(get(CASE_COLS.patientId) || "").trim();
+  var caseKeyVal   = String(get(CASE_COLS.caseKey)   || "").trim();
 
   var total = 0;
   var partCount = 0;
@@ -736,11 +799,12 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
     && (end1.getTime() < treatDate.getTime());
   if ((p1 || d1 || (inj1 instanceof Date)) && !isEnded1) {
     partCount++;
+    var mvc1 = buildMonthlyVisitCounts_V3_(headerValues, headMap, patientIdVal, caseKeyVal, inj1 instanceof Date ? inj1 : null);
     var part1 = calcOnePartAmount_V3_(settings, kubun, d1, inj1, treatDate,
       get(CASE_COLS.cold1) === true,
       get(CASE_COLS.warm1) === true,
       get(CASE_COLS.elec1) === true,
-      partCount, reasons, p1);
+      partCount, reasons, p1, mvc1);
     part1.bui = p1;
     total += part1.total;
     parts.push(part1);
@@ -755,11 +819,12 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
     && (end2.getTime() < treatDate.getTime());
   if ((p2 || d2 || (inj2 instanceof Date)) && !isEnded2) {
     partCount++;
+    var mvc2 = buildMonthlyVisitCounts_V3_(headerValues, headMap, patientIdVal, caseKeyVal, inj2 instanceof Date ? inj2 : null);
     var part2 = calcOnePartAmount_V3_(settings, kubun, d2, inj2, treatDate,
       get(CASE_COLS.cold2) === true,
       get(CASE_COLS.warm2) === true,
       get(CASE_COLS.elec2) === true,
-      partCount, reasons, p2);
+      partCount, reasons, p2, mvc2);
     part2.bui = p2;
     total += part2.total;
     parts.push(part2);
@@ -813,6 +878,8 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
   // 明細全取得
   var detailValues = detailSh.getDataRange().getValues();
   if (detailValues.length < 2) throw new Error("施術明細にデータがありません。");
+  // 来院ヘッダ全取得（月別来院回数集計用 §11）
+  var headerValuesAll = headerSh.getDataRange().getValues();
 
   // visitKey該当行を収集（0-based index）
   var vkCol0 = maps.detail[AM_DETAIL_COLS.visitKey] - 1;
@@ -851,8 +918,10 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
     var electroChk = row[maps.detail[AM_DETAIL_COLS.electroChk] - 1] === true;
 
     var buiVal = String(row[maps.detail[AM_DETAIL_COLS.bui] - 1] || "").trim();
+    var caseKeyVal = String(row[maps.detail[AM_DETAIL_COLS.caseKey] - 1] || "").trim();
+    var mvc = buildMonthlyVisitCounts_V3_(headerValuesAll, maps.header, patientId, caseKeyVal, injuryDate);
     var part = calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate,
-      coldChk, warmChk, electroChk, partOrder, reasons, buiVal);
+      coldChk, warmChk, electroChk, partOrder, reasons, buiVal, mvc);
 
     // 相談支援：運用ON列が無いので事故防止で0固定
     var support = 0;
@@ -872,11 +941,11 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
   }
 
   // ヘッダ行を探す（detailSum更新前に参照してinitFee/reFee/supportFeeを取得）
-  var headerValues = headerSh.getDataRange().getValues();
+  // ★ headerValuesAll は月別来院回数集計用に上部でロード済み（再取得不要）
   var hkCol0 = maps.header[HEADER_COLS.visitKey] - 1;
   var headerRow0 = -1;
-  for (var r0 = 1; r0 < headerValues.length; r0++) {
-    if (String(headerValues[r0][hkCol0] || "").trim() === visitKey) {
+  for (var r0 = 1; r0 < headerValuesAll.length; r0++) {
+    if (String(headerValuesAll[r0][hkCol0] || "").trim() === visitKey) {
       headerRow0 = r0;
       break;
     }
@@ -886,7 +955,7 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
   // HIGH-1修正: initFee/reFee/supportFee はヘッダの既存値を保持し、
   // detailSum のみ再計算した上で visitTotal を再構成する。
   // SPEC §13: visitTotal = initFee + reFee + supportFee + detailSum
-  var headerRow = headerValues[headerRow0];
+  var headerRow = headerValuesAll[headerRow0];
   var existingInitFee   = Number(headerRow[maps.header[HEADER_COLS.initFee]   - 1] || 0);
   var existingReFee     = Number(headerRow[maps.header[HEADER_COLS.reFee]     - 1] || 0);
   var existingSupportFee = Number(headerRow[maps.header[HEADER_COLS.supportFee] - 1] || 0);

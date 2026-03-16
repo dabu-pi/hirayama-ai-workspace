@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 28/28 PASS 確認済み（2026-03-17）— fixture テスト基盤 完了**
-> TC15a/b（不全骨折冷罨法dayDiff境界）追加後も全件 PASS。次フェーズは長期50%逓減実装へ。
+> **fixture テスト: 31/31 PASS 確認待ち（2026-03-17）— TC16a/b/c（長期50%逓減）追加済み**
+> 28/28 は確認済み。TC16a/b/c + `calcLongTermCoef_V3_` 50%実装 + `buildMonthlyVisitCounts_V3_` 追加。clasp push 後に確認。
 
 ---
 
@@ -40,9 +40,12 @@
 - TC12: 多部位逓減 2部位（1,2部位目 係数1.0 各505→合計1010）
 - TC13: 多部位逓減 3部位（3部位目 係数0.6→303、合計1313）
 - TC14a: 長期逓減 境界（monthsElapsed=4、減額なし→505）
-- TC14b: 長期逓減 75%適用（monthsElapsed=5、505×0.75=379）★50%逓減は未実装
+- TC14b: 長期逓減 75%適用（monthsElapsed=5、505×0.75=379）
 - TC15a: 不全骨折冷罨法 dayDiff=6（境界OK）→ base=720+cold=85=805
 - TC15b: 不全骨折冷罨法 dayDiff=7（境界NG）→ cold=0、needCheck=true
+- TC16a: 長期50%逓減（monthsElapsed=5 + 全月10回以上）→ 505×0.50=253
+- TC16b: 長期75%維持（monthsElapsed=5 だが月3=9回<10）→ 505×0.75=379
+- TC16c: 長期条件未達（monthsElapsed=4）→ 減額なし=505
 - M01: 混在（case1=再検 / case2=初検抑制）→ 再検料410 / 初検料0 ✅ 実シート確認済み
 - M02: 混在（case1=再検 / case2=初検抑制なし）→ 初検料1550 / 再検料0 ✅ 実シート確認済み
 - M03: 混在（case1=後療 / case2=初検抑制）→ 初検料0 / 再検料0 ✅ 実シート確認済み

@@ -398,6 +398,47 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC16: 長期50%逓減（5か月超 + 月10回以上×5か月連続） ──────────────────
+  // injuryDate=2026-02-01（day<16 → 2月起算）、treatDate=2026-07-15 → monthsElapsed=5
+  // TC16a: monthlyVisitCounts=[10,10,10,10,10] → allFrequent=true → 50%
+  // TC16b: monthlyVisitCounts=[10,10,9,10,10]  → month3=9<10 → 75%
+  // TC16c: treatDate=2026-06-15 → monthsElapsed=4 → 100%（訪問頻度条件は関係なし）
+  "TC16a": {
+    testId: "TC16a",
+    context: { patientId: "P001", treatDate: "2026-07-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true },
+      monthlyVisitCounts: [10, 10, 10, 10, 10] },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC16b": {
+    testId: "TC16b",
+    context: { patientId: "P001", treatDate: "2026-07-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true },
+      monthlyVisitCounts: [10, 10, 9, 10, 10] },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  "TC16c": {
+    testId: "TC16c",
+    context: { patientId: "P001", treatDate: "2026-06-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true },
+      monthlyVisitCounts: [10, 10, 10, 10, 10] },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -714,6 +755,42 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  // ── TC16: 長期50%逓減 ──────────────────────────────────────────────────────
+  // Math.round(505 * 0.50) = Math.round(252.5) = 253
+  // Math.round(505 * 0.75) = Math.round(378.75) = 379
+  "TC16a": {
+    // 50%適用: monthsElapsed=5 かつ全月10回以上 → ltCoef=0.50 → 253
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 253, visitTotal: 253,
+      needCheck: true, needCheckReason: "長期減額50%適用（捻挫）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-07-15_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 253 }
+    ]
+  },
+
+  "TC16b": {
+    // 75%のまま: monthsElapsed=5 だが月3=9回<10 → ltCoef=0.75 → 379
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 379, visitTotal: 379,
+      needCheck: true, needCheckReason: "長期減額75%適用（捻挫）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-07-15_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 379 }
+    ]
+  },
+
+  "TC16c": {
+    // 減額なし: monthsElapsed=4（長期条件未達）→ ltCoef=1.0 → 505
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-06-15_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
 };
 
 
@@ -723,13 +800,14 @@ var JREC01_EXPECTED_ = {
    ※ production ロジック変更時はここも更新すること
    ======================================================================= */
 function computeAmountsFromFixture_V3_(fx) {
-  var settings  = TEST_SETTINGS_;
-  var ms        = fx.context.monthlyStatus;
-  var treatDate = new Date(fx.context.treatDate);
-  var patId     = fx.context.patientId;
-  var kubun1    = (fx.cases[0] || {}).kubun || null;
-  var kubun2    = (fx.cases[1] || {}).kubun || null;
-  var reasons   = [];
+  var settings             = TEST_SETTINGS_;
+  var ms                   = fx.context.monthlyStatus;
+  var treatDate            = new Date(fx.context.treatDate);
+  var patId                = fx.context.patientId;
+  var kubun1               = (fx.cases[0] || {}).kubun || null;
+  var kubun2               = (fx.cases[1] || {}).kubun || null;
+  var monthlyVisitCounts   = fx.context.monthlyVisitCounts || null;  // §11 50%逓減用
+  var reasons              = [];
 
   // --- 初検料 ---
   var hasInit   = (kubun1 === "初検" || kubun2 === "初検");
@@ -774,7 +852,7 @@ function computeAmountsFromFixture_V3_(fx) {
       var part = calcOnePartAmount_V3_(
         settings, effectiveKubun, p.byomei, injDate, treatDate,
         !!p.cold, !!p.warm, !!p.electro,
-        i + 1, reasons, p.bui
+        i + 1, reasons, p.bui, monthlyVisitCounts
       );
       part.bui = p.bui;
       total += part.total;
@@ -964,6 +1042,9 @@ function runFixtureTC14a()  { showFixtureResult_("TC14a"); }
 function runFixtureTC14b()  { showFixtureResult_("TC14b"); }
 function runFixtureTC15a()  { showFixtureResult_("TC15a"); }
 function runFixtureTC15b()  { showFixtureResult_("TC15b"); }
+function runFixtureTC16a()  { showFixtureResult_("TC16a"); }
+function runFixtureTC16b()  { showFixtureResult_("TC16b"); }
+function runFixtureTC16c()  { showFixtureResult_("TC16c"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }
