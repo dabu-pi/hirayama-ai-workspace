@@ -311,6 +311,7 @@ git push origin feature/auto-dev-phase3-loop
 | エイリアス（PS）de | `de "テスト"` | コミット・push 完了と表示される |
 | エイリアス（PS） | `dstat` | プロジェクト状態が表示される |
 | エイリアス（PS） | `note "test" -Tag done` | logs/notes/ にメモが保存される |
+| env vars（AIOS） | `$env:AIOS_DASHBOARD_SPREADSHEET_ID` | スプレッドシートIDが表示される（Step 9参照） |
 
 ---
 
@@ -356,16 +357,91 @@ pip install -r requirements.txt
 - `CLAUDE.md`
 - `docs/AI_DEV_ENV.md`
 
-## ai-os 直接書き込み補足
+## Step 9 — de コマンド用 env vars の設定（AIOS Dashboard 連携）
 
-`Codex` から `Run_Log` を直接 Google Sheets へ追記する場合は、サービスアカウント JSON と環境変数が必要です。
-詳しくは [ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md](C:/hirayama-ai-workspace/workspace/ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md) を参照してください。
+### 何のための設定か
 
-最小設定:
+`de` コマンドは workspace 全プロジェクト共通の作業終了コマンドです。
+以下の環境変数が設定されていると、`de` 1コマンドで次の処理まで自動実行されます：
+
+```
+commit → push → Run_Log シート追記 → Projects 最小同期（次アクション / 最終更新日 / 補足）
+```
+
+**未設定の場合:** commit / push / ローカル Run_Log JSON 出力は通常通り動作します。
+Run_Log シート追記と Projects 同期のみスキップされます（エラーにはなりません）。
+
+### 必要な 2 つの環境変数
+
+| 変数名 | 内容 |
+|---|---|
+| `AIOS_DASHBOARD_SPREADSHEET_ID` | Hirayama AI OS Dashboard のスプレッドシートID（`1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk`） |
+| `AIOS_SERVICE_ACCOUNT_PATH` | サービスアカウント JSON の絶対パス（例: `C:\hirayama-ai-workspace\secrets\aios-service-account.json`） |
+
+サービスアカウント JSON は Git に含まれていません。別のPCからコピーするか、Google Cloud Console で再発行して配置してください。
+
+### 設定方法（PowerShell）
+
+#### セッション内だけ有効にする（動作確認・一時設定）
+
+PowerShell を開いて実行。ターミナルを閉じると消える。
 
 ```powershell
-[Environment]::SetEnvironmentVariable('AIOS_SERVICE_ACCOUNT_PATH', 'C:\hirayama-ai-workspace\secrets\aios-service-account.json', 'User')
+$env:AIOS_DASHBOARD_SPREADSHEET_ID = '1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk'
+$env:AIOS_SERVICE_ACCOUNT_PATH     = 'C:\hirayama-ai-workspace\secrets\aios-service-account.json'
+```
+
+#### 恒久設定（PC 再起動後も有効・推奨）
+
+PowerShell を **管理者なしで実行** してもユーザー範囲（`User` スコープ）で登録できます。
+設定後は新しいターミナルを開いて反映させてください。
+
+```powershell
 [Environment]::SetEnvironmentVariable('AIOS_DASHBOARD_SPREADSHEET_ID', '1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_SERVICE_ACCOUNT_PATH', 'C:\hirayama-ai-workspace\secrets\aios-service-account.json', 'User')
 [Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_NAME', 'Run_Log', 'User')
 [Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_WRITE', '1', 'User')
 ```
+
+> `AIOS_RUNLOG_SHEET_NAME` / `AIOS_RUNLOG_SHEET_WRITE` は補助変数。設定しなくてもスプレッドシートIDとサービスアカウントがあれば動作します。
+
+### 設定後の確認コマンド
+
+```powershell
+# 変数が設定されているか確認
+$env:AIOS_DASHBOARD_SPREADSHEET_ID
+$env:AIOS_SERVICE_ACCOUNT_PATH
+
+# サービスアカウントファイルが存在するか確認
+Test-Path $env:AIOS_SERVICE_ACCOUNT_PATH
+# → True が返れば OK
+```
+
+### 別PC セットアップ時の確認チェック
+
+1. `aios-service-account.json` を `C:\hirayama-ai-workspace\secrets\` に配置したか
+2. `AIOS_DASHBOARD_SPREADSHEET_ID` を恒久設定したか（上記コマンド参照）
+3. `AIOS_SERVICE_ACCOUNT_PATH` を恒久設定したか
+4. 新しいターミナルを開いて `$env:AIOS_DASHBOARD_SPREADSHEET_ID` を確認したか
+5. `de -ProjectId AIOS-06 "セットアップ確認"` を実行し Run_Log シートに行が追記されたか
+
+### 未設定時の挙動まとめ
+
+| ステップ | env vars 設定済み | env vars 未設定 |
+|---|---|---|
+| commit / push | ✅ 通常通り | ✅ 通常通り |
+| ローカル Run_Log JSON 出力 | ✅ 通常通り | ✅ 通常通り |
+| Run_Log シート追記 | ✅ 自動実行 | ⚠️ スキップ（エラーなし） |
+| Projects 最小同期 | ✅ 自動実行 | ⚠️ スキップ（エラーなし） |
+
+未設定 PC での手動フォロー手順（必要な場合のみ）:
+
+```powershell
+# Run_Log シートへ手動追記
+node scripts/append-runlog-to-sheet.mjs --json logs/runlog/<最新JSON> --write
+
+# Projects 最小同期（手動）
+node scripts/sync-project-from-runlog.mjs --json logs/runlog/<最新JSON> --project-id <ID> --expected-commit <hash> --write
+```
+
+詳細: [ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md](./ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md)
