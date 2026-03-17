@@ -135,7 +135,10 @@ V3TR.CONFIG = {
     "電療_回数", "電療_金額",
     "case計",
 
-    "当月合計", "窓口負担額", "請求金額"
+    "当月合計", "窓口負担額", "請求金額",
+
+    // 来院区分サマリー（exportHeaderFromCases_V3 と同一ロジックで導出）
+    "Mixed区分", "case1要約", "case2要約"
   ],
 
   /**
@@ -350,6 +353,13 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
   const copay = V3TR_roundToUnit_(total * burdenRatio, settings.roundUnit);
   const claim = Math.floor(total - copay); // 小数点以下切り捨て
 
+  // 来院区分サマリー（case1行・case2行の両方に同一値を書き込む）
+  const _k1 = caseSummary.case1.kubun || "";
+  const _k2 = caseSummary.case2.caseKey ? (caseSummary.case2.kubun || "") : "";
+  const _mixedFlag    = _k2 ? "Mixed" : "通常";
+  const _case1Summary = _k1 ? "case1:" + _k1 : "case1:なし";
+  const _case2Summary = _k2 ? "case2:" + _k2 : "case2:なし";
+
   const rowsOut = [];
   for (const caseNo of [1, 2]) {
     const key = `${patientId}|${ym}|C${caseNo}`;
@@ -475,6 +485,11 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
       row["窓口負担額"] = "";
       row["請求金額"] = "";
     }
+
+    // 来院区分サマリー（case1行・case2行の両方に同一値）
+    row["Mixed区分"]  = _mixedFlag;
+    row["case1要約"]  = _case1Summary;
+    row["case2要約"]  = _case2Summary;
 
     // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
     // 空レコード（caseKey=""・全金額0）の出力を抑制する。
@@ -632,6 +647,7 @@ function V3TR_buildCaseMonthlySummary_(shCases, patientId, start, end) {
   const cS1 = col(C.caseCols.start1), cS2 = col(C.caseCols.start2);
   const cE1 = col(C.caseCols.end1),   cE2 = col(C.caseCols.end2);
   const cT1 = map[C.caseCols.tenki1] || -1, cT2 = map[C.caseCols.tenki2] || -1;
+  const cKubun = col(C.caseCols.kubun);
 
   const lastByCaseNo = { 1: null, 2: null };
 
@@ -653,7 +669,7 @@ function V3TR_buildCaseMonthlySummary_(shCases, patientId, start, end) {
       caseKey: "", injuryName: "", injuryDate: "",
       firstDate: "", startDate: "", endDate: "",
       startDate1: "", endDate1: "", startDate2: "", endDate2: "",
-      tenki1: "", tenki2: "",
+      tenki1: "", tenki2: "", kubun: "",
     };
 
     const row = obj.row;
@@ -692,6 +708,7 @@ function V3TR_buildCaseMonthlySummary_(shCases, patientId, start, end) {
       // 転帰
       tenki1: (cT1 >= 0) ? String(row[cT1] || "").trim() : "",
       tenki2: (cT2 >= 0) ? String(row[cT2] || "").trim() : "",
+      kubun: String(row[cKubun] || "").trim(),
     };
   }
 
