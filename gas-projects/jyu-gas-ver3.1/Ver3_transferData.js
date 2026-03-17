@@ -22,16 +22,22 @@ V3TR.CONFIG = {
     history: "初検情報履歴",
   },
 
-  /** 初検情報履歴シートの列名 */
+  /**
+   * 初検情報履歴シートの列名
+   * ★ appendInitHistory_V3_（Ver3_core.js）が書き込む正式ヘッダと一致させること
+   */
   historyCols: {
+    createdAt:      "作成日時",
     patientId:      "患者ID",
-    caseKey:        "caseKey",       // 任意列（なければpatientIdのみでマッチ）
-    initDate:       "初検日",        // 月末日以前の最新1件を採用
+    caseKey:        "caseKey",           // Pass-1 正規マッチキー
+    caseNo:         "caseNo",
+    initDate:       "施術日(初検日)",    // 月末日以前の最新1件を採用
     injuryDatetime: "負傷の日時",
     injuryPlace:    "負傷の場所",
-    injuryStatus:   "負傷の状況",
-    initFindings:   "初検時所見",
-    supportContent: "初検時相談支援内容",
+    injuryStatus:   "負傷時の状況",
+    initFindings:   "初検時の所見",
+    supportContent: "初検時相談支援の内容",
+    injuryFixed:    "受傷日_確定",       // 任意列
   },
 
   setKeys: {

@@ -25,7 +25,7 @@ const SHEETS = {
   settings: "設定",
   cases: "来院ケース",
   master: "患者マスタ",
-  ui: "患者画面",
+  ui: "患者画面のコピー",   // ★検証用。本番化時は "患者画面" に戻す
   detail: "施術明細",
   header: "来院ヘッダ",
   history: "初検情報履歴",
@@ -39,29 +39,45 @@ const UI = {
   treatDate: "B4",
   kubun: "B5",
 
-  // 表示専用：区分（ユーザー指定）
+  // 表示専用：区分
   case1_kubunView: "C10",
-  case2_kubunView: "C25",
+  case2_kubunView: "C34",
 
   // Case1（入力2行）※ A〜H（G=終了日, H=転帰）
   case1_rows: ["A12:H12", "A13:H13"],
-  case1_shoken: "I11:N14",
-  case1_keikaNow: "A16:F19",
-  case1_keikaHistory: "I17:N21",
+  case1_shoken:       "A23:B28",
+  case1_keikaNow:     "A16:B20",
+  case1_keikaHistory: "D23:G28",
+  // Case1 初検情報入力（初検時のみ入力）
+  case1_initInfo: {
+    injuryDatetime: "E16:G16",
+    injuryPlace:    "E17:G17",
+    injuryStatus:   "E18:G18",
+    initFindings:   "E19:G19",
+    supportContent: "E20:G20",
+  },
 
   // Case2（入力2行）※ A〜H（G=終了日, H=転帰）
-  case2_rows: ["A27:H27", "A28:H28"],
-  case2_shoken: "I26:N29",
-  case2_keikaNow: "A31:F34",
-  case2_keikaHistory: "I32:N36",
+  case2_rows: ["A36:H36", "A37:H37"],
+  case2_shoken:       "A47:B52",
+  case2_keikaNow:     "A40:B44",
+  case2_keikaHistory: "D47:G52",
+  // Case2 初検情報入力（初検時のみ入力）
+  case2_initInfo: {
+    injuryDatetime: "E40:G40",
+    injuryPlace:    "E41:G41",
+    injuryStatus:   "E42:G42",
+    initFindings:   "E43:G43",
+    supportContent: "E44:G44",
+  },
 
   // 終了日入力（明示）
   case1_endHeader: "G11",
-  case2_endHeader: "G26",
+  case2_endHeader: "G35",
 
   // 来院回数（表示専用）
-  case1_visitCount: "B15",
-  case2_visitCount: "B30",
+  case1_visitCount: "G10",
+  case2_visitCount: "B39",
 
   // 会計ブロック（表示専用）
   billing_visitTotal: "E2",
@@ -228,7 +244,7 @@ function onEdit(e) {
     // ---- 近接部位チェック（部位名/傷病名セル編集時） ----
     var PROXIMITY_CELLS = {
       "A12": 1, "B12": 1, "A13": 1, "B13": 1,
-      "A27": 2, "B27": 2, "A28": 2, "B28": 2
+      "A36": 2, "B36": 2, "A37": 2, "B37": 2
     };
     if (PROXIMITY_CELLS[a1] != null) {
       var caseNo = PROXIMITY_CELLS[a1];
@@ -602,13 +618,13 @@ function applyEndedProtection_(uiSh, rowA1, isEnded) {
   }
 }
 
-/** 転帰ドロップダウンを設定（H12,H13,H27,H28） */
+/** 転帰ドロップダウンを設定（H12,H13,H36,H37） */
 function setupTenkiValidation_(uiSh) {
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["治癒", "中止", "転医"], true)
     .setAllowInvalid(false)
     .build();
-  ["H12", "H13", "H27", "H28"].forEach(function(cell) {
+  ["H12", "H13", "H36", "H37"].forEach(function(cell) {
     uiSh.getRange(cell).setDataValidation(rule);
   });
 }
@@ -833,21 +849,31 @@ function saveVisit_V3() {
   var kubun1 = case1HasData ? ep1.kubun : "";
   var kubun2 = case2HasData ? ep2.kubun : "";
 
-  upsertOneCase_(uiSh, caseSh, caseMap, {
+  var res1 = upsertOneCase_(uiSh, caseSh, caseMap, {
     visitKey: visitKey, patientId: patientId, treatDate: treatDate,
     kubun: ep1.kubun,
     caseNo: 1,
     now: now,
     episodeStartDate: ep1.episodeStartDate
   });
+  // 初検時のみ初検情報履歴へ upsert
+  if (res1 && res1.kubun === "初検") {
+    appendInitHistory_V3_(ss, patientId, 1, res1.caseKey, treatDate,
+                          readInitInfoFromUI_(uiSh, 1));
+  }
 
-  upsertOneCase_(uiSh, caseSh, caseMap, {
+  var res2 = upsertOneCase_(uiSh, caseSh, caseMap, {
     visitKey: visitKey, patientId: patientId, treatDate: treatDate,
     kubun: ep2.kubun,
     caseNo: 2,
     now: now,
     episodeStartDate: ep2.episodeStartDate
   });
+  // 初検時のみ初検情報履歴へ upsert
+  if (res2 && res2.kubun === "初検") {
+    appendInitHistory_V3_(ss, patientId, 2, res2.caseKey, treatDate,
+                          readInitInfoFromUI_(uiSh, 2));
+  }
 
   // ② 金額計算（来院ケースベース）
   // ※ upsertOneCase_ はデータ無しなら早期returnするが、
@@ -1201,6 +1227,7 @@ function upsertOneCase_(uiSh, caseSh, caseMap, base) {
 
     caseSh.getRange(rowIndex, 1, 1, lastCol).setValues([rowArr2]);
   }
+  return { kubun: kubun, caseKey: caseKey };
 }
 
 function writeLinesToCaseRow_(rowArr, caseMap, line1, line2) {
@@ -1748,14 +1775,16 @@ function clearEntryUI_V3() {
   uiSh.getRange(UI.case1_shoken).clearContent();
   uiSh.getRange(UI.case1_keikaNow).clearContent();
   uiSh.getRange(UI.case1_keikaHistory).clearContent();
+  clearInitInfoUI_V3_(uiSh, 1);
 
-  uiSh.getRange("A27:H28").clearContent();
+  uiSh.getRange("A36:H37").clearContent();
   uiSh.getRange(UI.case2_shoken).clearContent();
   uiSh.getRange(UI.case2_keikaNow).clearContent();
   uiSh.getRange(UI.case2_keikaHistory).clearContent();
+  clearInitInfoUI_V3_(uiSh, 2);
 
   // 取消線・色の解除 + チェックボックス再設定
-  var inputRows = ["A12:H12", "A13:H13", "A27:H27", "A28:H28"];
+  var inputRows = ["A12:H12", "A13:H13", "A36:H36", "A37:H37"];
   for (var i = 0; i < inputRows.length; i++) {
     applyEndedProtection_(uiSh, inputRows[i], false);
   }
@@ -1764,7 +1793,7 @@ function clearEntryUI_V3() {
     [false, false, false],
     [false, false, false]
   ]);
-  uiSh.getRange("D27:F28").setValues([
+  uiSh.getRange("D36:F37").setValues([
     [false, false, false],
     [false, false, false]
   ]);
@@ -1821,7 +1850,7 @@ function clearAfterSaveUI_V3_(uiSh) {
   }
 
   uiSh.getRange("D12:F13").setValues([[false,false,false],[false,false,false]]);
-  uiSh.getRange("D27:F28").setValues([[false,false,false],[false,false,false]]);
+  uiSh.getRange("D36:F37").setValues([[false,false,false],[false,false,false]]);
 
   // 転帰ドロップダウン再設定
   setupTenkiValidation_(uiSh);
@@ -1833,6 +1862,9 @@ function clearAfterSaveUI_V3_(uiSh) {
 
   setMergedValue_(uiSh, UI.case1_keikaHistory, "");
   setMergedValue_(uiSh, UI.case2_keikaHistory, "");
+
+  clearInitInfoUI_V3_(uiSh, 1);
+  clearInitInfoUI_V3_(uiSh, 2);
 
   uiSh.getRange(UI.case1_kubunView).setValue("");
   uiSh.getRange(UI.case2_kubunView).setValue("");
@@ -2590,4 +2622,101 @@ function ensureDetailHeaders_V3() {
   ];
   sh.getRange(1, 1, 1, required.length).setValues([required]);
   SpreadsheetApp.getUi().alert("施術明細ヘッダーを設定しました（" + required.length + "列）");
+}
+
+// ============================================================
+// ===== 初検情報UI読み取り / クリア / 履歴保存 =====
+// ============================================================
+
+/**
+ * UIシートから初検情報入力の5項目を読み取る。
+ * case1_initInfo / case2_initInfo のセル範囲を参照。
+ */
+function readInitInfoFromUI_(uiSh, caseNo) {
+  var cells = (caseNo === 1) ? UI.case1_initInfo : UI.case2_initInfo;
+  return {
+    injuryDatetime: String(getMergedValue_(uiSh, cells.injuryDatetime) || "").trim(),
+    injuryPlace:    String(getMergedValue_(uiSh, cells.injuryPlace)    || "").trim(),
+    injuryStatus:   String(getMergedValue_(uiSh, cells.injuryStatus)   || "").trim(),
+    initFindings:   String(getMergedValue_(uiSh, cells.initFindings)   || "").trim(),
+    supportContent: String(getMergedValue_(uiSh, cells.supportContent) || "").trim(),
+  };
+}
+
+/**
+ * 初検情報入力エリア（5セル）をクリアする。
+ * clearEntryUI_V3 / clearAfterSaveUI_V3_ から呼ぶ。
+ */
+function clearInitInfoUI_V3_(uiSh, caseNo) {
+  var cells = (caseNo === 1) ? UI.case1_initInfo : UI.case2_initInfo;
+  uiSh.getRange(cells.injuryDatetime).clearContent();
+  uiSh.getRange(cells.injuryPlace).clearContent();
+  uiSh.getRange(cells.injuryStatus).clearContent();
+  uiSh.getRange(cells.initFindings).clearContent();
+  uiSh.getRange(cells.supportContent).clearContent();
+}
+
+/**
+ * 初検情報履歴シートへ upsert（患者ID + caseKey + 施術日(初検日) をキーに更新、なければ append）。
+ * シートが存在しない場合は自動作成してヘッダを設定する。
+ * 初検 kubun の場合のみ saveVisit_V3 から呼ぶ。
+ *
+ * 正式ヘッダ（Ver3_transferData.js の historyCols と一致させること）:
+ *   作成日時 / 患者ID / caseKey / caseNo / 施術日(初検日) /
+ *   負傷の日時 / 負傷の場所 / 負傷時の状況 / 初検時の所見 /
+ *   初検時相談支援の内容 / 受傷日_確定
+ */
+function appendInitHistory_V3_(ss, patientId, caseNo, caseKey, treatDate, initFields) {
+  var HIST_HEADER = [
+    "作成日時", "患者ID", "caseKey", "caseNo", "施術日(初検日)",
+    "負傷の日時", "負傷の場所", "負傷時の状況", "初検時の所見",
+    "初検時相談支援の内容", "受傷日_確定"
+  ];
+
+  var sh = ss.getSheetByName(SHEETS.history);
+  if (!sh) {
+    sh = ss.insertSheet(SHEETS.history);
+    sh.getRange(1, 1, 1, HIST_HEADER.length).setValues([HIST_HEADER]);
+  }
+
+  // 既存行を探す（patientId + caseKey + 施術日(初検日) の3キー一致）
+  var hmap = buildHeaderColMap_(sh);
+  var cPid = hmap["患者ID"];
+  var cCK  = hmap["caseKey"];
+  var cDt  = hmap["施術日(初検日)"];
+  var rowIdx = 0;
+
+  if (cPid && cCK && cDt && sh.getLastRow() >= 2) {
+    var v = sh.getDataRange().getValues();
+    var td = (treatDate instanceof Date) ? treatDate.getTime() : null;
+    for (var r = 1; r < v.length; r++) {
+      if (String(v[r][cPid - 1] || "").trim() !== patientId) continue;
+      if (String(v[r][cCK  - 1] || "").trim() !== (caseKey || "")) continue;
+      var rowDt = v[r][cDt - 1];
+      if (td !== null && rowDt instanceof Date && rowDt.getTime() === td) {
+        rowIdx = r + 1;
+        break;
+      }
+    }
+  }
+
+  var rowArr = [
+    new Date(),
+    patientId,
+    caseKey   || "",
+    caseNo,
+    treatDate,
+    initFields.injuryDatetime || "",
+    initFields.injuryPlace    || "",
+    initFields.injuryStatus   || "",
+    initFields.initFindings   || "",
+    initFields.supportContent || "",
+    "",  // 受傷日_確定：任意列のため空文字（後から手動更新可）
+  ];
+
+  if (rowIdx > 0) {
+    sh.getRange(rowIdx, 1, 1, rowArr.length).setValues([rowArr]);
+  } else {
+    sh.appendRow(rowArr);
+  }
 }
