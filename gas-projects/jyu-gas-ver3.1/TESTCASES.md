@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 40/40 PASS 確認待ち（2026-03-17）— TC20a/b/c（金属副子等加算 Phase 2）追加済み**
-> 37/37 は確認済み（TC19a/b含む）。TC20a/b/c + `buildMetalCountByCaseKey_V3_` / `metalPriorCount` 実装。clasp push 後に確認。
+> **fixture テスト: 40/40 PASS 確認済み（2026-03-17）**
+> TC20a/b/c（金属副子等加算 Phase 2）含む全40ケース PASS。次: 柔道整復運動後療料 TC21a〜d 追加予定。
 
 ---
 
