@@ -40,6 +40,7 @@ var TEST_SETTINGS_ = {
   multiCoef3:           0.6,
   roundUnit:            10,
   metalAddon:           1000, // §18.3 骨折・不全骨折・脱臼 1,000円
+  exerciseAddon:        320,  // 柔道整復運動後療料 骨折・不全骨折・脱臼 dayDiff>=15
   _rawMap:              {},
 };
 
@@ -559,6 +560,59 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC21: 柔道整復運動後療料（骨折・不全骨折・脱臼 / dayDiff >= 15）───────────────
+  // TC21a: 骨折 dayDiff=15 exercise=true → exerciseOut=320, rowTotalOut=1170
+  // TC21b: 骨折 dayDiff=14 exercise=true → 算定不可（15日未満）, rowTotalOut=850
+  // TC21c: 捻挫 dayDiff=20 exercise=true → 算定不可（対象外傷病）, rowTotalOut=505
+  // TC21d: 骨折 dayDiff=8  exercise=true → 算定不可（15日未満）, rowTotalOut=850
+  "TC21a": {
+    testId: "TC21a",
+    context: { patientId: "P001", treatDate: "2026-01-20",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: false, exercise: true }
+      ]}
+    ]
+  },
+
+  "TC21b": {
+    testId: "TC21b",
+    context: { patientId: "P001", treatDate: "2026-01-19",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: false, exercise: true }
+      ]}
+    ]
+  },
+
+  "TC21c": {
+    testId: "TC21c",
+    context: { patientId: "P001", treatDate: "2026-01-25",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "捻挫", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: false, exercise: true }
+      ]}
+    ]
+  },
+
+  "TC21d": {
+    testId: "TC21d",
+    context: { patientId: "P001", treatDate: "2026-01-28",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-20",
+          cold: false, warm: false, electro: false, metal: false, exercise: true }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -1016,6 +1070,51 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  // ── TC21: 柔道整復運動後療料 ─────────────────────────────────────────────────
+  "TC21a": {
+    // 骨折 dayDiff=15 → 算定可。koryoKossetu=850, exerciseOut=320, rowTotalOut=1170
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1170, visitTotal: 1170,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-20_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, exerciseOut: 320, rowTotalOut: 1170 }
+    ]
+  },
+
+  "TC21b": {
+    // 骨折 dayDiff=14 → 算定不可（15日未満）。koryoKossetu=850, exerciseOut=0, rowTotalOut=850
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 850, visitTotal: 850,
+      needCheck: true, needCheckReason: "運動後療料 算定不可（受傷後15日未満）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-19_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, exerciseOut: 0, rowTotalOut: 850 }
+    ]
+  },
+
+  "TC21c": {
+    // 捻挫 dayDiff=20 → 算定不可（対象外傷病）。koryoNenZa=505, exerciseOut=0, rowTotalOut=505
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: true, needCheckReason: "運動後療料 算定不可（対象外傷病：捻挫）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-25_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, exerciseOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  "TC21d": {
+    // 骨折 dayDiff=8 → 算定不可（15日未満）。koryoKossetu=850, exerciseOut=0, rowTotalOut=850
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 850, visitTotal: 850,
+      needCheck: true, needCheckReason: "運動後療料 算定不可（受傷後15日未満）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-28_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, exerciseOut: 0, rowTotalOut: 850 }
+    ]
+  },
+
 };
 
 
@@ -1079,7 +1178,8 @@ function computeAmountsFromFixture_V3_(fx) {
         !!p.cold, !!p.warm, !!p.electro,
         i + 1, reasons, p.bui, monthlyVisitCounts,
         !!p.metal,                                          // §18.3 Phase 1
-        (p.metalPriorCount !== undefined) ? Number(p.metalPriorCount) : null  // §18.3 Phase 2
+        (p.metalPriorCount !== undefined) ? Number(p.metalPriorCount) : null,  // §18.3 Phase 2
+        !!p.exercise                                        // 柔道整復運動後療料
       );
       part.bui = p.bui;
       total += part.total;
@@ -1136,7 +1236,8 @@ function computeAmountsFromFixture_V3_(fx) {
         coldOut:     p.cold,
         warmOut:     p.warm,
         electroOut:  p.electro,
-        metalOut:    p.metalOut,  // §18.3
+        metalOut:    p.metalOut,     // §18.3
+        exerciseOut: p.exerciseOut,  // 柔道整復運動後療料
         rowTotalOut: Math.round(p.total),
       });
     }
@@ -1282,6 +1383,10 @@ function runFixtureTC19b()  { showFixtureResult_("TC19b"); }
 function runFixtureTC20a()  { showFixtureResult_("TC20a"); }
 function runFixtureTC20b()  { showFixtureResult_("TC20b"); }
 function runFixtureTC20c()  { showFixtureResult_("TC20c"); }
+function runFixtureTC21a()  { showFixtureResult_("TC21a"); }
+function runFixtureTC21b()  { showFixtureResult_("TC21b"); }
+function runFixtureTC21c()  { showFixtureResult_("TC21c"); }
+function runFixtureTC21d()  { showFixtureResult_("TC21d"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

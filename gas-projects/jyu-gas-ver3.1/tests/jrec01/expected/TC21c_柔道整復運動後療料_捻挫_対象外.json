@@ -1,0 +1,21 @@
+{
+  "testId": "TC21c",
+  "note": "捻挫 dayDiff=20（対象外傷病）: exerciseOut=0, rowTotalOut=505, needCheck=true",
+  "header": {
+    "initFee": 0,
+    "reFee": 0,
+    "supportFee": 0,
+    "detailSum": 505,
+    "visitTotal": 505,
+    "needCheck": true,
+    "needCheckReason": "運動後療料 算定不可（対象外傷病：捻挫）",
+    "billedKubun": "後療",
+    "mixedFlag": "通常",
+    "case1Summary": "case1:後療",
+    "case2Summary": "case2:なし",
+    "chargeReason": "後療のみ"
+  },
+  "details": [
+    { "detailID": "P001_2026-01-25_C1_P1", "kubun": "後療", "baseOut": 505, "coldOut": 0, "exerciseOut": 0, "rowTotalOut": 505 }
+  ]
+}

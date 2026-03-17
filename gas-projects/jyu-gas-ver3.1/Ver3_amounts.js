@@ -50,6 +50,7 @@ const AM_SET_KEYS = {
   multiCoef3: "多部位_3部位目係数",
   roundUnit: "窓口端数単位",
   metalAddon: "金属副子等加算",  // §18.3 骨折・不全骨折・脱臼のみ算定
+  exerciseAddon: "柔道整復運動後療料",  // 骨折・不全骨折・脱臼 dayDiff>=15
 };
 
 /** ===== 施術明細：列名（最終ヘッダー前提）===== */
@@ -71,6 +72,7 @@ const AM_DETAIL_COLS = {
   warmChk: "温",
   electroChk: "電",
   metalChk: "金属副子チェック",  // §18.3 Phase 1
+  exerciseChk: "運動後療チェック",  // 柔道整復運動後療料 Phase 1
 
   // 出力（確定列）
   coefOut: "係数",
@@ -81,6 +83,7 @@ const AM_DETAIL_COLS = {
   electroOut: "電_確定",
   taikiOut: "待機_確定",
   metalOut: "金属副子_確定",    // §18.3 Phase 1
+  exerciseOut: "運動後療_確定",  // 柔道整復運動後療料 Phase 1
   rowTotalOut: "行合計_確定",
 };
 
@@ -126,6 +129,7 @@ function loadSettings_V3_(ss) {
     multiCoef3: Number(map[AM_SET_KEYS.multiCoef3] || 0.6),
     roundUnit: Number(map[AM_SET_KEYS.roundUnit] || 1),
     metalAddon: Number(map[AM_SET_KEYS.metalAddon] || 0),  // §18.3
+    exerciseAddon: Number(map[AM_SET_KEYS.exerciseAddon] || 0),  // 柔道整復運動後療料
     // 動的キー参照用（部位別整復料/固定料）
     _rawMap: map,
   };
@@ -437,9 +441,10 @@ function buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKey, beforeDa
  *
  * @param {boolean} [metalChk] - 金属副子等加算チェック（§18.3）
  * @param {number|null} [metalPriorCount] - 当日より前の通算算定回数（null=Phase 1 モード・回数制限なし）
- * @return {Object} { base, cold, warm, electro, taiki, metalOut, coef, longTermCoef, total, ... }
+ * @param {boolean} [exerciseChk] - 柔道整復運動後療料チェック
+ * @return {Object} { base, cold, warm, electro, taiki, metalOut, exerciseOut, coef, longTermCoef, total, ... }
  */
-function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui, monthlyVisitCounts, metalChk, metalPriorCount) {
+function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui, monthlyVisitCounts, metalChk, metalPriorCount, exerciseChk) {
   var injuryType = detectInjuryType_V3_(byomei);
   var base = calcBaseFee_V3_(settings, kubun, injuryType, bui);
 
@@ -556,6 +561,21 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
     }
   }
 
+  // 柔道整復運動後療料（骨折・不全骨折・脱臼 / dayDiff >= 15 / 逓減対象外）
+  var exerciseOut = 0;
+  if (exerciseChk) {
+    if (injuryType === "骨折" || injuryType === "不全骨折" || injuryType === "脱臼") {
+      if (dayDiff != null && dayDiff >= 15) {
+        exerciseOut = settings.exerciseAddon || 0;
+      } else {
+        reasons.push("運動後療料 算定不可（受傷後15日未満）");
+      }
+    } else {
+      // C群（打撲・捻挫・挫傷）や不明傷病は算定不可
+      reasons.push("運動後療料 算定不可（対象外傷病：" + (byomei || "不明") + "）");
+    }
+  }
+
   return {
     base: base,
     cold: cold,
@@ -563,9 +583,10 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
     electro: electro,
     taiki: taiki,
     metalOut: metalOut,       // §18.3 逓減対象外
+    exerciseOut: exerciseOut, // 柔道整復運動後療料 逓減対象外
     coef: coef,
     longTermCoef: ltCoef,
-    total: (ltBase + ltCold + ltWarm + ltElectro + taiki) * coef + metalOut, // metalOut は coef・ltCoef 乗算なし
+    total: (ltBase + ltCold + ltWarm + ltElectro + taiki) * coef + metalOut + exerciseOut, // metal/exercise は coef・ltCoef 乗算なし
     byomei: byomei,
     partOrder: partOrder,
     injuryDate: injuryDate,
@@ -573,6 +594,7 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
     warmChk: warmChk,
     electroChk: elecChk,
     metalChk: !!metalChk,
+    exerciseChk: !!exerciseChk,
   };
 }
 
@@ -877,12 +899,13 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
     var metalCount1 = (metal1Chk && detailValues && detailMap)
       ? buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKeyVal, treatDate)
       : null;  // null = Phase 1 モード（回数制限なし）
+    var exercise1Chk = get(CASE_COLS.exercise1) === true;
     var part1 = calcOnePartAmount_V3_(settings, kubun, d1, inj1, treatDate,
       get(CASE_COLS.cold1) === true,
       get(CASE_COLS.warm1) === true,
       get(CASE_COLS.elec1) === true,
       partCount, reasons, p1, mvc1,
-      metal1Chk, metalCount1);  // §18.3 Phase 1+2
+      metal1Chk, metalCount1, exercise1Chk);  // §18.3 + 運動後療料
     part1.bui = p1;
     total += part1.total;
     parts.push(part1);
@@ -902,12 +925,13 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
     var metalCount2 = (metal2Chk && detailValues && detailMap)
       ? buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKeyVal, treatDate)
       : null;
+    var exercise2Chk = get(CASE_COLS.exercise2) === true;
     var part2 = calcOnePartAmount_V3_(settings, kubun, d2, inj2, treatDate,
       get(CASE_COLS.cold2) === true,
       get(CASE_COLS.warm2) === true,
       get(CASE_COLS.elec2) === true,
       partCount, reasons, p2, mvc2,
-      metal2Chk, metalCount2);  // §18.3 Phase 1+2
+      metal2Chk, metalCount2, exercise2Chk);  // §18.3 + 運動後療料
     part2.bui = p2;
     total += part2.total;
     parts.push(part2);
@@ -1000,6 +1024,9 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
     var warmChk = row[maps.detail[AM_DETAIL_COLS.warmChk] - 1] === true;
     var electroChk = row[maps.detail[AM_DETAIL_COLS.electroChk] - 1] === true;
     var metalChkVal = row[maps.detail[AM_DETAIL_COLS.metalChk] - 1] === true;  // §18.3
+    var exerciseChkVal = maps.detail[AM_DETAIL_COLS.exerciseChk]
+      ? row[maps.detail[AM_DETAIL_COLS.exerciseChk] - 1] === true
+      : false;
 
     var buiVal = String(row[maps.detail[AM_DETAIL_COLS.bui] - 1] || "").trim();
     var caseKeyVal = String(row[maps.detail[AM_DETAIL_COLS.caseKey] - 1] || "").trim();
@@ -1009,7 +1036,7 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
       ? buildMetalCountByCaseKey_V3_(detailValues, maps.detail, caseKeyVal, treatDate)
       : null;
     var part = calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate,
-      coldChk, warmChk, electroChk, partOrder, reasons, buiVal, mvc, metalChkVal, metalPriorCount);
+      coldChk, warmChk, electroChk, partOrder, reasons, buiVal, mvc, metalChkVal, metalPriorCount, exerciseChkVal);
 
     // 相談支援：運用ON列が無いので事故防止で0固定
     var support = 0;
@@ -1027,6 +1054,9 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
     detailSh.getRange(row1, maps.detail[AM_DETAIL_COLS.taikiOut]).setValue(part.taiki);
     if (maps.detail[AM_DETAIL_COLS.metalOut]) {
       detailSh.getRange(row1, maps.detail[AM_DETAIL_COLS.metalOut]).setValue(part.metalOut);
+    }
+    if (maps.detail[AM_DETAIL_COLS.exerciseOut]) {
+      detailSh.getRange(row1, maps.detail[AM_DETAIL_COLS.exerciseOut]).setValue(part.exerciseOut);
     }
     detailSh.getRange(row1, maps.detail[AM_DETAIL_COLS.rowTotalOut]).setValue(part.total);
   }
