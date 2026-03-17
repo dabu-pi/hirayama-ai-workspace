@@ -217,7 +217,7 @@ clasp push
 | Ver3_amounts.js | `4f6419d`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_core.js | `7dd0790`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_test.js | `dfe0387`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_transferData.js | `09129b7`（2026-03-17）| ✅ clasp push 済み（Script is already up to date）|
+| Ver3_transferData.js | `cebeffe`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 | SPEC.md | `22447fd`（2026-03-17）| N/A（ローカル文書のみ）|
 
@@ -242,6 +242,58 @@ JBIZ-04 には日次入力を持たせず、このブックを現場入力の正
 - 実装完了: 来院ヘッダ6列追加と `設定!E:I` 候補マスタ反映の最小実装まで完了
 - live 確認完了: Apps Script エディタから `ensureSettingsRows_V3` を手動実行し、`設定!E:I` と来院ヘッダ6列の反映、既存列・既存データ非破壊を確認
 - 保留: `clasp run` / Execution API 調査は別タスク。現時点ではコードではなく実行条件側の課題の可能性が高い
+
+---
+
+## 2026-03-17 再検料月内上限ロジック修正（commit cebeffe → 更新版）
+
+### 修正概要
+
+| 項目 | 内容 |
+|---|---|
+| 対象関数 | `V3TR_countKubunInCases_`（Ver3_transferData.js） |
+| 変更前 | `reCount: Math.min(rawReCount, 1)` — 月内固定1回キャップ |
+| 変更後 | `reCount: Math.min(rawReCount, validInitCount)` — 有効初検数を上限 |
+| commit | `cebeffe` |
+| clasp push | ✅ 済み |
+
+### 判定ロジック
+
+- `validInitCount`: 月内で複数 caseNo が初検を持つ場合、先行ケース終了日 vs. 後続ケース初検日で分岐
+  - [A] 施術継続中 Mixed: `終了日なし or 終了日 >= 後続初検日` → `validInitCount=1`
+  - [B] 治癒後別負傷: `先行終了日 < 後続初検日`（厳密 `<`） → `validInitCount=2`
+- エッジケース明文化済み:
+  - `endDate == later.initDate`（同日）→ [A] 保守扱い
+  - `endDate` 空欄 → [A] 保守扱い
+  - `caseNo` 列なし → 全行 caseNo=1 扱いで length<=1 → `validInitCount = min(rawInitCount,1)`
+
+### 到達点と未解決点
+
+| 項目 | 状態 |
+|---|---|
+| transferData 再検料集計（reCount） | ✅ 修正済み |
+| 既存 M01〜M05 との整合 | ✅ 変化なし確認（validInitCount=1 の場合は旧 Math.min(x,1) と等価） |
+| initCount（初検料） | `Math.min(rawInitCount,1)` のまま変更なし |
+| M06b 来院ヘッダ initFee | **⚠️ 未対応** |
+
+### M06b 来院ヘッダ実算定結果（コード分析）
+
+```
+getMonthlyBilledStatus_ の挙動:
+  月内に initFee > 0 の行が 1件でもあれば initBilled=true を立てる
+  → case1 の初検（例: 2/1）が billed → case2 の初検（例: 2/15）は initFee=0 に抑制される
+  ※ 治癒後かどうかを区別しない
+
+M06b での層間整合:
+  transferData: initCount=1（Math.min維持）, reCount=2（validInitCount=2）
+    → initFee=1550, reFee=820
+  来院ヘッダ実績: initFee=1550, reFee=820
+  → 現状は整合している（reCount 修正が適切に機能）
+
+M06b で initFee=3100 を正しく算定するには amounts.js 修正が必要:
+  getMonthlyBilledStatus_ が「治癒後の別ケース初検」を正しく initBilled=false と返すよう修正
+  → 別タスク: JREC-01 amounts.js 治癒後初検抑制解除（SPEC §3-6 月内上限ルール参照）
+```
 
 ---
 
@@ -294,13 +346,10 @@ JBIZ-04 には日次入力を持たせず、このブックを現場入力の正
 
 ### 保留論点（制度確認待ち・今回変更なし）
 
-**再検料 Mixed 2エピソード算定キャップ**
+**再検料 Mixed 2エピソード算定キャップ → 2026-03-17 一部解消**
 
-- 現象: Mixed 患者が同月内に 2 つの別傷病で、各々独立した 再検 を受けた場合
-- 現実装: `Math.min(reCount, 1)` — 再検料を月1回（410円）にキャップ
-- 制度上の解釈: 2 エピソードの再検は 410×2=820 円になる可能性がある（保険発第57号の解釈次第）
-- 今回の対象患者 hirayamaka / touji はいずれも 再検1回のみのため、このキャップは今回の請求には影響しない
-- 対応: 制度原文（保険発第57号）を確認後に実装判断。TESTCASES.md に境界ケース追加が必要
+- commit `cebeffe` で `Math.min(reCount, 1)` を `Math.min(reCount, validInitCount)` に修正済み
+- hirayamaka / touji 両患者とも validInitCount=1 のため今回の請求には影響なし
 
 ---
 

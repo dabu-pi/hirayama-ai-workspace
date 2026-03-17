@@ -1042,10 +1042,11 @@ function V3TR_countKubunInCases_(shCases, patientId, start, end) {
   const cE1  = map[C.caseCols.end1]   >= 0 ? map[C.caseCols.end1]   : -1;
   const cE2  = map[C.caseCols.end2]   >= 0 ? map[C.caseCols.end2]   : -1;
 
-  let rawReCount = 0;
+  let rawInitCount = 0;
+  let rawReCount   = 0;
   // caseNo → { hasInit, initDate, endDate }
   //   initDate: 当月内 kubun=初検 の最早日
-  //   endDate : 当月内 施術終了日_部位1/2 の最遅日
+  //   endDate : 当月内 施術終了日_部位1/2 の最遅日（複数行あれば最遅を保持）
   const caseInfo = {};
 
   for (let r = 1; r < v.length; r++) {
@@ -1057,6 +1058,7 @@ function V3TR_countKubunInCases_(shCases, patientId, start, end) {
     if (!caseInfo[no]) caseInfo[no] = { hasInit: false, initDate: null, endDate: null };
 
     if (k === "初検") {
+      rawInitCount++;
       caseInfo[no].hasInit = true;
       if (!caseInfo[no].initDate || dt < caseInfo[no].initDate) caseInfo[no].initDate = dt;
     } else if (k === "再検") {
@@ -1079,8 +1081,13 @@ function V3TR_countKubunInCases_(shCases, patientId, start, end) {
   //   治癒後に同月内で新たな別負傷が発生した場合、初検料を再度算定可 → 再検料も別途1回 [B]
   //
   // 判定: 月内に2つの初検 event が存在する場合、先行ケースの終了日 < 後続ケースの初検日 なら [B]
-  //   [A] 施術継続中 Mixed: 終了日なし or 終了日 >= 後続初検日 → validInitCount = 1
-  //   [B] 治癒後の新規別負傷: 先行ケース終了日 < 後続ケース初検日   → validInitCount = 2
+  //   [A] 施術継続中 Mixed: 終了日なし or 終了日 >= 後続初検日 → validInitCount=1
+  //   [B] 治癒後の新規別負傷: 先行ケース終了日 < 後続ケース初検日 → validInitCount=2
+  //
+  // エッジケース:
+  //   earlier.endDate === later.initDate: 厳密 < のため施術継続中 [A] 扱い（同日は保守側に倒す）
+  //   earlier.endDate が空（Date でない）: isPostRecovery=false → [A] 扱い
+  //   caseNo 列なし: 全行を caseNo=1 扱いにするため initCases.length<=1 → validInitCount=min(rawInitCount,1)
   const initCases = Object.keys(caseInfo).filter(function(no) { return caseInfo[no].hasInit; });
   let validInitCount;
   if (initCases.length <= 1) {
@@ -1092,14 +1099,24 @@ function V3TR_countKubunInCases_(shCases, patientId, start, end) {
     }).sort(function(a, b) { return a.initDate - b.initDate; });
     const earlier = sorted[0];
     const later   = sorted[1];
-    // earlier が later の初検日より前に終了していれば治癒後の新規別負傷 [B]
+    // earlier.endDate < later.initDate（厳密）→ 治癒後の新規別負傷 [B]
+    // earlier.endDate が Date でない or >= later.initDate → 施術継続中 [A]
     const isPostRecovery = earlier.endDate instanceof Date && earlier.endDate < later.initDate;
     validInitCount = isPostRecovery ? 2 : 1;
   }
 
+  // ★ initCount: 来院ヘッダ算定（getMonthlyBilledStatus_ による月内 initBilled 制限）と整合させるため
+  //   現状は Math.min(rawInitCount, 1) を維持する。
+  //   M06b（治癒後別負傷）での initCount=2 化は、amounts.js の initBilled 判定見直しと
+  //   同一工程で対応する（別タスク: JREC-01 amounts.js 治癒後初検抑制解除）。
+  // ★ reCount: 有効初検数(validInitCount)を上限とする
+  //   [A] 施術継続中 Mixed: Math.min(rawReCount, 1) と同等（変化なし）
+  //   [B] 治癒後別負傷:     Math.min(rawReCount, 2) で再検料 2 件を許容
+  //   ※ 再検料は来院ヘッダ算定において initBilled と独立して per-visit 算定されるため、
+  //      initCount=1 のまま reCount=2 となる過渡状態が発生しうる（制度的に正しい遷移途上）。
   return {
-    initCount: validInitCount,
-    reCount:   Math.min(rawReCount, validInitCount),  // 再検料は有効初検数を上限とする
+    initCount: Math.min(rawInitCount, 1),
+    reCount:   Math.min(rawReCount, validInitCount),
   };
 }
 
