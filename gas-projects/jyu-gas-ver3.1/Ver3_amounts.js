@@ -671,7 +671,8 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
 
   // --- 患者×月 上限チェック ---
   var monthKey = fmt_(treatDate, "yyyy-MM");
-  var monthlyStatus = getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, visitKey);
+  // 治癒後別負傷 [B] 判定のため caseSh / caseMap / treatDate を渡す
+  var monthlyStatus = getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, visitKey, caseSh, caseMap, treatDate);
 
   var hasInit = (kubun1 === "初検" || kubun2 === "初検");
   var hasReexam = (kubun1 === "再検" || kubun2 === "再検");
@@ -832,7 +833,19 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
 }
 
 /** 当月の既算定状況を来院ヘッダから取得（自分自身のvisitKeyは除外） */
-function getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, excludeVisitKey) {
+/**
+ * 患者×月の算定済みフラグを返す。
+ *
+ * opt_caseSh / opt_caseMap / opt_treatDate を渡した場合、
+ * 治癒後別負傷 [B] の判定を行う:
+ *   月内に initFee > 0 の行があっても、そのケースが opt_treatDate より前に終了していれば
+ *   initBilled=false を維持する（新規エピソードとして初検料を再算定可とする）。
+ *
+ * 制度根拠: 治癒後に同月内で新たな別負傷が発生した場合は初検料を再度算定できる
+ *           （厚生労働省集団指導資料 / §3-6 月内上限ルール）
+ */
+function getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, excludeVisitKey,
+                                  opt_caseSh, opt_caseMap, opt_treatDate) {
   var result = { initBilled: false, reBilled: false, supportBilled: false, initDate: null };
   var lastRow = headSh.getLastRow();
   if (lastRow < 2) return result;
@@ -846,12 +859,16 @@ function getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, excludeVi
   var cSup  = headMap[HEADER_COLS.supportFee];
   if (!cPid || !cDt || !cVk || !cInit || !cRe || !cSup) return result;
 
-  var pidVals  = headSh.getRange(2, cPid, n, 1).getValues().flat();
-  var dtVals   = headSh.getRange(2, cDt,  n, 1).getValues().flat();
-  var vkVals   = headSh.getRange(2, cVk,  n, 1).getValues().flat();
-  var initVals = headSh.getRange(2, cInit, n, 1).getValues().flat();
-  var reVals   = headSh.getRange(2, cRe,   n, 1).getValues().flat();
-  var supVals  = headSh.getRange(2, cSup,  n, 1).getValues().flat();
+  // 治癒後別負傷チェック用: 来院ヘッダの caseKey 列（任意）
+  var cCk = headMap[HEADER_COLS.caseKey];
+
+  var pidVals   = headSh.getRange(2, cPid,  n, 1).getValues().flat();
+  var dtVals    = headSh.getRange(2, cDt,   n, 1).getValues().flat();
+  var vkVals    = headSh.getRange(2, cVk,   n, 1).getValues().flat();
+  var initVals  = headSh.getRange(2, cInit, n, 1).getValues().flat();
+  var reVals    = headSh.getRange(2, cRe,   n, 1).getValues().flat();
+  var supVals   = headSh.getRange(2, cSup,  n, 1).getValues().flat();
+  var ckVals    = (cCk) ? headSh.getRange(2, cCk, n, 1).getValues().flat() : null;
 
   for (var i = 0; i < n; i++) {
     if (String(pidVals[i] || "").trim() !== patientId) continue;
@@ -865,13 +882,52 @@ function getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, excludeVi
     var sv = Number(supVals[i] || 0);
 
     if (iv > 0) {
-      result.initBilled = true;
-      result.initDate = d;
+      // 治癒後別負傷 [B] チェック:
+      //   opt_caseSh / opt_treatDate が提供されており、かつこの initFee 行の caseKey が
+      //   opt_treatDate より前に終了していれば → 別エピソード扱いで initBilled=true を立てない
+      var suppressInitBilled = false;
+      if (opt_caseSh && opt_caseMap && opt_treatDate instanceof Date && ckVals) {
+        var prevCaseKey = String(ckVals[i] || "").trim();
+        if (prevCaseKey) {
+          suppressInitBilled = isCaseEndedBefore_(opt_caseSh, opt_caseMap, prevCaseKey, opt_treatDate);
+        }
+      }
+      if (!suppressInitBilled) {
+        result.initBilled = true;
+        result.initDate = d;
+      }
     }
     if (rv > 0) result.reBilled = true;
     if (sv > 0) result.supportBilled = true;
   }
   return result;
+}
+
+/**
+ * 指定 caseKey の最遅施術終了日が treatDate より前であれば true を返す（ケース治癒済み判定）。
+ * 施術終了日_部位1 / 部位2 の両方を参照し、最も遅い日付を使用する。
+ * 終了日が未設定の場合は false（施術継続中）。
+ *
+ * 制度根拠: SPEC.md §3-6 治癒後別負傷 [B] 判定の補助ロジック
+ */
+function isCaseEndedBefore_(caseSh, caseMap, caseKey, treatDate) {
+  var v = caseSh.getDataRange().getValues();
+  if (v.length < 2) return false;
+
+  var cKey = caseMap[CASE_COLS.caseKey];
+  var cE1  = caseMap[CASE_COLS.end1];
+  var cE2  = caseMap[CASE_COLS.end2];
+  if (cKey === undefined) return false;
+
+  var latestEnd = null;
+  for (var r = 1; r < v.length; r++) {
+    if (String(v[r][cKey - 1] || "").trim() !== caseKey) continue;  // caseMap is 1-based
+    var e1 = (cE1 && v[r][cE1 - 1] instanceof Date) ? v[r][cE1 - 1] : null;
+    var e2 = (cE2 && v[r][cE2 - 1] instanceof Date) ? v[r][cE2 - 1] : null;
+    var eMax = (e1 && e2) ? (e1 > e2 ? e1 : e2) : (e1 || e2);
+    if (eMax && (!latestEnd || eMax > latestEnd)) latestEnd = eMax;
+  }
+  return latestEnd instanceof Date && latestEnd < treatDate;
 }
 
 /** 当月初検の次回来院日かどうか判定 */

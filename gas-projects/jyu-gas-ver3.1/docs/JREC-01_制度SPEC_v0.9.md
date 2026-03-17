@@ -1,7 +1,7 @@
 # JREC-01 制度SPEC v0.9
 
 作成日: 2026-03-16
-最終更新: 2026-03-17（§3-6 再検料 月内上限ルール追記）
+最終更新: 2026-03-17（§3-6 M06b 全層実装済みに更新）
 ステータス: 固定採用ルール確定 / 保留ルール分離済み
 根拠: 厚生労働省集団指導資料.pdf
 
@@ -106,11 +106,11 @@
 - それ以外（終了日なし or 同日以降）→ [A] 施術継続中 → `validInitCount=1`
 - エッジケース: 終了日=後続初検日（同日）は [A] 扱い（保守側）
 
-**実装上の注意（M06b 過渡状態）:**
-- 再検料集計（`V3TR_countKubunInCases_`）は上記ルールで対応済み
-- **初検料集計は未対応**: `getMonthlyBilledStatus_`（amounts.js）が月内初検を一律1回に制限するため、
-  [B] パターンでも来院ヘッダ上の initFee は 1550 円（1回分）にとどまる
-- `initCount` は `Math.min(rawInitCount, 1)` のまま維持し、amounts.js の修正と合わせて別工程で対応する
+**実装状況（M06b 全層実装済み 2026-03-17）:**
+- 再検料集計（`V3TR_countKubunInCases_`）: `validInitCount` 基準のキャップ対応済み。`initCount: Math.min(rawInitCount, validInitCount)`
+- 初検料集計（`getMonthlyBilledStatus_`）: `isCaseEndedBefore_` ヘルパーを追加し、先行 caseKey が治癒済みなら `initBilled=true` を抑制しない
+- 呼び出し元（`calcHeaderAmountsByVisitKey_V3_`）: `caseSh / caseMap / treatDate` を渡す形に更新済み
+- **fixture 未作成・実シート未確認**（動作確認は人間が実シートで行うこと）
 
 ---
 

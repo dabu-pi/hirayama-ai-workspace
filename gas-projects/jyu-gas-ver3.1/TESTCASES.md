@@ -7,7 +7,7 @@
 > TC20a/b/c（金属副子等加算 Phase 2）含む全40ケース PASS。次: 柔道整復運動後療料 TC21a〜d 追加予定。
 >
 > **M06a/b（2026-03-17 追加）:** 再検料キャップロジック修正（`Math.min(reCount,1)` → `Math.min(reCount, validInitCount)`）に対応した観点。
-> M06b（治癒後別負傷）は fixture 未作成・実シート未確認。制度根拠確認後に追加すること。
+> M06b（治癒後別負傷）: 全層実装済み（amounts.js `getMonthlyBilledStatus_` + `isCaseEndedBefore_` 対応 2026-03-17）。fixture 未作成・実シート未確認。動作確認は人間が実シートで行うこと。
 
 ---
 
@@ -547,8 +547,8 @@
 - 初検料 = 1550 × 2 = 3,100
 - 再検料 = 410 × 2 = 820
 
-> **注意:** 金額計算レイヤー（`calcHeaderAmountsByVisitKey_V3_`）でも、治癒後の新規初検に対して
-> `monthlyStatus.initBilled` が正しく false を返す必要がある。
-> 現状の `getMonthlyBilledStatus_` は月内に initBilled=true が立つと後続の初検を抑制するため、
-> 治癒後ケースでの2回目 initFee 算定には別途確認が必要（SPEC §3-4 適用範囲の検討課題）。
+> **実装完了（2026-03-17）:** `getMonthlyBilledStatus_`（amounts.js）に `isCaseEndedBefore_` ヘルパーを追加し、
+> 治癒後ケース（先行 caseKey の終了日 < 現在 treatDate）では `initBilled=true` を抑制しない実装が完成。
+> `calcHeaderAmountsByVisitKey_V3_` の呼び出し元も `caseSh / caseMap / treatDate` を渡す形に更新済み。
+> fixture 未作成・実シート未確認。動作確認は人間が実シートで行うこと。
 | 課金理由要約 | `再検ありのため再検採用` |

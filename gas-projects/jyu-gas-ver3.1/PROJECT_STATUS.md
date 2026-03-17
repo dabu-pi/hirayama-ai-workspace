@@ -245,55 +245,81 @@ JBIZ-04 には日次入力を持たせず、このブックを現場入力の正
 
 ---
 
-## 2026-03-17 再検料月内上限ロジック修正（commit cebeffe → 更新版）
+## 2026-03-17 再検料月内上限ロジック修正 + amounts.js 治癒後初検抑制解除
 
 ### 修正概要
 
-| 項目 | 内容 |
+| 対象ファイル | 対象関数 | 変更内容 |
+|---|---|---|
+| Ver3_transferData.js | `V3TR_countKubunInCases_` | `reCount` を `Math.min(rawReCount, validInitCount)` に変更（cebeffe）|
+| Ver3_transferData.js | `V3TR_countKubunInCases_` | `initCount` を `Math.min(rawInitCount, validInitCount)` に変更（本 commit）|
+| Ver3_amounts.js | `getMonthlyBilledStatus_` | 治癒後別負傷 [B] 判定を追加（opt_caseSh / opt_caseMap / opt_treatDate）|
+| Ver3_amounts.js | ─ | `isCaseEndedBefore_` ヘルパー追加 |
+
+### 判定ロジック（全層整合済み）
+
+```
+V3TR_countKubunInCases_（transferData）:
+  validInitCount:
+    [A] 施術継続中 Mixed: 先行ケース終了日なし or >= 後続初検日 → 1
+    [B] 治癒後別負傷:     先行ケース終了日 < 後続初検日（厳密）   → 2
+  initCount = Math.min(rawInitCount, validInitCount)
+  reCount   = Math.min(rawReCount,   validInitCount)
+
+getMonthlyBilledStatus_（amounts.js）:
+  initFee > 0 の行を発見した場合:
+    → isCaseEndedBefore_ で、そのケースが現在の treatDate より前に終了しているか確認
+    → 終了していれば suppressInitBilled=true → initBilled=false を維持（治癒後 [B]）
+    → 終了していなければ initBilled=true（施術継続中 [A]）
+
+isCaseEndedBefore_（amounts.js）:
+  caseKey の全行を走査し、施術終了日_部位1/2 の最遅値を取得
+  最遅終了日 < treatDate → true（治癒済み）/ それ以外 → false
+```
+
+### エッジケース明文化済み
+
+| ケース | 扱い |
 |---|---|
-| 対象関数 | `V3TR_countKubunInCases_`（Ver3_transferData.js） |
-| 変更前 | `reCount: Math.min(rawReCount, 1)` — 月内固定1回キャップ |
-| 変更後 | `reCount: Math.min(rawReCount, validInitCount)` — 有効初検数を上限 |
-| commit | `cebeffe` |
-| clasp push | ✅ 済み |
+| `endDate == later.initDate`（同日） | [A] 保守扱い（`<` 厳密）|
+| `endDate` 空欄（Date でない） | [A] 保守扱い（施術継続中とみなす）|
+| `caseKey` 列なし（headMap に未存在） | `ckVals=null` → `suppressInitBilled=false` → 従来動作 |
+| `caseNo` 列なし | 全行 caseNo=1 扱い → `initCases.length<=1` → `validInitCount=min(rawInitCount,1)` |
 
-### 判定ロジック
-
-- `validInitCount`: 月内で複数 caseNo が初検を持つ場合、先行ケース終了日 vs. 後続ケース初検日で分岐
-  - [A] 施術継続中 Mixed: `終了日なし or 終了日 >= 後続初検日` → `validInitCount=1`
-  - [B] 治癒後別負傷: `先行終了日 < 後続初検日`（厳密 `<`） → `validInitCount=2`
-- エッジケース明文化済み:
-  - `endDate == later.initDate`（同日）→ [A] 保守扱い
-  - `endDate` 空欄 → [A] 保守扱い
-  - `caseNo` 列なし → 全行 caseNo=1 扱いで length<=1 → `validInitCount = min(rawInitCount,1)`
-
-### 到達点と未解決点
+### 到達点
 
 | 項目 | 状態 |
 |---|---|
-| transferData 再検料集計（reCount） | ✅ 修正済み |
-| 既存 M01〜M05 との整合 | ✅ 変化なし確認（validInitCount=1 の場合は旧 Math.min(x,1) と等価） |
-| initCount（初検料） | `Math.min(rawInitCount,1)` のまま変更なし |
-| M06b 来院ヘッダ initFee | **⚠️ 未対応** |
+| transferData 再検料集計（reCount） | ✅ [A]=1 / [B]=2 |
+| transferData 初検料集計（initCount） | ✅ [A]=1 / [B]=2 |
+| amounts.js 初検抑制（getMonthlyBilledStatus_）| ✅ 治癒後別負傷 [B] で suppressInitBilled |
+| isCaseEndedBefore_ ヘルパー | ✅ 追加済み |
+| M06a（施術継続中）既存 M01〜M05 | ✅ 変化なし（validInitCount=1 → 旧挙動と等価）|
+| M06b fixture / 実シート確認 | ⚠️ 未実施（fixture 追加・실시후 확인が必要）|
 
-### M06b 来院ヘッダ実算定結果（コード分析）
+### M06b 全層整合の確認結果（コード分析）
 
 ```
-getMonthlyBilledStatus_ の挙動:
-  月内に initFee > 0 の行が 1件でもあれば initBilled=true を立てる
-  → case1 の初検（例: 2/1）が billed → case2 の初検（例: 2/15）は initFee=0 に抑制される
-  ※ 治癒後かどうかを区別しない
+[B] 治癒後別負傷 シナリオ（例: case1 終了 2/10、case2 初検 2/15）
 
-M06b での層間整合:
-  transferData: initCount=1（Math.min維持）, reCount=2（validInitCount=2）
-    → initFee=1550, reFee=820
-  来院ヘッダ実績: initFee=1550, reFee=820
-  → 現状は整合している（reCount 修正が適切に機能）
+amounts.js（per-visit 算定）:
+  case1 の初検（2/1）: initBilled=false → initFee=1550 ✅ billed
+  case2 の初検（2/15）:
+    getMonthlyBilledStatus_ → case1 caseKey の endDate=2/10 < treatDate=2/15 → suppressInitBilled=true
+    → initBilled=false → initFee=1550 ✅ billed（抑制されない）
+  来院ヘッダ initFee 合計 = 3100
 
-M06b で initFee=3100 を正しく算定するには amounts.js 修正が必要:
-  getMonthlyBilledStatus_ が「治癒後の別ケース初検」を正しく initBilled=false と返すよう修正
-  → 別タスク: JREC-01 amounts.js 治癒後初検抑制解除（SPEC §3-6 月内上限ルール参照）
+transferData 月次集計:
+  rawInitCount=2, validInitCount=2 → initCount=2 → initFee = 1550×2 = 3100 ✅
+  rawReCount=2,   validInitCount=2 → reCount=2   → reFee  = 410×2  = 820  ✅
+
+全層整合: ✅ amounts.js ↔ transferData で initFee / reFee が一致
 ```
+
+> **注記: 現行ヘッダ実装との整合を優先した過渡状態ではなく、M06b は制度的にも完成状態。**
+> M06b は amounts.js（per-visit）と transferData（月次集計）の両層が修正されたことで、
+> 「治癒後別負傷の初検料・再検料を各エピソードで独立算定する」という制度要件を充足している。
+> 実シート確認（M06b fixture）は次回作業で実施する。
 
 ---
 

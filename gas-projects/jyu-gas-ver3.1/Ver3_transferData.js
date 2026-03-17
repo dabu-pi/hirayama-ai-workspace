@@ -1105,17 +1105,14 @@ function V3TR_countKubunInCases_(shCases, patientId, start, end) {
     validInitCount = isPostRecovery ? 2 : 1;
   }
 
-  // ★ initCount: 来院ヘッダ算定（getMonthlyBilledStatus_ による月内 initBilled 制限）と整合させるため
-  //   現状は Math.min(rawInitCount, 1) を維持する。
-  //   M06b（治癒後別負傷）での initCount=2 化は、amounts.js の initBilled 判定見直しと
-  //   同一工程で対応する（別タスク: JREC-01 amounts.js 治癒後初検抑制解除）。
-  // ★ reCount: 有効初検数(validInitCount)を上限とする
-  //   [A] 施術継続中 Mixed: Math.min(rawReCount, 1) と同等（変化なし）
-  //   [B] 治癒後別負傷:     Math.min(rawReCount, 2) で再検料 2 件を許容
-  //   ※ 再検料は来院ヘッダ算定において initBilled と独立して per-visit 算定されるため、
-  //      initCount=1 のまま reCount=2 となる過渡状態が発生しうる（制度的に正しい遷移途上）。
+  // ★ initCount: validInitCount を上限とする
+  //   amounts.js の getMonthlyBilledStatus_ が治癒後別負傷 [B] を正しく判定するよう修正済みのため、
+  //   transferData 側も validInitCount に合わせて初検料算定件数を反映する。
+  //   [A] 施術継続中 Mixed: Math.min(rawInitCount, 1) と等価
+  //   [B] 治癒後別負傷:     Math.min(rawInitCount, 2) で 2 件を反映
+  // ★ reCount: 有効初検数(validInitCount)を上限とする（[A]=1 / [B]=2）
   return {
-    initCount: Math.min(rawInitCount, 1),
+    initCount: Math.min(rawInitCount, validInitCount),
     reCount:   Math.min(rawReCount, validInitCount),
   };
 }
