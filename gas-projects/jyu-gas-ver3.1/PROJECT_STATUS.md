@@ -316,10 +316,15 @@ transferData 月次集計:
 全層整合: ✅ amounts.js ↔ transferData で initFee / reFee が一致
 ```
 
-> **注記: 現行ヘッダ実装との整合を優先した過渡状態ではなく、M06b は制度的にも完成状態。**
+> **ステータス: 実装受理 / 運用完了は未了（2026-03-17 確認）**
 > M06b は amounts.js（per-visit）と transferData（月次集計）の両層が修正されたことで、
 > 「治癒後別負傷の初検料・再検料を各エピソードで独立算定する」という制度要件を充足している。
-> 実シート確認（M06b fixture）は次回作業で実施する。
+>
+> **運用完了条件（残タスク）:**
+> 1. 実シートで M06b パターン入力 → initFee=3100 / reFee=820 を確認（人間作業）
+> 2. Dashboard 反映: `de -ProjectId JREC-01`（env vars 設定済み環境で実施）
+> 3. M06b fixture 追加（TESTCASES.md 追記）
+> 4. caseKey 欠落フォールバック時のログ化（任意）
 
 ---
 
