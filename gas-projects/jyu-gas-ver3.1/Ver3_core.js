@@ -699,10 +699,18 @@ function getPatientVisitDatesFromCases_(caseSh, caseMap, patientId) {
    ======================================================================= */
 function saveVisit_V3() {
   var ss = SpreadsheetApp.getActive();
-  var uiSh = ss.getSheetByName(SHEETS.ui);
+  var uiSh   = ss.getSheetByName(SHEETS.ui);
   var caseSh = ss.getSheetByName(SHEETS.cases);
   var headSh = ss.getSheetByName(SHEETS.header);
-  if (!uiSh || !caseSh || !headSh) throw new Error("必要シートが見つかりません（患者画面/来院ケース/来院ヘッダ）");
+  // どのシートが不足しているかを個別に特定して通知する
+  var missing = [];
+  if (!uiSh)   missing.push(SHEETS.ui   + "（入力元）");
+  if (!caseSh) missing.push(SHEETS.cases + "（保存先）");
+  if (!headSh) missing.push(SHEETS.header + "（保存先）");
+  if (missing.length) {
+    Logger.log("必要シート不足: " + missing.join(", "));
+    throw new Error("必要シート不足: " + missing.join(", "));
+  }
 
   var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
   var treatDate = uiSh.getRange(UI.treatDate).getValue();
