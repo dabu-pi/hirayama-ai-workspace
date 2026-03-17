@@ -1,0 +1,26 @@
+{
+  "testId": "TC19b",
+  "description": "金属副子等加算 Phase 1: 捻挫 metalChk=true → metalOut=0 + 要確認（C群は算定不可）",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-01-15",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    {
+      "caseNo": 1,
+      "kubun": "後療",
+      "parts": [
+        {
+          "bui": "腰部",
+          "byomei": "捻挫",
+          "injuryDate": "2026-01-05",
+          "cold": false,
+          "warm": false,
+          "electro": false,
+          "metal": true
+        }
+      ]
+    }
+  ]
+}

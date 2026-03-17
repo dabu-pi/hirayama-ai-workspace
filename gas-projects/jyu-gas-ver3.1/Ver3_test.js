@@ -39,6 +39,7 @@ var TEST_SETTINGS_ = {
   taiki:                5,    // 2026-03-17 設定シート確認済み
   multiCoef3:           0.6,
   roundUnit:            10,
+  metalAddon:           1000, // §18.3 骨折・不全骨折・脱臼 1,000円
   _rawMap:              {},
 };
 
@@ -491,6 +492,33 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC19: 金属副子等加算 Phase 1（§18.3）─────────────────────────────────
+  // TC19a: 骨折 metalChk=true → metalOut=1000, 逓減対象外, needCheck=false
+  // TC19b: 捻挫 metalChk=true → metalOut=0 + 要確認, needCheck=true
+  "TC19a": {
+    testId: "TC19a",
+    context: { patientId: "P001", treatDate: "2026-01-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: true }
+      ]}
+    ]
+  },
+
+  "TC19b": {
+    testId: "TC19b",
+    context: { patientId: "P001", treatDate: "2026-01-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: true }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -891,6 +919,30 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  "TC19a": {
+    // 骨折 metalChk=true → metalOut=1000, rowTotalOut=850+1000=1850, needCheck=false
+    // koryoKossetu=850, metalAddon=1000, coef=1.0, ltCoef=1.0(骨折は対象外)
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1850, visitTotal: 1850,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-15_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, metalOut: 1000, rowTotalOut: 1850 }
+    ]
+  },
+
+  "TC19b": {
+    // 捻挫 metalChk=true → metalOut=0 + 要確認, rowTotalOut=505, needCheck=true
+    // koryoNenZa=505, coef=1.0, ltCoef=1.0(monthsElapsed=0)
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 505, visitTotal: 505,
+      needCheck: true, needCheckReason: "金属副子等加算 算定不可（対象外傷病：捻挫）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-15_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, metalOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
 };
 
 
@@ -952,7 +1004,8 @@ function computeAmountsFromFixture_V3_(fx) {
       var part = calcOnePartAmount_V3_(
         settings, effectiveKubun, p.byomei, injDate, treatDate,
         !!p.cold, !!p.warm, !!p.electro,
-        i + 1, reasons, p.bui, monthlyVisitCounts
+        i + 1, reasons, p.bui, monthlyVisitCounts,
+        !!p.metal   // §18.3
       );
       part.bui = p.bui;
       total += part.total;
@@ -1009,6 +1062,7 @@ function computeAmountsFromFixture_V3_(fx) {
         coldOut:     p.cold,
         warmOut:     p.warm,
         electroOut:  p.electro,
+        metalOut:    p.metalOut,  // §18.3
         rowTotalOut: Math.round(p.total),
       });
     }
@@ -1149,6 +1203,8 @@ function runFixtureTC17a()  { showFixtureResult_("TC17a"); }
 function runFixtureTC17b()  { showFixtureResult_("TC17b"); }
 function runFixtureTC18a()  { showFixtureResult_("TC18a"); }
 function runFixtureTC18b()  { showFixtureResult_("TC18b"); }
+function runFixtureTC19a()  { showFixtureResult_("TC19a"); }
+function runFixtureTC19b()  { showFixtureResult_("TC19b"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

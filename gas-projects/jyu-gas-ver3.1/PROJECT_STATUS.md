@@ -38,8 +38,8 @@
 
 ## 次アクション
 
-> 最終更新: 2026-03-17（33/33 PASS 確認済み — TC17a/b 温罨法初検日特例 実装完了）
-> TC18a/b（長期継続理由書アラート）実装済み。clasp push 後に 35/35 PASS 確認待ち。
+> 最終更新: 2026-03-17（35/35 PASS 確認済み — TC18a/b 長期継続理由書アラート 実装完了）
+> TC19a/b（金属副子等加算 Phase 1）実装済み。clasp push 後に 37/37 PASS 確認待ち。
 
 ### ✅ 温罨法初検日特例 実装完了（2026-03-17）
 
@@ -47,9 +47,20 @@
 - TC17a（初検日特例・warm=0）/ TC17b（後療日通常算定・warm=75）すべてPASS
 - `calcOnePartAmount_V3_`: kubun=初検 時に warm=0 固定（初検日特例）
 
-### ✅ 長期継続理由書アラート 実装済み（2026-03-17）— clasp push 後 PASS 確認待ち
+### ✅ 金属副子等加算 Phase 1 実装済み（2026-03-17）— clasp push 後 PASS 確認待ち
 
-- TC18a/b 実装済み。TC14a/b・TC16a/b/c expected 更新済み
+- TC19a/b 実装済み（骨折=算定可・捻挫=要確認）
+- `AM_SET_KEYS.metalAddon` / `loadSettings_V3_` に `金属副子等加算` = 1,000 追加
+- `AM_DETAIL_COLS` に `metalChk / metalOut` 追加（施術明細列）
+- `CASE_COLS` に `metal1 / metal2` 追加（来院ケース列）
+- `calcOnePartAmount_V3_`: `metalChk` 引数追加 → 骨折/不全骨折/脱臼→1,000円, C群→0+要確認
+- `metalOut` は逓減（coef・ltCoef）対象外 → `total += metalOut`（乗算なし）
+- `calcCaseDetailAmount_V3_` / `recalcAmountsByVisitKey_V3_` にも metalChk 読み取り・書き込みを反映
+- Phase 2（回数制限 caseKey来院履歴参照）は別タスク
+
+### ✅ 長期継続理由書アラート 実装完了（2026-03-17）— 35/35 PASS 確認済み
+
+- TC18a/b PASS 確認済み。TC14a/b・TC16a/b/c expected 更新済み
 - `calcMonthsElapsed_V3_`: 受傷日から来院日までの月数を計算（共通ヘルパー）
 - `calcOnePartAmount_V3_`: monthsElapsed ≥ 3 → `"長期施術3か月超（継続理由書確認）"` を needCheck reason に追加
 - 長期減額 reason（あれば）が先、継続理由書 reason が後（セミコロン区切り）
@@ -69,7 +80,9 @@
 | 優先 | 項目 | 状況 |
 |---|---|---|
 | 高 | 温罨法 初検日特例 | ✅ 実装済み（TC17a/b PASS）|
-| 中 | 長期継続理由書アラート | ✅ 実装済み（TC18a/b）clasp push 後 PASS 確認待ち |
+| 中 | 長期継続理由書アラート | ✅ 実装済み（TC18a/b PASS 確認済み）|
+| 中 | 金属副子等加算 Phase 1 | ✅ 実装済み（TC19a/b）clasp push 後 PASS 確認待ち |
+| 低 | 金属副子等加算 Phase 2（回数制限） | 未実装。caseKey来院履歴参照が必要 |
 | 中 | 特殊骨折制限（3部位目以降の制限等） | 未調査。骨折+多部位の制限条件があれば fixture で境界確認が必要 |
 | 中 | transferData への新5列反映 | 申請書データへの反映可否を検討 |
 | 低 | 既存データ一括再計算メニュー | 過去来院ヘッダへの新5列遡及反映 |
@@ -113,10 +126,10 @@
 
 ## テスト状況
 
-- テストケース文書: `TESTCASES.md` あり（TC01〜TC18b、M01〜M05 計35ケース）
+- テストケース文書: `TESTCASES.md` あり（TC01〜TC19b、M01〜M05 計37ケース）
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 35件（TC01〜TC18b + M01〜M05）
-- **33/33 PASS 確認済み（2026-03-17）** — TC18a/b は clasp push 後に確認予定
+- fixture 件数: 37件（TC01〜TC19b + M01〜M05）
+- **35/35 PASS 確認済み（2026-03-17）** — TC19a/b は clasp push 後に確認予定
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
