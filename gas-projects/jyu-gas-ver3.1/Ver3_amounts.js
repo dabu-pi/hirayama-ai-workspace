@@ -397,15 +397,49 @@ function buildMonthlyVisitCounts_V3_(headerValues, headMap, patientId, caseKey, 
 }
 
 /**
+ * caseKey 単位で金属副子等加算の通算算定回数を集計（§18.3 Phase 2）
+ * 施術明細の「金属副子_確定」> 0 かつ 施術日 < beforeDate の visitKey を重複除去してカウント。
+ * detailMap / detailValues が渡されなければ 0 を返す（Phase 1 モードと共存可）。
+ * @param {Array[][]} detailValues - 施術明細 getDataRange().getValues()
+ * @param {Object} detailMap - buildHeaderColMap_ の結果（AM_DETAIL_COLS キー）
+ * @param {string} caseKey
+ * @param {Date} beforeDate - この日より前の来院のみカウント（当日除外）
+ * @return {number} 通算算定回数（0以上）
+ */
+function buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKey, beforeDate) {
+  if (!detailValues || !detailMap || !caseKey) return 0;
+  var ckIdx    = detailMap[AM_DETAIL_COLS.caseKey];
+  var dtIdx    = detailMap[AM_DETAIL_COLS.treatDate];
+  var metalIdx = detailMap[AM_DETAIL_COLS.metalOut];
+  var vkIdx    = detailMap[AM_DETAIL_COLS.visitKey];
+  if (!ckIdx || !dtIdx || !metalIdx || !vkIdx) return 0;
+
+  var seen = {};  // visitKey → true（重複除去）
+  for (var r = 1; r < detailValues.length; r++) {
+    var row = detailValues[r];
+    if (String(row[ckIdx - 1] || "").trim() !== caseKey) continue;
+    var td = row[dtIdx - 1];
+    if (!(td instanceof Date)) continue;
+    if (beforeDate instanceof Date && td.getTime() >= beforeDate.getTime()) continue;
+    var metal = Number(row[metalIdx - 1] || 0);
+    if (metal <= 0) continue;
+    var vk = String(row[vkIdx - 1] || "").trim();
+    if (vk) seen[vk] = true;
+  }
+  return Object.keys(seen).length;
+}
+
+/**
  * 1部位分の金額算定（object返却版）
  *
  * Ver3_core.js 側の同名関数と同じロジックだが、
  * 内訳オブジェクトを返す点が異なる。
  *
- * @param {boolean} [metalChk] - 金属副子等加算チェック（§18.3 Phase 1）
+ * @param {boolean} [metalChk] - 金属副子等加算チェック（§18.3）
+ * @param {number|null} [metalPriorCount] - 当日より前の通算算定回数（null=Phase 1 モード・回数制限なし）
  * @return {Object} { base, cold, warm, electro, taiki, metalOut, coef, longTermCoef, total, ... }
  */
-function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui, monthlyVisitCounts, metalChk) {
+function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui, monthlyVisitCounts, metalChk, metalPriorCount) {
   var injuryType = detectInjuryType_V3_(byomei);
   var base = calcBaseFee_V3_(settings, kubun, injuryType, bui);
 
@@ -506,11 +540,16 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
   // 多部位逓減 §10
   var coef = (partOrder >= 3) ? Number(settings.multiCoef3 || 0.6) : 1.0;
 
-  // 金属副子等加算 §18.3 Phase 1（傷病種別チェックのみ・回数制限は Phase 2）
+  // 金属副子等加算 §18.3（Phase 1: 傷病種別チェック / Phase 2: 回数制限追加）
   var metalOut = 0;
   if (metalChk) {
     if (injuryType === "骨折" || injuryType === "不全骨折" || injuryType === "脱臼") {
-      metalOut = settings.metalAddon || 0;
+      // Phase 2: 回数制限チェック（metalPriorCount が渡された場合のみ）
+      if (metalPriorCount != null && metalPriorCount >= 3) {
+        reasons.push("金属副子等加算 算定上限超（通算3回）");
+      } else {
+        metalOut = settings.metalAddon || 0;
+      }
     } else {
       // C群（打撲・捻挫・挫傷）や不明傷病は算定不可
       reasons.push("金属副子等加算 算定不可（対象外傷病：" + (byomei || "不明") + "）");
@@ -609,8 +648,12 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
   var effectiveKubun2 = calcKoryoOnThisDay ? (kubun2 === "初検" ? "後療" : kubun2) : kubun2;
 
   var headerValuesForMvc = headSh.getDataRange().getValues();
-  var detail1 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 1, effectiveKubun1, treatDate, settings, reasons, headerValuesForMvc, headMap);
-  var detail2 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 2, effectiveKubun2, treatDate, settings, reasons, headerValuesForMvc, headMap);
+  // §18.3 Phase 2: 施術明細を読み込み金属副子等加算の通算回数判定に使用
+  var detailShForMetal = ss.getSheetByName(SHEETS.detail);
+  var detailMapForMetal = buildHeaderColMap_(detailShForMetal);
+  var detailValuesForMetal = detailShForMetal.getDataRange().getValues();
+  var detail1 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 1, effectiveKubun1, treatDate, settings, reasons, headerValuesForMvc, headMap, detailValuesForMetal, detailMapForMetal);
+  var detail2 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 2, effectiveKubun2, treatDate, settings, reasons, headerValuesForMvc, headMap, detailValuesForMetal, detailMapForMetal);
   var detailSum = detail1.total + detail2.total;
 
   // --- 来院合計 = 初検料 + 再検料 + 相談支援料 + 明細合計 ---
@@ -801,9 +844,11 @@ function checkIsNextVisitAfterMonthlyInit_(headSh, headMap, caseSh, caseMap, pat
 }
 
 /** 1ケース分の明細金額を来院ケースの部位データから算定（SPEC準拠版）
+ *  @param {Array[][]|null} [detailValues] - 施術明細全データ（Phase 2 回数制限用。null=Phase 1 モード）
+ *  @param {Object|null} [detailMap] - 施術明細列マップ（Phase 2 回数制限用。null=Phase 1 モード）
  *  @return {{ total: number, parts: Object[] }} 合計と部位別内訳配列
  */
-function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, treatDate, settings, reasons, headerValues, headMap) {
+function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, treatDate, settings, reasons, headerValues, headMap, detailValues, detailMap) {
   // 来院ケース行は visitKey + caseNo で検索
   var rowIndex = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, caseNo);
   if (rowIndex === 0) return { total: 0, parts: [] };
@@ -828,12 +873,16 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
   if ((p1 || d1 || (inj1 instanceof Date)) && !isEnded1) {
     partCount++;
     var mvc1 = buildMonthlyVisitCounts_V3_(headerValues, headMap, patientIdVal, caseKeyVal, inj1 instanceof Date ? inj1 : null);
+    var metal1Chk = get(CASE_COLS.metal1) === true;
+    var metalCount1 = (metal1Chk && detailValues && detailMap)
+      ? buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKeyVal, treatDate)
+      : null;  // null = Phase 1 モード（回数制限なし）
     var part1 = calcOnePartAmount_V3_(settings, kubun, d1, inj1, treatDate,
       get(CASE_COLS.cold1) === true,
       get(CASE_COLS.warm1) === true,
       get(CASE_COLS.elec1) === true,
       partCount, reasons, p1, mvc1,
-      get(CASE_COLS.metal1) === true);  // §18.3
+      metal1Chk, metalCount1);  // §18.3 Phase 1+2
     part1.bui = p1;
     total += part1.total;
     parts.push(part1);
@@ -849,12 +898,16 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
   if ((p2 || d2 || (inj2 instanceof Date)) && !isEnded2) {
     partCount++;
     var mvc2 = buildMonthlyVisitCounts_V3_(headerValues, headMap, patientIdVal, caseKeyVal, inj2 instanceof Date ? inj2 : null);
+    var metal2Chk = get(CASE_COLS.metal2) === true;
+    var metalCount2 = (metal2Chk && detailValues && detailMap)
+      ? buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKeyVal, treatDate)
+      : null;
     var part2 = calcOnePartAmount_V3_(settings, kubun, d2, inj2, treatDate,
       get(CASE_COLS.cold2) === true,
       get(CASE_COLS.warm2) === true,
       get(CASE_COLS.elec2) === true,
       partCount, reasons, p2, mvc2,
-      get(CASE_COLS.metal2) === true);  // §18.3
+      metal2Chk, metalCount2);  // §18.3 Phase 1+2
     part2.bui = p2;
     total += part2.total;
     parts.push(part2);
@@ -951,8 +1004,12 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
     var buiVal = String(row[maps.detail[AM_DETAIL_COLS.bui] - 1] || "").trim();
     var caseKeyVal = String(row[maps.detail[AM_DETAIL_COLS.caseKey] - 1] || "").trim();
     var mvc = buildMonthlyVisitCounts_V3_(headerValuesAll, maps.header, patientId, caseKeyVal, injuryDate);
+    // §18.3 Phase 2: 通算回数（caseKey×当日より前）
+    var metalPriorCount = metalChkVal
+      ? buildMetalCountByCaseKey_V3_(detailValues, maps.detail, caseKeyVal, treatDate)
+      : null;
     var part = calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate,
-      coldChk, warmChk, electroChk, partOrder, reasons, buiVal, mvc, metalChkVal);
+      coldChk, warmChk, electroChk, partOrder, reasons, buiVal, mvc, metalChkVal, metalPriorCount);
 
     // 相談支援：運用ON列が無いので事故防止で0固定
     var support = 0;

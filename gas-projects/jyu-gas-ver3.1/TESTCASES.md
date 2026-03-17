@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 37/37 PASS 確認済み（2026-03-17）**
-> TC19a/b（金属副子等加算 Phase 1）含む全37ケース PASS。次: Phase 2（caseKey通算3回制限）TC20a/b/c 追加予定。
+> **fixture テスト: 40/40 PASS 確認待ち（2026-03-17）— TC20a/b/c（金属副子等加算 Phase 2）追加済み**
+> 37/37 は確認済み（TC19a/b含む）。TC20a/b/c + `buildMetalCountByCaseKey_V3_` / `metalPriorCount` 実装。clasp push 後に確認。
 
 ---
 
@@ -52,6 +52,9 @@
 - TC18b: 長期継続理由書アラートなし（monthsElapsed=2 → needCheck=false）
 - TC19a: 金属副子等加算 骨折（metalChk=true → metalOut=1000, rowTotalOut=1850, needCheck=false）
 - TC19b: 金属副子等加算 捻挫（metalChk=true → metalOut=0 + 要確認, needCheck=true）
+- TC20a: 金属副子等加算 Phase 2・1回目（metalPriorCount=0 → metalOut=1000, needCheck=false）
+- TC20b: 金属副子等加算 Phase 2・3回目（metalPriorCount=2 → metalOut=1000, needCheck=false）
+- TC20c: 金属副子等加算 Phase 2・上限超（metalPriorCount=3 → metalOut=0 + 要確認, needCheck=true）
 - M01: 混在（case1=再検 / case2=初検抑制）→ 再検料410 / 初検料0 ✅ 実シート確認済み
 - M02: 混在（case1=再検 / case2=初検抑制なし）→ 初検料1550 / 再検料0 ✅ 実シート確認済み
 - M03: 混在（case1=後療 / case2=初検抑制）→ 初検料0 / 再検料0 ✅ 実シート確認済み

@@ -519,6 +519,46 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC20: 金属副子等加算 Phase 2（caseKey 通算3回制限）─────────────────────
+  // TC20a: 骨折 metalChk=true, metalPriorCount=0 → 1回目・算定可
+  // TC20b: 骨折 metalChk=true, metalPriorCount=2 → 3回目・算定可
+  // TC20c: 骨折 metalChk=true, metalPriorCount=3 → 上限超・算定不可
+  "TC20a": {
+    testId: "TC20a",
+    context: { patientId: "P001", treatDate: "2026-01-15",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: true, metalPriorCount: 0 }
+      ]}
+    ]
+  },
+
+  "TC20b": {
+    testId: "TC20b",
+    context: { patientId: "P001", treatDate: "2026-01-25",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: true, metalPriorCount: 2 }
+      ]}
+    ]
+  },
+
+  "TC20c": {
+    testId: "TC20c",
+    context: { patientId: "P001", treatDate: "2026-02-05",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: true, metalPriorCount: 3 }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -943,6 +983,39 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  "TC20a": {
+    // 骨折 metalPriorCount=0 → 1回目算定可。koryoKossetu=850, metalOut=1000, rowTotalOut=1850
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1850, visitTotal: 1850,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-15_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, metalOut: 1000, rowTotalOut: 1850 }
+    ]
+  },
+
+  "TC20b": {
+    // 骨折 metalPriorCount=2 → 3回目・算定可。koryoKossetu=850, metalOut=1000, rowTotalOut=1850
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1850, visitTotal: 1850,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-25_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, metalOut: 1000, rowTotalOut: 1850 }
+    ]
+  },
+
+  "TC20c": {
+    // 骨折 metalPriorCount=3 → 上限超・算定不可。koryoKossetu=850, metalOut=0, rowTotalOut=850
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 850, visitTotal: 850,
+      needCheck: true, needCheckReason: "金属副子等加算 算定上限超（通算3回）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-05_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, metalOut: 0, rowTotalOut: 850 }
+    ]
+  },
+
 };
 
 
@@ -1005,7 +1078,8 @@ function computeAmountsFromFixture_V3_(fx) {
         settings, effectiveKubun, p.byomei, injDate, treatDate,
         !!p.cold, !!p.warm, !!p.electro,
         i + 1, reasons, p.bui, monthlyVisitCounts,
-        !!p.metal   // §18.3
+        !!p.metal,                                          // §18.3 Phase 1
+        (p.metalPriorCount !== undefined) ? Number(p.metalPriorCount) : null  // §18.3 Phase 2
       );
       part.bui = p.bui;
       total += part.total;
@@ -1205,6 +1279,9 @@ function runFixtureTC18a()  { showFixtureResult_("TC18a"); }
 function runFixtureTC18b()  { showFixtureResult_("TC18b"); }
 function runFixtureTC19a()  { showFixtureResult_("TC19a"); }
 function runFixtureTC19b()  { showFixtureResult_("TC19b"); }
+function runFixtureTC20a()  { showFixtureResult_("TC20a"); }
+function runFixtureTC20b()  { showFixtureResult_("TC20b"); }
+function runFixtureTC20c()  { showFixtureResult_("TC20c"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }
