@@ -1569,8 +1569,9 @@ function applyCaseRowToUI_Safe_(uiSh, src, caseNo, treatDate, opt) {
 /**
  * ===== 来院ケース → 来院ヘッダへ一括出力（高速） =====
  * ★設計方針: 基本項目（visitKey/日付/区分等）のみコピー。
- *   算定区分/Mixed区分/case要約/課金理由の5列は空で出力する（calcHeaderAmountsByVisitKey_V3_ を呼ばない）。
- *   5列を埋めるには出力後に「金額計算・保存」を別途実行すること。
+ *   Mixed区分/case1要約/case2要約の3列はkubun値から生成（費用計算不要）。
+ *   算定区分/課金理由の2列は空で出力する（費用計算後に金額計算・保存で上書きされる）。
+ *   case2要約の初検抑制表現（"case2:初検(抑制)"）は近似値（"case2:初検"）で出力する。
  */
 function exportHeaderFromCases_V3() {
   var ss = SpreadsheetApp.getActive();
@@ -1603,6 +1604,18 @@ function exportHeaderFromCases_V3() {
   var caseNoVals   = caseSh.getRange(2, caseMap[CASE_COLS.caseNo], n, 1).getValues().flat();
 
   var existed = buildExistingHeaderKeySet_(headSh, headMap);
+
+  // 事前集計: visitKey → { kubun1, kubun2 }（Mixed区分/case要約生成用）
+  var kvMap = {};
+  for (var p = 0; p < n; p++) {
+    var pvk = String(visitKeyVals[p] || "").trim();
+    var pno = Number(caseNoVals[p] || 0);
+    var pkubun = String(kubunVals[p] || "").trim();
+    if (!pvk || !pno) continue;
+    if (!kvMap[pvk]) kvMap[pvk] = { kubun1: "", kubun2: "" };
+    if (pno === 1) kvMap[pvk].kubun1 = pkubun;
+    if (pno === 2) kvMap[pvk].kubun2 = pkubun;
+  }
 
   var out = [];
   var now = new Date();
@@ -1650,6 +1663,24 @@ function exportHeaderFromCases_V3() {
     setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, "");
     setByName_(rowArr, headMap, HEADER_COLS.nextReservation, "");
     setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, "");
+
+    // Mixed区分/case要約: kubun値から生成（費用計算不要の3列）
+    // billedKubun / chargeReason は "" のまま（金額計算・保存で上書きされる）
+    var kv = kvMap[visitKey] || { kubun1: "", kubun2: "" };
+    var k1 = kv.kubun1, k2 = kv.kubun2;
+    var mixedFlag    = k2 ? "Mixed" : "通常";
+    var case1Summary = k1 === "初検" ? "case1:初検"
+                     : k1 === "再検" ? "case1:再検"
+                     : k1 === "後療" ? "case1:後療"
+                     : "case1:なし";
+    var case2Summary = !k2         ? "case2:なし"
+                     : k2 === "初検" ? "case2:初検"   // 抑制有無は近似（金額計算後に正確値で上書き）
+                     : k2 === "再検" ? "case2:再検"
+                     : k2 === "後療" ? "case2:後療"
+                     : "case2:" + k2;
+    setByName_(rowArr, headMap, HEADER_COLS.mixedFlag,    mixedFlag);
+    setByName_(rowArr, headMap, HEADER_COLS.case1Summary, case1Summary);
+    setByName_(rowArr, headMap, HEADER_COLS.case2Summary, case2Summary);
 
     out.push(rowArr);
     existed.add(visitKey);
