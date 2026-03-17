@@ -2226,7 +2226,7 @@ function setupValidation_V3() {
   }
 
   // B列: 傷病名プルダウン（選択必須）
-  var diseaseCells = ["B12", "B13", "B27", "B28"];
+  var diseaseCells = ["B12", "B13", "B36", "B37"];
   var diseaseRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(names, true)
     .setAllowInvalid(false)
@@ -2248,7 +2248,7 @@ function setupValidation_V3() {
   // A列: 部位名プルダウン（自由入力も許可）
   var partMsg = "";
   if (partNames.length) {
-    var partCells = ["A12", "A13", "A27", "A28"];
+    var partCells = ["A12", "A13", "A36", "A37"];
     var partRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(partNames, true)
       .setAllowInvalid(true)
@@ -2658,13 +2658,17 @@ function clearInitInfoUI_V3_(uiSh, caseNo) {
 
 /**
  * 初検情報履歴シートへ upsert（患者ID + caseKey + 施術日(初検日) をキーに更新、なければ append）。
- * シートが存在しない場合は自動作成してヘッダを設定する。
- * 初検 kubun の場合のみ saveVisit_V3 から呼ぶ。
  *
- * 正式ヘッダ（Ver3_transferData.js の historyCols と一致させること）:
- *   作成日時 / 患者ID / caseKey / caseNo / 施術日(初検日) /
- *   負傷の日時 / 負傷の場所 / 負傷時の状況 / 初検時の所見 /
- *   初検時相談支援の内容 / 受傷日_確定
+ * ★ saveVisit_V3 は来院ヘッダへの二重登録禁止チェック（同日 visitKey エラー）で
+ *    再保存をブロックするため、この upsert は初回登録が主用途。
+ *    caseKey + 施術日(初検日) 一致行の更新は移行・補完スクリプトからの呼び出し用フォールバック。
+ *
+ * ★ シートが存在しない、またはデータ行が 0 の場合のみ正式ヘッダで初期化する
+ *    （データ行がある場合は既存ヘッダを壊さない）。
+ *
+ * ★ 旧ヘッダ名との alias テーブルでシート破壊なく読み書き互換を保つ。
+ *    旧→新: 初検日→施術日(初検日) / 負傷の状況→負傷時の状況 /
+ *           初検時所見→初検時の所見 / 初検時相談支援内容→初検時相談支援の内容
  */
 function appendInitHistory_V3_(ss, patientId, caseNo, caseKey, treatDate, initFields) {
   var HIST_HEADER = [
@@ -2672,15 +2676,30 @@ function appendInitHistory_V3_(ss, patientId, caseNo, caseKey, treatDate, initFi
     "負傷の日時", "負傷の場所", "負傷時の状況", "初検時の所見",
     "初検時相談支援の内容", "受傷日_確定"
   ];
+  // 旧ヘッダ名 → 新ヘッダ名 alias（既存シートの列名互換）
+  var COL_ALIAS = {
+    "初検日":               "施術日(初検日)",
+    "負傷の状況":           "負傷時の状況",
+    "初検時所見":           "初検時の所見",
+    "初検時相談支援内容":   "初検時相談支援の内容",
+  };
 
   var sh = ss.getSheetByName(SHEETS.history);
-  if (!sh) {
-    sh = ss.insertSheet(SHEETS.history);
+  if (!sh) { sh = ss.insertSheet(SHEETS.history); }
+
+  // データ行なし（空 or ヘッダのみ）の場合のみ正式ヘッダを書き込む
+  if (sh.getLastRow() < 2) {
     sh.getRange(1, 1, 1, HIST_HEADER.length).setValues([HIST_HEADER]);
   }
 
-  // 既存行を探す（patientId + caseKey + 施術日(初検日) の3キー一致）
-  var hmap = buildHeaderColMap_(sh);
+  // alias を解決したヘッダマップを構築（旧ヘッダ名も新ヘッダ名として扱う）
+  var rawMap = buildHeaderColMap_(sh);
+  var hmap = {};
+  Object.keys(rawMap).forEach(function(name) {
+    hmap[COL_ALIAS[name] || name] = rawMap[name];
+  });
+
+  // upsert キー検索（patientId + caseKey + 施術日(初検日) の3キー一致）
   var cPid = hmap["患者ID"];
   var cCK  = hmap["caseKey"];
   var cDt  = hmap["施術日(初検日)"];
@@ -2694,25 +2713,30 @@ function appendInitHistory_V3_(ss, patientId, caseNo, caseKey, treatDate, initFi
       if (String(v[r][cCK  - 1] || "").trim() !== (caseKey || "")) continue;
       var rowDt = v[r][cDt - 1];
       if (td !== null && rowDt instanceof Date && rowDt.getTime() === td) {
-        rowIdx = r + 1;
-        break;
+        rowIdx = r + 1; break;
       }
     }
   }
 
-  var rowArr = [
-    new Date(),
-    patientId,
-    caseKey   || "",
-    caseNo,
-    treatDate,
-    initFields.injuryDatetime || "",
-    initFields.injuryPlace    || "",
-    initFields.injuryStatus   || "",
-    initFields.initFindings   || "",
-    initFields.supportContent || "",
-    "",  // 受傷日_確定：任意列のため空文字（後から手動更新可）
-  ];
+  // 書き込みデータ（hmap 経由で列順に依存しない）
+  var writeData = {
+    "作成日時":             new Date(),
+    "患者ID":               patientId,
+    "caseKey":              caseKey   || "",
+    "caseNo":               caseNo,
+    "施術日(初検日)":       treatDate,
+    "負傷の日時":           initFields.injuryDatetime || "",
+    "負傷の場所":           initFields.injuryPlace    || "",
+    "負傷時の状況":         initFields.injuryStatus   || "",
+    "初検時の所見":         initFields.initFindings   || "",
+    "初検時相談支援の内容": initFields.supportContent || "",
+    "受傷日_確定":          "",   // 任意列：後から手動更新可
+  };
+  var colCount = Math.max(sh.getLastColumn(), HIST_HEADER.length);
+  var rowArr = new Array(colCount).fill("");
+  Object.keys(writeData).forEach(function(key) {
+    if (hmap[key] !== undefined) rowArr[hmap[key] - 1] = writeData[key];
+  });
 
   if (rowIdx > 0) {
     sh.getRange(rowIdx, 1, 1, rowArr.length).setValues([rowArr]);

@@ -929,7 +929,9 @@ function V3TR_loadInitInfo_(shHistory, patientId, caseKey, endExcl) {
 
   const cPid  = map[C.historyCols.patientId];
   const cCK   = map[C.historyCols.caseKey];    // 任意列（undefined の場合もある）
-  const cDate = map[C.historyCols.initDate];
+  // 旧ヘッダ互換 alias: 新ヘッダ名で見つからない場合に旧名にフォールバック（cDate は null 早期リターンを防ぐため必須）
+  const cDate = map[C.historyCols.initDate] !== undefined
+                ? map[C.historyCols.initDate] : map["初検日"];
   if (cPid === undefined || cDate === undefined) return null;
 
   // 日付フィルタ共通: 患者ID一致 かつ 対象月末日以前
@@ -977,13 +979,15 @@ function V3TR_loadInitInfo_(shHistory, patientId, caseKey, endExcl) {
 
   const row = v[bestRow];
   const get = (col) => (col !== undefined) ? String(row[col] || "").trim() : "";
+  // 旧ヘッダ名フォールバック（列名が変わった4列のみ alias 解決）
+  const a = (newKey, oldKey) => map[newKey] !== undefined ? map[newKey] : map[oldKey];
   return {
     matchMode,
     injuryDatetime: get(map[C.historyCols.injuryDatetime]),
     injuryPlace:    get(map[C.historyCols.injuryPlace]),
-    injuryStatus:   get(map[C.historyCols.injuryStatus]),
-    initFindings:   get(map[C.historyCols.initFindings]),
-    supportContent: get(map[C.historyCols.supportContent]),
+    injuryStatus:   get(a(C.historyCols.injuryStatus, "負傷の状況")),
+    initFindings:   get(a(C.historyCols.initFindings,  "初検時所見")),
+    supportContent: get(a(C.historyCols.supportContent, "初検時相談支援内容")),
   };
 }
 
