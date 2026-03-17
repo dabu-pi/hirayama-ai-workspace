@@ -434,6 +434,47 @@ function buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKey, beforeDa
 }
 
 /**
+ * caseKey×当月単位で柔道整復運動後療料の算定回数を集計（Phase 2）
+ * 施術明細の「運動後療_確定」> 0 かつ 施術日が treatDate と同年月 かつ 施術日 < treatDate
+ * の visitKey を重複除去してカウント。
+ * detailMap / detailValues が渡されなければ 0 を返す（Phase 1 モードと共存可）。
+ * @param {Array[][]} detailValues - 施術明細 getDataRange().getValues()
+ * @param {Object} detailMap - buildHeaderColMap_ の結果（AM_DETAIL_COLS キー）
+ * @param {string} caseKey
+ * @param {Date} treatDate - 当日施術日（同月判定基準 かつ 当日除外の境界）
+ * @return {number} 当月算定回数（0以上）
+ */
+function buildExerciseCountByMonth_V3_(detailValues, detailMap, caseKey, treatDate) {
+  if (!detailValues || !detailMap || !caseKey) return 0;
+  if (!(treatDate instanceof Date)) return 0;
+  var ckIdx  = detailMap[AM_DETAIL_COLS.caseKey];
+  var dtIdx  = detailMap[AM_DETAIL_COLS.treatDate];
+  var exIdx  = detailMap[AM_DETAIL_COLS.exerciseOut];
+  var vkIdx  = detailMap[AM_DETAIL_COLS.visitKey];
+  if (!ckIdx || !dtIdx || !exIdx || !vkIdx) return 0;
+
+  var targetYear  = treatDate.getFullYear();
+  var targetMonth = treatDate.getMonth();  // 0-indexed
+
+  var seen = {};  // visitKey → true（重複除去）
+  for (var r = 1; r < detailValues.length; r++) {
+    var row = detailValues[r];
+    if (String(row[ckIdx - 1] || "").trim() !== caseKey) continue;
+    var td = row[dtIdx - 1];
+    if (!(td instanceof Date)) continue;
+    // 当日除外（当日より前のみ）
+    if (td.getTime() >= treatDate.getTime()) continue;
+    // 同月チェック
+    if (td.getFullYear() !== targetYear || td.getMonth() !== targetMonth) continue;
+    var ex = Number(row[exIdx - 1] || 0);
+    if (ex <= 0) continue;
+    var vk = String(row[vkIdx - 1] || "").trim();
+    if (vk) seen[vk] = true;
+  }
+  return Object.keys(seen).length;
+}
+
+/**
  * 1部位分の金額算定（object返却版）
  *
  * Ver3_core.js 側の同名関数と同じロジックだが、
@@ -442,9 +483,10 @@ function buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKey, beforeDa
  * @param {boolean} [metalChk] - 金属副子等加算チェック（§18.3）
  * @param {number|null} [metalPriorCount] - 当日より前の通算算定回数（null=Phase 1 モード・回数制限なし）
  * @param {boolean} [exerciseChk] - 柔道整復運動後療料チェック
+ * @param {number|null} [exercisePriorCount] - 当月・当日より前の算定回数（null=Phase 1 モード・回数制限なし）
  * @return {Object} { base, cold, warm, electro, taiki, metalOut, exerciseOut, coef, longTermCoef, total, ... }
  */
-function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui, monthlyVisitCounts, metalChk, metalPriorCount, exerciseChk) {
+function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, coldChk, warmChk, elecChk, partOrder, reasons, bui, monthlyVisitCounts, metalChk, metalPriorCount, exerciseChk, exercisePriorCount) {
   var injuryType = detectInjuryType_V3_(byomei);
   var base = calcBaseFee_V3_(settings, kubun, injuryType, bui);
 
@@ -566,7 +608,12 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
   if (exerciseChk) {
     if (injuryType === "骨折" || injuryType === "不全骨折" || injuryType === "脱臼") {
       if (dayDiff != null && dayDiff >= 15) {
-        exerciseOut = settings.exerciseAddon || 0;
+        // Phase 2: 当月5回上限チェック（exercisePriorCount が渡された場合のみ）
+        if (exercisePriorCount != null && exercisePriorCount >= 5) {
+          reasons.push("運動後療料 算定上限超（当月5回）");
+        } else {
+          exerciseOut = settings.exerciseAddon || 0;
+        }
       } else {
         reasons.push("運動後療料 算定不可（受傷後15日未満）");
       }
@@ -900,12 +947,15 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
       ? buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKeyVal, treatDate)
       : null;  // null = Phase 1 モード（回数制限なし）
     var exercise1Chk = get(CASE_COLS.exercise1) === true;
+    var exerciseCount1 = (exercise1Chk && detailValues && detailMap)
+      ? buildExerciseCountByMonth_V3_(detailValues, detailMap, caseKeyVal, treatDate)
+      : null;  // null = Phase 1 モード（回数制限なし）
     var part1 = calcOnePartAmount_V3_(settings, kubun, d1, inj1, treatDate,
       get(CASE_COLS.cold1) === true,
       get(CASE_COLS.warm1) === true,
       get(CASE_COLS.elec1) === true,
       partCount, reasons, p1, mvc1,
-      metal1Chk, metalCount1, exercise1Chk);  // §18.3 + 運動後療料
+      metal1Chk, metalCount1, exercise1Chk, exerciseCount1);  // §18.3 + 運動後療料 Phase 1+2
     part1.bui = p1;
     total += part1.total;
     parts.push(part1);
@@ -926,12 +976,15 @@ function calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, caseNo, kubun, trea
       ? buildMetalCountByCaseKey_V3_(detailValues, detailMap, caseKeyVal, treatDate)
       : null;
     var exercise2Chk = get(CASE_COLS.exercise2) === true;
+    var exerciseCount2 = (exercise2Chk && detailValues && detailMap)
+      ? buildExerciseCountByMonth_V3_(detailValues, detailMap, caseKeyVal, treatDate)
+      : null;
     var part2 = calcOnePartAmount_V3_(settings, kubun, d2, inj2, treatDate,
       get(CASE_COLS.cold2) === true,
       get(CASE_COLS.warm2) === true,
       get(CASE_COLS.elec2) === true,
       partCount, reasons, p2, mvc2,
-      metal2Chk, metalCount2, exercise2Chk);  // §18.3 + 運動後療料
+      metal2Chk, metalCount2, exercise2Chk, exerciseCount2);  // §18.3 + 運動後療料 Phase 1+2
     part2.bui = p2;
     total += part2.total;
     parts.push(part2);
@@ -1035,8 +1088,12 @@ function recalcAmountsByVisitKey_V3_(ss, visitKey) {
     var metalPriorCount = metalChkVal
       ? buildMetalCountByCaseKey_V3_(detailValues, maps.detail, caseKeyVal, treatDate)
       : null;
+    // 運動後療料 Phase 2: 当月回数（caseKey×当月×当日より前）
+    var exercisePriorCount = exerciseChkVal
+      ? buildExerciseCountByMonth_V3_(detailValues, maps.detail, caseKeyVal, treatDate)
+      : null;
     var part = calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate,
-      coldChk, warmChk, electroChk, partOrder, reasons, buiVal, mvc, metalChkVal, metalPriorCount, exerciseChkVal);
+      coldChk, warmChk, electroChk, partOrder, reasons, buiVal, mvc, metalChkVal, metalPriorCount, exerciseChkVal, exercisePriorCount);
 
     // 相談支援：運用ON列が無いので事故防止で0固定
     var support = 0;

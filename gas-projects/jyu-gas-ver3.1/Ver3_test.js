@@ -613,6 +613,35 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC22: 柔道整復運動後療料 Phase 2（当月5回上限）────────────────────────────
+  // TC22a: 骨折 dayDiff=15 exercisePriorCount=5 → 算定上限超
+  // TC22b: 骨折 dayDiff=15 exercisePriorCount=4 → 5回目・算定可
+  "TC22a": {
+    testId: "TC22a",
+    context: { patientId: "P001", treatDate: "2026-01-20",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: false,
+          exercise: true, exercisePriorCount: 5 }
+      ]}
+    ]
+  },
+
+  "TC22b": {
+    testId: "TC22b",
+    context: { patientId: "P001", treatDate: "2026-01-20",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "右前腕", byomei: "骨折", injuryDate: "2026-01-05",
+          cold: false, warm: false, electro: false, metal: false,
+          exercise: true, exercisePriorCount: 4 }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -1115,6 +1144,29 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  // ── TC22: 柔道整復運動後療料 Phase 2（当月5回上限）────────────────────────────
+  "TC22a": {
+    // 骨折 dayDiff=15 exercisePriorCount=5 → 上限超。koryoKossetu=850, exerciseOut=0, rowTotalOut=850
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 850, visitTotal: 850,
+      needCheck: true, needCheckReason: "運動後療料 算定上限超（当月5回）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-20_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, exerciseOut: 0, rowTotalOut: 850 }
+    ]
+  },
+
+  "TC22b": {
+    // 骨折 dayDiff=15 exercisePriorCount=4 → 5回目・算定可。koryoKossetu=850, exerciseOut=320, rowTotalOut=1170
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1170, visitTotal: 1170,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-01-20_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, exerciseOut: 320, rowTotalOut: 1170 }
+    ]
+  },
+
 };
 
 
@@ -1177,9 +1229,10 @@ function computeAmountsFromFixture_V3_(fx) {
         settings, effectiveKubun, p.byomei, injDate, treatDate,
         !!p.cold, !!p.warm, !!p.electro,
         i + 1, reasons, p.bui, monthlyVisitCounts,
-        !!p.metal,                                          // §18.3 Phase 1
-        (p.metalPriorCount !== undefined) ? Number(p.metalPriorCount) : null,  // §18.3 Phase 2
-        !!p.exercise                                        // 柔道整復運動後療料
+        !!p.metal,                                                                   // §18.3 Phase 1
+        (p.metalPriorCount !== undefined) ? Number(p.metalPriorCount) : null,        // §18.3 Phase 2
+        !!p.exercise,                                                                // 運動後療料 Phase 1
+        (p.exercisePriorCount !== undefined) ? Number(p.exercisePriorCount) : null   // 運動後療料 Phase 2
       );
       part.bui = p.bui;
       total += part.total;
@@ -1387,6 +1440,8 @@ function runFixtureTC21a()  { showFixtureResult_("TC21a"); }
 function runFixtureTC21b()  { showFixtureResult_("TC21b"); }
 function runFixtureTC21c()  { showFixtureResult_("TC21c"); }
 function runFixtureTC21d()  { showFixtureResult_("TC21d"); }
+function runFixtureTC22a()  { showFixtureResult_("TC22a"); }
+function runFixtureTC22b()  { showFixtureResult_("TC22b"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }
