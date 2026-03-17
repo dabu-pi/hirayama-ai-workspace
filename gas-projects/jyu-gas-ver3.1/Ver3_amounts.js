@@ -710,9 +710,12 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
     reFee = settings.reFee;
   }
 
-  // --- 部位別明細金額（後療料＋冷温電） ---
-  // hasBillableInitial=true なら初検日扱い（施療料）、false なら後療日扱い（後療料）
-  var calcKoryoOnThisDay = !hasBillableInitial;
+  // --- 部位別明細金額 ---
+  // 【設計方針】初検抑制（initFee=0）は「初検料加算を0にする」のみ。
+  //   部位基本料の算定区分は case 自体の生の kubun を使う。
+  //   初検抑制があっても、その日は case2 にとって初検日であり施療料を適用する。
+  //   effectiveKubun は来院ヘッダ要約・chargeReason 生成専用（部位計算には使わない）。
+  var calcKoryoOnThisDay = !hasBillableInitial;  // 来院ヘッダ要約生成のために保持
   var effectiveKubun1 = calcKoryoOnThisDay ? (kubun1 === "初検" ? "後療" : kubun1) : kubun1;
   var effectiveKubun2 = calcKoryoOnThisDay ? (kubun2 === "初検" ? "後療" : kubun2) : kubun2;
 
@@ -721,8 +724,9 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
   var detailShForMetal = ss.getSheetByName(SHEETS.detail);
   var detailMapForMetal = buildHeaderColMap_(detailShForMetal);
   var detailValuesForMetal = detailShForMetal.getDataRange().getValues();
-  var detail1 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 1, effectiveKubun1, treatDate, settings, reasons, headerValuesForMvc, headMap, detailValuesForMetal, detailMapForMetal);
-  var detail2 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 2, effectiveKubun2, treatDate, settings, reasons, headerValuesForMvc, headMap, detailValuesForMetal, detailMapForMetal);
+  // 部位基本料は生の kubun で算定（初検抑制時も初検日扱いの施療料を適用）
+  var detail1 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 1, kubun1, treatDate, settings, reasons, headerValuesForMvc, headMap, detailValuesForMetal, detailMapForMetal);
+  var detail2 = calcCaseDetailAmount_V3_(caseSh, caseMap, visitKey, 2, kubun2, treatDate, settings, reasons, headerValuesForMvc, headMap, detailValuesForMetal, detailMapForMetal);
   var detailSum = detail1.total + detail2.total;
 
   // --- 来院合計 = 初検料 + 再検料 + 相談支援料 + 明細合計 ---
