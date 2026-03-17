@@ -25,7 +25,7 @@ const SHEETS = {
   settings: "設定",
   cases: "来院ケース",
   master: "患者マスタ",
-  ui: "患者画面のコピー",   // ★検証用。本番化時は "患者画面" に戻す
+  ui: "患者画面",
   detail: "施術明細",
   header: "来院ヘッダ",
   history: "初検情報履歴",
