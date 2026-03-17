@@ -1049,7 +1049,10 @@ function V3TR_countKubunInCases_(shCases, patientId, start, end) {
     if (k === "初検") initCount++;
     else if (k === "再検") reCount++;
   }
-  // ★初検料・再検料は患者×月で各1回が上限（保険発第57号）
+  // ★初検料は患者×月で1回が上限（保険発第57号）→ Math.min(initCount, 1) は正しい
+  // ★再検料は保険発第57号では "1月につき1回" の記載あり → Math.min(reCount, 1) で現状1回に制限。
+  //   ただし Mixed 患者（2エピソード別々に再検発生）の場合に2回算定が正しいかは要確認。
+  //   2エピソード×再検料が認められる場合は Math.min(reCount, 2) 等に変更すること。
   return {
     initCount: Math.min(initCount, 1),
     reCount:   Math.min(reCount, 1),
@@ -1065,7 +1068,14 @@ function V3TR_buildCaseMoneyBlock_(agg) {
   const koryoCount = agg.koryoCount || 0;
   const koryoUnit = (koryoCount > 0) ? Math.round(koryoSum / koryoCount) : 0;
 
-  const caseTotal = koryoSum + coldSum + warmSum + elecSum;
+  // 施療料（初検日の部位基本料）を全部位分合算してcaseTotalに算入する。
+  // V3TR_aggregateDetailMonthly_ で kubun="初検" のbaseはkoryoSumに含めず
+  // ptgt.shoryoFee に個別保存されているため、ここで明示的に合算する。
+  const shoryoSum = Math.round(
+    Object.values(agg.parts || {}).reduce(function(s, p) { return s + (p.shoryoFee || 0); }, 0)
+  );
+
+  const caseTotal = shoryoSum + koryoSum + coldSum + warmSum + elecSum;
 
   return {
     koryoUnit,
