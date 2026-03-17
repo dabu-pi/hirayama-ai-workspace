@@ -154,7 +154,8 @@ V3TR.CONFIG = {
     "Mixed区分", "case1要約", "case2要約",
 
     // 初検情報（初検情報履歴シートから取得：対象月末日時点での最新1件）
-    "負傷の日時", "負傷の場所", "負傷の状況", "初検時所見", "初検時相談支援内容"
+    "負傷の日時", "負傷の場所", "負傷の状況", "初検時所見", "初検時相談支援内容",
+    "初検取得モード"  // "caseKey" | "patientFallback" | "none"
   ],
 
   /**
@@ -519,6 +520,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     row["負傷の状況"]         = initInfo ? initInfo.injuryStatus     : "";
     row["初検時所見"]         = initInfo ? initInfo.initFindings     : "";
     row["初検時相談支援内容"] = initInfo ? initInfo.supportContent   : "";
+    row["初検取得モード"]     = initInfo ? initInfo.matchMode        : "none";
 
     // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
     // 空レコード（caseKey=""・全金額0）の出力を抑制する。
@@ -897,15 +899,21 @@ function V3TR_aggregateDetailMonthly_(shDetail, patientId, start, end, endDates)
 }
 
 /**
- * 初検情報履歴から、patientId + caseKey で対象月末日以前の最新1件を返す。
- * caseKey 列が存在しない場合は patientId のみでマッチ。
- * 行が見つからない場合は null を返す（呼び出し側が空文字に変換）。
+ * 初検情報履歴から対象月末日以前の最新1件を返す。
+ *
+ * 【マッチ戦略（2パス）】
+ *   Pass-1（正規ルート）: caseKey 列が存在 かつ 行の caseKey が引数と完全一致
+ *                         → matchMode: "caseKey"
+ *   Pass-2（フォールバック）: Pass-1 で行が見つからない場合のみ実行。
+ *                             patientId のみでマッチ（caseKey 不問）
+ *                             → matchMode: "patientFallback"
+ *   行なし: null を返す（呼び出し側が matchMode: "none" として扱う）
  *
  * @param {Sheet}  shHistory  - 初検情報履歴シート
  * @param {string} patientId  - 患者ID
  * @param {string} caseKey    - 対象caseKey（空文字可）
  * @param {Date}   endExcl    - 対象月の翌月1日（exclusive）
- * @returns {{injuryDatetime, injuryPlace, injuryStatus, initFindings, supportContent}|null}
+ * @returns {{injuryDatetime, injuryPlace, injuryStatus, initFindings, supportContent, matchMode}|null}
  */
 function V3TR_loadInitInfo_(shHistory, patientId, caseKey, endExcl) {
   if (!shHistory || shHistory.getLastRow() < 2) return null;
@@ -918,29 +926,53 @@ function V3TR_loadInitInfo_(shHistory, patientId, caseKey, endExcl) {
   const cDate = map[C.historyCols.initDate];
   if (cPid === undefined || cDate === undefined) return null;
 
-  let best = null;
-  for (let r = 1; r < v.length; r++) {
-    if (String(v[r][cPid] || "").trim() !== patientId) continue;
-
-    // caseKey 列が存在し、かつ行に値がある場合のみマッチング
-    if (cCK !== undefined && caseKey) {
-      const rowCK = String(v[r][cCK] || "").trim();
-      if (rowCK && rowCK !== caseKey) continue;
-    }
-
+  // 日付フィルタ共通: 患者ID一致 かつ 対象月末日以前
+  function eligible(r) {
+    if (String(v[r][cPid] || "").trim() !== patientId) return false;
     const dt = v[r][cDate];
-    if (!(dt instanceof Date)) continue;
-    if (endExcl instanceof Date && dt.getTime() >= endExcl.getTime()) continue; // exclusive
-
-    if (!best || dt.getTime() > best.dt.getTime()) {
-      best = { dt, row: v[r] };
-    }
+    if (!(dt instanceof Date)) return false;
+    if (endExcl instanceof Date && dt.getTime() >= endExcl.getTime()) return false;
+    return true;
   }
-  if (!best) return null;
+  function latest(rows) {
+    let best = null;
+    for (const r of rows) {
+      const dt = v[r][cDate];
+      if (!best || dt.getTime() > v[best][cDate].getTime()) best = r;
+    }
+    return best;
+  }
 
-  const row = best.row;
+  // Pass-1: caseKey 列が存在し、行の caseKey が対象と完全一致
+  let bestRow = null;
+  let matchMode = "none";
+
+  if (cCK !== undefined && caseKey) {
+    const candidates = [];
+    for (let r = 1; r < v.length; r++) {
+      if (!eligible(r)) continue;
+      if (String(v[r][cCK] || "").trim() === caseKey) candidates.push(r);
+    }
+    const found = latest(candidates);
+    if (found !== null) { bestRow = found; matchMode = "caseKey"; }
+  }
+
+  // Pass-2: フォールバック（patientId のみ）
+  if (bestRow === null) {
+    const candidates = [];
+    for (let r = 1; r < v.length; r++) {
+      if (eligible(r)) candidates.push(r);
+    }
+    const found = latest(candidates);
+    if (found !== null) { bestRow = found; matchMode = "patientFallback"; }
+  }
+
+  if (bestRow === null) return null;
+
+  const row = v[bestRow];
   const get = (col) => (col !== undefined) ? String(row[col] || "").trim() : "";
   return {
+    matchMode,
     injuryDatetime: get(map[C.historyCols.injuryDatetime]),
     injuryPlace:    get(map[C.historyCols.injuryPlace]),
     injuryStatus:   get(map[C.historyCols.injuryStatus]),
