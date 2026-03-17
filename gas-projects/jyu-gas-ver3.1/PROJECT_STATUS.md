@@ -38,8 +38,20 @@
 
 ## 次アクション
 
-> 最終更新: 2026-03-17（40/40 PASS 確認済み — TC20a/b/c 金属副子等加算 Phase 2 完了）
-> 次: 柔道整復運動後療料 実装（TC21a〜d 予定）。
+> 最終更新: 2026-03-17（46/46 PASS 確認済み — TC22a/b 柔道整復運動後療料 Phase 2 完了）
+> 次: 下記「次タスク候補」参照。
+
+### 次タスク候補（優先順）
+
+| 優先 | タスク | 分類 | 概要 |
+|---|---|---|---|
+| 1 | exportHeaderFromCases_V3 への新5列配線 | **実装可能** | calcHeaderAmountsByVisitKey_V3_ で生成済みの5列（算定区分/Mixed区分等）を exportHeaderFromCases_V3_ に配線するだけ。コード範囲が限定的で副作用が少ない。 |
+| 2 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
+| 3 | transferData への新5列反映 | **調査先行** | Ver3_transferData.js（月次転記）への新5列反映。申請書データへの影響・不要列の除外方針を確認してから実装着手。 |
+
+**保留継続:**
+- 運動後療料 月2回特例 → `docs/JREC-01_運動後療料_月2回特例メモ.md` 参照（根拠資料未確認のため）
+- 既存データ一括再計算メニュー → 低優先度
 
 ### ✅ 温罨法初検日特例 実装完了（2026-03-17）
 
@@ -133,10 +145,10 @@
 
 ## テスト状況
 
-- テストケース文書: `TESTCASES.md` あり（TC01〜TC19b、M01〜M05 計37ケース）
+- テストケース文書: `TESTCASES.md` あり
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 40件（TC01〜TC20c + M01〜M05）
-- **40/40 PASS 確認済み（2026-03-17）**
+- fixture 件数: 46件（TC01〜TC22b + M01〜M05）
+- **46/46 PASS 確認済み（2026-03-17）**
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
@@ -193,9 +205,9 @@ clasp push
 
 | ファイル | 最終 GitHub commit | Apps Script 反映 |
 |---|---|---|
-| Ver3_amounts.js | `9fc4fbd`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_core.js | `f073d4f`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_test.js | `9fc4fbd`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_amounts.js | `dfe0387`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_core.js | `887d514`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_test.js | `dfe0387`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_transferData.js | `20fc562`（2026-03-16）| 要確認 |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 
