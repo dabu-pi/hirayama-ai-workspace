@@ -19,6 +19,19 @@ V3TR.CONFIG = {
     master: "患者マスタ",
     insurer: "保険者情報",
     transfer: "申請書_転記データ",
+    history: "初検情報履歴",
+  },
+
+  /** 初検情報履歴シートの列名 */
+  historyCols: {
+    patientId:      "患者ID",
+    caseKey:        "caseKey",       // 任意列（なければpatientIdのみでマッチ）
+    initDate:       "初検日",        // 月末日以前の最新1件を採用
+    injuryDatetime: "負傷の日時",
+    injuryPlace:    "負傷の場所",
+    injuryStatus:   "負傷の状況",
+    initFindings:   "初検時所見",
+    supportContent: "初検時相談支援内容",
   },
 
   setKeys: {
@@ -138,7 +151,10 @@ V3TR.CONFIG = {
     "当月合計", "窓口負担額", "請求金額",
 
     // 来院区分サマリー（exportHeaderFromCases_V3 と同一ロジックで導出）
-    "Mixed区分", "case1要約", "case2要約"
+    "Mixed区分", "case1要約", "case2要約",
+
+    // 初検情報（初検情報履歴シートから取得：対象月末日時点での最新1件）
+    "負傷の日時", "負傷の場所", "負傷の状況", "初検時所見", "初検時相談支援内容"
   ],
 
   /**
@@ -314,6 +330,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
   const shDetail   = ss.getSheetByName(C.sheetNames.detail);
   const shMaster   = ss.getSheetByName(C.sheetNames.master);
   const shInsurer  = ss.getSheetByName(C.sheetNames.insurer);
+  const shHistory  = ss.getSheetByName(C.sheetNames.history);  // 任意（なければ空文字）
 
   if (!shSettings || !shCases || !shDetail || !shMaster) {
     throw new Error("必要シートが見つかりません（設定/来院ケース/施術明細/患者マスタ）。");
@@ -368,6 +385,11 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     const cm = (caseNo === 1) ? c1 : c2;
 
     const jitsunisu = (caseNo === 1) ? detailAgg.case1.visitDays : detailAgg.case2.visitDays;
+
+    // 初検情報（シートがなければ全列空文字）
+    const initInfo = shHistory
+      ? V3TR_loadInitInfo_(shHistory, patientId, cs.caseKey || "", end)
+      : null;
 
     const row = {};
     row["recordKey"] = key;
@@ -490,6 +512,13 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     row["Mixed区分"]  = _mixedFlag;
     row["case1要約"]  = _case1Summary;
     row["case2要約"]  = _case2Summary;
+
+    // 初検情報（caseKey 単位で取得。シート未存在 or 行なしは空文字）
+    row["負傷の日時"]         = initInfo ? initInfo.injuryDatetime  : "";
+    row["負傷の場所"]         = initInfo ? initInfo.injuryPlace      : "";
+    row["負傷の状況"]         = initInfo ? initInfo.injuryStatus     : "";
+    row["初検時所見"]         = initInfo ? initInfo.initFindings     : "";
+    row["初検時相談支援内容"] = initInfo ? initInfo.supportContent   : "";
 
     // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
     // 空レコード（caseKey=""・全金額0）の出力を抑制する。
@@ -865,6 +894,59 @@ function V3TR_aggregateDetailMonthly_(shDetail, patientId, start, end, endDates)
   });
 
   return { case1: agg1, case2: agg2 };
+}
+
+/**
+ * 初検情報履歴から、patientId + caseKey で対象月末日以前の最新1件を返す。
+ * caseKey 列が存在しない場合は patientId のみでマッチ。
+ * 行が見つからない場合は null を返す（呼び出し側が空文字に変換）。
+ *
+ * @param {Sheet}  shHistory  - 初検情報履歴シート
+ * @param {string} patientId  - 患者ID
+ * @param {string} caseKey    - 対象caseKey（空文字可）
+ * @param {Date}   endExcl    - 対象月の翌月1日（exclusive）
+ * @returns {{injuryDatetime, injuryPlace, injuryStatus, initFindings, supportContent}|null}
+ */
+function V3TR_loadInitInfo_(shHistory, patientId, caseKey, endExcl) {
+  if (!shHistory || shHistory.getLastRow() < 2) return null;
+  const C   = V3TR.CONFIG;
+  const map = V3TR_buildHeaderMap_(shHistory);
+  const v   = shHistory.getDataRange().getValues();
+
+  const cPid  = map[C.historyCols.patientId];
+  const cCK   = map[C.historyCols.caseKey];    // 任意列（undefined の場合もある）
+  const cDate = map[C.historyCols.initDate];
+  if (cPid === undefined || cDate === undefined) return null;
+
+  let best = null;
+  for (let r = 1; r < v.length; r++) {
+    if (String(v[r][cPid] || "").trim() !== patientId) continue;
+
+    // caseKey 列が存在し、かつ行に値がある場合のみマッチング
+    if (cCK !== undefined && caseKey) {
+      const rowCK = String(v[r][cCK] || "").trim();
+      if (rowCK && rowCK !== caseKey) continue;
+    }
+
+    const dt = v[r][cDate];
+    if (!(dt instanceof Date)) continue;
+    if (endExcl instanceof Date && dt.getTime() >= endExcl.getTime()) continue; // exclusive
+
+    if (!best || dt.getTime() > best.dt.getTime()) {
+      best = { dt, row: v[r] };
+    }
+  }
+  if (!best) return null;
+
+  const row = best.row;
+  const get = (col) => (col !== undefined) ? String(row[col] || "").trim() : "";
+  return {
+    injuryDatetime: get(map[C.historyCols.injuryDatetime]),
+    injuryPlace:    get(map[C.historyCols.injuryPlace]),
+    injuryStatus:   get(map[C.historyCols.injuryStatus]),
+    initFindings:   get(map[C.historyCols.initFindings]),
+    supportContent: get(map[C.historyCols.supportContent]),
+  };
 }
 
 function V3TR_emptyAgg_() {
