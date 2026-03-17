@@ -3,8 +3,8 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 37/37 PASS 確認待ち（2026-03-17）— TC19a/b（金属副子等加算 Phase 1）追加済み**
-> 35/35 は確認済み（TC18a/b含む）。TC19a/b + `calcOnePartAmount_V3_` metalChk 実装。clasp push 後に確認。
+> **fixture テスト: 37/37 PASS 確認済み（2026-03-17）**
+> TC19a/b（金属副子等加算 Phase 1）含む全37ケース PASS。次: Phase 2（caseKey通算3回制限）TC20a/b/c 追加予定。
 
 ---
 
