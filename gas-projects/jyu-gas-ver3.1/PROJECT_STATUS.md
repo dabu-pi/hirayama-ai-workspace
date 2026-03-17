@@ -321,10 +321,50 @@ transferData 月次集計:
 > 「治癒後別負傷の初検料・再検料を各エピソードで独立算定する」という制度要件を充足している。
 >
 > **運用完了条件（残タスク）:**
-> 1. 実シートで M06b パターン入力 → initFee=3100 / reFee=820 を確認（人間作業）
-> 2. Dashboard 反映: `de -ProjectId JREC-01`（env vars 設定済み環境で実施）
-> 3. M06b fixture 追加（TESTCASES.md 追記）
-> 4. caseKey 欠落フォールバック時のログ化（任意）
+> 1. ~~実シートで M06b パターン入力 → initFee=3100 / reFee=820 を確認~~ ✅ NDJSON・申請書生成で確認済み（2026-03-17）
+> 2. Dashboard 反映: `de -ProjectId JREC-01` ✅ 本セッションで実施
+> 3. M06b fixture 追加（TESTCASES.md 追記）⚠️ 未実施
+> 4. caseKey 欠落フォールバック時のログ化（任意）⚠️ 未実施
+
+## 2026-03-17 M06b 実シート確認（write_application.py バッチ実行）
+
+### 確認条件
+
+| 項目 | 内容 |
+|---|---|
+| 実行コマンド | `python write_application.py --batch` |
+| NDJSON | transfer_batch_2026-03.ndjson（再生成） |
+| 実行環境 | .venv（Pillow 不足で一度失敗 → pip install Pillow 後に成功）|
+| 出力ファイル | output\2026-03\申請書_hirayamaka_2026-03.xlsx |
+| セル書込数 | 86 |
+| 検証 | 全件パス ✅ |
+
+### hirayamaka M06b データ確認
+
+| 項目 | 値 | 確認 |
+|---|---|---|
+| case1 caseKey | hirayamaka_2026-03-02_C1 | — |
+| case1 施術終了年月日 | 2026-03-09 | 治癒 |
+| case2 caseKey | hirayamaka_2026-03-16_C2 | — |
+| case2 初検日 | 2026-03-16 | 治癒後の新規別負傷 |
+| isPostRecovery 判定 | 2026-03-09 < 2026-03-16 → true | ✅ [B] 治癒後別負傷 |
+| 初検料_月額 | 3,100 | ✅ 期待値通り（1550×2） |
+| 再検料_月額 | 820 | ✅ 期待値通り（410×2） |
+| 当月合計 | 6,936 | — |
+| 窓口負担額 | 2,080 | — |
+| 請求金額 | 4,856 | — |
+
+### 確認余地（事実として記録、未解決）
+
+| 項目 | 内容 |
+|---|---|
+| case要約表示 | case1要約="case1:再検" / case2要約="case2:再検" — 両ケースとも再検表示。M06b では case2 に初検（3/16）があるが case2要約が "再検" を示す。表示仕様として問題ないか確認余地あり（billing 正確性に影響なし）|
+
+### Pillow 依存追加（再発防止）
+
+- .venv に Pillow 未インストール状態で実行 → `ModuleNotFoundError: No module named 'PIL'`
+- `pip install Pillow` 後に再実行し成功
+- `requirements.txt` を新規作成し openpyxl / Pillow を明記（本コミット）
 
 ---
 

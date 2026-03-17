@@ -72,3 +72,7 @@ secrets/
 # 参考資料PDF（制度資料など。Git管理対象外・ローカル保持）
 gas-projects/**/*.pdf
 
+# 申請書出力・転記バッチ（患者個人情報を含むためGit管理外）
+gas-projects/**/output/**/*.xlsx
+gas-projects/**/transfer_batch*.ndjson
+
