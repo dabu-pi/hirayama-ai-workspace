@@ -38,16 +38,25 @@
 
 ## 次アクション
 
-> 最終更新: 2026-03-17（46/46 PASS 確認済み — TC22a/b 柔道整復運動後療料 Phase 2 完了）
+> 最終更新: 2026-03-17（168ecfc — exportHeaderFromCases_V3 新3列配線完了）
 > 次: 下記「次タスク候補」参照。
+
+### ✅ exportHeaderFromCases_V3 新3列配線 完了（2026-03-17）
+
+- `Ver3_core.js` に事前集計パス追加（visitKey → kubun1/kubun2 マップ）
+- `Mixed区分 / case1要約 / case2要約` の3列をkubunから生成して書き込み
+- `算定区分 / 課金理由要約` は空のまま維持（金額計算・保存で上書きされる）
+- `case2要約` の初検抑制表現は近似（`"case2:初検"`）。金額計算後に正確値で上書きされる
+- 確認状況: 既存ヘッダ全件が出力済みのため export 新規追加でのlive確認は省略。コードレビュー確認完了扱い
+- **live 再確認予定: 来院ヘッダ再構築時（リセット→一括 export するタイミング）**
+- commit: `168ecfc`
 
 ### 次タスク候補（優先順）
 
 | 優先 | タスク | 分類 | 概要 |
 |---|---|---|---|
-| 1 | exportHeaderFromCases_V3 への新5列配線 | **実装可能** | calcHeaderAmountsByVisitKey_V3_ で生成済みの5列（算定区分/Mixed区分等）を exportHeaderFromCases_V3_ に配線するだけ。コード範囲が限定的で副作用が少ない。 |
-| 2 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
-| 3 | transferData への新5列反映 | **調査先行** | Ver3_transferData.js（月次転記）への新5列反映。申請書データへの影響・不要列の除外方針を確認してから実装着手。 |
+| 1 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
+| 2 | transferData への新5列反映 | **調査先行** | Ver3_transferData.js（月次転記）への新5列反映。申請書データへの影響・不要列の除外方針を確認してから実装着手。 |
 
 **保留継続:**
 - 運動後療料 月2回特例 → `docs/JREC-01_運動後療料_月2回特例メモ.md` 参照（根拠資料未確認のため）
@@ -206,7 +215,7 @@ clasp push
 | ファイル | 最終 GitHub commit | Apps Script 反映 |
 |---|---|---|
 | Ver3_amounts.js | `dfe0387`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_core.js | `887d514`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_core.js | `168ecfc`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_test.js | `dfe0387`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_transferData.js | `20fc562`（2026-03-16）| 要確認 |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
