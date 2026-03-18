@@ -157,7 +157,7 @@ V3TR.CONFIG = {
     "当月合計", "窓口負担額", "請求金額",
 
     // 来院区分サマリー（exportHeaderFromCases_V3 と同一ロジックで導出）
-    "Mixed区分", "case1要約", "case2要約",
+    "Mixed区分", "case1要約", "case2要約", "算定区分", "課金理由要約",
 
     // 初検情報（初検情報履歴シートから取得：対象月末日時点での最新1件）
     "負傷の日時", "負傷の場所", "負傷の状況", "初検時所見", "初検時相談支援内容",
@@ -380,9 +380,49 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
   // 来院区分サマリー（case1行・case2行の両方に同一値を書き込む）
   const _k1 = caseSummary.case1.kubun || "";
   const _k2 = caseSummary.case2.caseKey ? (caseSummary.case2.kubun || "") : "";
-  const _mixedFlag    = _k2 ? "Mixed" : "通常";
+  const _isMixed   = !!_k2;
+  const _mixedFlag = _isMixed ? "Mixed" : "通常";
   const _case1Summary = _k1 ? "case1:" + _k1 : "case1:なし";
-  const _case2Summary = _k2 ? "case2:" + _k2 : "case2:なし";
+
+  // case2:初検(抑制) 判定
+  //   [A] 施術継続中 Mixed: case1.endDate が空 or >= case2.startDate → 抑制
+  //   [B] 治癒後別負傷:     case1.endDate < case2.startDate（厳密）→ 抑制しない
+  const _cs1End   = caseSummary.case1.endDate;
+  const _cs2Start = caseSummary.case2.startDate;
+  const _isPostRecovery = (_cs1End instanceof Date) && (_cs2Start instanceof Date) && (_cs1End < _cs2Start);
+  const _initSuppressed = (_k2 === "初検") && _isMixed && !_isPostRecovery;
+  const _case2Summary = !_k2                              ? "case2:なし"
+    : (_k2 === "初検" && _initSuppressed)                 ? "case2:初検(抑制)"
+    : "case2:" + _k2;
+
+  // 算定区分（display列: header 側 chargeKubun と同一ルール）
+  // _effInitFee: 抑制フラグを反映した実効初検料（算定区分の判断にのみ使用、金額計算は変えない）
+  const _hasKoryo    = (_k1 === "後療" || _k2 === "後療");
+  const _effInitFee  = _initSuppressed ? 0 : initFee;
+  const _chargeKubun = _effInitFee > 0 ? "初検"
+    : reFee > 0                        ? "再検"
+    : _hasKoryo                        ? "後療"
+    : "算定なし";
+
+  // 課金理由要約（header 側 chargeReason と同一ルール）
+  let _chargeReason;
+  if (_effInitFee > 0 && !_isMixed) {
+    _chargeReason = "初検のみ";
+  } else if (_effInitFee > 0 && _isMixed) {
+    _chargeReason = "算定可能な初検ありのため初検採用";
+  } else if (reFee > 0 && _isMixed && _initSuppressed) {
+    _chargeReason = "初検抑制のため再検採用";
+  } else if (reFee > 0 && _isMixed && !_initSuppressed) {
+    _chargeReason = "再検ありのため再検採用";
+  } else if (reFee > 0) {
+    _chargeReason = "再検のみ";
+  } else if (_hasKoryo && _isMixed && _initSuppressed) {
+    _chargeReason = "初検抑制かつ再検対象なし";
+  } else if (_hasKoryo) {
+    _chargeReason = "後療のみ";
+  } else {
+    _chargeReason = "算定なし";
+  }
 
   const rowsOut = [];
   for (const caseNo of [1, 2]) {
@@ -516,9 +556,11 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     }
 
     // 来院区分サマリー（case1行・case2行の両方に同一値）
-    row["Mixed区分"]  = _mixedFlag;
-    row["case1要約"]  = _case1Summary;
-    row["case2要約"]  = _case2Summary;
+    row["Mixed区分"]    = _mixedFlag;
+    row["case1要約"]    = _case1Summary;
+    row["case2要約"]    = _case2Summary;
+    row["算定区分"]     = _chargeKubun;
+    row["課金理由要約"] = _chargeReason;
 
     // 初検情報（caseKey 単位で取得。シート未存在 or 行なしは空文字）
     row["負傷の日時"]         = initInfo ? initInfo.injuryDatetime  : "";

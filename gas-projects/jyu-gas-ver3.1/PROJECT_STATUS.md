@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-17
+最終更新: 2026-03-18
 
 ---
 
@@ -51,12 +51,35 @@
 - **live 再確認予定: 来院ヘッダ再構築時（リセット→一括 export するタイミング）**
 - commit: `168ecfc`
 
+### ✅ transferData 表示列 正式仕様整合 完了（2026-03-18）
+
+- `Ver3_transferData.js` の Mixed区分 / case1要約 / case2要約 / 算定区分 / 課金理由要約 を header 側正式仕様に整合
+- **case2:初検(抑制)** 判定を追加: `case1.endDate < case2.startDate`（厳密）= [B] 治癒後 → 抑制なし / それ以外 = [A] 施術継続中 → 抑制
+- **算定区分** を transferCols に追加: 初検/再検/後療/算定なし（`_effInitFee` で抑制フラグを反映、金額計算は変えない）
+- **課金理由要約** を transferCols に追加: header 側と同一7パターンルール
+- commit: （本 commit）
+
+#### 整合確認観点（M01〜M03 / TC03）
+
+| ケース | Mixed区分 | case1要約 | case2要約 | 算定区分 | 課金理由要約 |
+|---|---|---|---|---|---|
+| M01（case1=再検 / case2=初検抑制）| Mixed | case1:再検 | case2:初検(抑制) | 再検 | 初検抑制のため再検採用 |
+| M02（case1=再検 / case2=初検算定可）| Mixed | case1:再検 | case2:初検 | 初検 | 算定可能な初検ありのため初検採用 |
+| M03（case1=後療 / case2=初検抑制）| Mixed | case1:後療 | case2:初検(抑制) | 後療 | 初検抑制かつ再検対象なし |
+| M05（case1=後療 / case2=再検）| Mixed | case1:後療 | case2:再検 | 再検 | 再検ありのため再検採用 |
+| TC03（case1=後療のみ）| 通常 | case1:後療 | case2:なし | 後療 | 後療のみ |
+
+#### 未解決論点（引き続き保留）
+
+- M01 のケース: case1=再検(継続中)、case2=初検(抑制) のとき `V3TR_countKubunInCases_` は initCount=1 を返す（case2の初検を金額計算に含める）が、amounts.js は initFee=0 を算定する。金額不整合が残る。今回は「金額計算の正本は変えない」方針のため未修正。算定区分 display 列は `_initSuppressed` フラグで正しく表示できる。
+- live 確認は次回転記再生成時（clasp push → 転記データ再生成）で実施する
+
 ### 次タスク候補（優先順）
 
 | 優先 | タスク | 分類 | 概要 |
 |---|---|---|---|
 | 1 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
-| 2 | transferData への新5列反映 | **調査先行** | Ver3_transferData.js（月次転記）への新5列反映。申請書データへの影響・不要列の除外方針を確認してから実装着手。 |
+| 2 | transferData live 確認 | **確認** | clasp push → 転記データ再生成 → 算定区分/課金理由要約/case2要約が正しく出力されることを実シートで確認。 |
 
 **保留継続:**
 - 運動後療料 月2回特例 → `docs/JREC-01_運動後療料_月2回特例メモ.md` 参照（根拠資料未確認のため）
@@ -217,7 +240,7 @@ clasp push
 | Ver3_amounts.js | `4f6419d`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_core.js | `7dd0790`（2026-03-17）| ✅ clasp push 済み |
 | Ver3_test.js | `dfe0387`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_transferData.js | `cebeffe`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_transferData.js | 本 commit（2026-03-18）| ⚠️ clasp push 要 |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 | SPEC.md | `22447fd`（2026-03-17）| N/A（ローカル文書のみ）|
 
