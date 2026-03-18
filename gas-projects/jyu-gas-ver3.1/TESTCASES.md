@@ -1,10 +1,10 @@
 # 柔整 Ver3 金額計算 テストケース（TESTCASES.md）
 
-最終更新: 2026-03-17
+最終更新: 2026-03-19
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 48/48 PASS 確認予定（2026-03-18）**
-> TC09b（[A]施術継続中・case2再検抑制）追加。clasp push → runFixtureSuite() で PASS 確認すること。
+> **fixture テスト: 48/48 PASS ✅ 確認済み（2026-03-19）**
+> TC01〜TC22b 全48ケース。runFixtureSuite() で PASS 確認。
 >
 > **2026-03-18 金額不整合修正:** [A] 施術継続中シナリオで case2 再検が誤算定されるバグを修正。
 > `getMonthlyBilledStatus_` に reBilled 用 `isCaseEndedBefore_` チェック追加 + `calcHeaderAmountsByVisitKey_V3_` の reFee 条件に `!reBilled` を追加。TC09b fixture で修正後の動作を確認。
