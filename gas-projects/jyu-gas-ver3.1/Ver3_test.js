@@ -153,6 +153,22 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── M06b: 治癒後別負傷（case2初検、case1は治癒済）──────────────────────────
+  // treatDate=2026-02-15: case1は2/01初検・2/04再検・2/10治癒。case2は2/15新規初検（治癒後別負傷）。
+  // initBilled=false: getMonthlyBilledStatus_+isCaseEndedBefore_ が確定（case1終了2/10 < treatDate2/15）
+  // reBilled=true: case1の再検(2/04)が当月算定済 → reFee=0（per-visit グローバルフラグ）
+  // ★金額不整合: per-visit reFee=0 だが V3TR月次集計は kubun=再検行カウントで 410×2=820 になりうる（既知・未修正）
+  "M06b": {
+    testId: "M06b",
+    context: { patientId: "P001", treatDate: "2026-02-15",
+      monthlyStatus: { initBilled: false, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "肩関節", byomei: "打撲", injuryDate: "2026-02-15", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
   // ── TC04: 30日境界 ─────────────────────────────────────────────────────
   "TC04a": {
     testId: "TC04a",
@@ -732,6 +748,21 @@ var JREC01_EXPECTED_ = {
     details: [
       { detailID: "P001_2026-02-12_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
       { detailID: "P001_2026-02-12_C2_P1", kubun: "再検", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  // ── M06b: 治癒後別負傷（case2初検、case1は治癒済）──────────────────────────
+  // initBilled=false（治癒後別負傷）→ initFee=1550
+  // reBilled=true（case1再検算定済）→ reFee=0（per-visit）
+  // supportBilled=true（case1算定済）→ supportFee=0
+  // ★金額不整合メモ: V3TR月次集計は kubun=再検行カウントで 410×2=820 になりうる（既知・未修正）
+  "M06b": {
+    header: { initFee: 1550, reFee: 0, supportFee: 0, detailSum: 760, visitTotal: 2310,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-02-15_C1_P1", kubun: "初検", baseOut: 760, coldOut: 0, rowTotalOut: 760 }
     ]
   },
 
@@ -1447,6 +1478,7 @@ function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }
 function runFixtureM04()    { showFixtureResult_("M04"); }
 function runFixtureM05()    { showFixtureResult_("M05"); }
+function runFixtureM06b()   { showFixtureResult_("M06b"); }
 
 function showFixtureResult_(testId) {
   var r = runFixtureTest_(testId);

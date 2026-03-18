@@ -85,12 +85,31 @@
 - clasp push（707e3d1）→ 転記データ再生成 → 3パターン全て正式仕様と整合確認済み
 - case2:初検(抑制) が M01 / M03 で正しく出力されることを実シートで確認
 
+### ✅ M06b fixture 追加 完了（2026-03-18）
+
+- `Ver3_test.js` に `M06b` fixture & expected を追加（JREC01_FIXTURES_ / JREC01_EXPECTED_）
+- `tests/jrec01/fixtures/M06b_治癒後別負傷_case2初検.json` / `expected/` 追加
+- `runFixtureM06b()` ラッパー関数追加
+- `TESTCASES.md` の M06b セクションに fixture 仕様・金額不整合の確認箇所を追記
+- fixture カウント: 46 → 47 件（PASS 確認は clasp push → runFixtureSuite() で実施すること）
+
+**fixture 設計の要点:**
+
+| 項目 | 設計判断 |
+|---|---|
+| テスト対象レイヤー | per-visit 計算（computeAmountsFromFixture_V3_）|
+| treatDate | 2026-02-15（case1は2/10治癒済、case2新規初検）|
+| initBilled=false | isCaseEndedBefore_ が確定した状態を monthlyStatus に直接設定 |
+| reBilled=true | case1の再検(2/04)算定済・月内グローバルフラグ |
+| reFee=0 | per-visit グローバル reBilled=true による抑制 |
+| 金額不整合記録 | per-visit reFee=0 vs V3TR月次 reCount=2 → 820 の不整合を fixture note に明記 |
+
 ### 次タスク候補（優先順）
 
 | 優先 | タスク | 分類 | 概要 |
 |---|---|---|---|
-| 1 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
-| 2 | M06b fixture 追加 | **テスト** | TESTCASES.md に M06b（治癒後別負傷）の fixture を追加し runFixtureSuite で PASS 確認。 |
+| 1 | M06b fixture PASS確認 | **確認** | clasp push 済み → runFixtureSuite() を実行し 47/47 PASS を確認。 |
+| 2 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
 
 **保留継続:**
 - 運動後療料 月2回特例 → `docs/JREC-01_運動後療料_月2回特例メモ.md` 参照（根拠資料未確認のため）
@@ -190,8 +209,8 @@
 
 - テストケース文書: `TESTCASES.md` あり
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 46件（TC01〜TC22b + M01〜M05）
-- **46/46 PASS 確認済み（2026-03-17）**
+- fixture 件数: 47件（TC01〜TC22b + M01〜M05 + M06b）
+- **46/46 PASS 確認済み（2026-03-17）** / M06b 追加後: 47/47 PASS 確認要（clasp push → runFixtureSuite() で実施）
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85

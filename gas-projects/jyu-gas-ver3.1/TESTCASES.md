@@ -3,11 +3,11 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 40/40 PASS 確認済み（2026-03-17）**
-> TC20a/b/c（金属副子等加算 Phase 2）含む全40ケース PASS。次: 柔道整復運動後療料 TC21a〜d 追加予定。
+> **fixture テスト: 47/47 PASS 確認予定（2026-03-18）**
+> M06b（治癒後別負傷 case2初検 per-visit）追加。clasp push → runFixtureSuite() で PASS 確認すること。
 >
-> **M06a/b（2026-03-17 追加）:** 再検料キャップロジック修正（`Math.min(reCount,1)` → `Math.min(reCount, validInitCount)`）に対応した観点。
-> M06b（治癒後別負傷）: 全層実装済み（amounts.js `getMonthlyBilledStatus_` + `isCaseEndedBefore_` 対応 2026-03-17）。fixture 未作成・実シート未確認。動作確認は人間が実シートで行うこと。
+> **M06a/b（2026-03-17〜18）:** 再検料キャップロジック修正（`Math.min(reCount,1)` → `Math.min(reCount, validInitCount)`）に対応した観点。
+> M06b: 全層実装済み・NDJSON実値確認済み（2026-03-17）。fixture 追加済み（2026-03-18: case2初検 per-visit）。
 
 ---
 
@@ -64,7 +64,7 @@
 - M04: 混在（case1=初検 / case2=初検）→ 初検料1回のみ / 両ケース施療料 ✅
 - M05: 混在（case1=後療 / case2=再検）→ 再検料410 / 後療料のみ ✅ 実シート確認済み（e931fe5）
 - M06a: 治癒後別負傷（施術継続中 Mixed）→ 再検料410×1 のみ（キャップ）✅ ロジック確認
-- M06b: 治癒後別負傷（治癒後の新規 Mixed）→ 再検料410×2（各エピソードで1回ずつ）✅ ロジック確認 / ✅ NDJSON・申請書生成で実値確認済み（2026-03-17: initFee=3100 / reFee=820）
+- M06b: 治癒後別負傷（治癒後の新規 Mixed）→ 再検料410×2（各エピソードで1回ずつ）✅ ロジック確認 / ✅ NDJSON・申請書生成で実値確認済み（2026-03-17: initFee=3100 / reFee=820）/ ✅ fixture 追加済み（2026-03-18: case2初検 per-visit）
 
 ---
 
@@ -550,5 +550,31 @@
 > **実装完了（2026-03-17）:** `getMonthlyBilledStatus_`（amounts.js）に `isCaseEndedBefore_` ヘルパーを追加し、
 > 治癒後ケース（先行 caseKey の終了日 < 現在 treatDate）では `initBilled=true` を抑制しない実装が完成。
 > `calcHeaderAmountsByVisitKey_V3_` の呼び出し元も `caseSh / caseMap / treatDate` を渡す形に更新済み。
-> fixture 未作成・実シート未確認。動作確認は人間が実シートで行うこと。
+> NDJSON・申請書生成で実値確認済み（2026-03-17）。fixture 追加済み（2026-03-18）。
 | 課金理由要約 | `再検ありのため再検採用` |
+
+### fixture 仕様（M06b: case2初検 per-visit、2026-03-18 追加）
+
+| 項目 | 値 |
+|---|---|
+| testId | M06b |
+| treatDate | 2026-02-15（case1は2/10治癒済、case2新規初検）|
+| monthlyStatus.initBilled | false（isCaseEndedBefore_ 確定: case1終了2/10 < 2/15）|
+| monthlyStatus.reBilled | true（case1の再検2/04算定済・月内グローバル）|
+| monthlyStatus.supportBilled | true（case1相談支援料算定済）|
+| kubun | 初検（case2新規）|
+| 期待: initFee | 1550 |
+| 期待: reFee | 0（reBilled=true → per-visit は抑制）|
+| 期待: supportFee | 0（supportBilled=true）|
+| 期待: visitTotal | 2310（1550+760）|
+| 期待: billedKubun | 初検 |
+| 期待: chargeReason | 初検のみ |
+
+#### ★ 金額不整合（既知・未修正）
+
+| レイヤー | 再検料 |
+|---|---|
+| per-visit header（amounts.js）| case2 再検(2/18): reBilled=true → reFee=0 |
+| 月次 transfer（V3TR_countKubunInCases_）| kubun=再検 行カウント → rawReCount=2, validInitCount=2 → reCount=2 → 820 |
+
+> amounts.js は月内グローバル `reBilled` フラグで case2 再検を抑制するが、V3TR はケース行の kubun 値を直接カウントするため、per-visit reFee と月次 reFee が一致しない。fixture はこの不整合の確認箇所として活用できる（「金額計算の正本は変えない」方針により未修正）。
