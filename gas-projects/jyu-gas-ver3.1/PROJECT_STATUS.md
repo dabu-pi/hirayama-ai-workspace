@@ -290,9 +290,9 @@ clasp push
 
 | ファイル | 最終 GitHub commit | Apps Script 反映 |
 |---|---|---|
-| Ver3_amounts.js | 本 commit（2026-03-18）| ⚠️ clasp push 要 |
+| Ver3_amounts.js | `209ceb9`（2026-03-18）| ✅ clasp push 済み |
 | Ver3_core.js | `7dd0790`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_test.js | 本 commit（2026-03-18）| ⚠️ clasp push 要 |
+| Ver3_test.js | `209ceb9`（2026-03-18）| ✅ clasp push 済み |
 | Ver3_transferData.js | `707e3d1`（2026-03-18）| ✅ clasp push 済み |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 | SPEC.md | `22447fd`（2026-03-17）| N/A（ローカル文書のみ）|
