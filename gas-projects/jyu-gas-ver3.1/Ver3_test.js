@@ -156,8 +156,8 @@ var JREC01_FIXTURES_ = {
   // ── M06b: 治癒後別負傷（case2初検、case1は治癒済）──────────────────────────
   // treatDate=2026-02-15: case1は2/01初検・2/04再検・2/10治癒。case2は2/15新規初検（治癒後別負傷）。
   // initBilled=false: getMonthlyBilledStatus_+isCaseEndedBefore_ が確定（case1終了2/10 < treatDate2/15）
-  // reBilled=true: case1の再検(2/04)が当月算定済 → reFee=0（per-visit グローバルフラグ）
-  // ★金額不整合: per-visit reFee=0 だが V3TR月次集計は kubun=再検行カウントで 410×2=820 になりうる（既知・未修正）
+  // reBilled=true: case1の再検(2/04)が当月算定済。この来院は hasReexam=false（case2=初検）なので
+  //   reBilled は reFee に影響しない。[A] 施術継続中の再検抑制は TC09b を参照。
   "M06b": {
     testId: "M06b",
     context: { patientId: "P001", treatDate: "2026-02-15",
@@ -306,6 +306,23 @@ var JREC01_FIXTURES_ = {
       ]},
       { caseNo: 2, kubun: "後療", parts: [
         { bui: "肩関節", byomei: "打撲", injuryDate: "2026-02-10", cold: false, warm: false, electro: false }
+      ]}
+    ]
+  },
+
+  // ── TC09b: [A]施術継続中・case2再検抑制（reBilled=true → reFee=0） ─────────
+  // case1後療（施術継続中）+ case2再検（月内2件目 → reBilled=true で抑制）
+  // 2026-03-18 修正: amounts.js reFee path に !reBilled 追加で正しく抑制されることを確認
+  "TC09b": {
+    testId: "TC09b",
+    context: { patientId: "P001", treatDate: "2026-02-12",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "腰部", byomei: "捻挫", injuryDate: "2026-02-01", cold: false, warm: false, electro: false }
+      ]},
+      { caseNo: 2, kubun: "再検", parts: [
+        { bui: "肩関節", byomei: "打撲", injuryDate: "2026-02-08", cold: false, warm: false, electro: false }
       ]}
     ]
   },
@@ -753,9 +770,9 @@ var JREC01_EXPECTED_ = {
 
   // ── M06b: 治癒後別負傷（case2初検、case1は治癒済）──────────────────────────
   // initBilled=false（治癒後別負傷）→ initFee=1550
-  // reBilled=true（case1再検算定済）→ reFee=0（per-visit）
+  // reBilled=true（case1再検算定済）→ reFee=0（hasReexam=false なので reBilled 無関係）
   // supportBilled=true（case1算定済）→ supportFee=0
-  // ★金額不整合メモ: V3TR月次集計は kubun=再検行カウントで 410×2=820 になりうる（既知・未修正）
+  // [A] 施術継続中の再検抑制シナリオは TC09b 参照（2026-03-18 修正済）
   "M06b": {
     header: { initFee: 1550, reFee: 0, supportFee: 0, detailSum: 760, visitTotal: 2310,
       needCheck: false, needCheckReason: "",
@@ -890,6 +907,20 @@ var JREC01_EXPECTED_ = {
     details: [
       { detailID: "P001_2026-02-12_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
       { detailID: "P001_2026-02-12_C2_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
+    ]
+  },
+
+  // ── TC09b: [A]施術継続中・case2再検抑制 ──────────────────────────────────
+  // reBilled=true → reFee=0（2026-03-18 修正で正しく抑制）
+  // billedKubun=後療: detailSum=505+505=1010
+  "TC09b": {
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 1010, visitTotal: 1010,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "Mixed",
+      case1Summary: "case1:後療", case2Summary: "case2:再検", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-02-12_C1_P1", kubun: "後療", baseOut: 505, coldOut: 0, rowTotalOut: 505 },
+      { detailID: "P001_2026-02-12_C2_P1", kubun: "再検", baseOut: 505, coldOut: 0, rowTotalOut: 505 }
     ]
   },
 
@@ -1238,8 +1269,11 @@ function computeAmountsFromFixture_V3_(fx) {
   }
 
   // --- 再検料 ---
+  // monthlyStatus.reBilled 制御（2026-03-18 追加, amounts.js と同期）:
+  //   [A] 施術継続中: reBilled=true → 当月2件目の再検を抑制（reFee=0）
+  //   [B] 治癒後別負傷: isCaseEndedBefore_ で suppressReBilled=true → reBilled=false → 再検許可
   var reFee = 0;
-  if (hasReexam && !hasBillableInitial) {
+  if (hasReexam && !hasBillableInitial && !ms.reBilled) {
     reFee = settings.reFee;
   }
 
@@ -1447,6 +1481,7 @@ function runFixtureTC07b()  { showFixtureResult_("TC07b"); }
 function runFixtureTC08a()  { showFixtureResult_("TC08a"); }
 function runFixtureTC08b()  { showFixtureResult_("TC08b"); }
 function runFixtureTC09()   { showFixtureResult_("TC09"); }
+function runFixtureTC09b()  { showFixtureResult_("TC09b"); }
 function runFixtureTC10()   { showFixtureResult_("TC10"); }
 function runFixtureTC11()   { showFixtureResult_("TC11"); }
 function runFixtureTC12()   { showFixtureResult_("TC12"); }

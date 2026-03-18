@@ -3,11 +3,11 @@
 最終更新: 2026-03-17
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 47/47 PASS 確認予定（2026-03-18）**
-> M06b（治癒後別負傷 case2初検 per-visit）追加。clasp push → runFixtureSuite() で PASS 確認すること。
+> **fixture テスト: 48/48 PASS 確認予定（2026-03-18）**
+> TC09b（[A]施術継続中・case2再検抑制）追加。clasp push → runFixtureSuite() で PASS 確認すること。
 >
-> **M06a/b（2026-03-17〜18）:** 再検料キャップロジック修正（`Math.min(reCount,1)` → `Math.min(reCount, validInitCount)`）に対応した観点。
-> M06b: 全層実装済み・NDJSON実値確認済み（2026-03-17）。fixture 追加済み（2026-03-18: case2初検 per-visit）。
+> **2026-03-18 金額不整合修正:** [A] 施術継続中シナリオで case2 再検が誤算定されるバグを修正。
+> `getMonthlyBilledStatus_` に reBilled 用 `isCaseEndedBefore_` チェック追加 + `calcHeaderAmountsByVisitKey_V3_` の reFee 条件に `!reBilled` を追加。TC09b fixture で修正後の動作を確認。
 
 ---
 
@@ -37,7 +37,8 @@
 - TC06: 温/電（捻挫 受傷5日経過後のみ）✅
 - TC07: 温/電（骨折 受傷7日経過後のみ）✅
 - TC08: 冷罨法（脱臼 0-4日のみ）✅ koryoDakkyu=720 確認済み（2026-03-17）
-- TC09: 月内上限の再検抑制（別ケースでも再検は月1回）✅
+- TC09: 月内上限の再検抑制（両ケース後療・reBilled=true）✅
+- TC09b: [A]施術継続中・case2再検抑制（reBilled=true → reFee=0）✅ 2026-03-18 修正・fixture 追加
 - TC10: 複合（同月別ケース＋加算算定不可＋要確認理由複数）✅
 - TC11: 初検 脱臼（整復料 seifukuDakkyu=5200 算定）✅ seifukuDakkyu=5200 確認済み（2026-03-17）
 - TC12: 多部位逓減 2部位（1,2部位目 係数1.0 各505→合計1010）
@@ -235,7 +236,7 @@
 
 ---
 
-## TC09: 月内上限の再検抑制（別ケースでも再検は月1回）
+## TC09: 月内上限の再検抑制（両ケース後療・reBilled=true）
 
 > **実装状況:** `reBilled` フラグで月上限制御済み（追加実装不要・2026-03-17 確認）
 > `getMonthlyBilledStatus_` が `reBilled: true` を返すと `reFee=0` に抑制。
@@ -253,6 +254,44 @@
   - 再検料=0（当月再検は既に1回算定済、reBilled=true）
   - 後療料は施術実態があれば算定可
   - 要確認=FALSE（算定不可なし）
+
+---
+
+## TC09b: [A]施術継続中・case2再検抑制（reBilled=true → reFee=0）
+
+> **実装状況:** 2026-03-18 修正済み。Ver3_amounts.js 2箇所変更で正しく抑制される。
+>
+> **修正前のバグ:** `calcHeaderAmountsByVisitKey_V3_` の reFee 判定に `!monthlyStatus.reBilled` が欠落。
+> case1 施術継続中 + case2 再検の来院日で reFee=410 が誤算定されていた。
+>
+> **修正内容:**
+> - `getMonthlyBilledStatus_`: reBilled 立てる前に `isCaseEndedBefore_` チェック追加（[B] なら suppressReBilled=true）
+> - `calcHeaderAmountsByVisitKey_V3_`: reFee 条件に `!monthlyStatus.reBilled` 追加
+> - `computeAmountsFromFixture_V3_` (Ver3_test.js): reFee 条件に `!ms.reBilled` 追加（production と同期）
+
+### 入力（fixture）
+- 患者: P001
+- treatDate: 2026-02-12
+- monthlyStatus: initBilled=true, reBilled=true, supportBilled=true
+- case1: kubun=後療、腰部、捻挫、受傷日=2026-02-01（施術継続中）
+- case2: kubun=再検、肩関節、打撲、受傷日=2026-02-08（月内2件目の再検）
+
+### 期待値
+- initFee=0（initBilled=true → 抑制）
+- reFee=0（reBilled=true → [A] 抑制）
+- supportFee=0（hasBillableInitial=false）
+- detailSum=1010（後療505 + 再検505）
+- visitTotal=1010
+- billedKubun=後療、mixedFlag=Mixed
+- case1Summary=case1:後療、case2Summary=case2:再検
+- chargeReason=後療のみ
+
+### [A]/[B] 分岐まとめ
+
+| シナリオ | 先行ケース状態 | isCaseEndedBefore_ | reBilled | case2 再検 reFee |
+|---|---|---|---|---|
+| [A] 施術継続中（TC09b）| 施術継続中（endDate なし/未来）| false | true | 0（抑制）✅ |
+| [B] 治癒後別負傷（M06b相当）| 治癒済（endDate < treatDate）| true | false | 410（許可）✅ |
 
 ---
 
@@ -564,17 +603,20 @@
 | monthlyStatus.supportBilled | true（case1相談支援料算定済）|
 | kubun | 初検（case2新規）|
 | 期待: initFee | 1550 |
-| 期待: reFee | 0（reBilled=true → per-visit は抑制）|
+| 期待: reFee | 0（hasReexam=false: case2=初検のため reBilled 無関係）|
 | 期待: supportFee | 0（supportBilled=true）|
 | 期待: visitTotal | 2310（1550+760）|
 | 期待: billedKubun | 初検 |
 | 期待: chargeReason | 初検のみ |
 
-#### ★ 金額不整合（既知・未修正）
+#### fixture の意図と [A] 不整合の解消
 
-| レイヤー | 再検料 |
-|---|---|
-| per-visit header（amounts.js）| case2 再検(2/18): reBilled=true → reFee=0 |
-| 月次 transfer（V3TR_countKubunInCases_）| kubun=再検 行カウント → rawReCount=2, validInitCount=2 → reCount=2 → 820 |
+M06b fixture は [B] 治癒後別負傷シナリオの initFee=1550 算定確認に特化している（case2=初検、hasReexam=false）。
+reBilled=true は「case1 の再検(2/04)が月内算定済」を表すが、case2 は初検来院なので reFee とは無関係。
 
-> amounts.js は月内グローバル `reBilled` フラグで case2 再検を抑制するが、V3TR はケース行の kubun 値を直接カウントするため、per-visit reFee と月次 reFee が一致しない。fixture はこの不整合の確認箇所として活用できる（「金額計算の正本は変えない」方針により未修正）。
+[A] 施術継続中での再検誤算定は **TC09b で修正確認済み（2026-03-18）**。
+
+| レイヤー | [B] M06b（case2=初検 2/15）| [A] TC09b（case2=再検・修正後）|
+|---|---|---|
+| per-visit reFee | 0（hasReexam=false）✅ | 0（reBilled=true → 抑制）✅ |
+| V3TR reCount | 2（2/04 + 2/18）→ reFee=820 ✅ | ―（対象シナリオが異なる）|

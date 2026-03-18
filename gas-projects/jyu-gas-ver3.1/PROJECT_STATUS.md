@@ -102,13 +102,36 @@
 | initBilled=false | isCaseEndedBefore_ が確定した状態を monthlyStatus に直接設定 |
 | reBilled=true | case1の再検(2/04)算定済・月内グローバルフラグ |
 | reFee=0 | per-visit グローバル reBilled=true による抑制 |
-| 金額不整合記録 | per-visit reFee=0 vs V3TR月次 reCount=2 → 820 の不整合を fixture note に明記 |
+| reBilled=true 影響 | M06b は hasReexam=false（case2=初検）のため reBilled は reFee に無関係。[A] 抑制は TC09b 参照。 |
+
+### ✅ [A]施術継続中 再検料抑制バグ修正 完了（2026-03-18）
+
+**問題:** [A] 施術継続中シナリオで case2=再検の来院日に reFee=410 が誤算定されていた。
+**根本原因:** `calcHeaderAmountsByVisitKey_V3_` の reFee 判定に `!monthlyStatus.reBilled` チェックが欠落。`getMonthlyBilledStatus_` も reBilled に `isCaseEndedBefore_` を適用していなかった。
+
+| ファイル | 対象関数 | 変更内容 |
+|---|---|---|
+| Ver3_amounts.js | `getMonthlyBilledStatus_` | reBilled 立てる前に `isCaseEndedBefore_` で [B] 判定 → suppressReBilled 時は reBilled=false を維持 |
+| Ver3_amounts.js | `calcHeaderAmountsByVisitKey_V3_` | reFee 条件に `!monthlyStatus.reBilled` を追加 |
+| Ver3_test.js | `computeAmountsFromFixture_V3_` | reFee 条件に `!ms.reBilled` を追加（production と同期） |
+| Ver3_test.js | JREC01_FIXTURES_ | TC09b fixture 追加（[A] case1後療 / case2再検 / reBilled=true → reFee=0） |
+| Ver3_test.js | JREC01_EXPECTED_ | TC09b expected 追加（reFee=0, visitTotal=1010） |
+
+**修正後の[A]/[B]挙動整理:**
+
+| シナリオ | isCaseEndedBefore_ | reBilled | reFee（case2再検来院日） |
+|---|---|---|---|
+| [A] 施術継続中 | false | true | 0（抑制）✅ |
+| [B] 治癒後別負傷 | true | false（suppressReBilled） | 410（許可）✅ |
+
+- fixture カウント: 47 → **48 件**（TC09b 追加）
+- M06b fixture note の誤記（"per-visit reFee=0 だが V3TR=820"）を修正済み
 
 ### 次タスク候補（優先順）
 
 | 優先 | タスク | 分類 | 概要 |
 |---|---|---|---|
-| 1 | M06b fixture PASS確認 | **確認** | clasp push 済み → runFixtureSuite() を実行し 47/47 PASS を確認。 |
+| 1 | 48/48 PASS確認 | **確認** | clasp push 後 → runFixtureSuite() を実行し 48/48 PASS を確認。 |
 | 2 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
 
 **保留継続:**
@@ -209,8 +232,8 @@
 
 - テストケース文書: `TESTCASES.md` あり
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 47件（TC01〜TC22b + M01〜M05 + M06b）
-- **46/46 PASS 確認済み（2026-03-17）** / M06b 追加後: 47/47 PASS 確認要（clasp push → runFixtureSuite() で実施）
+- fixture 件数: 48件（TC01〜TC22b + TC09b + M01〜M05 + M06b）
+- **46/46 PASS 確認済み（2026-03-17）** / 48件: PASS 確認要（clasp push → runFixtureSuite() で実施）
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
@@ -267,10 +290,10 @@ clasp push
 
 | ファイル | 最終 GitHub commit | Apps Script 反映 |
 |---|---|---|
-| Ver3_amounts.js | `4f6419d`（2026-03-17）| ✅ clasp push 済み |
+| Ver3_amounts.js | 本 commit（2026-03-18）| ⚠️ clasp push 要 |
 | Ver3_core.js | `7dd0790`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_test.js | `dfe0387`（2026-03-17）| ✅ clasp push 済み |
-| Ver3_transferData.js | 本 commit（2026-03-18）| ✅ clasp push 済み |
+| Ver3_test.js | 本 commit（2026-03-18）| ⚠️ clasp push 要 |
+| Ver3_transferData.js | `707e3d1`（2026-03-18）| ✅ clasp push 済み |
 | Ver3_patientPicker.js | 変更なし | 問題なし |
 | SPEC.md | `22447fd`（2026-03-17）| N/A（ローカル文書のみ）|
 

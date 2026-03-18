@@ -706,8 +706,13 @@ function calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kub
   // kubun===再検 は calcEpisodeForCase_ が「エピソード内priorCount===1」
   // = 同一caseKeyの初検後・最初の後療日と判定した結果
   // 初検が算定される日（hasBillableInitial）は初検優先で再検料は立てない
+  //
+  // monthlyStatus.reBilled 制御（2026-03-18 追加）:
+  //   [A] 施術継続中: 先行ケースが月内に再検算定済かつ治癒していない → reBilled=true → 当月2件目の再検を抑制
+  //   [B] 治癒後別負傷: 先行ケースの再検は治癒後ケース扱い → isCaseEndedBefore_ で suppressReBilled=true
+  //                   → reBilled=false → 後続エピソードの再検を許可
   var reFee = 0;
-  if (hasReexam && !hasBillableInitial) {
+  if (hasReexam && !hasBillableInitial && !monthlyStatus.reBilled) {
     reFee = settings.reFee;
   }
 
@@ -897,7 +902,20 @@ function getMonthlyBilledStatus_(headSh, headMap, patientId, monthKey, excludeVi
         result.initDate = d;
       }
     }
-    if (rv > 0) result.reBilled = true;
+    if (rv > 0) {
+      // 治癒後別負傷 [B] チェック（initBilled と同じロジック）:
+      //   この再検料行の caseKey が opt_treatDate より前に治癒済みであれば
+      //   別エピソード扱いで reBilled=true を立てない（[B] 再検は月内制限対象外）
+      //   case が治癒していない（施術継続中）なら [A] → reBilled=true（月内1回制限）
+      var suppressReBilled = false;
+      if (opt_caseSh && opt_caseMap && opt_treatDate instanceof Date && ckVals) {
+        var ckForRe = String(ckVals[i] || "").trim();
+        if (ckForRe) {
+          suppressReBilled = isCaseEndedBefore_(opt_caseSh, opt_caseMap, ckForRe, opt_treatDate);
+        }
+      }
+      if (!suppressReBilled) result.reBilled = true;
+    }
     if (sv > 0) result.supportBilled = true;
   }
   return result;
