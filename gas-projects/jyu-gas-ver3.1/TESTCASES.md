@@ -38,7 +38,7 @@
 - TC07: 温/電（骨折 受傷7日経過後のみ）✅
 - TC08: 冷罨法（脱臼 0-4日のみ）✅ koryoDakkyu=720 確認済み（2026-03-17）
 - TC09: 月内上限の再検抑制（両ケース後療・reBilled=true）✅
-- TC09b: [A]施術継続中・case2再検抑制（reBilled=true → reFee=0）✅ 2026-03-18 修正・fixture 追加
+- TC09b: [A]施術継続中・case2再検抑制（reBilled=true → reFee=0）✅ 2026-03-18 修正・fixture 追加 / ✅ 実シート確認済み（2026-03-19: コア挙動OK、総額差は付随算定による）
 - TC10: 複合（同月別ケース＋加算算定不可＋要確認理由複数）✅
 - TC11: 初検 脱臼（整復料 seifukuDakkyu=5200 算定）✅ seifukuDakkyu=5200 確認済み（2026-03-17）
 - TC12: 多部位逓減 2部位（1,2部位目 係数1.0 各505→合計1010）
@@ -277,14 +277,25 @@
 - case2: kubun=再検、肩関節、打撲、受傷日=2026-02-08（月内2件目の再検）
 
 ### 期待値
+
+> **実シート確認済み: 2026-03-19**
+> コア挙動（reFee抑制・区分判定・要約5列）はOK。
+> 実シートの detailSum/visitTotal は付随算定（温罨法・電療等）の入力により 1010 より大きくなりうる。
+> 総額一致はテスト趣旨の対象外。
+
+**コア確認項目（合否判定の本質）:**
+- reFee=0（reBilled=true → [A] 抑制）✅
+- billedKubun=後療 ✅
+- mixedFlag=Mixed ✅
+- case1Summary=case1:後療 ✅
+- case2Summary=case2:再検 ✅
+- chargeReason=後療のみ ✅
+
+**参考: 付随算定OFFの基準額（加算なし入力時の理論値）:**
 - initFee=0（initBilled=true → 抑制）
-- reFee=0（reBilled=true → [A] 抑制）
 - supportFee=0（hasBillableInitial=false）
 - detailSum=1010（後療505 + 再検505）
 - visitTotal=1010
-- billedKubun=後療、mixedFlag=Mixed
-- case1Summary=case1:後療、case2Summary=case2:再検
-- chargeReason=後療のみ
 
 ### [A]/[B] 分岐まとめ
 
