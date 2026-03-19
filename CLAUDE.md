@@ -175,6 +175,7 @@ C:\hirayama-ai-workspace\
 
 - **仕様が不明な場合は実装せず、質問してから進める**
 - GASコードはローカル実行不可。テストは `TESTCASES.md` のケースをもとにコードレビューで行い、スプレッドシート上の動作確認は人間が行う
+- **preview（devサーバー）不要**: `gas-projects/` 配下は clasp push が検証手段。`.claude/settings.json` で `disableAllHooks: true` を設定済み（Claude Code 内部の preview 要求 Stop hook を無効化するため）
 - freee API の仕様は `freee-automation/spec.md` を参照し、エンドポイントを推測で実装しない
 - 認証情報ファイルが必要な場合は「このパスに配置してください」と指示するにとどめ、内容を生成・提案しない
 
