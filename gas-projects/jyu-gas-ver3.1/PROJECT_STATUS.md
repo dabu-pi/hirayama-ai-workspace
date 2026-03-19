@@ -228,7 +228,7 @@
 | No | 差分項目 | 現状 | 影響レイヤー | 優先度 |
 |---|---|---|---|---|
 | D1 | 施術終了年月日が未転記 | ✅ **部位別maxDate対応済み（2026-03-19）** — 終了日→p1/p2Dates.maxDate→aggDates.maxDate の3段フォールバック | `Ver3_transferData.js:469-485` 修正済み | **高** |
-| D2 | 継続月数・頻回欄が未対応 | `transferCols` に存在しない / `write_application.py` に CELL 定義なし | 転記仕様追加 + py 実装 | **高** |
+| D2 | 継続月数・頻回欄が未対応 | 調査完了（2026-03-19）— `transferCols` に `継続月数1/2` 未定義 / `頻回` = 既存 `実日数` の別マッピング / py の INJURY_ROWS に `contMonths` / `freqDays` 未追加 / **セル位置確認待ち** | `Ver3_transferData.js` + `write_application.py` | **高** |
 | D3 | 負傷名の左右表記粒度 | `V3TR_buildInjuryLabel_` は `bui + byomei` 単純結合。左右が部位名に含まれる前提か不明 | `Ver3_transferData.js` ラベル生成 | **中** |
 | D4 | 負傷の原因欄が未書込 | `CELL_MAP["負傷原因"]="BR20"` は定義済み・`transferCols` に未登録・`write_application.py` に書込処理が欠落 | `transferCols` 追加 + py 書込処理追加 | **中** |
 | D5 | 施術証明欄・委任欄の自動/手書き分離が未明文化 | 両欄ともに py 実装なし（全手書き前提で空出力） | `write_application.py` + 運用ドキュメント | **低** |
@@ -242,12 +242,64 @@
 - `write_application.py:build_injury_rows()` は `row1.get("施術終了年月日1")` → `endDate` を正しく参照しているが、NDJSON に値が入っていなければ空
 - **確認箇所**: 転記データシートの `施術終了年月日1` セルが実際に値を持っているか
 
-**D2 — 継続月数・頻回**
+**D2 — 継続月数・頻回（調査完了 2026-03-19）**
 
-- 公式様式の申請書には継続月数欄（何か月施術継続しているか）と頻回欄（月の施術回数）がある
-- `transferCols` に `継続月数` / `頻回` キーが一切なし
-- `write_application.py` にも CELL 定義なし
-- 実装方針: `V3TR_buildTransferRow_` 内で `calcMonthsElapsed_V3_` をベースに継続月数を計算し transferCols に追加
+#### 未実装箇所一覧
+
+| レイヤー | ファイル | 未実装内容 |
+|---|---|---|
+| GAS | `Ver3_transferData.js:119-165` | `transferCols` に `継続月数1` / `継続月数2` なし |
+| GAS | `Ver3_transferData.js:V3TR_buildTransferRow_` | 継続月数の計算・代入ロジックなし |
+| Python | `write_application.py:INJURY_ROWS` | `contMonths` / `freqDays` キーが各行定義にない |
+| Python | `write_application.py:write_application()` | 継続月数・頻回の書込処理（put_num 呼び出し）なし |
+| セル位置 | テンプレート xlsx | 継続月数・頻回欄のセル番地が未確認（**実装前に要確認**） |
+
+#### データ正本（使用できる既存フィールド）
+
+| フィールド | データソース | 場所 |
+|---|---|---|
+| `p1.injuryDate` | 施術明細 `受傷日_確定` 列 | `V3TR_aggregateDetailMonthly_` で集計 |
+| `p2.injuryDate` | 同上（部位2） | 同上 |
+| `p1Dates.maxDate` | `V3TR_aggDateRange_(p1)` | 部位1の最終施術日（=当月最終施術日） |
+| `p2Dates.maxDate` | `V3TR_aggDateRange_(p2)` | 部位2の最終施術日 |
+| `jitsunisu` | `detailAgg.case1/2.visitDays` | ケース全体の月内施術実日数 |
+| `calcMonthsElapsed_V3_()` | `Ver3_amounts.js:319` | GASプロジェクト同一なのでアクセス可 |
+
+#### 実装案
+
+```javascript
+// Ver3_transferData.js — V3TR_buildTransferRow_ 内（p1Dates/p2Dates 定義後に追加）
+
+// 継続月数1（部位1の受傷日から対象月最終施術日までの経過月数+1）
+const injD1 = (p1.injuryDate instanceof Date) ? p1.injuryDate : V3TR_parseDate_(p1.injuryDate);
+const lastD1 = p1Dates.maxDate || aggDates.maxDate;
+const me1 = (injD1 && lastD1) ? calcMonthsElapsed_V3_(injD1, lastD1) : -1;
+row["継続月数1"] = (me1 >= 0) ? me1 + 1 : "";   // 経過月数0=1か月目
+
+// 継続月数2（部位2がある場合のみ）
+const injD2 = (p2.injuryDate instanceof Date) ? p2.injuryDate : V3TR_parseDate_(p2.injuryDate);
+const lastD2 = p2Dates.maxDate || aggDates.maxDate;
+const me2 = (injD2 && lastD2 && V3TR_buildInjuryLabel_(p2)) ? calcMonthsElapsed_V3_(injD2, lastD2) : -1;
+row["継続月数2"] = (me2 >= 0) ? me2 + 1 : "";
+
+// 頻回（当月施術実日数 = jitsunisu と同値。申請書の「頻回」欄セルへ書込用）
+row["頻回"] = jitsunisu || "";
+```
+
+#### 未解決論点
+
+| 論点 | 内容 | 優先度 |
+|---|---|---|
+| セル位置 | テンプレート xlsx 行31付近で 継続月数・頻回 のセル番地を実物確認 | **実装ブロッカー** |
+| 頻回の粒度 | 行26-30 各行に個別フィールドか / 行31に1フィールドか | テンプレ確認待ち |
+| 継続月数の粒度 | 部位別（p1/p2）か / ケース全体1値か | テンプレ確認待ち |
+| `V3TR_parseDate_` の存在確認 | `p1.injuryDate` が Date 型でない場合のパース関数 | 実装時に確認 |
+
+#### 次アクション
+
+1. テンプレート xlsx「新　様式第5号」を開き、行26-30 各行の 継続月数・頻回のセル番地を確認
+2. 行31 の 請求区分(DH31) 周辺に別途「継続月数」「頻回」フィールドがあるか確認
+3. セル番地確定後、上記実装案に沿って `transferCols` 追加 → `V3TR_buildTransferRow_` 実装 → `write_application.py` 実装
 
 **D3 — 負傷名の左右表記**
 
