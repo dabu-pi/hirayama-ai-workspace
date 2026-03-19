@@ -245,8 +245,46 @@
 | GAS Script Properties `APPGEN_ENDPOINT` / `APPGEN_SECRET` 設定 | ✅ 完了 |
 
 **次アクション:**
-1. **GAS → Cloud Run 疎通確認** — `Ver3_transferData.js` 側の呼び出しコードを GAS エディタから実行し、Cloud Run に正常リクエストが届くことを確認
-2. **本処理エンドポイント確認** — `/generate` エンドポイントに実データを送り、申請書 xlsx が返却されることを確認（`docs/JREC-01_スモークテスト手順.md` 参照）
+
+スモークテスト関数を `Ver3_smokeTest.js` に追加済み（2026-03-19）。以下の手順で実行する。
+
+### STEP 1: clasp push
+
+```bash
+cd gas-projects/jyu-gas-ver3.1
+clasp push
+```
+
+### STEP 2: /health 疎通確認
+
+1. Apps Script エディタを開く（スプレッドシート > 拡張機能 > Apps Script）
+2. 関数プルダウンで **`V3TR_smokeHealth`** を選択して「実行」
+3. 期待: アラートに `✅ /health OK / HTTP: 200 / Body: {"status":"ok"}`
+
+### STEP 3: /generate 疎通確認（患者0件の最小 NDJSON）
+
+1. 同エディタで **`V3TR_smokeGenerate`** を選択して「実行」
+2. 送信内容: 患者データなし・meta行のみ（実来院データ不要）
+3. 期待: アラートに `✅ /generate OK / HTTP: 200 / Body: {"status":"ok","patients":[],...}`
+
+### STEP 4: 本番メニューで実データ送信
+
+上記2ステップ成功後:
+1. スプレッドシートを開いてメニュー「柔整ツール」>「**【B案】申請書を生成して Drive に保存**」
+2. 月を確認して OK
+3. 完了アラートで「エラー: 0 件」を確認
+4. Drive フォルダに xlsx が保存されているか確認
+5. `_申請書生成ログ` シートに `OK` 行が追記されているか確認
+
+### 失敗時の確認点
+
+| 症状 | 確認先 |
+|---|---|
+| `APPGEN_ENDPOINT が未設定` | Script Properties の値を再確認 |
+| HTTP 401 | `APPGEN_SECRET` の値と Cloud Run の `JREC_APPGEN_SECRET_KEY` が一致しているか |
+| HTTP 400 | NDJSON フォーマット / schemaVersion 確認 |
+| HTTP 500 | GCP Console > Cloud Logging でスタックトレース確認 |
+| 接続失敗 | `APPGEN_ENDPOINT` の URL が正しいか（末尾スラッシュなし）|
 
 ### 次フェーズ候補
 
