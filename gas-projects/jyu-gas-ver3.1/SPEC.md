@@ -897,7 +897,7 @@ GAS実装方針（Phase 1 / Phase 2 に分割）:
 
 | D# | 項目 | 現状 | 修正レイヤー | 優先 |
 |---|---|---|---|---|
-| D1 | 施術終了年月日 | 転記データで空になるケースあり | `Ver3_transferData.js` + `write_application.py` | 高 |
+| D1 | 施術終了年月日 | ✅ **実ファイル確認済み・クローズ（2026-03-19）** | `Ver3_transferData.js:478/487` 修正完了 | ~~高~~ **DONE** |
 | D2 | 継続月数・頻回 | transferCols 未定義・py 未実装 | `Ver3_transferData.js` + `write_application.py` | 高 |
 | D3 | 負傷名の左右表記 | 部位名への左右混入依存。フォーマット未規定 | 運用ルール明文化 or `V3TR_buildInjuryLabel_` 改修 | 中 |
 | D4 | 負傷の原因欄 | `CELL_MAP` 定義あり・py 書込処理欠落 | `transferCols` + `write_application.py` | 中 |
@@ -934,7 +934,7 @@ GAS実装方針（Phase 1 / Phase 2 に分割）:
 | 施術継続中 | **当月の最終施術日**（対象月の施術明細から取得） | 空欄 |
 | 治癒・中止・転医 | 治癒/中止/転医日（来院ケースの `施術終了日_部位N`） | 治癒 / 中止 / 転医 |
 
-#### 実装変更箇所（2行修正）**✅ 実装済み 2026-03-19**
+#### 実装変更箇所（2行修正）**✅ 実装済み・実ファイル確認済み・クローズ（2026-03-19）**
 
 ```javascript
 // Ver3_transferData.js — V3TR_buildTransferRow_ 内
@@ -974,8 +974,7 @@ row["施術終了年月日1"] = cs.endDate1 || p1Dates.maxDate || aggDates.maxDa
 row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDate || "";
 ```
 
-> **残課題なし。** `p1/p2._daySet` がケース全体 `_daySet` のサブセットとして正しく集計されている前提で動作する。
-> `V3TR_aggDateRange_` が空 agg を受け取った場合は `minDate/maxDate` が `null` になる設計のため空文字フォールバックが効く。
+> **D1 クローズ。** 実ファイル（`申請書_touji_2026-02_214947.xlsx` / `申請書_hirayamaka_2026-02_214947.xlsx`）で部位別終了日・実日数を確認済み。残課題なし。次タスクは D2（継続月数・頻回）。
 
 #### 転帰の運用ルール（P2確定）
 
