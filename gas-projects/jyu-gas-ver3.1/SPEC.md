@@ -986,77 +986,56 @@ row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDa
 
 ### D2 — 継続月数・頻回
 
-> **最終更新: 2026-03-19 — 実装調査完了・セル位置確認待ち**
+> **最終更新: 2026-03-19 — テンプレート xlsx セル位置確認完了・実装方針確定**
 
-#### 仕様（公式様式より）
+#### テンプレート xlsx 確認結果（2026-03-19）
 
-- **継続月数**: 当月時点で施術が何か月継続しているかを記載（整数）。1か月目=1。
-- **頻回**: 当月の施術実日数を記載（申請書の「頻回」欄セルへの書込）
-
-#### 現状（調査結果 2026-03-19）
-
-| 箇所 | 現状 |
+| 確認項目 | 結果 |
 |---|---|
-| `transferCols` | `継続月数1` / `継続月数2` / `頻回` キーが存在しない |
-| `V3TR_buildTransferRow_` | 継続月数の計算ロジックなし（代入なし） |
-| `write_application.py INJURY_ROWS` | `contMonths` / `freqDays` キーが各行定義にない |
-| `write_application.py write_application()` | 書込処理なし |
-| テンプレート xlsx | 継続月数・頻回欄のセル番地 **未確認（実装ブロッカー）** |
+| 行26-30 に継続月数・頻回列 | **存在しない** — injury rows には该当なし |
+| 「頻回」「継続月」テキストのセル | **テンプレート全体で0件** |
+| 行31 の構造 | E31:L31「経過」/ **M31:CY31 空マージセル（書込対象）** / CZ31:DG31「請求区分」/ DH31:DV31「新規・継続」 |
 
-#### 使用するデータ（既存フィールド）
+#### 確定設計
 
-| 用途 | データ | 取得元 |
-|---|---|---|
-| 継続月数1 | `calcMonthsElapsed_V3_(p1.injuryDate, p1Dates.maxDate) + 1` | Ver3_amounts.js + 既存集計 |
-| 継続月数2 | `calcMonthsElapsed_V3_(p2.injuryDate, p2Dates.maxDate) + 1` | 部位2がある場合のみ |
-| 頻回 | `jitsunisu`（当月施術実日数・caseNo全体） | `detailAgg.case1/2.visitDays` |
+> **INJURY_ROWS への追加計画は廃止。継続月数・施術回数は M31「経過」欄に1テキストとして書き込む。**
 
-- `calcMonthsElapsed_V3_` は `Ver3_amounts.js` に実装済み。GAS同一プロジェクト内のためアクセス可。
-- 戻り値 `0` = 1か月目（起算月と同月）なので `+1` して記載。
+| 書込セル | `M31`（マージセル M31:CY31 の左上） |
+|---|---|
+| 書込内容 | `"○ヶ月 月○回"` 形式の文字列 |
+| 継続月数の基準 | case1 主部位 (p1) 受傷日 → 当月最終施術日、経過月数+1 |
+| 施術回数 | caseNo=1 の `jitsunisu`（当月実日数合計） |
 
-#### 実装コード案（GAS側）
+#### 実装コード案（確定）
 
 ```javascript
-// V3TR_buildTransferRow_ 内 — p1Dates/p2Dates 定義直後に追加予定
+// Ver3_transferData.js — V3TR_buildTransferRow_ 内 (caseNo===1 ブロック)
 const injD1 = (p1.injuryDate instanceof Date) ? p1.injuryDate : V3TR_parseDate_(p1.injuryDate);
 const lastD1 = p1Dates.maxDate || aggDates.maxDate;
 const me1 = (injD1 && lastD1) ? calcMonthsElapsed_V3_(injD1, lastD1) : -1;
-row["継続月数1"] = (me1 >= 0) ? me1 + 1 : "";
-
-const injD2 = (p2.injuryDate instanceof Date) ? p2.injuryDate : V3TR_parseDate_(p2.injuryDate);
-const lastD2 = p2Dates.maxDate || aggDates.maxDate;
-const me2 = (injD2 && lastD2 && V3TR_buildInjuryLabel_(p2)) ? calcMonthsElapsed_V3_(injD2, lastD2) : -1;
-row["継続月数2"] = (me2 >= 0) ? me2 + 1 : "";
-
-row["頻回"] = jitsunisu || "";
+const keizoku1 = (me1 >= 0) ? me1 + 1 : "";
+row["経過"] = keizoku1 !== "" && jitsunisu
+  ? keizoku1 + "ヶ月 月" + jitsunisu + "回"
+  : keizoku1 !== "" ? keizoku1 + "ヶ月" : "";
 ```
-
-#### Python実装案（セル位置確定後に実装）
 
 ```python
-# INJURY_ROWS の各行定義に追加（セル番地確定後）:
-{"row": 26, ..., "days": "CZ26", "tenki": "DH26",
- "contMonths": "??26",   # ← テンプレ確認待ち
- "freqDays": "??26"},    # ← テンプレ確認待ち
+# write_application.py
+CELL_MAP["経過"] = "M31"          # 追加
 
-# write_application() 内 build_injury_rows ループに追加:
-put_num(m["contMonths"], d.get("contMonths"))
-put_num(m["freqDays"], d.get("freqDays"))
+# write_application() 内に追加
+if row1.get("経過"):
+    put(CELL_MAP["経過"], row1.get("経過"))
 ```
 
-#### build_injury_rows への追加
-
-`write_application.py:build_injury_rows()` に `継続月数1/2` → `contMonths`、`頻回` → `freqDays` のマッピングを追加する。
-
-#### 未解決論点
+#### 残論点（軽微）
 
 | 論点 | 内容 |
 |---|---|
-| セル位置（**ブロッカー**） | 行26-30 各行に個別フィールドか / 行31に集約フィールドか — テンプレ実物確認要 |
-| 継続月数の粒度 | 部位別（p1/p2各行）か申請書1行か |
-| `V3TR_parseDate_` の存在 | `p1.injuryDate` が Date 型でない場合のパース。要確認 |
+| `V3TR_parseDate_` の存在 | `p1.injuryDate` が Date 型でない場合のパース関数。実装時に確認 |
+| case2 がある場合の書式 | case1 のみ or case2 も含める（例: `①○ヶ月/②○ヶ月 月○回`） — 運用判断 |
 
-> **次アクション**: テンプレート xlsx「新　様式第5号」を開き、行26-30と行31付近で継続月数・頻回のセル番地を確認してから実装に進む。確認完了後、上記コード案を実装してコードレビュー → clasp push → 実確認。
+> **次アクション**: 上記確定案で `Ver3_transferData.js` + `write_application.py` を実装 → clasp push → 実確認
 
 ### D3 — 負傷名の左右表記
 
