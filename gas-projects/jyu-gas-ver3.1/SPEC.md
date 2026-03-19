@@ -898,7 +898,7 @@ GAS実装方針（Phase 1 / Phase 2 に分割）:
 | D# | 項目 | 現状 | 修正レイヤー | 優先 |
 |---|---|---|---|---|
 | D1 | 施術終了年月日 | ✅ **実ファイル確認済み・クローズ（2026-03-19）** | `Ver3_transferData.js:478/487` 修正完了 | ~~高~~ **DONE** |
-| D2 | 継続月数・頻回 | transferCols 未定義・py 未実装 | `Ver3_transferData.js` + `write_application.py` | 高 |
+| D2 | 継続月数・頻回 | ⚠️ **制度定義再確認待ち（2026-03-20 保留）** — セル位置確認済み（M31）・実装は保留 | `Ver3_transferData.js` + `write_application.py` | **高（保留中）** |
 | D3 | 負傷名の左右表記 | 部位名への左右混入依存。フォーマット未規定 | 運用ルール明文化 or `V3TR_buildInjuryLabel_` 改修 | 中 |
 | D4 | 負傷の原因欄 | `CELL_MAP` 定義あり・py 書込処理欠落 | `transferCols` + `write_application.py` | 中 |
 | D5 | 施術証明欄・委任欄 | 両欄空出力（py 実装なし） | 施術証明は設定値で自動化、委任欄は手書き | 低 |
@@ -986,9 +986,10 @@ row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDa
 
 ### D2 — 継続月数・頻回
 
-> **最終更新: 2026-03-19 — テンプレート xlsx セル位置確認完了・実装方針確定**
+> **最終更新: 2026-03-20 — ⚠️ 実装保留・制度定義再確認待ち**
+> ~~2026-03-19 セル位置確認完了・実装方針確定~~ → 方針修正により保留
 
-#### テンプレート xlsx 確認結果（2026-03-19）
+#### テンプレート xlsx 確認結果（2026-03-19）✅ 完了
 
 | 確認項目 | 結果 |
 |---|---|
@@ -996,20 +997,27 @@ row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDa
 | 「頻回」「継続月」テキストのセル | **テンプレート全体で0件** |
 | 行31 の構造 | E31:L31「経過」/ **M31:CY31 空マージセル（書込対象）** / CZ31:DG31「請求区分」/ DH31:DV31「新規・継続」 |
 
-#### 確定設計
+#### 保留理由（2026-03-20）
 
-> **INJURY_ROWS への追加計画は廃止。継続月数・施術回数は M31「経過」欄に1テキストとして書き込む。**
+> **M31「経過」欄への書込み案は保留。制度定義の再確認が必要。**
 
-| 書込セル | `M31`（マージセル M31:CY31 の左上） |
+| 未解決論点 | 内容 |
 |---|---|
-| 書込内容 | `"○ヶ月 月○回"` 形式の文字列 |
-| 継続月数の基準 | case1 主部位 (p1) 受傷日 → 当月最終施術日、経過月数+1 |
-| 施術回数 | caseNo=1 の `jitsunisu`（当月実日数合計） |
+| 「継続月数」の制度定義 | 単純な受傷日からの経過月数（calcMonthsElapsed_V3_ ベース）か、**毎月10回以上施術した連続月数**か — 公式記載要領の再確認が必要 |
+| 「頻回」の位置づけ | 単純な施術回数表示か、§12「長期かつ頻回の特別料金」の判定フラグとの関係整理が必要 |
+| M31 経過欄の記載根拠 | `○ヶ月 月○回` を経過欄に書く公式様式上の記載要領が未確認 |
 
-#### 実装コード案（確定）
+#### 方向性（保留前の確定事項は維持）
+
+- INJURY_ROWS への `contMonths`/`freqDays` 追加計画: **廃止確定**（変更なし）
+- M31 への書込方式: **維持予定**（書込内容の仕様のみ保留）
+- 書込セル: `M31`（マージセル M31:CY31 の左上）— **確定維持**
+
+#### 参考実装案（保留中 — 制度定義確定後に再検討）
 
 ```javascript
 // Ver3_transferData.js — V3TR_buildTransferRow_ 内 (caseNo===1 ブロック)
+// ⚠️ 保留案: 継続月数の定義が確定してから再検討すること
 const injD1 = (p1.injuryDate instanceof Date) ? p1.injuryDate : V3TR_parseDate_(p1.injuryDate);
 const lastD1 = p1Dates.maxDate || aggDates.maxDate;
 const me1 = (injD1 && lastD1) ? calcMonthsElapsed_V3_(injD1, lastD1) : -1;
@@ -1020,22 +1028,18 @@ row["経過"] = keizoku1 !== "" && jitsunisu
 ```
 
 ```python
-# write_application.py
-CELL_MAP["経過"] = "M31"          # 追加
+# write_application.py — ⚠️ 保留案
+CELL_MAP["経過"] = "M31"          # 追加予定
 
-# write_application() 内に追加
+# write_application() 内に追加予定
 if row1.get("経過"):
     put(CELL_MAP["経過"], row1.get("経過"))
 ```
 
-#### 残論点（軽微）
+#### 次アクション（保留解除条件）
 
-| 論点 | 内容 |
-|---|---|
-| `V3TR_parseDate_` の存在 | `p1.injuryDate` が Date 型でない場合のパース関数。実装時に確認 |
-| case2 がある場合の書式 | case1 のみ or case2 も含める（例: `①○ヶ月/②○ヶ月 月○回`） — 運用判断 |
-
-> **次アクション**: 上記確定案で `Ver3_transferData.js` + `write_application.py` を実装 → clasp push → 実確認
+1. 継続月数・頻回の公式記載要領を再確認し、制度定義とM31記載書式を整合
+2. 定義確定後、設計方針を再整合してから実装着手
 
 ### D3 — 負傷名の左右表記
 
