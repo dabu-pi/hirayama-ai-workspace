@@ -184,6 +184,62 @@
 - TC23a〜TC25b 合計 9 件の fixture 境界ケース設計完了（実装も同日完了）
 - 未実装事項（医師同意制御・特殊骨折医師依頼後療特例）を記録
 
+### ✅ B案 公式様式差分 整理完了（2026-03-19）
+
+> B案メニュー実行・Drive出力OK後、実際の申請書と公式様式を照合して確認済みの差分を記録。
+> 実装前に docs への記録を先行させる方針（SPEC.md §22 / TESTCASES.md TC-B01〜TC-B05 参照）。
+
+#### 確認済み差分一覧
+
+| No | 差分項目 | 現状 | 影響レイヤー | 優先度 |
+|---|---|---|---|---|
+| D1 | 施術終了年月日が未転記 | `transferCols` に列定義あり・コード上セットしているが実出力が空 | `Ver3_transferData.js` 読取ロジック確認 / `write_application.py` 書込 | **高** |
+| D2 | 継続月数・頻回欄が未対応 | `transferCols` に存在しない / `write_application.py` に CELL 定義なし | 転記仕様追加 + py 実装 | **高** |
+| D3 | 負傷名の左右表記粒度 | `V3TR_buildInjuryLabel_` は `bui + byomei` 単純結合。左右が部位名に含まれる前提か不明 | `Ver3_transferData.js` ラベル生成 | **中** |
+| D4 | 負傷の原因欄が未書込 | `CELL_MAP["負傷原因"]="BR20"` は定義済み・`transferCols` に未登録・`write_application.py` に書込処理が欠落 | `transferCols` 追加 + py 書込処理追加 | **中** |
+| D5 | 施術証明欄・委任欄の自動/手書き分離が未明文化 | 両欄ともに py 実装なし（全手書き前提で空出力） | `write_application.py` + 運用ドキュメント | **低** |
+
+#### 各差分の詳細
+
+**D1 — 施術終了年月日**
+
+- `V3TR_buildCaseMonthlySummary_` が `lastByCaseNo[caseNo]`（月内最終来院ケース行）から `施術終了日_部位1/2` を読む
+- 施術終了日を最終来院行に入力していない場合 or 月またぎ終了の場合は空になる可能性
+- `write_application.py:build_injury_rows()` は `row1.get("施術終了年月日1")` → `endDate` を正しく参照しているが、NDJSON に値が入っていなければ空
+- **確認箇所**: 転記データシートの `施術終了年月日1` セルが実際に値を持っているか
+
+**D2 — 継続月数・頻回**
+
+- 公式様式の申請書には継続月数欄（何か月施術継続しているか）と頻回欄（月の施術回数）がある
+- `transferCols` に `継続月数` / `頻回` キーが一切なし
+- `write_application.py` にも CELL 定義なし
+- 実装方針: `V3TR_buildTransferRow_` 内で `calcMonthsElapsed_V3_` をベースに継続月数を計算し transferCols に追加
+
+**D3 — 負傷名の左右表記**
+
+- `V3TR_buildInjuryLabel_(partAgg)` = `partAgg.bui + " " + partAgg.byomei`
+- `partAgg.bui` は施術明細の「部位」列の値そのまま
+- 現場入力が「右頸部」「左足関節」のように左右込みで入力されていれば問題なし
+- 問題ケース: 「頸部」と入力し左右なしで記録されていると申請書の負傷名欄に左右が出ない
+- **確認箇所**: 実シートの部位名入力フォーマット（左右を部位名に含めているか）
+
+**D4 — 負傷の原因欄**
+
+- `Ver3_transferData.js` の GAS セルマップ: `負傷原因: "BR20"` 定義あり（A案/GAS直書き用）
+- `write_application.py` の `CELL_MAP["負傷原因"] = "BR20"` 定義あり
+- しかし `write_application()` 関数内に `put(CELL_MAP["負傷原因"], ...)` の呼び出しが**存在しない**（実装欠落）
+- `transferCols` にも「負傷原因」キーが未登録 → NDJSON に値が入らない
+- **修正箇所**: `transferCols` に `"負傷原因"` を追加 + `V3TR_buildTransferRow_` でセット + `write_application.py` に書込処理追加
+
+**D5 — 施術証明欄・委任欄**
+
+- 施術証明欄（施術者氏名・施術所名・所在地）: 院側の固定情報 → 設定シートから自動入力可能
+- 委任欄（患者の委任署名・日付・患者氏名記入）: 患者が手書きする必須欄 → 自動入力不可
+- 現状は両欄とも空出力（py 実装なし）
+- **明文化方針**: 施術証明欄は設定シートに院情報を登録して自動出力、委任欄は手書き前提として py は対象外とする
+
+---
+
 ### 次タスク候補（優先順）
 
 | 優先 | タスク | 分類 | 概要 |
