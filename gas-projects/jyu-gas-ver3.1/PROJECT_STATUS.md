@@ -233,9 +233,24 @@
 | 中 | transferData への新5列反映 | 申請書データへの反映可否を検討 |
 | 低 | 既存データ一括再計算メニュー | 過去来院ヘッダへの新5列遡及反映 |
 
+### ✅ Cloud Run デプロイ完了（2026-03-19）
+
+| 項目 | 状態 |
+|---|---|
+| Secret Manager `JREC_APPGEN_SECRET_KEY` 登録 | ✅ 完了 |
+| Cloud Run SA に Secret Accessor 権限付与 | ✅ 完了 |
+| Docker build / tag / push | ✅ 完了 |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ 完了 |
+| `/health` エンドポイント 200 OK 確認 | ✅ 完了（`{"status":"ok"}`）|
+| GAS Script Properties `APPGEN_ENDPOINT` / `APPGEN_SECRET` 設定 | ✅ 完了 |
+
+**次アクション:**
+1. **GAS → Cloud Run 疎通確認** — `Ver3_transferData.js` 側の呼び出しコードを GAS エディタから実行し、Cloud Run に正常リクエストが届くことを確認
+2. **本処理エンドポイント確認** — `/generate` エンドポイントに実データを送り、申請書 xlsx が返却されることを確認（`docs/JREC-01_スモークテスト手順.md` 参照）
+
 ### 次フェーズ候補
 
-1. **申請書生成フロー B案** — ✅ コード実装・手順書完了。次: `docs/JREC-01_CloudRun_デプロイ手順.md` の手順を人間が実施 → `docs/JREC-01_スモークテスト手順.md` でスモークテスト実施
+1. **申請書生成フロー B案** — ✅ Cloud Run デプロイ完了・/health 確認済み。次: GAS → Cloud Run 疎通確認 → 本処理エンドポイント確認
 2. **特殊骨折制限** — 骨折+多部位の制限条件調査と fixture 追加
 3. ~~transferData への新5列反映~~ — ✅ 実装済み確認済み（2026-03-19）
 

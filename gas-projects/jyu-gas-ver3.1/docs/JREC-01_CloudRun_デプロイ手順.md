@@ -2,7 +2,7 @@
 
 作成日: 2026-03-19
 対象コミット: 5542ed9
-ステータス: 手順書作成済み / デプロイ未実施
+ステータス: **デプロイ完了（2026-03-19）**
 
 ---
 
@@ -190,15 +190,20 @@ Apps Script エディタを開く:
 
 ## 11. デプロイ完了チェックリスト
 
-- [ ] GCP プロジェクト作成
-- [ ] API 有効化（run / artifactregistry / secretmanager / cloudbuild）
-- [ ] Artifact Registry リポジトリ作成
-- [ ] Secret Manager に `JREC_APPGEN_SECRET_KEY` 登録
-- [ ] SA に Secret Accessor 権限付与
-- [ ] Docker build & push 成功
-- [ ] Cloud Run デプロイ成功
-- [ ] `/health` エンドポイント 200 OK 確認
-- [ ] スクリプトプロパティ `APPGEN_ENDPOINT` / `APPGEN_SECRET` 設定
+- [x] GCP プロジェクト作成
+- [x] API 有効化（run / artifactregistry / secretmanager / cloudbuild）
+- [x] Artifact Registry リポジトリ作成
+- [x] Secret Manager に `JREC_APPGEN_SECRET_KEY` 登録
+- [x] SA に Secret Accessor 権限付与
+- [x] Docker build & push 成功
+- [x] Cloud Run デプロイ成功
+- [x] `/health` エンドポイント 200 OK 確認（`{"status":"ok"}`）
+- [x] スクリプトプロパティ `APPGEN_ENDPOINT` / `APPGEN_SECRET` 設定
+
+### 次ステップ（2026-03-19 時点）
+
+- [ ] GAS → Cloud Run 疎通確認（GAS エディタから呼び出しテスト）
+- [ ] `/generate` 本処理エンドポイント確認（`docs/JREC-01_スモークテスト手順.md` 参照）
 
 ---
 
@@ -207,3 +212,4 @@ Apps Script エディタを開く:
 | 日付 | 内容 |
 |---|---|
 | 2026-03-19 | 初版作成 |
+| 2026-03-19 | デプロイ完了・チェックリスト全項目確認済み |
