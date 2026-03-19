@@ -4,12 +4,26 @@
 
 ---
 
-## 現在地
+## 現在地（2026-03-19 確定）
 
 - プロジェクト: 柔整毎日記録システム Ver3.1
 - ディレクトリ: `gas-projects/jyu-gas-ver3.1/`
 - 状態: 稼働中
 - 優先度: 最優先
+
+### 到達点スナップショット
+
+| 項目 | 状態 |
+|---|---|
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ 完了 |
+| `/health` 200 OK 確認済み | ✅ 完了 |
+| GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
+| `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
+| `clasp push`（smokeTest を GAS に反映） | ⬜ **新PCで最初に実施** |
+| GAS → Cloud Run 疎通確認（smokeHealth / smokeGenerate 実行） | ⬜ 次の作業 |
+| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⬜ 次の作業 |
+
+> **別PC引継ぎ手順:** `docs/JREC-01_別PC再開手順.md` を参照
 
 ---
 
