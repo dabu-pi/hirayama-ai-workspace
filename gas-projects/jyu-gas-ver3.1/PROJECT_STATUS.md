@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-18
+最終更新: 2026-03-19
 
 ---
 
@@ -127,12 +127,21 @@
 - fixture カウント: 47 → **48 件**（TC09b 追加）
 - M06b fixture note の誤記（"per-visit reFee=0 だが V3TR=820"）を修正済み
 
+### ✅ B-3: SPEC.md §14 実装整合更新 完了（2026-03-19）
+
+- 施術明細列数を 23 → 27 に修正（metalChk / exerciseChk / metalOut / exerciseOut 追加）
+- 列テーブルに §18.3 対応の4列を追記
+- 行合計_確定の式に `+ metalOut + exerciseOut` を追加
+- データフローの戻り値に metalOut / exerciseOut / metalChk / exerciseChk を追記
+- fixture 48/48 PASS・TC09b 実シート確認を反映
+
+**JREC-01 テストフェーズ（B-1〜B-3）完全クローズ**
+
 ### 次タスク候補（優先順）
 
 | 優先 | タスク | 分類 | 概要 |
 |---|---|---|---|
-| 1 | 48/48 PASS確認 | **確認** | clasp push 後 → runFixtureSuite() を実行し 48/48 PASS を確認。 |
-| 2 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
+| 1 | 特殊骨折制限 | **調査先行** | 骨折+多部位時の整復料・固定料制限条件が未調査。制度原文ページ特定 → fixture 境界ケース設計の順で進める。 |
 
 **保留継続:**
 - 運動後療料 月2回特例 → `docs/JREC-01_運動後療料_月2回特例メモ.md` 参照（根拠資料未確認のため）
@@ -233,8 +242,8 @@
 - テストケース文書: `TESTCASES.md` あり
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
 - fixture 件数: 48件（TC01〜TC22b + TC09b + M01〜M05 + M06b）
-- **46/46 PASS 確認済み（2026-03-17）** / 48件: PASS 確認要（clasp push → runFixtureSuite() で実施）
-- 実シート確認済み: M01 / M02 / M03 / M04 / M05
+- **48/48 PASS 確認済み（2026-03-19）** runFixtureSuite() で全件通過
+- 実シート確認済み: M01 / M02 / M03 / M04 / M05 / TC09b
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85
 

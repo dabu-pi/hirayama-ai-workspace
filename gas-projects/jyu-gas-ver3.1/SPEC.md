@@ -359,7 +359,7 @@ detailID = visitKey + "_C" + caseNo + "_P" + partOrder
 - `partOrder` = 同一ケース内の部位順（1始まり、多部位逓減に使用）
 - 既存行があれば上書き、なければ末尾追記（冪等）
 
-### 施術明細シート列（全23列）
+### 施術明細シート列（全27列）
 
 | 列名 | 内容 | データソース |
 |------|------|------------|
@@ -378,6 +378,8 @@ detailID = visitKey + "_C" + caseNo + "_P" + partOrder
 | 冷 | チェックON/OFF | coldChk |
 | 温 | チェックON/OFF | warmChk |
 | 電 | チェックON/OFF | electroChk |
+| 金属副子チェック | チェックON/OFF（§18.3） | metalChk |
+| 運動後療チェック | チェックON/OFF（将来用） | exerciseChk |
 | 係数 | 多部位逓減係数 | coef (1.0 or 0.6) |
 | 基本料_確定 | 施療料/後療料/整復料/固定料 | base（長期減額前） |
 | 初検相談_確定 | 0固定（明細行には分配しない） | 0 |
@@ -385,9 +387,12 @@ detailID = visitKey + "_C" + caseNo + "_P" + partOrder
 | 温_確定 | 温罨法金額（算定不可は0） | warm |
 | 電_確定 | 電療金額（算定不可は0） | electro |
 | 待機_確定 | 待機料金額 | taiki |
-| 行合計_確定 | (ltBase+冷+温+電+待機)×coef | total |
+| 金属副子_確定 | 金属副子等加算金額（§18.3） | metalOut（逓減対象外） |
+| 運動後療_確定 | 柔道整復運動後療料金額（将来用） | exerciseOut（逓減対象外） |
+| 行合計_確定 | (ltBase+冷+温+電+待機)×coef + metalOut + exerciseOut | total |
 
 > **注意**: `基本料_確定` は長期減額前の raw base。長期減額（ltCoef）は `行合計_確定` の計算に組み込まれている。
+> `金属副子_確定` / `運動後療_確定` は多部位逓減（coef）・長期逓減（ltCoef）の対象外。`行合計_確定` に加算のみ。
 
 ### データフロー
 
@@ -396,9 +401,11 @@ saveVisit_V3
   └─ calcHeaderAmountsByVisitKey_V3_()
         └─ calcCaseDetailAmount_V3_(caseNo=1) → { total, parts: [part1, part2] }
               └─ calcOnePartAmount_V3_() → { base, cold, warm, electro, taiki,
+                                              metalOut, exerciseOut,
                                               coef, longTermCoef, total,
                                               byomei, partOrder, injuryDate,
-                                              coldChk, warmChk, electroChk }
+                                              coldChk, warmChk, electroChk,
+                                              metalChk, exerciseChk }
                 ※ calcCaseDetailAmount_V3_ が part.bui = 部位名 を追加
         └─ calcCaseDetailAmount_V3_(caseNo=2) → 同様
         └─ amounts.details = { case1Parts: [...], case2Parts: [...] }
