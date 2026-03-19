@@ -1,6 +1,6 @@
 # SETUP.md — write_application.py 別PCセットアップ手順
 
-最終更新: 2026-03-16
+最終更新: 2026-03-19（§8章: 新PCでの clasp 復旧手順追記）
 
 このファイルは `write_application.py`（療養費支給申請書 自動生成スクリプト）を
 別PCでゼロから再現するための手順書です。
@@ -292,6 +292,79 @@ python write_application.py --batch
 - コードに単価・定数をハードコードしない（設定シートで管理）
 - 申請書 xlsx や認証情報（`service_account.json` 等）はコミットしない
 - GAS コードの変更後は `clasp push` を忘れずに実施する
+
+---
+
+---
+
+## 第8章: 新PCでの clasp 復旧手順（.clasp.json が無い場合）
+
+`.clasp.json` は gitignore 対象のため、新PCや再クローン後には存在しない。
+以下の手順で復旧する（2026-03-19 実施・確認済み）。
+
+### なぜ .clasp.json がないのか
+
+`.gitignore` に `**/.clasp.json` が記載されているため、リポジトリには含まれない。
+ファイルを再作成するには Apps Script の Script ID が必要。
+
+### Script ID の確認方法
+
+1. スプレッドシート（毎日記録ブック Ver3.1）を開く
+2. 「拡張機能」→「Apps Script」
+3. 左メニューの「⚙ プロジェクトの設定」をクリック
+4. 「スクリプト ID」欄の値をコピーする
+
+> **JREC-01 の Script ID:** `1LROlc63TPr4Y2uV3nT6tAwOc-T0bOFflF0aXNzTlLEM_C3QbydHxCTzH`
+
+### 復旧手順
+
+**方法A: 一時フォルダで clone して .clasp.json だけコピー（推奨）**
+
+```powershell
+# 1. 作業用の一時フォルダに clone する
+cd C:\hirayama-ai-workspace
+mkdir clasp-tmp
+cd clasp-tmp
+clasp clone 1LROlc63TPr4Y2uV3nT6tAwOc-T0bOFflF0aXNzTlLEM_C3QbydHxCTzH
+
+# 2. .clasp.json だけ jyu-gas-ver3.1 にコピー
+Copy-Item .clasp.json "C:\hirayama-ai-workspace\workspace\gas-projects\jyu-gas-ver3.1\.clasp.json"
+
+# 3. 一時フォルダを削除（中のコードは workspace と同じなので不要）
+cd ..
+Remove-Item -Recurse -Force clasp-tmp
+```
+
+**方法B: .clasp.json を手動作成**
+
+```powershell
+# jyu-gas-ver3.1 フォルダに直接作成
+cd "C:\hirayama-ai-workspace\workspace\gas-projects\jyu-gas-ver3.1"
+```
+
+以下の内容で `.clasp.json` を新規作成する（エディタで作成）:
+
+```json
+{
+  "scriptId": "1LROlc63TPr4Y2uV3nT6tAwOc-T0bOFflF0aXNzTlLEM_C3QbydHxCTzH",
+  "rootDir": "."
+}
+```
+
+### 復旧確認
+
+```powershell
+cd "C:\hirayama-ai-workspace\workspace\gas-projects\jyu-gas-ver3.1"
+clasp push
+```
+
+エラーなく push が完了すれば復旧成功。
+
+### 注意事項
+
+- `.clasp.json` 自体は gitignore 対象のままにすること（コミットしない）
+- `clasp pull` は実行しないこと（GitHub 正本が上書きされる）
+- `clasp push` 後は Apps Script エディタで内容を目視確認すること
 
 ---
 

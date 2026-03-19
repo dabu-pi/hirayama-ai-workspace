@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-19
+最終更新: 2026-03-19（B案メニュー実行OK・新PC clasp復旧完了）
 
 ---
 
@@ -19,11 +19,12 @@
 | `/health` 200 OK 確認済み | ✅ 完了 |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
-| `clasp push`（smokeTest を GAS に反映） | ⬜ **新PCで最初に実施** |
-| GAS → Cloud Run 疎通確認（smokeHealth / smokeGenerate 実行） | ⬜ 次の作業 |
-| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⬜ 次の作業 |
+| `clasp push`（smokeTest を GAS に反映） | ✅ 新PC復旧済み（2026-03-19） |
+| GAS → Cloud Run 疎通確認（smokeHealth / smokeGenerate 実行） | ✅ `/health` / `/generate` 200 OK 確認済み（2026-03-19） |
+| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ✅ 実行OK・Drive出力OK（2026-03-19） |
 
 > **別PC引継ぎ手順:** `docs/JREC-01_別PC再開手順.md` を参照
+> **clasp 復旧手順（新PC用）:** `SETUP.md` §8章を参照
 
 ---
 
@@ -189,10 +190,13 @@
 |---|---|---|---|
 | 1 | ~~runFixtureSuite() PASS確認~~ | ✅ **完了** | 57/57 PASS 確認済み（2026-03-19） |
 | 2 | ~~transferData への新5列反映~~ | ✅ **実装済み（調査完了）** | transferCols に全5列記載済み・V3TR_buildRows_ でセット済み（2026-03-18）。write_application.py は5列を参照しない（申請書不要・監査列のため正しい）。schemaVersion "3.0" 継続で問題なし。コード変更不要。 |
+| 3 | ~~B案メニュー実行確認~~ | ✅ **完了** | 疎通確認・メニュー実行・Drive出力まで一通り確認済み（2026-03-19）|
+| **次** | **B案 出力内容確認** | 🔵 **次の作業** | 生成された申請書のレイアウト・金額・患者情報・部位負傷名・請求額の整合確認 |
 
 **保留継続:**
 - 運動後療料 月2回特例 → `docs/JREC-01_運動後療料_月2回特例メモ.md` 参照（根拠資料未確認のため）
 - 既存データ一括再計算メニュー → 低優先度
+- 保存先フォルダIDやURLを設定値・ログ・ドキュメントに明記 → B案出力内容確認フェーズで実施
 
 ### ✅ 温罨法初検日特例 実装完了（2026-03-17）
 
@@ -246,6 +250,53 @@
 | 中 | 特殊骨折制限（3部位目以降の制限等） | 未調査。骨折+多部位の制限条件があれば fixture で境界確認が必要 |
 | 中 | transferData への新5列反映 | 申請書データへの反映可否を検討 |
 | 低 | 既存データ一括再計算メニュー | 過去来院ヘッダへの新5列遡及反映 |
+
+### ✅ B案メニュー実行・Drive出力確認完了（2026-03-19）
+
+#### 実施内容
+
+| 手順 | 結果 |
+|---|---|
+| 新PCで `.clasp.json` 復旧（Script ID から `clasp clone`） | ✅ 完了 |
+| `jyu-gas-ver3.1` フォルダに `.clasp.json` コピー | ✅ 完了 |
+| `clasp push` 実施 | ✅ 完了 |
+| `Ver3_core.js:228` メニュー登録確認 | ✅ 確認済み |
+| `Ver3_transferData.js:1984` `V3TR_menuGenerateApplication_B()` 実装確認 | ✅ 確認済み |
+
+#### 疎通確認結果
+
+| テスト | エンドポイント | 結果 | レスポンス |
+|---|---|---|---|
+| V3TR_smokeHealth | `https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app/health` | HTTP 200 | `{"status":"ok"}` |
+| V3TR_smokeGenerate | `/generate` | HTTP 200 | `{"status":"ok","patients":[],"month":"2026-03","generatedAt":"..."}` |
+
+#### B案メニュー実行結果
+
+- **メニュー:** 柔整ツール → 「【B案】申請書を生成して Drive に保存」
+- **実行結果:** OK
+- **Drive出力:** OK
+- **対象患者数:** 1件
+- **エラー:** なし
+- **出力先フォルダ:** 確認済み
+
+#### 重要判断（記録）
+
+- B案は「Cloud Run 疎通確認 → GAS連携 → メニュー実行 → 実ファイル出力」まで通過済み
+- 新PCでも Apps Script / clasp 復旧手順が確認できた（`SETUP.md` §8章に手順追記）
+- この時点で **B案はスモークテスト段階を通過**。次は出力内容確認フェーズ
+
+#### 次フェーズ（出力内容確認）
+
+| 確認項目 | 内容 |
+|---|---|
+| レイアウト崩れ | 帳票の枠・位置ずれがないか |
+| 金額整合 | 当月合計・窓口負担額・請求金額が正しいか |
+| 患者情報 | 氏名・生年月日・保険者番号・住所 |
+| 対象月 | ヘッダに正しい月が入っているか |
+| 部位・負傷名 | 記載内容が転記データと一致しているか |
+| 請求額 | write_application.py の A案出力と比較確認 |
+
+---
 
 ### ✅ Cloud Run デプロイ完了（2026-03-19）
 
