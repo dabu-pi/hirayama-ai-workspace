@@ -952,17 +952,30 @@ row["施術終了年月日2"] = cs.endDate2 || aggDates.maxDate || "";
 - `aggDates.maxDate` = `V3TR_aggDateRange_(agg)` の戻り値（施術明細の最大施術日 = 当月最終施術日）
 - 治癒後に `endDate1` が入っていれば優先、なければ当月最終施術日でフォールバック
 
-#### 粗さと次案（2026-03-19 記録）
+#### 粗さ解消（一次fix → 二次fixで部位別対応済み）✅ 2026-03-19
 
-`aggDates` は `agg`（caseNo 全体の集計）から生成するため、**部位1と部位2の最終施術日が異なる場合は同じ maxDate が両方に入る**。
-より正確にする場合は以下の方式に変更する（将来タスク）。
+**一次fix（粗さあり）:** `aggDates.maxDate` = caseNo全体のmaxDate → 部位1と部位2が同じ日になる問題があった。
+
+**二次fix（部位別対応済み）:** `p1Dates.maxDate` / `p2Dates.maxDate` に変更。優先順位:
+
+```
+cs.endDate1/2 優先（終了日入力あり）
+  → p1Dates.maxDate / p2Dates.maxDate（部位別最終施術日）
+    → aggDates.maxDate（ケース全体 フォールバック）
+      → "" (空)
+```
+
+実装（Ver3_transferData.js）:
 
 ```javascript
-const p1Dates = V3TR_aggDateRange_(p1);  // p1 は agg.parts[1]
-const p2Dates = V3TR_aggDateRange_(p2);  // p2 は agg.parts[2]
-row["施術終了年月日1"] = cs.endDate1 || p1Dates.maxDate || "";
-row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || "";
+const p1Dates  = V3TR_aggDateRange_(p1);   // p1 は agg.parts[1]
+const p2Dates  = V3TR_aggDateRange_(p2);   // p2 は agg.parts[2]
+row["施術終了年月日1"] = cs.endDate1 || p1Dates.maxDate || aggDates.maxDate || "";
+row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDate || "";
 ```
+
+> **残課題なし。** `p1/p2._daySet` がケース全体 `_daySet` のサブセットとして正しく集計されている前提で動作する。
+> `V3TR_aggDateRange_` が空 agg を受け取った場合は `minDate/maxDate` が `null` になる設計のため空文字フォールバックが効く。
 
 #### 転帰の運用ルール（P2確定）
 
