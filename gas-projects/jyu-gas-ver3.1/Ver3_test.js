@@ -41,7 +41,24 @@ var TEST_SETTINGS_ = {
   roundUnit:            10,
   metalAddon:           1000, // §18.3 骨折・不全骨折・脱臼 1,000円
   exerciseAddon:        320,  // 柔道整復運動後療料 骨折・不全骨折・脱臼 dayDiff>=15
-  _rawMap:              {},
+  _rawMap: {
+    // 整復料（骨折 初検・部位別）§17 付録A
+    "整復料_骨折_鎖骨":  5500,
+    "整復料_骨折_肋骨":  5500,
+    "整復料_骨折_指_趾": 5500,
+    "整復料_骨折_前腕":  7200,
+    "整復料_骨折_上腕":  7800,
+    "整復料_骨折_下腿":  7800,
+    "整復料_骨折_大腿":  11800,
+    // 固定料（不全骨折 初検・部位別）§17 付録A
+    "固定料_鎖骨":  3000,
+    "固定料_肋骨":  3000,
+    "固定料_指_趾": 3000,
+    "固定料_前腕":  4100,
+    "固定料_上腕":  4600,
+    "固定料_下腿":  4600,
+    "固定料_大腿":  7200,
+  },
 };
 
 
@@ -675,6 +692,122 @@ var JREC01_FIXTURES_ = {
     ]
   },
 
+  // ── TC23: 特殊骨折初検 安全弁（未定義部位 → base=0）───────────────────────────
+  // TC23a: 骨折 膝蓋骨（特殊骨折：mapBuiToSettingKey_ 未登録）→ base=0 + 要確認
+  // TC23b: 骨折 腰椎（脊椎：mapBuiToSettingKey_ 未登録）→ base=0 + 要確認
+  // TC23c: 骨折 胸骨（特殊骨折：mapBuiToSettingKey_ 未登録）→ base=0 + 要確認
+  // TC23d: 骨折 大腿（定義済み部位）→ base=11800 正常算定（ポジティブケース）
+  "TC23a": {
+    testId: "TC23a",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "膝蓋骨", byomei: "骨折", injuryDate: "2026-03-01",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+  "TC23b": {
+    testId: "TC23b",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "腰椎", byomei: "骨折", injuryDate: "2026-03-01",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+  "TC23c": {
+    testId: "TC23c",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "胸骨", byomei: "骨折", injuryDate: "2026-03-01",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+  "TC23d": {
+    testId: "TC23d",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "大腿", byomei: "骨折", injuryDate: "2026-03-01",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+
+  // ── TC24: 骨折/不全骨折 算定特性確認 ─────────────────────────────────────────
+  // TC24a: 不全骨折 肩甲骨（未定義部位）→ base=0 + 要確認
+  // TC24b: 骨折 後療 monthsElapsed=14 → ltCoef=1.0（§11 長期減額対象外）
+  // TC24c: 不全骨折 後療 monthsElapsed=14 → ltCoef=1.0（§11 同上）
+  "TC24a": {
+    testId: "TC24a",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: false, reBilled: false, supportBilled: false } },
+    cases: [
+      { caseNo: 1, kubun: "初検", parts: [
+        { bui: "肩甲骨", byomei: "不全骨折", injuryDate: "2026-03-01",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+  "TC24b": {
+    testId: "TC24b",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true },
+      monthlyVisitCounts: [10, 10, 10, 10, 10] },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "前腕", byomei: "骨折", injuryDate: "2025-01-05",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+  "TC24c": {
+    testId: "TC24c",
+    context: { patientId: "P001", treatDate: "2026-03-01",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true },
+      monthlyVisitCounts: [10, 10, 10, 10, 10] },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "前腕", byomei: "不全骨折", injuryDate: "2025-01-05",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+
+  // ── TC25: 脱臼長期逓減・骨折継続理由書アラートなし確認 ──────────────────────────
+  // TC25a: 脱臼 後療 monthsElapsed=5 → ltCoef=0.75 + 継続理由書アラート（§18.2 脱臼対象）
+  // TC25b: 骨折 後療 monthsElapsed=3 → ltCoef=1.0 + 継続理由書アラートなし（§20 骨折対象外・コード修正後）
+  "TC25a": {
+    testId: "TC25a",
+    context: { patientId: "P001", treatDate: "2026-07-01",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "肩関節", byomei: "脱臼", injuryDate: "2026-02-01",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+  "TC25b": {
+    testId: "TC25b",
+    context: { patientId: "P001", treatDate: "2026-05-01",
+      monthlyStatus: { initBilled: true, reBilled: true, supportBilled: true } },
+    cases: [
+      { caseNo: 1, kubun: "後療", parts: [
+        { bui: "前腕", byomei: "骨折", injuryDate: "2026-02-01",
+          cold: false, warm: false, electro: false, metal: false, exercise: false }
+      ]}
+    ]
+  },
+
 };
 
 
@@ -1229,6 +1362,113 @@ var JREC01_EXPECTED_ = {
     ]
   },
 
+  // ── TC23: 特殊骨折初検 安全弁 ──────────────────────────────────────────────
+  "TC23a": {
+    // 骨折 膝蓋骨（mapBuiToSettingKey_ 未登録）→ base=0, needCheck=true
+    // visitTotal = initFee(1550) + supportFee(100) + detailSum(0) = 1650
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 0, visitTotal: 1650,
+      needCheck: true,
+      needCheckReason: "整復料/固定料 取得不可（膝蓋骨：設定シートにキーがありません）",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "初検", baseOut: 0, coldOut: 0, rowTotalOut: 0 }
+    ]
+  },
+  "TC23b": {
+    // 骨折 腰椎（脊椎：mapBuiToSettingKey_ 未登録）→ base=0, needCheck=true
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 0, visitTotal: 1650,
+      needCheck: true,
+      needCheckReason: "整復料/固定料 取得不可（腰椎：設定シートにキーがありません）",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "初検", baseOut: 0, coldOut: 0, rowTotalOut: 0 }
+    ]
+  },
+  "TC23c": {
+    // 骨折 胸骨（特殊骨折：mapBuiToSettingKey_ 未登録）→ base=0, needCheck=true
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 0, visitTotal: 1650,
+      needCheck: true,
+      needCheckReason: "整復料/固定料 取得不可（胸骨：設定シートにキーがありません）",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "初検", baseOut: 0, coldOut: 0, rowTotalOut: 0 }
+    ]
+  },
+  "TC23d": {
+    // 骨折 大腿（定義済み部位）→ base=整復料_骨折_大腿=11800, needCheck=false（ポジティブケース）
+    // visitTotal = initFee(1550) + supportFee(100) + detailSum(11800) = 13450
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 11800, visitTotal: 13450,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "初検", baseOut: 11800, coldOut: 0, rowTotalOut: 11800 }
+    ]
+  },
+
+  // ── TC24: 骨折/不全骨折 算定特性確認 ─────────────────────────────────────────
+  "TC24a": {
+    // 不全骨折 肩甲骨（mapBuiToSettingKey_ 未登録）→ base=0, needCheck=true
+    header: { initFee: 1550, reFee: 0, supportFee: 100, detailSum: 0, visitTotal: 1650,
+      needCheck: true,
+      needCheckReason: "整復料/固定料 取得不可（肩甲骨：設定シートにキーがありません）",
+      billedKubun: "初検", mixedFlag: "通常",
+      case1Summary: "case1:初検", case2Summary: "case2:なし", chargeReason: "初検のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "初検", baseOut: 0, coldOut: 0, rowTotalOut: 0 }
+    ]
+  },
+  "TC24b": {
+    // 骨折 後療 monthsElapsed=14 → ltCoef=1.0（§11 骨折は長期減額対象外）+ 継続理由書アラートなし（§20 骨折対象外）
+    // koryoKossetu=850, rowTotalOut=850, needCheck=false
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 850, visitTotal: 850,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, rowTotalOut: 850 }
+    ]
+  },
+  "TC24c": {
+    // 不全骨折 後療 monthsElapsed=14 → ltCoef=1.0（§11 不全骨折も長期減額対象外）+ 継続理由書アラートなし
+    // koryoFuzenKossetu=720, rowTotalOut=720, needCheck=false
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 720, visitTotal: 720,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-03-01_C1_P1", kubun: "後療", baseOut: 720, coldOut: 0, rowTotalOut: 720 }
+    ]
+  },
+
+  // ── TC25: 脱臼長期逓減・骨折継続理由書アラートなし ─────────────────────────────
+  "TC25a": {
+    // 脱臼 後療 monthsElapsed=5 → ltCoef=0.75（§11 脱臼は対象）
+    // koryoDakkyu=720, rowTotalOut=Math.round(720*0.75)=540, needCheck=true（長期75%+継続理由書）
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 540, visitTotal: 540,
+      needCheck: true,
+      needCheckReason: "長期減額75%適用（脱臼）;長期施術3か月超（継続理由書確認）",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-07-01_C1_P1", kubun: "後療", baseOut: 720, coldOut: 0, rowTotalOut: 540 }
+    ]
+  },
+  "TC25b": {
+    // 骨折 後療 monthsElapsed=3 → ltCoef=1.0（§11 骨折対象外）+ 継続理由書アラートなし（§20 骨折対象外・コード修正後）
+    // koryoKossetu=850, rowTotalOut=850, needCheck=false
+    header: { initFee: 0, reFee: 0, supportFee: 0, detailSum: 850, visitTotal: 850,
+      needCheck: false, needCheckReason: "",
+      billedKubun: "後療", mixedFlag: "通常",
+      case1Summary: "case1:後療", case2Summary: "case2:なし", chargeReason: "後療のみ" },
+    details: [
+      { detailID: "P001_2026-05-01_C1_P1", kubun: "後療", baseOut: 850, coldOut: 0, rowTotalOut: 850 }
+    ]
+  },
+
 };
 
 
@@ -1508,6 +1748,15 @@ function runFixtureTC21c()  { showFixtureResult_("TC21c"); }
 function runFixtureTC21d()  { showFixtureResult_("TC21d"); }
 function runFixtureTC22a()  { showFixtureResult_("TC22a"); }
 function runFixtureTC22b()  { showFixtureResult_("TC22b"); }
+function runFixtureTC23a()  { showFixtureResult_("TC23a"); }
+function runFixtureTC23b()  { showFixtureResult_("TC23b"); }
+function runFixtureTC23c()  { showFixtureResult_("TC23c"); }
+function runFixtureTC23d()  { showFixtureResult_("TC23d"); }
+function runFixtureTC24a()  { showFixtureResult_("TC24a"); }
+function runFixtureTC24b()  { showFixtureResult_("TC24b"); }
+function runFixtureTC24c()  { showFixtureResult_("TC24c"); }
+function runFixtureTC25a()  { showFixtureResult_("TC25a"); }
+function runFixtureTC25b()  { showFixtureResult_("TC25b"); }
 function runFixtureM01()    { showFixtureResult_("M01"); }
 function runFixtureM02()    { showFixtureResult_("M02"); }
 function runFixtureM03()    { showFixtureResult_("M03"); }

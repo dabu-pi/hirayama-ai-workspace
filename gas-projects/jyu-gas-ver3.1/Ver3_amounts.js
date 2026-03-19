@@ -573,9 +573,9 @@ function calcOnePartAmount_V3_(settings, kubun, byomei, injuryDate, treatDate, c
   } else if (ltCoef < 1.0) {
     reasons.push("長期減額75%適用（" + byomei + "）");
   }
-  // 継続理由書アラート: 受傷3か月超（長期減額有無を問わず）
+  // 継続理由書アラート: 受傷3か月超（C群・脱臼対象。骨折・不全骨折は§20対象外）
   var meAlert = calcMonthsElapsed_V3_(injuryDate, treatDate);
-  if (meAlert >= 3) {
+  if (meAlert >= 3 && injuryType !== "骨折" && injuryType !== "不全骨折") {
     reasons.push("長期施術3か月超（継続理由書確認）");
   }
   // 長期対象: 後療料(再検/後療時のbase)・冷・温・電。初検時のbaseと待機料は非対象

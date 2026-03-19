@@ -3,8 +3,8 @@
 最終更新: 2026-03-19
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 48/48 PASS ✅ 確認済み（2026-03-19）**
-> TC01〜TC22b 全48ケース。runFixtureSuite() で PASS 確認。
+> **fixture テスト: 57/57 実装完了（2026-03-19） — GAS上での PASS 確認は人間が実施**
+> TC01〜TC25b 全57ケース。TC23〜TC25b（9件）は今セッションで追加。runFixtureSuite() での PASS 確認はスプレッドシート上で人間が実施すること。
 >
 > **2026-03-18 金額不整合修正:** [A] 施術継続中シナリオで case2 再検が誤算定されるバグを修正。
 > `getMonthlyBilledStatus_` に reBilled 用 `isCaseEndedBefore_` チェック追加 + `calcHeaderAmountsByVisitKey_V3_` の reFee 条件に `!reBilled` を追加。TC09b fixture で修正後の動作を確認。
@@ -59,6 +59,21 @@
 - TC20a: 金属副子等加算 Phase 2・1回目（metalPriorCount=0 → metalOut=1000, needCheck=false）
 - TC20b: 金属副子等加算 Phase 2・3回目（metalPriorCount=2 → metalOut=1000, needCheck=false）
 - TC20c: 金属副子等加算 Phase 2・上限超（metalPriorCount=3 → metalOut=0 + 要確認, needCheck=true）
+- TC21a: 柔道整復運動後療料 dayDiff=15 算定可
+- TC21b: 柔道整復運動後療料 dayDiff=14 不可
+- TC21c: 柔道整復運動後療料 捻挫 対象外
+- TC21d: 柔道整復運動後療料 dayDiff=8 不可
+- TC22a: 柔道整復運動後療料 Phase2 上限超
+- TC22b: 柔道整復運動後療料 Phase2 5回目
+- TC23a: 特殊骨折初検 安全弁（骨折 膝蓋骨 → base=0 + 要確認）
+- TC23b: 特殊骨折初検 安全弁（骨折 腰椎 → base=0 + 要確認）
+- TC23c: 特殊骨折初検 安全弁（骨折 胸骨 → base=0 + 要確認）
+- TC23d: 骨折初検 正常算定（大腿 → base=11800, needCheck=false）
+- TC24a: 不全骨折初検 安全弁（肩甲骨 → base=0 + 要確認）
+- TC24b: 骨折後療 長期減額なし（monthsElapsed=14 → ltCoef=1.0, needCheck=false）
+- TC24c: 不全骨折後療 長期減額なし（monthsElapsed=14 → ltCoef=1.0, needCheck=false）
+- TC25a: 脱臼後療 長期75%（monthsElapsed=5 → ltCoef=0.75 + 継続理由書アラート）
+- TC25b: 骨折後療 継続理由書アラートなし（monthsElapsed=3 → ltCoef=1.0, needCheck=false）
 - M01: 混在（case1=再検 / case2=初検抑制）→ 再検料410 / 初検料0 ✅ 実シート確認済み
 - M02: 混在（case1=再検 / case2=初検抑制なし）→ 初検料1550 / 再検料0 ✅ 実シート確認済み
 - M03: 混在（case1=後療 / case2=初検抑制）→ 初検料0 / 再検料0 ✅ 実シート確認済み

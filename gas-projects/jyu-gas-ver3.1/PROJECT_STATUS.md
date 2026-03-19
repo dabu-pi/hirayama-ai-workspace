@@ -137,33 +137,42 @@
 
 **JREC-01 テストフェーズ（B-1〜B-3）完全クローズ**
 
+### ✅ 特殊骨折制限 fixture 実装完了（2026-03-19）
+
+- fixture/expected JSON（TC23a〜TC25b 9件）作成
+- Ver3_test.js: `JREC01_FIXTURES_` / `JREC01_EXPECTED_` / wrapper関数 追加
+- Ver3_amounts.js: §20 継続理由書アラートを骨折/不全骨折除外に修正
+- Ver3_test.js: TEST_SETTINGS_._rawMap に 整復料_骨折_*/固定料_* 単価 14件追加
+- fixture 件数: 48 → 57（TC23a〜TC25b 9件追加）
+- **runFixtureSuite() PASS は GAS エディタ上で人間が確認すること（ローカル実行不可）**
+
+**実装済み fixture:**
+
+| TC | 傷病 | 部位 / 条件 | ポイント |
+|---|---|---|---|
+| TC23a | 骨折 | 膝蓋骨（未定義部位） | base=0 + 要確認 |
+| TC23b | 骨折 | 腰椎（脊椎） | base=0 + 要確認 |
+| TC23c | 骨折 | 胸骨 | base=0 + 要確認 |
+| TC23d | 骨折 | 大腿（定義済み） | base=11800 正常算定 |
+| TC24a | 不全骨折 | 肩甲骨（未定義部位） | base=0 + 要確認 |
+| TC24b | 骨折 | 後療 monthsElapsed=14 | ltCoef=1.0（長期減額対象外） |
+| TC24c | 不全骨折 | 後療 monthsElapsed=14 | ltCoef=1.0（同上） |
+| TC25a | 脱臼 | 後療 monthsElapsed=5 | ltCoef=0.75 + 継続理由書アラート |
+| TC25b | 骨折 | 後療 monthsElapsed=3 | ltCoef=1.0 + アラートなし（§20 骨折対象外） |
+
 ### ✅ 特殊骨折制限 制度整理・fixture 設計 完了（2026-03-19）
 
 - `FRACTURE_RESTRICTION.md` 作成（同ディレクトリ）
 - 骨折/不全骨折/脱臼 の算定可否ルールを令和6年改正通知根拠で整理
 - 現行実装の安全弁（mapBuiToSettingKey_ 未登録 → base=0）を確認・文書化
-- TC21a〜TC23b 合計 9 件の fixture 境界ケース設計完了（**fixture 実装は次タスク**）
+- TC23a〜TC25b 合計 9 件の fixture 境界ケース設計完了（実装も同日完了）
 - 未実装事項（医師同意制御・特殊骨折医師依頼後療特例）を記録
-
-**設計済み fixture:**
-
-| TC | 傷病 | 部位 / 条件 | ポイント |
-|---|---|---|---|
-| TC21a | 骨折 | 膝蓋骨（未定義部位） | base=0 + 要確認 |
-| TC21b | 骨折 | 腰椎（脊椎） | base=0 + 要確認 |
-| TC21c | 骨折 | 胸骨 | base=0 + 要確認 |
-| TC21d | 骨折 | 大腿（定義済み）| base=11800 正常算定 |
-| TC22a | 不全骨折 | 肩甲骨（未定義部位） | base=0 + 要確認 |
-| TC22b | 骨折 | 後療 monthsElapsed=14 | ltCoef=1.0（長期減額対象外） |
-| TC22c | 不全骨折 | 後療 monthsElapsed=14 | ltCoef=1.0 |
-| TC23a | 脱臼 | 後療 monthsElapsed=5 | ltCoef=0.75（脱臼は対象） |
-| TC23b | 骨折 | 後療 monthsElapsed=3 | 継続理由書アラートなし（§20 骨折対象外） |
 
 ### 次タスク候補（優先順）
 
 | 優先 | タスク | 分類 | 概要 |
 |---|---|---|---|
-| 1 | 特殊骨折制限 fixture 実装 | **実装** | FRACTURE_RESTRICTION.md の TC21〜TC23 を Ver3_test.js に追加。fixture 9件 + runFixtureSuite() PASS確認。 |
+| 1 | clasp push → runFixtureSuite() PASS確認 | **確認** | Ver3_test.js + Ver3_amounts.js を clasp push 後、GAS エディタで runFixtureSuite() 実行して 57/57 PASS を確認する。 |
 | 2 | transferData への新5列反映 | **調査先行** | Ver3_transferData.js（月次転記）への新5列反映。申請書データへの影響・不要列の除外方針を確認してから実装着手。 |
 
 **保留継続:**
@@ -264,8 +273,8 @@
 
 - テストケース文書: `TESTCASES.md` あり
 - fixture テスト基盤: `Ver3_test.js` + `tests/jrec01/fixtures/` + `tests/jrec01/expected/` 整備済み
-- fixture 件数: 48件（TC01〜TC22b + TC09b + M01〜M05 + M06b）
-- **48/48 PASS 確認済み（2026-03-19）** runFixtureSuite() で全件通過
+- fixture 件数: 57件（TC01〜TC25b + TC09b + M01〜M05 + M06b）
+- **48/48 PASS 確認済み（2026-03-19）** runFixtureSuite() で全件通過（TC23〜TC25b 追加分は clasp push 後に人間が確認）
 - 実シート確認済み: M01 / M02 / M03 / M04 / M05 / TC09b
 - Apps Script メニューから `runFixtureSuite()` で一括実行可能
 - 確認済み単価: koryoDakkyu=720 / seifukuDakkyu=5200 / warm=75 / electro=33 / taiki=5 / cold=85

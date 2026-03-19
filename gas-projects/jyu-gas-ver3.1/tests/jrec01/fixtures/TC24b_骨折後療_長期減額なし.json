@@ -1,0 +1,18 @@
+{
+  "testId": "TC24b",
+  "description": "骨折後療 長期減額なし: monthsElapsed=14 + 月10回×5か月でも ltCoef=1.0（§11 骨折は長期減額対象外）",
+  "ref": "FRACTURE_RESTRICTION.md#TC24b / SPEC.md §11",
+  "note": "injuryDate=2025-01-05（day<16→1月起算）, treatDate=2026-03-01 → monthsElapsed=14。骨折はcalcLongTermCoef_V3_が早期return1.0するため減額なし。継続理由書アラートも§20対象外のため不要。",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-03-01",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true },
+    "monthlyVisitCounts": [10, 10, 10, 10, 10]
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "前腕", "byomei": "骨折", "injuryDate": "2025-01-05",
+        "cold": false, "warm": false, "electro": false, "metal": false, "exercise": false }
+    ]}
+  ]
+}

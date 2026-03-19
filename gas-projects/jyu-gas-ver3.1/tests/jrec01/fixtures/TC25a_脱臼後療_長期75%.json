@@ -1,0 +1,17 @@
+{
+  "testId": "TC25a",
+  "description": "脱臼後療 長期75%: monthsElapsed=5 → ltCoef=0.75 + 継続理由書アラート（§11/§18.2 脱臼は対象）",
+  "ref": "FRACTURE_RESTRICTION.md#TC25a / SPEC.md §11 §18.2",
+  "note": "injuryDate=2026-02-01（day<16→2月起算）, treatDate=2026-07-01 → monthsElapsed=5。monthlyVisitCountsなし→50%未達→ltCoef=0.75。Math.round(720*0.75)=540。",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-07-01",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "肩関節", "byomei": "脱臼", "injuryDate": "2026-02-01",
+        "cold": false, "warm": false, "electro": false, "metal": false, "exercise": false }
+    ]}
+  ]
+}

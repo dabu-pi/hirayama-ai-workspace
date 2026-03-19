@@ -1,0 +1,17 @@
+{
+  "testId": "TC23d",
+  "description": "骨折初検 ポジティブケース: 部位=大腿（定義済み）→ base=整復料_骨折_大腿=11800, needCheck=false",
+  "ref": "FRACTURE_RESTRICTION.md#TC23d / SPEC.md §18.3",
+  "note": "mapBuiToSettingKey_('大腿')='大腿' → _rawMap['整復料_骨折_大腿']=11800。安全弁が発動しないことを確認。",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-03-01",
+    "monthlyStatus": { "initBilled": false, "reBilled": false, "supportBilled": false }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "初検", "parts": [
+      { "bui": "大腿", "byomei": "骨折", "injuryDate": "2026-03-01",
+        "cold": false, "warm": false, "electro": false, "metal": false, "exercise": false }
+    ]}
+  ]
+}
