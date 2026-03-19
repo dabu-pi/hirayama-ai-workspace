@@ -235,7 +235,7 @@
 
 ### 次フェーズ候補
 
-1. **申請書生成フロー B案実装** — `docs/JREC-01_申請書生成B案_MVP実装設計.md` 参照。未確定残件: GCP プロジェクト ID / Cloud Run リージョン / SECRET_KEY / 生成ログシート追加可否
+1. **申請書生成フロー B案実装** — ✅ コード実装完了。次: Cloud Run deploy（GCP プロジェクト: hirayama-jrec-appgen / リージョン: asia-northeast1）+ スクリプトプロパティ設定（APPGEN_ENDPOINT / APPGEN_SECRET）+ 動作確認
 2. **特殊骨折制限** — 骨折+多部位の制限条件調査と fixture 追加
 3. ~~transferData への新5列反映~~ — ✅ 実装済み確認済み（2026-03-19）
 

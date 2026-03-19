@@ -1,6 +1,10 @@
-# write_application.py 実行環境
+# write_application.py 実行環境（ローカル）
 # python -m venv .venv && .venv\Scripts\activate
 # pip install -r requirements.txt
 
 openpyxl>=3.1.5
 Pillow>=12.1.1
+
+# server.py 実行環境（Cloud Run）
+flask>=3.0.0
+gunicorn>=21.0.0

@@ -994,6 +994,178 @@ def find_latest_ndjson() -> tuple[str | None, str]:
     return latest, search_dir
 
 
+# ===== サーバー向けAPI（Cloud Run 用） =====
+
+def write_application_to_bytes(template_path: str, json_data: dict) -> bytes:
+    """
+    write_application() の in-memory 版。
+    一時ファイルを経由して xlsx bytes を返す（保存なし）。
+    """
+    import io as _io
+    import tempfile as _tmp
+    tmp = _tmp.NamedTemporaryFile(suffix=".xlsx", delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+    try:
+        write_application(template_path, json_data, tmp_path)
+        with open(tmp_path, "rb") as f:
+            return f.read()
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+def load_batch_ndjson_string(ndjson_str: str) -> dict:
+    """
+    NDJSON 文字列を解析して {"meta": {...}, "patients": [...]} を返す。
+    エラー時は ValueError / JSONDecodeError を raise（sys.exit しない）。
+    """
+    meta = None
+    patients = []
+    for line_no, line in enumerate(ndjson_str.splitlines(), 1):
+        line = line.strip()
+        if not line:
+            continue
+        obj = json.loads(line)  # JSONDecodeError は呼び出し元に伝播
+        if obj.get("_meta"):
+            meta = obj
+        else:
+            patients.append(obj)
+    if meta is None:
+        raise ValueError("NDJSONにメタデータ行（_meta: true）がありません")
+    return {"meta": meta, "patients": patients}
+
+
+def validate_batch_safe(batch: dict) -> list:
+    """
+    バリデーション。エラーリストを返す（sys.exit しない）。
+    空リストなら OK。
+    """
+    meta = batch["meta"]
+    patients = batch["patients"]
+    errors = []
+
+    sv = str(meta.get("schemaVersion", ""))
+    if sv != SCHEMA_VERSION:
+        errors.append(f"schemaVersion不一致: 期待={SCHEMA_VERSION}, 実際={sv}")
+
+    expected_count = meta.get("patientCount", 0)
+    if expected_count != len(patients):
+        errors.append(f"patientCount不一致: メタ={expected_count}, 実際={len(patients)}")
+
+    seen_ids: dict = {}
+    for i, p in enumerate(patients):
+        pid = p.get("patientId", "")
+        if pid in seen_ids:
+            errors.append(f"patientId重複: {pid}")
+        else:
+            seen_ids[pid] = i
+
+    month = meta.get("month", "")
+    for i, p in enumerate(patients):
+        pid = p.get("patientId", f"[行{i+2}]")
+        case1 = p.get("case1")
+        if case1 is None:
+            errors.append(f"{pid}: case1がnullです")
+            continue
+        for key in REQUIRED_CASE1_KEYS:
+            val = case1.get(key)
+            if val is None or val == "":
+                errors.append(f"{pid}: case1に必須キー「{key}」がありません")
+        c1_month = str(case1.get("対象月", "")).strip()
+        if c1_month and month and c1_month != month:
+            errors.append(f"{pid}: case1[\"対象月\"]={c1_month} がmeta.month={month}と不一致")
+
+    return errors
+
+
+def verify_output_bytes(xlsx_bytes: bytes, expected: dict) -> list:
+    """
+    xlsx bytes から検証する（verify_output の in-memory 版）。
+    """
+    import io as _io
+    warnings_list = []
+    try:
+        wb = load_workbook(_io.BytesIO(xlsx_bytes), read_only=True, data_only=True)
+        ws = wb[TEMPLATE_SHEET]
+
+        name_val = ws["E21"].value
+        if not name_val:
+            warnings_list.append("E21（患者氏名）が空")
+        elif expected.get("患者氏名") and str(name_val) != str(expected["患者氏名"]):
+            warnings_list.append(f"E21（患者氏名）不一致: Excel={name_val}, JSON={expected['患者氏名']}")
+
+        total = safe_int(expected.get("当月合計"))
+        if total and total > 0:
+            if ws["DP44"].value is None:
+                warnings_list.append("DP44（合計1の位）が空（当月合計>0なのに）")
+
+        if expected.get("保険者番号") and ws["CQ4"].value is None:
+            warnings_list.append("CQ4（保険者番号1桁目）が空")
+
+        wb.close()
+    except Exception as e:
+        warnings_list.append(f"検証中にエラー: {e}")
+    return warnings_list
+
+
+def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
+    """
+    NDJSON 文字列を受け取り、患者ごとの xlsx bytes を返す（Cloud Run 向け）。
+
+    返り値: [
+      {"patientId": str, "fileName": str, "content": bytes, "warnings": list},
+      ...  # エラー患者は "error" キーを追加し content=None
+    ]
+    """
+    if template_path is None:
+        template_path = str(Path(__file__).parent / TEMPLATE_FILE)
+
+    batch = load_batch_ndjson_string(ndjson_str)
+    errors = validate_batch_safe(batch)
+    if errors:
+        raise ValueError("バリデーションエラー:\n" + "\n".join(f"  - {e}" for e in errors))
+
+    meta = batch["meta"]
+    month = meta["month"]
+    results = []
+
+    for p in batch["patients"]:
+        pid = p.get("patientId", "unknown")
+        json_data = {
+            "case1": p.get("case1"),
+            "case2": p.get("case2"),
+            "visitDays": p.get("visitDays", []),
+        }
+        file_name = f"申請書_{pid}_{month}.xlsx"
+        try:
+            xlsx_bytes = write_application_to_bytes(template_path, json_data)
+            expected = {
+                "患者氏名": (p.get("case1") or {}).get("患者氏名", ""),
+                "当月合計": (p.get("case1") or {}).get("当月合計", 0),
+                "保険者番号": (p.get("case1") or {}).get("保険者番号", ""),
+            }
+            warns = verify_output_bytes(xlsx_bytes, expected)
+            results.append({
+                "patientId": pid,
+                "fileName": file_name,
+                "content": xlsx_bytes,
+                "warnings": warns,
+            })
+        except Exception as e:
+            results.append({
+                "patientId": pid,
+                "fileName": file_name,
+                "content": None,
+                "warnings": [f"生成エラー: {e}"],
+                "error": str(e),
+            })
+
+    return results
+
+
 # ===== メイン =====
 def main():
     script_dir = Path(__file__).parent

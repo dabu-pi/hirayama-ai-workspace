@@ -1966,6 +1966,247 @@ function V3TR_getOutputFolder_(ss) {
 }
 
 /**
+ * ===== 申請書生成 B案メニュー =====
+ * スプレッドシートから1クリックで申請書 xlsx を生成して Drive に保存する。
+ *
+ * 処理フロー:
+ *   1. 月指定（デフォルト当月。SHIFT 押下時のみダイアログ）
+ *   2. NDJSON 生成（既存ロジック流用）
+ *   3. Cloud Run POST /generate（X-Secret-Key 認証）
+ *   4. レスポンス base64 → Drive の月別フォルダに xlsx 保存
+ *   5. _申請書生成ログ シートへ記録
+ *   6. 完了アラート（保存先 URL 付き）
+ *
+ * 設定（スクリプトプロパティ）:
+ *   APPGEN_ENDPOINT  - Cloud Run エンドポイント URL
+ *   APPGEN_SECRET    - X-Secret-Key の値
+ */
+function V3TR_menuGenerateApplication_B() {
+  var ss = SpreadsheetApp.getActive();
+  var ui = SpreadsheetApp.getUi();
+
+  // ===== 1. 月指定 =====
+  var now = new Date();
+  var defaultYm = Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM");
+  var ym = defaultYm;
+
+  // SHIFT キー相当: 常にダイアログを表示（GAS は修飾キー検知不可のため prompt を表示）
+  var r = ui.prompt(
+    "申請書生成（B案）",
+    "対象月（yyyy-MM）を確認・修正してください\nデフォルト: " + defaultYm,
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  var input = (r.getResponseText() || "").trim();
+  if (input) {
+    if (!/^\d{4}-\d{2}$/.test(input)) {
+      return ui.alert("形式が違います。yyyy-MM で入力してください。");
+    }
+    ym = input;
+  }
+
+  // ===== 2. 設定取得 =====
+  var props = PropertiesService.getScriptProperties();
+  var endpoint = props.getProperty("APPGEN_ENDPOINT") || "";
+  var secretKey = props.getProperty("APPGEN_SECRET") || "";
+
+  if (!endpoint) {
+    return ui.alert("スクリプトプロパティ「APPGEN_ENDPOINT」が未設定です。\n" +
+      "スクリプトエディタ > プロジェクトの設定 > スクリプトプロパティ から設定してください。");
+  }
+  if (!secretKey) {
+    return ui.alert("スクリプトプロパティ「APPGEN_SECRET」が未設定です。");
+  }
+
+  // ===== 3. NDJSON 生成 =====
+  var patientIds = V3TR_findPatientsForMonth_(ss, ym);
+  if (patientIds.length === 0) {
+    return ui.alert("対象月（" + ym + "）に来院記録のある患者が見つかりません。");
+  }
+
+  ss.toast("NDJSON 生成中... (" + patientIds.length + " 名)", "申請書生成", 5);
+
+  var genAt = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
+  var metaLine = JSON.stringify({
+    _meta: true,
+    schemaVersion: "3.0",
+    generatedAt: genAt,
+    month: ym,
+    patientCount: patientIds.length
+  });
+  var ndjsonLines = [metaLine];
+
+  var skipPatients = [];
+  for (var i = 0; i < patientIds.length; i++) {
+    var pid = patientIds[i];
+    try {
+      V3TR_buildTransferDataForMonth_(ss, pid, ym);
+      var jsonStr = V3TR_exportTransferJson_(ss, pid, ym);
+      var parsed = JSON.parse(jsonStr);
+      ndjsonLines.push(JSON.stringify({
+        patientId: pid,
+        case1: parsed.case1,
+        case2: parsed.case2,
+        visitDays: parsed.visitDays || []
+      }));
+    } catch (e) {
+      Logger.log("[B案] NDJSON生成エラー: " + pid + " - " + e.message);
+      skipPatients.push(pid + "（" + e.message + "）");
+    }
+  }
+
+  var ndjsonStr = ndjsonLines.join("\n");
+
+  // ===== 4. Cloud Run へ POST =====
+  ss.toast("Cloud Run に送信中...", "申請書生成", 10);
+
+  var payload = JSON.stringify({ ndjson: ndjsonStr, month: ym });
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "X-Secret-Key": secretKey },
+    payload: payload,
+    muteHttpExceptions: true
+  };
+
+  var resp;
+  try {
+    resp = UrlFetchApp.fetch(endpoint + "/generate", options);
+  } catch (e) {
+    return ui.alert("Cloud Run への接続に失敗しました:\n" + e.message +
+      "\n\nエンドポイント: " + endpoint);
+  }
+
+  var statusCode = resp.getResponseCode();
+  var bodyText = resp.getContentText();
+
+  if (statusCode !== 200) {
+    Logger.log("[B案] HTTP " + statusCode + ": " + bodyText);
+    return ui.alert("申請書生成に失敗しました (HTTP " + statusCode + ")\n\n" + bodyText.slice(0, 300));
+  }
+
+  var result;
+  try {
+    result = JSON.parse(bodyText);
+  } catch (e) {
+    return ui.alert("レスポンスの解析に失敗しました:\n" + bodyText.slice(0, 300));
+  }
+
+  // ===== 5. Drive に保存 =====
+  ss.toast("Drive に保存中...", "申請書生成", 10);
+
+  var folder = V3TR_getOutputFolder_(ss);
+  var monthFolder = V3TR_getOrCreateMonthFolder_(folder, ym);
+  var timestamp = Utilities.formatDate(new Date(), "Asia/Tokyo", "HHmmss");
+
+  var savedFiles = [];
+  var errorPatients = [];
+
+  var patients = result.patients || [];
+  for (var j = 0; j < patients.length; j++) {
+    var p = patients[j];
+    if (p.error || !p.content) {
+      errorPatients.push(p.patientId + "（" + (p.error || "content なし") + "）");
+      continue;
+    }
+    try {
+      var fileName = "申請書_" + p.patientId + "_" + ym + "_" + timestamp + ".xlsx";
+      var xlsxBlob = Utilities.newBlob(
+        Utilities.base64Decode(p.content),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileName
+      );
+      var savedFile = monthFolder.createFile(xlsxBlob);
+      savedFiles.push({ patientId: p.patientId, fileName: fileName, url: savedFile.getUrl(), warnings: p.warnings || [] });
+    } catch (e) {
+      errorPatients.push(p.patientId + "（Drive保存エラー: " + e.message + "）");
+    }
+  }
+
+  // ===== 6. ログ記録 =====
+  V3TR_writeGenerationLog_(ss, ym, genAt, savedFiles, errorPatients.concat(skipPatients));
+
+  // ===== 7. 完了アラート =====
+  var lines = [
+    "【申請書生成完了】",
+    "",
+    "対象月: " + ym,
+    "保存: " + savedFiles.length + " 件",
+    "エラー: " + (errorPatients.length + skipPatients.length) + " 件",
+    "",
+    "保存先フォルダ: " + monthFolder.getUrl(),
+  ];
+
+  if (savedFiles.length > 0) {
+    lines.push("");
+    lines.push("生成ファイル:");
+    savedFiles.forEach(function(f) {
+      var warn = f.warnings.length > 0 ? " ⚠️要確認" : "";
+      lines.push("  " + f.patientId + warn);
+    });
+  }
+  if (errorPatients.length + skipPatients.length > 0) {
+    lines.push("");
+    lines.push("エラー患者:");
+    errorPatients.concat(skipPatients).forEach(function(e) {
+      lines.push("  " + e);
+    });
+  }
+
+  ui.alert(lines.join("\n"));
+}
+
+
+/**
+ * 月別フォルダを取得または作成する
+ * 例: output/2026-03/
+ */
+function V3TR_getOrCreateMonthFolder_(parentFolder, ym) {
+  var folders = parentFolder.getFoldersByName(ym);
+  if (folders.hasNext()) return folders.next();
+  return parentFolder.createFolder(ym);
+}
+
+
+/**
+ * _申請書生成ログ シートに生成結果を追記する
+ */
+function V3TR_writeGenerationLog_(ss, ym, generatedAt, savedFiles, errorList) {
+  var LOG_SHEET = "_申請書生成ログ";
+  var sh = ss.getSheetByName(LOG_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(LOG_SHEET);
+    sh.getRange(1, 1, 1, 8).setValues([[
+      "実行日時", "対象月", "患者ID", "ファイル名", "Drive URL",
+      "warnings", "ステータス", "エラー詳細"
+    ]]);
+    sh.setFrozenRows(1);
+  }
+
+  var rows = [];
+  savedFiles.forEach(function(f) {
+    rows.push([
+      generatedAt, ym, f.patientId, f.fileName, f.url,
+      f.warnings.join(" / "), "OK", ""
+    ]);
+  });
+  errorList.forEach(function(e) {
+    // "patientId（理由）" 形式のパース
+    var match = e.match(/^([^（]+)（(.+)）$/);
+    var pid = match ? match[1] : e;
+    var detail = match ? match[2] : "";
+    rows.push([
+      generatedAt, ym, pid, "", "", "", "ERROR", detail
+    ]);
+  });
+
+  if (rows.length > 0) {
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
+  }
+}
+
+
+/**
  * _JSON出力シートにバックアップ書き込み
  */
 function V3TR_writeSheetBackup_(ss, ym, generatedAt, patientRows) {

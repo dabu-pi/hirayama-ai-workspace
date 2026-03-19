@@ -225,6 +225,7 @@ function onOpen() {
       .addItem("保険者情報 → 患者マスタへ転記", "copyInsurerToMaster_V3")
       .addSeparator()
       .addItem("一括JSON出力（月指定）", "V3TR_menuBatchExportJson")
+      .addItem("【B案】申請書を生成して Drive に保存", "V3TR_menuGenerateApplication_B")
       .addToUi();
   } catch (err) {
     console.error(err);
