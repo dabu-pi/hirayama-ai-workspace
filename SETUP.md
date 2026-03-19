@@ -223,7 +223,38 @@ note "セットアップ完了" -Tag done
 
 ---
 
-## Step 6 — Codex / Claude 共通の起動ルール
+## Step 6 — Claude Code パーミッション設定（3台共通・必須）
+
+`git push` / `clasp push` の確認ダイアログを省略するため、ユーザー共通設定を作成する。
+
+```powershell
+# ファイルが存在しない場合は新規作成、存在する場合は内容を確認して追記
+notepad $env:USERPROFILE\.claude\settings.json
+```
+
+以下の内容を設定する（既存の `allow` 配列がある場合は2行を追記する）:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "Bash(clasp push:*)"
+    ]
+  }
+}
+```
+
+> **注意:** `~/.claude/settings.json` はリポジトリに含まれない。3台のPC（院PC・自宅PC・ノートPC）それぞれで手動作成が必要。
+
+確認:
+```powershell
+cat $env:USERPROFILE\.claude\settings.json
+```
+
+---
+
+## Step 7 — Codex / Claude 共通の起動ルール
 
 AI に作業を依頼する前に、次を確認する。
 

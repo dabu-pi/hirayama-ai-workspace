@@ -303,7 +303,7 @@ C:\hirayama-ai-workspace\
 
 ### Git運用
 
-- **`git push` / `clasp push` は確認なしで実行してよい**（`.claude/settings.json` で `allow` 設定済み）
+- **`git push` / `clasp push` は確認なしで実行してよい**（`~/.claude/settings.json` ユーザー共通設定で `allow` 済み。3台のPCすべてに適用すること → SETUP.md 参照）
 - **通常作業ブランチは `feature/auto-dev-phase3-loop`** とする。新しいPCで作業を始めるときは `git checkout feature/auto-dev-phase3-loop` → `ds` の順で実行する。
 - **Claude Codeは作業完了後、基本的に `de` でcommitとpushまで行う**
 - 人間がやること: 作業開始 → `ds`、作業終了 → `de -ProjectId <id> "説明"`（これだけ）
