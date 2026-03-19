@@ -144,7 +144,9 @@
 - Ver3_amounts.js: §20 継続理由書アラートを骨折/不全骨折除外に修正
 - Ver3_test.js: TEST_SETTINGS_._rawMap に 整復料_骨折_*/固定料_* 単価 14件追加
 - fixture 件数: 48 → 57（TC23a〜TC25b 9件追加）
+- clasp push 済み（2026-03-19、別PC再開時に反映）
 - **runFixtureSuite() PASS は GAS エディタ上で人間が確認すること（ローカル実行不可）**
+- ⚠️ 57/57 PASS 確認待ち（GAS エディタで runFixtureSuite() を実行すること）
 
 **実装済み fixture:**
 
@@ -172,7 +174,7 @@
 
 | 優先 | タスク | 分類 | 概要 |
 |---|---|---|---|
-| 1 | clasp push → runFixtureSuite() PASS確認 | **確認** | Ver3_test.js + Ver3_amounts.js を clasp push 後、GAS エディタで runFixtureSuite() 実行して 57/57 PASS を確認する。 |
+| 1 | runFixtureSuite() PASS確認 | **確認待ち（人間）** | clasp push 完了済み。GAS エディタで runFixtureSuite() を実行して 57/57 PASS を確認する。 |
 | 2 | transferData への新5列反映 | **調査先行** | Ver3_transferData.js（月次転記）への新5列反映。申請書データへの影響・不要列の除外方針を確認してから実装着手。 |
 
 **保留継続:**
