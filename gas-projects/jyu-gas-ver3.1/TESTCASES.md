@@ -3,8 +3,8 @@
 最終更新: 2026-03-19
 参照: SPEC.md（柔整 Ver3 金額計算 仕様書）
 
-> **fixture テスト: 57/57 実装完了（2026-03-19） — GAS上での PASS 確認は人間が実施**
-> TC01〜TC25b 全57ケース。TC23〜TC25b（9件）は今セッションで追加。runFixtureSuite() での PASS 確認はスプレッドシート上で人間が実施すること。
+> **fixture テスト: 57/57 PASS 確認済み（2026-03-19）**
+> TC01〜TC25b 全57ケース。TC23〜TC25b（特殊骨折制限 9件）含む全件 GAS エディタ上で runFixtureSuite() PASS 確認済み。
 >
 > **2026-03-18 金額不整合修正:** [A] 施術継続中シナリオで case2 再検が誤算定されるバグを修正。
 > `getMonthlyBilledStatus_` に reBilled 用 `isCaseEndedBefore_` チェック追加 + `calcHeaderAmountsByVisitKey_V3_` の reFee 条件に `!reBilled` を追加。TC09b fixture で修正後の動作を確認。
