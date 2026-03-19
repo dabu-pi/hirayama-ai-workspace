@@ -473,7 +473,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     row["負傷年月日1"] = p1.injuryDate || "";
     row["初検年月日1"] = cs.startDate1 || cs.firstDate || aggDates.minDate || "";
     row["施術開始年月日1"] = cs.startDate1 || cs.startDate || aggDates.minDate || "";
-    row["施術終了年月日1"] = cs.endDate1 || "";  // 治療終了時のみ（フォールバックしない）
+    row["施術終了年月日1"] = cs.endDate1 || aggDates.maxDate || "";  // 継続中は当月最終施術日
     row["実日数1"] = p1.visitDays || jitsunisu;  // ★部位別実日数（フォールバック:ケース全体）
     row["転帰1"] = cs.tenki1 || "";
 
@@ -482,7 +482,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     row["負傷年月日2"] = p2.injuryDate || "";
     row["初検年月日2"] = cs.startDate2 || cs.firstDate || aggDates.minDate || "";
     row["施術開始年月日2"] = cs.startDate2 || cs.startDate || aggDates.minDate || "";
-    row["施術終了年月日2"] = cs.endDate2 || "";  // 治療終了時のみ
+    row["施術終了年月日2"] = cs.endDate2 || aggDates.maxDate || "";  // 継続中は当月最終施術日
     row["実日数2"] = (V3TR_buildInjuryLabel_(p2)) ? (p2.visitDays || jitsunisu) : "";  // ★部位別実日数
     row["転帰2"] = cs.tenki2 || "";
 
