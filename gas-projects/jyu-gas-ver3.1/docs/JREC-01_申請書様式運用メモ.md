@@ -545,7 +545,7 @@ if seikyu_kubun:
     --image asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/jrec-appgen-server:latest \
     --region asia-northeast1
 
-現在の最新リビジョン: jrec-appgen-server-00005-wh9（2026-03-20 デプロイ）
+現在の最新リビジョン: jrec-appgen-server-00006-cm8（2026-03-20 デプロイ / U5後期高齢者対応）
 Service URL: https://jrec-appgen-server-737882491829.asia-northeast1.run.app
 ```
 
