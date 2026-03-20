@@ -1667,6 +1667,35 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   if (burden6 === 2 && CM.給付8_7割) { sh.getRange(CM.給付8_7割).setValue("⑧・⑦"); count++; }
   if (burden6 === 3 && CM.給付8_7割) { sh.getRange(CM.給付8_7割).setValue("⑧・⑦"); count++; }
 
+  // ===== D4 負傷原因 行20 BR20 =====
+  // 出力条件: case2の部位1に金額あり = 申請書3部位目が存在 = 「3部位目を100分の60で算定することとなる場合」
+  // 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
+  // ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定。docs §4 D4 参照
+  // ソース: 初検情報履歴シート由来の「負傷の状況」「負傷の場所」「負傷の日時」（transferCols登録済み）
+  var part3HasData = (row2 != null) && (
+    Number(row2["部位1_計"] || 0) > 0 ||
+    Number(row2["部位1_後療料_金額"] || 0) > 0
+  );
+  if (part3HasData) {
+    var d4Parts = [];
+    function V3TR_buildInjuryText_(r) {
+      var seg = [];
+      var place  = String(r["負傷の場所"] || "").trim();
+      var status = String(r["負傷の状況"] || "").trim();
+      var dt     = String(r["負傷の日時"] || "").trim();
+      if (place)  seg.push(place);
+      if (status) seg.push(status);
+      if (dt)     seg.push(dt);
+      return seg.join("\u3000"); // 全角スペース区切り
+    }
+    var d4T1 = V3TR_buildInjuryText_(row1);
+    var d4T2 = row2 ? V3TR_buildInjuryText_(row2) : "";
+    if (d4T1) d4Parts.push(d4T1);
+    if (d4T2 && d4T2 !== d4T1) d4Parts.push(d4T2);
+    var d4Text = d4Parts.join(" / ");
+    if (d4Text) put(CM.負傷原因, d4Text);
+  }
+
   // ===== 施術機関固定情報（設定シートから取得）=====
   // U1: 都道府県番号 → CI2 / U2: 施術機関コード → CZ2 / U4: 単独 → CT8 / 下段登録記号番号 → CR49
   // ★ U2 は 登録記号番号 から先頭「協/契」のみ除去（ハイフン保持）した値を使う（暫定運用）

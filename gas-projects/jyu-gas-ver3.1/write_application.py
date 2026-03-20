@@ -534,6 +534,38 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
             ws[kyufu_cell] = kyufu_text
             count += 1
 
+    # ===== D4 負傷原因 BR20 =====
+    # 出力条件: row2の部位1に金額あり = 申請書3部位目が存在
+    #           = 「3部位目を100分の60で算定することとなる場合」
+    # 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
+    # ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定
+    # ソース: 「負傷の状況」「負傷の場所」「負傷の日時」（初検情報履歴シート由来・transferCols登録済み）
+    part3_has_data = (
+        row2 is not None and (
+            (safe_num(row2.get("部位1_計")) or 0) > 0 or
+            (safe_num(row2.get("部位1_後療料_金額")) or 0) > 0
+        )
+    )
+    if part3_has_data:
+        def _build_injury_text(row):
+            segs = []
+            for k in ("負傷の場所", "負傷の状況", "負傷の日時"):
+                v = str(row.get(k) or "").strip()
+                if v:
+                    segs.append(v)
+            return "\u3000".join(segs)  # 全角スペース区切り
+        t1 = _build_injury_text(row1)
+        t2 = _build_injury_text(row2) if row2 else ""
+        unique_texts = []
+        seen: set = set()
+        for t in [t1, t2]:
+            if t and t not in seen:
+                seen.add(t)
+                unique_texts.append(t)
+        injury_text = " / ".join(unique_texts)
+        if injury_text:
+            put(CELL_MAP["負傷原因"], injury_text)
+
     # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
     # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT8 / 下段登録記号番号 → CR49
     # clinic_info が None の場合はスキップ（後方互換: 旧NDJSON/単体テスト対応）

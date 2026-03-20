@@ -288,7 +288,7 @@
 - `row["請求区分"]` 生成: GAS側 `V3TR_buildTransferRow_` 内で `cs.firstDate` の年月 vs `ym` で "新規"/"継続" を判定
 - DH31 書込: `write_application.py` の `put(CELL_MAP["請求区分"], seikyu_kubun)` で実装
 - 保留: 同月内治癒再発（case1継続 + case2同月初検 → 両方○）は将来対応
-| D4 | 負傷の原因欄が未書込 | `CELL_MAP["負傷原因"]="BR20"` は定義済み・`transferCols` に未登録・`write_application.py` に書込処理が欠落 | `transferCols` 追加 + py 書込処理追加 | **中** |
+| D4 | 負傷の原因欄 | ✅ **実装済み（2026-03-20）** 3部位目60/100算定時（row2["部位1_計"]>0）のみ BR20 に出力。GAS: V3TR_writeToApplication_ / Python: write_application() | — | ~~中~~ **DONE** |
 | D5 | 施術証明欄・委任欄の自動/手書き分離が未明文化 | 両欄ともに py 実装なし（全手書き前提で空出力） | `write_application.py` + 運用ドキュメント | **低** |
 
 #### 各差分の詳細
@@ -363,13 +363,15 @@ INJURY_ROWS への `contMonths`/`freqDays` 追加計画は廃止確定。M31 書
 - 問題ケース: 「頸部」と入力し左右なしで記録されていると申請書の負傷名欄に左右が出ない
 - **確認箇所**: 実シートの部位名入力フォーマット（左右を部位名に含めているか）
 
-**D4 — 負傷の原因欄**
+**D4 — 負傷の原因欄** — ✅ 実装済み（2026-03-20）
 
-- `Ver3_transferData.js` の GAS セルマップ: `負傷原因: "BR20"` 定義あり（A案/GAS直書き用）
-- `write_application.py` の `CELL_MAP["負傷原因"] = "BR20"` 定義あり
-- しかし `write_application()` 関数内に `put(CELL_MAP["負傷原因"], ...)` の呼び出しが**存在しない**（実装欠落）
-- `transferCols` にも「負傷原因」キーが未登録 → NDJSON に値が入らない
-- **修正箇所**: `transferCols` に `"負傷原因"` を追加 + `V3TR_buildTransferRow_` でセット + `write_application.py` に書込処理追加
+- 出力条件: 「3部位目を100分の60で算定することとなる場合」= `row2["部位1_計"] > 0` が true のとき
+- 新しい transferCol 追加なし。既存の `負傷の状況` / `負傷の場所` / `負傷の日時` (transferCols登録済み) から派生
+- GAS: `V3TR_writeToApplication_` に `V3TR_buildInjuryText_` + part3HasData 判定を追加
+- Python: `write_application()` に `_build_injury_text()` + part3_has_data 判定を追加
+- 出力形式: `{負傷の場所　負傷の状況　負傷の日時}` を全角スペース結合。複数ケースは " / " で結合
+- ★ 後期高齢・2部位以下・3部位目実績なし → BR20 空欄（制度上正しい）
+- ★ 残課題: multiCoef3 が 0.6 以外の設定の場合の判定精度 / 告示原文での制度確認
 
 **D5 — 施術証明欄・委任欄**
 
