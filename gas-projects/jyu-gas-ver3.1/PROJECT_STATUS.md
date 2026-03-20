@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-20（○専用セル方式実装・D4書込先BR21分離修正 / Cloud Run 再デプロイ要）
+最終更新: 2026-03-20（○専用セル方式・D4書込先BR21修正・テンプレ英数字リネーム・Revision 00010-h77 deploy完了）
 
 ---
 
@@ -11,19 +11,19 @@
 - 状態: 稼働中（B案確認完了。D2/U5後期高齢者対応確定済み。残課題: D5/U2/U6暫定運用欄公式確認）
 - 優先度: 最優先
 - ブランチ: `feature/auto-dev-phase3-loop`
-- 最新コミット: `（本コミット）`
+- 最新コミット: `ce29f9f`
 
 ### 到達点スナップショット（2026-03-20 更新）
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ⚠️ **再デプロイ必要**（00008-8rx は旧実装。○専用セル方式・D4書込先修正を反映するため再ビルド要）|
-| `/health` 200 OK 確認済み | ✅ 完了（再デプロイ後に再確認）|
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00010-h77 deploy完了（2026-03-20）** — ○専用セル方式・D4 BR21書込・テンプレ英数字リネーム反映済み |
+| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-20 Revision 00010-h77）`{"status":"ok"}` |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
 | `clasp push`（最新 GAS を反映） | ✅ 2026-03-20 済み（7ファイル）|
-| GAS → Cloud Run 疎通確認 | ✅ `/health` / `/generate` 200 OK 確認済み（再デプロイ後に再確認）|
-| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⚠️ 再デプロイ後に再確認必要（○専用セル方式・D4書込先修正が反映されているか）|
+| GAS → Cloud Run 疎通確認 | ✅ `/health` 200 OK（Revision 00010-h77）。`/generate` は B案実行で確認要 |
+| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⚠️ **B案再生成で目視確認が残り** — ○専用セル方式・D4 BR21書込が正しく帳票に表示されるか確認 |
 | 申請書上段欄（U1〜U7）実装 | ✅ 全欄実装済み（○専用セル方式に変更済み）|
 | 下段 登録記号番号 分割欄書込 | ✅ 修正済み（CR51/DK51/DR51 分割書込、2026-03-20）|
 | U6 給付割合 片側丸付け | ✅ 修正済み（2026-03-20、現方式維持）|
@@ -49,7 +49,7 @@
 
 ### 現在のプロジェクト状態
 
-**○専用セル方式・D4書込先修正（本コミット）。次の必須作業: Cloud Run 再デプロイ → B案再生成で確認。**
+**○専用セル方式・D4書込先修正・テンプレ英数字リネーム完了。Revision 00010-h77 deploy済み・/health OK。次の必須作業: B案再生成で帳票目視確認。**
 
 | カテゴリ | 状態 | 詳細 |
 |---|---|---|
@@ -169,7 +169,8 @@
 | **mineo U5=⑥家族 誤表示（保険種別文字列バグ）** | `保険種別` がGASマスタで `"後期高齢"` 等の名称文字列で保存されているのに、`V3TR_deriveHonkeku_`/`derive_honkeku_cell` が `Number("後期高齢")` = 0 に変換し後期高齢判定をスキップ → 続柄空白 → "家族" fallback | GAS: `INS_TYPE_NAME_MAP_` 追加（名称→数値変換）。Python: `_INS_TYPE_NAME_MAP` + `detect_insurance_type` fallback 追加。両側 clasp push / Cloud Build / Revision 00007-vwf 反映済み | 9d0e398 |
 | **英語日付混入（"Mon Feb 02 2026..."）** | `V3TR_loadInitInfo_` の `get()` が `String(dateObj)` で英語Date文字列化。「負傷の日時」列がDate型セルの場合に発生。Python側では`put_wareki_ymd`をスキップするが、D4の`injury_text`に混入する | GAS: `get()` で `instanceof Date` チェック→`Utilities.formatDate("yyyy/MM/dd")` 変換 | （本コミット）|
 | **「負傷の原因」D4書込先ずれ（再修正）** | `BR20:DV24`はラベル＋内容が同一結合セル。旧修正（E44/摘要欄）は暫定対応で意味的に誤り | Python: `BR20:DV24`をoutputファイル内のみ分割→BR20:DV20ラベル行（"負傷の原因"保持）＋BR21:DV24コンテンツ行。`D4_INJURY_CONTENT_CELL = "BR21"` に書込 | （本コミット）|
-| **丸付けレイアウト崩れ（性別/保険種別/単独区分/本家区分）** | 文字置換方式（"1"→"①"等）がセルの文字縮小・位置ずれを引き起こしていた。テンプレートの固定ラベル文字も置換対象になりレイアウトが崩壊 | Python: `SELECTION_SPLIT_MAP`で各選択肢の結合セルをラベル行＋マーカー行に分割。テンプレート文字は保持し、マーカー行に"○"のみ書込む○専用セル方式に全面切替（`_apply_selection_splits` / `_write_selection_marker`）| （本コミット）|
+| **丸付けレイアウト崩れ（性別/保険種別/単独区分/本家区分）** | 文字置換方式（"1"→"①"等）がセルの文字縮小・位置ずれを引き起こしていた。テンプレートの固定ラベル文字も置換対象になりレイアウトが崩壊 | Python: `SELECTION_SPLIT_MAP`で各選択肢の結合セルをラベル行＋マーカー行に分割。テンプレート文字は保持し、マーカー行に"○"のみ書込む○専用セル方式に全面切替（`_apply_selection_splits` / `_write_selection_marker`）| c039ff7 |
+| **テンプレート xlsx 日本語名 Cloud Build 失敗** | `療養費支給申請書.xlsx` の日本語ファイル名が Cloud Build 環境で文字化けし `COPY` ステップでファイル未検出 | `application_template.xlsx` に英数字リネーム。Dockerfile・write_application.py `TEMPLATE_FILE` を同名に修正 | ce29f9f |
 
 ### 今回完了したこと（2026-03-20）
 
@@ -183,13 +184,15 @@
 | JREC-01スプレッドシートID確定 | `1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM` |
 | **U5保険種別文字列バグ修正** | 根本原因: 保険種別の名称文字列("後期高齢")→数値変換漏れ。GAS/Python両側にINS_TYPE_NAME_MAPを追加。Revision 00007-vwf deploy済み |
 | **○専用セル方式 全面実装** | 性別/保険種別/単独区分/本家区分の4項目を`SELECTION_SPLIT_MAP`方式に切替。テンプレート固定ラベル保持＋マーカー行"○"書込。openpyxlコードのみ変更（Cloud Run 再デプロイで反映）|
-| **D4 書込先再修正（BR21）** | BR20:DV24を出力ファイル内で分割→BR20ラベル行保持・BR21コンテンツ行書込。E44摘要汚染なし。動作テスト確認済み（本コミット）|
+| **D4 書込先再修正（BR21）** | BR20:DV24を出力ファイル内で分割→BR20ラベル行保持・BR21コンテンツ行書込。E44摘要汚染なし。動作テスト確認済み（c039ff7）|
+| **テンプレ英数字リネーム** | `療養費支給申請書.xlsx` → `application_template.xlsx`。Dockerfile・TEMPLATE_FILE修正。Cloud Build 文字化け問題を解消（ce29f9f）|
+| **Cloud Run Revision 00010-h77 deploy** | 上記全修正を反映。`/health` 200 OK 確認済み（2026-03-20）|
 
 ### まだ残っていること（次の作業候補）
 
 | 優先 | タスク | 種別 | 理由 |
 |---|---|---|---|
-| **0** | **Cloud Run 再デプロイ** | **必須・即時** | **本コミットの write_application.py 変更（○専用セル方式・D4 BR21）は Cloud Run に反映されていない。`gcloud builds submit` + `gcloud run deploy` 実施後に B案再生成で目視確認** |
+| **0** | **B案再生成で帳票目視確認** | **必須・次の作業** | **Revision 00010-h77 deploy済み。スプレッドシートから B案を実行し、○専用セル方式（4項目）・D4 BR21書込が帳票上で正しく表示されるか目視確認** |
 | 1 | D5 施術証明欄・委任欄 | 未実装（低優先）| 手書き運用で当面は問題なし |
 | 3 | ~~U5 後期高齢者の本家区分~~ | ✅ **確定済み（2026-03-20）**| 高一（DH8）基本 / 7割給付（負担3割）のみ高7（DH12）|
 | 4 | U2 施術機関コード | 暫定運用 | 先頭「協/契」除去・ハイフン保持の公式根拠未確認。現行値は実務上OK |
@@ -203,8 +206,8 @@
 |---|---|---|
 | Run_Log シート | ✅ 反映済み | `Run_Log!A48:J48`（D2/M31整合化完了 2026-03-20）|
 | Projects シート | ✅ 反映済み | `Projects!A4:M4` 次アクション・最終更新日更新済み |
-| GitHub（コード） | ✅ 反映済み | commit 2600dcb（feature/auto-dev-phase3-loop）|
-| Cloud Run Revision | ⚠️ **再デプロイ必要** | 00008-8rx は旧実装（文字置換方式）。○専用セル方式・D4 BR21書込 を反映するには Docker rebuild + redeploy が必要 |
+| GitHub（コード） | ✅ 反映済み | commit ce29f9f（feature/auto-dev-phase3-loop）|
+| Cloud Run Revision | ✅ **反映済み** | **00010-h77**（○専用セル方式・D4 BR21書込・テンプレ英数字リネーム 2026-03-20）|
 | JREC-01スプレッドシート（患者マスタ） | ✅ 読取アクセス可能 | 共有復旧済み（2026-03-20）。gspread で患者マスタ確認済み。**スプレッドシートID: `1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM`** |
 | JREC-01スプレッドシート（患者マスタ書込） | ⚠️ 未実施 | 今回確認の結果、修正不要と判明。書込権限は共有設定次第 |
 
