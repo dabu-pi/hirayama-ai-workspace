@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-21（○画像位置・形状微調整・SELECTION_OVAL_MAP導入・Revision deploy待ち）
+最終更新: 2026-03-21（○画像位置・形状微調整・SELECTION_OVAL_MAP導入・Revision 00013-xtd deploy完了）
 
 ---
 
@@ -17,7 +17,7 @@
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision deploy中（2026-03-21）** — ○画像位置・形状微調整。SELECTION_OVAL_MAP導入（full_merge範囲で上N行移動効果）・OVAL_STYLES追加・KYUFU_OVAL_MAP 4列幅化 |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00013-xtd deploy完了（2026-03-21）** — ○画像位置・形状微調整。SELECTION_OVAL_MAP導入（full_merge範囲で上N行移動効果）・OVAL_STYLES追加・KYUFU_OVAL_MAP 4列幅化 |
 | `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-21 Revision 00012-7mn）`{"status":"ok"}` |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
