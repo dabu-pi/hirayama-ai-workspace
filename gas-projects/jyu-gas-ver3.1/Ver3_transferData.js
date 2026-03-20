@@ -2120,6 +2120,11 @@ function V3TR_menuBatchExportJson() {
     }
   }
 
+  // ① patientCount後補正: スキップ発生時の validate_batch_safe 不一致を防ぐ
+  var actualMetaA = JSON.parse(metaLine);
+  actualMetaA.patientCount = ndjsonLines.length - 1;  // meta行を除いた実患者数
+  ndjsonLines[0] = JSON.stringify(actualMetaA);
+
   // 3. Drive に NDJSON ファイルを出力
   var ndjsonContent = ndjsonLines.join("\n");
   var fileName = "transfer_batch_" + ym + ".ndjson";
@@ -2327,6 +2332,83 @@ function V3TR_menuGenerateApplication_B() {
       skipPatients.push(pid + "（" + e.message + "）");
     }
   }
+
+  // ===== ②-A プリフライトバリデーション（Cloud Run POST 前）=====
+  // NDJSON生成は成功したが内容に問題がある患者を検出し、人間に判断を委ねる
+  var PREFLIGHT_REQUIRED_KEYS = ["患者ID", "対象月", "患者氏名", "当月合計", "窓口負担額", "請求金額"];
+  var preflightErrors = [];  // [{pid, reasons:[]}]
+
+  for (var pi = 1; pi < ndjsonLines.length; pi++) {
+    var pLine;
+    try { pLine = JSON.parse(ndjsonLines[pi]); } catch (pe) {
+      preflightErrors.push({ pid: "(行" + (pi + 1) + ")", reasons: ["JSONパース失敗: " + pe.message] });
+      continue;
+    }
+    var ppid = pLine.patientId || "(患者ID不明)";
+    var reasons = [];
+    var c1 = pLine.case1;
+    if (!c1) {
+      reasons.push("case1 が null（転記データ未生成の可能性）");
+    } else {
+      PREFLIGHT_REQUIRED_KEYS.forEach(function(k) {
+        var v = c1[k];
+        if (v === null || v === undefined || String(v).trim() === "") {
+          reasons.push("必須項目「" + k + "」が空");
+        }
+      });
+      var c1Month = String(c1["対象月"] || "").trim();
+      if (c1Month && c1Month !== ym) {
+        reasons.push("対象月不一致（データ=" + c1Month + ", 実行月=" + ym + "）");
+      }
+    }
+    if (reasons.length > 0) {
+      preflightErrors.push({ pid: ppid, reasons: reasons });
+    }
+  }
+
+  // ===== ②-B プリフライト結果処理 =====
+  if (preflightErrors.length > 0) {
+    var pfLines = ["【確認】以下の患者にデータ上の問題が見つかりました。\n"];
+    preflightErrors.forEach(function(e) {
+      pfLines.push("  " + e.pid + ":");
+      e.reasons.forEach(function(r) { pfLines.push("    ・" + r); });
+    });
+    pfLines.push("\nこの患者をスキップして他の患者のみ生成しますか？");
+    pfLines.push("（「はい」: 問題患者を除外して続行 ／ 「いいえ」: 中断）");
+
+    var pfResp = ui.alert("申請書生成（B案）", pfLines.join("\n"), ui.ButtonSet.YES_NO);
+    if (pfResp !== ui.Button.YES) {
+      return ui.alert("申請書生成を中断しました。\n問題患者のデータを確認してから再実行してください。");
+    }
+
+    // 問題患者を NDJSON から除外
+    var errorPids = {};
+    preflightErrors.forEach(function(e) { errorPids[e.pid] = true; });
+    var filteredLines = [ndjsonLines[0]];  // meta行は保持
+    for (var fi = 1; fi < ndjsonLines.length; fi++) {
+      var fl;
+      try { fl = JSON.parse(ndjsonLines[fi]); } catch(_) { continue; }
+      if (!errorPids[fl.patientId]) {
+        filteredLines.push(ndjsonLines[fi]);
+      } else {
+        // skipPatients に転記（除外理由付き）
+        var pfErr = preflightErrors.filter(function(e) { return e.pid === fl.patientId; })[0];
+        var pfReason = pfErr ? pfErr.reasons.join(" / ") : "プリフライト除外";
+        skipPatients.push(fl.patientId + "（プリフライト除外: " + pfReason + "）");
+        Logger.log("[B案] プリフライト除外: " + fl.patientId + " - " + pfReason);
+      }
+    }
+    ndjsonLines = filteredLines;
+
+    if (ndjsonLines.length === 1) {
+      return ui.alert("問題患者を除外した結果、生成対象の患者がいなくなりました。\n処理を中断します。");
+    }
+  }
+
+  // ① patientCount後補正: スキップ・プリフライト除外後の実患者数で補正
+  var actualMetaB = JSON.parse(ndjsonLines[0]);
+  actualMetaB.patientCount = ndjsonLines.length - 1;  // meta行を除いた実患者数
+  ndjsonLines[0] = JSON.stringify(actualMetaB);
 
   var ndjsonStr = ndjsonLines.join("\n");
 
