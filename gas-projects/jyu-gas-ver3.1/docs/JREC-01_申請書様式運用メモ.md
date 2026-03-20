@@ -161,7 +161,7 @@
 
 ---
 
-## 3. 申請書上段・行31 未点検欄の整理
+## 4. 申請書上段・行31 未点検欄の整理
 
 > 詳細は `PROJECT_STATUS.md` の「申請書上段・31行目 未点検欄点検タスク」を参照。
 
@@ -179,7 +179,7 @@
 
 ---
 
-## 4. 申請書欄 公式定義整理（2026-03-20）
+## 5. 申請書欄 公式定義整理（2026-03-20）
 
 > 調査方針: 厚生労働省通知・国保連記載要領を一次情報として優先。
 > 非公式ブログ・民間解説は使用しない。
@@ -399,7 +399,7 @@ if seikyu_kubun:
 
 ---
 
-## 4-D. D4 — 負傷の原因欄（BR20）
+## 5-D. D4 — 負傷の原因欄（BR20）
 
 > 作成: 2026-03-20
 
@@ -448,7 +448,7 @@ if seikyu_kubun:
 
 ---
 
-## 5. 設計方針まとめ（将来の公費対応を見据えて）
+## 6. 設計方針まとめ（将来の公費対応を見据えて）
 
 | 方針 | 内容 |
 |---|---|
@@ -459,7 +459,7 @@ if seikyu_kubun:
 
 ---
 
-## 6. 参照ドキュメント
+## 7. 参照ドキュメント
 
 | ドキュメント | 内容 |
 |---|---|
@@ -472,11 +472,11 @@ if seikyu_kubun:
 
 ---
 
-## 7. 中断前記録・運用注意事項（2026-03-20 最終更新）
+## 8. 中断前記録・運用注意事項（2026-03-20 最終更新）
 
 > ⚠️ **次回再開時はまず `PROJECT_STATUS.md` の「現在のプロジェクト状態」と「まだ残っていること」を読むこと。**
 
-### 7-0. B案最終確認結果（2026-03-20）
+### 8-0. B案最終確認結果（2026-03-20）
 
 **B案申請書生成は全項目動作確認済み。次の作業は D2/D5/U5後期高齢者の制度確認。**
 
@@ -488,7 +488,7 @@ if seikyu_kubun:
 | P1 二重build除去後の出力不変 | ✅ 確認済み | ファイル数・内容変化なし |
 | 生成ファイル目視確認 | ✅ OK | 全患者分を目視確認済み |
 
-### 7-1. 実装済み項目の整合状態（2026-03-20 最終）
+### 8-1. 実装済み項目の整合状態（2026-03-20 最終）
 
 | 欄 | 実装状態 | 暫定/保留 | B案確認状態 |
 |---|---|---|---|
@@ -502,9 +502,9 @@ if seikyu_kubun:
 | 下段 登録記号番号 | ✅ 実装済み（分割欄修正済）| — | ✅ B案最終確認済み（CR51/DK51/DR51 分割書込）|
 | D4 負傷原因 | ✅ 実装済み | ⚠️ **暫定運用** | 3部位ケースの実案件確認が残課題 |
 | D5 施術証明欄 | ❌ 未実装 | — | 手書き運用継続 |
-| D2 継続月数・頻回 | ❌ 保留中 | 制度定義（月10回以上の連続月数）の再確認が必要 | — |
+| D2 継続月数・頻回 | ✅ 設計確定・M31出力停止 | 正本=摘要欄+長期欄（手動）。M31空欄許容 | ✅ コード整合済み（8fb80a6）|
 
-### 7-2. 今回修正した不具合（2026-03-20）
+### 8-2. 今回修正した不具合（2026-03-20）
 
 **不具合1: U6 が両方丸になっていた**
 - 旧実装: `"⑧・⑦"` 固定文字列でセル全体を上書き → 8と7の両方が丸になる
@@ -521,7 +521,7 @@ if seikyu_kubun:
 - 対応: Docker rebuild（Cloud Build）+ Cloud Run redeploy → Revision `jrec-appgen-server-00003-9mh`
 - 運用注記: **`write_application.py` を変更したら必ず Cloud Run redeploy が必要。clasp push だけでは不十分。**
 
-### 7-3. 実装済みと暫定運用の境界
+### 8-3. 実装済みと暫定運用の境界
 
 | 種別 | 項目 | 内容 |
 |---|---|---|
@@ -533,18 +533,21 @@ if seikyu_kubun:
 | **未確認** | 高7 の "⓪" 表示 | Unicode U+24EA が帳票上で正しく表示されるかの実機確認未完了 |
 | **保留** | U5 後期高齢者 | 保険種別=6 または75歳以上の場合の本家区分記載方式を要確認 |
 | **未実装** | D5 施術証明欄 | 手書き運用 |
-| **保留** | D2 継続月数・頻回 | 「月10回以上の連続月数」の制度定義の確認が必要 |
+| **整合済み** | D2 継続月数・頻回 | 設計確定（2026-03-20）。M31出力停止（B案）。正本=摘要欄+長期欄（手動）。内部値（rawContMonths/freqStarted）は保持 |
 
-### 7-4. Cloud Run 運用注意
+### 8-4. Cloud Run 運用注意
 
 ```
 デプロイ手順（write_application.py 変更時に必ず実施）:
   gcloud config set project hirayama-jrec-appgen
-  gcloud builds submit --tag gcr.io/hirayama-jrec-appgen/jrec-appgen-server:latest
-  gcloud run deploy jrec-appgen-server --image gcr.io/hirayama-jrec-appgen/jrec-appgen-server:latest --region asia-northeast1
+  gcloud builds submit --tag asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/jrec-appgen-server:latest
+  gcloud run deploy jrec-appgen-server \
+    --image asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/jrec-appgen-server:latest \
+    --region asia-northeast1
 
-現在の最新リビジョン: jrec-appgen-server-00003-9mh（2026-03-20 デプロイ）
+現在の最新リビジョン: jrec-appgen-server-00005-wh9（2026-03-20 デプロイ）
 Service URL: https://jrec-appgen-server-737882491829.asia-northeast1.run.app
 ```
 
 > ⚠️ **GAS側のみ変更なら clasp push だけでよい。Python側変更時は必ず上記 redeploy まで実施すること。**
+> ✅ D2/M31整合化（commit 8fb80a6）は Python 動作変更なし → **再デプロイ不要**（00005-wh9 継続使用）
