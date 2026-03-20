@@ -739,23 +739,29 @@ function V3TR_calcAgeAtEndOfMonth_(birthday, ym) {
  * U5本家区分: row1のデータから appCellMap のキー名を返す（暫定ルール）
  *
  * 判定ロジック（優先順位順）:
- *   1. 保険種別=6（後期高齢）→ null（保留: 制度上の記載方式未確認）
+ *   1. 保険種別=6（後期高齢）→ "高一"基本。7割給付（負担3割）のみ "高7"（★制度確定2026-03-20）
  *   2. 6歳未満（就学前）→ "六歳"（DB10）
  *   3. 70〜74歳 + 2割負担 → "高一"（DH8）
  *   4. 70〜74歳 + 3割負担 → "高7"（DH12）
  *   5. 70〜74歳 + 割合不明 → "高一"（安全側）
- *   6. 75歳以上 → null（後期高齢者扱い・保留）
+ *   6. 75歳以上 → 後期高齢者扱い。高一基本、7割給付のみ高7
  *   7. 70歳未満 + 続柄="本人" → "本人"（DB8）
  *   8. 70歳未満 + 続柄その他 → "家族"（DB12）
  *
  * 生年月日が不明な場合は年齢区分をスキップして続柄のみで本人/家族判定。
- * ★ 公式一次資料での完全確認未完了。現時点の暫定運用（docs §4 U5 参照）。
+ * 保険種別はGASマスタで"後期高齢"等の名称文字列で保存されているため、名称→数値変換を内部で行う。
  *
  * @param {Object} row1 - transferData の row（患者毎データ）
  * @return {string|null} appCellMap のキー名 or null（書込なし）
  */
 function V3TR_deriveHonkeku_(row1) {
-  const insuranceType = Number(row1["保険種別"]) || 0;
+  // 保険種別: 数値(6)も名称文字列("後期高齢")も数値に正規化
+  // GASマスタは"協会けんぽ"等の文字列で保存されているため、文字列→数値マップが必要
+  const INS_TYPE_NAME_MAP_ = {
+    "協会けんぽ": 1, "組合": 2, "共済": 3, "国保": 4, "退職": 5, "後期高齢": 6,
+  };
+  const insuranceTypeRaw = row1["保険種別"];
+  const insuranceType = (Number(insuranceTypeRaw) || INS_TYPE_NAME_MAP_[String(insuranceTypeRaw || "").trim()] || 0);
   const relation      = String(row1["続柄"] || "").trim();
   const burden        = Number(row1["一部負担金割合"]) || 0;
   const birthday      = row1["患者生年月日"];

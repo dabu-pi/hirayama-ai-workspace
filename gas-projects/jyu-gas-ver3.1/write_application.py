@@ -797,7 +797,19 @@ def derive_honkeku_cell(row1: dict) -> str | None:
 
     生年月日がない場合: 続柄のみで本人/家族を判定（年齢区分はスキップ）。
     """
-    ins_type = safe_int(row1.get("保険種別")) or 0
+    # 保険種別: 数値(6)も名称文字列("後期高齢")も数値に正規化
+    # GASマスタは"協会けんぽ"等の文字列で保存されているため、文字列→数値マップが必要
+    _INS_TYPE_NAME_MAP = {
+        "協会けんぽ": 1, "組合": 2, "共済": 3, "国保": 4, "退職": 5, "後期高齢": 6,
+    }
+    ins_type_raw = row1.get("保険種別")
+    ins_type = safe_int(ins_type_raw)
+    if ins_type is None and ins_type_raw:
+        ins_type = _INS_TYPE_NAME_MAP.get(str(ins_type_raw).strip())
+    if ins_type is None:
+        ins_type = detect_insurance_type(str(row1.get("保険者番号") or "")) or 0
+    ins_type = ins_type or 0
+
     relation = str(row1.get("続柄") or "").strip()
     burden   = safe_int(row1.get("一部負担金割合")) or 0
     birthday = row1.get("患者生年月日")

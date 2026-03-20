@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-20（B案最終確認完了・3件生成/エラー0件/mineo問題なし/P1確認完了）
+最終更新: 2026-03-20（U5保険種別文字列バグ修正・Revision 00007-vwf deploy完了）
 
 ---
 
@@ -17,7 +17,7 @@
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ 完了（最新: Revision jrec-appgen-server-00003-9mh, 2026-03-20）|
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ 完了（最新: Revision jrec-appgen-server-00007-vwf, 2026-03-20）|
 | `/health` 200 OK 確認済み | ✅ 完了 |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
@@ -33,6 +33,7 @@
 | B案 2026-02 申請書生成 3件完了 | ✅ 実シート確認済み（2026-03-20）— 生成3件 / エラー0件 |
 | B案高速化 P1（二重build除去） | ✅ 実装完了（2026-03-20）— `V3TR_exportTransferJson_` に `skipBuild` 引数追加、B案ループで `true` 渡し |
 | mineo 患者マスタ直接確認（共有復旧後）| ✅ 確認済み（2026-03-20）— `負担割合=0.1`（正値）/ `一部負担金割合`列なし / `保険種別`空欄（Python自動判定で補完）|
+| **U5保険種別文字列バグ修正・Revision 00007-vwf** | ✅ **完了（2026-03-20）** — 保険種別が文字列"後期高齢"で格納されるのにNumber("後期高齢")=0になり家族fallbackに落ちていた。名称→数値マップ追加+detectフォールバックで修正。GAS/Python両側修正・clasp push・Cloud Build・Revision 00007-vwf deploy済み |
 | **B案最終確認（全患者クリーン）** | ✅ **完了（2026-03-20 人間実行）** — 3件生成 / エラー0件 / mineo warning なし / 目視確認OK / P1（二重build除去）出力不変確認済み |
 
 > **別PC引継ぎ手順:** `docs/JREC-01_別PC再開手順.md` を参照
@@ -78,7 +79,7 @@
 | U6 8割給付（割合=2） | **⑧・７** | DP11 | '８'のみ丸付け（片側）|
 | U6 7割給付（割合=3） | **８・⑦** | DP11 | '７'のみ丸付け（片側）|
 | 後期高齢者 保険種別 | **⑥.後期** | CJ11 | 保険種別=6 |
-| 後期高齢者 U5 本家区分 | **空欄** | — | 制度未確認のため保留 |
+| 後期高齢者 U5 本家区分 | **⑧高一**（期待値） | — | 保険種別文字列バグ修正済み（00007-vwf）。B案再生成で確認要 |
 | 後期高齢者 U6 給付割合 | **10・⑨** | DP8 | 一部負担金割合=1（後期一般）|
 
 ### 実ファイル確認対象患者
@@ -164,7 +165,8 @@
 | B案再生成が最新実装を反映しない | clasp push は GAS のみ更新。Python（write_application.py）は Docker イメージに焼き込まれており Cloud Run 未再デプロイだと旧コードが動く | Docker rebuild（Cloud Build） + Cloud Run redeploy（Revision 00003-9mh）実施 | — |
 | **B案で特定患者がスキップされると全員失敗する** | `patientCount` をループ前に `patientIds.length` で確定 → スキップ発生時に Python `validate_batch_safe` が patientCount不一致を検出 → `ValueError` → HTTP 400 → 全患者失敗 | ① patientCount後補正（A案・B案両方）: ループ後に `ndjsonLines.length - 1` で上書き。② B案プリフライト追加: Cloud Run POST前にcase1必須キーを GAS側検証、問題患者を除外して続行可能に | bed4550 |
 | **負担割合0や金額不整合でも検知なしに POST していた** | プリフライトが「空かどうか」しか見ておらず、0値・金額合計不一致を見逃していた | ③ B案プリフライト第2段（warning）追加: 当月合計>0 の場合に 一部負担金割合0 / 窓口負担額0 / 請求金額0 / 合計不一致 を `preflightWarnings` として収集。除外なし・確認ダイアログのみ表示（ok→続行 / いいえ→中断）| ce9cda7 |
-| **B案で1患者あたり build が2回実行されていた** | `V3TR_exportTransferJson_` 内が `V3TR_buildTransferDataForMonth_` を内部呼出していたためループ内で build が二重実行 | P1 二重build除去: `V3TR_exportTransferJson_` に `skipBuild` オプション引数を追加。B案ループ側で `build` 後に `skipBuild=true` で呼ぶことで 1患者1回に削減。他の呼び出し元（A案・A案個別）には影響なし | （本コミット）|
+| **B案で1患者あたり build が2回実行されていた** | `V3TR_exportTransferJson_` 内が `V3TR_buildTransferDataForMonth_` を内部呼出していたためループ内で build が二重実行 | P1 二重build除去: `V3TR_exportTransferJson_` に `skipBuild` オプション引数を追加。B案ループ側で `build` 後に `skipBuild=true` で呼ぶことで 1患者1回に削減。他の呼び出し元（A案・A案個別）には影響なし | 2600dcb |
+| **mineo U5=⑥家族 誤表示（保険種別文字列バグ）** | `保険種別` がGASマスタで `"後期高齢"` 等の名称文字列で保存されているのに、`V3TR_deriveHonkeku_`/`derive_honkeku_cell` が `Number("後期高齢")` = 0 に変換し後期高齢判定をスキップ → 続柄空白 → "家族" fallback | GAS: `INS_TYPE_NAME_MAP_` 追加（名称→数値変換）。Python: `_INS_TYPE_NAME_MAP` + `detect_insurance_type` fallback 追加。両側 clasp push / Cloud Build / Revision 00007-vwf 反映済み | （本コミット）|
 
 ### 今回完了したこと（2026-03-20）
 
@@ -176,6 +178,7 @@
 | 申請書目視確認 | 氏名・保険者番号・金額・各申請書欄 いずれも OK |
 | mineo 患者マスタ直接確認 | 共有復旧後 gspread 経由で確認。修正不要（負担割合=0.1 は正値）|
 | JREC-01スプレッドシートID確定 | `1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM` |
+| **U5保険種別文字列バグ修正** | 根本原因: 保険種別の名称文字列("後期高齢")→数値変換漏れ。GAS/Python両側にINS_TYPE_NAME_MAPを追加。Revision 00007-vwf deploy済み |
 
 ### まだ残っていること（次の作業候補）
 
@@ -194,7 +197,8 @@
 |---|---|---|
 | Run_Log シート | ✅ 反映済み | `Run_Log!A48:J48`（D2/M31整合化完了 2026-03-20）|
 | Projects シート | ✅ 反映済み | `Projects!A4:M4` 次アクション・最終更新日更新済み |
-| GitHub（コード） | ✅ 反映済み | commit 8fb80a6（feature/auto-dev-phase3-loop）|
+| GitHub（コード） | ✅ 反映済み | commit 2600dcb（feature/auto-dev-phase3-loop）|
+| Cloud Run Revision | ✅ 反映済み | 00007-vwf（U5保険種別文字列バグ修正 2026-03-20）|
 | JREC-01スプレッドシート（患者マスタ） | ✅ 読取アクセス可能 | 共有復旧済み（2026-03-20）。gspread で患者マスタ確認済み。**スプレッドシートID: `1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM`** |
 | JREC-01スプレッドシート（患者マスタ書込） | ⚠️ 未実施 | 今回確認の結果、修正不要と判明。書込権限は共有設定次第 |
 
