@@ -25,7 +25,7 @@ import sys
 import os
 import glob as glob_mod
 import copy
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 
 try:
@@ -74,6 +74,30 @@ CELL_MAP = {
 
 # U4 単併区分: テンプレート CT8 = "1.単独" → "①.単独" に置換（固定値）
 TANKEI_KUBUN_CELL = "CT8"
+
+# ===== U5 本家区分: 該当セルの先頭数字を丸数字に置換 =====
+# テンプレートセルの値: DB8="2.本人" / DB10="4.六歳" / DB12="6.家族" / DH8="8.高一" / DH12="0.高7"
+# 置換ルール: 先頭数字 → 対応する丸数字（DH12 の "0" は Unicode U+24EA "⓪"）
+HONKEKU_CIRCLE_MAP = {
+    "DB8":  ("2", "②"),   # 2.本人 → ②.本人（70歳未満・本人）
+    "DB10": ("4", "④"),   # 4.六歳 → ④.六歳（6歳未満・就学前）
+    "DB12": ("6", "⑥"),   # 6.家族 → ⑥.家族（70歳未満・被扶養者）
+    "DH8":  ("8", "⑧"),   # 8.高一 → ⑧.高一（前期高齢者70-74歳・2割負担）
+    "DH12": ("0", "⓪"),   # 0.高7 → ⓪.高7（前期高齢者70-74歳・3割負担）Unicode U+24EA
+}
+
+# ===== U6 給付割合: 一部負担金割合→書込セル・丸数字テキスト =====
+# DP8  "10・９" → 給付9割グループ（一部負担1割）
+# DP11 "８・７" → 給付8割or7割グループ（一部負担2割or3割）
+KYUFU_CELLS = {
+    1: "DP8",   # 1割負担 → 9割給付 → 10・9グループ
+    2: "DP11",  # 2割負担 → 8割給付 → 8・7グループ
+    3: "DP11",  # 3割負担 → 7割給付 → 8・7グループ
+}
+KYUFU_CIRCLE_TEXT = {
+    "DP8":  "⑩・⑨",
+    "DP11": "⑧・⑦",
+}
 
 # ===== 初検料・再検料・計: ラベル内に金額を埋め込む =====
 # セル構造: E33:X33 = "初検料　　　　　　　　円" のようにラベル内テキスト
@@ -487,6 +511,29 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     if seikyu_kubun:
         put(CELL_MAP["請求区分"], seikyu_kubun)
 
+    # ===== U5 本家区分 行8-13 =====
+    # 判定ソース: 保険種別・続柄・生年月日・一部負担金割合・対象月
+    # ★ 後期高齢者（保険種別=6 or 75歳以上）は制度上の記載方式未確認のため空欄（保留）
+    # ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U5 参照
+    honkeku_cell = derive_honkeku_cell(row1)
+    if honkeku_cell and honkeku_cell in HONKEKU_CIRCLE_MAP:
+        orig_char, circle_char = HONKEKU_CIRCLE_MAP[honkeku_cell]
+        original = ws[honkeku_cell].value
+        if original and str(orig_char) in str(original):
+            ws[honkeku_cell] = str(original).replace(str(orig_char), circle_char, 1)
+            count += 1
+
+    # ===== U6 給付割合 行8-13 =====
+    # 一部負担金割合 1 → DP8（⑩・⑨） / 2,3 → DP11（⑧・⑦）
+    # ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
+    burden_digit = safe_int(row1.get("一部負担金割合")) or 0
+    kyufu_cell = KYUFU_CELLS.get(burden_digit)
+    if kyufu_cell:
+        kyufu_text = KYUFU_CIRCLE_TEXT.get(kyufu_cell)
+        if kyufu_text:
+            ws[kyufu_cell] = kyufu_text
+            count += 1
+
     # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
     # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT8 / 下段登録記号番号 → CR49
     # clinic_info が None の場合はスキップ（後方互換: 旧NDJSON/単体テスト対応）
@@ -645,6 +692,86 @@ def derive_clinic_code(toroku_kigo_no: str) -> str:
     if s and s[0] in ("協", "契"):
         s = s[1:]
     return s  # ハイフン保持
+
+
+def calc_age_at_end_of_month(birthday, ym: str):
+    """
+    対象月末日時点の年齢を計算する。
+
+    Args:
+        birthday: 生年月日（date / "YYYY-MM-DD" 文字列 / スプレッドシートの日付値）
+        ym: 対象月 "YYYY-MM"
+    Returns:
+        int（年齢） or None（計算不能）
+    """
+    if not birthday or not ym:
+        return None
+    bd = parse_date(birthday)
+    if not bd:
+        return None
+    try:
+        parts = ym.split("-")
+        y, m_num = int(parts[0]), int(parts[1])
+        # 対象月末日
+        if m_num == 12:
+            eom = date(y + 1, 1, 1) - timedelta(days=1)
+        else:
+            eom = date(y, m_num + 1, 1) - timedelta(days=1)
+    except (ValueError, IndexError):
+        return None
+    age = eom.year - bd.year
+    if (eom.month, eom.day) < (bd.month, bd.day):
+        age -= 1
+    return age if age >= 0 else None
+
+
+def derive_honkeku_cell(row1: dict) -> str | None:
+    """
+    U5本家区分: 患者情報から書込セル番地を返す（暫定ルール）。
+
+    判定ロジック（優先順位順）:
+    1. 保険種別=6（後期高齢）→ None（保留: 制度上の記載方式未確認）
+    2. 6歳未満（就学前）→ DB10（4.六歳）
+    3. 70〜74歳 + 一部負担金割合=2 → DH8（8.高一）
+    4. 70〜74歳 + 一部負担金割合=3 → DH12（0.高7）
+    5. 70〜74歳 + 割合不明 → DH8（高一で安全側）
+    6. 75歳以上 → None（後期高齢者扱い・保留）
+    7. 70歳未満 + 続柄=本人 → DB8（2.本人）
+    8. 70歳未満 + 続柄その他 → DB12（6.家族）
+
+    生年月日がない場合: 続柄のみで本人/家族を判定（年齢区分はスキップ）。
+    ★ 公式一次資料での完全確認未完了。現時点の暫定運用。
+    """
+    ins_type = safe_int(row1.get("保険種別")) or 0
+    relation = str(row1.get("続柄") or "").strip()
+    burden   = safe_int(row1.get("一部負担金割合")) or 0
+    birthday = row1.get("患者生年月日")
+    ym       = str(row1.get("対象月") or "")
+
+    # 後期高齢者（保険種別=6）→ 保留
+    if ins_type == 6:
+        return None
+
+    age = calc_age_at_end_of_month(birthday, ym)
+
+    # 6歳未満（就学前）
+    if age is not None and age < 6:
+        return "DB10"
+
+    # 70〜74歳（前期高齢者）
+    if age is not None and 70 <= age <= 74:
+        if burden == 2:
+            return "DH8"
+        if burden == 3:
+            return "DH12"
+        return "DH8"  # 負担割合不明は安全側（高一=8割給付）
+
+    # 75歳以上 → 後期高齢者扱い・保留
+    if age is not None and age >= 75:
+        return None
+
+    # 70歳未満（年齢不明含む）: 続柄で判定
+    return "DB8" if relation == "本人" else "DB12"
 
 
 def put_calendar_circles(ws, cell, visit_days):

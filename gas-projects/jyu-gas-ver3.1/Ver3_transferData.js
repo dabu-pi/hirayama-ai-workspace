@@ -313,6 +313,17 @@ V3TR.CONFIG = {
     // --- 単併区分 行8-13 (U4) ---
     単独: "CT8",            // CT8:CY9（固定「単独」→ テキスト"①.単独"に置換）
 
+    // --- 本家区分 行8-13 (U5) ---
+    本人: "DB8",    // DB8:DG9  テンプレート"2.本人"（70歳未満・本人）
+    六歳: "DB10",   // DB10:DG11 テンプレート"4.六歳"（6歳未満・就学前）
+    家族: "DB12",   // DB12:DG13 テンプレート"6.家族"（70歳未満・被扶養者）
+    高一: "DH8",    // DH8:DM9  テンプレート"8.高一"（前期高齢者70-74歳・2割負担）
+    高7:  "DH12",   // DH12:DM13 テンプレート"0.高7"（前期高齢者70-74歳・3割負担）
+
+    // --- 給付割合 行8-13 (U6) ---
+    給付9割:  "DP8",   // DP8:DV10  テンプレート"10・９"（一部負担1割→給付9割）
+    給付8_7割: "DP11",  // DP11:DV13 テンプレート"８・７"（一部負担2or3割→給付8or7割）
+
     // --- 下段 登録記号番号 行49-50 ---
     登録記号番号: "CR49",   // CR49:DV50（施術機関登録記号番号フル値: 例「契2804440-0-0」）
 
@@ -664,6 +675,85 @@ function V3TR_loadClinicInfo_(shSettings) {
     prefectureNo: map[C.setKeys.prefectureNo] || "",
     torokuKigoNo: map[C.setKeys.torokuKigoNo] || "",
   };
+}
+
+/**
+ * 対象月末日時点の年齢を計算する
+ * @param {Date|string} birthday - 生年月日（Date or "YYYY-MM-DD"）
+ * @param {string} ym - 対象月 "YYYY-MM"
+ * @return {number|null} 年齢。計算できない場合 null
+ */
+function V3TR_calcAgeAtEndOfMonth_(birthday, ym) {
+  if (!birthday || !ym) return null;
+  let bd;
+  if (birthday instanceof Date) {
+    bd = birthday;
+  } else {
+    const parts = String(birthday).split(/[-\/]/);
+    if (parts.length < 3) return null;
+    bd = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  if (isNaN(bd.getTime())) return null;
+  const ymParts = String(ym).split("-");
+  if (ymParts.length < 2) return null;
+  const y = Number(ymParts[0]);
+  const m = Number(ymParts[1]);
+  // 対象月末日（month=m は 0-indexed で翌月 0 日 = 当月末日）
+  const endOfMonth = new Date(y, m, 0);
+  let age = endOfMonth.getFullYear() - bd.getFullYear();
+  const monthDiff = endOfMonth.getMonth() - bd.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && endOfMonth.getDate() < bd.getDate())) {
+    age--;
+  }
+  return (isFinite(age) && age >= 0) ? age : null;
+}
+
+/**
+ * U5本家区分: row1のデータから appCellMap のキー名を返す（暫定ルール）
+ *
+ * 判定ロジック（優先順位順）:
+ *   1. 保険種別=6（後期高齢）→ null（保留: 制度上の記載方式未確認）
+ *   2. 6歳未満（就学前）→ "六歳"（DB10）
+ *   3. 70〜74歳 + 2割負担 → "高一"（DH8）
+ *   4. 70〜74歳 + 3割負担 → "高7"（DH12）
+ *   5. 70〜74歳 + 割合不明 → "高一"（安全側）
+ *   6. 75歳以上 → null（後期高齢者扱い・保留）
+ *   7. 70歳未満 + 続柄="本人" → "本人"（DB8）
+ *   8. 70歳未満 + 続柄その他 → "家族"（DB12）
+ *
+ * 生年月日が不明な場合は年齢区分をスキップして続柄のみで本人/家族判定。
+ * ★ 公式一次資料での完全確認未完了。現時点の暫定運用（docs §4 U5 参照）。
+ *
+ * @param {Object} row1 - transferData の row（患者毎データ）
+ * @return {string|null} appCellMap のキー名 or null（書込なし）
+ */
+function V3TR_deriveHonkeku_(row1) {
+  const insuranceType = Number(row1["保険種別"]) || 0;
+  const relation      = String(row1["続柄"] || "").trim();
+  const burden        = Number(row1["一部負担金割合"]) || 0;
+  const birthday      = row1["患者生年月日"];
+  const ym            = String(row1["対象月"] || "");
+
+  // 後期高齢者（保険種別=6）→ 保留
+  if (insuranceType === 6) return null;
+
+  const age = V3TR_calcAgeAtEndOfMonth_(birthday, ym);
+
+  // 6歳未満（就学前）
+  if (age !== null && age < 6) return "六歳";
+
+  // 70〜74歳（前期高齢者）
+  if (age !== null && age >= 70 && age <= 74) {
+    if (burden === 2) return "高一";
+    if (burden === 3) return "高7";
+    return "高一"; // 負担割合不明は安全側（高一=8割給付）
+  }
+
+  // 75歳以上 → 後期高齢者扱い・保留
+  if (age !== null && age >= 75) return null;
+
+  // 70歳未満（年齢不明含む）: 続柄で判定
+  return (relation === "本人") ? "本人" : "家族";
 }
 
 /**
@@ -1549,6 +1639,33 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   // ===== U7 請求区分 行31 DH31 =====
   // "新規" or "継続" を書き込む。同月内治癒再発の両方○は将来対応。
   put(CM.請求区分, row1["請求区分"]);
+
+  // ===== U5 本家区分 行8-13 =====
+  // 判定ソース: 保険種別・続柄・生年月日・一部負担金割合・対象月
+  // ★ 後期高齢者（保険種別=6 or 75歳以上）は制度上の記載方式未確認のため空欄（保留）
+  // ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U5 参照
+  const HONKEKU_CIRCLE_MAP_ = {
+    "本人": ["2", "②"], "六歳": ["4", "④"], "家族": ["6", "⑥"],
+    "高一": ["8", "⑧"], "高7":  ["0", "⓪"],  // "高7" の "0" → Unicode U+24EA ⓪
+  };
+  const honkekuKey = V3TR_deriveHonkeku_(row1);
+  if (honkekuKey && CM[honkekuKey]) {
+    var hcCell = sh.getRange(CM[honkekuKey]);
+    var hcVal  = String(hcCell.getValue() || "");
+    var hm     = HONKEKU_CIRCLE_MAP_[honkekuKey];
+    if (hm && hcVal.indexOf(hm[0]) !== -1) {
+      hcCell.setValue(hcVal.replace(hm[0], hm[1]));
+      count++;
+    }
+  }
+
+  // ===== U6 給付割合 行8-13 =====
+  // 一部負担金割合 1→DP8（⑩・⑨） / 2,3→DP11（⑧・⑦）
+  // ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
+  const burden6 = Number(row1["一部負担金割合"]) || 0;
+  if (burden6 === 1 && CM.給付9割)   { sh.getRange(CM.給付9割).setValue("⑩・⑨");   count++; }
+  if (burden6 === 2 && CM.給付8_7割) { sh.getRange(CM.給付8_7割).setValue("⑧・⑦"); count++; }
+  if (burden6 === 3 && CM.給付8_7割) { sh.getRange(CM.給付8_7割).setValue("⑧・⑦"); count++; }
 
   // ===== 施術機関固定情報（設定シートから取得）=====
   // U1: 都道府県番号 → CI2 / U2: 施術機関コード → CZ2 / U4: 単独 → CT8 / 下段登録記号番号 → CR49
