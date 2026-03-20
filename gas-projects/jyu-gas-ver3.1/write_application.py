@@ -41,7 +41,7 @@ TEMPLATE_SHEET = "新　様式第5号"
 # ===== 保険者番号: 8桁を1桁ずつ（各4列結合セル） =====
 INSURER_NO_CELLS = ["CQ4", "CU4", "CY4", "DC4", "DG4", "DK4", "DO4", "DS4"]
 
-# ===== 保険種別: 該当番号に○付け =====
+# ===== 保険種別: 該当番号に○付け（参照用: 実際の○書込は SELECTION_SPLIT_MAP 経由）=====
 INSURANCE_TYPE_CELLS = {
     1: "CB8",   # 協会けんぽ
     2: "CF8",   # 組合
@@ -50,6 +50,42 @@ INSURANCE_TYPE_CELLS = {
     5: "CF11",  # 退職
     6: "CJ11",  # 後期高齢
 }
+
+# ===== 選択肢セル分割マップ（○専用セル方式）=====
+# テンプレートの結合セルを出力ファイル内で「ラベル行＋マーカー行」に分割する。
+# テンプレートファイルは変更せず、毎回ロードした出力ファイルのみに分割を適用する。
+# 書式: {key: (full_merge, label_merge, marker_merge, label_text)}
+#   full_merge  : テンプレート元の結合範囲（分割前）
+#   label_merge : 上段ラベル行（テキスト保持）
+#   marker_merge: 下段マーカー行（選択時「○」を書込む）
+#   label_text  : テンプレートのラベル文字列（書き戻し用）
+SELECTION_SPLIT_MAP = {
+    # --- 性別 (AL21:AO22/AL23:AO24 各4x2 → 4x1 ラベル + 4x1 マーカー) ---
+    "gender_男": ("AL21:AO22", "AL21:AO21", "AL22:AO22", "1 男"),
+    "gender_女": ("AL23:AO24", "AL23:AO23", "AL24:AO24", "2 女"),
+    # --- 保険種別 (各4x3 → 4x2 ラベル + 4x1 マーカー) ---
+    "ins_1": ("CB8:CE10",  "CB8:CE9",   "CB10:CE10", "1.協"),
+    "ins_2": ("CF8:CI10",  "CF8:CI9",   "CF10:CI10", "2.組"),
+    "ins_3": ("CJ8:CM10",  "CJ8:CM9",   "CJ10:CM10", "3.共"),
+    "ins_4": ("CB11:CE13", "CB11:CE12", "CB13:CE13", "4.国"),
+    "ins_5": ("CF11:CI13", "CF11:CI12", "CF13:CI13", "5.退"),
+    "ins_6": ("CJ11:CM13", "CJ11:CM12", "CJ13:CM13", "6.後期"),
+    # --- 単独区分 (各6x2 → 6x1 ラベル + 6x1 マーカー) ---
+    "tankei_1": ("CT8:CY9",   "CT8:CY8",   "CT9:CY9",   "1.単独"),
+    "tankei_2": ("CT10:CY11", "CT10:CY10", "CT11:CY11", "2.2併"),
+    "tankei_3": ("CT12:CY13", "CT12:CY12", "CT13:CY13", "3.3併"),
+    # --- 本家区分 (各6x2 → 6x1 ラベル + 6x1 マーカー) ---
+    "honke_DB8":  ("DB8:DG9",   "DB8:DG8",   "DB9:DG9",   "2.本人"),
+    "honke_DB10": ("DB10:DG11", "DB10:DG10", "DB11:DG11", "4.六歳"),
+    "honke_DB12": ("DB12:DG13", "DB12:DG12", "DB13:DG13", "6.家族"),
+    "honke_DH8":  ("DH8:DM9",   "DH8:DM8",   "DH9:DM9",   "8.高一"),
+    "honke_DH12": ("DH12:DM13", "DH12:DM12", "DH13:DM13", "0.高7"),
+}
+
+# D4 負傷の原因: BR20:DV24（5行結合）をラベル行(BR20)＋内容行(BR21-24)に分離
+# (full_merge, label_merge, content_merge, label_text)
+D4_INJURY_CELL_SPLIT = ("BR20:DV24", "BR20:DV20", "BR21:DV24", "負傷の原因")
+D4_INJURY_CONTENT_CELL = "BR21"  # 内容書込先（分離後のコンテンツ行左上）
 
 # ===== セルマッピング =====
 CELL_MAP = {
@@ -62,7 +98,6 @@ CELL_MAP = {
     "生年月日_元号": "AP21",
     "生年月日_年": "AY23",
 
-    "負傷原因": "BR20",
     "請求区分": "DH31",
     "経過":     "M31",  # D2 継続月数・頻回 補助表示（★正本は摘要欄・頻回欄0.5）
     "摘要": "E44",
@@ -72,20 +107,6 @@ CELL_MAP = {
     "施術機関コード": "CZ2",  # U2: CZ2:DV3 マージ。登録記号番号の数字部分（★暫定運用）
     # 注: "登録記号番号" は CR49:DV50（ラベル行）のため CELL_MAP から除外。
     #     分割書込先は TOROKU_KIGO_SPLIT_CELLS で管理。
-}
-
-# U4 単併区分: テンプレート CT8 = "1.単独" → "①.単独" に置換（固定値）
-TANKEI_KUBUN_CELL = "CT8"
-
-# ===== U5 本家区分: 該当セルの先頭数字を丸数字に置換 =====
-# テンプレートセルの値: DB8="2.本人" / DB10="4.六歳" / DB12="6.家族" / DH8="8.高一" / DH12="0.高7"
-# 置換ルール: 先頭数字 → 対応する丸数字（DH12 の "0" は Unicode U+24EA "⓪"）
-HONKEKU_CIRCLE_MAP = {
-    "DB8":  ("2", "②"),   # 2.本人 → ②.本人（70歳未満・本人）
-    "DB10": ("4", "④"),   # 4.六歳 → ④.六歳（6歳未満・就学前）
-    "DB12": ("6", "⑥"),   # 6.家族 → ⑥.家族（70歳未満・被扶養者）
-    "DH8":  ("8", "⑧"),   # 8.高一 → ⑧.高一（前期高齢者70-74歳・2割負担）
-    "DH12": ("0", "⓪"),   # 0.高7 → ⓪.高7（前期高齢者70-74歳・3割負担）Unicode U+24EA
 }
 
 # ===== U6 給付割合: 一部負担金割合→対象セル・置換文字（片側丸付け）=====
@@ -332,6 +353,59 @@ def _add_tenki_oval(ws, tenki_cell: str, tenki_value: str):
     ws.add_image(xl_img)
 
 
+# ===== 選択肢セル分割：○専用セル方式 =====
+
+def _apply_selection_splits(ws):
+    """
+    出力ファイル内で選択肢セルをラベル行＋マーカー行に分割する。
+
+    SELECTION_SPLIT_MAP の全エントリを無条件に処理する（選択済み・未選択を問わず）。
+    これにより全選択肢が同じ「ラベル行＋マーカー行」構造となり、視覚的な一貫性が保たれる。
+
+    あわせて D4 負傷の原因（BR20:DV24）も「ラベル行＋内容行」に分割し、
+    ラベル「負傷の原因」を BR20 に書き戻す。
+
+    テンプレートファイルは変更しない（毎回ロードされる）。
+    """
+    from openpyxl.styles import Alignment
+    center = Alignment(horizontal='center', vertical='center',
+                       wrap_text=False, shrink_to_fit=False)
+
+    for _key, (full, label, marker, text) in SELECTION_SPLIT_MAP.items():
+        ws.unmerge_cells(full)
+        ws.merge_cells(label)
+        label_cell = label.split(':')[0]
+        ws[label_cell] = text
+        ws[label_cell].alignment = center
+        ws.merge_cells(marker)
+        marker_cell_addr = marker.split(':')[0]
+        ws[marker_cell_addr].alignment = center
+
+    # D4: BR20:DV24 → ラベル行 BR20:DV20 + 内容行 BR21:DV24
+    full, label, content, text = D4_INJURY_CELL_SPLIT
+    ws.unmerge_cells(full)
+    ws.merge_cells(label)
+    ws[label.split(':')[0]] = text
+    ws.merge_cells(content)
+
+
+def _write_selection_marker(ws, marker_key: str):
+    """
+    指定キーのマーカーセル（下段行）に「○」を書き込む。
+    _apply_selection_splits() が事前に呼ばれていることが前提。
+    """
+    from openpyxl.styles import Alignment
+    if marker_key not in SELECTION_SPLIT_MAP:
+        return
+    _full, _label, marker, _text = SELECTION_SPLIT_MAP[marker_key]
+    marker_cell_addr = marker.split(':')[0]
+    ws[marker_cell_addr] = "○"
+    ws[marker_cell_addr].alignment = Alignment(
+        horizontal='center', vertical='center',
+        wrap_text=False, shrink_to_fit=False
+    )
+
+
 # ===== メイン転記 =====
 def write_application(template_path: str, json_data: dict, output_path: str, clinic_info: dict = None):
     """
@@ -345,6 +419,9 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     """
     wb = load_workbook(template_path)
     ws = wb[TEMPLATE_SHEET]
+
+    # 選択肢セルを「ラベル行＋マーカー行」に分割（○専用セル方式の前処理）
+    _apply_selection_splits(ws)
 
     count = 0
     row1 = json_data.get("case1") or {}
@@ -394,13 +471,14 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     if symbol or number:
         put(CELL_MAP["記号番号"], f"{symbol}・{number}")
 
-    # ===== 保険種別○付け =====
+    # ===== 保険種別○付け（○専用セル方式）=====
     # マスタ値優先、なければ保険者番号から自動判定
+    # テンプレセル（1.協 等）は変更せず、下段マーカー行に「○」を書込む
     ins_type = safe_int(row1.get("保険種別"))
     if ins_type is None:
         ins_type = detect_insurance_type(insurer_no)
-    if ins_type and ins_type in INSURANCE_TYPE_CELLS:
-        put_era_circle(ws, INSURANCE_TYPE_CELLS[ins_type], ins_type)
+    if ins_type and 1 <= ins_type <= 6:
+        _write_selection_marker(ws, f"ins_{ins_type}")
         count += 1
 
     # ===== 被保険者 =====
@@ -410,23 +488,13 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     # ===== 受療者 =====
     put(CELL_MAP["患者氏名"], row1.get("患者氏名"))
 
-    # ===== 性別 AL21:AO22 (男) / AL23:AO24 (女) =====
-    # テンプレ: AL21="1 男" / AL23="2 女"
-    # 男 → AL21 の "1" を "①" に置換 / 女 → AL23 の "2" を "②" に置換
-    # 根拠: テンプレートスキャン確認（2026-03-20）。U5/U6 と同じ片側丸付け方式。
+    # ===== 性別（○専用セル方式）=====
+    # テンプレセル（1 男 / 2 女）は変更せず、下段マーカー行に「○」を書込む
+    # 根拠: テンプレートスキャン確認（2026-03-20）
     gender_val = str(row1.get("性別") or "").strip()
-    if gender_val == "男":
-        cell_m = ws["AL21"]
-        orig_m = str(cell_m.value or "")
-        if "1" in orig_m:
-            ws["AL21"] = orig_m.replace("1", "①", 1)
-            count += 1
-    elif gender_val == "女":
-        cell_f = ws["AL23"]
-        orig_f = str(cell_f.value or "")
-        if "2" in orig_f:
-            ws["AL23"] = orig_f.replace("2", "②", 1)
-            count += 1
+    if gender_val in ("男", "女"):
+        _write_selection_marker(ws, f"gender_{gender_val}")
+        count += 1
 
     # 生年月日 → 元号○付け + 年月日テキスト
     bd = parse_date(row1.get("患者生年月日"))
@@ -544,22 +612,20 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     if keizoku:  # GAS側が "" を送るため現状は常にスキップ（出力停止中）
         put(CELL_MAP["経過"], keizoku)
 
-    # ===== U5 本家区分 行8-13 =====
+    # ===== U5 本家区分 行8-13（○専用セル方式）=====
     # 判定ソース: 保険種別・続柄・生年月日・一部負担金割合・対象月
-    # ★ 後期高齢者（保険種別=6 or 75歳以上）は制度上の記載方式未確認のため空欄（保留）
-    # ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U5 参照
+    # テンプレセル（2.本人 等）は変更せず、下段マーカー行に「○」を書込む
+    # 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U5 参照
     honkeku_cell = derive_honkeku_cell(row1)
-    if honkeku_cell and honkeku_cell in HONKEKU_CIRCLE_MAP:
-        orig_char, circle_char = HONKEKU_CIRCLE_MAP[honkeku_cell]
-        original = ws[honkeku_cell].value
-        if original and str(orig_char) in str(original):
-            ws[honkeku_cell] = str(original).replace(str(orig_char), circle_char, 1)
-            count += 1
+    if honkeku_cell:
+        _write_selection_marker(ws, f"honke_{honkeku_cell}")
+        count += 1
 
     # ===== U6 給付割合 行8-13 =====
-    # 片側丸付け: 対象数字1文字のみ置換（U5と同方式）
+    # 片側丸付け: 対象数字1文字のみ置換（テンプレセルへの直接書込）
     # 一部負担金割合=1→DP8('９'→'⑨') / 2→DP11('８'→'⑧') / 3→DP11('７'→'⑦')
     # 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
+    # ★ U6 は2択セル（DP8/DP11）のみで選択肢が少なく結合構造が異なるため現方式を維持
     burden_digit = safe_int(row1.get("一部負担金割合")) or 0
     kyufu_entry = KYUFU_CHAR_MAP.get(burden_digit)
     if kyufu_entry:
@@ -569,12 +635,15 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
             ws[kyufu_cell] = str(original).replace(orig_char, circle_char, 1)
             count += 1
 
-    # ===== D4 負傷原因 BR20 =====
+    # ===== D4 負傷の原因（BR21: 分離後のコンテンツ行）=====
     # 出力条件: row2の部位1に金額あり = 申請書3部位目が存在
     #           = 「3部位目を100分の60で算定することとなる場合」
     # 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
+    # セル構造: _apply_selection_splits() により
+    #   BR20:DV20 = ラベル行「負傷の原因」（固定）
+    #   BR21:DV24 = コンテンツ行（ここに書込む）
     # ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定
-    # ソース: 「負傷の状況」「負傷の場所」「負傷の日時」（初検情報履歴シート由来・transferCols登録済み）
+    # ソース: 「負傷の状況」「負傷の場所」「負傷の日時」（初検情報履歴シート由来）
     part3_has_data = (
         row2 is not None and (
             (safe_num(row2.get("部位1_計")) or 0) > 0 or
@@ -599,15 +668,12 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
                 unique_texts.append(t)
         injury_text = " / ".join(unique_texts)
         if injury_text:
-            # BR20はラベル「負傷の原因」を含む結合セルのため書き込まない（ラベル保護）
-            # ★修正（2026-03-20）: 3部位目算定根拠は摘要欄（E44）に追記する方式に変更
-            existing = str(ws[CELL_MAP["摘要"]].value or "").strip()
-            d4_note = f"3部位: {injury_text}"
-            ws[CELL_MAP["摘要"]] = (f"{existing} / {d4_note}" if existing else d4_note)
+            # BR21: コンテンツ行（_apply_selection_splits で分離済み）
+            ws[D4_INJURY_CONTENT_CELL] = injury_text
             count += 1
 
     # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
-    # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT8
+    # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT9（マーカー行）
     # 下段登録記号番号 → CR51(左)/DK51(中)/DR51(右) 分割書込
     # clinic_info が None の場合はスキップ（後方互換: 旧NDJSON/単体テスト対応）
     if clinic_info:
@@ -621,9 +687,8 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         if clinic_code:
             put(CELL_MAP["施術機関コード"], clinic_code)
 
-        # U4: 単併区分 → CT8（固定「単独」）
-        # テンプレート CT8 = "1.単独" → "①.単独" に置換
-        put_era_circle(ws, TANKEI_KUBUN_CELL, 1)
+        # U4: 単併区分（○専用セル方式）固定「単独」→ tankei_1 マーカー行に○
+        _write_selection_marker(ws, "tankei_1")
 
         # 下段 登録記号番号 → CR51/DK51/DR51（分割書込）
         # CR49:DV50 はラベル行「登録記号番号」→ 書き込まない
