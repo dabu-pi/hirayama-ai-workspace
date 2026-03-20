@@ -781,20 +781,21 @@ def calc_age_at_end_of_month(birthday, ym: str):
 
 def derive_honkeku_cell(row1: dict) -> str | None:
     """
-    U5本家区分: 患者情報から書込セル番地を返す（暫定ルール）。
+    U5本家区分: 患者情報から書込セル番地を返す。
 
     判定ロジック（優先順位順）:
-    1. 保険種別=6（後期高齢）→ None（保留: 制度上の記載方式未確認）
+    1. 保険種別=6（後期高齢）→ DH8（8.高一）基本。7割給付（負担3割）のみ DH12（0.高7）
+       ★制度確定（2026-03-20）: 本人/家族区分は使わない。給付割合は U6 側で表現する。
     2. 6歳未満（就学前）→ DB10（4.六歳）
     3. 70〜74歳 + 一部負担金割合=2 → DH8（8.高一）
     4. 70〜74歳 + 一部負担金割合=3 → DH12（0.高7）
     5. 70〜74歳 + 割合不明 → DH8（高一で安全側）
-    6. 75歳以上 → None（後期高齢者扱い・保留）
+    6. 75歳以上 → DH8（8.高一）基本。7割給付（負担3割）のみ DH12（0.高7）
+       ★保険種別が6以外でも75歳超は後期高齢者として高一/高7 で判定する
     7. 70歳未満 + 続柄=本人 → DB8（2.本人）
     8. 70歳未満 + 続柄その他 → DB12（6.家族）
 
     生年月日がない場合: 続柄のみで本人/家族を判定（年齢区分はスキップ）。
-    ★ 公式一次資料での完全確認未完了。現時点の暫定運用。
     """
     ins_type = safe_int(row1.get("保険種別")) or 0
     relation = str(row1.get("続柄") or "").strip()
@@ -802,9 +803,9 @@ def derive_honkeku_cell(row1: dict) -> str | None:
     birthday = row1.get("患者生年月日")
     ym       = str(row1.get("対象月") or "")
 
-    # 後期高齢者（保険種別=6）→ 保留
+    # 後期高齢者（保険種別=6）→ 高一 基本。7割給付（負担3割）のみ 高7
     if ins_type == 6:
-        return None
+        return "DH12" if burden == 3 else "DH8"
 
     age = calc_age_at_end_of_month(birthday, ym)
 
@@ -820,9 +821,9 @@ def derive_honkeku_cell(row1: dict) -> str | None:
             return "DH12"
         return "DH8"  # 負担割合不明は安全側（高一=8割給付）
 
-    # 75歳以上 → 後期高齢者扱い・保留
+    # 75歳以上 → 後期高齢者扱い（保険種別=6と同じルール）
     if age is not None and age >= 75:
-        return None
+        return "DH12" if burden == 3 else "DH8"
 
     # 70歳未満（年齢不明含む）: 続柄で判定
     return "DB8" if relation == "本人" else "DB12"

@@ -761,8 +761,9 @@ function V3TR_deriveHonkeku_(row1) {
   const birthday      = row1["患者生年月日"];
   const ym            = String(row1["対象月"] || "");
 
-  // 後期高齢者（保険種別=6）→ 保留
-  if (insuranceType === 6) return null;
+  // 後期高齢者（保険種別=6）→ 高一 基本。7割給付（負担3割）のみ 高7
+  // ★制度確定（2026-03-20）: 本人/家族区分は使わない。給付割合は U6 側で表現する。
+  if (insuranceType === 6) return (burden === 3) ? "高7" : "高一";
 
   const age = V3TR_calcAgeAtEndOfMonth_(birthday, ym);
 
@@ -776,8 +777,9 @@ function V3TR_deriveHonkeku_(row1) {
     return "高一"; // 負担割合不明は安全側（高一=8割給付）
   }
 
-  // 75歳以上 → 後期高齢者扱い・保留
-  if (age !== null && age >= 75) return null;
+  // 75歳以上 → 後期高齢者扱い（保険種別=6と同じルール）
+  // ★保険種別が6以外でも75歳超は後期高齢者として高一/高7 で判定する
+  if (age !== null && age >= 75) return (burden === 3) ? "高7" : "高一";
 
   // 70歳未満（年齢不明含む）: 続柄で判定
   return (relation === "本人") ? "本人" : "家族";
