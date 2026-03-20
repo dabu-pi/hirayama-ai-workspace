@@ -190,11 +190,11 @@
 
 ### Dashboard反映状況
 
-| 対象 | 状態 | 理由 |
+| 対象 | 状態 | 詳細 |
 |---|---|---|
-| Run_Log シート | ❌ 未反映 | `append-runlog-to-sheet.mjs` がローカルに未配置のため自動更新不可 |
-| Projects シート | ❌ 未反映 | 同上。次回 `de -ProjectId JREC-01 "..."` 実行時に自動更新される |
-| GitHub（コード） | ✅ 反映済み | 最新コミット push 済み（feature/auto-dev-phase3-loop）|
+| Run_Log シート | ✅ 反映済み | `Run_Log!A48:J48`（D2/M31整合化完了 2026-03-20）|
+| Projects シート | ✅ 反映済み | `Projects!A4:M4` 次アクション・最終更新日更新済み |
+| GitHub（コード） | ✅ 反映済み | commit 8fb80a6（feature/auto-dev-phase3-loop）|
 | JREC-01スプレッドシート（患者マスタ） | ✅ 読取アクセス可能 | 共有復旧済み（2026-03-20）。gspread で患者マスタ確認済み。**スプレッドシートID: `1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM`** |
 | JREC-01スプレッドシート（患者マスタ書込） | ⚠️ 未実施 | 今回確認の結果、修正不要と判明。書込権限は共有設定次第 |
 
