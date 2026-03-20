@@ -1960,9 +1960,12 @@ function V3TR_menuExportJson() {
  * @param {string} ym - yyyy-MM
  * @return {string} JSON文字列
  */
-function V3TR_exportTransferJson_(ss, patientId, ym) {
-  // まず転記データを生成/更新
-  V3TR_buildTransferDataForMonth_(ss, patientId, ym);
+/**
+ * @param {boolean} [skipBuild=false] true のとき build を省略（B案ループ内など build 済みの場合）
+ */
+function V3TR_exportTransferJson_(ss, patientId, ym, skipBuild) {
+  // まず転記データを生成/更新（skipBuild=true の場合は呼び出し元で build 済みのため省略）
+  if (!skipBuild) V3TR_buildTransferDataForMonth_(ss, patientId, ym);
 
   const shTransfer = ss.getSheetByName(V3TR.CONFIG.sheetNames.transfer);
   const tMap = V3TR_buildHeaderMap_(shTransfer);
@@ -2318,8 +2321,9 @@ function V3TR_menuGenerateApplication_B() {
   for (var i = 0; i < patientIds.length; i++) {
     var pid = patientIds[i];
     try {
+      // P1 二重build除去: build後に skipBuild=true で export を呼ぶ（1患者1回）
       V3TR_buildTransferDataForMonth_(ss, pid, ym);
-      var jsonStr = V3TR_exportTransferJson_(ss, pid, ym);
+      var jsonStr = V3TR_exportTransferJson_(ss, pid, ym, true);
       var parsed = JSON.parse(jsonStr);
       ndjsonLines.push(JSON.stringify({
         patientId: pid,
