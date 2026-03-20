@@ -47,7 +47,7 @@ V3TR.CONFIG = {
     roundUnit: "窓口端数単位",
     outputFolderId: "出力フォルダID",
     prefectureNo: "都道府県番号",    // U1 CI2書込用（施術機関所在都道府県番号、2桁）
-    torokuKigoNo: "登録記号番号",    // U2/下段CR49書込用（例: 契2804440-0-0）
+    torokuKigoNo: "登録記号番号",    // U2(CZ2)・下段分割欄(CR51/DK51/DR51)書込用（例: 契2804440-0-0）
   },
 
   masterCols: {
@@ -321,11 +321,17 @@ V3TR.CONFIG = {
     高7:  "DH12",   // DH12:DM13 テンプレート"0.高7"（前期高齢者70-74歳・3割負担）
 
     // --- 給付割合 行8-13 (U6) ---
-    給付9割:  "DP8",   // DP8:DV10  テンプレート"10・９"（一部負担1割→給付9割）
-    給付8_7割: "DP11",  // DP11:DV13 テンプレート"８・７"（一部負担2or3割→給付8or7割）
+    // テンプレート実値: DP8='10・９' / DP11='８・７'（全角文字）
+    // 片側丸付け: 対象数字1文字のみ置換（U5と同方式）
+    給付9割:  "DP8",   // DP8:DV10  割合=1: '９'→'⑨' → '10・⑨'
+    給付8_7割: "DP11",  // DP11:DV13 割合=2: '８'→'⑧' / 割合=3: '７'→'⑦'
 
-    // --- 下段 登録記号番号 行49-50 ---
-    登録記号番号: "CR49",   // CR49:DV50（施術機関登録記号番号フル値: 例「契2804440-0-0」）
+    // --- 下段 登録記号番号 分割欄 行51-52 ---
+    // CR49:DV50 はラベル行「登録記号番号」→ 書き込み禁止
+    // 入力欄: 左=CR51:DH52 / 中=DK51:DO52 / 右=DR51:DV52
+    登録記号番号_左: "CR51",  // 左欄: 例「契2804440」（ハイフン前の部分・先頭文字含む）
+    登録記号番号_中: "DK51",  // 中欄: 例「0」（1つ目ハイフン後）
+    登録記号番号_右: "DR51",  // 右欄: 例「0」（2つ目ハイフン後）
 
     // --- 摘要 行44-46左 ---
     摘要: "E44",            // E44:CG46
@@ -658,7 +664,7 @@ function V3TR_loadSettings_(shSettings) {
 }
 
 /**
- * 設定シートから施術機関固定情報を読み込む（U1/U2/下段登録記号番号）
+ * 設定シートから施術機関固定情報を読み込む（U1/U2/下段登録記号番号分割欄）
  * 返り値: { prefectureNo: "14", torokuKigoNo: "契2804440-0-0" }
  */
 function V3TR_loadClinicInfo_(shSettings) {
@@ -1660,12 +1666,25 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   }
 
   // ===== U6 給付割合 行8-13 =====
-  // 一部負担金割合 1→DP8（⑩・⑨） / 2,3→DP11（⑧・⑦）
-  // ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
+  // 片側丸付け: 対象数字1文字のみ置換（U5と同方式）
+  // テンプレート実値: DP8='10・９' / DP11='８・７'（全角文字）
+  // 割合=1→DP8('９'→'⑨') / 割合=2→DP11('８'→'⑧') / 割合=3→DP11('７'→'⑦')
+  // 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
   const burden6 = Number(row1["一部負担金割合"]) || 0;
-  if (burden6 === 1 && CM.給付9割)   { sh.getRange(CM.給付9割).setValue("⑩・⑨");   count++; }
-  if (burden6 === 2 && CM.給付8_7割) { sh.getRange(CM.給付8_7割).setValue("⑧・⑦"); count++; }
-  if (burden6 === 3 && CM.給付8_7割) { sh.getRange(CM.給付8_7割).setValue("⑧・⑦"); count++; }
+  var kyufuCharMap6 = {
+    1: [CM.給付9割,  "９", "⑨"],
+    2: [CM.給付8_7割, "８", "⑧"],
+    3: [CM.給付8_7割, "７", "⑦"],
+  };
+  var kyufuEntry6 = kyufuCharMap6[burden6];
+  if (kyufuEntry6 && kyufuEntry6[0]) {
+    var kyufuRng6 = sh.getRange(kyufuEntry6[0]);
+    var kyufuVal6 = String(kyufuRng6.getValue() || "");
+    if (kyufuVal6.indexOf(kyufuEntry6[1]) !== -1) {
+      kyufuRng6.setValue(kyufuVal6.replace(kyufuEntry6[1], kyufuEntry6[2]));
+      count++;
+    }
+  }
 
   // ===== D4 負傷原因 行20 BR20 =====
   // 出力条件: case2の部位1に金額あり = 申請書3部位目が存在 = 「3部位目を100分の60で算定することとなる場合」
@@ -1697,7 +1716,8 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   }
 
   // ===== 施術機関固定情報（設定シートから取得）=====
-  // U1: 都道府県番号 → CI2 / U2: 施術機関コード → CZ2 / U4: 単独 → CT8 / 下段登録記号番号 → CR49
+  // U1: 都道府県番号 → CI2 / U2: 施術機関コード → CZ2 / U4: 単独 → CT8
+  // 下段登録記号番号 → CR51(左)/DK51(中)/DR51(右) 分割書込
   // ★ U2 は 登録記号番号 から先頭「協/契」のみ除去（ハイフン保持）した値を使う（暫定運用）
   const shSettingsForClinic = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
   const clinicInfo = V3TR_loadClinicInfo_(shSettingsForClinic);
@@ -1712,7 +1732,16 @@ function V3TR_writeToApplication_(ss, row1, row2) {
       count++;
     }
   }
-  put(CM.登録記号番号, clinicInfo.torokuKigoNo);
+  // 下段 登録記号番号 → CR51/DK51/DR51（分割書込）
+  // CR49:DV50 はラベル行「登録記号番号」→ 書き込まない
+  // 例: '契2804440-0-0' → 左='契2804440' / 中='0' / 右='0'
+  var torokuFull = String(clinicInfo.torokuKigoNo || "").trim();
+  if (torokuFull && CM.登録記号番号_左) {
+    var torokuParts = torokuFull.split("-");
+    put(CM.登録記号番号_左, torokuParts[0] || "");
+    put(CM.登録記号番号_中, torokuParts.length > 1 ? torokuParts[1] : "");
+    put(CM.登録記号番号_右, torokuParts.length > 2 ? torokuParts[2] : "");
+  }
 
   return count;
 }

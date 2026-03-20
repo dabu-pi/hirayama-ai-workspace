@@ -69,7 +69,8 @@ CELL_MAP = {
     # ===== 施術機関固定情報（全患者共通: NDJSON meta から取得）=====
     "都道府県番号": "CI2",    # U1: CI2:CL3 マージ。施術機関所在都道府県番号（2桁）
     "施術機関コード": "CZ2",  # U2: CZ2:DV3 マージ。登録記号番号の数字部分（★暫定運用）
-    "登録記号番号": "CR49",   # 下段 CR49:DV50 マージ。施術機関登録記号番号フル値（例: 契2804440-0-0）
+    # 注: "登録記号番号" は CR49:DV50（ラベル行）のため CELL_MAP から除外。
+    #     分割書込先は TOROKU_KIGO_SPLIT_CELLS で管理。
 }
 
 # U4 単併区分: テンプレート CT8 = "1.単独" → "①.単独" に置換（固定値）
@@ -86,18 +87,23 @@ HONKEKU_CIRCLE_MAP = {
     "DH12": ("0", "⓪"),   # 0.高7 → ⓪.高7（前期高齢者70-74歳・3割負担）Unicode U+24EA
 }
 
-# ===== U6 給付割合: 一部負担金割合→書込セル・丸数字テキスト =====
-# DP8  "10・９" → 給付9割グループ（一部負担1割）
-# DP11 "８・７" → 給付8割or7割グループ（一部負担2割or3割）
-KYUFU_CELLS = {
-    1: "DP8",   # 1割負担 → 9割給付 → 10・9グループ
-    2: "DP11",  # 2割負担 → 8割給付 → 8・7グループ
-    3: "DP11",  # 3割負担 → 7割給付 → 8・7グループ
+# ===== U6 給付割合: 一部負担金割合→対象セル・置換文字（片側丸付け）=====
+# テンプレート実値: DP8='10・９' / DP11='８・７'（全角文字）
+# 片側丸付けルール: 対象数字1文字だけを丸数字に置換（U5と同方式）
+# 一部負担金割合=1 → DP8  の '９' → '⑨' → '10・⑨'
+# 一部負担金割合=2 → DP11 の '８' → '⑧' → '⑧・７'
+# 一部負担金割合=3 → DP11 の '７' → '⑦' → '８・⑦'
+KYUFU_CHAR_MAP = {
+    1: ("DP8",  "９", "⑨"),   # 1割負担 → 9割給付 → '10・⑨'
+    2: ("DP11", "８", "⑧"),   # 2割負担 → 8割給付 → '⑧・７'
+    3: ("DP11", "７", "⑦"),   # 3割負担 → 7割給付 → '８・⑦'
 }
-KYUFU_CIRCLE_TEXT = {
-    "DP8":  "⑩・⑨",
-    "DP11": "⑧・⑦",
-}
+
+# ===== 下段 登録記号番号 分割欄（行51-52）=====
+# CR49:DV50 はラベル行「登録記号番号」→ 書き込み禁止
+# 入力欄: 左=CR51:DH52 / 中=DK51:DO52 / 右=DR51:DV52
+# 区切りセル DI51:DJ52 / DP51:DQ52 は触らない（テンプレートのハイフン表示用）
+TOROKU_KIGO_SPLIT_CELLS = ("CR51", "DK51", "DR51")
 
 # ===== 初検料・再検料・計: ラベル内に金額を埋め込む =====
 # セル構造: E33:X33 = "初検料　　　　　　　　円" のようにラベル内テキスト
@@ -524,14 +530,16 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
             count += 1
 
     # ===== U6 給付割合 行8-13 =====
-    # 一部負担金割合 1 → DP8（⑩・⑨） / 2,3 → DP11（⑧・⑦）
-    # ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
+    # 片側丸付け: 対象数字1文字のみ置換（U5と同方式）
+    # 一部負担金割合=1→DP8('９'→'⑨') / 2→DP11('８'→'⑧') / 3→DP11('７'→'⑦')
+    # 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
     burden_digit = safe_int(row1.get("一部負担金割合")) or 0
-    kyufu_cell = KYUFU_CELLS.get(burden_digit)
-    if kyufu_cell:
-        kyufu_text = KYUFU_CIRCLE_TEXT.get(kyufu_cell)
-        if kyufu_text:
-            ws[kyufu_cell] = kyufu_text
+    kyufu_entry = KYUFU_CHAR_MAP.get(burden_digit)
+    if kyufu_entry:
+        kyufu_cell, orig_char, circle_char = kyufu_entry
+        original = ws[kyufu_cell].value
+        if original and orig_char in str(original):
+            ws[kyufu_cell] = str(original).replace(orig_char, circle_char, 1)
             count += 1
 
     # ===== D4 負傷原因 BR20 =====
@@ -567,7 +575,8 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
             put(CELL_MAP["負傷原因"], injury_text)
 
     # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
-    # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT8 / 下段登録記号番号 → CR49
+    # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT8
+    # 下段登録記号番号 → CR51(左)/DK51(中)/DR51(右) 分割書込
     # clinic_info が None の場合はスキップ（後方互換: 旧NDJSON/単体テスト対応）
     if clinic_info:
         # U1: 都道府県番号 → CI2
@@ -584,10 +593,14 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         # テンプレート CT8 = "1.単独" → "①.単独" に置換
         put_era_circle(ws, TANKEI_KUBUN_CELL, 1)
 
-        # 下段 登録記号番号 → CR49（フル値: 例「契2804440-0-0」）
+        # 下段 登録記号番号 → CR51/DK51/DR51（分割書込）
+        # CR49:DV50 はラベル行「登録記号番号」→ 書き込まない
+        # 例: '契2804440-0-0' → 左='契2804440' / 中='0' / 右='0'
         toroku = str(clinic_info.get("torokuKigoNo") or "").strip()
         if toroku:
-            put(CELL_MAP["登録記号番号"], toroku)
+            parts = toroku.split("-")
+            for i, cell_addr in enumerate(TOROKU_KIGO_SPLIT_CELLS):
+                ws[cell_addr] = parts[i] if i < len(parts) else ""
 
     wb.save(output_path)
     print(f"書込完了: {output_path} ({count}セル)")
