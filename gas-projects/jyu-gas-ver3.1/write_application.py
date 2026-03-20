@@ -35,7 +35,7 @@ except ImportError:
     sys.exit(1)
 
 # ===== 設定 =====
-TEMPLATE_FILE = "療養費支給申請書.xlsx"
+TEMPLATE_FILE = "application_template.xlsx"
 TEMPLATE_SHEET = "新　様式第5号"
 
 # ===== 保険者番号: 8桁を1桁ずつ（各4列結合セル） =====

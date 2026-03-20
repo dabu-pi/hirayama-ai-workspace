@@ -7,7 +7,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # アプリ本体とテンプレートをコピー
-COPY server.py write_application.py 療養費支給申請書.xlsx ./
+COPY server.py write_application.py application_template.xlsx ./
 
 # Cloud Run はデフォルト 8080
 ENV PORT=8080
