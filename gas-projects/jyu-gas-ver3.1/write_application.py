@@ -137,16 +137,18 @@ CELL_MAP = {
     #     分割書込先は TOROKU_KIGO_SPLIT_CELLS で管理。
 }
 
-# ===== U6 給付割合: 一部負担金割合→対象セル・置換文字（片側丸付け）=====
-# テンプレート実値: DP8='10・９' / DP11='８・７'（全角文字）
-# 片側丸付けルール: 対象数字1文字だけを丸数字に置換（U5と同方式）
-# 一部負担金割合=1 → DP8  の '９' → '⑨' → '10・⑨'
-# 一部負担金割合=2 → DP11 の '８' → '⑧' → '⑧・７'
-# 一部負担金割合=3 → DP11 の '７' → '⑦' → '８・⑦'
-KYUFU_CHAR_MAP = {
-    1: ("DP8",  "９", "⑨"),   # 1割負担 → 9割給付 → '10・⑨'
-    2: ("DP11", "８", "⑧"),   # 2割負担 → 8割給付 → '⑧・７'
-    3: ("DP11", "７", "⑦"),   # 3割負担 → 7割給付 → '８・⑦'
+# ===== U6 給付割合: 一部負担金割合 → 対象数字上に楕円画像（○専用画像方式）=====
+# テンプレート実値: DP8:DV10 = '10・9'（7列×3行）/ DP11:DV13 = '8・7'（7列×3行）
+# テンプレート文字列は変更せず、対象数字の上に透明背景楕円画像を浮かべる。
+#
+# 数字の列方向位置（テンプレートスキャン確認: DP=col120, DV=col126 = 7列）:
+#   '10・9'（4文字, 中央揃え）: 左余白1.5列 → '1'@DQ, '0'@DR, '・'@DS, '9'@DT-DU
+#   '8・7'  (3文字, 中央揃え)  : 左余白2列   → '8'@DR-DS, '・'@DT, '7'@DT-DU
+# ★ズレがある場合はセル範囲を1列ずつ左右にずらして調整すること
+KYUFU_OVAL_MAP = {
+    1: "DT8:DU10",   # 9割給付: '9' の位置（DP8 右側 DT-DU 列, rows 8-10）
+    2: "DR11:DS13",  # 8割給付: '8' の位置（DP11 左寄り DR-DS 列, rows 11-13）
+    3: "DT11:DU13",  # 7割給付: '7' の位置（DP11 右側 DT-DU 列, rows 11-13）
 }
 
 # ===== 下段 登録記号番号 分割欄（行51-52）=====
@@ -381,6 +383,69 @@ def _add_tenki_oval(ws, tenki_cell: str, tenki_value: str):
     ws.add_image(xl_img)
 
 
+# ===== ○専用画像方式: 汎用楕円アンカー =====
+
+def _draw_oval_on_range(ws, cell_range: str, margin_emu: int = 19050):
+    """
+    指定セル範囲 "A1:C3" に透明背景の楕円 PNG 画像を TwoCellAnchor でアンカー配置する。
+
+    テキスト "○" の代わりに使うことで、列幅・結合セル・フォントサイズに依存しない
+    視覚的中央配置を実現する。配置基準は SELECTION_SPLIT_MAP / KYUFU_OVAL_MAP の
+    セル範囲文字列で管理し、微調整時はマップの値を1列ずらすだけでよい。
+
+    転帰 (_add_tenki_oval) と同じ PIL + TwoCellAnchor 方式を汎用化したもの。
+
+    AnchorMarker の col/row は 0-based:
+      from_col = column_index_from_string(start_col) - 1  ← left edge of start col
+      to_col   = column_index_from_string(end_col)        ← right edge of end col
+      from_row = start_row - 1                            ← top of start row
+      to_row   = end_row                                  ← bottom of end row
+
+    margin_emu: 上下左右マージン (EMU)。19050 ≈ 2px at 96dpi。
+    """
+    from PIL import Image as PILImage, ImageDraw
+    from openpyxl.drawing.image import Image as XlImage
+    from openpyxl.drawing.spreadsheet_drawing import TwoCellAnchor, AnchorMarker
+    from openpyxl.utils import column_index_from_string
+    from io import BytesIO
+    import re
+
+    m = re.match(r"([A-Z]+)(\d+):([A-Z]+)(\d+)", cell_range.strip())
+    if not m:
+        return
+    sc, sr_str, ec, er_str = m.group(1), m.group(2), m.group(3), m.group(4)
+    sr, er = int(sr_str), int(er_str)
+
+    # AnchorMarker 座標 (0-based)
+    from_col = column_index_from_string(sc) - 1   # left edge of sc
+    from_row = sr - 1                              # top edge of sr
+    to_col   = column_index_from_string(ec)        # right edge of ec (= left of ec+1)
+    to_row   = er                                  # bottom edge of er (= top of er+1)
+
+    # PNG サイズ: TwoCellAnchor で引き伸ばされるためアスペクト比を大まかに合わせる
+    col_span = column_index_from_string(ec) - column_index_from_string(sc) + 1
+    row_span = er - sr + 1
+    img_h = max(20, row_span * 20)
+    img_w = max(30, col_span * 15)
+
+    # 透明背景 + 黒楕円輪郭 PNG を生成
+    pil_img = PILImage.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(pil_img)
+    draw.ellipse([1, 1, img_w - 2, img_h - 2], outline='black', width=2)
+
+    buf = BytesIO()
+    pil_img.save(buf, format='PNG')
+    buf.seek(0)
+
+    xl_img = XlImage(buf)
+    xl_img.anchor = TwoCellAnchor(
+        _from=AnchorMarker(col=from_col, colOff=margin_emu, row=from_row, rowOff=margin_emu),
+        to=AnchorMarker(col=to_col,   colOff=0,           row=to_row,   rowOff=0),
+        editAs='oneCell',
+    )
+    ws.add_image(xl_img)
+
+
 # ===== 選択肢セル分割：○専用セル方式 =====
 
 def _apply_selection_splits(ws):
@@ -406,8 +471,7 @@ def _apply_selection_splits(ws):
         ws[label_cell] = text
         ws[label_cell].alignment = center
         ws.merge_cells(marker)
-        marker_cell_addr = marker.split(':')[0]
-        ws[marker_cell_addr].alignment = center
+        # ★マーカー行にテキストは書かない。_write_selection_marker が画像楕円を配置する。
 
     # D4: BR20:DV24 → ラベル行 BR20:DV20 + 内容行 BR21:DV24
     full, label, content, text = D4_INJURY_CELL_SPLIT
@@ -419,19 +483,16 @@ def _apply_selection_splits(ws):
 
 def _write_selection_marker(ws, marker_key: str):
     """
-    指定キーのマーカーセル（下段行）に「○」を書き込む。
+    指定キーのマーカー行（下段）に楕円画像を配置する（○専用画像方式）。
     _apply_selection_splits() が事前に呼ばれていることが前提。
+
+    テキスト "○" は書き込まない。PIL TwoCellAnchor で画像がセル中央に浮かぶ。
+    位置調整は SELECTION_SPLIT_MAP の marker_merge 範囲を1列ずらして行う。
     """
-    from openpyxl.styles import Alignment
     if marker_key not in SELECTION_SPLIT_MAP:
         return
-    _full, _label, marker, _text = SELECTION_SPLIT_MAP[marker_key]
-    marker_cell_addr = marker.split(':')[0]
-    ws[marker_cell_addr] = "○"
-    ws[marker_cell_addr].alignment = Alignment(
-        horizontal='center', vertical='center',
-        wrap_text=False, shrink_to_fit=False
-    )
+    _full, _label, marker_range, _text = SELECTION_SPLIT_MAP[marker_key]
+    _draw_oval_on_range(ws, marker_range)
 
 
 # ===== メイン転記 =====
@@ -649,19 +710,15 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         _write_selection_marker(ws, f"honke_{honkeku_cell}")
         count += 1
 
-    # ===== U6 給付割合 行8-13 =====
-    # 片側丸付け: 対象数字1文字のみ置換（テンプレセルへの直接書込）
-    # 一部負担金割合=1→DP8('９'→'⑨') / 2→DP11('８'→'⑧') / 3→DP11('７'→'⑦')
+    # ===== U6 給付割合 行8-13（○専用画像方式）=====
+    # テンプレート文字列（'10・9' / '8・7'）は変更せず、対象数字の上に楕円画像を配置。
+    # KYUFU_OVAL_MAP でサブセル範囲を指定。ズレがある場合は1列ずらして調整可能。
     # 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
-    # ★ U6 は2択セル（DP8/DP11）のみで選択肢が少なく結合構造が異なるため現方式を維持
     burden_digit = safe_int(row1.get("一部負担金割合")) or 0
-    kyufu_entry = KYUFU_CHAR_MAP.get(burden_digit)
-    if kyufu_entry:
-        kyufu_cell, orig_char, circle_char = kyufu_entry
-        original = ws[kyufu_cell].value
-        if original and orig_char in str(original):
-            ws[kyufu_cell] = str(original).replace(orig_char, circle_char, 1)
-            count += 1
+    kyufu_oval_range = KYUFU_OVAL_MAP.get(burden_digit)
+    if kyufu_oval_range:
+        _draw_oval_on_range(ws, kyufu_oval_range)
+        count += 1
 
     # ===== D4 負傷の原因（BR21: 分離後のコンテンツ行）=====
     # 出力条件: row2の部位1に金額あり = 申請書3部位目が存在

@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-20（英語日付Python側正規化追加・Revision 00011-24p deploy完了）
+最終更新: 2026-03-21（○表示画像方式全面移行・Revision 00012-7mn deploy完了）
 
 ---
 
@@ -17,16 +17,16 @@
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00011-24p deploy完了（2026-03-20）** — 英語日付Python側正規化追加・○専用セル方式・D4 BR21書込・テンプレ英数字リネーム反映済み |
-| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-20 Revision 00011-24p）`{"status":"ok"}` |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00012-7mn deploy完了（2026-03-21）** — ○表示を全面画像方式（TwoCellAnchor PIL楕円）に移行。KYUFU_CHAR_MAP廃止・KYUFU_OVAL_MAP採用 |
+| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-21 Revision 00012-7mn）`{"status":"ok"}` |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
 | `clasp push`（最新 GAS を反映） | ✅ 2026-03-20 済み（7ファイル）|
 | GAS → Cloud Run 疎通確認 | ✅ `/health` 200 OK（Revision 00010-h77）。`/generate` は B案実行で確認要 |
-| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⚠️ **B案再生成で目視確認が残り** — ○専用セル方式・D4 BR21書込が正しく帳票に表示されるか確認 |
-| 申請書上段欄（U1〜U7）実装 | ✅ 全欄実装済み（○専用セル方式に変更済み）|
+| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⚠️ **B案再生成で目視確認が残り** — 画像楕円方式の実帳票での見え方確認（U6 KYUFU_OVAL_MAP位置含む）|
+| 申請書上段欄（U1〜U7）実装 | ✅ 全欄実装済み（○専用画像方式 Revision 00012-7mn）|
 | 下段 登録記号番号 分割欄書込 | ✅ 修正済み（CR51/DK51/DR51 分割書込、2026-03-20）|
-| U6 給付割合 片側丸付け | ✅ 修正済み（2026-03-20、現方式維持）|
+| U6 給付割合 | ✅ **画像方式移行済み（2026-03-21）** — KYUFU_OVAL_MAP でサブセル範囲指定（DT/DR列）。位置ズレは1列調整で対応可。|
 | D4 負傷原因欄 | ✅ **書込先修正（本コミット）** BR20ラベル保持・BR21コンテンツ行書込 |
 | B案プリフライト hard error | ✅ 実シート確認済み（2026-03-20）— mineo「患者氏名空欄」で除外ダイアログ表示 OK |
 | B案プリフライト warning | ✅ 実シート確認済み（2026-03-20）— mineo「一部負担金割合0 / 窓口負担額0」で警告ダイアログ表示 OK |
