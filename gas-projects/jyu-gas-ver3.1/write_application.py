@@ -87,6 +87,34 @@ SELECTION_SPLIT_MAP = {
 D4_INJURY_CELL_SPLIT = ("BR20:DV24", "BR20:DV20", "BR21:DV24", "負傷の原因")
 D4_INJURY_CONTENT_CELL = "BR21"  # 内容書込先（分離後のコンテンツ行左上）
 
+# ===== 英語日付文字列 → 和暦表記 変換（Python側安全網） =====
+# GAS 側 Utilities.formatDate が効かなかった場合（String型セルなど）への対策。
+# "Mon Feb 02 2026 00:00:00 GMT+0900" → "2026/02/02" → さらに put_wareki_ymd 書式へ変換せず
+# _build_injury_text 内でセグメントとして使うため ISO 形式（YYYY/MM/DD）に正規化するだけでよい。
+import re as _re
+
+_EN_MONTH = {
+    "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
+    "May": "05", "Jun": "06", "Jul": "07", "Aug": "08",
+    "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12",
+}
+
+def _normalize_date_str(s: str) -> str:
+    """
+    JavaScript Date.toString() 形式の英語日付を YYYY/MM/DD に変換する。
+    例: "Mon Feb 02 2026 00:00:00 GMT+0900 (JST)" → "2026/02/02"
+    該当しない文字列はそのまま返す。
+    """
+    m = _re.match(
+        r"\w{3}\s+(\w{3})\s+(\d{2})\s+(\d{4})", s.strip()
+    )
+    if m:
+        mon_str, day, year = m.group(1), m.group(2), m.group(3)
+        mon = _EN_MONTH.get(mon_str)
+        if mon:
+            return f"{year}/{mon}/{day}"
+    return s
+
 # ===== セルマッピング =====
 CELL_MAP = {
     "記号番号": "CK5",  # BZ5はテンプレートラベル「記号・番号」を保持
@@ -656,6 +684,8 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
             for k in ("負傷の場所", "負傷の状況", "負傷の日時"):
                 v = str(row.get(k) or "").strip()
                 if v:
+                    # 英語日付文字列（GAS String型セル由来）をYYYY/MM/DDに正規化
+                    v = _normalize_date_str(v)
                     segs.append(v)
             return "\u3000".join(segs)  # 全角スペース区切り
         t1 = _build_injury_text(row1)
