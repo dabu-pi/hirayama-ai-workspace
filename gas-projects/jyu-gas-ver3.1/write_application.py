@@ -146,9 +146,47 @@ CELL_MAP = {
 #   '8・7'  (3文字, 中央揃え)  : 左余白2列   → '8'@DR-DS, '・'@DT, '7'@DT-DU
 # ★ズレがある場合はセル範囲を1列ずつ左右にずらして調整すること
 KYUFU_OVAL_MAP = {
-    1: "DT8:DU10",   # 9割給付: '9' の位置（DP8 右側 DT-DU 列, rows 8-10）
-    2: "DR11:DS13",  # 8割給付: '8' の位置（DP11 左寄り DR-DS 列, rows 11-13）
-    3: "DT11:DU13",  # 7割給付: '7' の位置（DP11 右側 DT-DU 列, rows 11-13）
+    1: "DS8:DV10",   # 9割給付: '9' の位置（4列幅: DS-DV, rows 8-10）
+    2: "DQ11:DT13",  # 8割給付: '8' の位置（4列幅: DQ-DT, rows 11-13）
+    3: "DS11:DV13",  # 7割給付: '7' の位置（4列幅: DS-DV, rows 11-13）
+}
+
+# ===== 選択肢楕円の配置範囲マップ =====
+# _write_selection_marker が参照する配置範囲。
+# full_merge（ラベル行＋マーカー行の全結合範囲）を指定することで、
+# マーカー行のみ指定した場合より上方向に広がり「上N行分移動」と同等の効果を得る。
+# ・保険種別: 3行全体 → マーカー行1行のみ指定から「上2行」分移動
+# ・単独区分/本家区分/性別: 2行全体 → マーカー行1行のみ指定から「上1行」分移動
+# ・給付割合は KYUFU_OVAL_MAP で別管理（横幅優先のため）
+SELECTION_OVAL_MAP = {
+    # 性別（2行 × 4列）
+    "gender_男": "AL21:AO22",
+    "gender_女": "AL23:AO24",
+    # 保険種別（3行 × 4列）
+    "ins_1": "CB8:CE10",
+    "ins_2": "CF8:CI10",
+    "ins_3": "CJ8:CM10",
+    "ins_4": "CB11:CE13",
+    "ins_5": "CF11:CI13",
+    "ins_6": "CJ11:CM13",
+    # 単独区分（2行 × 6列）
+    "tankei_1": "CT8:CY9",
+    "tankei_2": "CT10:CY11",
+    "tankei_3": "CT12:CY13",
+    # 本家区分（2行 × 6列）
+    "honke_DB8":  "DB8:DG9",
+    "honke_DB10": "DB10:DG11",
+    "honke_DB12": "DB12:DG13",
+    "honke_DH8":  "DH8:DM9",
+    "honke_DH12": "DH12:DM13",
+}
+
+# ===== 楕円スタイル =====
+# "normal": 通常の選択肢欄（性別/保険種別/単独/本家）
+# "kyufu":  給付割合専用（縦方向マージンを小さくして横長に見せる）
+OVAL_STYLES = {
+    "normal": {"margin_emu": 19050, "line_width": 2},
+    "kyufu":  {"margin_emu": 9525,  "line_width": 2},
 }
 
 # ===== 下段 登録記号番号 分割欄（行51-52）=====
@@ -385,12 +423,12 @@ def _add_tenki_oval(ws, tenki_cell: str, tenki_value: str):
 
 # ===== ○専用画像方式: 汎用楕円アンカー =====
 
-def _draw_oval_on_range(ws, cell_range: str, margin_emu: int = 19050):
+def _draw_oval_on_range(ws, cell_range: str, style: str = "normal"):
     """
     指定セル範囲 "A1:C3" に透明背景の楕円 PNG 画像を TwoCellAnchor でアンカー配置する。
 
     テキスト "○" の代わりに使うことで、列幅・結合セル・フォントサイズに依存しない
-    視覚的中央配置を実現する。配置基準は SELECTION_SPLIT_MAP / KYUFU_OVAL_MAP の
+    視覚的中央配置を実現する。配置基準は SELECTION_OVAL_MAP / KYUFU_OVAL_MAP の
     セル範囲文字列で管理し、微調整時はマップの値を1列ずらすだけでよい。
 
     転帰 (_add_tenki_oval) と同じ PIL + TwoCellAnchor 方式を汎用化したもの。
@@ -401,7 +439,7 @@ def _draw_oval_on_range(ws, cell_range: str, margin_emu: int = 19050):
       from_row = start_row - 1                            ← top of start row
       to_row   = end_row                                  ← bottom of end row
 
-    margin_emu: 上下左右マージン (EMU)。19050 ≈ 2px at 96dpi。
+    style: OVAL_STYLES のキー。"normal"（通常選択欄）/ "kyufu"（給付割合専用）。
     """
     from PIL import Image as PILImage, ImageDraw
     from openpyxl.drawing.image import Image as XlImage
@@ -409,6 +447,10 @@ def _draw_oval_on_range(ws, cell_range: str, margin_emu: int = 19050):
     from openpyxl.utils import column_index_from_string
     from io import BytesIO
     import re
+
+    oval_style = OVAL_STYLES.get(style, OVAL_STYLES["normal"])
+    margin_emu = oval_style["margin_emu"]
+    line_width = oval_style["line_width"]
 
     m = re.match(r"([A-Z]+)(\d+):([A-Z]+)(\d+)", cell_range.strip())
     if not m:
@@ -431,7 +473,7 @@ def _draw_oval_on_range(ws, cell_range: str, margin_emu: int = 19050):
     # 透明背景 + 黒楕円輪郭 PNG を生成
     pil_img = PILImage.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(pil_img)
-    draw.ellipse([1, 1, img_w - 2, img_h - 2], outline='black', width=2)
+    draw.ellipse([1, 1, img_w - 2, img_h - 2], outline='black', width=line_width)
 
     buf = BytesIO()
     pil_img.save(buf, format='PNG')
@@ -483,16 +525,20 @@ def _apply_selection_splits(ws):
 
 def _write_selection_marker(ws, marker_key: str):
     """
-    指定キーのマーカー行（下段）に楕円画像を配置する（○専用画像方式）。
+    指定キーの選択肢セル全体（ラベル行＋マーカー行）に楕円画像を配置する（○専用画像方式）。
     _apply_selection_splits() が事前に呼ばれていることが前提。
 
     テキスト "○" は書き込まない。PIL TwoCellAnchor で画像がセル中央に浮かぶ。
-    位置調整は SELECTION_SPLIT_MAP の marker_merge 範囲を1列ずらして行う。
+    配置範囲は SELECTION_OVAL_MAP（full_merge）を使用するため、マーカー行のみを
+    指定した旧方式に対して「上N行分」移動した位置に楕円が描かれる。
+      ・保険種別: 3行全体 → 実質「上2行」移動
+      ・性別/単独/本家: 2行全体 → 実質「上1行」移動
+    位置微調整は SELECTION_OVAL_MAP の範囲文字列を変更して行う。
     """
-    if marker_key not in SELECTION_SPLIT_MAP:
+    if marker_key not in SELECTION_OVAL_MAP:
         return
-    _full, _label, marker_range, _text = SELECTION_SPLIT_MAP[marker_key]
-    _draw_oval_on_range(ws, marker_range)
+    oval_range = SELECTION_OVAL_MAP[marker_key]
+    _draw_oval_on_range(ws, oval_range, style="normal")
 
 
 # ===== メイン転記 =====
@@ -717,7 +763,7 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     burden_digit = safe_int(row1.get("一部負担金割合")) or 0
     kyufu_oval_range = KYUFU_OVAL_MAP.get(burden_digit)
     if kyufu_oval_range:
-        _draw_oval_on_range(ws, kyufu_oval_range)
+        _draw_oval_on_range(ws, kyufu_oval_range, style="kyufu")
         count += 1
 
     # ===== D4 負傷の原因（BR21: 分離後のコンテンツ行）=====
