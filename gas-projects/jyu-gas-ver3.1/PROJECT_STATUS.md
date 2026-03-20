@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-20（B案patientCount後補正 + プリフライトバリデーション実装完了）
+最終更新: 2026-03-20（B案プリフライト第2段：0値・未確定値 warning 追加完了）
 
 ---
 
@@ -80,13 +80,14 @@
 | U6 が両方丸になっていた | `⑧・⑦` 固定文字列全体を書き込んでいた（セル置換方式が誤り）| KYUFU_CHAR_MAP で片側1文字のみ置換する方式に修正（U5と同方式）| b6a7c79 |
 | 登録記号番号をラベル行（CR49）へ上書きしていた | テンプレート CR49:DV50 がラベル行であることを未確認のまま書込していた | openpyxlスキャンで入力欄（CR51/DK51/DR51）を確定し分割書込に修正 | b6a7c79 |
 | B案再生成が最新実装を反映しない | clasp push は GAS のみ更新。Python（write_application.py）は Docker イメージに焼き込まれており Cloud Run 未再デプロイだと旧コードが動く | Docker rebuild（Cloud Build） + Cloud Run redeploy（Revision 00003-9mh）実施 | — |
-| **B案で特定患者がスキップされると全員失敗する** | `patientCount` をループ前に `patientIds.length` で確定 → スキップ発生時に Python `validate_batch_safe` が patientCount不一致を検出 → `ValueError` → HTTP 400 → 全患者失敗 | ① patientCount後補正（A案・B案両方）: ループ後に `ndjsonLines.length - 1` で上書き。② B案プリフライト追加: Cloud Run POST前にcase1必須キーを GAS側検証、問題患者を除外して続行可能に | （本コミット）|
+| **B案で特定患者がスキップされると全員失敗する** | `patientCount` をループ前に `patientIds.length` で確定 → スキップ発生時に Python `validate_batch_safe` が patientCount不一致を検出 → `ValueError` → HTTP 400 → 全患者失敗 | ① patientCount後補正（A案・B案両方）: ループ後に `ndjsonLines.length - 1` で上書き。② B案プリフライト追加: Cloud Run POST前にcase1必須キーを GAS側検証、問題患者を除外して続行可能に | bed4550 |
+| **負担割合0や金額不整合でも検知なしに POST していた** | プリフライトが「空かどうか」しか見ておらず、0値・金額合計不一致を見逃していた | ③ B案プリフライト第2段（warning）追加: 当月合計>0 の場合に 一部負担金割合0 / 窓口負担額0 / 請求金額0 / 合計不一致 を `preflightWarnings` として収集。除外なし・確認ダイアログのみ表示（ok→続行 / いいえ→中断）| （本コミット）|
 
 ### 再開時の優先候補（優先順）
 
 | 優先 | タスク | 理由 |
 |---|---|---|
-| 1 | **B案プリフライト動作確認** | mineo を含む3患者で実行し、プリフライトダイアログ・除外後生成・patientCount補正を確認する |
+| 1 | **B案プリフライト（warning含む）動作確認** | mineo（負担割合0）を含む3患者で実行し、warning ダイアログ・hard error 除外・patientCount補正を実案件で確認する |
 | 2 | D5 施術証明欄・委任欄 | 毎回手書き運用のため優先度は低いが未実装 |
 | 3 | U5 後期高齢者の制度確認 | 保険種別=6 の場合の本家区分記載方式が未確認。空欄のままか記載必要か |
 | 4 | D4 3部位ケースの追加確認 | row2["部位1_計"] > 0 の判定が実案件で正しく動くか確認 |

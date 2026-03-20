@@ -2336,7 +2336,8 @@ function V3TR_menuGenerateApplication_B() {
   // ===== ②-A プリフライトバリデーション（Cloud Run POST 前）=====
   // NDJSON生成は成功したが内容に問題がある患者を検出し、人間に判断を委ねる
   var PREFLIGHT_REQUIRED_KEYS = ["患者ID", "対象月", "患者氏名", "当月合計", "窓口負担額", "請求金額"];
-  var preflightErrors = [];  // [{pid, reasons:[]}]
+  var preflightErrors   = [];  // [{pid, reasons:[]}]  hard error → 除外対象
+  var preflightWarnings = [];  // [{pid, warnings:[]}] warning   → 確認後続行可
 
   for (var pi = 1; pi < ndjsonLines.length; pi++) {
     var pLine;
@@ -2345,28 +2346,52 @@ function V3TR_menuGenerateApplication_B() {
       continue;
     }
     var ppid = pLine.patientId || "(患者ID不明)";
-    var reasons = [];
+    var reasons  = [];
+    var warnings = [];
     var c1 = pLine.case1;
     if (!c1) {
       reasons.push("case1 が null（転記データ未生成の可能性）");
     } else {
+      // --- hard error: 必須キー空 ---
       PREFLIGHT_REQUIRED_KEYS.forEach(function(k) {
         var v = c1[k];
         if (v === null || v === undefined || String(v).trim() === "") {
           reasons.push("必須項目「" + k + "」が空");
         }
       });
+      // --- hard error: 対象月不一致 ---
       var c1Month = String(c1["対象月"] || "").trim();
       if (c1Month && c1Month !== ym) {
         reasons.push("対象月不一致（データ=" + c1Month + ", 実行月=" + ym + "）");
       }
+
+      // --- warning: 0値・未確定値（当月合計 > 0 の場合のみ評価）---
+      var totalAmt  = Number(c1["当月合計"]    || 0);
+      var copayAmt  = Number(c1["窓口負担額"]   || 0);
+      var claimAmt  = Number(c1["請求金額"]     || 0);
+      var burdenDig = c1["一部負担金割合"];
+      var burdenVal = (burdenDig === null || burdenDig === undefined) ? 0 : Number(burdenDig);
+      if (totalAmt > 0) {
+        if (!burdenDig || burdenVal === 0) {
+          warnings.push("一部負担金割合が 0 または未設定（負担割合が不明な可能性）");
+        }
+        if (copayAmt === 0) {
+          warnings.push("当月合計 " + totalAmt + " 円 なのに窓口負担額が 0（免除・後日確認の場合は無視可）");
+        }
+        if (claimAmt === 0) {
+          warnings.push("当月合計 " + totalAmt + " 円 なのに請求金額が 0（要確認）");
+        }
+        if (copayAmt + claimAmt !== totalAmt) {
+          warnings.push("窓口負担額(" + copayAmt + ") + 請求金額(" + claimAmt + ") = " +
+            (copayAmt + claimAmt) + " が当月合計(" + totalAmt + ")と一致しない");
+        }
+      }
     }
-    if (reasons.length > 0) {
-      preflightErrors.push({ pid: ppid, reasons: reasons });
-    }
+    if (reasons.length  > 0) preflightErrors.push({   pid: ppid, reasons:  reasons  });
+    if (warnings.length > 0) preflightWarnings.push({ pid: ppid, warnings: warnings });
   }
 
-  // ===== ②-B プリフライト結果処理 =====
+  // ===== ②-B プリフライト結果処理（hard error）=====
   if (preflightErrors.length > 0) {
     var pfLines = ["【確認】以下の患者にデータ上の問題が見つかりました。\n"];
     preflightErrors.forEach(function(e) {
@@ -2403,6 +2428,30 @@ function V3TR_menuGenerateApplication_B() {
     if (ndjsonLines.length === 1) {
       return ui.alert("問題患者を除外した結果、生成対象の患者がいなくなりました。\n処理を中断します。");
     }
+  }
+
+  // ===== ②-C プリフライト結果処理（warning）=====
+  // hard error で除外された患者の warning は表示しない（もう対象外のため）
+  var excludedByError = {};
+  preflightErrors.forEach(function(e) { excludedByError[e.pid] = true; });
+  var activeWarnings = preflightWarnings.filter(function(w) { return !excludedByError[w.pid]; });
+
+  if (activeWarnings.length > 0) {
+    var wfLines = ["【要確認】以下の患者に未確定の可能性がある値があります。\n"];
+    activeWarnings.forEach(function(w) {
+      wfLines.push("  " + w.pid + ":");
+      w.warnings.forEach(function(msg) { wfLines.push("    ⚠️ " + msg); });
+    });
+    wfLines.push("\n※正当な値であれば無視して構いません。");
+    wfLines.push("このまま生成を続けますか？");
+    wfLines.push("（「はい」: このまま続行 ／ 「いいえ」: 中断して確認）");
+
+    var wfResp = ui.alert("申請書生成（B案）— 要確認", wfLines.join("\n"), ui.ButtonSet.YES_NO);
+    if (wfResp !== ui.Button.YES) {
+      return ui.alert("申請書生成を中断しました。\n値を確認してから再実行してください。");
+    }
+    // 続行（患者除外なし）
+    Logger.log("[B案] warning を確認のうえ続行: " + activeWarnings.map(function(w) { return w.pid; }).join(", "));
   }
 
   // ① patientCount後補正: スキップ・プリフライト除外後の実患者数で補正
