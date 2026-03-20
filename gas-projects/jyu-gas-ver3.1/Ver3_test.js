@@ -1772,3 +1772,167 @@ function showFixtureResult_(testId) {
   Logger.log(msg);
   SpreadsheetApp.getUi().alert(msg);
 }
+
+
+/* =======================================================================
+   D2 継続月数・頻回 純粋計算テスト（シート不要）
+   Apps Script エディタで runD2Suite() を実行して確認する。
+
+   ★制度ルール（確認点）:
+     ① 4連続+当月10回以上 → displayMonths=5（5か月目表示）
+     ② 5連続達成翌月       → displayMonths=6（固定）
+     ③ 頻回開始後に当月10回未満でも → displayMonths=6（継続）
+     ④ 16日以降初検の翌月起算  → totalMonths が1か月短くなること
+     ⑤ case2行はM31空欄        → コードレビューで確認済み（if caseNo===1）
+   ======================================================================= */
+
+/**
+ * D2 純粋計算ロジック（V3TR_calcD2Keizoku_ の計算部のみを分離）
+ * countsArr: 0-indexed 月インデックス → 月別来院日数 の配列（長さ = totalMonths）
+ * totalMonths: 起算月〜対象月の月数
+ */
+function V3TR_calcD2FromCounts_(countsArr, totalMonths) {
+  if (!countsArr || totalMonths <= 0) return { rawContMonths: 0, freqStarted: false, displayMonths: "" };
+
+  var streak = 0;
+  var freqStartedBefore = false;
+  for (var m = 0; m < totalMonths - 1; m++) {
+    var cnt = countsArr[m] || 0;
+    if (cnt >= 10) {
+      streak++;
+      if (streak >= 5) { freqStartedBefore = true; break; }
+    } else {
+      streak = 0;
+    }
+  }
+  if (freqStartedBefore) {
+    return { rawContMonths: -1, freqStarted: true, displayMonths: 6 };
+  }
+  var curCnt = countsArr[totalMonths - 1] || 0;
+  if (curCnt >= 10) {
+    streak++;
+  } else {
+    streak = 0;
+  }
+  return {
+    rawContMonths: streak,
+    freqStarted:   (streak >= 5),
+    displayMonths: (streak > 0) ? streak : "",
+  };
+}
+
+/**
+ * D2 起算月計算（V3TR_calcD2Keizoku_ の起算月ロジックを分離）
+ * injuryDate: Date、ym: "yyyy-MM"
+ * return: 起算月〜対象月の月数（totalMonths）
+ */
+function V3TR_calcD2TotalMonths_(injuryDate, ym) {
+  var sy = injuryDate.getFullYear();
+  var sm = injuryDate.getMonth();
+  if (injuryDate.getDate() >= 16) {
+    sm++;
+    if (sm > 11) { sm = 0; sy++; }
+  }
+  var parts = ym.split("-").map(Number);
+  var ey = parts[0], em = parts[1] - 1;
+  return (ey - sy) * 12 + (em - sm) + 1;
+}
+
+var D2_TEST_CASES_ = [
+  {
+    id: "D2-①",
+    desc: "4連続+当月10回以上 → displayMonths=5（5か月目）",
+    // 起算月1〜4か月目: 全て≥10。対象月（5か月目）: ≥10
+    counts:       [12, 10, 11, 10, 10],
+    totalMonths:  5,
+    expectedDisp: 5,
+    expectedFreq: true,
+  },
+  {
+    id: "D2-②",
+    desc: "5連続達成翌月（6か月目） → displayMonths=6固定",
+    // 起算月1〜5か月目: 全て≥10（freqStartedBeforeで検出）。対象月（6か月目）: 0回でも
+    counts:       [12, 10, 11, 10, 10, 0],
+    totalMonths:  6,
+    expectedDisp: 6,
+    expectedFreq: true,
+  },
+  {
+    id: "D2-③",
+    desc: "頻回開始後に当月10回未満でも → displayMonths=6継続",
+    // 起算月1〜5: ≥10。対象月（7か月目）: 5回
+    counts:       [12, 10, 11, 10, 10, 0, 5],
+    totalMonths:  7,
+    expectedDisp: 6,
+    expectedFreq: true,
+  },
+  {
+    id: "D2-④a",
+    desc: "16日以降初検(2026-01-20) → 起算月=2026-02。対象月2026-06 → totalMonths=5",
+    injuryDate:      new Date(2026, 0, 20),  // 2026-01-20（1月=0-indexed）
+    ym:              "2026-06",
+    expectedTotal:   5,  // 2026-02〜2026-06 = 5ヶ月
+  },
+  {
+    id: "D2-④b",
+    desc: "15日以前初検(2026-01-15) → 起算月=2026-01。対象月2026-06 → totalMonths=6",
+    injuryDate:      new Date(2026, 0, 15),  // 2026-01-15
+    ym:              "2026-06",
+    expectedTotal:   6,  // 2026-01〜2026-06 = 6ヶ月
+  },
+  {
+    id: "D2-⑤",
+    desc: "連続途切れ後に再び5連続 → 2度目の5連続翌月にdisplayMonths=6",
+    // 1〜3: ≥10、4: <10（途切れ）、5〜9: ≥10（5連続再達成）、10: 対象月
+    counts:       [12, 10, 11, 8, 10, 11, 12, 10, 10, 0],
+    totalMonths:  10,
+    expectedDisp: 6,
+    expectedFreq: true,
+  },
+];
+
+function runD2Suite_() {
+  var pass = 0, fail = 0;
+  var log = [];
+
+  for (var i = 0; i < D2_TEST_CASES_.length; i++) {
+    var tc = D2_TEST_CASES_[i];
+    var ok = false;
+    var detail = "";
+
+    if (tc.expectedTotal !== undefined) {
+      // ④ 起算月テスト
+      var total = V3TR_calcD2TotalMonths_(tc.injuryDate, tc.ym);
+      ok = (total === tc.expectedTotal);
+      detail = "totalMonths: " + total + " (expected " + tc.expectedTotal + ")";
+    } else {
+      // ①②③⑤ 計算ロジックテスト
+      var res = V3TR_calcD2FromCounts_(tc.counts, tc.totalMonths);
+      ok = (res.displayMonths === tc.expectedDisp && res.freqStarted === tc.expectedFreq);
+      detail = "displayMonths=" + res.displayMonths + "(expect " + tc.expectedDisp + ")"
+        + " freqStarted=" + res.freqStarted + "(expect " + tc.expectedFreq + ")";
+    }
+
+    if (ok) {
+      pass++;
+      log.push("[PASS] " + tc.id + ": " + tc.desc);
+    } else {
+      fail++;
+      log.push("[FAIL] " + tc.id + ": " + tc.desc + "\n       " + detail);
+    }
+  }
+
+  var summary = "D2テスト PASS: " + pass + "  FAIL: " + fail + "  / " + D2_TEST_CASES_.length;
+  Logger.log(summary + "\n" + log.join("\n"));
+  SpreadsheetApp.getUi().alert(summary + "\n\n" + log.join("\n"));
+}
+
+/** ⑤ case2のM31空欄確認（コードレビュー用メモ）
+ * V3TR_buildTransferDataForMonth_ 内の for(caseNo of [1,2]) ループで
+ * caseNo===1 のブロックのみ V3TR_calcD2Keizoku_ を呼び出し row["経過"] を設定。
+ * caseNo===2 は else { row["経過"] = ""; } で空文字を設定している。
+ * → write_application.py では `if keizoku:` の条件で空文字はスキップされ M31 未書込になる。
+ */
+
+// 公開ラッパー（Args Scriptメニューから直接実行可能）
+function runD2Suite() { runD2Suite_(); }

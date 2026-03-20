@@ -48,13 +48,13 @@
 
 ### 現在のプロジェクト状態
 
-**B案（申請書生成）は完全に動作確認済み。D2実装完了（GAS+Python 2026-03-20）。次の作業: clasp push + Cloud Run 再デプロイ + 動作確認。**
+**B案・D2 ともに稼働中。D2はclasp push + Cloud Run再デプロイ完了（2026-03-20）。全6ロジックテスト PASS 確認。**
 
 | カテゴリ | 状態 | 詳細 |
 |---|---|---|
 | B案申請書生成 | ✅ **本番稼働可能** | 3件生成/エラー0件/全患者クリーン（2026-03-20確認済み）|
 | 申請書上段欄 U1〜U7 | ✅ 全欄実装済み | U2/U5/U6 は暫定運用（制度公式確認が残課題）|
-| D2 継続月数・頻回 | ✅ **実装完了** | GAS: `V3TR_calcD2Keizoku_` 新設 + `row["経過"]` 生成（2026-03-20）。Python: `CELL_MAP["経過"]="M31"` + 書込。Cloud Run再デプロイ + 動作確認が必要 |
+| D2 継続月数・頻回 | ✅ **反映完了** | clasp push / Cloud Run rev.00004-kc9 再デプロイ / ロジックテスト6ケースPASS（2026-03-20）|
 | D5 施術証明欄 | ❌ 未実装 | 手書き運用継続。優先度低 |
 | U5 後期高齢者本家区分 | ⚠️ 保留中 | 後期高齢者の本家区分記載方式が制度上未確認。空欄運用 |
 
@@ -525,11 +525,18 @@
 | `Ver3_transferData.js` | `V3TR_calcD2Keizoku_()` 新設（行863付近）+ `V3TR_buildTransferDataForMonth_` 内 `row["経過"]` 生成（case1のみ・case2は空文字）|
 | `write_application.py` | `CELL_MAP["経過"] = "M31"` 追加 + D2書込ブロック追加（U7 DH31直後）|
 
-#### 残タスク（反映・確認）
+#### 反映・確認済み（2026-03-20）
 
-1. `clasp push` → GAS に転記ロジック反映
-2. Cloud Run 再デプロイ（`write_application.py` 変更のため必須）
-3. 月次申請生成 → M31 に「○ヶ月 月○回」が表示されることを確認
+| 作業 | 結果 |
+|---|---|
+| clasp push | ✅ 7ファイル Pushed（Ver3_transferData.js / Ver3_test.js 含む）|
+| Cloud Build | ✅ SUCCESS（image: asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/jrec-appgen-server:latest）|
+| Cloud Run デプロイ | ✅ revision `jrec-appgen-server-00004-kc9` — 100% トラフィック |
+| /health 確認 | ✅ `{"status":"ok"}` |
+| D2 ロジックテスト | ✅ 全6ケース PASS（①4連続+当月→5 / ②翌月→6固定 / ③頻回後未達→6継続 / ④16日以降翌月起算 / ⑤連続途切れ再達成→6 / ⑥case2空欄確認）|
+| GAS側テスト関数 | `runD2Suite()` を Ver3_test.js に追加済み。Apps Script エディタから実行可能 |
+
+> 残タスク: B案を実際に実行してM31欄の実書込を目視確認（本番患者データで）
 
 **D3 — 負傷名の左右表記**
 
