@@ -161,7 +161,10 @@ V3TR.CONFIG = {
 
     // 初検情報（初検情報履歴シートから取得：対象月末日時点での最新1件）
     "負傷の日時", "負傷の場所", "負傷の状況", "初検時所見", "初検時相談支援内容",
-    "初検取得モード"  // "caseKey" | "patientFallback" | "none"
+    "初検取得モード",  // "caseKey" | "patientFallback" | "none"
+
+    // 申請書上段・31行目 書込欄（U7〜）
+    "請求区分",  // "新規" | "継続" | "" （同月内治癒再発の両方○は将来対応）
   ],
 
   /**
@@ -571,6 +574,21 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     row["初検時所見"]         = initInfo ? initInfo.initFindings     : "";
     row["初検時相談支援内容"] = initInfo ? initInfo.supportContent   : "";
     row["初検取得モード"]     = initInfo ? initInfo.matchMode        : "none";
+
+    // U7 請求区分: 初検年月日（cs.firstDate）の年月と対象月（ym: "yyyy-MM"）を比較
+    // 新規 = 初検月が対象月と同じ / 継続 = 初検月が対象月より前
+    // 同月内治癒再発（「新規・継続」両方○）は将来対応。現時点では "新規" or "継続" の単一値。
+    {
+      const [ymYear, ymMonth] = ym.split("-").map(Number);
+      const initD = (cs.firstDate instanceof Date) ? cs.firstDate : null;
+      if (initD) {
+        const iYear  = initD.getFullYear();
+        const iMonth = initD.getMonth() + 1;  // 0-based → 1-based
+        row["請求区分"] = (iYear === ymYear && iMonth === ymMonth) ? "新規" : "継続";
+      } else {
+        row["請求区分"] = "";  // 初検日が不明な場合は空（手入力を促す）
+      }
+    }
 
     // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
     // 空レコード（caseKey=""・全金額0）の出力を抑制する。
@@ -1481,6 +1499,10 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   putDigits(CM.合計, row1["当月合計"]);
   putDigits(CM.一部負担金, row1["窓口負担額"]);
   putDigits(CM.請求金額, row1["請求金額"]);
+
+  // ===== U7 請求区分 行31 DH31 =====
+  // "新規" or "継続" を書き込む。同月内治癒再発の両方○は将来対応。
+  put(CM.請求区分, row1["請求区分"]);
 
   return count;
 }

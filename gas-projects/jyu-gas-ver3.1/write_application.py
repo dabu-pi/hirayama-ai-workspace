@@ -469,6 +469,13 @@ def write_application(template_path: str, json_data: dict, output_path: str):
         if n is not None:
             count += len(str(abs(n)))
 
+    # ===== U7 請求区分 DH31 =====
+    # GAS側 row["請求区分"] = "新規" | "継続" | ""
+    # 同月内治癒再発（"新規・継続" 両方○）は将来対応。現時点では文字列をそのまま書く。
+    seikyu_kubun = row1.get("請求区分") or ""
+    if seikyu_kubun:
+        put(CELL_MAP["請求区分"], seikyu_kubun)
+
     wb.save(output_path)
     print(f"書込完了: {output_path} ({count}セル)")
     return count
