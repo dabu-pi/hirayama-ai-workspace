@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-20（○専用セル方式・D4書込先BR21修正・テンプレ英数字リネーム・Revision 00010-h77 deploy完了）
+最終更新: 2026-03-20（英語日付Python側正規化追加・Revision 00011-24p deploy完了）
 
 ---
 
@@ -11,14 +11,14 @@
 - 状態: 稼働中（B案確認完了。D2/U5後期高齢者対応確定済み。残課題: D5/U2/U6暫定運用欄公式確認）
 - 優先度: 最優先
 - ブランチ: `feature/auto-dev-phase3-loop`
-- 最新コミット: `ce29f9f`
+- 最新コミット: `8941b19`
 
 ### 到達点スナップショット（2026-03-20 更新）
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00010-h77 deploy完了（2026-03-20）** — ○専用セル方式・D4 BR21書込・テンプレ英数字リネーム反映済み |
-| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-20 Revision 00010-h77）`{"status":"ok"}` |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00011-24p deploy完了（2026-03-20）** — 英語日付Python側正規化追加・○専用セル方式・D4 BR21書込・テンプレ英数字リネーム反映済み |
+| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-20 Revision 00011-24p）`{"status":"ok"}` |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
 | `clasp push`（最新 GAS を反映） | ✅ 2026-03-20 済み（7ファイル）|
@@ -49,7 +49,7 @@
 
 ### 現在のプロジェクト状態
 
-**○専用セル方式・D4書込先修正・テンプレ英数字リネーム完了。Revision 00010-h77 deploy済み・/health OK。次の必須作業: B案再生成で帳票目視確認。**
+**英語日付Python側正規化追加・Revision 00011-24p deploy済み・/health OK。次の必須作業: B案再生成で帳票目視確認（旧ファイルを開き直さず必ず再生成すること）。**
 
 | カテゴリ | 状態 | 詳細 |
 |---|---|---|
@@ -171,6 +171,8 @@
 | **「負傷の原因」D4書込先ずれ（再修正）** | `BR20:DV24`はラベル＋内容が同一結合セル。旧修正（E44/摘要欄）は暫定対応で意味的に誤り | Python: `BR20:DV24`をoutputファイル内のみ分割→BR20:DV20ラベル行（"負傷の原因"保持）＋BR21:DV24コンテンツ行。`D4_INJURY_CONTENT_CELL = "BR21"` に書込 | （本コミット）|
 | **丸付けレイアウト崩れ（性別/保険種別/単独区分/本家区分）** | 文字置換方式（"1"→"①"等）がセルの文字縮小・位置ずれを引き起こしていた。テンプレートの固定ラベル文字も置換対象になりレイアウトが崩壊 | Python: `SELECTION_SPLIT_MAP`で各選択肢の結合セルをラベル行＋マーカー行に分割。テンプレート文字は保持し、マーカー行に"○"のみ書込む○専用セル方式に全面切替（`_apply_selection_splits` / `_write_selection_marker`）| c039ff7 |
 | **テンプレート xlsx 日本語名 Cloud Build 失敗** | `療養費支給申請書.xlsx` の日本語ファイル名が Cloud Build 環境で文字化けし `COPY` ステップでファイル未検出 | `application_template.xlsx` に英数字リネーム。Dockerfile・write_application.py `TEMPLATE_FILE` を同名に修正 | ce29f9f |
+| **英語日付文字列が D4 負傷の日時に混入** | GAS String型セル（`"Mon Feb 02 2026..."`）は `instanceof Date` チェックをすり抜け Python に英語日付文字列として渡る | Python側: `_normalize_date_str()` 追加。`_build_injury_text` 内で英語日付→YYYY/MM/DD正規化。GAS側修正の安全網 | 8941b19 |
+| **旧ファイル（00008-8rx出力）が問題の出所** | 14:05 UTC に 00008-8rx でB案実行 → 14:13 UTC に 00010-h77 deploy。ユーザーは deploy 前のファイルを参照していた | 旧経路ではない。同一 URL でも deploy 前後でリビジョンが変わる。ファイル再生成で解消 | — |
 
 ### 今回完了したこと（2026-03-20）
 
@@ -186,7 +188,7 @@
 | **○専用セル方式 全面実装** | 性別/保険種別/単独区分/本家区分の4項目を`SELECTION_SPLIT_MAP`方式に切替。テンプレート固定ラベル保持＋マーカー行"○"書込。openpyxlコードのみ変更（Cloud Run 再デプロイで反映）|
 | **D4 書込先再修正（BR21）** | BR20:DV24を出力ファイル内で分割→BR20ラベル行保持・BR21コンテンツ行書込。E44摘要汚染なし。動作テスト確認済み（c039ff7）|
 | **テンプレ英数字リネーム** | `療養費支給申請書.xlsx` → `application_template.xlsx`。Dockerfile・TEMPLATE_FILE修正。Cloud Build 文字化け問題を解消（ce29f9f）|
-| **Cloud Run Revision 00010-h77 deploy** | 上記全修正を反映。`/health` 200 OK 確認済み（2026-03-20）|
+| **Cloud Run Revision 00011-24p deploy** | 英語日付正規化追加・全修正を反映。`/health` 200 OK 確認済み（2026-03-20）|
 
 ### まだ残っていること（次の作業候補）
 
@@ -207,7 +209,7 @@
 | Run_Log シート | ✅ 反映済み | `Run_Log!A48:J48`（D2/M31整合化完了 2026-03-20）|
 | Projects シート | ✅ 反映済み | `Projects!A4:M4` 次アクション・最終更新日更新済み |
 | GitHub（コード） | ✅ 反映済み | commit ce29f9f（feature/auto-dev-phase3-loop）|
-| Cloud Run Revision | ✅ **反映済み** | **00010-h77**（○専用セル方式・D4 BR21書込・テンプレ英数字リネーム 2026-03-20）|
+| Cloud Run Revision | ✅ **反映済み** | **00011-24p**（英語日付Python正規化・○専用セル方式・D4 BR21書込・テンプレ英数字リネーム 2026-03-20）|
 | JREC-01スプレッドシート（患者マスタ） | ✅ 読取アクセス可能 | 共有復旧済み（2026-03-20）。gspread で患者マスタ確認済み。**スプレッドシートID: `1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM`** |
 | JREC-01スプレッドシート（患者マスタ書込） | ⚠️ 未実施 | 今回確認の結果、修正不要と判明。書込権限は共有設定次第 |
 

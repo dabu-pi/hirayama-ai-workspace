@@ -495,7 +495,7 @@ if seikyu_kubun:
 
 ### 8-0. B案最終確認結果（2026-03-20）
 
-**○専用セル方式・D4書込先修正・テンプレ英数字リネーム適用済み。Revision 00010-h77 deploy完了・/health OK。次: B案再生成で帳票目視確認。**
+**英語日付Python側正規化追加・Revision 00011-24p deploy完了・/health OK。次: B案再生成で帳票目視確認（必ず Deploy 後に再生成すること）。**
 
 | 確認項目 | 結果 | 備考 |
 |---|---|---|
@@ -568,7 +568,7 @@ if seikyu_kubun:
     --image asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/jrec-appgen-server:latest \
     --region asia-northeast1
 
-現在の最新リビジョン: **jrec-appgen-server-00010-h77**（2026-03-20 デプロイ / ○専用セル方式・D4 BR21書込・テンプレ英数字リネーム反映）
+現在の最新リビジョン: **jrec-appgen-server-00011-24p**（2026-03-20 デプロイ / 英語日付Python正規化・○専用セル方式・D4 BR21書込・テンプレ英数字リネーム反映）
 Service URL: https://jrec-appgen-server-737882491829.asia-northeast1.run.app
 /health: ✅ {"status":"ok"} 確認済み（2026-03-20）
 ★ 次回デプロイコマンド（--source 方式では PROJECT_ID 展開失敗あり。gcr.io 明示推奨）:
