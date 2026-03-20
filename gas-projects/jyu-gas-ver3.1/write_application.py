@@ -410,6 +410,24 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     # ===== 受療者 =====
     put(CELL_MAP["患者氏名"], row1.get("患者氏名"))
 
+    # ===== 性別 AL21:AO22 (男) / AL23:AO24 (女) =====
+    # テンプレ: AL21="1 男" / AL23="2 女"
+    # 男 → AL21 の "1" を "①" に置換 / 女 → AL23 の "2" を "②" に置換
+    # 根拠: テンプレートスキャン確認（2026-03-20）。U5/U6 と同じ片側丸付け方式。
+    gender_val = str(row1.get("性別") or "").strip()
+    if gender_val == "男":
+        cell_m = ws["AL21"]
+        orig_m = str(cell_m.value or "")
+        if "1" in orig_m:
+            ws["AL21"] = orig_m.replace("1", "①", 1)
+            count += 1
+    elif gender_val == "女":
+        cell_f = ws["AL23"]
+        orig_f = str(cell_f.value or "")
+        if "2" in orig_f:
+            ws["AL23"] = orig_f.replace("2", "②", 1)
+            count += 1
+
     # 生年月日 → 元号○付け + 年月日テキスト
     bd = parse_date(row1.get("患者生年月日"))
     if bd:
@@ -581,7 +599,12 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
                 unique_texts.append(t)
         injury_text = " / ".join(unique_texts)
         if injury_text:
-            put(CELL_MAP["負傷原因"], injury_text)
+            # BR20はラベル「負傷の原因」を含む結合セルのため書き込まない（ラベル保護）
+            # ★修正（2026-03-20）: 3部位目算定根拠は摘要欄（E44）に追記する方式に変更
+            existing = str(ws[CELL_MAP["摘要"]].value or "").strip()
+            d4_note = f"3部位: {injury_text}"
+            ws[CELL_MAP["摘要"]] = (f"{existing} / {d4_note}" if existing else d4_note)
+            count += 1
 
     # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
     # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT8

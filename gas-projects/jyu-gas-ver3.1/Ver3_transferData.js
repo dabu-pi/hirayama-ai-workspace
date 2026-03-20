@@ -54,6 +54,7 @@ V3TR.CONFIG = {
     patientId: "患者ID",
     name: "氏名",
     birthday: "生年月日",
+    gender: "性別",            // "男" or "女"（申請書 AL21/AL23 丸付け用）
     address1: "住所1",
     address2: "住所2",
     relation: "本人・家族の別",
@@ -121,7 +122,7 @@ V3TR.CONFIG = {
   transferCols: [
     "recordKey", "患者ID", "対象月", "caseNo", "caseKey",
 
-    "患者氏名", "患者生年月日", "住所", "続柄",
+    "患者氏名", "患者生年月日", "性別", "住所", "続柄",
     "被保険者氏名", "保険者番号", "記号", "番号", "保険者名",
     "保険種別",
     "一部負担金割合",
@@ -478,6 +479,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
 
     row["患者氏名"] = master.name || "";
     row["患者生年月日"] = master.birthday || "";
+    row["性別"] = master.gender || "";   // "男" or "女"
     row["住所"] = master.address || "";
     row["続柄"] = master.relation || "";
 
@@ -842,6 +844,7 @@ function V3TR_loadMasterRow_(shMaster, patientId) {
     return {
       name: get(C.masterCols.name),
       birthday: (get(C.masterCols.birthday) instanceof Date) ? get(C.masterCols.birthday) : "",
+      gender: String(get(C.masterCols.gender) || "").trim(),  // "男" or "女"
       address: address,
       relation: get(C.masterCols.relation),
       insuredName: get(C.masterCols.insuredName),
@@ -1313,7 +1316,13 @@ function V3TR_loadInitInfo_(shHistory, patientId, caseKey, endExcl) {
   if (bestRow === null) return null;
 
   const row = v[bestRow];
-  const get = (col) => (col !== undefined) ? String(row[col] || "").trim() : "";
+  // ★ Date セルは Utilities.formatDate で変換（String(dateObj) で英語化するのを防ぐ）
+  const get = (col) => {
+    if (col === undefined) return "";
+    const val = row[col];
+    if (val instanceof Date) return Utilities.formatDate(val, "Asia/Tokyo", "yyyy/MM/dd");
+    return String(val || "").trim();
+  };
   // 旧ヘッダ名フォールバック（列名が変わった4列のみ alias 解決）
   const a = (newKey, oldKey) => map[newKey] !== undefined ? map[newKey] : map[oldKey];
   return {
