@@ -618,27 +618,26 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
       }
     }
 
-    // D2 継続月数・頻回: M31 経過欄 補助表示
-    // ★制度上の正本: 継続月数→摘要欄（手動）、頻回→申請書「頻回」欄(0.5)
-    // ★M31は補助表示扱い（義務なし・記載しても制度違反なし）
-    // case1 のみ出力（M31は申請書1シートにつき1欄）
-    if (caseNo === 1) {
-      // injuryDate: 部位1の受傷日 → 来院ケース初検日 の優先順でフォールバック
-      const injD1 = (p1.injuryDate instanceof Date) ? p1.injuryDate
-                  : (cs.startDate1 instanceof Date)  ? cs.startDate1
-                  : (cs.firstDate  instanceof Date)  ? cs.firstDate : null;
-      if (injD1 && cs.caseKey) {
-        const d2res = V3TR_calcD2Keizoku_(shCases, patientId, cs.caseKey, injD1, ym);
-        const kd = d2res.displayMonths;
-        row["経過"] = (kd !== "" && jitsunisu)
-          ? kd + "ヶ月 月" + jitsunisu + "回"
-          : (kd !== "") ? kd + "ヶ月" : "";
-      } else {
-        row["経過"] = "";
-      }
-    } else {
-      row["経過"] = ""; // case2行は経過欄なし
-    }
+    // D2 継続月数・頻回: 内部値計算のみ。M31への出力は当面停止（B案: 既定で書かない）
+    // ★設計確定（2026-03-20）: 正本=摘要欄（手動）+長期欄（頻回→0.5/長期のみ→0.75、手動）
+    // ★M31（経過欄）は空欄許容。row["経過"] は常に "" とし Python 側も書かない。
+    // ★将来 M31 自動出力を復活させる場合は、下記コメントアウト部を有効化すること。
+    //
+    // --- 復活時はここから有効化 ---
+    // if (caseNo === 1) {
+    //   const injD1 = (p1.injuryDate instanceof Date) ? p1.injuryDate
+    //               : (cs.startDate1 instanceof Date)  ? cs.startDate1
+    //               : (cs.firstDate  instanceof Date)  ? cs.firstDate : null;
+    //   if (injD1 && cs.caseKey) {
+    //     const d2res = V3TR_calcD2Keizoku_(shCases, patientId, cs.caseKey, injD1, ym);
+    //     const kd = d2res.displayMonths;
+    //     row["経過"] = (kd !== "" && jitsunisu)
+    //       ? kd + "ヶ月 月" + jitsunisu + "回"
+    //       : (kd !== "") ? kd + "ヶ月" : "";
+    //   } else { row["経過"] = ""; }
+    // } else { row["経過"] = ""; }
+    // --- ここまで ---
+    row["経過"] = ""; // 常に空。M31出力停止中（設計確定 2026-03-20）
 
     // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
     // 空レコード（caseKey=""・全金額0）の出力を抑制する。

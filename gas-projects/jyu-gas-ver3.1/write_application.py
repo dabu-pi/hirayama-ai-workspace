@@ -518,12 +518,12 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     if seikyu_kubun:
         put(CELL_MAP["請求区分"], seikyu_kubun)
 
-    # ===== D2 継続月数・頻回: M31 経過欄（補助表示）=====
-    # ★制度上の正本: 継続月数→摘要欄（手動）、頻回→申請書「頻回」欄（0.5 記載）
-    # ★M31は補助表示扱い（義務なし・記載しても制度違反なし）
-    # GAS側 row["経過"] = "Nヶ月 月N回" | "Nヶ月" | ""
+    # ===== D2 継続月数・頻回: M31 経過欄（当面未使用・出力停止）=====
+    # ★設計確定（2026-03-20）: GAS側が row["経過"]="" を送るためこのブロックは自然にスキップ
+    # ★正本=摘要欄（手動）+長期欄（頻回→0.5/長期のみ→0.75、手動）
+    # ★将来 M31 自動出力を復活させる場合はコメントアウトを解除すること
     keizoku = str(row1.get("経過") or "").strip()
-    if keizoku:
+    if keizoku:  # GAS側が "" を送るため現状は常にスキップ（出力停止中）
         put(CELL_MAP["経過"], keizoku)
 
     # ===== U5 本家区分 行8-13 =====
