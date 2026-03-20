@@ -46,6 +46,8 @@ V3TR.CONFIG = {
     reFee: "再検料",
     roundUnit: "窓口端数単位",
     outputFolderId: "出力フォルダID",
+    prefectureNo: "都道府県番号",    // U1 CI2書込用（施術機関所在都道府県番号、2桁）
+    torokuKigoNo: "登録記号番号",    // U2/下段CR49書込用（例: 契2804440-0-0）
   },
 
   masterCols: {
@@ -304,6 +306,15 @@ V3TR.CONFIG = {
 
     // --- 請求区分 行31 ---
     請求区分: "DH31",       // "新規 ・ 継続"
+
+    // --- 申請書上段 施術機関情報 ---
+    都道府県番号: "CI2",    // CI2:CL3（U1: 施術機関所在都道府県番号、2桁）
+    施術機関コード: "CZ2",  // CZ2:DV3（U2: 登録記号番号の数字部分 ★暫定運用）
+    // --- 単併区分 行8-13 (U4) ---
+    単独: "CT8",            // CT8:CY9（固定「単独」→ テキスト"①.単独"に置換）
+
+    // --- 下段 登録記号番号 行49-50 ---
+    登録記号番号: "CR49",   // CR49:DV50（施術機関登録記号番号フル値: 例「契2804440-0-0」）
 
     // --- 摘要 行44-46左 ---
     摘要: "E44",            // E44:CG46
@@ -633,6 +644,41 @@ function V3TR_loadSettings_(shSettings) {
     reFee: Number(map[C.setKeys.reFee] || 0),
     roundUnit: Number(map[C.setKeys.roundUnit] || 1),
   };
+}
+
+/**
+ * 設定シートから施術機関固定情報を読み込む（U1/U2/下段登録記号番号）
+ * 返り値: { prefectureNo: "14", torokuKigoNo: "契2804440-0-0" }
+ */
+function V3TR_loadClinicInfo_(shSettings) {
+  const C = V3TR.CONFIG;
+  if (!shSettings) return { prefectureNo: "", torokuKigoNo: "" };
+  const v = shSettings.getDataRange().getValues();
+  const map = {};
+  for (let r = 1; r < v.length; r++) {
+    const k = String(v[r][0] || "").trim();
+    if (!k) continue;
+    map[k] = String(v[r][1] || "").trim();
+  }
+  return {
+    prefectureNo: map[C.setKeys.prefectureNo] || "",
+    torokuKigoNo: map[C.setKeys.torokuKigoNo] || "",
+  };
+}
+
+/**
+ * 登録記号番号から施術機関コードを導出（暫定ルール）
+ * 例: "契2804440-0-0" → "280444000"
+ * ルール: 先頭の「協」または「契」を除去し、ハイフンを除去して数字のみ結合
+ * ★ 公式一次資料での完全確認未完了。現時点の暫定運用（docs/JREC-01_申請書様式運用メモ.md §4 U2参照）。
+ */
+function V3TR_deriveClinicCode_(torokuKigoNo) {
+  if (!torokuKigoNo) return "";
+  let s = String(torokuKigoNo).trim();
+  if (s.charAt(0) === "協" || s.charAt(0) === "契") {
+    s = s.substring(1);
+  }
+  return s.replace(/-/g, "");
 }
 
 function V3TR_buildHeaderMap_(sh) {
@@ -1504,6 +1550,24 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   // "新規" or "継続" を書き込む。同月内治癒再発の両方○は将来対応。
   put(CM.請求区分, row1["請求区分"]);
 
+  // ===== 施術機関固定情報（設定シートから取得）=====
+  // U1: 都道府県番号 → CI2 / U2: 施術機関コード → CZ2 / U4: 単独 → CT8 / 下段登録記号番号 → CR49
+  // ★ U2 は 登録記号番号 から先頭「協/契」とハイフンを除いた数字部分を使う（暫定運用）
+  const shSettingsForClinic = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
+  const clinicInfo = V3TR_loadClinicInfo_(shSettingsForClinic);
+  put(CM.都道府県番号, clinicInfo.prefectureNo);
+  put(CM.施術機関コード, V3TR_deriveClinicCode_(clinicInfo.torokuKigoNo));
+  // U4 単独: テンプレート "1.単独" の "1" を "①" に置換
+  if (clinicInfo.prefectureNo || clinicInfo.torokuKigoNo) {
+    var tankeiCell = sh.getRange(CM.単独);
+    var tankeiVal = tankeiCell.getValue();
+    if (String(tankeiVal).indexOf("1") !== -1) {
+      tankeiCell.setValue(String(tankeiVal).replace("1", "①"));
+      count++;
+    }
+  }
+  put(CM.登録記号番号, clinicInfo.torokuKigoNo);
+
   return count;
 }
 
@@ -1836,12 +1900,17 @@ function V3TR_menuBatchExportJson() {
 
   // 2. 各患者のJSONを生成
   var now = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
+  // 施術機関固定情報（設定シートから取得して meta に埋め込む）
+  var shSettingsA = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
+  var clinicInfoA = V3TR_loadClinicInfo_(shSettingsA);
   var metaLine = JSON.stringify({
     _meta: true,
     schemaVersion: "3.0",
     generatedAt: now,
     month: ym,
-    patientCount: patientIds.length
+    patientCount: patientIds.length,
+    prefectureNo: clinicInfoA.prefectureNo,
+    torokuKigoNo: clinicInfoA.torokuKigoNo,
   });
 
   var ndjsonLines = [metaLine];
@@ -2051,12 +2120,17 @@ function V3TR_menuGenerateApplication_B() {
   ss.toast("NDJSON 生成中... (" + patientIds.length + " 名)", "申請書生成", 5);
 
   var genAt = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
+  // 施術機関固定情報（設定シートから取得して meta に埋め込む）
+  var shSettingsB = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
+  var clinicInfoB = V3TR_loadClinicInfo_(shSettingsB);
   var metaLine = JSON.stringify({
     _meta: true,
     schemaVersion: "3.0",
     generatedAt: genAt,
     month: ym,
-    patientCount: patientIds.length
+    patientCount: patientIds.length,
+    prefectureNo: clinicInfoB.prefectureNo,
+    torokuKigoNo: clinicInfoB.torokuKigoNo,
   });
   var ndjsonLines = [metaLine];
 

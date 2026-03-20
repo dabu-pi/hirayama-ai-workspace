@@ -65,7 +65,15 @@ CELL_MAP = {
     "負傷原因": "BR20",
     "請求区分": "DH31",
     "摘要": "E44",
+
+    # ===== 施術機関固定情報（全患者共通: NDJSON meta から取得）=====
+    "都道府県番号": "CI2",    # U1: CI2:CL3 マージ。施術機関所在都道府県番号（2桁）
+    "施術機関コード": "CZ2",  # U2: CZ2:DV3 マージ。登録記号番号の数字部分（★暫定運用）
+    "登録記号番号": "CR49",   # 下段 CR49:DV50 マージ。施術機関登録記号番号フル値（例: 契2804440-0-0）
 }
+
+# U4 単併区分: テンプレート CT8 = "1.単独" → "①.単独" に置換（固定値）
+TANKEI_KUBUN_CELL = "CT8"
 
 # ===== 初検料・再検料・計: ラベル内に金額を埋め込む =====
 # セル構造: E33:X33 = "初検料　　　　　　　　円" のようにラベル内テキスト
@@ -294,12 +302,15 @@ def _add_tenki_oval(ws, tenki_cell: str, tenki_value: str):
 
 
 # ===== メイン転記 =====
-def write_application(template_path: str, json_data: dict, output_path: str):
+def write_application(template_path: str, json_data: dict, output_path: str, clinic_info: dict = None):
     """
     テンプレートxlsxを開き、転記データを書き込んで別名保存。
     書式・結合は保持される。
 
     json_data: { "case1": {...}, "case2": {...} | null }
+    clinic_info: { "prefectureNo": "14", "torokuKigoNo": "契2804440-0-0" }
+      全患者共通の施術機関固定情報。None の場合は書込をスキップ（後方互換）。
+      NDJSON の _meta 行から取得し、batch_write / batch_write_from_string が渡す。
     """
     wb = load_workbook(template_path)
     ws = wb[TEMPLATE_SHEET]
@@ -476,6 +487,29 @@ def write_application(template_path: str, json_data: dict, output_path: str):
     if seikyu_kubun:
         put(CELL_MAP["請求区分"], seikyu_kubun)
 
+    # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
+    # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT8 / 下段登録記号番号 → CR49
+    # clinic_info が None の場合はスキップ（後方互換: 旧NDJSON/単体テスト対応）
+    if clinic_info:
+        # U1: 都道府県番号 → CI2
+        pref_no = str(clinic_info.get("prefectureNo") or "").strip()
+        if pref_no:
+            put(CELL_MAP["都道府県番号"], pref_no)
+
+        # U2: 施術機関コード → CZ2（登録記号番号から数字部分を導出: 暫定運用）
+        clinic_code = derive_clinic_code(str(clinic_info.get("torokuKigoNo") or ""))
+        if clinic_code:
+            put(CELL_MAP["施術機関コード"], clinic_code)
+
+        # U4: 単併区分 → CT8（固定「単独」）
+        # テンプレート CT8 = "1.単独" → "①.単独" に置換
+        put_era_circle(ws, TANKEI_KUBUN_CELL, 1)
+
+        # 下段 登録記号番号 → CR49（フル値: 例「契2804440-0-0」）
+        toroku = str(clinic_info.get("torokuKigoNo") or "").strip()
+        if toroku:
+            put(CELL_MAP["登録記号番号"], toroku)
+
     wb.save(output_path)
     print(f"書込完了: {output_path} ({count}セル)")
     return count
@@ -596,6 +630,21 @@ def detect_insurance_type(insurer_no: str) -> int | None:
         return 6   # 後期高齢
 
     return None
+
+
+def derive_clinic_code(toroku_kigo_no: str) -> str:
+    """
+    登録記号番号から施術機関コードを導出（暫定ルール）。
+    例: "契2804440-0-0" → "280444000"
+
+    ルール: 先頭の「協」または「契」を除去し、ハイフンを除去して数字のみ結合。
+    ★ 公式一次資料での完全確認未完了。現時点の暫定運用。
+      （詳細: docs/JREC-01_申請書様式運用メモ.md §4 U2 参照）
+    """
+    s = (toroku_kigo_no or "").strip()
+    if s and s[0] in ("協", "契"):
+        s = s[1:]
+    return s.replace("-", "")
 
 
 def put_calendar_circles(ws, cell, visit_days):
@@ -921,6 +970,12 @@ def batch_write(ndjson_path: str):
     patients = batch["patients"]
     month = meta["month"]
 
+    # 施術機関固定情報を meta から取得（NDJSON に含まれない場合は空でスキップ）
+    clinic_info = {
+        "prefectureNo": str(meta.get("prefectureNo") or ""),
+        "torokuKigoNo": str(meta.get("torokuKigoNo") or ""),
+    }
+
     # 3. 出力ディレクトリ作成
     out_dir = script_dir / "output" / month
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -942,7 +997,7 @@ def batch_write(ndjson_path: str):
         out_path = out_dir / f"申請書_{pid}_{month}.xlsx"
 
         try:
-            write_application(str(template), json_data, str(out_path))
+            write_application(str(template), json_data, str(out_path), clinic_info=clinic_info)
             success_count += 1
 
             # 機械検証
@@ -1003,10 +1058,11 @@ def find_latest_ndjson() -> tuple[str | None, str]:
 
 # ===== サーバー向けAPI（Cloud Run 用） =====
 
-def write_application_to_bytes(template_path: str, json_data: dict) -> bytes:
+def write_application_to_bytes(template_path: str, json_data: dict, clinic_info: dict = None) -> bytes:
     """
     write_application() の in-memory 版。
     一時ファイルを経由して xlsx bytes を返す（保存なし）。
+    clinic_info: 施術機関固定情報（batch_write_from_string から渡す）。None でもよい。
     """
     import io as _io
     import tempfile as _tmp
@@ -1014,7 +1070,7 @@ def write_application_to_bytes(template_path: str, json_data: dict) -> bytes:
     tmp_path = tmp.name
     tmp.close()
     try:
-        write_application(template_path, json_data, tmp_path)
+        write_application(template_path, json_data, tmp_path, clinic_info=clinic_info)
         with open(tmp_path, "rb") as f:
             return f.read()
     finally:
@@ -1137,6 +1193,13 @@ def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
 
     meta = batch["meta"]
     month = meta["month"]
+
+    # 施術機関固定情報を meta から取得
+    clinic_info = {
+        "prefectureNo": str(meta.get("prefectureNo") or ""),
+        "torokuKigoNo": str(meta.get("torokuKigoNo") or ""),
+    }
+
     results = []
 
     for p in batch["patients"]:
@@ -1148,7 +1211,7 @@ def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
         }
         file_name = f"申請書_{pid}_{month}.xlsx"
         try:
-            xlsx_bytes = write_application_to_bytes(template_path, json_data)
+            xlsx_bytes = write_application_to_bytes(template_path, json_data, clinic_info=clinic_info)
             expected = {
                 "患者氏名": (p.get("case1") or {}).get("患者氏名", ""),
                 "当月合計": (p.get("case1") or {}).get("当月合計", 0),
