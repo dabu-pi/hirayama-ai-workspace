@@ -618,6 +618,28 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
       }
     }
 
+    // D2 継続月数・頻回: M31 経過欄 補助表示
+    // ★制度上の正本: 継続月数→摘要欄（手動）、頻回→申請書「頻回」欄(0.5)
+    // ★M31は補助表示扱い（義務なし・記載しても制度違反なし）
+    // case1 のみ出力（M31は申請書1シートにつき1欄）
+    if (caseNo === 1) {
+      // injuryDate: 部位1の受傷日 → 来院ケース初検日 の優先順でフォールバック
+      const injD1 = (p1.injuryDate instanceof Date) ? p1.injuryDate
+                  : (cs.startDate1 instanceof Date)  ? cs.startDate1
+                  : (cs.firstDate  instanceof Date)  ? cs.firstDate : null;
+      if (injD1 && cs.caseKey) {
+        const d2res = V3TR_calcD2Keizoku_(shCases, patientId, cs.caseKey, injD1, ym);
+        const kd = d2res.displayMonths;
+        row["経過"] = (kd !== "" && jitsunisu)
+          ? kd + "ヶ月 月" + jitsunisu + "回"
+          : (kd !== "") ? kd + "ヶ月" : "";
+      } else {
+        row["経過"] = "";
+      }
+    } else {
+      row["経過"] = ""; // case2行は経過欄なし
+    }
+
     // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
     // 空レコード（caseKey=""・全金額0）の出力を抑制する。
     // cs.caseKey が非空 or visitDays>0 のいずれかがあれば不整合検出のため出力を維持する。
@@ -859,6 +881,108 @@ function V3TR_parseYM_(ym) {
   const start = new Date(y, m - 1, 1);
   const end = new Date(y, m, 1);
   return { start, end };
+}
+
+/**
+ * D2 継続月数・頻回 計算（申請書 M31 経過欄 補助表示用）
+ *
+ * caseKey 単位で、起算月（初検日16日以降→翌月起算）からの月別来院日数を集計し、
+ * 月10回以上の連続月数（rawContMonths）と頻回開始フラグ（freqStarted）を返す。
+ *
+ * ★制度上の位置づけ:
+ *   - 継続月数の公式記録先: 摘要欄（手動記入）
+ *   - 頻回の公式記録先: 申請書「頻回」欄（0.5 を記載。長期欄0.75は書かない）
+ *   - M31「経過」欄への記載: 補助表示扱い（義務なし・制度違反でもない）
+ * ★ calcMonthsElapsed_V3_ は単純経過月数のため使用しない。
+ *
+ * @param {Sheet} shCases  - 来院ケースシート（全期間データが必要）
+ * @param {string} patientId
+ * @param {string} caseKey
+ * @param {Date}   injuryDate - 起算月計算用（受傷日または初検日）
+ * @param {string} ym         - 対象月 "yyyy-MM"（終端月として使用）
+ * @return {{ rawContMonths: number, freqStarted: boolean, displayMonths: number|string }}
+ *   displayMonths: 1〜5か月目→実連続月数 / 6か月目以降(freqStarted)→6固定 / 対象外→""
+ */
+function V3TR_calcD2Keizoku_(shCases, patientId, caseKey, injuryDate, ym) {
+  const empty = { rawContMonths: 0, freqStarted: false, displayMonths: "" };
+  if (!shCases || !patientId || !caseKey || !(injuryDate instanceof Date)) return empty;
+
+  // 起算月（初検日16日以降→翌月起算）
+  let sy = injuryDate.getFullYear();
+  let sm = injuryDate.getMonth(); // 0-indexed
+  if (injuryDate.getDate() >= 16) {
+    sm++;
+    if (sm > 11) { sm = 0; sy++; }
+  }
+
+  // 対象月（ym の終端月）
+  const [ymY, ymM] = ym.split("-").map(Number);
+  const ey = ymY, em = ymM - 1; // 0-indexed
+  const totalMonths = (ey - sy) * 12 + (em - sm) + 1;
+  if (totalMonths <= 0) return empty;
+
+  // 来院ケースシートを読み込み（全期間・患者×caseKey でフィルタ）
+  const C  = V3TR.CONFIG;
+  const vals = shCases.getDataRange().getValues();
+  const hmap = V3TR_buildHeaderMap_(shCases);
+  const pidCol = hmap[C.caseCols.patientId];
+  const ckCol  = hmap[C.caseCols.caseKey];
+  const dtCol  = hmap[C.caseCols.treatDate];
+  if (pidCol === undefined || ckCol === undefined || dtCol === undefined) return empty;
+
+  // 月別来院日数（distinct 施術日でカウント）
+  const visitSets = {};
+  for (let r = 1; r < vals.length; r++) {
+    const row = vals[r];
+    if (String(row[pidCol] || "").trim() !== patientId) continue;
+    if (String(row[ckCol]  || "").trim() !== caseKey)  continue;
+    const td = row[dtCol];
+    if (!(td instanceof Date)) continue;
+    const idx = (td.getFullYear() - sy) * 12 + (td.getMonth() - sm);
+    if (idx < 0 || idx >= totalMonths) continue;
+    if (!visitSets[idx]) visitSets[idx] = {};
+    // 日付の同一性を yyyymmdd 数値で担保
+    const dk = td.getFullYear() * 10000 + (td.getMonth() + 1) * 100 + td.getDate();
+    visitSets[idx][dk] = true;
+  }
+  const counts = {};
+  for (const idx in visitSets) {
+    counts[idx] = Object.keys(visitSets[idx]).length;
+  }
+
+  // 「対象月より前の月」で 5 連続達成（freqStarted）済みかを判定
+  let streak = 0;
+  let freqStartedBefore = false;
+  for (let m = 0; m < totalMonths - 1; m++) {
+    const cnt = counts[m] || 0;
+    if (cnt >= 10) {
+      streak++;
+      if (streak >= 5) { freqStartedBefore = true; break; } // 5連続達成 → 以降は「6」固定
+    } else {
+      streak = 0; // freqStarted 未達のためリセット可
+    }
+  }
+
+  // 対象月より前に頻回成立 → 対象月は 6か月目以降 → displayMonths = 6 固定
+  if (freqStartedBefore) {
+    return { rawContMonths: -1, freqStarted: true, displayMonths: 6 };
+  }
+
+  // 対象月を処理（当月が10回以上なら連続+1、未満なら0リセット）
+  const curCnt = counts[totalMonths - 1] || 0;
+  if (curCnt >= 10) {
+    streak++;
+  } else {
+    streak = 0;
+  }
+
+  // 対象月が 5か月目完了（freqStarted=true）の場合:
+  // 今月は「5」表示（翌月の申請から「6」固定になる）
+  return {
+    rawContMonths:  streak,
+    freqStarted:    (streak >= 5),
+    displayMonths:  (streak > 0) ? streak : "",
+  };
 }
 function V3TR_inRange_(d, start, end) {
   if (!(d instanceof Date)) return false;

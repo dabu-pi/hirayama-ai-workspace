@@ -1077,7 +1077,7 @@ row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDa
 
 ### D2 — 継続月数・頻回
 
-> **最終更新: 2026-03-20 — 制度定義確定・仕様固定（実装待ち）**
+> **最終更新: 2026-03-20 — 実装完了（GAS + Python）**
 
 #### テンプレート xlsx 確認結果（2026-03-19）✅ 完了
 
@@ -1147,11 +1147,29 @@ row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDa
 | `write_application.py` | `CELL_MAP["経過"] = "M31"` 追加 + 書込処理追加 |
 | Cloud Run | `write_application.py` 変更後に再デプロイ必要 |
 
+#### M31の制度上の位置づけ（補助表示）
+
+| 欄 | 公式記録先 | システム対応 |
+|---|---|---|
+| 継続月数（経過欄） | **摘要欄**（手動記入） | M31へ補助表示（`row["経過"]`）|
+| 頻回（0.5） | **申請書「頻回」欄**（0.5記載。長期欄0.75は書かない）| 別途手動記入（計算値は `calcLongTermCoef_V3_` が算定係数として使用）|
+| 長期施術継続理由書 | 別紙様式1（3か月超で添付必須） | 手動対応（システム外）|
+
+> M31 は「補助表示」として記載する。義務ではないが制度違反でもない。
+
+#### 実装済みコード概要（2026-03-20）
+
+| ファイル | 追加・変更内容 |
+|---|---|
+| `Ver3_transferData.js` | `V3TR_calcD2Keizoku_()` 新設（行863付近）+ `V3TR_buildTransferDataForMonth_` 内 `row["経過"]` 生成（case1のみ）|
+| `write_application.py` | `CELL_MAP["経過"] = "M31"` 追加 + D2書込ブロック追加（U7ブロック直後）|
+
 #### 次アクション
 
-1. `Ver3_transferData.js` に月別10回以上連続月数の計算ロジックと `row["経過"]` 生成を追加
-2. `write_application.py` に `CELL_MAP["経過"]` と書込処理を追加
-3. `clasp push` + Cloud Run 再デプロイ → 動作確認（TC追加検討）
+1. `clasp push` → GAS に転記ロジック反映
+2. Cloud Run 再デプロイ（`write_application.py` 変更のため必須）
+3. 動作確認（月次申請生成 → M31 に「○ヶ月 月○回」が表示されることを確認）
+4. TC追加検討: 継続月数5か月目 / freqStarted後 / 連続途切れケース
 
 ### D3 — 負傷名の左右表記
 

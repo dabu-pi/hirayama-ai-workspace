@@ -64,6 +64,7 @@ CELL_MAP = {
 
     "負傷原因": "BR20",
     "請求区分": "DH31",
+    "経過":     "M31",  # D2 継続月数・頻回 補助表示（★正本は摘要欄・頻回欄0.5）
     "摘要": "E44",
 
     # ===== 施術機関固定情報（全患者共通: NDJSON meta から取得）=====
@@ -516,6 +517,14 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     seikyu_kubun = row1.get("請求区分") or ""
     if seikyu_kubun:
         put(CELL_MAP["請求区分"], seikyu_kubun)
+
+    # ===== D2 継続月数・頻回: M31 経過欄（補助表示）=====
+    # ★制度上の正本: 継続月数→摘要欄（手動）、頻回→申請書「頻回」欄（0.5 記載）
+    # ★M31は補助表示扱い（義務なし・記載しても制度違反なし）
+    # GAS側 row["経過"] = "Nヶ月 月N回" | "Nヶ月" | ""
+    keizoku = str(row1.get("経過") or "").strip()
+    if keizoku:
+        put(CELL_MAP["経過"], keizoku)
 
     # ===== U5 本家区分 行8-13 =====
     # 判定ソース: 保険種別・続柄・生年月日・一部負担金割合・対象月
