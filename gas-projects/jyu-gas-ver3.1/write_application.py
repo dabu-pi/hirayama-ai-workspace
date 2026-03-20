@@ -635,16 +635,16 @@ def detect_insurance_type(insurer_no: str) -> int | None:
 def derive_clinic_code(toroku_kigo_no: str) -> str:
     """
     登録記号番号から施術機関コードを導出（暫定ルール）。
-    例: "契2804440-0-0" → "280444000"
+    例: "契2804440-0-0" → "2804440-0-0"
 
-    ルール: 先頭の「協」または「契」を除去し、ハイフンを除去して数字のみ結合。
+    ルール: 先頭の「協」または「契」の1文字のみ除去。ハイフンはそのまま保持。
     ★ 公式一次資料での完全確認未完了。現時点の暫定運用。
       （詳細: docs/JREC-01_申請書様式運用メモ.md §4 U2 参照）
     """
     s = (toroku_kigo_no or "").strip()
     if s and s[0] in ("協", "契"):
         s = s[1:]
-    return s.replace("-", "")
+    return s  # ハイフン保持
 
 
 def put_calendar_circles(ws, cell, visit_days):

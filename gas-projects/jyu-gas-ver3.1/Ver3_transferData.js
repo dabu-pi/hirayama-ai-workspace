@@ -668,8 +668,8 @@ function V3TR_loadClinicInfo_(shSettings) {
 
 /**
  * 登録記号番号から施術機関コードを導出（暫定ルール）
- * 例: "契2804440-0-0" → "280444000"
- * ルール: 先頭の「協」または「契」を除去し、ハイフンを除去して数字のみ結合
+ * 例: "契2804440-0-0" → "2804440-0-0"
+ * ルール: 先頭の「協」または「契」の1文字のみ除去。ハイフンはそのまま保持。
  * ★ 公式一次資料での完全確認未完了。現時点の暫定運用（docs/JREC-01_申請書様式運用メモ.md §4 U2参照）。
  */
 function V3TR_deriveClinicCode_(torokuKigoNo) {
@@ -678,7 +678,7 @@ function V3TR_deriveClinicCode_(torokuKigoNo) {
   if (s.charAt(0) === "協" || s.charAt(0) === "契") {
     s = s.substring(1);
   }
-  return s.replace(/-/g, "");
+  return s; // ハイフン保持
 }
 
 function V3TR_buildHeaderMap_(sh) {
@@ -1552,7 +1552,7 @@ function V3TR_writeToApplication_(ss, row1, row2) {
 
   // ===== 施術機関固定情報（設定シートから取得）=====
   // U1: 都道府県番号 → CI2 / U2: 施術機関コード → CZ2 / U4: 単独 → CT8 / 下段登録記号番号 → CR49
-  // ★ U2 は 登録記号番号 から先頭「協/契」とハイフンを除いた数字部分を使う（暫定運用）
+  // ★ U2 は 登録記号番号 から先頭「協/契」のみ除去（ハイフン保持）した値を使う（暫定運用）
   const shSettingsForClinic = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
   const clinicInfo = V3TR_loadClinicInfo_(shSettingsForClinic);
   put(CM.都道府県番号, clinicInfo.prefectureNo);
