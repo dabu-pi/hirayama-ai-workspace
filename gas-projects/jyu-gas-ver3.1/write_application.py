@@ -160,27 +160,30 @@ KYUFU_OVAL_MAP = {
 #   v1 (Revision 00012-7mn): marker_merge → full_merge に変更（上N行分移動）
 #   v2 (Revision 00013-xtd): full_merge をそのまま使用
 #   v3 (Revision 00014-*): 全エントリ -1行（目視で全欄「さらに上1セル」要望）
+#   v4 (Revision 00016-*): _apply_selection_splits の選択肢分割を廃止。
+#     テンプレ結合を維持するため SELECTION_OVAL_MAP をテンプレ full_merge 値に戻す。
+#     【根本原因】分割でテキスト位置が上シフト → 楕円とのズレが発生していた。
 SELECTION_OVAL_MAP = {
-    # 性別（-1行: AL21:AO22/AL23:AO24 → AL20:AO21/AL22:AO23）
-    "gender_男": "AL20:AO21",
-    "gender_女": "AL22:AO23",
-    # 保険種別（-1行: CB8:CE10 → CB7:CE9 等）
-    "ins_1": "CB7:CE9",
-    "ins_2": "CF7:CI9",
-    "ins_3": "CJ7:CM9",
-    "ins_4": "CB10:CE12",
-    "ins_5": "CF10:CI12",
-    "ins_6": "CJ10:CM12",
-    # 単独区分（-1行: CT8:CY9 → CT7:CY8 等）
-    "tankei_1": "CT7:CY8",
-    "tankei_2": "CT9:CY10",
-    "tankei_3": "CT11:CY12",
-    # 本家区分（-1行: DB8:DG9 → DB7:DG8 等）
-    "honke_DB8":  "DB7:DG8",
-    "honke_DB10": "DB9:DG10",
-    "honke_DB12": "DB11:DG12",
-    "honke_DH8":  "DH7:DM8",
-    "honke_DH12": "DH11:DM12",
+    # 性別（テンプレ full_merge そのまま）
+    "gender_男": "AL21:AO22",
+    "gender_女": "AL23:AO24",
+    # 保険種別（テンプレ full_merge そのまま）
+    "ins_1": "CB8:CE10",
+    "ins_2": "CF8:CI10",
+    "ins_3": "CJ8:CM10",
+    "ins_4": "CB11:CE13",
+    "ins_5": "CF11:CI13",
+    "ins_6": "CJ11:CM13",
+    # 単独区分（テンプレ full_merge そのまま）
+    "tankei_1": "CT8:CY9",
+    "tankei_2": "CT10:CY11",
+    "tankei_3": "CT12:CY13",
+    # 本家区分（テンプレ full_merge そのまま）
+    "honke_DB8":  "DB8:DG9",
+    "honke_DB10": "DB10:DG11",
+    "honke_DB12": "DB12:DG13",
+    "honke_DH8":  "DH8:DM9",
+    "honke_DH12": "DH12:DM13",
 }
 
 # ===== 楕円スタイル =====
@@ -490,33 +493,21 @@ def _draw_oval_on_range(ws, cell_range: str, style: str = "normal"):
     ws.add_image(xl_img)
 
 
-# ===== 選択肢セル分割：○専用セル方式 =====
+# ===== D4 負傷の原因セル分割 =====
 
 def _apply_selection_splits(ws):
     """
-    出力ファイル内で選択肢セルをラベル行＋マーカー行に分割する。
+    D4 負傷の原因（BR20:DV24）を「ラベル行 BR20 + 内容行 BR21-24」に分割し、
+    ラベル「負傷の原因」を BR20:DV20 に書き戻す。
 
-    SELECTION_SPLIT_MAP の全エントリを無条件に処理する（選択済み・未選択を問わず）。
-    これにより全選択肢が同じ「ラベル行＋マーカー行」構造となり、視覚的な一貫性が保たれる。
-
-    あわせて D4 負傷の原因（BR20:DV24）も「ラベル行＋内容行」に分割し、
-    ラベル「負傷の原因」を BR20 に書き戻す。
+    ★ 選択肢セル（性別/保険種別/単独区分/本家区分）の分割は行わない。
+      - 旧方式: unmerge_cells + re-merge でラベル行＋マーカー行に分割していた
+      - 廃止理由: 分割するとテキスト表示位置が上シフトし、楕円画像とのズレが発生する
+        （テンプレ: 3行結合の中央 ≈ 行9 → 分割後: 2行ラベル中央 ≈ 行8-9 上よりに移動）
+      - 現在の画像オーバーレイ方式では分割不要。テンプレ結合をそのまま維持する。
 
     テンプレートファイルは変更しない（毎回ロードされる）。
     """
-    from openpyxl.styles import Alignment
-    center = Alignment(horizontal='center', vertical='center',
-                       wrap_text=False, shrink_to_fit=False)
-
-    for _key, (full, label, marker, text) in SELECTION_SPLIT_MAP.items():
-        ws.unmerge_cells(full)
-        ws.merge_cells(label)
-        label_cell = label.split(':')[0]
-        ws[label_cell] = text
-        ws[label_cell].alignment = center
-        ws.merge_cells(marker)
-        # ★マーカー行にテキストは書かない。_write_selection_marker が画像楕円を配置する。
-
     # D4: BR20:DV24 → ラベル行 BR20:DV20 + 内容行 BR21:DV24
     full, label, content, text = D4_INJURY_CELL_SPLIT
     ws.unmerge_cells(full)
