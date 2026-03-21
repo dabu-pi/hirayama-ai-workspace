@@ -202,8 +202,45 @@ Apps Script エディタを開く:
 
 ### 次ステップ（2026-03-19 時点）
 
-- [ ] GAS → Cloud Run 疎通確認（GAS エディタから呼び出しテスト）
-- [ ] `/generate` 本処理エンドポイント確認（`docs/JREC-01_スモークテスト手順.md` 参照）
+- [x] GAS → Cloud Run 疎通確認（GAS エディタから呼び出しテスト）— ✅ 完了（2026-03-20）
+- [x] `/generate` 本処理エンドポイント確認 — ✅ B案 3件生成 / エラー0件 / 目視確認OK（2026-03-21）
+
+---
+
+## 起動安定化メモ（Revision 00016 〜 00019 で発覚・解消）
+
+### 問題の経緯
+
+| リビジョン | 状態 | 原因 |
+|---|---|---|
+| 00015-g96 | ✅ 正常稼働 | gunicorn 旧世代（21.x/22.x 系）が動作 |
+| 00016-4lw 〜 00018 | ❌ 全リクエスト 504 | 下記2問題が重複 |
+| 00019-w8n | ✅ 正常稼働（/health 0.13s / Booting worker 確認済み）| 両問題を解消 |
+
+### 問題1 — `--preload` + モジュールレベル import の組み合わせ
+
+- **原因:** `server.py` に `from write_application import batch_write_from_string` がモジュールレベルにあった
+- **影響:** gunicorn `--preload` 使用時、master プロセスで openpyxl/PIL の重い import が実行 → worker fork 前に詰まり worker が一切起動しない
+- **修正:** `write_application` import を `/generate` ハンドラ内の遅延 import に変更。`--preload` は廃止
+
+### 問題2（根本原因）— gunicorn 25.1.0 の worker fork 不全
+
+- **原因:** `requirements.txt` に `gunicorn>=21.0.0` と書いていたため、2026-03-21 以降のビルドで gunicorn 25.1.0 がインストールされた
+- **影響:** gunicorn 25.1.0 は worker が一切 fork されない（Booting worker ログなし）。TCP probe は master が listening = pass するが HTTP 応答なし
+- **修正:** `requirements.txt` を `gunicorn==23.0.0` に固定（long-term stable）
+- **根拠:** 00015-g96（動作確認済み）は dirty_xxx config dump を出力 → 旧世代 gunicorn と判断
+
+### 現在の安定起動設計（Revision 00019〜）
+
+| 設計項目 | 内容 |
+|---|---|
+| gunicorn バージョン | `==23.0.0` に固定（25.x の fork バグ回避）|
+| `--preload` | **廃止**（master での重い import を防ぐ）|
+| `write_application` import | `/generate` ハンドラ内での遅延 import（初回のみ。キャッシュして再利用）|
+| `/health` ルート | `os` / `logging` / `flask` のみ使用。worker 起動直後から即応 |
+| 起動確認ログ | `app import 開始` → `Flask app 生成完了` → `health route 登録完了` → （/generate 初回）`write_application import 開始/完了` |
+
+> **再デプロイ後の確認方法:** `/health` が 200 OK を返し、Cloud Logging に `Booting worker pid:N` が出ることを確認する。
 
 ---
 
@@ -213,3 +250,4 @@ Apps Script エディタを開く:
 |---|---|
 | 2026-03-19 | 初版作成 |
 | 2026-03-19 | デプロイ完了・チェックリスト全項目確認済み |
+| 2026-03-21 | 起動安定化メモ追記（gunicorn 23.0.0 固定・--preload廃止・遅延import化）/ 次ステップ完了マーク |
