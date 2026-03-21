@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-21（○画像位置・形状微調整・SELECTION_OVAL_MAP導入・Revision 00013-xtd deploy完了）
+最終更新: 2026-03-21（○画像位置最終微調整 -1行・Revision 00015-g96 deploy完了 / gunicorn --preload 追加）
 
 ---
 
@@ -17,13 +17,13 @@
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00013-xtd deploy完了（2026-03-21）** — ○画像位置・形状微調整。SELECTION_OVAL_MAP導入（full_merge範囲で上N行移動効果）・OVAL_STYLES追加・KYUFU_OVAL_MAP 4列幅化 |
-| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-21 Revision 00012-7mn）`{"status":"ok"}` |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00015-g96 deploy完了（2026-03-21）** — ○画像 -1行微調整・Dockerfile に `--preload` 追加（worker import hang 修正）。/health 200 OK確認済み |
+| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-21 Revision 00015-g96）`{"status":"ok"}` |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
 | `clasp push`（最新 GAS を反映） | ✅ 2026-03-20 済み（7ファイル）|
 | GAS → Cloud Run 疎通確認 | ✅ `/health` 200 OK（Revision 00010-h77）。`/generate` は B案実行で確認要 |
-| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⚠️ **B案再生成で目視確認が残り** — ○位置・形状微調整後（SELECTION_OVAL_MAP/KYUFU_OVAL_MAP 4列）の実帳票での見え方確認 |
+| 本番メニュー「【B案】申請書を生成して Drive に保存」 | ⚠️ **B案再生成で目視確認が残り** — 全欄 -1行調整後（SELECTION_OVAL_MAP v3）の実帳票での見え方確認 |
 | 申請書上段欄（U1〜U7）実装 | ✅ 全欄実装済み（○専用画像方式 Revision 00012-7mn）|
 | 下段 登録記号番号 分割欄書込 | ✅ 修正済み（CR51/DK51/DR51 分割書込、2026-03-20）|
 | U6 給付割合 | ✅ **画像方式＋形状微調整済み（2026-03-21）** — KYUFU_OVAL_MAP を4列幅（DS-DV/DQ-DT）に拡張。style="kyufu"（margin_emu=9525）で横長楕円。|
