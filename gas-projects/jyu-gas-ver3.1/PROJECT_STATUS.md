@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-21（server.py 遅延 import 化・--preload 廃止・Revision 00018 deploy）
+最終更新: 2026-03-21（gunicorn 23.0.0 固定・server.py 遅延 import 化・--preload 廃止・Revision 00019-w8n /health 200 OK 確認）
 
 ---
 
@@ -17,8 +17,8 @@
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00018 deploy（2026-03-21）** — server.py 遅延 import 化（write_application を /generate 内に移動）・--preload 廃止。/health は軽量ルートとして即応 |
-| `/health` 200 OK 確認済み | ⚠️ Revision 00018 deploy後に確認予定 |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00019-w8n deploy完了（2026-03-21）** — gunicorn 23.0.0 固定（25.1.0 worker fork バグ回避）・server.py 遅延 import 化・--preload 廃止 |
+| `/health` 200 OK 確認済み | ✅ **確認済み（Revision 00019-w8n）** `{"status":"ok"}` 応答 0.13s。Booting worker pid:2 ログ確認済み |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
 | `clasp push`（最新 GAS を反映） | ✅ 2026-03-20 済み（7ファイル）|

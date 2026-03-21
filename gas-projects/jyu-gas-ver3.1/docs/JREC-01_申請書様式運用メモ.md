@@ -569,13 +569,15 @@ if seikyu_kubun:
     --image asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/jrec-appgen-server:latest \
     --region asia-northeast1
 
-現在の最新リビジョン: **Revision 00018**（2026-03-21 デプロイ / server.py 遅延 import 化・--preload 廃止・/health 軽量化）
+現在の最新リビジョン: **Revision 00019-w8n**（2026-03-21 デプロイ / gunicorn 23.0.0 固定・server.py 遅延 import 化・--preload 廃止・/health 200 OK 0.13s 確認済み）
 
-### Cloud Run 起動設計（Revision 00018〜）
+### Cloud Run 起動設計（Revision 00019〜）
 
 | 項目 | 内容 |
 |---|---|
-| **問題** | `from write_application import ...` がモジュールレベルにあり `--preload` 時に master での重い import が worker fork を阻害 → 全リクエスト 504 |
+| **問題1** | `from write_application import ...` がモジュールレベルにあり `--preload` 時に master での重い import が worker fork を阻害 → 全リクエスト 504 |
+| **問題2（根本）** | `gunicorn>=21.0.0` で 2026-03-21 以降のビルドが gunicorn 25.1.0 をインストール → worker が一切 fork されない（Booting worker ログなし）|
+| **修正2** | `requirements.txt` で `gunicorn==23.0.0` に固定 |
 | **修正** | `write_application` import を `/generate` ハンドラ内の遅延 import に変更。初回呼び出し時のみ import し `_batch_write_from_string` にキャッシュ |
 | **--preload** | 廃止。遅延 import により不要。かつ master での重い import 阻害を防ぐ |
 | **/health** | `write_application` / `openpyxl` / `PIL` に一切触れない軽量ルート。worker 起動直後から即応 |
