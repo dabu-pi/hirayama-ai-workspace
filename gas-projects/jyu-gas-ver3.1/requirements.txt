@@ -7,4 +7,7 @@ Pillow>=12.1.1
 
 # server.py 実行環境（Cloud Run）
 flask>=3.0.0
-gunicorn>=21.0.0
+# gunicorn 25.1.0 で worker fork 不全バグ発生（全リクエスト 504、Revision 00016-00018 で確認）
+# 00015-g96（動作確認済み）の dirty_xxx config dump = 21.x/22.x 系の出力
+# 23.0.0 は long-term stable → 固定してバグ回避
+gunicorn==23.0.0
