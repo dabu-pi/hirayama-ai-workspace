@@ -6,31 +6,51 @@ POST /generate を受け付け、NDJSON を openpyxl で xlsx に変換して ba
 
 認証: X-Secret-Key ヘッダ（環境変数 SECRET_KEY と照合）
 将来: IAM/OIDC に移行する場合は認証部分のみ差し替え（本体ロジック変更不要）
+
+【起動設計】
+  - write_application / openpyxl / PIL 等の重い import はここでは行わない
+  - /health は標準ライブラリのみで即応できる構成にする
+  - batch_write_from_string は /generate ハンドラ内で初回遅延 import する
+  - これにより gunicorn worker 起動時に重い import がブロックしない
 """
 import os
 import base64
 import logging
 from datetime import datetime, timezone, timedelta
 
-from flask import Flask, request, jsonify
-from write_application import batch_write_from_string
-
-app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+logger.info("server.py: app import 開始")
+
+from flask import Flask, request, jsonify
+
+# ★ write_application はここで import しない（遅延 import → /generate 内で実施）
+# 旧: from write_application import batch_write_from_string  ← --preload 時に重い import が master で走り worker fork を阻害
+
+app = Flask(__name__)
+logger.info("server.py: Flask app 生成完了")
 
 JST = timezone(timedelta(hours=9))
 
 # 環境変数から取得（Cloud Run では Secret Manager → 環境変数注入）
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
+# 遅延 import キャッシュ（初回 /generate 呼び出し時に 1 度だけ import）
+_batch_write_from_string = None
+
 
 # ===== ヘルスチェック =====
 
 @app.route("/health", methods=["GET"])
 def health():
-    """Cloud Run ヘルスチェック用エンドポイント"""
+    """Cloud Run ヘルスチェック用エンドポイント
+    write_application / openpyxl / PIL に一切触れない軽量ルート。
+    gunicorn worker 起動直後でも即応できる。
+    """
     return jsonify({"status": "ok"})
+
+
+logger.info("server.py: health route 登録完了")
 
 
 # ===== 申請書生成 =====
@@ -48,6 +68,7 @@ def generate():
     患者要素:
       {"patientId": str, "fileName": str, "content": base64str, "warnings": []}
     """
+    global _batch_write_from_string
 
     # 1. 認証チェック
     req_key = request.headers.get("X-Secret-Key", "")
@@ -81,9 +102,16 @@ def generate():
 
     logger.info(f"generate start: month={month}")
 
-    # 3. xlsx 生成
+    # 3. 遅延 import（初回のみ）
+    if _batch_write_from_string is None:
+        logger.info("write_application import 開始 ...")
+        from write_application import batch_write_from_string as _fn
+        _batch_write_from_string = _fn
+        logger.info("write_application import 完了")
+
+    # 4. xlsx 生成
     try:
-        results = batch_write_from_string(ndjson_str)
+        results = _batch_write_from_string(ndjson_str)
     except ValueError as e:
         logger.error(f"validation error: {e}")
         return jsonify({
@@ -100,7 +128,7 @@ def generate():
             "detail": repr(e),
         }), 500
 
-    # 4. レスポンス組み立て
+    # 5. レスポンス組み立て
     patients_out = []
     has_error = False
     for r in results:

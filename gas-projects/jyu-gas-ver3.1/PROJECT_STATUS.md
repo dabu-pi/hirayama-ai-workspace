@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-21（結合セル分割廃止・テンプレ結合完全維持・Revision 00016 deploy）
+最終更新: 2026-03-21（server.py 遅延 import 化・--preload 廃止・Revision 00018 deploy）
 
 ---
 
@@ -17,8 +17,8 @@
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00017-d9l deploy完了（2026-03-21）** — 選択肢セル分割廃止・テンプレ結合完全維持・SELECTION_OVAL_MAP を full_merge 値に戻す（根本原因修正）。00016は Cloud Run Worker fork 問題で504、00017 で解消 |
-| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-21 Revision 00017-d9l）`{"status":"ok"}` |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00018 deploy（2026-03-21）** — server.py 遅延 import 化（write_application を /generate 内に移動）・--preload 廃止。/health は軽量ルートとして即応 |
+| `/health` 200 OK 確認済み | ⚠️ Revision 00018 deploy後に確認予定 |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
 | `clasp push`（最新 GAS を反映） | ✅ 2026-03-20 済み（7ファイル）|
