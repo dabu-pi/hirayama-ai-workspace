@@ -569,7 +569,7 @@ if seikyu_kubun:
     --image asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/jrec-appgen-server:latest \
     --region asia-northeast1
 
-現在の最新リビジョン: **Revision 00016**（2026-03-21 デプロイ / 選択肢セル分割廃止・テンプレ結合維持・SELECTION_OVAL_MAP を full_merge 値に戻す）
+現在の最新リビジョン: **Revision 00017-d9l**（2026-03-21 デプロイ / 選択肢セル分割廃止・テンプレ結合維持・SELECTION_OVAL_MAP を full_merge 値に戻す）
 Service URL: https://jrec-appgen-server-737882491829.asia-northeast1.run.app
 /health: ✅ {"status":"ok"} 確認済み（2026-03-20）
 ★ 次回デプロイコマンド（--source 方式では PROJECT_ID 展開失敗あり。gcr.io 明示推奨）:

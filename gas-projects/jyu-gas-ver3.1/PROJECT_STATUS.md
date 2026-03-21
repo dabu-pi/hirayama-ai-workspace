@@ -17,8 +17,8 @@
 
 | 項目 | 状態 |
 |---|---|
-| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00016 deploy（2026-03-21）** — 選択肢セル分割廃止・テンプレ結合完全維持・SELECTION_OVAL_MAP を full_merge 値に戻す（根本原因修正）|
-| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-21 Revision 00015-g96）。Revision 00016 deploy完了後に再確認要 |
+| Cloud Run `jrec-appgen-server` デプロイ | ✅ **Revision 00017-d9l deploy完了（2026-03-21）** — 選択肢セル分割廃止・テンプレ結合完全維持・SELECTION_OVAL_MAP を full_merge 値に戻す（根本原因修正）。00016は Cloud Run Worker fork 問題で504、00017 で解消 |
+| `/health` 200 OK 確認済み | ✅ 確認済み（2026-03-21 Revision 00017-d9l）`{"status":"ok"}` |
 | GAS Script Properties（APPGEN_ENDPOINT / APPGEN_SECRET） | ✅ 設定済み |
 | `Ver3_smokeTest.js`（V3TR_smokeHealth / V3TR_smokeGenerate） | ✅ commit 済み |
 | `clasp push`（最新 GAS を反映） | ✅ 2026-03-20 済み（7ファイル）|
