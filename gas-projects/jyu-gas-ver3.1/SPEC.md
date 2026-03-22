@@ -1,6 +1,6 @@
 # 柔整 Ver3 金額計算 仕様書（SPEC.md）
 
-最終更新: 2026-03-20（D2設計確定: M31空欄許容・正本は摘要欄+長期欄・A16:B20院内メモ化）
+最終更新: 2026-03-22（Phase 0 実装: UI入力ギャップ解消 — 自費・経営情報ブロック追加）
 対象: Ver3_amounts（来院ヘッダ金額計算・安全制御）
 
 ---
@@ -457,11 +457,53 @@ saveVisit_V3
 ### 処理順序（saveVisit_V3）
 
 1. 来院ケース保存
-2. 金額計算
+2. 金額計算（保険算定のみ。自費金額は混入しない）
 3. 来院ヘッダupsert
 4. 明細upsert
 5. **UI会計ブロック更新**
-6. 経過履歴更新 / UIクリア
+6. 経過履歴更新 / UIクリア（自費ブロックもクリア）
+
+---
+
+## 15-3. 会計・経営情報ブロック（Phase 0 / 2026-03-22 実装）
+
+> JBIZ-04（慢性疼痛強化プロジェクト）のKPI集計と連携するための自費・経営情報を記録する。
+> 保険算定・申請書生成とは完全に独立。来院合計には自費金額を混入しない。
+
+### 入力セル（患者画面シート 行53〜61）
+
+| セル | UI定数名 | 内容 | 入力形式 |
+|------|------|------|------|
+| B55 | selfPay_accountingType | 会計区分 | プルダウン: 保険のみ / 保険+自費 / 自費のみ |
+| B56 | selfPay_menuType | 自費メニュー区分 | プルダウン: 手技50分 / 運動療法 / セルフケア / ジム体験 / その他 |
+| B57 | selfPay_amount | 自費金額（円） | 数値入力 |
+| B58 | selfPay_chronicFlag | 慢性候補フラグ | チェックボックス（boolean）|
+| B59 | selfPay_nextReserv | 次回予約あり | チェックボックス（boolean）|
+| B60 | selfPay_firstVisitType | 新規区分 | プルダウン: 保険新規 / 自費直新規 / 再来（空欄可）|
+| B61 | selfPay_menuCode | メニューコード | テキスト（将来拡張用。空欄可）|
+
+### 来院ヘッダ列との対応
+
+| UIセル | HEADER_COLS | 来院ヘッダ列名 |
+|---|---|---|
+| B55 | accountingType | 会計区分 |
+| B56 | selfPayMenuType | 自費メニュー区分 |
+| B57 | selfPayAmount | 自費売上額 |
+| B58 | chronicCandidateFlag | 慢性候補フラグ |
+| B59 | nextReservation | 次回予約あり |
+| B60 | firstVisitType | 新規区分 |
+| B61 | selfPayMenuCode（新設）| 自費メニューコード |
+
+### 実装ルール
+
+- `readSelfPayFromUI_V3_(uiSh)` が `saveVisit_V3` の先頭で UIから読み取る
+- 読み取り値は `appendHeaderRow_V3_` に渡して来院ヘッダへ書き込む
+- 自費金額は `amounts.visitTotal`（保険算定）に加算しない（完全独立）
+- B58/B59 はチェックボックス（boolean）。TRUE/FALSE 文字列ではない
+- `clearAfterSaveUI_V3_` で保存後にクリア（次の患者に備える）
+- `clearEntryUI_V3` でも手動クリア対象
+- `setupSelfPayValidation_V3_` でプルダウン・チェックボックスを設定（初回のみ実行）
+- Sheets 上のブロック設置（ラベル・チェックボックス）は手動（PHASE0_DESIGN.md 参照）
 
 ---
 

@@ -85,6 +85,16 @@ const UI = {
   billing_claimPay: "E4",
   billing_needCheck: "E5",
   billing_needCheckReason: "E6",
+
+  // 会計・経営情報ブロック（入力用 — Phase 0 / 行53〜61）
+  // 保険算定UIとは独立。saveVisit_V3 で readSelfPayFromUI_V3_ が読み取る。
+  selfPay_accountingType:  "B55",
+  selfPay_menuType:        "B56",
+  selfPay_amount:          "B57",
+  selfPay_chronicFlag:     "B58",  // チェックボックス (boolean)
+  selfPay_nextReserv:      "B59",  // チェックボックス (boolean)
+  selfPay_firstVisitType:  "B60",
+  selfPay_menuCode:        "B61",  // 将来拡張: self_pay_menu_code
 };
 
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
@@ -162,6 +172,7 @@ const HEADER_COLS = {
   chronicCandidateFlag: "慢性候補フラグ",
   nextReservation: "次回予約あり",
   firstVisitType: "新規区分",
+  selfPayMenuCode: "自費メニューコード",  // Phase 0 追加: 将来拡張用。空欄可。
   // HIGH-2: 同日2ケース活性時の第2ケースキー（通常は空）
   caseKey2: "caseKey2",
   // mixed case 説明性列（来院ヘッダの監査・見返し用）
@@ -219,6 +230,7 @@ function onOpen() {
       .addItem("入力バリデーション設定（傷病名プルダウン）", "setupValidation_V3")
       .addItem("設定シート初期セットアップ", "ensureSettingsRows_V3")
       .addItem("施術明細ヘッダーセットアップ", "ensureDetailHeaders_V3")
+      .addItem("自費入力欄初期設定（患者画面B55〜B61）", "setupSelfPayValidation_V3")
       .addSeparator()
       .addItem("患者検索プルダウン設定", "setupPatientPicker_V3")
       .addItem("患者検索プルダウン更新", "refreshPatientPicker_V3")
@@ -722,6 +734,9 @@ function saveVisit_V3() {
   var visitKey = buildVisitKey_(patientId, treatDate);
   var now = new Date();
 
+  // ★ Phase 0: 自費・経営情報をUIから読み込む（保険算定とは完全に独立）
+  var selfPayInfo = readSelfPayFromUI_V3_(uiSh);
+
   var caseMap = buildHeaderColMap_(caseSh);
   // 不足ヘッダーを自動追加（転帰列など新規追加列への対応）
   caseMap = ensureHeaderCols_(caseSh, caseMap, Object.values(CASE_COLS));
@@ -941,6 +956,14 @@ function saveVisit_V3() {
     case1Summary: amounts.case1Summary || "",
     case2Summary: amounts.case2Summary || "",
     chargeReason: amounts.chargeReason || "",
+    // Phase 0: 自費・経営情報（保険算定とは独立。来院合計には混入しない）
+    accountingType:       selfPayInfo.accountingType,
+    selfPayMenuType:      selfPayInfo.selfPayMenuType,
+    selfPayAmount:        selfPayInfo.selfPayAmount,
+    chronicCandidateFlag: selfPayInfo.chronicCandidateFlag,
+    nextReservation:      selfPayInfo.nextReservation,
+    firstVisitType:       selfPayInfo.firstVisitType,
+    selfPayMenuCode:      selfPayInfo.selfPayMenuCode,
   });
 
   // ④ 施術明細upsert
@@ -1014,13 +1037,16 @@ function appendHeaderRow_V3_(headSh, headMap, obj) {
   setByName_(rowArr, headMap, HEADER_COLS.createdAt, obj.createdAt);
   setByName_(rowArr, headMap, HEADER_COLS.caseKey, obj.caseKey);
   setByName_(rowArr, headMap, HEADER_COLS.caseIndex, obj.caseIndex);
-  // 保険算定の「区分」とは別に、経営KPI用の会計区分を保持する。
+  // 保険算定の「区分」とは別に、経営KPI用の会計区分を保持する（Phase 0: UIから読み取り）
   setByName_(rowArr, headMap, HEADER_COLS.accountingType, obj.accountingType != null ? obj.accountingType : "");
   setByName_(rowArr, headMap, HEADER_COLS.selfPayMenuType, obj.selfPayMenuType != null ? obj.selfPayMenuType : "");
   setByName_(rowArr, headMap, HEADER_COLS.selfPayAmount, obj.selfPayAmount != null ? obj.selfPayAmount : "");
   setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, obj.chronicCandidateFlag != null ? obj.chronicCandidateFlag : "");
   setByName_(rowArr, headMap, HEADER_COLS.nextReservation, obj.nextReservation != null ? obj.nextReservation : "");
   setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, obj.firstVisitType != null ? obj.firstVisitType : "");
+  if (headMap[HEADER_COLS.selfPayMenuCode]) {
+    setByName_(rowArr, headMap, HEADER_COLS.selfPayMenuCode, obj.selfPayMenuCode != null ? obj.selfPayMenuCode : "");
+  }
   // HIGH-2: 同日2ケース活性時に第2ケースキーを記録（通常空）
   setByName_(rowArr, headMap, HEADER_COLS.caseKey2, obj.caseKey2 != null ? obj.caseKey2 : "");
   // mixed case 説明性列（列が存在しない場合は setByName_ が無視する）
@@ -1818,6 +1844,9 @@ function clearEntryUI_V3() {
 
   clearAmountsUI_V3_(uiSh);
 
+  // Phase 0: 自費・経営情報ブロックをクリア
+  clearSelfPayUI_V3_(uiSh);
+
   SpreadsheetApp.getUi().alert("自動入力エリアをクリアしました（B4は保持・書式は保持）。");
 }
 
@@ -1842,6 +1871,79 @@ function clearAmountsUI_V3_(uiSh) {
   uiSh.getRange(UI.billing_claimPay).clearContent();
   uiSh.getRange(UI.billing_needCheck).clearContent();
   uiSh.getRange(UI.billing_needCheckReason).clearContent();
+}
+
+/* =======================================================================
+   Phase 0: 自費・経営情報 UI 関数
+   ======================================================================= */
+
+/** ===== 患者画面から自費・経営情報を読み込む（Phase 0） ===== */
+function readSelfPayFromUI_V3_(uiSh) {
+  var accType  = String(uiSh.getRange(UI.selfPay_accountingType).getValue() || "").trim();
+  var menuType = String(uiSh.getRange(UI.selfPay_menuType).getValue() || "").trim();
+  var amount   = uiSh.getRange(UI.selfPay_amount).getValue();
+  var chronic  = uiSh.getRange(UI.selfPay_chronicFlag).getValue() === true;
+  var nextResv = uiSh.getRange(UI.selfPay_nextReserv).getValue() === true;
+  var fvType   = String(uiSh.getRange(UI.selfPay_firstVisitType).getValue() || "").trim();
+  var menuCode = String(uiSh.getRange(UI.selfPay_menuCode).getValue() || "").trim();
+
+  return {
+    accountingType:       accType,
+    selfPayMenuType:      menuType,
+    selfPayAmount:        (typeof amount === "number" && amount > 0) ? amount : "",
+    chronicCandidateFlag: chronic,
+    nextReservation:      nextResv,
+    firstVisitType:       fvType,
+    selfPayMenuCode:      menuCode,
+  };
+}
+
+/** ===== 患者画面の自費・経営情報ブロックをクリア（Phase 0） ===== */
+function clearSelfPayUI_V3_(uiSh) {
+  uiSh.getRange(UI.selfPay_accountingType).clearContent();
+  uiSh.getRange(UI.selfPay_menuType).clearContent();
+  uiSh.getRange(UI.selfPay_amount).clearContent();
+  uiSh.getRange(UI.selfPay_chronicFlag).setValue(false);  // チェックボックス → FALSE
+  uiSh.getRange(UI.selfPay_nextReserv).setValue(false);   // チェックボックス → FALSE
+  uiSh.getRange(UI.selfPay_firstVisitType).clearContent();
+  uiSh.getRange(UI.selfPay_menuCode).clearContent();
+}
+
+/** ===== 自費入力欄の検証・チェックボックス設定（メニューから呼ぶ公開版） ===== */
+function setupSelfPayValidation_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  if (!uiSh) throw new Error("患者画面シートが見つかりません");
+  setupSelfPayValidation_V3_(uiSh);
+  SpreadsheetApp.getUi().alert("自費入力欄の検証設定を完了しました（B55〜B61）。");
+}
+
+/** ===== 患者画面の自費ブロックに検証・チェックボックスを設定（内部用） ===== */
+function setupSelfPayValidation_V3_(uiSh) {
+  // B55: 会計区分プルダウン
+  var acctRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["保険のみ", "保険+自費", "自費のみ"], true)
+    .setAllowInvalid(true)
+    .build();
+  uiSh.getRange(UI.selfPay_accountingType).setDataValidation(acctRule);
+
+  // B56: 自費メニュー区分プルダウン
+  var menuRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["手技50分", "運動療法", "セルフケア", "ジム体験", "その他"], true)
+    .setAllowInvalid(true)
+    .build();
+  uiSh.getRange(UI.selfPay_menuType).setDataValidation(menuRule);
+
+  // B58/B59: チェックボックス（boolean保存）
+  uiSh.getRange(UI.selfPay_chronicFlag).insertCheckboxes();
+  uiSh.getRange(UI.selfPay_nextReserv).insertCheckboxes();
+
+  // B60: 新規区分プルダウン（空欄可）
+  var fvRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["保険新規", "自費直新規", "再来"], true)
+    .setAllowInvalid(true)
+    .build();
+  uiSh.getRange(UI.selfPay_firstVisitType).setDataValidation(fvRule);
 }
 
 /** ===== 保存後クリア ===== */
@@ -1877,6 +1979,9 @@ function clearAfterSaveUI_V3_(uiSh) {
 
   uiSh.getRange(UI.case1_kubunView).setValue("");
   uiSh.getRange(UI.case2_kubunView).setValue("");
+
+  // Phase 0: 自費・経営情報ブロックをクリア（次の患者入力に備える）
+  clearSelfPayUI_V3_(uiSh);
 
   // 会計ブロックは保存直後の確認用に残す（clearEntryUI_V3で初めてクリア）
 }

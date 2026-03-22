@@ -325,8 +325,34 @@ clearSelfPayUI_V3_(uiSh);
 ## ステータス
 
 - [x] 設計完了（2026-03-22）
-- [ ] Sheets手動設置（院長確認後）
-- [ ] Ver3_core.js コード変更
-- [ ] clasp push
+- [ ] Sheets手動設置（院長確認後 — 患者画面 行53〜61 にラベル・チェックボックス設置）
+- [x] Ver3_core.js コード変更（2026-03-22）
+- [ ] clasp push（Sheets手動設置後に実施）
 - [ ] GASメニュー「自費入力欄初期設定」実行
 - [ ] テスト T1〜T6 実施
+
+## 実装済みコード変更（Ver3_core.js）
+
+| 変更種別 | 内容 | 行番号（目安）|
+|---|---|---|
+| UI 追加 | `selfPay_accountingType` 〜 `selfPay_menuCode`（7フィールド）| UI オブジェクト末尾 |
+| HEADER_COLS 追加 | `selfPayMenuCode: "自費メニューコード"` | firstVisitType の直後 |
+| onOpen メニュー追加 | `自費入力欄初期設定（患者画面B55〜B61）`→ `setupSelfPayValidation_V3` | ensureDetailHeaders の後 |
+| saveVisit_V3 修正 | `readSelfPayFromUI_V3_(uiSh)` を `now = new Date()` 直後に呼び出し | 738行付近 |
+| appendHeaderRow_V3_ 呼び出し修正 | selfPayInfo の7フィールドを渡す | 956〜966行付近 |
+| appendHeaderRow_V3_ 本体修正 | `selfPayMenuCode` の `if (headMap[...])` ガード付き書き込み追加 | 1047行付近 |
+| 新設関数 | `readSelfPayFromUI_V3_` | clearAmountsUI_V3_ の後 |
+| 新設関数 | `clearSelfPayUI_V3_` | readSelfPayFromUI_V3_ の後 |
+| 新設関数 | `setupSelfPayValidation_V3` / `setupSelfPayValidation_V3_` | clearSelfPayUI_V3_ の後 |
+| clearAfterSaveUI_V3_ 修正 | `clearSelfPayUI_V3_(uiSh)` を会計ブロックコメントの直前に追加 | 1984行付近 |
+| clearEntryUI_V3 修正 | `clearSelfPayUI_V3_(uiSh)` を `clearAmountsUI_V3_` の直後に追加 | 1848行付近 |
+
+## 残作業（院長アクション）
+
+1. **患者画面の行53〜62が空欄であることを確認する**
+2. Sheets 上で以下を手動設置：
+   - A53: `── 会計・経営情報 ──`（見出し）
+   - A55: `会計区分` / A56: `自費メニュー区分` / A57: `自費金額（円）`
+   - A58: `慢性候補フラグ` / A59: `次回予約あり` / A60: `新規区分` / A61: `メニューコード`
+3. 設置後に「clasp push 実施」を Claude Code に依頼する
+4. clasp push 後に GAS メニュー「自費入力欄初期設定（患者画面B55〜B61）」を実行する

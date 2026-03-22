@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-22（Phase 0設計完了 — UI入力ギャップ解消の差分設計を PHASE0_DESIGN.md に記録）
+最終更新: 2026-03-22（Phase 0 コード実装完了 — clasp push & Sheets手動設置待ち）
 
 ---
 
@@ -8,7 +8,7 @@
 
 - プロジェクト: 柔整毎日記録システム Ver3.1
 - ディレクトリ: `gas-projects/jyu-gas-ver3.1/`
-- 状態: 稼働中（B案本番稼働可能）。**Phase 0（UI入力ギャップ解消）設計完了 — 実装前確認待ち**
+- 状態: 稼働中（B案本番稼働可能）。**Phase 0 Ver3_core.js コード実装完了 — Sheets手動設置 & clasp push 待ち**
 - 優先度: 最優先
 - ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -30,9 +30,19 @@
 | saveVisit_V3 | selfPayInfo の読み取りと `appendHeaderRow_V3_` への渡しを追加 |
 | clear関数 | `clearAfterSaveUI_V3_` / `clearEntryUI_V3` に `clearSelfPayUI_V3_` を追加 |
 
-**実装前確認事項:**
-1. 患者画面の行53〜62が空欄であることを確認（院長）
-2. Sheets手動設置（ラベル入力・チェックボックス挿入）後に clasp push
+**コード変更済み（Ver3_core.js）:**
+- UI オブジェクト: `selfPay_*` 7フィールド追加
+- HEADER_COLS: `selfPayMenuCode` 追加
+- 新設: `readSelfPayFromUI_V3_` / `clearSelfPayUI_V3_` / `setupSelfPayValidation_V3_`
+- `saveVisit_V3`: selfPayInfo読み取り + appendHeaderRow_V3_ への渡し実装
+- `clearAfterSaveUI_V3_` / `clearEntryUI_V3`: clearSelfPayUI_V3_ 追加
+- メニュー: 「自費入力欄初期設定」追加
+
+**次のアクション（院長）:**
+1. 患者画面の行53〜62が空欄か確認
+2. Sheets に会計・経営情報ブロックを手動設置（PHASE0_DESIGN.md §Sheets手動設置手順）
+3. 「clasp push してください」と Claude Code に依頼
+4. clasp push 後 GAS メニュー「自費入力欄初期設定」を実行
 
 **リスクなし:** 保険算定（Ver3_amounts.js）・申請書生成（Ver3_transferData.js）は変更なし
 - 優先度: 最優先
