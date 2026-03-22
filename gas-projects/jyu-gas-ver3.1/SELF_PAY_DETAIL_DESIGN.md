@@ -2,6 +2,7 @@
 
 作成: 2026-03-22（初版）
 改訂: 2026-03-22（Rev.2 — D7/F7 表示専用化・自費明細ブロック正本化・delete&replace 方針確定）
+改訂: 2026-03-22（Rev.3 — ダイアログ再オープンハング修正: getCurrentVisitKey_V3 Date シリアライズ問題対応）
 対象: JREC-01（柔整毎日記録システム Ver3.1）+ JBIZ-04（接骨院経営戦略）
 
 ---
@@ -518,7 +519,7 @@ Phase 3（将来）
 
 ## Phase 2 実機確認状況（2026-03-22 時点）
 
-> **次回再開位置: T2-3 から**
+> **次回再開位置: T2-3 から（ブロッカー修正済み — 実機確認可能）**
 
 ### 完了済みテスト
 
@@ -528,11 +529,21 @@ Phase 3（将来）
 | T2-2 | 自費複数件保存 | ✅ **OK** — 自費明細2行 / D7="〇〇ほか1件" / F7=合計 / H8="2件保存済" 確認 |
 | T2-9 | 自費のみ + 保険継続 case あり | ✅ **OK（部分）** — confirm 警告: OK / 保険算定なし: OK / 施術明細保険記録なし: OK / **来院ヘッダに1行追記: あり（仕様として許容）** |
 
+### ⚠️ ブロッカー修正済み（2026-03-22 T2-3 実施中に発見・修正）
+
+| 項目 | 内容 |
+|---|---|
+| **症状** | 自費入力後に「自費入力」ボタンを再押下すると「読み込み中…」で止まりダイアログが開かない |
+| **根本原因** | `getCurrentVisitKey_V3()` が返す `existItems` 内に `treatDate`/`createdAt` の生 Date オブジェクトが含まれており、`google.script.run` の JSON シリアライズ時にサイレント失敗。初回（existItems=[]）は正常だが2回目以降でハング |
+| **修正内容** | ① `existItems` を JSON-safe な4項目のみ（menuId/menuName/unitPrice/qty）にマップ / ② 関数全体を try-catch でラップし `error` フィールドを返すよう変更 / ③ UI セルの個別読み取り6回 → バッチ読み取り2回に最適化（B2:C4 / B7:D8）|
+| **修正ファイル** | `Ver3_core.js`（getCurrentVisitKey_V3）/ `selfPayDialog.html`（error フィールドハンドリング + failure handler 更新）|
+| **clasp push** | ✅ 完了（2026-03-22）|
+
 ### 未実施テスト
 
 | # | テスト内容 | 実装根拠（コードレビュー済）|
 |---|---|---|
-| **T2-3**（次回開始）| 保存後 再保存（金額変更）| `deleteSelfPayDetailRows_V3_` で一括削除後 `appendSelfPayDetailRow_V3_` で再追記。D7/F7/H8 も再計算 |
+| **T2-3**（次回開始）| 保存後 再保存（金額変更）| ブロッカー修正済み。`deleteSelfPayDetailRows_V3_` で一括削除後 `appendSelfPayDetailRow_V3_` で再追記。D7/F7/H8 も再計算 |
 | T2-4 | 価格マスタ変更後の過去データ確認 | `unitPrice` は保存時点の snapshot。マスタ変更の影響なし |
 | T2-5 | 会計区分=保険のみ・自費なし | H8="未入力" かつ F7 空欄 → 警告なしで saveVisit 続行 |
 | T2-6 | clearEntryUI_V3 実行後 | D7/F7 clearContent / H8="未入力" / 自費明細シートは変化なし |

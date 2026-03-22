@@ -3291,31 +3291,56 @@ function openSelfPayDialog_V3() {
  *             nextReservation: boolean, existItems: Array}}
  */
 function getCurrentVisitKey_V3() {
-  var ss   = SpreadsheetApp.getActive();
-  var uiSh = ss.getSheetByName(SHEETS.ui);
-  if (!uiSh) return {visitKey: "", patientId: "", existItems: []};
+  try {
+    var ss   = SpreadsheetApp.getActive();
+    var uiSh = ss.getSheetByName(SHEETS.ui);
+    if (!uiSh) return {visitKey: "", patientId: "", existItems: [], error: "患者画面シートが見つかりません"};
 
-  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
-  var treatDate = uiSh.getRange(UI.treatDate).getValue();
-  if (!patientId || !(treatDate instanceof Date)) return {visitKey: "", patientId: "", existItems: []};
+    // バッチ読み取り①: B2:C4 → patientId(C2=[0][1]) / treatDate(B4=[2][0])
+    var metaVals  = uiSh.getRange("B2:C4").getValues();
+    var patientId = String(metaVals[0][1] || "").trim();   // C2
+    var treatDate = metaVals[2][0];                        // B4
 
-  var visitKey = buildVisitKey_(patientId, treatDate);
-  var detailSh = ensureSelfPayDetailSheetInternal_(ss);
-  var existItems = readSelfPayDetailsForVisit_V3_(detailSh, visitKey);
+    if (!patientId || !(treatDate instanceof Date)) {
+      return {visitKey: "", patientId: "", existItems: [], error: "患者または来院日が未選択"};
+    }
 
-  var acctType = String(uiSh.getRange(UI.selfPay_accountingType).getValue() || "").trim();
-  var chronic  = uiSh.getRange(UI.selfPay_chronicFlag).getValue() === true;
-  var nextResv = uiSh.getRange(UI.selfPay_nextReserv).getValue()   === true;
+    var visitKey = buildVisitKey_(patientId, treatDate);
+    var detailSh = ensureSelfPayDetailSheetInternal_(ss);
+    var existRows = readSelfPayDetailsForVisit_V3_(detailSh, visitKey);
 
-  return {
-    visitKey:        visitKey,
-    patientId:       patientId,
-    treatDate:       Utilities.formatDate(treatDate, "Asia/Tokyo", "yyyy-MM-dd"),
-    accountingType:  acctType,
-    chronicFlag:     chronic,
-    nextReservation: nextResv,
-    existItems:      existItems,
-  };
+    // ★ JSON-safe化: Date型フィールド(treatDate/createdAt)を除外し、
+    //    ダイアログ表示に必要な4項目のみを返す。
+    //    google.script.run は Date を含むオブジェクトを正しくシリアライズできず
+    //    2回目以降のダイアログ起動がハングする原因となる。
+    var existItems = existRows.map(function(row) {
+      return {
+        menuId:    String(row.menuId    || ""),
+        menuName:  String(row.menuName  || ""),
+        unitPrice: Number(row.unitPrice) || 0,
+        qty:       Number(row.qty)       || 1,
+      };
+    });
+
+    // バッチ読み取り②: B7:D8 → accountingType(B7=[0][0]) / chronicFlag(B8=[1][0]) / nextReserv(D8=[1][2])
+    var selfPayVals = uiSh.getRange("B7:D8").getValues();
+    var acctType = String(selfPayVals[0][0] || "").trim();  // B7
+    var chronic  = selfPayVals[1][0] === true;              // B8
+    var nextResv = selfPayVals[1][2] === true;              // D8
+
+    return {
+      visitKey:        visitKey,
+      patientId:       patientId,
+      treatDate:       Utilities.formatDate(treatDate, "Asia/Tokyo", "yyyy-MM-dd"),
+      accountingType:  acctType,
+      chronicFlag:     chronic,
+      nextReservation: nextResv,
+      existItems:      existItems,
+    };
+  } catch (e) {
+    Logger.log("getCurrentVisitKey_V3 エラー: " + e.message);
+    return {visitKey: "", patientId: "", existItems: [], error: e.message};
+  }
 }
 
 /**

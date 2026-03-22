@@ -158,13 +158,20 @@
     // 初期化: visitKey とマスタを並行取得
     google.script.run
       .withSuccessHandler(function(info) {
+        // ★ サーバー側が error フィールドを返した場合はエラー表示で停止
+        if (info && info.error) {
+          document.getElementById('visitKeyLabel').textContent = '読み込みエラー: ' + info.error;
+          document.getElementById('loading').textContent = 'エラーが発生しました。ダイアログを閉じて再試行してください。';
+          return;
+        }
         visitKeyInfo = info;
         document.getElementById('visitKeyLabel').textContent =
           '来院キー: ' + (info.visitKey || '---') + ' / ' + (info.treatDate || '');
         loadMenuMaster();
       })
       .withFailureHandler(function(e) {
-        document.getElementById('visitKeyLabel').textContent = 'エラー: ' + e.message;
+        document.getElementById('visitKeyLabel').textContent = '接続エラー: ' + e.message;
+        document.getElementById('loading').textContent = 'エラーが発生しました。ダイアログを閉じて再試行してください。';
       })
       .getCurrentVisitKey_V3();
 
@@ -186,6 +193,7 @@
         })
         .withFailureHandler(function(e) {
           document.getElementById('loading').textContent = 'マスタ読み込みエラー: ' + e.message;
+          document.getElementById('loading').style.display = 'block';
         })
         .getSelfPayMenuMaster_V3();
     }
