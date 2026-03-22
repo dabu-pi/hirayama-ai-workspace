@@ -470,40 +470,43 @@ saveVisit_V3
 > JBIZ-04（慢性疼痛強化プロジェクト）のKPI集計と連携するための自費・経営情報を記録する。
 > 保険算定・申請書生成とは完全に独立。来院合計には自費金額を混入しない。
 
-### 入力セル（患者画面シート 行53〜61）
+### 入力セル（患者画面シート 行7〜8）— Phase 1 確定 2026-03-22
+
+> ⚠️ Phase 0 設計（B55〜B61）は PHASE0_DESIGN.md に記録。現行は行7〜8。
 
 | セル | UI定数名 | 内容 | 入力形式 |
 |------|------|------|------|
-| B55 | selfPay_accountingType | 会計区分 | プルダウン: 保険のみ / 保険+自費 / 自費のみ |
-| B56 | selfPay_menuType | 自費メニュー区分 | プルダウン: 手技50分 / 運動療法 / セルフケア / ジム体験 / その他 |
-| B57 | selfPay_amount | 自費金額（円） | 数値入力 |
-| B58 | selfPay_chronicFlag | 慢性候補フラグ | チェックボックス（boolean）|
-| B59 | selfPay_nextReserv | 次回予約あり | チェックボックス（boolean）|
-| B60 | selfPay_firstVisitType | 新規区分 | プルダウン: 保険新規 / 自費直新規 / 再来（空欄可）|
-| B61 | selfPay_menuCode | メニューコード | テキスト（将来拡張用。空欄可）|
+| B7 | selfPay_accountingType | 会計区分 | プルダウン: 保険のみ / 保険+自費 / 自費のみ |
+| D7 | selfPay_menuType | 自費メニュー区分 | プルダウン: 手技50分 / 運動療法 / セルフケア / ジム体験 / その他 |
+| F7 | selfPay_amount | 自費金額（円） | 数値入力 |
+| H7 | — | 会計合計（表示専用） | 数式: =IF(F7="",E3,E3+F7)（E3=窓口負担額）|
+| B8 | selfPay_chronicFlag | 慢性候補フラグ | チェックボックス（boolean）|
+| D8 | selfPay_nextReserv | 次回予約あり | チェックボックス（boolean）|
+| F8 | selfPay_firstVisitType | 新規区分 | プルダウン: 保険新規 / 自費直新規 / 再来（空欄可）|
+| H8 | selfPay_menuCode | メニューコード | テキスト（将来拡張用。空欄可）|
 
 ### 来院ヘッダ列との対応
 
 | UIセル | HEADER_COLS | 来院ヘッダ列名 |
 |---|---|---|
-| B55 | accountingType | 会計区分 |
-| B56 | selfPayMenuType | 自費メニュー区分 |
-| B57 | selfPayAmount | 自費売上額 |
-| B58 | chronicCandidateFlag | 慢性候補フラグ |
-| B59 | nextReservation | 次回予約あり |
-| B60 | firstVisitType | 新規区分 |
-| B61 | selfPayMenuCode（新設）| 自費メニューコード |
+| B7 | accountingType | 会計区分 |
+| D7 | selfPayMenuType | 自費メニュー区分 |
+| F7 | selfPayAmount | 自費売上額 |
+| B8 | chronicCandidateFlag | 慢性候補フラグ |
+| D8 | nextReservation | 次回予約あり |
+| F8 | firstVisitType | 新規区分 |
+| H8 | selfPayMenuCode | 自費メニューコード |
 
 ### 実装ルール
 
 - `readSelfPayFromUI_V3_(uiSh)` が `saveVisit_V3` の先頭で UIから読み取る
 - 読み取り値は `appendHeaderRow_V3_` に渡して来院ヘッダへ書き込む
 - 自費金額は `amounts.visitTotal`（保険算定）に加算しない（完全独立）
-- B58/B59 はチェックボックス（boolean）。TRUE/FALSE 文字列ではない
+- B8/D8 はチェックボックス（boolean）。TRUE/FALSE 文字列ではない
 - `clearAfterSaveUI_V3_` で保存後にクリア（次の患者に備える）
 - `clearEntryUI_V3` でも手動クリア対象
-- `setupSelfPayValidation_V3_` でプルダウン・チェックボックスを設定（初回のみ実行）
-- Sheets 上のブロック設置（ラベル・チェックボックス）は手動（PHASE0_DESIGN.md 参照）
+- `setupSelfPayValidation_V3_` でプルダウン・チェックボックス・数式・ラベルを全自動生成
+  GASメニュー「会計ブロック自動生成（患者画面 行7〜8）」を1回実行すれば Sheets 設置完了
 
 ---
 

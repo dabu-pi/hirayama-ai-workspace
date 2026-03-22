@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-22（Phase 0 コード実装完了 — clasp push & Sheets手動設置待ち）
+最終更新: 2026-03-22（Phase 1 完了 — 行7〜8へ移動・H7数式修正・docs整合完了）
 
 ---
 
@@ -8,7 +8,7 @@
 
 - プロジェクト: 柔整毎日記録システム Ver3.1
 - ディレクトリ: `gas-projects/jyu-gas-ver3.1/`
-- 状態: 稼働中（B案本番稼働可能）。**Phase 0 Ver3_core.js コード実装完了 — Sheets手動設置 & clasp push 待ち**
+- 状態: 稼働中（B案本番稼働可能）。**Phase 1 UI再設計完了（行7〜8配置）— GASメニュー再実行でシート反映待ち**
 - 優先度: 最優先
 - ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -23,7 +23,7 @@
 
 | 変更 | 内容 |
 |---|---|
-| 患者画面 行53〜61 | 「会計・経営情報ブロック」を設置（B55〜B61）|
+| 患者画面 行7〜8 | 「会計・経営情報ブロック」を設置（B7/D7/F7/H7/B8/D8/F8/H8）Phase 1 確定 2026-03-22 |
 | UI オブジェクト | `selfPay_*` 7フィールドを追加 |
 | HEADER_COLS | `selfPayMenuCode: "自費メニューコード"` を追加（将来拡張）|
 | 新設関数 | `readSelfPayFromUI_V3_` / `clearSelfPayUI_V3_` / `setupSelfPayValidation_V3_` |
@@ -39,10 +39,9 @@
 - メニュー: 「自費入力欄初期設定」追加
 
 **次のアクション（院長）:**
-1. 患者画面の行53〜62が空欄か確認
-2. Sheets に会計・経営情報ブロックを手動設置（PHASE0_DESIGN.md §Sheets手動設置手順）
-3. 「clasp push してください」と Claude Code に依頼
-4. clasp push 後 GAS メニュー「自費入力欄初期設定」を実行
+1. GASメニュー「会計ブロック自動生成（患者画面 行7〜8）」を実行（H7数式修正・B9/行55残骸クリアの反映）
+2. E5 に条件付き書式設定（要確認=TRUE → 橙背景）← Sheets 手動
+3. テスト T1〜T6 実施（UI_REDESIGN_PHASE1.md 参照）
 
 **リスクなし:** 保険算定（Ver3_amounts.js）・申請書生成（Ver3_transferData.js）は変更なし
 - 優先度: 最優先
