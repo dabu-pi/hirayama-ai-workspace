@@ -1958,8 +1958,12 @@ function setupSelfPayValidation_V3_(uiSh) {
   uiSh.getRange("F8").setBackground(INPUT_BG);
   uiSh.getRange("H8").setBackground(INPUT_BG);
 
-  // ── H7: 会計合計 数式（E2=窓口負担額）────────────────
-  uiSh.getRange("H7").setFormula("=IF(F7=\"\",E2,E2+F7)").setBackground(FORMULA_BG);
+  // ── H7: 会計合計 数式（E3=窓口負担額 ※E2=来院合計なので注意）────
+  uiSh.getRange("H7").setFormula("=IF(F7=\"\",E3,E3+F7)").setBackground(FORMULA_BG);
+
+  // ── 旧セル残骸クリア（D9/F9: 旧チェックボックス設定の残り）────────
+  uiSh.getRange("D9").clearContent().clearDataValidations();
+  uiSh.getRange("F9").clearContent().clearDataValidations();
 
   // ── ブロック外枠（A7:H8）─────────────────────────────
   uiSh.getRange("A7:H8").setBorder(
