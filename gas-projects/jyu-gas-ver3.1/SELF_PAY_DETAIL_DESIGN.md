@@ -80,13 +80,26 @@ D8: [チェックボックス入力]  ← 引き続き入力
 E8: 「新規区分」（ラベル）
 F8: [プルダウン入力]         ← 引き続き入力
 G8: 「明細入力」（ラベル）
-H8: [ボタン代替セル] 「自費メニュー追加 ▶」← Phase 2 で追加（クリックで ダイアログ起動）
-    ※ GAS onSelectionChange or Drawing ボタンで実装
+H8: [状態表示セル] GAS が書き込む自費明細の保存状態
+    └─ 0件: "未入力"
+    └─ n件: "n件保存済"（例: "1件保存済", "2件保存済"）
+    ※ ダイアログの起動は Drawing ボタンで行う（H8 はトリガーでない）
 ```
 
-> **H8 の扱い:** Phase 1 では「メニューコード」入力欄だったが、Phase 2 で「自費メニュー追加」
-> トリガーセルに転用する。UI.selfPay_menuCode = "H8" は Phase 2 では
-> ダイアログ起動トリガーとして再定義する。
+> **H8 の扱い（Phase 2 確定）:** Phase 1 では「メニューコード」入力欄だったが、Phase 2 では
+> **状態表示セル**に転用する（Q6 確定）。GAS が "未入力" または "n件保存済" を書き込む。
+> ダイアログの起動は Drawing ボタンで行い、H8 はトリガーとして使わない。
+> UI.selfPay_menuCode = "H8" は引き続き使用するが、Phase 2 では状態書き込み先として機能する。
+
+### H8 状態表示仕様（確定）
+
+| 条件 | H8 表示値 | 設定タイミング |
+|---|---|---|
+| 自費明細 0件（初期・クリア後）| `"未入力"` | `updateH8Status_V3_(uiSh, 0)` / `clearSelfPayUI_V3_` / `setupSelfPayValidation_V3_` |
+| 自費明細 1件以上 | `"n件保存済"`（例: "1件保存済"）| `updateH8Status_V3_(uiSh, n)` — n は保存行数 |
+
+> **"0件保存済" は存在しない。** count=0 のとき必ず "未入力" を書き込む。
+> `saveVisit_V3` の警告チェックは「H8 = "未入力" かつ F7 > 0」のときのみ発火する。
 
 ---
 
@@ -485,7 +498,7 @@ Phase 3（将来）
 | T2-2 | 自費2件（M001/M010）保存 | `detailRows.length > 1` のとき `display = menuName + "ほか1件"` の分岐コード確認済み。F7=14300（5500+8800）。実機確認待ち |
 | T2-3 | 保存後 再保存（金額変更） | `deleteSelfPayDetailRows_V3_` で visitKey 一致行を後方削除後に `appendSelfPayDetailRow_V3_` で再追記。D7/F7/H8 も再計算。実機確認待ち |
 | T2-4 | 価格マスタ変更後の過去データ確認 | `unitPrice` は `saveSelfPayDetails_V3_` の `item.unitPrice` を snapshot 保存するため、マスタ変更の影響を受けない設計確認済み。実機確認待ち |
-| T2-5 | 会計区分=保険のみ・自費入力なし | `items.length === 0` のとき `updateSelfPayDisplay_V3_` で D7/F7 が空欄（total=0 → setValue("")）。H8="0件保存済"。実機確認待ち |
+| T2-5 | 会計区分=保険のみ・自費入力なし | ダイアログを開かない場合、H8 は初期値の "未入力" のまま。saveVisit は警告なしで続行（H8="未入力" かつ F7 空欄のため）。来院ヘッダの自費列は空欄で保存。実機確認待ち |
 | T2-6 | clearEntryUI_V3 実行後 | `clearSelfPayUI_V3_` で D7/F7 clearContent・H8="未入力"。自費明細シートは変化しない（クリアは UI のみ）設計確認済み。実機確認待ち |
 | T2-7 | delete & replace 後の他visitKey 行ずれなし | `deleteSelfPayDetailRows_V3_` は後方ループ（`r = data.length-1` から）で削除するため、他行のインデックスずれなし。コード確認済み。実機確認待ち |
 | T2-8 | 自費明細シートが存在しない場合 | `ensureSelfPayDetailSheetInternal_` が `insertSheet` で自動作成するため、シート未作成時のエラーは発生しない設計。ダイアログ起動時に自動初期化。実機確認待ち |
