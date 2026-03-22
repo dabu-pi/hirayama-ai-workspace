@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-22（Phase 2 設計 Rev.2 完了 — D7/F7 表示専用化・ダイアログ方式確定）
+最終更新: 2026-03-22（Phase 2 実装完了 — ダイアログ・delete&replace・D7/F7 表示専用化）
 
 ---
 
@@ -54,12 +54,24 @@
 - テスト観点 T2-1〜T2-8 定義済み
 - 詳細: `SELF_PAY_DETAIL_DESIGN.md`（Rev.2）
 
-**次のアクション（Phase 2 実装着手前）:**
-- 価格マスタ テーブルを設定シートに手動追加（院長）
-- `自費明細` シート作成（GAS メニュー拡張後に初期化）
-- H8 の用途変更（メニューコード → ダイアログ起動）について院長と確認
+**✅ Phase 2 コード実装完了（2026-03-22）:**
+- SHEETS const に `selfPayDetail: "自費明細"` 追加
+- 自費明細シート作成・ヘッダ初期化関数群実装
+- delete & replace 保存関数群実装（saveSelfPayDetails_V3_ ほか）
+- `selfPayDialog.html` 新規作成（価格マスタプルダウン・複数行・合計計算）
+- `openSelfPayDialog_V3` / `getCurrentVisitKey_V3` / `saveSelfPayDetailsFromDialog_V3` 実装
+- `getSelfPayMenuMaster_V3`（設定シート優先・フォールバック付き）実装
+- `setupSelfPayValidation_V3_` 修正: D7/F7 表示専用（薄黄）・H8 状態表示（薄青）
+- `clearSelfPayUI_V3_` 修正: H8 を "未入力" リセット
+- `saveVisit_V3` に `checkSelfPayWarningBeforeSave_V3_` 追加
+- onOpen に「自費明細入力」「自費明細シート初期化」メニュー追加
+- `clasp push` 完了（2026-03-22）
 
-**実装着手タイミング:** 2026-04-01 運用開始後・実績データ蓄積確認後
+**次のアクション（院長の手動作業）:**
+- 価格マスタ テーブルを設定シートに手動追加（列: menu_id / メニュー名 / 一般料金 / asago会員料金 / KPI集計対象 / 確定状況）
+- GASメニュー「会計ブロック自動生成（患者画面 行7〜8）」を再実行（D7/F7 表示専用化を患者画面に適用）
+- GASメニュー「自費明細シート初期化」を実行（`自費明細` シート作成）
+- Drawing ボタンをシートに設置して `openSelfPayDialog_V3` を割り当て（手順: SELF_PAY_DETAIL_DESIGN.md § Drawing ボタン設置手順）
 
 **リスクなし:** 保険算定（Ver3_amounts.js）・申請書生成（Ver3_transferData.js）は変更なし
 - 優先度: 最優先

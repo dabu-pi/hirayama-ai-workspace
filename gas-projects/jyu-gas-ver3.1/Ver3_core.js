@@ -30,6 +30,7 @@ const SHEETS = {
   header: "来院ヘッダ",
   history: "初検情報履歴",
   insurer: "保険者情報",
+  selfPayDetail: "自費明細",  // Phase 2: 自費明細シート
 };
 
 /** ===== 患者画面 UIセル ===== */
@@ -235,6 +236,8 @@ function onOpen() {
       .addItem("設定シート初期セットアップ", "ensureSettingsRows_V3")
       .addItem("施術明細ヘッダーセットアップ", "ensureDetailHeaders_V3")
       .addItem("会計ブロック自動生成（患者画面 行7〜8）", "setupSelfPayValidation_V3")
+      .addItem("自費明細入力（患者画面）", "openSelfPayDialog_V3")
+      .addItem("自費明細シート初期化", "ensureSelfPayDetailSheet_V3")
       .addSeparator()
       .addItem("患者検索プルダウン設定", "setupPatientPicker_V3")
       .addItem("患者検索プルダウン更新", "refreshPatientPicker_V3")
@@ -740,6 +743,11 @@ function saveVisit_V3() {
 
   // ★ Phase 0: 自費・経営情報をUIから読み込む（保険算定とは完全に独立）
   var selfPayInfo = readSelfPayFromUI_V3_(uiSh);
+
+  // ★ Phase 2: 自費明細の未保存警告チェック
+  if (!checkSelfPayWarningBeforeSave_V3_(uiSh)) {
+    return;  // キャンセル
+  }
 
   var caseMap = buildHeaderColMap_(caseSh);
   // 不足ヘッダーを自動追加（転帰列など新規追加列への対応）
@@ -1902,15 +1910,15 @@ function readSelfPayFromUI_V3_(uiSh) {
   };
 }
 
-/** ===== 患者画面の自費・経営情報ブロックをクリア（Phase 0） ===== */
+/** ===== 患者画面の自費・経営情報ブロックをクリア（Phase 0/2） ===== */
 function clearSelfPayUI_V3_(uiSh) {
   uiSh.getRange(UI.selfPay_accountingType).clearContent();
-  uiSh.getRange(UI.selfPay_menuType).clearContent();
-  uiSh.getRange(UI.selfPay_amount).clearContent();
+  uiSh.getRange(UI.selfPay_menuType).clearContent();      // D7: 表示専用（Phase 2）
+  uiSh.getRange(UI.selfPay_amount).clearContent();        // F7: 表示専用（Phase 2）
   uiSh.getRange(UI.selfPay_chronicFlag).setValue(false);  // チェックボックス → FALSE
   uiSh.getRange(UI.selfPay_nextReserv).setValue(false);   // チェックボックス → FALSE
   uiSh.getRange(UI.selfPay_firstVisitType).clearContent();
-  uiSh.getRange(UI.selfPay_menuCode).clearContent();
+  uiSh.getRange(UI.selfPay_menuCode).setValue("未入力");  // H8: 状態表示をリセット（Phase 2）
 }
 
 /** ===== 自費入力欄 会計ブロック自動生成（メニューから呼ぶ公開版） ===== */
@@ -1920,9 +1928,11 @@ function setupSelfPayValidation_V3() {
   if (!uiSh) throw new Error("患者画面シートが見つかりません");
   setupSelfPayValidation_V3_(uiSh);
   SpreadsheetApp.getUi().alert(
-    "会計・経営情報ブロック（行7〜8）の自動生成が完了しました。\n" +
-    "Row 7: 会計区分(B7) / 自費メニュー(D7) / 自費金額(F7) / 会計合計(H7)\n" +
-    "Row 8: 慢性候補(B8) / 次回予約(D8) / 新規区分(F8) / メニューコード(H8)"
+    "会計・経営情報ブロック（行7〜8）の自動生成が完了しました（Phase 2）。\n" +
+    "Row 7: 会計区分(B7) / 自費メニュー[表示専用](D7) / 自費金額[表示専用](F7) / 会計合計(H7)\n" +
+    "Row 8: 慢性候補(B8) / 次回予約(D8) / 新規区分(F8) / 明細状態[状態表示](H8)\n" +
+    "D7/F7 は手入力不可。自費明細ダイアログから保存すると自動表示されます。\n" +
+    "H8 は状態表示セル。Drawingボタンをシートに設置して openSelfPayDialog_V3 を割り当ててください。"
   );
 }
 
@@ -1947,16 +1957,16 @@ function setupSelfPayValidation_V3_(uiSh) {
   uiSh.getRange("A8").setValue("慢性候補").setBackground(LABEL_BG).setFontWeight("bold");
   uiSh.getRange("C8").setValue("次回予約").setBackground(LABEL_BG).setFontWeight("bold");
   uiSh.getRange("E8").setValue("新規区分").setBackground(LABEL_BG).setFontWeight("bold");
-  uiSh.getRange("G8").setValue("メニューコード").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("G8").setValue("明細入力").setBackground(LABEL_BG).setFontWeight("bold");  // Phase 2: H8 = 状態表示セル
 
   // ── 入力セル背景色 ────────────────────────────────────
   uiSh.getRange("B7").setBackground(INPUT_BG);
-  uiSh.getRange("D7").setBackground(INPUT_BG);
-  uiSh.getRange("F7").setBackground(INPUT_BG);
+  uiSh.getRange("D7").setBackground("#fff9c4");  // Phase 2: 表示専用（薄黄）
+  uiSh.getRange("F7").setBackground("#fff9c4");  // Phase 2: 表示専用（薄黄）
   uiSh.getRange("B8").setBackground(INPUT_BG);
   uiSh.getRange("D8").setBackground(INPUT_BG);
   uiSh.getRange("F8").setBackground(INPUT_BG);
-  uiSh.getRange("H8").setBackground(INPUT_BG);
+  uiSh.getRange("H8").setBackground("#e8f4f8").setValue("未入力");  // Phase 2: 状態表示セル（薄青）
 
   // ── H7: 会計合計 数式（E3=窓口負担額 ※E2=来院合計なので注意）────
   uiSh.getRange("H7").setFormula("=IF(F7=\"\",E3,E3+F7)").setBackground(FORMULA_BG);
@@ -1982,12 +1992,9 @@ function setupSelfPayValidation_V3_(uiSh) {
     .build();
   uiSh.getRange(UI.selfPay_accountingType).setDataValidation(acctRule);
 
-  // ── D7: 自費メニュー区分 プルダウン ──────────────────
-  var menuRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["手技50分", "運動療法", "セルフケア", "ジム体験", "その他"], true)
-    .setAllowInvalid(true)
-    .build();
-  uiSh.getRange(UI.selfPay_menuType).setDataValidation(menuRule);
+  // ── D7: 表示専用（Phase 2: 入力規則削除 → 薄黄背景）─────────────────
+  // Phase 1 まではプルダウン入力欄だったが、Phase 2 でダイアログ経由の表示専用セルに変更
+  uiSh.getRange(UI.selfPay_menuType).clearDataValidations().setBackground("#fff9c4");
 
   // ── B8・D8: チェックボックス（boolean 保存）──────────
   uiSh.getRange(UI.selfPay_chronicFlag).insertCheckboxes();
@@ -2919,4 +2926,415 @@ function appendInitHistory_V3_(ss, patientId, caseNo, caseKey, treatDate, initFi
     var writtenRow = (rowIdx > 0) ? rowIdx : sh.getLastRow();
     sh.getRange(writtenRow, caseNoCol).setNumberFormat("0");
   }
+}
+
+/* =======================================================================
+   Phase 2: 自費明細シート・ダイアログ・保存関数群
+   ======================================================================= */
+
+/** ===== 自費明細シートの作成・ヘッダ初期化（メニューから呼ぶ公開版） ===== */
+function ensureSelfPayDetailSheet_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ensureSelfPayDetailSheetInternal_(ss);
+  SpreadsheetApp.getUi().alert(
+    "自費明細シートの確認が完了しました。\n" +
+    "シート名: " + SHEETS.selfPayDetail + "\n" +
+    "14列ヘッダ設置済み。visitKey / lineNo などが列定義されています。"
+  );
+}
+
+/**
+ * 自費明細シートが存在しない場合は作成し、14列ヘッダを書き込む（内部用）。
+ * 既存シートがある場合はそのまま返す。
+ * @param {Spreadsheet} ss
+ * @returns {Sheet} 自費明細シート
+ */
+function ensureSelfPayDetailSheetInternal_(ss) {
+  var sh = ss.getSheetByName(SHEETS.selfPayDetail);
+  if (!sh) {
+    sh = ss.insertSheet(SHEETS.selfPayDetail);
+  }
+  // ヘッダ行がなければ書き込む（データ行がある場合は既存ヘッダを壊さない）
+  if (sh.getLastRow() < 1) {
+    var headers = [
+      "明細ID", "visitKey", "行番号", "施術日", "患者ID",
+      "会計区分", "menu_id", "メニュー名", "単価", "数量",
+      "小計", "慢性候補フラグ", "次回予約あり", "作成日時"
+    ];
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/**
+ * visitKey に一致する自費明細行を後方削除する。
+ * @param {Sheet}  detailSh - 自費明細シート
+ * @param {string} visitKey
+ */
+function deleteSelfPayDetailRows_V3_(detailSh, visitKey) {
+  if (detailSh.getLastRow() < 2) return;
+  var data    = detailSh.getDataRange().getValues();
+  var headRow = data[0];
+  var vkCol   = headRow.indexOf("visitKey");  // 0-based
+  if (vkCol < 0) return;
+
+  for (var r = data.length - 1; r >= 1; r--) {
+    if (String(data[r][vkCol] || "") === visitKey) {
+      detailSh.deleteRow(r + 1);  // Sheet は 1-based
+    }
+  }
+}
+
+/**
+ * 自費明細シートに1行追記する。
+ * @param {Sheet}  detailSh
+ * @param {Object} rowObj - {selfPayDetailId, visitKey, lineNo, treatDate, patientId,
+ *                           accountingType, menuId, menuName, unitPrice, qty, subtotal,
+ *                           chronicFlag, nextReservation, createdAt}
+ */
+function appendSelfPayDetailRow_V3_(detailSh, rowObj) {
+  detailSh.appendRow([
+    rowObj.selfPayDetailId,
+    rowObj.visitKey,
+    rowObj.lineNo,
+    rowObj.treatDate,
+    rowObj.patientId,
+    rowObj.accountingType  || "",
+    rowObj.menuId          || "",
+    rowObj.menuName        || "",
+    rowObj.unitPrice,
+    rowObj.qty,
+    rowObj.subtotal,
+    rowObj.chronicFlag       ? true : false,
+    rowObj.nextReservation   ? true : false,
+    rowObj.createdAt,
+  ]);
+}
+
+/**
+ * D7（自費メニュー表示）と F7（自費金額合計）を更新する。
+ * @param {Sheet}  uiSh
+ * @param {Array}  detailRows - [{menuName, subtotal}, ...] 当該 visitKey の全行
+ */
+function updateSelfPayDisplay_V3_(uiSh, detailRows) {
+  // F7: 合計金額
+  var total = detailRows.reduce(function(s, r) { return s + (r.subtotal || 0); }, 0);
+  uiSh.getRange(UI.selfPay_amount).setValue(total > 0 ? total : "");
+
+  // D7: メニュー集計テキスト
+  var display = "";
+  if (detailRows.length === 1) {
+    display = detailRows[0].menuName || "";
+  } else if (detailRows.length > 1) {
+    display = (detailRows[0].menuName || "") + "ほか" + (detailRows.length - 1) + "件";
+  }
+  uiSh.getRange(UI.selfPay_menuType).setValue(display);
+}
+
+/**
+ * H8 の状態表示を更新する。
+ * @param {Sheet}  uiSh
+ * @param {number} count - 保存済み明細件数
+ */
+function updateH8Status_V3_(uiSh, count) {
+  if (count === 0) {
+    uiSh.getRange(UI.selfPay_menuCode).setValue("未入力");
+  } else {
+    uiSh.getRange(UI.selfPay_menuCode).setValue(count + "件保存済");
+  }
+}
+
+/**
+ * visitKey に一致する自費明細行を返す。
+ * @param {Sheet}  detailSh
+ * @param {string} visitKey
+ * @returns {Array} [{menuName, subtotal, lineNo, unitPrice, qty, menuId, ...}, ...]
+ */
+function readSelfPayDetailsForVisit_V3_(detailSh, visitKey) {
+  if (!detailSh || detailSh.getLastRow() < 2) return [];
+  var data    = detailSh.getDataRange().getValues();
+  var headRow = data[0];
+  var vkCol   = headRow.indexOf("visitKey");
+  if (vkCol < 0) return [];
+
+  var colIdx = {};
+  headRow.forEach(function(name, i) { colIdx[name] = i; });
+
+  var result = [];
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][vkCol] || "") !== visitKey) continue;
+    result.push({
+      selfPayDetailId: data[r][colIdx["明細ID"]       || 0] || "",
+      visitKey:        visitKey,
+      lineNo:          data[r][colIdx["行番号"]        || 2] || r,
+      treatDate:       data[r][colIdx["施術日"]        || 3] || "",
+      patientId:       data[r][colIdx["患者ID"]        || 4] || "",
+      accountingType:  data[r][colIdx["会計区分"]      || 5] || "",
+      menuId:          data[r][colIdx["menu_id"]       || 6] || "",
+      menuName:        data[r][colIdx["メニュー名"]    || 7] || "",
+      unitPrice:       data[r][colIdx["単価"]          || 8] || 0,
+      qty:             data[r][colIdx["数量"]          || 9] || 1,
+      subtotal:        data[r][colIdx["小計"]          || 10] || 0,
+      chronicFlag:     data[r][colIdx["慢性候補フラグ"]|| 11] === true,
+      nextReservation: data[r][colIdx["次回予約あり"]  || 12] === true,
+      createdAt:       data[r][colIdx["作成日時"]      || 13] || "",
+    });
+  }
+  return result;
+}
+
+/**
+ * 自費明細を visitKey 単位で delete & replace する（内部用）。
+ * @param {Sheet}  uiSh     - 患者画面シート（D7/F7/H8 更新用）
+ * @param {Sheet}  detailSh - 自費明細シート
+ * @param {string} visitKey
+ * @param {Array}  items    - [{menuId, menuName, unitPrice, qty}, ...]
+ * @param {Object} context  - {treatDate, patientId, accountingType, chronicFlag, nextReservation}
+ */
+function saveSelfPayDetails_V3_(uiSh, detailSh, visitKey, items, context) {
+  var now = new Date();
+
+  // Step 1: 既存行を全削除（visitKey 一致行）
+  deleteSelfPayDetailRows_V3_(detailSh, visitKey);
+
+  // Step 2: 新しい行を追記
+  var savedRows = [];
+  items.forEach(function(item, idx) {
+    var lineNo   = idx + 1;
+    var detailId = visitKey + "_L" + lineNo;
+    var subtotal = (item.unitPrice || 0) * (item.qty || 1);
+    var rowObj = {
+      selfPayDetailId: detailId,
+      visitKey:        visitKey,
+      lineNo:          lineNo,
+      treatDate:       context.treatDate  || "",
+      patientId:       context.patientId  || "",
+      accountingType:  context.accountingType  || "",
+      menuId:          item.menuId        || "",
+      menuName:        item.menuName      || "",
+      unitPrice:       item.unitPrice     || 0,
+      qty:             item.qty           || 1,
+      subtotal:        subtotal,
+      chronicFlag:     context.chronicFlag     || false,
+      nextReservation: context.nextReservation || false,
+      createdAt:       now,
+    };
+    appendSelfPayDetailRow_V3_(detailSh, rowObj);
+    savedRows.push(rowObj);
+  });
+
+  // Step 3: D7/F7 を更新
+  updateSelfPayDisplay_V3_(uiSh, savedRows);
+
+  // Step 4: H8 を更新
+  updateH8Status_V3_(uiSh, savedRows.length);
+}
+
+/* =======================================================================
+   Phase 2: 価格マスタ取得
+   ======================================================================= */
+
+/**
+ * 設定シートの「価格マスタ」テーブルを読む。
+ * 見つからない場合はフォールバック定義を返す。
+ * HTMLダイアログから google.script.run で呼ぶ公開関数。
+ * @returns {Array} [{menuId, menuName, unitPrice}, ...]
+ */
+function getSelfPayMenuMaster_V3() {
+  // フォールバック（設定シートに価格マスタがない場合）
+  var fallback = [
+    {menuId: "M001", menuName: "慢性ケア手技50分",          unitPrice: 5500},
+    {menuId: "M010", menuName: "パーソナルトレーニング60分", unitPrice: 8800},
+    {menuId: "M011", menuName: "4回集中コース",              unitPrice: 35200},
+    {menuId: "M002", menuName: "症状別初回評価",             unitPrice: 3300},
+  ];
+
+  try {
+    var ss = SpreadsheetApp.getActive();
+    var settingsSh = ss.getSheetByName(SHEETS.settings);
+    if (!settingsSh) return fallback;
+
+    var data = settingsSh.getDataRange().getValues();
+    // 「価格マスタ」セクションを探す（先頭列に "menu_id" または "価格マスタ" があれば開始）
+    var startRow = -1;
+    for (var r = 0; r < data.length; r++) {
+      var cell = String(data[r][0] || "").trim();
+      if (cell === "menu_id" || cell === "価格マスタ") {
+        // ヘッダ行を発見 → 次行からデータ
+        startRow = (cell === "価格マスタ") ? r + 1 : r;
+        break;
+      }
+    }
+    if (startRow < 0) return fallback;
+
+    // ヘッダ行のインデックスを確認
+    var headerRow = data[startRow];
+    var colMenuId   = headerRow.indexOf("menu_id");
+    var colName     = headerRow.indexOf("メニュー名");
+    var colPrice    = headerRow.indexOf("一般料金");
+    if (colMenuId < 0 || colName < 0 || colPrice < 0) return fallback;
+
+    var result = [];
+    for (var i = startRow + 1; i < data.length; i++) {
+      var mid = String(data[i][colMenuId] || "").trim();
+      if (!mid) break;  // 空行で終了
+      var price = Number(data[i][colPrice]) || 0;
+      result.push({
+        menuId:    mid,
+        menuName:  String(data[i][colName] || "").trim(),
+        unitPrice: price,
+      });
+    }
+    return result.length > 0 ? result : fallback;
+  } catch (e) {
+    Logger.log("getSelfPayMenuMaster_V3 エラー: " + e.message);
+    return fallback;
+  }
+}
+
+/* =======================================================================
+   Phase 2: ダイアログ起動・HTMLからの保存呼び出し
+   ======================================================================= */
+
+/**
+ * 自費明細入力ダイアログを開く（Drawing ボタン / GASメニューから呼ぶ公開関数）。
+ * 患者画面から visitKey・context を読み取ってダイアログに渡す。
+ */
+function openSelfPayDialog_V3() {
+  var ss   = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  if (!uiSh) {
+    SpreadsheetApp.getUi().alert("患者画面シートが見つかりません。");
+    return;
+  }
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+  if (!patientId) {
+    SpreadsheetApp.getUi().alert("患者を選択してください（B2 で検索→選択）。");
+    return;
+  }
+  if (!(treatDate instanceof Date)) {
+    SpreadsheetApp.getUi().alert("来院日（B4）が日付になっていません。");
+    return;
+  }
+
+  var visitKey = buildVisitKey_(patientId, treatDate);
+
+  // 既存の自費明細を読んでダイアログに渡す
+  var detailSh   = ensureSelfPayDetailSheetInternal_(ss);
+  var existItems = readSelfPayDetailsForVisit_V3_(detailSh, visitKey);
+
+  var html = HtmlService.createHtmlOutputFromFile("selfPayDialog")
+    .setWidth(600)
+    .setHeight(420);
+
+  // テンプレートにデータを渡す（直接メタデータとして埋め込む）
+  // NOTE: createHtmlOutputFromFile はテンプレートではないためスクリプトレット不可。
+  //       ダイアログ側は google.script.run で visitKey を取得する方式を採用。
+  SpreadsheetApp.getUi().showModalDialog(html, "自費明細入力 — " + visitKey);
+}
+
+/**
+ * ダイアログから visitKey を取得するためのブリッジ関数。
+ * HTML側が google.script.run.getCurrentVisitKey_V3() で呼ぶ。
+ * @returns {{visitKey: string, patientId: string, treatDate: string,
+ *             accountingType: string, chronicFlag: boolean,
+ *             nextReservation: boolean, existItems: Array}}
+ */
+function getCurrentVisitKey_V3() {
+  var ss   = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  if (!uiSh) return {visitKey: "", patientId: "", existItems: []};
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+  if (!patientId || !(treatDate instanceof Date)) return {visitKey: "", patientId: "", existItems: []};
+
+  var visitKey = buildVisitKey_(patientId, treatDate);
+  var detailSh = ensureSelfPayDetailSheetInternal_(ss);
+  var existItems = readSelfPayDetailsForVisit_V3_(detailSh, visitKey);
+
+  var acctType = String(uiSh.getRange(UI.selfPay_accountingType).getValue() || "").trim();
+  var chronic  = uiSh.getRange(UI.selfPay_chronicFlag).getValue() === true;
+  var nextResv = uiSh.getRange(UI.selfPay_nextReserv).getValue()   === true;
+
+  return {
+    visitKey:        visitKey,
+    patientId:       patientId,
+    treatDate:       Utilities.formatDate(treatDate, "Asia/Tokyo", "yyyy-MM-dd"),
+    accountingType:  acctType,
+    chronicFlag:     chronic,
+    nextReservation: nextResv,
+    existItems:      existItems,
+  };
+}
+
+/**
+ * HTMLダイアログから google.script.run で呼ぶ保存関数。
+ * @param {string} visitKey
+ * @param {string} itemsJson    - JSON文字列: [{menuId, menuName, unitPrice, qty}, ...]
+ * @param {string} contextJson  - JSON文字列: {treatDate, patientId, accountingType, chronicFlag, nextReservation}
+ * @returns {string} "OK" or エラーメッセージ
+ */
+function saveSelfPayDetailsFromDialog_V3(visitKey, itemsJson, contextJson) {
+  try {
+    var items   = JSON.parse(itemsJson);
+    var context = JSON.parse(contextJson);
+
+    // treatDate を Date オブジェクトに変換
+    if (typeof context.treatDate === "string" && context.treatDate) {
+      var parts = context.treatDate.split("-");
+      context.treatDate = new Date(
+        parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])
+      );
+    }
+
+    var ss       = SpreadsheetApp.getActive();
+    var uiSh     = ss.getSheetByName(SHEETS.ui);
+    var detailSh = ensureSelfPayDetailSheetInternal_(ss);
+
+    saveSelfPayDetails_V3_(uiSh, detailSh, visitKey, items, context);
+    return "OK";
+  } catch (e) {
+    Logger.log("saveSelfPayDetailsFromDialog_V3 エラー: " + e.message);
+    return "ERROR: " + e.message;
+  }
+}
+
+/* =======================================================================
+   Phase 2: saveVisit_V3 向け安全制御（警告チェック）
+   ======================================================================= */
+
+/**
+ * saveVisit_V3 呼び出し時に H8 の状態を確認し、
+ * 未保存自費明細の可能性がある場合に confirm 警告を出す。
+ * @param {Sheet}  uiSh
+ * @returns {boolean} true=続行可 / false=キャンセル
+ */
+function checkSelfPayWarningBeforeSave_V3_(uiSh) {
+  try {
+    var h8Val = String(uiSh.getRange(UI.selfPay_menuCode).getValue() || "").trim();
+    var f7Val = uiSh.getRange(UI.selfPay_amount).getValue();
+    var f7Num = (typeof f7Val === "number" && f7Val > 0) ? f7Val : 0;
+
+    // H8 が「未入力」または空欄 かつ F7 に数値がある場合は警告
+    // （Phase 1 からの移行中に手入力された可能性）
+    if ((h8Val === "未入力" || h8Val === "") && f7Num > 0) {
+      var ui = SpreadsheetApp.getUi();
+      var resp = ui.alert(
+        "自費明細の確認",
+        "F7（自費金額）に " + f7Num + " 円が入力されていますが、\n" +
+        "自費明細ダイアログでの保存が確認されていません。\n\n" +
+        "このまま保存しますか？（自費明細シートには記録されません）",
+        ui.ButtonSet.OK_CANCEL
+      );
+      return (resp === ui.Button.OK);
+    }
+  } catch (e) {
+    Logger.log("checkSelfPayWarningBeforeSave_V3_ エラー: " + e.message);
+  }
+  return true;
 }
