@@ -36,7 +36,7 @@
 - 新設: `readSelfPayFromUI_V3_` / `clearSelfPayUI_V3_` / `setupSelfPayValidation_V3_`
 - `saveVisit_V3`: selfPayInfo読み取り + appendHeaderRow_V3_ への渡し実装
 - `clearAfterSaveUI_V3_` / `clearEntryUI_V3`: clearSelfPayUI_V3_ 追加
-- メニュー: 「自費入力欄初期設定」追加
+- メニュー: 「会計ブロック自動生成（患者画面 行7〜8）」追加（Phase 1 で名称変更済み）
 
 **次のアクション（院長）:**
 1. GASメニュー「会計ブロック自動生成（患者画面 行7〜8）」を実行（H7数式修正・B9/行55残骸クリアの反映）
