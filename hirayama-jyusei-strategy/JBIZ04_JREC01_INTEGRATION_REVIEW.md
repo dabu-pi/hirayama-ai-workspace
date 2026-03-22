@@ -293,6 +293,18 @@ KPI実績履歴（1行/月）
 
 ---
 
+## Phase 0 設計進捗（2026-03-22 更新）
+
+| ステップ | 状態 | 参照先 |
+|---|---|---|
+| 設計完了 | ✅ 完了（2026-03-22）| `gas-projects/jyu-gas-ver3.1/PHASE0_DESIGN.md` |
+| 患者画面 行53-62 確認（院長）| ⏸ 実装前確認待ち | — |
+| Sheets 手動設置 | ⏸ 確認後 | PHASE0_DESIGN.md §「Sheets手動設置手順」|
+| Ver3_core.js 変更 | ⏸ 設計承認後 | PHASE0_DESIGN.md §「関数変更差分」|
+| clasp push + テスト | ⏸ 変更後 | PHASE0_DESIGN.md §「テスト観点」|
+
+---
+
 ## Dashboard反映要否
 
 | 対象 | 反映要否 | 内容 |

@@ -1,14 +1,40 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-21（U2 施術機関コード 届出承諾通知書照合で確定完了。全公式確認項目クリア）
+最終更新: 2026-03-22（Phase 0設計完了 — UI入力ギャップ解消の差分設計を PHASE0_DESIGN.md に記録）
 
 ---
 
-## 現在地（2026-03-21 確定）
+## 現在地（2026-03-22 更新）
 
 - プロジェクト: 柔整毎日記録システム Ver3.1
 - ディレクトリ: `gas-projects/jyu-gas-ver3.1/`
-- 状態: 稼働中（B案目視確認完了・Cloud Run 起動安定化完了。D2/U5/U2/U6 公式確認完了。残課題: D5未実装・高7実機確認・D4 3部位実案件確認（発生時））
+- 状態: 稼働中（B案本番稼働可能）。**Phase 0（UI入力ギャップ解消）設計完了 — 実装前確認待ち**
+- 優先度: 最優先
+- ブランチ: `feature/auto-dev-phase3-loop`
+
+### Phase 0: UI入力ギャップ解消（2026-03-22 設計完了）
+
+> 詳細設計: `PHASE0_DESIGN.md` を参照
+
+**問題:** 来院ヘッダの経営管理列（会計区分・自費メニュー区分・自費売上額・慢性候補フラグ・次回予約あり・新規区分）は
+列定義・書き込みコードが存在するが、`saveVisit_V3` がUIから値を読んで渡しておらず常に空欄で保存される。
+
+**設計内容:**
+
+| 変更 | 内容 |
+|---|---|
+| 患者画面 行53〜61 | 「会計・経営情報ブロック」を設置（B55〜B61）|
+| UI オブジェクト | `selfPay_*` 7フィールドを追加 |
+| HEADER_COLS | `selfPayMenuCode: "自費メニューコード"` を追加（将来拡張）|
+| 新設関数 | `readSelfPayFromUI_V3_` / `clearSelfPayUI_V3_` / `setupSelfPayValidation_V3_` |
+| saveVisit_V3 | selfPayInfo の読み取りと `appendHeaderRow_V3_` への渡しを追加 |
+| clear関数 | `clearAfterSaveUI_V3_` / `clearEntryUI_V3` に `clearSelfPayUI_V3_` を追加 |
+
+**実装前確認事項:**
+1. 患者画面の行53〜62が空欄であることを確認（院長）
+2. Sheets手動設置（ラベル入力・チェックボックス挿入）後に clasp push
+
+**リスクなし:** 保険算定（Ver3_amounts.js）・申請書生成（Ver3_transferData.js）は変更なし
 - 優先度: 最優先
 - ブランチ: `feature/auto-dev-phase3-loop`
 - 最新コミット: `f97e316`
