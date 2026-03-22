@@ -86,16 +86,19 @@ const UI = {
   billing_needCheck: "E5",
   billing_needCheckReason: "E6",
 
-  // 会計・経営情報ブロック（入力用 — Phase 1 / 行7〜9）
+  // 会計・経営情報ブロック（入力用 — Phase 1 / 行7〜8）
   // 保険算定UIとは独立。saveVisit_V3 で readSelfPayFromUI_V3_ が読み取る。
   // Phase 2 で自費明細シートへの1行保存に拡張予定。menu_id は selfPay_menuCode に収容。
-  selfPay_accountingType:  "B8",   // 会計区分（プルダウン: 保険のみ/保険+自費/自費のみ）
-  selfPay_menuType:        "D8",   // 自費メニュー区分（プルダウン: 手技50分 等）
-  selfPay_amount:          "F8",   // 自費売上額（手入力 — Phase2で価格マスタ参照予定）
-  selfPay_chronicFlag:     "B9",   // 慢性候補フラグ（チェックボックス）
-  selfPay_nextReserv:      "D9",   // 次回予約あり（チェックボックス）
-  selfPay_firstVisitType:  "F9",   // 新規区分（プルダウン: 保険新規/自費直新規/再来）
-  selfPay_menuCode:        "H9",   // 自費メニューコード（将来: menu_id / Phase2価格マスタ連携用）
+  // Row 7: B7=会計区分, D7=自費メニュー, F7=自費売上額, H7=会計合計(=IF(F7="",E2,E2+F7))
+  // Row 8: B8=慢性候補, D8=次回予約, F8=新規区分, H8=メニューコード
+  // ※ Row 9 は Case1 ブロック開始のため使用不可
+  selfPay_accountingType:  "B7",   // 会計区分（プルダウン: 保険のみ/保険+自費/自費のみ）
+  selfPay_menuType:        "D7",   // 自費メニュー区分（プルダウン: 手技50分 等）
+  selfPay_amount:          "F7",   // 自費売上額（手入力 — Phase2で価格マスタ参照予定）
+  selfPay_chronicFlag:     "B8",   // 慢性候補フラグ（チェックボックス）
+  selfPay_nextReserv:      "D8",   // 次回予約あり（チェックボックス）
+  selfPay_firstVisitType:  "F8",   // 新規区分（プルダウン: 保険新規/自費直新規/再来）
+  selfPay_menuCode:        "H8",   // 自費メニューコード（将来: menu_id / Phase2価格マスタ連携用）
 };
 
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
@@ -231,7 +234,7 @@ function onOpen() {
       .addItem("入力バリデーション設定（傷病名プルダウン）", "setupValidation_V3")
       .addItem("設定シート初期セットアップ", "ensureSettingsRows_V3")
       .addItem("施術明細ヘッダーセットアップ", "ensureDetailHeaders_V3")
-      .addItem("自費入力欄初期設定（患者画面 行7〜9）", "setupSelfPayValidation_V3")
+      .addItem("会計ブロック自動生成（患者画面 行7〜8）", "setupSelfPayValidation_V3")
       .addSeparator()
       .addItem("患者検索プルダウン設定", "setupPatientPicker_V3")
       .addItem("患者検索プルダウン更新", "refreshPatientPicker_V3")
@@ -1910,36 +1913,79 @@ function clearSelfPayUI_V3_(uiSh) {
   uiSh.getRange(UI.selfPay_menuCode).clearContent();
 }
 
-/** ===== 自費入力欄の検証・チェックボックス設定（メニューから呼ぶ公開版） ===== */
+/** ===== 自費入力欄 会計ブロック自動生成（メニューから呼ぶ公開版） ===== */
 function setupSelfPayValidation_V3() {
   var ss = SpreadsheetApp.getActive();
   var uiSh = ss.getSheetByName(SHEETS.ui);
   if (!uiSh) throw new Error("患者画面シートが見つかりません");
   setupSelfPayValidation_V3_(uiSh);
-  SpreadsheetApp.getUi().alert("自費入力欄の検証設定を完了しました（B55〜B61）。");
+  SpreadsheetApp.getUi().alert(
+    "会計・経営情報ブロック（行7〜8）の自動生成が完了しました。\n" +
+    "Row 7: 会計区分(B7) / 自費メニュー(D7) / 自費金額(F7) / 会計合計(H7)\n" +
+    "Row 8: 慢性候補(B8) / 次回予約(D8) / 新規区分(F8) / メニューコード(H8)"
+  );
 }
 
-/** ===== 患者画面の自費ブロックに検証・チェックボックスを設定（内部用） ===== */
+/**
+ * ===== 患者画面 行7〜8 に会計・経営情報ブロックを自動生成（内部用） =====
+ * ラベル書き込み・背景色・プルダウン・チェックボックス・会計合計数式をすべて設定する。
+ * 手動設置は不要。このメニューを1回実行すれば完了。
+ * H7 の数式: =IF(F7="",E2,E2+F7) — E2=窓口負担額（writeAmountsToUI_V3_ が書き込む）
+ */
 function setupSelfPayValidation_V3_(uiSh) {
-  // B55: 会計区分プルダウン
+  var LABEL_BG   = "#e8e8e8";  // ラベルセル: ライトグレー
+  var INPUT_BG   = "#ffffff";  // 入力セル: 白
+  var FORMULA_BG = "#fff9c4";  // 会計合計(H7): 薄黄（表示専用・手入力不可）
+
+  // ── Row 7 ラベル書き込み ──────────────────────────────
+  uiSh.getRange("A7").setValue("会計区分").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("C7").setValue("自費メニュー").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("E7").setValue("自費金額（円）").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("G7").setValue("会計合計").setBackground(LABEL_BG).setFontWeight("bold");
+
+  // ── Row 8 ラベル書き込み ──────────────────────────────
+  uiSh.getRange("A8").setValue("慢性候補").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("C8").setValue("次回予約").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("E8").setValue("新規区分").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("G8").setValue("メニューコード").setBackground(LABEL_BG).setFontWeight("bold");
+
+  // ── 入力セル背景色 ────────────────────────────────────
+  uiSh.getRange("B7").setBackground(INPUT_BG);
+  uiSh.getRange("D7").setBackground(INPUT_BG);
+  uiSh.getRange("F7").setBackground(INPUT_BG);
+  uiSh.getRange("B8").setBackground(INPUT_BG);
+  uiSh.getRange("D8").setBackground(INPUT_BG);
+  uiSh.getRange("F8").setBackground(INPUT_BG);
+  uiSh.getRange("H8").setBackground(INPUT_BG);
+
+  // ── H7: 会計合計 数式（E2=窓口負担額）────────────────
+  uiSh.getRange("H7").setFormula("=IF(F7=\"\",E2,E2+F7)").setBackground(FORMULA_BG);
+
+  // ── ブロック外枠（A7:H8）─────────────────────────────
+  uiSh.getRange("A7:H8").setBorder(
+    true, true, true, true, null, null,
+    "#888888", SpreadsheetApp.BorderStyle.SOLID
+  );
+
+  // ── B7: 会計区分 プルダウン ───────────────────────────
   var acctRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["保険のみ", "保険+自費", "自費のみ"], true)
     .setAllowInvalid(true)
     .build();
   uiSh.getRange(UI.selfPay_accountingType).setDataValidation(acctRule);
 
-  // B56: 自費メニュー区分プルダウン
+  // ── D7: 自費メニュー区分 プルダウン ──────────────────
   var menuRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["手技50分", "運動療法", "セルフケア", "ジム体験", "その他"], true)
     .setAllowInvalid(true)
     .build();
   uiSh.getRange(UI.selfPay_menuType).setDataValidation(menuRule);
 
-  // B58/B59: チェックボックス（boolean保存）
+  // ── B8・D8: チェックボックス（boolean 保存）──────────
   uiSh.getRange(UI.selfPay_chronicFlag).insertCheckboxes();
   uiSh.getRange(UI.selfPay_nextReserv).insertCheckboxes();
 
-  // B60: 新規区分プルダウン（空欄可）
+  // ── F8: 新規区分 プルダウン（空欄可）────────────────
   var fvRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["保険新規", "自費直新規", "再来"], true)
     .setAllowInvalid(true)
