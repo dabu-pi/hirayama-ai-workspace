@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-22（Phase 1 実機確認完了 → repo cleanup 完了）
+最終更新: 2026-03-22（Phase 2 設計 Rev.2 完了 — D7/F7 表示専用化・ダイアログ方式確定）
 
 ---
 
@@ -47,9 +47,19 @@
 - `test_import.py`（Cloud Runデバッグ用一時スクリプト）を削除
 - `.claude/worktrees/` を追跡解除 + `.gitignore` に追加
 
-**次のアクション（Phase 2 以降）:**
-- Phase 2: `自費明細` シート新設 + `appendSelfPayDetailRow_V3_` 実装（設計: `SELF_PAY_DETAIL_DESIGN.md`）
-- 着手タイミング: 2026-04-01 運用開始後、実績データ蓄積を確認してから
+**✅ Phase 2 設計 Rev.2 完了（2026-03-22）:**
+- D7/F7 を表示専用化（自費明細集計結果を表示）
+- 入力正本: 患者画面 HTML ダイアログ（案P2-B）
+- 保存方式: visitKey 単位 delete & replace
+- テスト観点 T2-1〜T2-8 定義済み
+- 詳細: `SELF_PAY_DETAIL_DESIGN.md`（Rev.2）
+
+**次のアクション（Phase 2 実装着手前）:**
+- 価格マスタ テーブルを設定シートに手動追加（院長）
+- `自費明細` シート作成（GAS メニュー拡張後に初期化）
+- H8 の用途変更（メニューコード → ダイアログ起動）について院長と確認
+
+**実装着手タイミング:** 2026-04-01 運用開始後・実績データ蓄積確認後
 
 **リスクなし:** 保険算定（Ver3_amounts.js）・申請書生成（Ver3_transferData.js）は変更なし
 - 優先度: 最優先
