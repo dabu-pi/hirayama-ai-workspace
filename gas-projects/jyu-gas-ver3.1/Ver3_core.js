@@ -86,15 +86,16 @@ const UI = {
   billing_needCheck: "E5",
   billing_needCheckReason: "E6",
 
-  // 会計・経営情報ブロック（入力用 — Phase 0 / 行53〜61）
+  // 会計・経営情報ブロック（入力用 — Phase 1 / 行7〜9）
   // 保険算定UIとは独立。saveVisit_V3 で readSelfPayFromUI_V3_ が読み取る。
-  selfPay_accountingType:  "B55",
-  selfPay_menuType:        "B56",
-  selfPay_amount:          "B57",
-  selfPay_chronicFlag:     "B58",  // チェックボックス (boolean)
-  selfPay_nextReserv:      "B59",  // チェックボックス (boolean)
-  selfPay_firstVisitType:  "B60",
-  selfPay_menuCode:        "B61",  // 将来拡張: self_pay_menu_code
+  // Phase 2 で自費明細シートへの1行保存に拡張予定。menu_id は selfPay_menuCode に収容。
+  selfPay_accountingType:  "B8",   // 会計区分（プルダウン: 保険のみ/保険+自費/自費のみ）
+  selfPay_menuType:        "D8",   // 自費メニュー区分（プルダウン: 手技50分 等）
+  selfPay_amount:          "F8",   // 自費売上額（手入力 — Phase2で価格マスタ参照予定）
+  selfPay_chronicFlag:     "B9",   // 慢性候補フラグ（チェックボックス）
+  selfPay_nextReserv:      "D9",   // 次回予約あり（チェックボックス）
+  selfPay_firstVisitType:  "F9",   // 新規区分（プルダウン: 保険新規/自費直新規/再来）
+  selfPay_menuCode:        "H9",   // 自費メニューコード（将来: menu_id / Phase2価格マスタ連携用）
 };
 
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
@@ -230,7 +231,7 @@ function onOpen() {
       .addItem("入力バリデーション設定（傷病名プルダウン）", "setupValidation_V3")
       .addItem("設定シート初期セットアップ", "ensureSettingsRows_V3")
       .addItem("施術明細ヘッダーセットアップ", "ensureDetailHeaders_V3")
-      .addItem("自費入力欄初期設定（患者画面B55〜B61）", "setupSelfPayValidation_V3")
+      .addItem("自費入力欄初期設定（患者画面 行7〜9）", "setupSelfPayValidation_V3")
       .addSeparator()
       .addItem("患者検索プルダウン設定", "setupPatientPicker_V3")
       .addItem("患者検索プルダウン更新", "refreshPatientPicker_V3")

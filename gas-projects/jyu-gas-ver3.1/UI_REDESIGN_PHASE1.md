@@ -11,13 +11,13 @@
 
 - [x] 設計比較完了（2026-03-22）
 - [x] 推奨案決定（案A — 行7〜9活用）
-- [ ] Ver3_core.js 変更（UI const 7セル番地のみ）
-- [ ] Sheets 手動設置（行7〜9 にラベル・入力欄設置）
-- [ ] setupSelfPayValidation_V3 実行（GASメニューから）
+- [x] Ver3_core.js 変更（UI const 7セル番地 + onOpenラベル）— 2026-03-22
+- [x] clasp push 完了（2026-03-22）
+- [ ] Sheets 手動設置（行7〜9 にラベル・入力欄設置）← 院長アクション
+- [ ] setupSelfPayValidation_V3 実行（GASメニューから）← clasp push後に実行
+- [ ] H8 に会計合計数式 `=IF(F8="",E3,E3+F8)` 設置（Sheets手動）
+- [ ] E5 に条件付き書式設定（要確認=TRUE → 橙背景）
 - [ ] テスト T1〜T6
-
-> **重要:** Phase 0 の Sheets 手動設置はまだ実施していない（行53-61未設置）。
-> このタイミングで行7〜9への配置に変更するのが最も事故リスクが低い。
 
 ---
 
