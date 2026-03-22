@@ -1930,7 +1930,7 @@ function setupSelfPayValidation_V3() {
  * ===== 患者画面 行7〜8 に会計・経営情報ブロックを自動生成（内部用） =====
  * ラベル書き込み・背景色・プルダウン・チェックボックス・会計合計数式をすべて設定する。
  * 手動設置は不要。このメニューを1回実行すれば完了。
- * H7 の数式: =IF(F7="",E2,E2+F7) — E2=窓口負担額（writeAmountsToUI_V3_ が書き込む）
+ * H7 の数式: =IF(F7="",E3,E3+F7) — E3=窓口負担額（E2=来院合計なので注意）
  */
 function setupSelfPayValidation_V3_(uiSh) {
   var LABEL_BG   = "#e8e8e8";  // ラベルセル: ライトグレー
@@ -1961,9 +1961,13 @@ function setupSelfPayValidation_V3_(uiSh) {
   // ── H7: 会計合計 数式（E3=窓口負担額 ※E2=来院合計なので注意）────
   uiSh.getRange("H7").setFormula("=IF(F7=\"\",E3,E3+F7)").setBackground(FORMULA_BG);
 
-  // ── 旧セル残骸クリア（D9/F9: 旧チェックボックス設定の残り）────────
+  // ── 旧セル残骸クリア（B9/D9/F9: 旧チェックボックス設定の残り）──────
+  uiSh.getRange("B9").clearContent().clearDataValidations();
   uiSh.getRange("D9").clearContent().clearDataValidations();
   uiSh.getRange("F9").clearContent().clearDataValidations();
+
+  // ── 旧会計ブロック残骸クリア（Row55〜62: Phase0初回設置時の残り）──────
+  uiSh.getRange("A55:H62").clearContent().clearDataValidations();
 
   // ── ブロック外枠（A7:H8）─────────────────────────────
   uiSh.getRange("A7:H8").setBorder(
