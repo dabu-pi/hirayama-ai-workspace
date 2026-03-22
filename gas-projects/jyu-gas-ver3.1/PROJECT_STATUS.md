@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-22（Phase 1 実機確認完了 — T1〜T6 全項目OK・院長確認済み）
+最終更新: 2026-03-22（Phase 1 実機確認完了 → repo cleanup 完了）
 
 ---
 
@@ -42,6 +42,10 @@
 - GASメニュー「会計ブロック自動生成（患者画面 行7〜8）」実行済み
 - E5 条件付き書式設定済み
 - T1〜T6 全項目OK（詳細: `UI_REDESIGN_PHASE1.md §テスト結果`）
+
+**✅ repo cleanup 完了（2026-03-22）:**
+- `test_import.py`（Cloud Runデバッグ用一時スクリプト）を削除
+- `.claude/worktrees/` を追跡解除 + `.gitignore` に追加
 
 **次のアクション（Phase 2 以降）:**
 - Phase 2: `自費明細` シート新設 + `appendSelfPayDetailRow_V3_` 実装（設計: `SELF_PAY_DETAIL_DESIGN.md`）

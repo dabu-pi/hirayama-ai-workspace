@@ -66,6 +66,9 @@ artifacts/
 # local-only settings
 .claude/settings.local.json
 
+# Claude Code 内部ディレクトリ（worktrees はリポジトリに含めない）
+.claude/worktrees/
+
 # local secrets
 secrets/
 
