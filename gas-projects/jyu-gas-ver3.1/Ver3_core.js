@@ -749,6 +749,17 @@ function saveVisit_V3() {
     return;  // キャンセル
   }
 
+  // ★ 会計区分ゲート（Phase 2 バグ修正: 自費のみ時の保険保存防止）
+  // 空欄・未選択は後方互換で保険処理ありとして扱う
+  var acctType        = selfPayInfo.accountingType;
+  var isInsuranceVisit = (acctType !== "自費のみ");   // 保険のみ / 保険+自費 / 空欄 → true
+  var isSelfPayVisit   = (acctType !== "保険のみ");   // 保険+自費 / 自費のみ / 空欄 → true
+
+  // ★ 会計区分クロスチェック警告（レセプト事故防止）
+  if (!checkAccountingTypeCrossWarning_V3_(uiSh, acctType)) {
+    return;  // キャンセル
+  }
+
   var caseMap = buildHeaderColMap_(caseSh);
   // 不足ヘッダーを自動追加（転帰列など新規追加列への対応）
   caseMap = ensureHeaderCols_(caseSh, caseMap, Object.values(CASE_COLS));
@@ -779,142 +790,161 @@ function saveVisit_V3() {
     caseConfigs[ci].line2 = readRowNewUI_(uiSh, caseConfigs[ci].rows[1]);
   }
 
-  // ★必須フィールドチェック（部位・傷病・受傷日 — 未入力なら保存ブロック）
-  var requiredErrors = [];
-  for (var vi = 0; vi < caseConfigs.length; vi++) {
-    var cfg = caseConfigs[vi];
-    var lines = [cfg.line1, cfg.line2];
-    for (var ri = 0; ri < lines.length; ri++) {
-      var line = lines[ri];
-      if (!line.hasCore) continue;
-      var missing = [];
-      if (!line.part)       missing.push("部位");
-      if (!line.disease)    missing.push("傷病");
-      if (!line.injuryDate) missing.push("受傷日");
-      if (missing.length > 0) {
-        requiredErrors.push(cfg.label + " 行" + (ri + 1) + ": " + missing.join("・") + " が未入力");
+  // ★必須フィールドチェック（保険処理ありの場合のみ）
+  if (isInsuranceVisit) {
+    var requiredErrors = [];
+    for (var vi = 0; vi < caseConfigs.length; vi++) {
+      var cfg = caseConfigs[vi];
+      var lines = [cfg.line1, cfg.line2];
+      for (var ri = 0; ri < lines.length; ri++) {
+        var line = lines[ri];
+        if (!line.hasCore) continue;
+        var missing = [];
+        if (!line.part)       missing.push("部位");
+        if (!line.disease)    missing.push("傷病");
+        if (!line.injuryDate) missing.push("受傷日");
+        if (missing.length > 0) {
+          requiredErrors.push(cfg.label + " 行" + (ri + 1) + ": " + missing.join("・") + " が未入力");
+        }
       }
     }
-  }
-  if (requiredErrors.length > 0) {
-    throw new Error(
-      "必須項目が未入力のため保存できません。\n\n" +
-      requiredErrors.join("\n")
-    );
-  }
-
-  // ★治療法チェック（前回来院との比較 — 警告のみ、保存はブロックしない）
-  var therapyWarnings = [];
-  for (var ti = 0; ti < caseConfigs.length; ti++) {
-    var tcfg = caseConfigs[ti];
-    if (!tcfg.line1.hasCore && !tcfg.line2.hasCore) continue;
-    var latestDate = findLatestCaseRowDateInEpisode_(caseSh, caseMap, patientId, treatDate, tcfg.no);
-    if (!latestDate) continue;
-    var prevRow = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, latestDate, tcfg.no);
-    if (!prevRow) continue;
-    if (tcfg.line1.hasCore) {
-      var d1 = [];
-      if (prevRow.cold1 && !tcfg.line1.cold) d1.push("冷罨法");
-      if (prevRow.warm1 && !tcfg.line1.warm) d1.push("温罨法");
-      if (prevRow.elec1 && !tcfg.line1.elec) d1.push("電療");
-      if (d1.length) therapyWarnings.push(tcfg.label + " 部位1: " + d1.join("・"));
-    }
-    if (tcfg.line2.hasCore) {
-      var d2 = [];
-      if (prevRow.cold2 && !tcfg.line2.cold) d2.push("冷罨法");
-      if (prevRow.warm2 && !tcfg.line2.warm) d2.push("温罨法");
-      if (prevRow.elec2 && !tcfg.line2.elec) d2.push("電療");
-      if (d2.length) therapyWarnings.push(tcfg.label + " 部位2: " + d2.join("・"));
+    if (requiredErrors.length > 0) {
+      throw new Error(
+        "必須項目が未入力のため保存できません。\n\n" +
+        requiredErrors.join("\n")
+      );
     }
   }
-  if (therapyWarnings.length > 0) {
-    ss.toast(
-      "前回適用の治療法が今回チェックされていません:\n" + therapyWarnings.join("\n"),
-      "治療法の確認", 10
-    );
-  }
 
-  // ★終了日⇔転帰の整合チェック（BLOCKING）
-  var tenkiErrors = [];
-  for (var tci = 0; tci < caseConfigs.length; tci++) {
-    var tcfg2 = caseConfigs[tci];
-    var tlines = [tcfg2.line1, tcfg2.line2];
-    for (var tri = 0; tri < tlines.length; tri++) {
-      var tline = tlines[tri];
-      if (!tline.hasCore) continue;
-      var hasEnd = (tline.endVal !== "" && tline.endVal != null);
-      var hasTenki = !!tline.tenki;
-      if (hasEnd && !hasTenki) {
-        tenkiErrors.push(tcfg2.label + " 部位" + (tri + 1) + ": 終了日がありますが転帰が未選択です");
+  // ★治療法チェック・転帰チェック・近接部位チェック（保険処理ありの場合のみ）
+  if (isInsuranceVisit) {
+    // 治療法チェック（前回来院との比較 — 警告のみ、保存はブロックしない）
+    var therapyWarnings = [];
+    for (var ti = 0; ti < caseConfigs.length; ti++) {
+      var tcfg = caseConfigs[ti];
+      if (!tcfg.line1.hasCore && !tcfg.line2.hasCore) continue;
+      var latestDate = findLatestCaseRowDateInEpisode_(caseSh, caseMap, patientId, treatDate, tcfg.no);
+      if (!latestDate) continue;
+      var prevRow = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, latestDate, tcfg.no);
+      if (!prevRow) continue;
+      if (tcfg.line1.hasCore) {
+        var d1 = [];
+        if (prevRow.cold1 && !tcfg.line1.cold) d1.push("冷罨法");
+        if (prevRow.warm1 && !tcfg.line1.warm) d1.push("温罨法");
+        if (prevRow.elec1 && !tcfg.line1.elec) d1.push("電療");
+        if (d1.length) therapyWarnings.push(tcfg.label + " 部位1: " + d1.join("・"));
       }
-      if (!hasEnd && hasTenki) {
-        tenkiErrors.push(tcfg2.label + " 部位" + (tri + 1) + ": 転帰がありますが終了日が未入力です");
+      if (tcfg.line2.hasCore) {
+        var d2 = [];
+        if (prevRow.cold2 && !tcfg.line2.cold) d2.push("冷罨法");
+        if (prevRow.warm2 && !tcfg.line2.warm) d2.push("温罨法");
+        if (prevRow.elec2 && !tcfg.line2.elec) d2.push("電療");
+        if (d2.length) therapyWarnings.push(tcfg.label + " 部位2: " + d2.join("・"));
       }
     }
-  }
-  if (tenkiErrors.length > 0) {
-    throw new Error("終了日と転帰の整合性エラー:\n\n" + tenkiErrors.join("\n"));
-  }
+    if (therapyWarnings.length > 0) {
+      ss.toast(
+        "前回適用の治療法が今回チェックされていません:\n" + therapyWarnings.join("\n"),
+        "治療法の確認", 10
+      );
+    }
 
-  // ★近接部位チェック（§18 — 近接部位があれば保存ブロック）
-  var proxErrors = [];
-  for (var pi = 0; pi < caseConfigs.length; pi++) {
-    var pcfg = caseConfigs[pi];
-    if (pcfg.line1.hasCore && pcfg.line2.hasCore) {
-      var prox = checkProximityParts_V3_(pcfg.line1.part, pcfg.line1.disease, pcfg.line2.part, pcfg.line2.disease);
-      if (prox.isProximity) {
-        proxErrors.push("ケース" + pcfg.no + ": " + prox.reason);
+    // 終了日⇔転帰の整合チェック（BLOCKING）
+    var tenkiErrors = [];
+    for (var tci = 0; tci < caseConfigs.length; tci++) {
+      var tcfg2 = caseConfigs[tci];
+      var tlines = [tcfg2.line1, tcfg2.line2];
+      for (var tri = 0; tri < tlines.length; tri++) {
+        var tline = tlines[tri];
+        if (!tline.hasCore) continue;
+        var hasEnd = (tline.endVal !== "" && tline.endVal != null);
+        var hasTenki = !!tline.tenki;
+        if (hasEnd && !hasTenki) {
+          tenkiErrors.push(tcfg2.label + " 部位" + (tri + 1) + ": 終了日がありますが転帰が未選択です");
+        }
+        if (!hasEnd && hasTenki) {
+          tenkiErrors.push(tcfg2.label + " 部位" + (tri + 1) + ": 転帰がありますが終了日が未入力です");
+        }
       }
     }
+    if (tenkiErrors.length > 0) {
+      throw new Error("終了日と転帰の整合性エラー:\n\n" + tenkiErrors.join("\n"));
+    }
+
+    // 近接部位チェック（§18 — 近接部位があれば保存ブロック）
+    var proxErrors = [];
+    for (var pi = 0; pi < caseConfigs.length; pi++) {
+      var pcfg = caseConfigs[pi];
+      if (pcfg.line1.hasCore && pcfg.line2.hasCore) {
+        var prox = checkProximityParts_V3_(pcfg.line1.part, pcfg.line1.disease, pcfg.line2.part, pcfg.line2.disease);
+        if (prox.isProximity) {
+          proxErrors.push("ケース" + pcfg.no + ": " + prox.reason);
+        }
+      }
+    }
+    if (proxErrors.length > 0) {
+      throw new Error(
+        "近接部位が検出されたため保存できません。\n部位または傷病名を修正してください。\n\n" +
+        proxErrors.join("\n")
+      );
+    }
+  }  // end isInsuranceVisit checks
+
+  // ① 来院ケースへ保存（保険処理ありの場合のみ）
+  var case1HasData = false;
+  var case2HasData = false;
+  var ep1 = null;
+  var ep2 = null;
+  var kubun1 = "";
+  var kubun2 = "";
+
+  if (isInsuranceVisit) {
+    // UIに実データがあるケースのみ区分を有効にする（空ケースの"初検"誤判定を防止）
+    case1HasData = hasCaseDataInUI_(uiSh, 1);
+    case2HasData = hasCaseDataInUI_(uiSh, 2);
+
+    ep1 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 1);
+    ep2 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 2);
+
+    kubun1 = case1HasData ? ep1.kubun : "";
+    kubun2 = case2HasData ? ep2.kubun : "";
+
+    var res1 = upsertOneCase_(uiSh, caseSh, caseMap, {
+      visitKey: visitKey, patientId: patientId, treatDate: treatDate,
+      kubun: ep1.kubun,
+      caseNo: 1,
+      now: now,
+      episodeStartDate: ep1.episodeStartDate
+    });
+    // 初検時のみ初検情報履歴へ upsert
+    if (res1 && res1.kubun === "初検") {
+      appendInitHistory_V3_(ss, patientId, 1, res1.caseKey, treatDate,
+                            readInitInfoFromUI_(uiSh, 1));
+    }
+
+    var res2 = upsertOneCase_(uiSh, caseSh, caseMap, {
+      visitKey: visitKey, patientId: patientId, treatDate: treatDate,
+      kubun: ep2.kubun,
+      caseNo: 2,
+      now: now,
+      episodeStartDate: ep2.episodeStartDate
+    });
+    // 初検時のみ初検情報履歴へ upsert
+    if (res2 && res2.kubun === "初検") {
+      appendInitHistory_V3_(ss, patientId, 2, res2.caseKey, treatDate,
+                            readInitInfoFromUI_(uiSh, 2));
+    }
+  }  // end isInsuranceVisit case saving
+
+  // ② 金額計算（保険処理ありの場合のみ / 自費のみは全ゼロ）
+  var amounts;
+  if (isInsuranceVisit) {
+    // 来院ケースベース。UIに実データがあるケースの区分のみを渡す
+    amounts = calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kubun1, kubun2);
+  } else {
+    // 自費のみ: 保険算定なし → 保険列はすべてゼロ
+    amounts = buildZeroInsuranceAmounts_V3_();
   }
-  if (proxErrors.length > 0) {
-    throw new Error(
-      "近接部位が検出されたため保存できません。\n部位または傷病名を修正してください。\n\n" +
-      proxErrors.join("\n")
-    );
-  }
-
-  // ① 来院ケースへ保存
-  // UIに実データがあるケースのみ区分を有効にする（空ケースの"初検"誤判定を防止）
-  var case1HasData = hasCaseDataInUI_(uiSh, 1);
-  var case2HasData = hasCaseDataInUI_(uiSh, 2);
-
-  var ep1 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 1);
-  var ep2 = calcEpisodeForCase_(caseSh, caseMap, patientId, treatDate, 2);
-
-  var kubun1 = case1HasData ? ep1.kubun : "";
-  var kubun2 = case2HasData ? ep2.kubun : "";
-
-  var res1 = upsertOneCase_(uiSh, caseSh, caseMap, {
-    visitKey: visitKey, patientId: patientId, treatDate: treatDate,
-    kubun: ep1.kubun,
-    caseNo: 1,
-    now: now,
-    episodeStartDate: ep1.episodeStartDate
-  });
-  // 初検時のみ初検情報履歴へ upsert
-  if (res1 && res1.kubun === "初検") {
-    appendInitHistory_V3_(ss, patientId, 1, res1.caseKey, treatDate,
-                          readInitInfoFromUI_(uiSh, 1));
-  }
-
-  var res2 = upsertOneCase_(uiSh, caseSh, caseMap, {
-    visitKey: visitKey, patientId: patientId, treatDate: treatDate,
-    kubun: ep2.kubun,
-    caseNo: 2,
-    now: now,
-    episodeStartDate: ep2.episodeStartDate
-  });
-  // 初検時のみ初検情報履歴へ upsert
-  if (res2 && res2.kubun === "初検") {
-    appendInitHistory_V3_(ss, patientId, 2, res2.caseKey, treatDate,
-                          readInitInfoFromUI_(uiSh, 2));
-  }
-
-  // ② 金額計算（来院ケースベース）
-  // ※ upsertOneCase_ はデータ無しなら早期returnするが、
-  //    金額計算には「UIに実データがあるケースの区分のみ」を渡す
-  var amounts = calcHeaderAmountsByVisitKey_V3_(ss, visitKey, patientId, treatDate, kubun1, kubun2);
 
   // ③ 来院ヘッダへ1行追記
   var injuryFixed = null;
@@ -954,10 +984,11 @@ function saveVisit_V3() {
     needCheck: amounts.needCheck ? true : false,
     needCheckReason: amounts.needCheckReason || "",
     createdAt: now,
+    // 自費のみの場合は ep1/ep2 が null のため null-safe に処理する
     caseKey: case1HasData
       ? buildCaseKey_(patientId, ep1.episodeStartDate, 1)
-      : buildCaseKey_(patientId, ep2.episodeStartDate, 2),
-    caseIndex: case1HasData ? 1 : 2,
+      : (case2HasData ? buildCaseKey_(patientId, ep2.episodeStartDate, 2) : ""),
+    caseIndex: case1HasData ? 1 : (case2HasData ? 2 : 0),
     // HIGH-2: 同日に case1/case2 が両方アクティブの場合に第2ケースキーを保存
     caseKey2: (case1HasData && case2HasData)
       ? buildCaseKey_(patientId, ep2.episodeStartDate, 2)
@@ -978,36 +1009,51 @@ function saveVisit_V3() {
     selfPayMenuCode:      selfPayInfo.selfPayMenuCode,
   });
 
-  // ④ 施術明細upsert
-  var detailSh = ss.getSheetByName(SHEETS.detail);
-  if (detailSh) {
-    var detailMap = buildHeaderColMap_(detailSh);
-    upsertDetailRows_V3_(detailSh, detailMap, {
-      visitKey: visitKey,
-      patientId: patientId,
-      treatDate: treatDate,
-      kubun1: kubun1,
-      kubun2: kubun2,
-      amounts: amounts,
-      ep1: ep1,
-      ep2: ep2,
-      now: now,
-    });
+  // ④ 施術明細upsert（保険処理ありの場合のみ）
+  if (isInsuranceVisit) {
+    var detailSh = ss.getSheetByName(SHEETS.detail);
+    if (detailSh) {
+      var detailMap = buildHeaderColMap_(detailSh);
+      upsertDetailRows_V3_(detailSh, detailMap, {
+        visitKey: visitKey,
+        patientId: patientId,
+        treatDate: treatDate,
+        kubun1: kubun1,
+        kubun2: kubun2,
+        amounts: amounts,
+        ep1: ep1,
+        ep2: ep2,
+        now: now,
+      });
+    }
   }
 
   // ⑤ UI会計ブロック更新
-  writeAmountsToUI_V3_(uiSh, amounts);
+  if (isInsuranceVisit) {
+    writeAmountsToUI_V3_(uiSh, amounts);
+  } else {
+    clearAmountsUI_V3_(uiSh);  // 自費のみ: 保険金額欄をクリア（誤表示防止）
+  }
 
   // ⑥ 経過履歴更新 / UIクリア
   refreshKeikaHistoryUI_V3();
   clearAfterSaveUI_V3_(uiSh);
-  SpreadsheetApp.getUi().alert(
-    "保存完了（統合：ケース＋金額＋ヘッダ）\n" +
-    "visitKey: " + visitKey + "\n" +
-    "来院合計: " + amounts.visitTotal + "\n" +
-    "窓口負担: " + amounts.windowPay + "\n" +
-    "保険請求: " + amounts.claimPay
-  );
+  if (isInsuranceVisit) {
+    SpreadsheetApp.getUi().alert(
+      "保存完了（統合：ケース＋金額＋ヘッダ）\n" +
+      "visitKey: " + visitKey + "\n" +
+      "来院合計: " + amounts.visitTotal + "\n" +
+      "窓口負担: " + amounts.windowPay + "\n" +
+      "保険請求: " + amounts.claimPay
+    );
+  } else {
+    SpreadsheetApp.getUi().alert(
+      "保存完了（自費のみ）\n" +
+      "visitKey: " + visitKey + "\n" +
+      "※ 保険ケース保存・保険算定は行っていません\n" +
+      "保険請求額: 0（会計区分 = 自費のみ）"
+    );
+  }
 }
 
 
@@ -3337,4 +3383,73 @@ function checkSelfPayWarningBeforeSave_V3_(uiSh) {
     Logger.log("checkSelfPayWarningBeforeSave_V3_ エラー: " + e.message);
   }
   return true;
+}
+
+/* =======================================================================
+   会計区分クロスチェック警告（Phase 2 バグ修正 — レセプト事故防止）
+   ======================================================================= */
+
+/**
+ * 会計区分とUI入力状態の矛盾を検出し、confirm 警告を出す。
+ *  ① 自費のみ なのに保険ケースデータがUIに残っている場合
+ *  ② 保険のみ なのに自費明細が保存済みの場合
+ * @param {Sheet}  uiSh
+ * @param {string} acctType - 会計区分の値
+ * @returns {boolean} true=続行可 / false=キャンセル
+ */
+function checkAccountingTypeCrossWarning_V3_(uiSh, acctType) {
+  try {
+    var uiObj = SpreadsheetApp.getUi();
+
+    // ① 自費のみ + 保険ケースデータがUIに残っている
+    if (acctType === "自費のみ") {
+      var c1 = hasCaseDataInUI_(uiSh, 1);
+      var c2 = hasCaseDataInUI_(uiSh, 2);
+      if (c1 || c2) {
+        var resp = uiObj.alert(
+          "【会計区分の確認】レセプト事故防止",
+          "会計区分が「自費のみ」ですが、保険ケースの入力データが残っています。\n\n" +
+          "・保険ケースは保存しません（来院ケースシートへの記録なし）\n" +
+          "・保険算定・請求額・窓口負担はすべて 0 になります\n\n" +
+          "このまま続行しますか？（自費明細のみ保存されます）",
+          uiObj.ButtonSet.OK_CANCEL
+        );
+        return (resp === uiObj.Button.OK);
+      }
+    }
+
+    // ② 保険のみ + 自費明細が保存済み
+    if (acctType === "保険のみ") {
+      var h8Val = String(uiSh.getRange(UI.selfPay_menuCode).getValue() || "").trim();
+      if (h8Val !== "未入力" && h8Val !== "") {
+        var resp2 = uiObj.alert(
+          "【会計区分の確認】",
+          "会計区分が「保険のみ」ですが、自費明細が保存済みです（" + h8Val + "）。\n\n" +
+          "来院ヘッダの自費金額は 0 円で記録されます。\n" +
+          "（自費明細シートの保存済みデータは削除されません）\n\n" +
+          "このまま続行しますか？",
+          uiObj.ButtonSet.OK_CANCEL
+        );
+        return (resp2 === uiObj.Button.OK);
+      }
+    }
+  } catch (e) {
+    Logger.log("checkAccountingTypeCrossWarning_V3_ エラー: " + e.message);
+  }
+  return true;
+}
+
+/**
+ * 保険算定なし（自費のみ）の場合に使用するゼロ金額オブジェクトを返す。
+ * appendHeaderRow_V3_ および writeAmountsToUI_V3_ のパラメータ互換。
+ * @returns {Object}
+ */
+function buildZeroInsuranceAmounts_V3_() {
+  return {
+    initFee: 0, reFee: 0, supportFee: 0, detailSum: 0,
+    visitTotal: 0, windowPay: 0, claimPay: 0,
+    needCheck: false, needCheckReason: "",
+    billedKubun: "", mixedFlag: "",
+    case1Summary: "", case2Summary: "", chargeReason: ""
+  };
 }
