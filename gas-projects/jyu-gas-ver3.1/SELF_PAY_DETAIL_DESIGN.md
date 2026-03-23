@@ -3,6 +3,7 @@
 作成: 2026-03-22（初版）
 改訂: 2026-03-22（Rev.2 — D7/F7 表示専用化・自費明細ブロック正本化・delete&replace 方針確定）
 改訂: 2026-03-22（Rev.3 — ダイアログ再オープンハング修正: getCurrentVisitKey_V3 Date シリアライズ問題対応）
+改訂: 2026-03-23（Rev.4 — Phase 3: getSelfPayMenuMaster_V3 を JBIZ 直接参照方式へ変更）
 対象: JREC-01（柔整毎日記録システム Ver3.1）+ JBIZ-04（接骨院経営戦略）
 
 ---
@@ -499,7 +500,14 @@ Phase 3（将来）
   - `buildZeroInsuranceAmounts_V3_` — 全ゼロ金額オブジェクト
   - `caseKey`/`caseIndex`/`caseKey2` を null-safe に修正
   - `clasp push` 完了（2026-03-22）
-- [ ] 価格マスタ テーブル追加（設定シート手動）← 院長が設定シートに追加
+- [x] **Phase 3 JBIZ直接参照方式実装（2026-03-23）** — JREC設定シートへの手動追加は不要。JBIZ 正本参照に切り替え済み。
+  - `getSelfPayMenuMaster_V3` を `SpreadsheetApp.openById` 方式へ変更
+  - `setupJBIZMenuMasterId_V3` 新設（JBIZ O列 menu_id 初回設定）
+  - `migrateJBIZMemberRules_V3` 新設（下段ルールメモを「会員優待ルール」シートへ移行）
+  - JBIZ_SS_ID / JBIZ_MENU_SHEET / JBIZ_COL / JBIZ_MENU_ID_MAP 定数を追加
+  - fallback の menu_id を M001 → `SELF_CHRONIC50` 等の新命名規則へ更新
+  - onOpen に「【初回1回】JBIZ menu_id 列追加」「【整理用】JBIZ 会員優待ルール移行」を追加
+- [ ] JBIZ 側の手動作業（clasp push 後）— menu_id 列追加・確定状況設定（PROJECT_STATUS.md §JBIZ 側の手動作業 参照）
 - [ ] `自費明細` シート作成（GASメニュー「自費明細シート初期化」を1回実行）
 - [ ] Drawing ボタンをシートに設置して `openSelfPayDialog_V3` を割り当て（手動）
 - [ ] `setupSelfPayValidation_V3`（会計ブロック自動生成）を再実行して D7/F7 表示専用化を適用（手動）

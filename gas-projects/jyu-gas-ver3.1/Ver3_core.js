@@ -33,6 +33,40 @@ const SHEETS = {
   selfPayDetail: "自費明細",  // Phase 2: 自費明細シート
 };
 
+// ===== JBIZ 連携定数（Phase 3: 価格マスタ正本参照） =====
+const JBIZ_SS_ID    = "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc";
+const JBIZ_MENU_SHEET = "メニューマスタ（価格設定）";
+// 列インデックス（0始まり、A=0）
+const JBIZ_COL = {
+  displayOrder: 0,  // A: 表示順
+  category:     1,  // B: 大区分
+  subCategory:  2,  // C: 小区分
+  menuName:     3,  // D: メニュー名
+  description:  4,  // E: 内容
+  duration:     5,  // F: 時間
+  price:        6,  // G: 一般料金（円）
+  memberPrice:  7,  // H: ジム会員料金（円）
+  insurance:    8,  // I: 保険適用
+  unit:         9,  // J: 回数/単位
+  isMain:       10, // K: 主力手技フラグ
+  isKpi:        11, // L: KPI集計対象
+  status:       12, // M: 確定状況
+  note:         13, // N: 備考
+  menuId:       14, // O: menu_id（新設 — 2026-03-23）
+};
+// menu_id マッピング（初回セットアップ用）
+const JBIZ_MENU_ID_MAP = {
+  "慢性ケア手技50分":          "SELF_CHRONIC50",
+  "パーソナルトレーニング60分": "TRAINING_PERSONAL60",
+  "4回集中コース":             "TRAINING_4PASS",
+  "ジム月会費":                "GYM_MONTHLY",
+  "症状別初回評価":            "SELF_INITIAL_EVAL",
+  "保険基本施術":              "INS_BASE",
+  "延長施術10分":              "INS_OPTION_EXTEND10",
+  "筋膜ガン":                  "INS_OPTION_FASCIA_GUN",
+  "温熱5分":                   "INS_OPTION_HEAT5",
+};
+
 /** ===== 患者画面 UIセル ===== */
 const UI = {
   patientId: "C2",        // B2は検索プルダウン、C2に患者ID自動抽出
@@ -237,6 +271,8 @@ function onOpen() {
       .addItem("会計ブロック自動生成（患者画面 行7〜8）", "setupSelfPayValidation_V3")
       .addItem("自費明細入力（患者画面）", "openSelfPayDialog_V3")
       .addItem("自費明細シート初期化", "ensureSelfPayDetailSheet_V3")
+      .addItem("【初回1回】JBIZ menu_id 列追加", "setupJBIZMenuMasterId_V3")
+      .addItem("【整理用】JBIZ 会員優待ルール移行", "migrateJBIZMemberRules_V3")
       .addSeparator()
       .addItem("患者検索プルダウン設定", "setupPatientPicker_V3")
       .addItem("患者検索プルダウン更新", "refreshPatientPicker_V3")
@@ -3170,61 +3206,150 @@ function saveSelfPayDetails_V3_(uiSh, detailSh, visitKey, items, context) {
    ======================================================================= */
 
 /**
- * 設定シートの「価格マスタ」テーブルを読む。
- * 見つからない場合はフォールバック定義を返す。
+ * JBIZ「メニューマスタ（価格設定）」から自費メニューマスタを取得する。
+ * Phase 3: JBIZ正本参照方式（2026-03-23）
+ *   - SpreadsheetApp.openById で JBIZ を直接参照
+ *   - 確定状況 = "確定" の行のみ返す
+ *   - JBIZ 不達 / シートなし / 0件 → fallback を返して業務継続
  * HTMLダイアログから google.script.run で呼ぶ公開関数。
  * @returns {Array} [{menuId, menuName, unitPrice}, ...]
  */
 function getSelfPayMenuMaster_V3() {
-  // フォールバック（設定シートに価格マスタがない場合）
+  // フォールバック（JBIZ 不達時の業務継続用）
   var fallback = [
-    {menuId: "M001", menuName: "慢性ケア手技50分",          unitPrice: 5500},
-    {menuId: "M010", menuName: "パーソナルトレーニング60分", unitPrice: 8800},
-    {menuId: "M011", menuName: "4回集中コース",              unitPrice: 35200},
-    {menuId: "M002", menuName: "症状別初回評価",             unitPrice: 3300},
+    {menuId: "SELF_CHRONIC50",      menuName: "慢性ケア手技50分",          unitPrice: 5500},
+    {menuId: "TRAINING_PERSONAL60", menuName: "パーソナルトレーニング60分", unitPrice: 8800},
+    {menuId: "TRAINING_4PASS",      menuName: "4回集中コース",              unitPrice: 35200},
+    {menuId: "SELF_INITIAL_EVAL",   menuName: "症状別初回評価",             unitPrice: 3300},
   ];
 
   try {
-    var ss = SpreadsheetApp.getActive();
-    var settingsSh = ss.getSheetByName(SHEETS.settings);
-    if (!settingsSh) return fallback;
-
-    var data = settingsSh.getDataRange().getValues();
-    // 「価格マスタ」セクションを探す（先頭列に "menu_id" または "価格マスタ" があれば開始）
-    var startRow = -1;
-    for (var r = 0; r < data.length; r++) {
-      var cell = String(data[r][0] || "").trim();
-      if (cell === "menu_id" || cell === "価格マスタ") {
-        // ヘッダ行を発見 → 次行からデータ
-        startRow = (cell === "価格マスタ") ? r + 1 : r;
-        break;
-      }
+    var jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+    var sh = jbizSS.getSheetByName(JBIZ_MENU_SHEET);
+    if (!sh) {
+      Logger.log("getSelfPayMenuMaster_V3: JBIZ シートなし [" + JBIZ_MENU_SHEET + "] → fallback");
+      return fallback;
     }
-    if (startRow < 0) return fallback;
-
-    // ヘッダ行のインデックスを確認
-    var headerRow = data[startRow];
-    var colMenuId   = headerRow.indexOf("menu_id");
-    var colName     = headerRow.indexOf("メニュー名");
-    var colPrice    = headerRow.indexOf("一般料金");
-    if (colMenuId < 0 || colName < 0 || colPrice < 0) return fallback;
+    var data = sh.getDataRange().getValues();
+    if (data.length < 2) return fallback;
 
     var result = [];
-    for (var i = startRow + 1; i < data.length; i++) {
-      var mid = String(data[i][colMenuId] || "").trim();
-      if (!mid) break;  // 空行で終了
-      var price = Number(data[i][colPrice]) || 0;
-      result.push({
-        menuId:    mid,
-        menuName:  String(data[i][colName] || "").trim(),
-        unitPrice: price,
-      });
+    for (var r = 1; r < data.length; r++) {
+      var row    = data[r];
+      var menuId = String(row[JBIZ_COL.menuId] || "").trim();
+      if (!menuId) continue;
+      var status = String(row[JBIZ_COL.status] || "").trim();
+      if (status !== "確定") continue;
+      var menuName = String(row[JBIZ_COL.menuName] || "").trim();
+      if (!menuName) continue;
+      var unitPrice = Number(row[JBIZ_COL.price]) || 0;
+      result.push({menuId: menuId, menuName: menuName, unitPrice: unitPrice});
     }
-    return result.length > 0 ? result : fallback;
+    if (result.length === 0) {
+      Logger.log("getSelfPayMenuMaster_V3: JBIZ 確定メニュー 0件 → fallback");
+      return fallback;
+    }
+    Logger.log("getSelfPayMenuMaster_V3: JBIZ から " + result.length + " 件取得");
+    return result;
   } catch (e) {
-    Logger.log("getSelfPayMenuMaster_V3 エラー: " + e.message);
+    Logger.log("getSelfPayMenuMaster_V3 エラー: " + e.message + " → fallback");
     return fallback;
   }
+}
+
+/**
+ * JBIZ「メニューマスタ（価格設定）」に menu_id 列（O列）を追加する。
+ * 一度だけ実行。冪等（既存値は上書きしない）。
+ * 実行後 O列を確認し、未設定行に手動で menu_id を追加すること。
+ */
+function setupJBIZMenuMasterId_V3() {
+  var jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  var sh = jbizSS.getSheetByName(JBIZ_MENU_SHEET);
+  if (!sh) {
+    SpreadsheetApp.getUi().alert("JBIZ シートが見つかりません: " + JBIZ_MENU_SHEET);
+    return;
+  }
+  var data = sh.getDataRange().getValues();
+  var colIdx = JBIZ_COL.menuId + 1;  // getRange は 1始まり（O列 = 15）
+
+  // O1 ヘッダ設定（空欄の場合のみ）
+  if (!String(data[0][JBIZ_COL.menuId] || "").trim()) {
+    sh.getRange(1, colIdx).setValue("menu_id");
+  }
+
+  var set = 0;
+  for (var r = 1; r < data.length; r++) {
+    var menuName = String(data[r][JBIZ_COL.menuName] || "").trim();
+    var existing = String(data[r][JBIZ_COL.menuId]   || "").trim();
+    if (existing) continue;  // 既存値は上書きしない
+    var mid = JBIZ_MENU_ID_MAP[menuName];
+    if (mid) {
+      sh.getRange(r + 1, colIdx).setValue(mid);
+      set++;
+    }
+  }
+  SpreadsheetApp.flush();
+  Logger.log("setupJBIZMenuMasterId_V3 完了: " + set + " 件設定");
+  SpreadsheetApp.getUi().alert(
+    "JBIZ menu_id 設定完了。\n設定件数: " + set + " 件\n\n"
+    + "O列（menu_id）を確認し、未設定行に手動で menu_id を追加してください。\n"
+    + "追加後に getSelfPayMenuMaster_V3 が JBIZ から取得できるようになります。"
+  );
+}
+
+/**
+ * JBIZ「メニューマスタ（価格設定）」の17行目以降にある非メニュー行（会員優待ルールメモ等）を
+ * 「会員優待ルール」シートへ移行する。
+ * 条件: 行17以降 かつ menu_id 列が空 かつ 完全空行でない行が対象。
+ * 実行前にスプレッドシートをバックアップすること。
+ */
+function migrateJBIZMemberRules_V3() {
+  var ui = SpreadsheetApp.getUi();
+  var res = ui.alert(
+    "JBIZ 会員優待ルール移行",
+    "「メニューマスタ（価格設定）」の17行目以降で menu_id が空の行を\n"
+    + "「会員優待ルール」シートへコピーし、元行をクリアします。\n\n"
+    + "実行前にスプレッドシートをバックアップしてください。続行しますか？",
+    ui.ButtonSet.YES_NO
+  );
+  if (res !== ui.Button.YES) return;
+
+  var jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  var srcSh = jbizSS.getSheetByName(JBIZ_MENU_SHEET);
+  if (!srcSh) { ui.alert("元シートが見つかりません: " + JBIZ_MENU_SHEET); return; }
+
+  // 「会員優待ルール」シートを作成（なければ新規）
+  var dstSh = jbizSS.getSheetByName("会員優待ルール");
+  if (!dstSh) {
+    dstSh = jbizSS.insertSheet("会員優待ルール");
+    dstSh.getRange(1, 1).setValue("# JBIZ 会員優待ルール（メニューマスタから移行）");
+    dstSh.getRange(2, 1).setValue("移行日: " + Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd"));
+    dstSh.getRange(3, 1).setValue("元シート: " + JBIZ_MENU_SHEET);
+  }
+
+  var data = srcSh.getDataRange().getValues();
+  var dstNextRow = dstSh.getLastRow() + 2;
+  var moved = 0;
+  var numCols = srcSh.getLastColumn();
+
+  for (var r = 16; r < data.length; r++) {  // 17行目（0-indexed: r=16）以降
+    var menuId = String(data[r][JBIZ_COL.menuId] || "").trim();
+    if (menuId) continue;  // menu_id 設定済みメニュー行は移動しない
+    var rowData = data[r];
+    if (rowData.every(function(c) { return c === "" || c === null; })) continue;
+    dstSh.getRange(dstNextRow, 1, 1, rowData.length).setValues([rowData]);
+    srcSh.getRange(r + 1, 1, 1, numCols).clearContent();
+    dstNextRow++;
+    moved++;
+  }
+
+  SpreadsheetApp.flush();
+  Logger.log("migrateJBIZMemberRules_V3 完了: " + moved + " 行移行");
+  ui.alert(
+    "会員優待ルール移行完了。\n移行行数: " + moved + " 行\n"
+    + "「会員優待ルール」シートを確認してください。\n"
+    + "移行後、不要になった空行はスプレッドシートで手動削除できます。"
+  );
 }
 
 /* =======================================================================
