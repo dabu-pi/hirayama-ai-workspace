@@ -67,9 +67,11 @@ const JBIZ_MENU_ID_MAP = {
   "ジム月会費":                "GYM_MONTHLY",
   "症状別初回評価":            "SELF_INITIAL_EVAL",
   "保険基本施術":              "INS_BASE",
-  "延長施術10分":              "INS_OPTION_EXTEND10",
-  "筋膜ガン":                  "INS_OPTION_FASCIA_GUN",
-  "温熱5分":                   "INS_OPTION_HEAT5",
+  "手技延長":                  "INS_OPTION_EXTEND10",
+  // 2026-03-23: 筋膜リリース（マッサージガン）→ ストレッチ（20分）に置換。旧 INS_OPTION_FASCIA_GUN 廃止。
+  "ストレッチ（20分）":         "INS_OPTION_STRETCH20",
+  // 2026-03-23: 温熱追加 → 電療追加（15分）に置換。旧 INS_OPTION_HEAT5 廃止。
+  "電療追加（15分）":           "INS_OPTION_ELECTRO15",
 };
 
 /** ===== 患者画面 UIセル ===== */
