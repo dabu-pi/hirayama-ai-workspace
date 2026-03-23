@@ -1,3 +1,10 @@
+---
+name: resume
+description: 新しい Claude Code セッション開始時・別PC引き継ぎ時に、現在地・未完了・次アクションを即座に把握する。引数で -ProjectId を指定すると特定案件のみ絞り込める。
+argument-hint: "[-ProjectId <id>] [-Quick] [-Focus <keyword>]"
+allowed-tools: Read, Grep, Glob, Bash
+---
+
 # resume — セッション再開スキル
 
 **用途:** 新しい Claude Code セッション開始時・別PC引き継ぎ時に、現在地・未完了・次アクションを即座に把握する。

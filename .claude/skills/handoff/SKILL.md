@@ -1,3 +1,10 @@
+---
+name: handoff
+description: 作業終了時のコミット・プッシュ・完了報告を標準化する。de コマンドの Claude Code 版。認証情報チェック付き。
+argument-hint: "[-ProjectId <id>] [-Message \"説明\"] [-NoPush] [-WIP]"
+allowed-tools: Read, Bash
+---
+
 # handoff — セッション終了スキル
 
 **用途:** 作業終了時のコミット・プッシュ・完了報告を標準化する。`de` コマンドの Claude Code 版。

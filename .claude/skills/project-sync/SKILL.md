@@ -1,3 +1,10 @@
+---
+name: project-sync
+description: PROJECTS.md・ROADMAP.md・PROJECT_STATUS.md の3ファイル間の整合を確認し、ズレを修正する。フェーズ移行時・長期ブランク後の再開時に使う。
+argument-hint: "[-ProjectId <id>] [-AutoFix] [-DryRun]"
+allowed-tools: Read, Edit, Bash
+---
+
 # project-sync — プロジェクト整合確認スキル
 
 **用途:** PROJECTS.md・ROADMAP.md・PROJECT_STATUS.md の3ファイル間の整合を確認し、ズレを修正する。フェーズ移行時・長期ブランク後の再開時に使う。

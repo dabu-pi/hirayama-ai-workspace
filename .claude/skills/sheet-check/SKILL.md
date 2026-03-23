@@ -1,3 +1,10 @@
+---
+name: sheet-check
+description: Google Sheets の列・数式・入力規則を変更する作業の前後チェックを標準化する。before モードで7ステップ事前確認、after モードで完了報告テンプレを生成する。
+argument-hint: "-Phase <before|after> -Sheet <シート名>"
+allowed-tools: Read, Grep, Bash
+---
+
 # sheet-check — スプレッドシート作業チェック
 
 **用途:** Google Sheets の列・数式・入力規則を変更する作業の前後チェックを標準化する。

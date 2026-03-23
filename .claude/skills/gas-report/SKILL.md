@@ -1,3 +1,10 @@
+---
+name: gas-report
+description: Apps Script での動作確認結果を TESTCASES.md / PROJECT_STATUS.md へ標準フォーマットで記録する。GAS実機テスト後に使う。
+argument-hint: "-ProjectId <id> -TestId <ids> -Result <PASS|FAIL> [-Notes \"備考\"]"
+allowed-tools: Read, Edit, Bash
+---
+
 # gas-report — GAS実機確認レポート
 
 **用途:** Apps Script での動作確認結果を TESTCASES.md / PROJECT_STATUS.md へ標準フォーマットで記録する。
