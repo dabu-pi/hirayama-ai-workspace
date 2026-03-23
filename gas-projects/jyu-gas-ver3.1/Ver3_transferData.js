@@ -2246,6 +2246,16 @@ function V3TR_menuBatchExportJson() {
       var jsonStr = V3TR_exportTransferJson_(ss, pid, ym);
       var parsed = JSON.parse(jsonStr);
 
+      // ★Layer 2 安全フィルタ: 保険請求額=0 の患者は申請対象外として除外
+      var _eL2c1 = parsed.case1 ? Number(parsed.case1["請求金額"] || 0) : 0;
+      var _eL2c2 = parsed.case2 ? Number(parsed.case2["請求金額"] || 0) : 0;
+      if (_eL2c1 === 0 && _eL2c2 === 0) {
+        Logger.log("申請対象外スキップ（保険請求額=0）: " + pid);
+        ss.toast("スキップ（申請対象外）: " + pid, "一括JSON出力", 3);
+        sheetRows.push([pid, "SKIP: 保険請求額=0円（申請対象外）"]);
+        continue;
+      }
+
       // NDJSON行: { patientId, case1, case2, visitDays }
       var patientLine = JSON.stringify({
         patientId: pid,
@@ -2323,16 +2333,23 @@ function V3TR_findPatientsForMonth_(ss, ym) {
   }
 
   // --- 来院ヘッダからスキャン（補助ソース、明細欠けの患者も拾う） ---
+  // ★Layer 1 安全フィルタ: 会計区分=「自費のみ」の行は保険申請対象外なのでスキップ。
+  //   自費のみ来院は施術明細に記録されないため、来院ヘッダ経由でのみ申請リストに混入するリスクがある。
+  //   安全ルール: 保険申請対象 = 会計区分 ∈ {保険のみ, 保険+自費, ""(旧データ)} の行のみ通す。
+  //   列が存在しない場合（旧データ等）は安全方向でスキップせず通す。
   var shHeader = ss.getSheetByName("来院ヘッダ");
   if (shHeader && shHeader.getLastRow() >= 2) {
     var hMap = V3TR_buildHeaderMap_(shHeader);
     var hPid = hMap["患者ID"];
     var hDt = hMap["施術日"];
+    var hAcct = hMap["会計区分"];  // Layer 1: 申請対象フィルタ用
     if (hPid !== undefined && hDt !== undefined) {
       var hv = shHeader.getDataRange().getValues();
       for (var r = 1; r < hv.length; r++) {
         var dt = hv[r][hDt];
         if (V3TR_inRange_(dt, month.start, month.end)) {
+          // Layer 1: 会計区分=「自費のみ」の行は申請リストに含めない
+          if (hAcct !== undefined && String(hv[r][hAcct] || "").trim() === "自費のみ") continue;
           var pid = String(hv[r][hPid] || "").trim();
           if (pid) patientSet[pid] = true;
         }
@@ -2465,6 +2482,16 @@ function V3TR_menuGenerateApplication_B() {
       V3TR_buildTransferDataForMonth_(ss, pid, ym);
       var jsonStr = V3TR_exportTransferJson_(ss, pid, ym, true);
       var parsed = JSON.parse(jsonStr);
+      // ★Layer 2 安全フィルタ: 保険請求額=0 の患者は申請対象外として除外。
+      //   Layer 1（会計区分フィルタ）をすり抜けた場合の安全網。
+      //   claimPay=0 = 保険申請する金額がない = 申請書を生成してはならない。
+      var _bL2c1 = parsed.case1 ? Number(parsed.case1["請求金額"] || 0) : 0;
+      var _bL2c2 = parsed.case2 ? Number(parsed.case2["請求金額"] || 0) : 0;
+      if (_bL2c1 === 0 && _bL2c2 === 0) {
+        Logger.log("[B案] 申請対象外スキップ（保険請求額=0）: " + pid);
+        skipPatients.push(pid + "（申請対象外: 保険請求額=0円）");
+        continue;
+      }
       ndjsonLines.push(JSON.stringify({
         patientId: pid,
         case1: parsed.case1,
