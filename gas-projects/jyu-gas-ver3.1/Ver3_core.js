@@ -3288,9 +3288,10 @@ function getSelfPayMenuMaster_V3() {
 }
 
 /**
- * JBIZ「メニューマスタ（価格設定）」に menu_id 列（O列）を追加する。
+ * JBIZ「メニューマスタ（価格設定）」の C列（menu_id）ヘッダと既知メニューの menu_id を設定する。
  * 一度だけ実行。冪等（既存値は上書きしない）。
- * 実行後 O列を確認し、未設定行に手動で menu_id を追加すること。
+ * 実行後 C列を確認し、未設定行に手動で menu_id を追加すること。
+ * ※ 2026-03-23: menu_id 列を O列 → C列（旧:小区分）へ移動済み。
  */
 function setupJBIZMenuMasterId_V3() {
   var jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
@@ -3308,7 +3309,7 @@ function setupJBIZMenuMasterId_V3() {
   var data = sh.getDataRange().getValues();
   var colIdx = JBIZ_COL.menuId + 1;  // getRange は 1始まり（C列 = 3）
 
-  // O1 ヘッダ設定（空欄の場合のみ）
+  // C1 ヘッダ設定（空欄の場合のみ）
   if (!String(data[0][JBIZ_COL.menuId] || "").trim()) {
     sh.getRange(1, colIdx).setValue("menu_id");
   }
@@ -3328,7 +3329,7 @@ function setupJBIZMenuMasterId_V3() {
   Logger.log("setupJBIZMenuMasterId_V3 完了: " + set + " 件設定");
   SpreadsheetApp.getUi().alert(
     "JBIZ menu_id 設定完了。\n設定件数: " + set + " 件\n\n"
-    + "O列（menu_id）を確認し、未設定行に手動で menu_id を追加してください。\n"
+    + "C列（menu_id）を確認し、未設定行に手動で menu_id を追加してください。\n"
     + "追加後に getSelfPayMenuMaster_V3 が JBIZ から取得できるようになります。"
   );
 }

@@ -503,7 +503,7 @@ Phase 3（将来）
   - `clasp push` 完了（2026-03-22）
 - [x] **Phase 3 JBIZ直接参照方式実装（2026-03-23）** — JREC設定シートへの手動追加は不要。JBIZ 正本参照に切り替え済み。
   - `getSelfPayMenuMaster_V3` を `SpreadsheetApp.openById` 方式へ変更
-  - `setupJBIZMenuMasterId_V3` 新設（JBIZ O列 menu_id 初回設定）
+  - `setupJBIZMenuMasterId_V3` 新設（JBIZ C列 menu_id 初回設定。※ 2026-03-23: O列→C列移動済み）
   - `migrateJBIZMemberRules_V3` 新設（下段ルールメモを「会員優待ルール」シートへ移行）
   - JBIZ_SS_ID / JBIZ_MENU_SHEET_CANDIDATES / JBIZ_COL / JBIZ_MENU_ID_MAP 定数を追加
   - fallback の menu_id を M001 → `SELF_CHRONIC50` 等の新命名規則へ更新
@@ -513,7 +513,7 @@ Phase 3（将来）
   - `getJBIZMenuSheet_(jbizSS)` ヘルパー新設（候補を順に探す）
   - 全不一致時に実在シート名一覧を含むエラーを表示
   - `getSelfPayMenuMaster_V3` / `setupJBIZMenuMasterId_V3` / `migrateJBIZMemberRules_V3` を全て `getJBIZMenuSheet_` 経由へ統一
-- [ ] JBIZ 側の手動作業（clasp push 後）— menu_id 列追加・確定状況設定（PROJECT_STATUS.md §JBIZ 側の手動作業 参照）
+- [ ] JBIZ 側の手動作業（clasp push 後）— **C列** menu_id 設定・確定状況設定（PROJECT_STATUS.md §JBIZ 側の手動作業 参照。※ 2026-03-23: menu_id 列は O列 → C列へ移動済み）
 - [ ] `自費明細` シート作成（GASメニュー「自費明細シート初期化」を1回実行）
 - [ ] Drawing ボタンをシートに設置して `openSelfPayDialog_V3` を割り当て（手動）
 - [ ] `setupSelfPayValidation_V3`（会計ブロック自動生成）を再実行して D7/F7 表示専用化を適用（手動）

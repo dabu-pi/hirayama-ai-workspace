@@ -509,13 +509,14 @@ function setupNumeric(ss) {
 // ============================================================
 function setupPricing(ss) {
   const sheet = ss.insertSheet(SHEET.PRICING);
-  // 14列: 表示順/大区分/小区分/メニュー名/内容/時間/一般料金/ジム会員料金/保険適用/回数単位/主力手技フラグ/KPI集計/確定状況/備考
+  // 14列: 表示順/大区分/menu_id/メニュー名/内容/時間/一般料金/ジム会員料金/保険適用/回数単位/主力手技フラグ/KPI集計/確定状況/備考
+  // ※ C列(3列目)は旧「小区分」から menu_id に変更済み（2026-03-23）
   setColWidths(sheet, [40, 160, 90, 160, 200, 75, 90, 105, 65, 70, 110, 75, 85, 200]);
   addWarning(sheet, 14);
   addTitle(sheet, 14, 'メニューマスタ（価格設定）');
 
   // ヘッダ行（行3）
-  ['表示順', '大区分', '小区分', 'メニュー名', '内容', '時間',
+  ['表示順', '大区分', 'menu_id', 'メニュー名', '内容', '時間',
    '一般料金\n（円）', 'ジム会員\n料金（円）', '保険\n適用', '回数/単位',
    '主力手技\nフラグ', 'KPI集計\n対象', '確定状況', '備考']
     .forEach((h, i) => hdr(sheet, 3, i + 1, h));
@@ -532,7 +533,7 @@ function setupPricing(ss) {
   };
 
   // メニューデータ
-  // [表示順, 大区分, 小区分, メニュー名, 内容, 時間, 一般料金(null=保険適用), ジム会員料金(null=なし),
+  // [表示順, 大区分, menu_id, メニュー名, 内容, 時間, 一般料金(null=保険適用), ジム会員料金(null=なし),
   //  保険適用, 回数/単位, 主力手技フラグ, KPI集計対象, 確定状況, 備考]
   const menus = [
     [1,  '保険施術（急性期対応）',  '', '保険施術',
@@ -585,7 +586,7 @@ function setupPricing(ss) {
     // 大区分（2列）
     sheet.getRange(row, 2).setValue(cat)
       .setBackground(catColor).setFontWeight('bold').setWrap(true);
-    // 小区分（3列）
+    // menu_id（3列 = C列。旧: 小区分。2026-03-23変更）
     sheet.getRange(row, 3).setValue(subcat).setBackground(C.FIXED);
     // メニュー名（4列）
     sheet.getRange(row, 4).setValue(name)
