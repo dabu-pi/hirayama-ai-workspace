@@ -45,7 +45,7 @@ const JBIZ_MENU_SHEET_CANDIDATES = [
 const JBIZ_COL = {
   displayOrder: 0,  // A: 表示順
   category:     1,  // B: 大区分
-  subCategory:  2,  // C: 小区分
+  menuId:       2,  // C: menu_id（2026-03-23 O列から移動。旧: 小区分 — JREC未使用のため転用）
   menuName:     3,  // D: メニュー名
   description:  4,  // E: 内容
   duration:     5,  // F: 時間
@@ -57,7 +57,7 @@ const JBIZ_COL = {
   isKpi:        11, // L: KPI集計対象
   status:       12, // M: 確定状況
   note:         13, // N: 備考
-  menuId:       14, // O: menu_id（新設 — 2026-03-23）
+  // O列（インデックス14）: menu_id を C列へ移動したため廃止（2026-03-23）
 };
 // menu_id マッピング（初回セットアップ用）
 const JBIZ_MENU_ID_MAP = {
@@ -3306,7 +3306,7 @@ function setupJBIZMenuMasterId_V3() {
     return;
   }
   var data = sh.getDataRange().getValues();
-  var colIdx = JBIZ_COL.menuId + 1;  // getRange は 1始まり（O列 = 15）
+  var colIdx = JBIZ_COL.menuId + 1;  // getRange は 1始まり（C列 = 3）
 
   // O1 ヘッダ設定（空欄の場合のみ）
   if (!String(data[0][JBIZ_COL.menuId] || "").trim()) {
