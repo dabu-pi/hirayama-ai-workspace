@@ -215,7 +215,7 @@ NRS・RMDQ・STarT・PSFS を聞き取り入力（〜5分）
 
 | 連携項目 | 方針 |
 |---|---|
-| Projects シート | JEVAL-01 として登録。`de -ProjectId JEVAL-01 "説明"` でハンドオフ |
+| Projects シート | JASSESS-01 として登録。`de -ProjectId JASSESS-01 "説明"` でハンドオフ |
 | Run_Log シート | フェーズ移行時の作業ログを記録 |
 | Task_Queue | 実装タスクをキューに登録 |
 
@@ -257,13 +257,13 @@ NRS・RMDQ・STarT・PSFS を聞き取り入力（〜5分）
 ## 9. 次プロンプト案（GAS実装フェーズへ）
 
 ```
-JEVAL-01 腰痛評価シートシステムの Phase 1（GAS実装）を開始してください。
+JASSESS-01 運動器初期評価システムの Phase 1（GAS実装）を開始してください。
 
 参照ファイル:
-- workspace/low-back-assessment/SPEC.md
-- workspace/low-back-assessment/SHEET_DESIGN.md
-- workspace/low-back-assessment/LOGIC.md
-- workspace/low-back-assessment/gas/setup_sheets.js
+- workspace/msk-assessment-platform/SPEC.md
+- workspace/msk-assessment-platform/SHEET_DESIGN.md
+- workspace/msk-assessment-platform/LOGIC.md
+- workspace/msk-assessment-platform/gas/setup_sheets.js
 
 Phase 1 で実装してほしいこと:
 1. setup_sheets.js をレビューし、必要に応じて修正
@@ -275,5 +275,5 @@ Phase 1 で実装してほしいこと:
 - clasp 管理対象にする
 - 単価・閾値はすべて設定シートで管理（コードにハードコードしない）
 - 認証情報は生成・コミットしない
-- 作業完了後は de -ProjectId JEVAL-01 "Phase 1: シート自動生成完了" でハンドオフ
+- 作業完了後は de -ProjectId JASSESS-01 "Phase 1: シート自動生成完了" でハンドオフ
 ```

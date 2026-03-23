@@ -138,7 +138,7 @@ function setupConfigSheet(ss) {
   sheet.setColumnWidth(2, 200);
   sheet.setColumnWidth(3, 300);
 
-  setHeader(sheet, 1, 2, '設定シート — 腰痛評価システム (JEVAL-01)', 2);
+  setHeader(sheet, 1, 2, '設定シート — 運動器初期評価システム (JASSESS-01)', 2);
 
   const configs = [
     [3,  '施設名',                     '平山接骨院'],
@@ -220,7 +220,7 @@ function setupInputSheet(ss) {
 
   // タイトル
   sheet.getRange(1, 1, 1, 4).merge()
-       .setValue('腰痛評価入力シート — JEVAL-01')
+       .setValue('腰痛評価入力シート — JASSESS-01')
        .setBackground(COLORS.HEADER).setFontColor('#FFFFFF')
        .setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center');
 
