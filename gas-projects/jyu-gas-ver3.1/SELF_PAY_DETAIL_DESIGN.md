@@ -4,6 +4,7 @@
 改訂: 2026-03-22（Rev.2 — D7/F7 表示専用化・自費明細ブロック正本化・delete&replace 方針確定）
 改訂: 2026-03-22（Rev.3 — ダイアログ再オープンハング修正: getCurrentVisitKey_V3 Date シリアライズ問題対応）
 改訂: 2026-03-23（Rev.4 — Phase 3: getSelfPayMenuMaster_V3 を JBIZ 直接参照方式へ変更）
+改訂: 2026-03-23（Rev.5 — Phase 3 バグ修正: JBIZ シート名不一致 → 候補名配列 + getJBIZMenuSheet_ ヘルパーへ変更）
 対象: JREC-01（柔整毎日記録システム Ver3.1）+ JBIZ-04（接骨院経営戦略）
 
 ---
@@ -504,9 +505,14 @@ Phase 3（将来）
   - `getSelfPayMenuMaster_V3` を `SpreadsheetApp.openById` 方式へ変更
   - `setupJBIZMenuMasterId_V3` 新設（JBIZ O列 menu_id 初回設定）
   - `migrateJBIZMemberRules_V3` 新設（下段ルールメモを「会員優待ルール」シートへ移行）
-  - JBIZ_SS_ID / JBIZ_MENU_SHEET / JBIZ_COL / JBIZ_MENU_ID_MAP 定数を追加
+  - JBIZ_SS_ID / JBIZ_MENU_SHEET_CANDIDATES / JBIZ_COL / JBIZ_MENU_ID_MAP 定数を追加
   - fallback の menu_id を M001 → `SELF_CHRONIC50` 等の新命名規則へ更新
   - onOpen に「【初回1回】JBIZ menu_id 列追加」「【整理用】JBIZ 会員優待ルール移行」を追加
+- [x] **Phase 3 バグ修正（2026-03-23）** — JBIZ シート名「メニューマスタ（価格設定）」と実名「価格設定」の不一致により fallback に落ちていた問題を修正。
+  - `JBIZ_MENU_SHEET`（単値）→ `JBIZ_MENU_SHEET_CANDIDATES`（配列）に変更
+  - `getJBIZMenuSheet_(jbizSS)` ヘルパー新設（候補を順に探す）
+  - 全不一致時に実在シート名一覧を含むエラーを表示
+  - `getSelfPayMenuMaster_V3` / `setupJBIZMenuMasterId_V3` / `migrateJBIZMemberRules_V3` を全て `getJBIZMenuSheet_` 経由へ統一
 - [ ] JBIZ 側の手動作業（clasp push 後）— menu_id 列追加・確定状況設定（PROJECT_STATUS.md §JBIZ 側の手動作業 参照）
 - [ ] `自費明細` シート作成（GASメニュー「自費明細シート初期化」を1回実行）
 - [ ] Drawing ボタンをシートに設置して `openSelfPayDialog_V3` を割り当て（手動）

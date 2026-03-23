@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-03-23（Phase 3 JBIZ直接参照方式実装完了 — getSelfPayMenuMaster_V3 / setupJBIZMenuMasterId_V3 / migrateJBIZMemberRules_V3）
+最終更新: 2026-03-23（Phase 3 バグ修正 — JBIZ価格マスタシート名不一致 → 候補名両対応方式へ変更）
 
 ---
 
@@ -12,7 +12,7 @@
 |---|---|
 | 1. `ds` 実行 | `git pull` で最新を取得。ブランチ: `feature/auto-dev-phase3-loop` |
 | 2. 最終コミット確認 | `git log --oneline -3` で最新コミット確認 |
-| 3. 再開位置 | **JBIZ 側の menu_id 列追加（手動作業）から**（コードは push 済み） |
+| 3. 再開位置 | **JBIZ 側の手動作業（menu_id 列追加・確定状況設定）から**（コードは push 済み）|
 | 4. JBIZ 手動作業（最優先） | 下記「JBIZ 側の手動作業」参照 |
 | 5. JBIZ 確認後 | `柔整ツール → 【初回1回】JBIZ menu_id 列追加` を実行 |
 | 6. T2-3a 以降 | 自費ダイアログで JBIZ メニューが表示されることを確認してから T2-3a〜 |
@@ -26,16 +26,16 @@
 | Task 2 | 来院ヘッダ 自費収益3列撤去（自費明細シートを正本化） | ✅ 完了（commit `fc26621`） |
 | Task 3 | 保険申請対象フィルタ追加（2層安全フィルタ） | ✅ 完了（commit `f686dba`） |
 | Task 4 | T2-4〜T2-12 実機確認チェックリスト整備 | ✅ 完了 |
-| **Task 5** | **Phase 3 JBIZ直接参照方式実装**（本セッション） | ✅ 完了（コード実装+clasp push 待ち） |
+| **Task 5** | **Phase 3 JBIZ直接参照方式実装** | ✅ 完了（commit `3559754`） |
+| **Task 6** | **Phase 3 バグ修正 — JBIZ シート名不一致対応**（本セッション） | ✅ 完了（clasp push 済み） |
 
 **次のアクション（優先順）:**
 
-1. **clasp push を実行**（コード変更を JREC に反映）
-2. **JBIZ 側の手動作業**（下記参照）
-3. `柔整ツール → 【初回1回】JBIZ menu_id 列追加` を実行
-4. 自費ダイアログで JBIZ メニューが表示されることを確認
-5. T2-3a〜T2-3d → T2-4〜T2-8 → T2-10〜T2-12 を実機確認
-6. 全テスト PASS → Phase 2 完了宣言
+1. **JBIZ 側の手動作業**（下記「JBIZ 側の手動作業」参照）
+2. `柔整ツール → 【初回1回】JBIZ menu_id 列追加` を実行
+3. 自費ダイアログで JBIZ メニューが表示されることを確認（T2-3a 相当）
+4. T2-3a〜T2-3d → T2-4〜T2-8 → T2-10〜T2-12 を実機確認
+5. 全テスト PASS → Phase 2 完了宣言
 
 > ✅ `Ver3_transferData.js` accountingType フィルタは **実施済み**（commit `f686dba`）
 
@@ -104,12 +104,24 @@
 
 | 変更 | 内容 |
 |---|---|
-| 定数追加 | `JBIZ_SS_ID` / `JBIZ_MENU_SHEET` / `JBIZ_COL` / `JBIZ_MENU_ID_MAP` |
+| 定数追加 | `JBIZ_SS_ID` / `JBIZ_MENU_SHEET_CANDIDATES`（配列）/ `JBIZ_COL` / `JBIZ_MENU_ID_MAP` |
+| `getJBIZMenuSheet_` | シート名候補を順に試すヘルパー関数（新設 — 2026-03-23 バグ修正で追加）|
 | `getSelfPayMenuMaster_V3` | JBIZ 直接参照方式へ変更（旧: 設定シート参照）|
 | `setupJBIZMenuMasterId_V3` | JBIZ O列 menu_id 初回セットアップ関数（新設）|
 | `migrateJBIZMemberRules_V3` | 下段ルールメモを「会員優待ルール」シートへ移行（新設）|
-| onOpen | 上記2関数のメニュー項目追加 |
+| onOpen | setup / migrate 関数のメニュー項目追加 |
 | fallback 更新 | M001→`SELF_CHRONIC50` 等、menu_id を新命名規則へ統一 |
+
+### バグ修正記録（2026-03-23）
+
+| 項目 | 内容 |
+|---|---|
+| **不具合** | 自費ダイアログ起動時「JBIZ シートが見つかりません: メニューマスタ（価格設定）」が表示され fallback に落ちていた |
+| **一次原因** | `getSheetByName` に渡した名前「メニューマスタ（価格設定）」が JBIZ の実際のシート名「価格設定」と不一致 |
+| **対応** | 定数を単値 → 候補配列 `JBIZ_MENU_SHEET_CANDIDATES` に変更し、`getJBIZMenuSheet_()` で順に探す方式へ |
+| **候補順** | 1. メニューマスタ（価格設定） → 2. 価格設定 |
+| **全不一致時** | 探した候補 + 実在シート名一覧をログ・ダイアログに表示 |
+| **fallback** | 維持（JBIZ 不達・シートなし・0件すべてで業務継続）|
 
 ### テスト影響
 

@@ -35,7 +35,12 @@ const SHEETS = {
 
 // ===== JBIZ 連携定数（Phase 3: 価格マスタ正本参照） =====
 const JBIZ_SS_ID    = "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc";
-const JBIZ_MENU_SHEET = "メニューマスタ（価格設定）";
+// シート名候補（実名が変わっても候補に追加するだけで対応できるよう配列化）
+// 2026-03-23 バグ修正: 実名は「価格設定」（「メニューマスタ（価格設定）」ではなかった）
+const JBIZ_MENU_SHEET_CANDIDATES = [
+  "メニューマスタ（価格設定）",  // 設計時の想定名（旧）
+  "価格設定",                     // 実際のシート名（正）
+];
 // 列インデックス（0始まり、A=0）
 const JBIZ_COL = {
   displayOrder: 0,  // A: 表示順
@@ -3206,7 +3211,32 @@ function saveSelfPayDetails_V3_(uiSh, detailSh, visitKey, items, context) {
    ======================================================================= */
 
 /**
- * JBIZ「メニューマスタ（価格設定）」から自費メニューマスタを取得する。
+ * JBIZ 価格マスタシートを取得する内部ヘルパー。
+ * JBIZ_MENU_SHEET_CANDIDATES を順に試し、最初に見つかったシートを返す。
+ * 全候補で見つからない場合は null を返す（実在シート名一覧をログに出す）。
+ * @param {Spreadsheet} jbizSS openById で取得済みの JBIZ スプレッドシート
+ * @returns {Sheet|null}
+ */
+function getJBIZMenuSheet_(jbizSS) {
+  for (var i = 0; i < JBIZ_MENU_SHEET_CANDIDATES.length; i++) {
+    var sh = jbizSS.getSheetByName(JBIZ_MENU_SHEET_CANDIDATES[i]);
+    if (sh) {
+      Logger.log("getJBIZMenuSheet_: シート確認 [" + JBIZ_MENU_SHEET_CANDIDATES[i] + "]");
+      return sh;
+    }
+  }
+  // 全候補不一致 → 実在シート名一覧をログへ
+  var actualNames = jbizSS.getSheets().map(function(s) { return s.getName(); }).join(", ");
+  Logger.log(
+    "getJBIZMenuSheet_: 価格マスタシートが見つかりません。\n"
+    + "探した候補: [" + JBIZ_MENU_SHEET_CANDIDATES.join(", ") + "]\n"
+    + "実在シート名: [" + actualNames + "]"
+  );
+  return null;
+}
+
+/**
+ * JBIZ 価格マスタシートから自費メニューマスタを取得する。
  * Phase 3: JBIZ正本参照方式（2026-03-23）
  *   - SpreadsheetApp.openById で JBIZ を直接参照
  *   - 確定状況 = "確定" の行のみ返す
@@ -3225,9 +3255,9 @@ function getSelfPayMenuMaster_V3() {
 
   try {
     var jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
-    var sh = jbizSS.getSheetByName(JBIZ_MENU_SHEET);
+    var sh = getJBIZMenuSheet_(jbizSS);
     if (!sh) {
-      Logger.log("getSelfPayMenuMaster_V3: JBIZ シートなし [" + JBIZ_MENU_SHEET + "] → fallback");
+      Logger.log("getSelfPayMenuMaster_V3: JBIZ 価格マスタシートなし → fallback");
       return fallback;
     }
     var data = sh.getDataRange().getValues();
@@ -3264,9 +3294,15 @@ function getSelfPayMenuMaster_V3() {
  */
 function setupJBIZMenuMasterId_V3() {
   var jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
-  var sh = jbizSS.getSheetByName(JBIZ_MENU_SHEET);
+  var sh = getJBIZMenuSheet_(jbizSS);
   if (!sh) {
-    SpreadsheetApp.getUi().alert("JBIZ シートが見つかりません: " + JBIZ_MENU_SHEET);
+    var actualNames = jbizSS.getSheets().map(function(s) { return s.getName(); }).join(", ");
+    SpreadsheetApp.getUi().alert(
+      "JBIZ 価格マスタシートが見つかりません。\n"
+      + "探した候補: " + JBIZ_MENU_SHEET_CANDIDATES.join(" / ") + "\n"
+      + "実在シート名: " + actualNames + "\n\n"
+      + "JBIZ_MENU_SHEET_CANDIDATES に正しいシート名を追加してください。"
+    );
     return;
   }
   var data = sh.getDataRange().getValues();
@@ -3307,7 +3343,7 @@ function migrateJBIZMemberRules_V3() {
   var ui = SpreadsheetApp.getUi();
   var res = ui.alert(
     "JBIZ 会員優待ルール移行",
-    "「メニューマスタ（価格設定）」の17行目以降で menu_id が空の行を\n"
+    "「" + JBIZ_MENU_SHEET_CANDIDATES.join(" / ") + "」の17行目以降で menu_id が空の行を\n"
     + "「会員優待ルール」シートへコピーし、元行をクリアします。\n\n"
     + "実行前にスプレッドシートをバックアップしてください。続行しますか？",
     ui.ButtonSet.YES_NO
@@ -3315,8 +3351,16 @@ function migrateJBIZMemberRules_V3() {
   if (res !== ui.Button.YES) return;
 
   var jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
-  var srcSh = jbizSS.getSheetByName(JBIZ_MENU_SHEET);
-  if (!srcSh) { ui.alert("元シートが見つかりません: " + JBIZ_MENU_SHEET); return; }
+  var srcSh = getJBIZMenuSheet_(jbizSS);
+  if (!srcSh) {
+    var actualNames = jbizSS.getSheets().map(function(s) { return s.getName(); }).join(", ");
+    ui.alert(
+      "元シートが見つかりません。\n"
+      + "探した候補: " + JBIZ_MENU_SHEET_CANDIDATES.join(" / ") + "\n"
+      + "実在シート名: " + actualNames
+    );
+    return;
+  }
 
   // 「会員優待ルール」シートを作成（なければ新規）
   var dstSh = jbizSS.getSheetByName("会員優待ルール");
@@ -3324,7 +3368,7 @@ function migrateJBIZMemberRules_V3() {
     dstSh = jbizSS.insertSheet("会員優待ルール");
     dstSh.getRange(1, 1).setValue("# JBIZ 会員優待ルール（メニューマスタから移行）");
     dstSh.getRange(2, 1).setValue("移行日: " + Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd"));
-    dstSh.getRange(3, 1).setValue("元シート: " + JBIZ_MENU_SHEET);
+    dstSh.getRange(3, 1).setValue("元シート: " + srcSh.getName());
   }
 
   var data = srcSh.getDataRange().getValues();
