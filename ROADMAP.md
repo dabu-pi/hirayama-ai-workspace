@@ -277,27 +277,47 @@
 
 ---
 
-## 腰痛評価シートシステム JEVAL-01 `low-back-assessment/`
+## 運動器初期評価システム JASSESS-01 `msk-assessment-platform/`
 
-**現状:** 設計フェーズ完了（2026-03-23）。Phase 1（シート自動生成）待機中。
+*旧称: 腰痛評価シートシステム JEVAL-01 / 旧フォルダ: low-back-assessment/*
 
-| # | フェーズ | タスク | ステータス |
-|---|---|---|---|
-| P0-1 | Phase 0 | SPEC.md / SHEET_DESIGN.md / LOGIC.md / COMMENT_DESIGN.md / CLINICAL_OPERATION.md 作成 | ✅ 完了 |
-| P0-2 | Phase 0 | gas/setup_sheets.js（GAS雛形）作成 | ✅ 完了 |
-| P1-1 | Phase 1 | setup_sheets.js を Apps Script エディタで実行 → 8シート生成 | ⏸ 待機 |
-| P1-2 | Phase 1 | スプレッドシートID取得 → PROJECT_STATUS.md / CLAUDE.md 更新 | ⏸ 待機 |
-| P1-3 | Phase 1 | 基本入力動作確認（プルダウン・チェックボックス・自動計算） | ⏸ 待機 |
-| P2-1 | Phase 2 | 判定ロジックシートの数式実装（LOGIC.md Step 1〜7） | ⏸ 待機 |
-| P2-2 | Phase 2 | コメントマスタ充填（COMMENT_DESIGN.md の全テンプレ） | ⏸ 待機 |
-| P2-3 | Phase 2 | onEdit トリガー実装 → コメント自動生成 | ⏸ 待機 |
-| P3-1 | Phase 3 | saveToHistory() の必須項目バリデーション強化 | ⏸ 待機 |
-| P3-2 | Phase 3 | 評価履歴シートへの転記・確認テスト | ⏸ 待機 |
-| P4-1 | Phase 4 | 実臨床テスト（5症例以上）| ⏸ 待機 |
-| P4-2 | Phase 4 | 評価基準・コメントの微調整 | ⏸ 待機 |
-| P5-1 | Phase 5 | Claude API 連携実装（AI判定用出力シート → API呼び出し → 返却） | ⏸ 待機 |
-| P6-1 | Phase 6 | タブレット入力UI最適化 | ⏸ 待機 |
+**現状:** 設計・全体基盤整理完了（2026-03-23）。Phase 1（腰痛評価モジュール実装）待機中。
+
+### Phase 0（完了）: 設計・全体基盤整理
+
+| # | タスク | ステータス |
+|---|---|---|
+| P0-1 | SPEC.md / SHEET_DESIGN.md / LOGIC.md / COMMENT_DESIGN.md / CLINICAL_OPERATION.md 作成 | ✅ 完了 |
+| P0-2 | gas/setup_sheets.js（腰痛モジュール GAS雛形）作成 | ✅ 完了 |
+| P0-3 | JASSESS-01 / msk-assessment-platform へ再整理・全体基盤構造化 | ✅ 完了 |
+| P0-4 | DESIGN_DECISIONS.md（設計判断の記録）作成 | ✅ 完了 |
+| P0-5 | modules/low-back/README.md（腰痛モジュール仕様）作成 | ✅ 完了 |
+
+### Phase 1: 腰痛評価モジュール実装（待機中）
+
+| # | タスク | ステータス |
+|---|---|---|
+| P1-1 | setup_sheets.js を Apps Script エディタで実行 → 8シート生成 | ⏸ 待機 |
+| P1-2 | スプレッドシートID取得 → PROJECT_STATUS.md 更新 | ⏸ 待機 |
+| P1-3 | 基本入力動作確認（プルダウン・赤旗アラート・自動計算） | ⏸ 待機 |
+| P1-4 | 判定ロジックシートの数式実装（LOGIC.md 腰痛固有ロジック） | ⏸ 待機 |
+| P1-5 | コメントマスタ充填（COMMENT_DESIGN.md の全テンプレ） | ⏸ 待機 |
+| P1-6 | onEdit トリガー実装 → コメント自動生成 | ⏸ 待機 |
+| P1-7 | saveToHistory() の必須項目バリデーション強化 | ⏸ 待機 |
+| P1-8 | 実臨床テスト（5症例以上） | ⏸ 待機 |
+| P1-9 | 評価基準・コメントの微調整 | ⏸ 待機 |
+
+### 将来フェーズ（拡張モジュール）
+
+| フェーズ | 内容 | 着手条件 |
+|---|---|---|
+| Phase 2 | 頸部・肩こり評価モジュール（modules/neck-shoulder/） | Phase 1 実臨床テスト完了後 |
+| Phase 3 | 膝慢性痛評価モジュール（modules/knee/） | Phase 2 完了後 |
+| Phase 4a | 姿勢評価モジュール（modules/posture/） | Phase 3 完了後 |
+| Phase 4b | 高齢者機能・移乗評価モジュール（modules/elderly-function/） | Phase 3 完了後 |
+| Phase 5 | Claude API連携 → AI判定層実装 | Phase 1〜2 実臨床データ蓄積後 |
+| Phase 6 | タブレット入力UI最適化 | Phase 5 完了後 |
 
 ---
 
-最終更新: 2026-03-23（腰痛評価シートシステム JEVAL-01 設計フェーズ完了・Phase 0 全タスク完了）
+最終更新: 2026-03-23（JASSESS-01 / msk-assessment-platform に再整理 / Phase 0 全完了）

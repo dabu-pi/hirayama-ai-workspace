@@ -1,5 +1,9 @@
 /**
- * setup_sheets.js — 腰痛評価シート自動生成 GAS (JEVAL-01)
+ * setup_sheets.js — 運動器初期評価システム Phase 1: 腰痛評価モジュール シート自動生成 GAS
+ *
+ * システム: JASSESS-01 運動器初期評価システム (msk-assessment-platform)
+ * フェーズ: Phase 1 = 腰痛評価モジュール
+ * 将来: Phase 2〜でモジュール追加時は setup_{module}.js を追加する方針
  *
  * 使い方:
  *   1. Google スプレッドシートを新規作成する
@@ -11,9 +15,13 @@
  * 注意:
  *   - 既存シートがある場合は上書きされる
  *   - 閾値・選択肢はすべて「設定」シートで管理する（コード内に固定値を持たない）
- *   - clasp 管理対象として workspace/low-back-assessment/gas/ に保管する
+ *   - clasp 管理対象として workspace/msk-assessment-platform/gas/ に保管する
  *
- * 最終更新: 2026-03-23
+ * シート構成:
+ *   【共通基盤】設定 / 患者マスタ / 評価履歴 / コメントマスタ / AI判定用出力 / スタッフマスタ
+ *   【腰痛モジュール】腰痛評価入力 / 判定ロジック
+ *
+ * 最終更新: 2026-03-23（JEVAL-01 → JASSESS-01 / msk-assessment-platform へ移行）
  */
 
 // ========== 定数 ==========
@@ -61,7 +69,7 @@ function setupAllSheets() {
 
   // 完了メッセージ
   SpreadsheetApp.getUi().alert(
-    'セットアップ完了！\n\n' +
+    '[JASSESS-01] Phase 1 腰痛評価モジュール セットアップ完了！\n\n' +
     'スプレッドシートIDをコピーして PROJECT_STATUS.md に記録してください:\n' +
     ss.getId()
   );
