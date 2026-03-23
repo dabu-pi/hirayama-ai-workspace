@@ -47,6 +47,7 @@
 | 8 | KPI実績履歴 | KPI実績の履歴保管 | 手入力 / 保管 |
 | 9 | KPI逆算履歴 | 逆算条件の履歴保管 | 手入力 / 保管 |
 | 10 | 未確定項目 | 未確定事項・保留項目の管理 | 手入力 |
+| 11 | 初回評価設計 | 症状別初回評価3メニューの現場導線設計（✅ 2026-03-23 新規追加）| 参照 / 仮表示含む |
 
 ---
 
@@ -230,6 +231,7 @@
 
 | 日付 | 内容 |
 |---|---|
+| 2026-03-23 | 「初回評価設計」シート新規作成（sheetId=253470054）。37行×7列。上段=共通設定 / 中段=3メニュー比較表（腰痛✅/首肩こり✅/膝⚠️仮）+ 右側に次提案判定ルール / 下段=20分版フロー / 最下段=対象外注意。膝の体験種目は未試行のため⚠️仮表示。会員価格2,800円（仮）を記載。scripts/apply-jbiz04-eval-menu-design-sheet.mjs 新規作成。慢性疼痛_管理表_STATUS.md / menu-master-redesign.md / SHEET_DESIGN.md 更新。 |
 | 2026-03-23 | 症状別初回評価 3メニューを価格設定シートに反映（Row 29〜31）。menu_id付与（SELF_EVAL_LOWBACK30/NECKSHOULDER30/KNEE30）。一般料金3,300円/会員2,800円（仮）/主力手技フラグFALSE/KPI集計○/確定状況仮。未確定項目No.10追加（会員価格最終確定）。pricing.md / menu-master-redesign.md 整合更新。scripts/apply-jbiz04-pricing-eval-menus.mjs 新規作成。KPI逆算参照範囲K4:K15 への影響なし（TRUE=1件維持）。 |
 | 2026-03-22 | 「運用メモ」シート live 反映完了（sheetId: 2125870695）。日次メモ記録方法（自費件数・延べ回数・ジム利用者数・案内人数）/ 院長アクション3件 / 運用スケジュール（4/1開始・4月末初回判定）/ 月末10分手順 / 判定目安を1シートに集約。院長アクション③「機器リース」→ 数値前提!B14の現状値で固定して進めるに確定。scripts/apply-jbiz04-operation-runbook-sheet.mjs 新規作成。operation-runbook.md 更新。PROJECT_STATUS.md・慢性疼痛_管理表_STATUS.md 更新。Dashboard（Projects/Run_Log）更新。次アクション: 院長が①③を4/1までに実施。 |
 | 2026-03-22 | 運用セット整備完了。operations/operation-runbook.md 新規作成。日次（5分・紙メモ）/ 週次（5〜10分・ペース確認）/ 月末（10分・D5/D6入力→損益判定）のフローを記録。担当分担（院長/ジムスタッフ/受付/Claude Code）・運用開始チェックリスト5項目・月末判定簡易フロー作成。PROJECT_STATUS.md・慢性疼痛_管理表_STATUS.md 更新。Dashboard（Projects/Run_Log）更新。院長アクション残り3件（スタッフ周知・D5/D6確認・機器リース確認）。 |
