@@ -1,13 +1,13 @@
 ---
-name: resume
-description: 新しい Claude Code セッション開始時・別PC引き継ぎ時に、現在地・未完了・次アクションを即座に把握する。引数で -ProjectId を指定すると特定案件のみ絞り込める。
+name: project-resume
+description: 別PC引き継ぎ・長期ブランク後のプロジェクト再開整理スキル。Git状態・ROADMAP・STATUS.mdを読み込み、進行中案件の現在地・未完了タスク・次アクションを即座に整理する。引数で -ProjectId を指定すると特定案件のみ絞り込める。
 argument-hint: "[-ProjectId <id>] [-Quick] [-Focus <keyword>]"
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
-# resume — セッション再開スキル
+# project-resume — プロジェクト再開整理スキル
 
-**用途:** 新しい Claude Code セッション開始時・別PC引き継ぎ時に、現在地・未完了・次アクションを即座に把握する。
+**用途:** 別PC引き継ぎ・長期ブランク後に、進行中プロジェクトの現在地・未完了タスク・次アクションを即座に整理する。
 
 ---
 
@@ -45,7 +45,7 @@ git status
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SESSION RESUME
+PROJECT RESUME
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BRANCH:      <現在ブランチ名>
 LAST_COMMIT: <最終コミットID（7桁）> — <コミットメッセージ>
@@ -87,10 +87,10 @@ NOTES:
 ## 使用例
 
 ```
-/resume
-/resume -ProjectId JASSESS-01
-/resume -Quick
-/resume -Focus 慢性疼痛
+/project-resume
+/project-resume -ProjectId JASSESS-01
+/project-resume -Quick
+/project-resume -Focus 慢性疼痛
 ```
 
 ---
