@@ -338,9 +338,17 @@
         items.push({menuId: menuId, menuName: menuName, unitPrice: price, qty: qty});
       });
 
-      if (hasError || items.length === 0) {
+      if (hasError) {
         statusMsg.textContent = 'メニューを選択してください。';
         return;
+      }
+      // 全件削除保存: confirm で意図確認してから items=[] のまま保存ルートへ進める。
+      // サーバー側 saveSelfPayDetails_V3_ は items=[] を正しく処理できる
+      // （既存行を全削除し D7/F7 クリア・H8="未入力" に戻す）。
+      if (items.length === 0) {
+        if (!window.confirm('自費明細を全件削除します。\nD7/F7 がクリアされ H8 が「未入力」に戻ります。よろしいですか？')) {
+          return;
+        }
       }
 
       saveBtn.disabled = true;
