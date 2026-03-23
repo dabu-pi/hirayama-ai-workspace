@@ -172,12 +172,11 @@ const HEADER_COLS = {
   caseKey: "caseKey",
   caseIndex: "caseIndex",
   accountingType: "会計区分",
-  selfPayMenuType: "自費メニュー区分",
-  selfPayAmount: "自費売上額",
+  // selfPayMenuType / selfPayAmount / selfPayMenuCode は 2026-03-23 撤去。
+  // 自費明細シートが正本。二重管理・陳腐化防止のため来院ヘッダから除外。
   chronicCandidateFlag: "慢性候補フラグ",
   nextReservation: "次回予約あり",
   firstVisitType: "新規区分",
-  selfPayMenuCode: "自費メニューコード",  // Phase 0 追加: 将来拡張用。空欄可。
   // HIGH-2: 同日2ケース活性時の第2ケースキー（通常は空）
   caseKey2: "caseKey2",
   // mixed case 説明性列（来院ヘッダの監査・見返し用）
@@ -191,7 +190,7 @@ const HEADER_COLS = {
 /** ===== 設定シートの選択肢マスタ（E:I） ===== */
 const SETTINGS_CHOICE_MASTERS = [
   { col: 5, label: "会計区分", values: ["保険のみ", "保険+自費", "自費のみ"] },
-  { col: 6, label: "自費メニュー区分", values: ["手技50分", "運動療法", "セルフケア", "ジム体験", "その他"] },
+  // col:6 「自費メニュー区分」は 2026-03-23 撤去（自費明細シートのメニュー名が正本）
   { col: 7, label: "慢性候補フラグ", values: ["TRUE", "FALSE"] },
   { col: 8, label: "次回予約あり", values: ["TRUE", "FALSE"] },
   // 新規区分は空欄運用を許容するため、マスタには実値のみ置く。
@@ -201,7 +200,7 @@ const SETTINGS_CHOICE_MASTERS = [
 /** ===== 来院ヘッダ入力候補（設定シート E:I を参照） ===== */
 const HEADER_CHOICE_VALIDATIONS = [
   { headerName: HEADER_COLS.accountingType, settingsCol: 5, helpText: "設定シートE列の候補から選択します。" },
-  { headerName: HEADER_COLS.selfPayMenuType, settingsCol: 6, helpText: "設定シートF列の候補から選択します。" },
+  // selfPayMenuType は 2026-03-23 撤去（来院ヘッダから除外・自費明細が正本）
   { headerName: HEADER_COLS.chronicCandidateFlag, settingsCol: 7, helpText: "設定シートG列の TRUE / FALSE を使います。" },
   { headerName: HEADER_COLS.nextReservation, settingsCol: 8, helpText: "設定シートH列の TRUE / FALSE を使います。" },
   { headerName: HEADER_COLS.firstVisitType, settingsCol: 9, helpText: "設定シートI列の候補から選択します。空欄のままでも保持できます。" },
@@ -999,14 +998,12 @@ function saveVisit_V3() {
     case1Summary: amounts.case1Summary || "",
     case2Summary: amounts.case2Summary || "",
     chargeReason: amounts.chargeReason || "",
-    // Phase 0: 自費・経営情報（保険算定とは独立。来院合計には混入しない）
+    // 来院性質（保険算定とは独立。来院合計には混入しない）
+    // selfPayMenuType / selfPayAmount / selfPayMenuCode は 2026-03-23 撤去（自費明細シートが正本）
     accountingType:       selfPayInfo.accountingType,
-    selfPayMenuType:      selfPayInfo.selfPayMenuType,
-    selfPayAmount:        selfPayInfo.selfPayAmount,
     chronicCandidateFlag: selfPayInfo.chronicCandidateFlag,
     nextReservation:      selfPayInfo.nextReservation,
     firstVisitType:       selfPayInfo.firstVisitType,
-    selfPayMenuCode:      selfPayInfo.selfPayMenuCode,
   });
 
   // ④ 施術明細upsert（保険処理ありの場合のみ）
@@ -1097,14 +1094,10 @@ function appendHeaderRow_V3_(headSh, headMap, obj) {
   setByName_(rowArr, headMap, HEADER_COLS.caseIndex, obj.caseIndex);
   // 保険算定の「区分」とは別に、経営KPI用の会計区分を保持する（Phase 0: UIから読み取り）
   setByName_(rowArr, headMap, HEADER_COLS.accountingType, obj.accountingType != null ? obj.accountingType : "");
-  setByName_(rowArr, headMap, HEADER_COLS.selfPayMenuType, obj.selfPayMenuType != null ? obj.selfPayMenuType : "");
-  setByName_(rowArr, headMap, HEADER_COLS.selfPayAmount, obj.selfPayAmount != null ? obj.selfPayAmount : "");
+  // selfPayMenuType / selfPayAmount / selfPayMenuCode は 2026-03-23 撤去
   setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, obj.chronicCandidateFlag != null ? obj.chronicCandidateFlag : "");
   setByName_(rowArr, headMap, HEADER_COLS.nextReservation, obj.nextReservation != null ? obj.nextReservation : "");
   setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, obj.firstVisitType != null ? obj.firstVisitType : "");
-  if (headMap[HEADER_COLS.selfPayMenuCode]) {
-    setByName_(rowArr, headMap, HEADER_COLS.selfPayMenuCode, obj.selfPayMenuCode != null ? obj.selfPayMenuCode : "");
-  }
   // HIGH-2: 同日2ケース活性時に第2ケースキーを記録（通常空）
   setByName_(rowArr, headMap, HEADER_COLS.caseKey2, obj.caseKey2 != null ? obj.caseKey2 : "");
   // mixed case 説明性列（列が存在しない場合は setByName_ が無視する）
@@ -1778,8 +1771,7 @@ function exportHeaderFromCases_V3() {
     setByName_(rowArr, headMap, HEADER_COLS.caseKey, caseKey);
     setByName_(rowArr, headMap, HEADER_COLS.caseIndex, caseIndex);
     setByName_(rowArr, headMap, HEADER_COLS.accountingType, "");
-    setByName_(rowArr, headMap, HEADER_COLS.selfPayMenuType, "");
-    setByName_(rowArr, headMap, HEADER_COLS.selfPayAmount, "");
+    // selfPayMenuType / selfPayAmount は 2026-03-23 撤去
     setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, "");
     setByName_(rowArr, headMap, HEADER_COLS.nextReservation, "");
     setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, "");
@@ -1937,22 +1929,18 @@ function clearAmountsUI_V3_(uiSh) {
 
 /** ===== 患者画面から自費・経営情報を読み込む（Phase 0） ===== */
 function readSelfPayFromUI_V3_(uiSh) {
+  // selfPay_menuType(D7) / selfPay_amount(F7) / selfPay_menuCode(H8) は
+  // 自費明細ダイアログの表示専用。来院ヘッダへの書き込みは 2026-03-23 撤去。
   var accType  = String(uiSh.getRange(UI.selfPay_accountingType).getValue() || "").trim();
-  var menuType = String(uiSh.getRange(UI.selfPay_menuType).getValue() || "").trim();
-  var amount   = uiSh.getRange(UI.selfPay_amount).getValue();
   var chronic  = uiSh.getRange(UI.selfPay_chronicFlag).getValue() === true;
   var nextResv = uiSh.getRange(UI.selfPay_nextReserv).getValue() === true;
   var fvType   = String(uiSh.getRange(UI.selfPay_firstVisitType).getValue() || "").trim();
-  var menuCode = String(uiSh.getRange(UI.selfPay_menuCode).getValue() || "").trim();
 
   return {
     accountingType:       accType,
-    selfPayMenuType:      menuType,
-    selfPayAmount:        (typeof amount === "number" && amount > 0) ? amount : "",
     chronicCandidateFlag: chronic,
     nextReservation:      nextResv,
     firstVisitType:       fvType,
-    selfPayMenuCode:      menuCode,
   };
 }
 
