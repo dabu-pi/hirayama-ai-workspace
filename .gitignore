@@ -28,6 +28,7 @@ desktop.ini
 ~$*
 *.tmp
 *.bak
+tmp/
 
 # ログ・一時ファイル
 flask_log.txt
