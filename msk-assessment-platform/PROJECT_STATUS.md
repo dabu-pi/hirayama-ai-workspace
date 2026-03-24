@@ -145,7 +145,8 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
-| 2026-03-24 | TC-J02〜J10 PASS記録・PROJECT_STATUS.md 実機確認メモ整理 | （このコミット） |
+| 2026-03-25 | TC-J01b 不一致の根本原因特定・C52/C65 数式修正（COUNTIF→空欄ガード付き）・LOGIC.md/TESTCASES.md/PROJECT_STATUS.md 更新 | （このコミット） |
+| 2026-03-24 | TC-J02〜J10 PASS記録・PROJECT_STATUS.md 実機確認メモ整理 | 5071d46 |
 | 2026-03-24 | openById()修正・C88転倒リスク数式修正・実機確認WIPメモ追加 | be90df3 |
 | 2026-03-24 | clasp リンク設定・appsscript.json 追加・Apps Script へ push（3ファイル反映） | dc12d6d |
 | 2026-03-24 | 実機確認準備（TC-J 設計検証・期待値訂正・入力パターン表・onEdit ガイド） | 623558d |
@@ -180,16 +181,22 @@
 | `runLogicAll()` が standalone GAS で動かない（`getActiveSpreadsheet()` 取得不全） | `openById()` に変更・反映済み（be90df3） |
 | `C88` 転倒リスク数式：空欄でも「高」判定になる | `AND(C84<>"",C84<>"自立")` に修正済み（be90df3） |
 
+### 発見した不具合・修正済み（追記 2026-03-25）
+| 不具合 | 対応 |
+|---|---|
+| `C52`（RMDQ合計）・`C65`（STarT合計）が全空欄でも `0` を返し `START_LOW=true` になる | `COUNTIF` → `IF(COUNTA=0,"",COUNTIF)` に修正（`setup_sheets.js` 修正済み） |
+| TC-J01b 実機結果が branch12（運動療法開始）になり期待値 branch14 と不一致 | 上記数式修正により解消見込み。実機の C52/C65 を手動修正後に再確認が必要 |
+
 ### 未完了
 | 項目 | 状況 |
 |---|---|
-| TC-J01b（CHRONIC+STarT未入力） | 入力設定途中（C56を空欄化済み・C57〜C64が残り） |
+| TC-J01b（CHRONIC+STarT未入力） | **実機シートの C52/C65 数式を手動修正後に再確認が必要**（手順は TESTCASES.md に記載） |
 | TC-J01（CHRONIC+STarT低） | 未着手 |
 | `clearInputSheet()` | `getUi()` 起因でスタンドアロン不安定・未修正 |
 
 ### 次に最初にやること
-1. C57〜C64 を空欄化
-2. `runLogicAll()` 実行 → TC-J01b 確認
-3. TC-J01 入力 → 確認
+1. 実機シートの C52 と C65 を手動で数式修正（TESTCASES.md「TC-J01b 不一致の根本原因と修正」参照）
+2. C42〜C64 全空欄で `runLogicAll()` 実行 → TC-J01b 再確認 → PASS なら記録
+3. TC-J01 入力（STarT=2点）→ `runLogicAll()` 実行 → 確認
 4. TESTCASES.md に TC-J01b・TC-J01 結果を記録
 5. PROJECT_STATUS.md ステータスを「実機確認完了」に更新 → commit/push

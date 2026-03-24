@@ -332,7 +332,8 @@ function setupInputSheet(ss) {
 
   sheet.getRange(52, 2).setValue('RMDQ-10 合計スコア（自動）').setFontWeight('bold');
   setAutoCell(sheet, 52, 3,
-    '=COUNTIF(C42:C51,"はい(1)")');
+    '=IF(COUNTA(C42:C51)=0,"",COUNTIF(C42:C51,"はい(1)"))');
+  // ↑ 全空欄のとき "" を返す（logic_engine.js の toNum() が null と判定し、未入力と0点を区別するため）
   sheet.getRange(53, 2).setValue('RMDQ判定（自動）').setFontWeight('bold');
   setAutoCell(sheet, 53, 3,
     '=IF(C52="","",IF(C52>=8,"重度障害（8〜10）",IF(C52>=4,"中等度障害（4〜7）","軽度障害（0〜3）")))');
@@ -358,7 +359,8 @@ function setupInputSheet(ss) {
   });
 
   sheet.getRange(65, 2).setValue('STarT合計スコア（自動）').setFontWeight('bold');
-  setAutoCell(sheet, 65, 3, '=COUNTIF(C56:C64,"はい(1)")');
+  setAutoCell(sheet, 65, 3, '=IF(COUNTA(C56:C64)=0,"",COUNTIF(C56:C64,"はい(1)"))');
+  // ↑ 全空欄のとき "" を返す（logic_engine.js の toNum() が null と判定し、未入力と0点を区別するため）
   sheet.getRange(66, 2).setValue('STarT判定（自動）').setFontWeight('bold');
   setAutoCell(sheet, 66, 3,
     '=IF(C65="","",IF(C65>=6,"高リスク（6〜9）",IF(C65>=4,"中リスク（4〜5）","低リスク（0〜3）")))');
