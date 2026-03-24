@@ -466,18 +466,20 @@ function setupInputSheet(ss) {
   commentRows.forEach(([row, label]) => {
     sheet.getRange(row, 2).setValue(label).setFontWeight('bold');
     sheet.getRange(row, 3).setBackground(COLORS.AUTO)
-         .setValue('（LOGIC実装後に自動生成 — Phase 2）')
+         .setValue('（runLogicAll() 実行後に自動更新）')
          .setFontColor('#888888');
-    sheet.setRowHeight(row, 60);
+    sheet.setRowHeight(row, 80);
   });
 
   sheet.getRange(108, 2).setValue('再評価予定日').setFontWeight('bold');
   sheet.getRange(108, 3).setBackground(COLORS.MANUAL);
 
-  // ---- セクション L: 操作ボタン（将来GAS連携） ----
+  // ---- セクション L: 操作ボタン ----
   setHeader(sheet, 110, 2, 'L. 操作', 2);
-  sheet.getRange(111, 2).setValue('→ 評価入力をクリアする場合: clearInputSheet() を実行').setFontStyle('italic').setFontColor('#888888');
-  sheet.getRange(112, 2).setValue('→ 記録確定（評価履歴へ転記）: saveToHistory() を実行').setFontStyle('italic').setFontColor('#888888');
+  sheet.getRange(111, 2).setValue('→ 判定を更新（コメント再生成）: runLogicAll() を実行').setFontStyle('italic').setFontColor('#444444');
+  sheet.getRange(112, 2).setValue('→ 評価入力をクリアする場合: clearInputSheet() を実行').setFontStyle('italic').setFontColor('#888888');
+  sheet.getRange(113, 2).setValue('→ 記録確定（評価履歴へ転記）: saveToHistory() を実行').setFontStyle('italic').setFontColor('#888888');
+  sheet.getRange(115, 2).setValue('※ 入力中は onEdit トリガーが自動で runLogicAll() を呼び出します（トリガー設定済みの場合）').setFontSize(9).setFontColor('#888888');
 
   sheet.setFrozenRows(1);
 }
