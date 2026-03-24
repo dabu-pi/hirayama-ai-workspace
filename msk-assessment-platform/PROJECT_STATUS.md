@@ -47,6 +47,8 @@
 | 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール** |
 | ステータス | Phase 1 実機確認中（TC-J01〜J10 未実施） |
 | スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
+| Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
+| clasp 設定 | `gas/.clasp.json`（gitignore対象）/ `gas/appsscript.json`（コミット済み）|
 
 ---
 
@@ -143,7 +145,8 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
-| 2026-03-24 | 実機確認準備（TC-J 設計検証・期待値訂正・入力パターン表・onEdit ガイド） | （このコミット） |
+| 2026-03-24 | clasp リンク設定・appsscript.json 追加・Apps Script へ push（3ファイル反映） | （このコミット） |
+| 2026-03-24 | 実機確認準備（TC-J 設計検証・期待値訂正・入力パターン表・onEdit ガイド） | 623558d |
 | 2026-03-24 | Phase 1 ルールベース判定ロジック実装（logic_engine.js 新規 / LOGIC.md / TESTCASES.md 更新） | 08e4d3e |
 | 2026-03-24 | TESTCASES.md 新規作成・TC-H01〜H05 PASS 記録 | 117e097 |
 | 2026-03-24 | 動作評価まとめ判定バグ修正（全正常→正常・重症度ベース4段階） | 850e7ad |
