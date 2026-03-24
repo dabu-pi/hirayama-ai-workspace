@@ -400,8 +400,10 @@ function setupInputSheet(ss) {
   sheet.getRange(80, 2).setValue('動作時痛の方向').setFontWeight('normal');
   setDropdown(sheet, 80, 3, ['なし', '前屈時', '後屈時', '側屈時', '複合']);
   sheet.getRange(81, 2).setValue('動作評価まとめ（自動）').setFontWeight('bold');
+  // 重症度ベース判定: 著明制限1つ→重度 / 中等度1つ or 軽度2つ→中等度 / 軽度1つ→軽度 / 全正常→正常
+  // C76〜C79（前屈・後屈・右側屈・左側屈）の4項目すべてを参照
   setAutoCell(sheet, 81, 3,
-    '=IF(AND(C76="著明制限",C77="著明制限"),"全方向制限型",IF(OR(C76="著明制限",C76="中等度制限"),"屈曲優位制限型",IF(OR(C77="著明制限",C77="中等度制限"),"伸展優位制限型","軽度制限型")))');
+    '=IF(COUNTIF(C76:C79,"著明制限")>=1,"重度制限型",IF(OR(COUNTIF(C76:C79,"中等度制限")>=1,COUNTIF(C76:C79,"軽度制限")>=2),"中等度制限型",IF(COUNTIF(C76:C79,"軽度制限")>=1,"軽度制限型","正常")))');
 
   // ---- セクション I: 移乗動作 ----
   setHeader(sheet, 83, 2, 'I. 移乗動作評価', 2);
