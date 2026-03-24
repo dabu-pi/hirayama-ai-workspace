@@ -153,3 +153,40 @@
 | 2026-03-24 | Phase 1 セットアップ完了・スプレッドシートID記録 | 823f8e9 |
 | 2026-03-23 | JASSESS-01 / msk-assessment-platform へ再整理 | 14a1cad |
 | 2026-03-23 | プロジェクト新規作成（旧JEVAL-01） | ac5fb10 |
+
+
+## 2026-03-24 実機確認途中メモ（WIP）
+
+### 今回ここまでで確認できたこと
+- `runLogicAll()` が実機で動かない原因を修正
+- 原因は `SpreadsheetApp.getActiveSpreadsheet()` による取得不全で、`openById()` へ変更して反映済み
+- 実機で `C95` / `C99:C106` への書き込みを確認
+- 以下は実機 PASS 確認済み
+  - `TC-EMPTY01`
+  - `TC-EMPTY02`
+  - `TC-J01`
+  - `TC-J02`
+  - `TC-J03`
+  - `TC-J04`
+  - `TC-J05`
+  - `TC-J06`
+  - `TC-J07`
+  - `TC-J08`
+  - `TC-J09`
+  - `TC-J10`
+
+### 今回見つかった不具合
+- `C88` の転倒リスク数式に不具合あり
+- 空欄でも `高` 判定になる式だったため修正済み
+- 実シート側・`gas/setup_sheets.js` 側ともに修正済み
+
+### 未完了
+- `TC-J01b` は途中
+- `clearInputSheet()` は `getUi()` 起因で不安定なため未修正
+- 最終の `TESTCASES.md` 反映は未完了
+
+### 次に最初にやること
+- `C57:C64` を空欄化
+- `runLogicAll()` 実行
+- `TC-J01b` 確認
+- `TESTCASES.md` 更新

@@ -422,7 +422,7 @@ function setupInputSheet(ss) {
 
   sheet.getRange(88, 2).setValue('転倒リスク（自動）').setFontWeight('bold');
   setAutoCell(sheet, 88, 3,
-    '=IF(OR(C84<>"自立",C85="著明障害",C85="中等度障害"),"高",IF(OR(C86="不可",C87="不可"),"中","低"))');
+    '=IF(OR(AND(C84<>"",C84<>"自立"),C85="著明障害",C85="中等度障害"),"高",IF(OR(C86="不可",C87="不可"),"中","低"))');
 
   // ---- セクション J: 総合所見・判定 ----
   setHeader(sheet, 90, 2, 'J. 総合所見・施術者判定', 2);

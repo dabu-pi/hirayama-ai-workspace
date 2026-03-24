@@ -504,7 +504,7 @@ function writeResults(sheet, policy, comments) {
  *   - onEdit トリガーから自動呼び出し
  */
 function runLogicAll() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById('1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY');
   const sheet = ss.getSheetByName(SHEET_NAMES.INPUT);
   if (!sheet) {
     SpreadsheetApp.getUi().alert('腰痛評価入力シートが見つかりません。setupAllSheets() を再実行してください。');
