@@ -6,7 +6,11 @@
 
 ## 現在地
 
-- **実機確認準備完了（2026-03-24）** ← 最新
+- **Phase 1 実機確認完了（2026-03-25）** ← 最新
+  - TC-J01・TC-J01b PASS → TC-J01〜J10・TC-EMPTY01〜02 全ケース PASS
+  - C52/C65 数式バグ（全空欄で0を返す）を発見・修正・実機反映で解消
+  - 次フェーズ: onEdit トリガー設定 → 実臨床テスト（5〜10症例）
+- **実機確認準備完了（2026-03-24）**
   - TESTCASES.md 更新: TC-J01〜J10 の設計検証（期待値訂正・入力パターン早見表追加）
   - TC-J01 期待値訂正（STarT=2 → 機能改善・運動療法開始 / 旧: セルフケア習慣化 は誤り）
   - TC-J05 入力条件訂正（両側陽性→重度になる / 中等度確認は片側陽性で行う）
@@ -45,7 +49,7 @@
 | 英字フォルダ名 | **msk-assessment-platform** |
 | 目的 | 接骨院での運動器疾患評価の標準化・評価→方針→説明の一貫化・将来AI連携基盤 |
 | 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール** |
-| ステータス | Phase 1 実機確認中（TC-J01〜J10 未実施） |
+| ステータス | **Phase 1 実機確認完了 → 実臨床テスト待機中** |
 | スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
 | Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
 | clasp 設定 | `gas/.clasp.json`（gitignore対象）/ `gas/appsscript.json`（コミット済み）|
@@ -88,8 +92,8 @@
 | 基本入力動作確認（プルダウン・赤旗アラート・自動計算） | ✅ 完了（H.まとめバグ修正・再確認済み） |
 | ルールベース判定ロジック実装（LOGIC.md 準拠） | ✅ 完了（logic_engine.js 実装済み） |
 | コメント自動生成（onEdit連携） | ⏸ 実機確認後に有効化（ロジックは実装済み / トリガー設定は手動） |
-| **実機確認（TC-J01〜J10・TC-EMPTY）** | 🔄 **進行中**（TC-J02〜J10 PASS済 / TC-J01・TC-J01b 未実施） |
-| 実臨床テスト（5〜10症例） | ⏸ 実機確認完了後 |
+| **実機確認（TC-J01〜J10・TC-EMPTY）** | ✅ **完了**（TC-J01〜J10・TC-EMPTY01〜02 全 PASS / 2026-03-25） |
+| 実臨床テスト（5〜10症例） | 🔄 **次フェーズ**（onEdit トリガー設定後に開始） |
 
 ### 将来拡張モジュール（着手前）
 
@@ -130,14 +134,11 @@
 
 1. このファイルで現在地・フェーズ確認
 2. `DESIGN_DECISIONS.md` でなぜこの構造かを確認
-3. GAS実行済みかどうか確認（スプレッドシートIDが記録されているか）
-4. Phase 1 未実施なら `gas/setup_sheets.js` を Apps Script エディタで実行
-5. `TESTCASES.md` で確認済みテストを確認（TC-H01〜H05 PASS 済み）
-6. `gas/logic_engine.js` で Steps 8〜10 の判定ロジック確認
-7. **次アクション: 実機確認**
-   - Apps Script エディタで `logic_engine.js` を貼り付け（または確認）
-   - TESTCASES.md の「実機確認手順」に従って TC-J01〜J10・TC-EMPTY01〜03 を確認
-   - 全 PASS 後に onEdit トリガーを設定（TESTCASES.md「onEdit 自動トリガーについて」参照）
+3. `TESTCASES.md` で確認済みテストを確認（TC-J01〜J10・TC-EMPTY01〜02 全 PASS 済み）
+4. `gas/logic_engine.js` で Steps 8〜10 の判定ロジック確認（変更が必要な場合）
+5. **次アクション: onEdit トリガー設定 → 実臨床テスト**
+   - Apps Script エディタで onEdit トリガーを設定（TESTCASES.md「onEdit 自動トリガーについて」参照）
+   - 実臨床テスト 5〜10 症例を実施し、評価基準・コメントを微調整
 
 ---
 
@@ -145,7 +146,8 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
-| 2026-03-25 | TC-J01b 不一致の根本原因特定・C52/C65 数式修正（COUNTIF→空欄ガード付き）・LOGIC.md/TESTCASES.md/PROJECT_STATUS.md 更新 | （このコミット） |
+| 2026-03-25 | TC-J01・TC-J01b PASS確認 → Phase 1 実機確認完了 | （このコミット） |
+| 2026-03-25 | TC-J01b 不一致の根本原因特定・C52/C65 数式修正（COUNTIF→空欄ガード付き）・LOGIC.md/TESTCASES.md/PROJECT_STATUS.md 更新 | 8793fcf |
 | 2026-03-24 | TC-J02〜J10 PASS記録・PROJECT_STATUS.md 実機確認メモ整理 | 5071d46 |
 | 2026-03-24 | openById()修正・C88転倒リスク数式修正・実機確認WIPメモ追加 | be90df3 |
 | 2026-03-24 | clasp リンク設定・appsscript.json 追加・Apps Script へ push（3ファイル反映） | dc12d6d |
@@ -160,20 +162,22 @@
 
 ## 2026-03-24 実機確認メモ
 
-### PASS 確認済み（TESTCASES.md 記録済み）
-| TC | 結果 |
-|---|---|
-| TC-EMPTY01 | PASS |
-| TC-EMPTY02 | PASS |
-| TC-J02（馬尾緊急） | PASS |
-| TC-J03（赤旗） | PASS |
-| TC-J04（神経症状重度） | PASS |
-| TC-J05（神経根障害） | PASS |
-| TC-J06（行動変容・NRS中） | PASS |
-| TC-J07（行動変容・NRS低） | PASS |
-| TC-J08（疼痛管理優先） | PASS |
-| TC-J09（急性期管理） | PASS |
-| TC-J10（機能改善・運動療法） | PASS |
+### PASS 確認済み（TESTCASES.md 記録済み）— **全ケース完了**
+| TC | 結果 | 確認日 |
+|---|---|---|
+| TC-EMPTY01 | PASS | 2026-03-24 |
+| TC-EMPTY02 | PASS | 2026-03-24 |
+| TC-J01（CHRONIC+STarT低） | PASS | 2026-03-25 |
+| TC-J01b（CHRONIC+STarT未入力） | PASS | 2026-03-25 |
+| TC-J02（馬尾緊急） | PASS | 2026-03-24 |
+| TC-J03（赤旗） | PASS | 2026-03-24 |
+| TC-J04（神経症状重度） | PASS | 2026-03-24 |
+| TC-J05（神経根障害） | PASS | 2026-03-24 |
+| TC-J06（行動変容・NRS中） | PASS | 2026-03-24 |
+| TC-J07（行動変容・NRS低） | PASS | 2026-03-24 |
+| TC-J08（疼痛管理優先） | PASS | 2026-03-24 |
+| TC-J09（急性期管理） | PASS | 2026-03-24 |
+| TC-J10（機能改善・運動療法） | PASS | 2026-03-24 |
 
 ### 発見した不具合・修正済み
 | 不具合 | 対応 |
@@ -190,13 +194,12 @@
 ### 未完了
 | 項目 | 状況 |
 |---|---|
-| TC-J01b（CHRONIC+STarT未入力） | **実機シートの C52/C65 数式を手動修正後に再確認が必要**（手順は TESTCASES.md に記載） |
-| TC-J01（CHRONIC+STarT低） | 未着手 |
-| `clearInputSheet()` | `getUi()` 起因でスタンドアロン不安定・未修正 |
+| onEdit トリガー設定 | 実機確認完了後のため今すぐ実施可能（TESTCASES.md「onEdit 自動トリガーについて」参照） |
+| 実臨床テスト（5〜10症例） | onEdit トリガー設定後に開始 |
+| `clearInputSheet()` | `getUi()` 起因でスタンドアロン不安定・未修正（臨床使用に直接影響なし） |
 
 ### 次に最初にやること
-1. 実機シートの C52 と C65 を手動で数式修正（TESTCASES.md「TC-J01b 不一致の根本原因と修正」参照）
-2. C42〜C64 全空欄で `runLogicAll()` 実行 → TC-J01b 再確認 → PASS なら記録
-3. TC-J01 入力（STarT=2点）→ `runLogicAll()` 実行 → 確認
-4. TESTCASES.md に TC-J01b・TC-J01 結果を記録
-5. PROJECT_STATUS.md ステータスを「実機確認完了」に更新 → commit/push
+1. Apps Script エディタでトリガーを追加: `onEdit` → スプレッドシートから → 編集時（TESTCASES.md 参照）
+2. onEdit ありで 1 症例だけ動作確認（トリガー発火・C95 自動更新を確認）
+3. 実臨床テスト 5〜10 症例を実施
+4. 評価基準・コメントの微調整（臨床フィードバックをもとに）
