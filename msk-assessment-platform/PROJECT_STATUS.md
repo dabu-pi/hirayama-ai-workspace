@@ -88,7 +88,7 @@
 | 基本入力動作確認（プルダウン・赤旗アラート・自動計算） | ✅ 完了（H.まとめバグ修正・再確認済み） |
 | ルールベース判定ロジック実装（LOGIC.md 準拠） | ✅ 完了（logic_engine.js 実装済み） |
 | コメント自動生成（onEdit連携） | ⏸ 実機確認後に有効化（ロジックは実装済み / トリガー設定は手動） |
-| **実機確認（TC-J01〜J10・TC-EMPTY）** | ⏸ **次アクション** |
+| **実機確認（TC-J01〜J10・TC-EMPTY）** | 🔄 **進行中**（TC-J02〜J10 PASS済 / TC-J01・TC-J01b 未実施） |
 | 実臨床テスト（5〜10症例） | ⏸ 実機確認完了後 |
 
 ### 将来拡張モジュール（着手前）
@@ -145,7 +145,9 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
-| 2026-03-24 | clasp リンク設定・appsscript.json 追加・Apps Script へ push（3ファイル反映） | （このコミット） |
+| 2026-03-24 | TC-J02〜J10 PASS記録・PROJECT_STATUS.md 実機確認メモ整理 | （このコミット） |
+| 2026-03-24 | openById()修正・C88転倒リスク数式修正・実機確認WIPメモ追加 | be90df3 |
+| 2026-03-24 | clasp リンク設定・appsscript.json 追加・Apps Script へ push（3ファイル反映） | dc12d6d |
 | 2026-03-24 | 実機確認準備（TC-J 設計検証・期待値訂正・入力パターン表・onEdit ガイド） | 623558d |
 | 2026-03-24 | Phase 1 ルールベース判定ロジック実装（logic_engine.js 新規 / LOGIC.md / TESTCASES.md 更新） | 08e4d3e |
 | 2026-03-24 | TESTCASES.md 新規作成・TC-H01〜H05 PASS 記録 | 117e097 |
@@ -155,38 +157,39 @@
 | 2026-03-23 | プロジェクト新規作成（旧JEVAL-01） | ac5fb10 |
 
 
-## 2026-03-24 実機確認途中メモ（WIP）
+## 2026-03-24 実機確認メモ
 
-### 今回ここまでで確認できたこと
-- `runLogicAll()` が実機で動かない原因を修正
-- 原因は `SpreadsheetApp.getActiveSpreadsheet()` による取得不全で、`openById()` へ変更して反映済み
-- 実機で `C95` / `C99:C106` への書き込みを確認
-- 以下は実機 PASS 確認済み
-  - `TC-EMPTY01`
-  - `TC-EMPTY02`
-  - `TC-J01`
-  - `TC-J02`
-  - `TC-J03`
-  - `TC-J04`
-  - `TC-J05`
-  - `TC-J06`
-  - `TC-J07`
-  - `TC-J08`
-  - `TC-J09`
-  - `TC-J10`
+### PASS 確認済み（TESTCASES.md 記録済み）
+| TC | 結果 |
+|---|---|
+| TC-EMPTY01 | PASS |
+| TC-EMPTY02 | PASS |
+| TC-J02（馬尾緊急） | PASS |
+| TC-J03（赤旗） | PASS |
+| TC-J04（神経症状重度） | PASS |
+| TC-J05（神経根障害） | PASS |
+| TC-J06（行動変容・NRS中） | PASS |
+| TC-J07（行動変容・NRS低） | PASS |
+| TC-J08（疼痛管理優先） | PASS |
+| TC-J09（急性期管理） | PASS |
+| TC-J10（機能改善・運動療法） | PASS |
 
-### 今回見つかった不具合
-- `C88` の転倒リスク数式に不具合あり
-- 空欄でも `高` 判定になる式だったため修正済み
-- 実シート側・`gas/setup_sheets.js` 側ともに修正済み
+### 発見した不具合・修正済み
+| 不具合 | 対応 |
+|---|---|
+| `runLogicAll()` が standalone GAS で動かない（`getActiveSpreadsheet()` 取得不全） | `openById()` に変更・反映済み（be90df3） |
+| `C88` 転倒リスク数式：空欄でも「高」判定になる | `AND(C84<>"",C84<>"自立")` に修正済み（be90df3） |
 
 ### 未完了
-- `TC-J01b` は途中
-- `clearInputSheet()` は `getUi()` 起因で不安定なため未修正
-- 最終の `TESTCASES.md` 反映は未完了
+| 項目 | 状況 |
+|---|---|
+| TC-J01b（CHRONIC+STarT未入力） | 入力設定途中（C56を空欄化済み・C57〜C64が残り） |
+| TC-J01（CHRONIC+STarT低） | 未着手 |
+| `clearInputSheet()` | `getUi()` 起因でスタンドアロン不安定・未修正 |
 
 ### 次に最初にやること
-- `C57:C64` を空欄化
-- `runLogicAll()` 実行
-- `TC-J01b` 確認
-- `TESTCASES.md` 更新
+1. C57〜C64 を空欄化
+2. `runLogicAll()` 実行 → TC-J01b 確認
+3. TC-J01 入力 → 確認
+4. TESTCASES.md に TC-J01b・TC-J01 結果を記録
+5. PROJECT_STATUS.md ステータスを「実機確認完了」に更新 → commit/push
