@@ -335,3 +335,25 @@ const TRIGGER_CELLS = new Set([
 3. Run `refreshInputSheetTransferValidations()` once.
 4. Re-open each dropdown in `C84:C87`.
 5. Confirm that `C85:C87` no longer reuse the `C84` choices.
+
+## 2026-03-25 C103 selfcare wording split
+
+### Scope
+
+- This change does not modify `judgeOverallPolicy()` or the main result in `C95`.
+- The target is only the wording branch used for `C103`.
+
+### Intent
+
+- `ACUTE + NRS_HIGH` keeps the acute-phase wording.
+- `CHRONIC + NRS_HIGH` now uses a chronic high-pain wording:
+  - avoid full rest
+  - maintain activity within a tolerable range
+  - restart movement gradually
+  - support self-control of load and symptoms
+
+### Existing cases to keep stable
+
+- `TC-J08` remains a PASS case for the main policy branch `NRS_HIGH + RMDQ_MOD`.
+- `TC-J09` remains a PASS case for the main policy branch `ACUTE + NRS_MID`.
+- This fix is intended to improve `C103` wording for chronic high-pain cases without changing those policy outcomes.

@@ -190,6 +190,7 @@
 |---|---|
 | `C52`（RMDQ合計）・`C65`（STarT合計）が全空欄でも `0` を返し `START_LOW=true` になる | `COUNTIF` → `IF(COUNTA=0,"",COUNTIF)` に修正（`setup_sheets.js` 修正済み） |
 | TC-J01b 実機結果が branch12（運動療法開始）になり期待値 branch14 と不一致 | 上記数式修正により解消見込み。実機の C52/C65 を手動修正後に再確認が必要 |
+| `generateComments()` の `C103` で `flags.NRS_HIGH || flags.ACUTE` が同一分岐になり、慢性高疼痛でも急性期寄り文面になる | `logic_engine.js` の C103 分岐を `ACUTE + NRS_HIGH` / `CHRONIC + NRS_HIGH` / `ACUTE` / `NRS_HIGH` に分割。`judgeOverallPolicy()` と `C95` は変更なし。TC-J08 PASS 実績は維持、TC-J09 の急性期文面方針も維持 |
 
 ### 未完了
 | 項目 | 状況 |

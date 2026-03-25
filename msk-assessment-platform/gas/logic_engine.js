@@ -375,8 +375,14 @@ function generateComments(flags, data, policy) {
   let selfcare;
   if (flags.CAUDA || flags.REDFLAG || flags.NERVE_SEVERE) {
     selfcare = '症状が安定するまでセルフエクササイズは控えてください。\n安全な姿勢・動作（良肢位の保持）のみ指導します。';
-  } else if (flags.NRS_HIGH || flags.ACUTE) {
+  } else if (flags.ACUTE && flags.NRS_HIGH) {
     selfcare = '急性期・高強度疼痛期は安静を優先し、段階的に活動を再開します。\n・骨盤中間位での良肢位保持\n・温熱・冷却の使い分け（急性炎症期は冷却）\n・痛みの出ない範囲での軽い動き（ベッド上での膝抱え等）';
+  } else if (flags.CHRONIC && flags.NRS_HIGH) {
+    selfcare = '慢性期でも痛みが強い時期は、完全安静にしすぎず、痛みを悪化させない範囲で活動を維持します。\n・日常動作を止めすぎず、できる範囲で継続する\n・症状が落ち着く範囲の歩行や軽い体操から段階的に再開する\n・痛みの波に合わせて負荷量を調整し、セルフコントロール方法を共有する';
+  } else if (flags.ACUTE) {
+    selfcare = '急性期は安静・保護を優先し、症状に合わせて段階的に活動を再開します。\n・骨盤中間位での良肢位保持\n・温熱・冷却の使い分け（急性炎症期は冷却）\n・痛みの出ない範囲での軽い動き（ベッド上での膝抱え等）';
+  } else if (flags.NRS_HIGH) {
+    selfcare = '痛みが強い時期は、無理な運動を避けつつ、悪化しない範囲で活動量を保つことが重要です。\n・痛みの強い動作は一時的に調整する\n・短時間の歩行や軽い体操など、負担の少ない活動を継続する\n・症状に応じて負荷を段階的に上げる';
   } else if (flags.START_HIGH) {
     selfcare = '「動けない」という思い込みを修正することが大切です。\n・無理のない範囲での日常活動の継続を促す\n・腹式呼吸（リラクゼーション）の習慣化\n・「痛み＝傷が広がっている」という誤信念の修正\n・段階的に活動範囲を広げる（graded activity）';
   } else if (flags.CHRONIC && flags.START_LOW) {
