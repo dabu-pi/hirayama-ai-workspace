@@ -78,6 +78,11 @@ node scripts/inspect-jassess-live-sheet.mjs
 - live 値は `TC-EMPTY03` 相当の状態と整合
   - `C95 = 機能改善・セルフケア習慣化 — 再発予防を見据えた運動療法と生活指導`
   - `C99` のスコア行 = `【スコア】（スコア未入力）`
+- `saveToHistory()` 実行後の評価履歴も確認
+  - `E0001`
+  - `TEST`
+  - 判定文一致
+  - 評価まとめ一致
 - 結論:
   - JASSESS-01 は **実臨床テスト開始可**
 
@@ -85,7 +90,6 @@ node scripts/inspect-jassess-live-sheet.mjs
 
 ## 任意残件
 
-- `saveToHistory()` を実症例で 1 回だけ確認
 - `C84:C87` の複数セル貼り付けでも onEdit 自動更新するか追加確認
 
 ---

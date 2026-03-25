@@ -8,8 +8,8 @@ Project: JASSESS-01
 - Local files are the source of truth.
 - live Google Sheet read is now available through the shared service account.
 - JASSESS-01 is ready to begin 5-10 live clinical cases.
-- Optional remaining checks only:
-  - `saveToHistory()` one real run
+- `saveToHistory()` one real run is complete.
+- Optional remaining check only:
   - `C84:C87` multi-cell paste
 
 ## Apps Script Push
@@ -57,8 +57,7 @@ Status on 2026-03-25:
 - Start with one case only.
 - The one-case check has passed.
 - Pre-clinical checks are complete enough to begin live clinical cases.
-- Optional extra confidence checks:
-  - `saveToHistory()` one real run
+- Optional extra confidence check:
   - `C84:C87`
 - `clearInputSheet()` is now safe in UI-less execution contexts.
 - `saveToHistory()` is still intended for spreadsheet UI use.
@@ -101,3 +100,18 @@ Status on 2026-03-25:
   - `C95` readable
   - `C99:C106` readable
   - TC-EMPTY03-equivalent live state matched the expected local result
+
+## saveToHistory Check
+
+Status on 2026-03-25:
+
+- Confirmed one real run of `saveToHistory()` from spreadsheet UI
+- Confirmed history row:
+  - `E0001`
+  - `TEST`
+- Confirmed copied content:
+  - policy text matches `C95`
+  - summary text matches `C99`
+- Practical conclusion:
+  - history transfer flow is ready for live clinical use
+  - only optional remaining check is `C84:C87` multi-cell paste

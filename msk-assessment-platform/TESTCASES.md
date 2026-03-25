@@ -37,7 +37,7 @@ GAS 実機確認後はこのファイルを更新し commit / push する。
 
 ---
 
-### 未実施テスト（基本動作・転記 — Phase 1 継続確認予定）
+### 継続確認テスト（基本動作・転記）
 
 | TestId | 対象セクション | テスト内容 | 結果 | 予定日 |
 |---|---|---|---|---|
@@ -48,7 +48,7 @@ GAS 実機確認後はこのファイルを更新し commit / push する。
 | TC-E01 | E. RMDQ-10 | はい=3 → 軽度 / はい=7 → 中等度 / はい=10 → 重度 | 未実施 | — |
 | TC-F01 | F. STarT | はい=4 → 高リスク | 未実施 | — |
 | TC-I01 | I. 移乗動作 | 歩行=著明障害 → 転倒リスク=高 | 未実施 | — |
-| TC-Z01 | 全体 | 全項目入力 → 評価履歴への転記 | 未実施 | — |
+| TC-Z01 | 全体 | `saveToHistory()` 実行 → 評価履歴への転記 | PASS | 2026-03-25 |
 
 ---
 
@@ -335,13 +335,13 @@ const TRIGGER_CELLS = new Set([
 |---|---|---|---|---|---|
 | TC-LIVE01 | service account 共有後、live `腰痛評価入力` の `C95` / `C99:C106` を直接取得 | 読取成功し、ローカルで確認済みの期待値と整合する | PASS | 2026-03-25 | read path confirmed |
 | TC-LIVE02 | TC-EMPTY03 相当の live 状態を読取 | `C95=機能改善・セルフケア習慣化` / `C99` に `【スコア】（スコア未入力）` が含まれる | PASS | 2026-03-25 | `C95` と `C99:C106` 整合確認 |
+| TC-LIVE03 | `saveToHistory()` 実行後の評価履歴を live で確認 | `E0001` / `TEST` / 判定文一致 / 評価まとめ一致 | PASS | 2026-03-25 | 実機転記確認 |
 
 ### Practical conclusion
 
 - live read path is now reusable
 - JASSESS-01 is ready to begin live clinical testing
 - optional remaining checks:
-  - `saveToHistory()` one real run
   - multi-cell paste check on `C84:C87`
 
 ## 2026-03-25 C33 empty-guard fix
