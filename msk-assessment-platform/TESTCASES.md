@@ -357,3 +357,21 @@ const TRIGGER_CELLS = new Set([
 - `TC-J08` remains a PASS case for the main policy branch `NRS_HIGH + RMDQ_MOD`.
 - `TC-J09` remains a PASS case for the main policy branch `ACUTE + NRS_MID`.
 - This fix is intended to improve `C103` wording for chronic high-pain cases without changing those policy outcomes.
+
+## 2026-03-25 onEdit multi-cell paste check
+
+### Risk note
+
+- `logic_engine.js` currently uses `e.range.getA1Notation()` and checks it with `TRIGGER_CELLS.has(cell)`.
+- That works for single-cell edits such as `C42`.
+- For multi-cell paste, Apps Script can pass a range notation such as `C42:C51`.
+- In that case, the edited range may include trigger cells but still fail the current single-cell membership check.
+- This is not fixed in this update. The goal here is to leave it as an explicit pre-operation check item.
+
+### Pre-operation check item
+
+1. After installable `onEdit` trigger setup, paste into a multi-cell trigger range such as `C42:C51`.
+2. Confirm whether `C95` and `C99:C106` update automatically.
+3. Repeat once with a multi-cell paste that includes `C84:C87`.
+4. If auto-update does not occur, record it as the expected limitation of the current single-cell trigger check.
+5. Treat this as a future fix candidate before full live onEdit operation.

@@ -198,6 +198,7 @@
 | onEdit トリガー設定 | 実機確認完了後のため今すぐ実施可能（TESTCASES.md「onEdit 自動トリガーについて」参照） |
 | 実臨床テスト（5〜10症例） | onEdit トリガー設定後に開始 |
 | `clearInputSheet()` | `getUi()` 起因でスタンドアロン不安定・未修正（臨床使用に直接影響なし） |
+| onEdit の複数セル貼り付け取りこぼし | `logic_engine.js` は `e.range.getA1Notation()` を `TRIGGER_CELLS.has(cell)` で単一セル前提判定している。複数セルコピペ時は `C42:C51` のような範囲表記になり、対象セルを含んでいても trigger 判定を通らない可能性がある。今回は未修正。実運用前チェック項目・将来修正候補として保持 |
 
 ### 次に最初にやること
 1. Apps Script エディタでトリガーを追加: `onEdit` → スプレッドシートから → 編集時（TESTCASES.md 参照）
