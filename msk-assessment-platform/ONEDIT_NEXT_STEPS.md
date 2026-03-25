@@ -9,8 +9,14 @@ Project: JASSESS-01
   - `logic_engine.js`
   - `setup_sheets.js`
   - `zz_clear_input_override.js`
-- This environment could not run `clasp` directly because the `clasp` command was not installed.
-- When `clasp` is available, run the push from `msk-assessment-platform/gas`.
+- Local `clasp` binary: `C:\Users\pinsh\AppData\Roaming\npm\clasp.cmd`
+- `clasp push` was completed on 2026-03-25 from `msk-assessment-platform/gas`.
+- Reflected remote files:
+  - `appsscript.json`
+  - `logic_engine.js`
+  - `setup_sheets.js`
+  - `zz_clear_input_override.js`
+- Next human step is trigger setup and one-case verification.
 
 ## Installable Trigger
 
