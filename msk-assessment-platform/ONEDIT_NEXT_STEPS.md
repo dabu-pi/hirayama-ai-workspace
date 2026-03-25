@@ -47,7 +47,6 @@ Status on 2026-03-25:
 - Start with one case only.
 - The one-case check has passed.
 - Next checks before 5-10 clinical cases:
-  - `TC-EMPTY03`
   - optional extra confidence check on `C84:C87`
 - `clearInputSheet()` is now safe in UI-less execution contexts.
 - `saveToHistory()` is still intended for spreadsheet UI use.
@@ -60,3 +59,17 @@ Status on 2026-03-25:
 - Confirmed auto-update after multi-cell paste into `C56:C64`
 - Practical result: the known pre-check risk did not reproduce for RMDQ / STarT ranges in the live sheet
 - `C84:C87` can still be checked later if we want extra confidence before broader live use
+
+## Partial-Input Empty Check
+
+Status on 2026-03-25:
+
+- Confirmed `TC-EMPTY03`
+- Inputs:
+  - `C11 = 3か月以上`
+  - NRS / RMDQ / STarT left blank
+- Confirmed result:
+  - `C95 = 機能改善・セルフケア習慣化 — 再発予防を見据えた運動療法と生活指導`
+  - score line = `【スコア】（スコア未入力）`
+- Practical conclusion:
+  - pre-clinical checks are complete enough to begin 5-10 live clinical cases
