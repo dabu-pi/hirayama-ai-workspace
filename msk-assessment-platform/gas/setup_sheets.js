@@ -130,6 +130,45 @@ function setAutoCell(sheet, row, col, formula) {
   sheet.getRange(row, col).setFormula(formula).setBackground(COLORS.AUTO);
 }
 
+function buildInputSheetC33Formula_(sheet) {
+  const radiatingValidation = sheet.getRange('C28').getDataValidation();
+  const weaknessValidation = sheet.getRange('C31').getDataValidation();
+  const slrValidation = sheet.getRange('C32').getDataValidation();
+
+  if (!radiatingValidation || !weaknessValidation || !slrValidation) {
+    throw new Error('C33 refresh requires dropdown validation on C28, C31, and C32.');
+  }
+
+  const [radiatingChoices] = radiatingValidation.getCriteriaValues();
+  const [weaknessChoices] = weaknessValidation.getCriteriaValues();
+  const [slrChoices] = slrValidation.getCriteriaValues();
+
+  const [radiatingNone, radiatingUnilateral, radiatingBilateral] = radiatingChoices;
+  const [weaknessNone, weaknessPresent] = weaknessChoices;
+  const [slrNegative, slrPositiveRight, slrPositiveLeft, slrPositiveBilateral] = slrChoices;
+
+  const C33_NONE = '\u306a\u3057';
+  const C33_MILD = '\u8efd\u5ea6';
+  const C33_MODERATE = '\u4e2d\u7b49\u5ea6';
+  const C33_SEVERE = '\u91cd\u5ea6';
+
+  return `=IF(COUNTA(C28,C31,C32)=0,"",IF(OR(C31="${weaknessPresent}",C32="${slrPositiveBilateral}"),"${C33_SEVERE}",IF(OR(C32="${slrPositiveRight}",C32="${slrPositiveLeft}"),"${C33_MODERATE}",IF(OR(C28="${radiatingUnilateral}",C28="${radiatingBilateral}"),"${C33_MILD}",IF(AND(C28="${radiatingNone}",C31="${weaknessNone}",C32="${slrNegative}"),"${C33_NONE}","")))))`;
+}
+
+function refreshInputSheetC33Formula() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.INPUT);
+
+  if (!sheet) {
+    throw new Error('Input sheet not found.');
+  }
+
+  setAutoCell(sheet, 33, 3, buildInputSheetC33Formula_(sheet));
+  SpreadsheetApp.flush();
+
+  return { ok: true, cell: 'C33' };
+}
+
 // ========== シート 1: 設定 ==========
 
 function setupConfigSheet(ss) {
@@ -289,9 +328,10 @@ function setupInputSheet(ss) {
     setDropdown(sheet, row, 3, choices);
   });
 
+  const nerveLevelFormula = buildInputSheetC33Formula_(sheet);
+
   sheet.getRange(33, 2).setValue('神経症状レベル（自動）').setFontWeight('bold');
-  setAutoCell(sheet, 33, 3,
-    '=IF(OR(C31="あり",C32="両側陽性"),"重度",IF(OR(C32="陽性（右）",C32="陽性（左）"),"中等度",IF(C28<>"なし","軽度","なし")))');
+  setAutoCell(sheet, 33, 3, nerveLevelFormula);
 
   // ---- セクション D: NRS ----
   setHeader(sheet, 35, 2, 'D. 痛みの強度（NRS: 0〜10）', 2);

@@ -285,3 +285,30 @@ const TRIGGER_CELLS = new Set([
 - `clearInputSheet()` is UI-safe and falls back to logging when UI is unavailable.
 - `saveToHistory()` should still be used from spreadsheet UI.
 - See `ONEDIT_NEXT_STEPS.md` and `CLEAR_INPUT_CONTEXT_FIX.md` for handoff notes.
+
+## 2026-03-25 C33 empty-guard fix
+
+### Observed issue
+
+- After `clearInputSheet()`, `C28`, `C31`, and `C32` can all be blank.
+- In that state, `C33` could become `軽度`.
+- The root cause was the old `setup_sheets.js` formula using `C28 <> "なし"` for the mild branch.
+
+### Spec after fix
+
+- `C28/C31/C32` all blank -> `C33` stays blank
+- `C28=なし`, `C31=なし`, `C32=陰性` -> `C33=なし`
+- `C28=片側` or `C28=両側` -> `C33=軽度`
+- `C32=陽性（右）` or `C32=陽性（左）` -> `C33=中等度`
+- `C31=あり` or `C32=両側陽性` -> `C33=重度`
+- Partial entry without an explicit rule match -> keep `C33` blank
+
+### Quick regression check
+
+1. Run `clearInputSheet()`.
+2. Confirm `C28`, `C31`, and `C32` are blank.
+3. Confirm `C33` is blank and does not auto-change to `軽度`.
+4. Enter the normal case `C28=なし`, `C31=なし`, `C32=陰性`.
+5. Confirm `C33=なし`.
+6. Reconfirm that the known normal flow used in `TC-J01` still behaves normally.
+7. If the live sheet still has the old formula, run `refreshInputSheetC33Formula()` once from the Apps Script editor after `clasp push`.
