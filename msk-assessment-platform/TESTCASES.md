@@ -388,12 +388,19 @@ const TRIGGER_CELLS = new Set([
 - That works for single-cell edits such as `C42`.
 - For multi-cell paste, Apps Script can pass a range notation such as `C42:C51`.
 - In that case, the edited range may include trigger cells but still fail the current single-cell membership check.
-- This is not fixed in this update. The goal here is to leave it as an explicit pre-operation check item.
+- This was left as a pre-operation check item.
 
 ### Pre-operation check item
 
 1. After installable `onEdit` trigger setup, paste into a multi-cell trigger range such as `C42:C51`.
 2. Confirm whether `C95` and `C99:C106` update automatically.
-3. Repeat once with a multi-cell paste that includes `C84:C87`.
+3. Repeat once with another trigger range if needed.
 4. If auto-update does not occur, record it as the expected limitation of the current single-cell trigger check.
 5. Treat this as a future fix candidate before full live onEdit operation.
+
+### 2026-03-25 observed result
+
+- Multi-cell paste into `C42:C51` updated the sheet automatically.
+- Multi-cell paste into `C56:C64` also updated the sheet automatically.
+- In the current live sheet + trigger setup, the previously noted risk did not reproduce for RMDQ and STarT ranges.
+- `C84:C87` remains optional as an extra confidence check, but it is no longer a blocking pre-clinical item.

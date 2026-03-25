@@ -48,6 +48,15 @@ Status on 2026-03-25:
 - The one-case check has passed.
 - Next checks before 5-10 clinical cases:
   - `TC-EMPTY03`
-  - multi-cell paste behavior on trigger ranges such as `C42:C51` and `C84:C87`
+  - optional extra confidence check on `C84:C87`
 - `clearInputSheet()` is now safe in UI-less execution contexts.
 - `saveToHistory()` is still intended for spreadsheet UI use.
+
+## Multi-Cell Paste Check
+
+Status on 2026-03-25:
+
+- Confirmed auto-update after multi-cell paste into `C42:C51`
+- Confirmed auto-update after multi-cell paste into `C56:C64`
+- Practical result: the known pre-check risk did not reproduce for RMDQ / STarT ranges in the live sheet
+- `C84:C87` can still be checked later if we want extra confidence before broader live use
