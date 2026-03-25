@@ -287,6 +287,14 @@ const TRIGGER_CELLS = new Set([
 - `saveToHistory()` should still be used from spreadsheet UI.
 - See `ONEDIT_NEXT_STEPS.md` and `CLEAR_INPUT_CONTEXT_FIX.md` for handoff notes.
 
+### Trigger inventory check before live use
+
+1. Open the Apps Script editor.
+2. Open the Triggers screen.
+3. Confirm how many installable `onEdit` triggers exist.
+4. Confirm there is no duplicate trigger that would cause double execution.
+5. Only then proceed to one-case onEdit verification.
+
 ## 2026-03-25 C33 empty-guard fix
 
 ### Observed issue

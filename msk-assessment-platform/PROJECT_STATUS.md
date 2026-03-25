@@ -9,7 +9,7 @@
 - **Phase 1 実機確認完了（2026-03-25）** ← 最新
   - TC-J01・TC-J01b PASS → TC-J01〜J10・TC-EMPTY01〜02 全ケース PASS
   - C52/C65 数式バグ（全空欄で0を返す）を発見・修正・実機反映で解消
-  - 次フェーズ: onEdit トリガー設定 → 実臨床テスト（5〜10症例）
+  - 次フェーズ: onEdit 確認 / 実臨床前チェック → 実臨床テスト（5〜10症例）
 - **実機確認準備完了（2026-03-24）**
   - TESTCASES.md 更新: TC-J01〜J10 の設計検証（期待値訂正・入力パターン早見表追加）
   - TC-J01 期待値訂正（STarT=2 → 機能改善・運動療法開始 / 旧: セルフケア習慣化 は誤り）
@@ -49,7 +49,7 @@
 | 英字フォルダ名 | **msk-assessment-platform** |
 | 目的 | 接骨院での運動器疾患評価の標準化・評価→方針→説明の一貫化・将来AI連携基盤 |
 | 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール** |
-| ステータス | **Phase 1 実機確認完了 → 実臨床テスト待機中** |
+| ステータス | **Phase 1 実機確認完了 → onEdit確認 / 実臨床前チェック待ち** |
 | スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
 | Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
 | clasp 設定 | `gas/.clasp.json`（gitignore対象）/ `gas/appsscript.json`（コミット済み）|
@@ -136,8 +136,9 @@
 2. `DESIGN_DECISIONS.md` でなぜこの構造かを確認
 3. `TESTCASES.md` で確認済みテストを確認（TC-J01〜J10・TC-EMPTY01〜02 全 PASS 済み）
 4. `gas/logic_engine.js` で Steps 8〜10 の判定ロジック確認（変更が必要な場合）
-5. **次アクション: onEdit トリガー設定 → 実臨床テスト**
-   - Apps Script エディタで onEdit トリガーを設定（TESTCASES.md「onEdit 自動トリガーについて」参照）
+5. **次アクション: onEdit 確認 / 実臨床前チェック → 実臨床テスト**
+   - Apps Script エディタで onEdit トリガー本数を確認し、重複トリガーがないことを確認
+   - 1 症例だけ onEdit 動作確認を実施
    - 実臨床テスト 5〜10 症例を実施し、評価基準・コメントを微調整
 
 ---
@@ -196,12 +197,13 @@
 | 項目 | 状況 |
 |---|---|
 | onEdit トリガー設定 | 実機確認完了後のため今すぐ実施可能（TESTCASES.md「onEdit 自動トリガーについて」参照） |
+| onEdit トリガー本数・重複確認 | Apps Script の installable trigger は repo ファイルからは本数確定できない。別PC再開時は Apps Script エディタの「トリガー」で onEdit が何本あるか確認し、重複があれば整理してから運用開始する |
 | 実臨床テスト（5〜10症例） | onEdit トリガー設定後に開始 |
 | `clearInputSheet()` | `getUi()` 起因でスタンドアロン不安定・未修正（臨床使用に直接影響なし） |
 | onEdit の複数セル貼り付け取りこぼし | `logic_engine.js` は `e.range.getA1Notation()` を `TRIGGER_CELLS.has(cell)` で単一セル前提判定している。複数セルコピペ時は `C42:C51` のような範囲表記になり、対象セルを含んでいても trigger 判定を通らない可能性がある。今回は未修正。実運用前チェック項目・将来修正候補として保持 |
 
 ### 次に最初にやること
-1. Apps Script エディタでトリガーを追加: `onEdit` → スプレッドシートから → 編集時（TESTCASES.md 参照）
-2. onEdit ありで 1 症例だけ動作確認（トリガー発火・C95 自動更新を確認）
-3. 実臨床テスト 5〜10 症例を実施
-4. 評価基準・コメントの微調整（臨床フィードバックをもとに）
+1. Apps Script エディタの「トリガー」で onEdit の本数を確認し、重複がないことを確認
+2. 不足していれば onEdit を追加: `onEdit` → スプレッドシートから → 編集時（TESTCASES.md 参照）
+3. onEdit ありで 1 症例だけ動作確認（トリガー発火・C95 自動更新を確認）
+4. 実臨床テスト 5〜10 症例を実施
