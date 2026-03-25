@@ -27,8 +27,12 @@ function getArgOrDefault(args, key, fallback) {
   return args[key] || fallback;
 }
 
+function normalizeRangeKey(value) {
+  return String(value || '').replace(/^'(.+)'!/, '$1!');
+}
+
 function indexByRange(valueRanges = []) {
-  return new Map((valueRanges || []).map((item) => [item.range, item.values || []]));
+  return new Map((valueRanges || []).map((item) => [normalizeRangeKey(item.range), item.values || []]));
 }
 
 function rowsToMap(rows = []) {

@@ -308,6 +308,42 @@ const TRIGGER_CELLS = new Set([
 4. Confirm there is no duplicate trigger that would cause double execution.
 5. Only then proceed to one-case onEdit verification.
 
+## 2026-03-25 live sheet read verification
+
+### Access result
+
+- live Google Sheet read succeeded after sharing the sheet with the service account
+  - `id-719@e-carte-448107.iam.gserviceaccount.com`
+- Source-of-truth policy remains:
+  - local files are canonical
+  - live sheet is an execution / verification target
+- Reusable script added:
+  - `scripts/read_live_sheet_jassess.mjs`
+
+### Verified live target
+
+- Spreadsheet ID:
+  - `1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY`
+- Spreadsheet title:
+  - `平山接骨院_運動器初期評価システム_JASSESS-01`
+- Sheet:
+  - `腰痛評価入力`
+
+### Verified live consistency
+
+| TestId | 確認内容 | 期待動作 | 結果 | 確認日 | 備考 |
+|---|---|---|---|---|---|
+| TC-LIVE01 | service account 共有後、live `腰痛評価入力` の `C95` / `C99:C106` を直接取得 | 読取成功し、ローカルで確認済みの期待値と整合する | PASS | 2026-03-25 | read path confirmed |
+| TC-LIVE02 | TC-EMPTY03 相当の live 状態を読取 | `C95=機能改善・セルフケア習慣化` / `C99` に `【スコア】（スコア未入力）` が含まれる | PASS | 2026-03-25 | `C95` と `C99:C106` 整合確認 |
+
+### Practical conclusion
+
+- live read path is now reusable
+- JASSESS-01 is ready to begin live clinical testing
+- optional remaining checks:
+  - `saveToHistory()` one real run
+  - multi-cell paste check on `C84:C87`
+
 ## 2026-03-25 C33 empty-guard fix
 
 ### Observed issue

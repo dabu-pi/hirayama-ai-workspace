@@ -1,18 +1,21 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-25（onEdit / 複数貼り付け / TC-EMPTY03 確認 PASS / 実臨床テスト開始可）
+最終更新: 2026-03-25（live 読取成功 / onEdit・空欄安全性確認 PASS / 実臨床テスト開始可）
 
 ---
 
 ## 現在地
 
 - **実臨床テスト開始可（2026-03-25）** ← 最新
+  - ローカル正本を維持しつつ、service account 共有で live Google Sheet 読取に成功
+  - live `腰痛評価入力` シートから `C95` と `C99:C106` を直接取得できる確認経路を整備
   - Apps Script installable `onEdit` トリガー 1 本を確認（Head / スプレッドシートから / 編集時 / エラー率 0%）
   - `refreshInputSheetC33Formula()` 実行済み
   - `clearInputSheet()` 実行後、TC-J01 の 1 症例で `C95` および `C99:C106` の自動更新を確認
   - 複数セル貼り付け確認: `C42:C51` および `C56:C64` の貼り付けでも自動更新を確認
   - TC-EMPTY03 PASS: `C11=3か月以上` + NRS/RMDQ/STarT 空欄で `機能改善・セルフケア習慣化` 分岐と `【スコア】（スコア未入力）` を確認
-  - 次フェーズ: 実臨床テスト（5〜10症例）。必要なら `C84:C87` を追加確認
+  - live 読取でも TC-EMPTY03 相当の `C95` / `C99:C106` 整合を再確認
+  - 次フェーズ: 実臨床テスト（5〜10症例）。任意残件は `saveToHistory()` 1回確認と `C84:C87` 複数貼り付け確認
 - **Phase 1 実機確認完了（2026-03-25）** ← 最新
   - TC-J01・TC-J01b PASS → TC-J01〜J10・TC-EMPTY01〜02 全ケース PASS
   - C52/C65 数式バグ（全空欄で0を返す）を発見・修正・実機反映で解消
@@ -58,8 +61,10 @@
 | 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール** |
 | ステータス | **Phase 1 実臨床前チェック完了 → 実臨床テスト開始可** |
 | スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
+| スプレッドシート名 | **平山接骨院_運動器初期評価システム_JASSESS-01** |
 | Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
 | clasp 設定 | `gas/.clasp.json`（gitignore対象）/ `gas/appsscript.json`（コミット済み）|
+| live 読取経路 | `service_account.json` を shared viewer として使用 / `scripts/read_live_sheet_jassess.mjs` |
 
 ---
 
@@ -101,6 +106,7 @@
 | コメント自動生成（onEdit連携） | ✅ 完了（installable trigger 設定・1症例自動更新確認済み / 2026-03-25） |
 | **実機確認（TC-J01〜J10・TC-EMPTY）** | ✅ **完了**（TC-J01〜J10・TC-EMPTY01〜02 全 PASS / 2026-03-25） |
 | 実臨床テスト（5〜10症例） | ✅ **開始可**（onEdit / 空欄安全性 / 複数貼り付け確認済み） |
+| live Google Sheet 読取 | ✅ 完了（service account 共有後に `腰痛評価入力` の `C95` / `C99:C106` 直接取得成功） |
 
 ### 将来拡張モジュール（着手前）
 
@@ -145,7 +151,8 @@
 4. `gas/logic_engine.js` で Steps 8〜10 の判定ロジック確認（変更が必要な場合）
 5. **次アクション: 実臨床テスト**
    - 実臨床テスト 5〜10 症例を実施し、評価基準・コメントを微調整
-   - 必要なら `C84:C87` の複数セル貼り付けでも onEdit を追加確認
+   - 途中確認は `scripts/read_live_sheet_jassess.mjs` で live の `C95` / `C99:C106` を読む
+   - 必要なら `saveToHistory()` 1回確認と `C84:C87` の複数セル貼り付けでも onEdit を追加確認
 
 ---
 
@@ -153,6 +160,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-25 | service account 共有後、live `腰痛評価入力` から `C95` / `C99:C106` の直接読取に成功。ローカル正本へ反映し、再利用用スクリプトと access メモを整備 | （このコミット） |
 | 2026-03-25 | TC-EMPTY03 PASS。`C11=3か月以上` + NRS/RMDQ/STarT 空欄で `機能改善・セルフケア習慣化` と `【スコア】（スコア未入力）` を確認 | （このコミット） |
 | 2026-03-25 | `C42:C51` / `C56:C64` の複数セル貼り付けでも自動更新を確認。既知リスクは縮小し、`C84:C87` は任意の追加確認項目へ変更 | （このコミット） |
 | 2026-03-25 | onEdit トリガー1本確認・`refreshInputSheetC33Formula()` 実行・TC-J01 1症例で `C95` / `C99:C106` 自動更新確認 PASS | （このコミット） |
@@ -208,8 +216,10 @@
 | 実臨床テスト（5〜10症例） | 開始可。5〜10 症例で評価基準・コメントの妥当性を微調整する |
 | `clearInputSheet()` | UI-less 実行対応済み（`zz_clear_input_override.js`）。継続して spreadsheet UI からの使用を基本とする |
 | onEdit の複数セル貼り付け取りこぼし | `C42:C51` / `C56:C64` の複数セル貼り付けでは再現せず自動更新を確認済み。`C84:C87` など他レンジは必要なら追加確認するが、現時点では既知重大リスクではない |
+| `saveToHistory()` | 実症例で 1 回だけ UI 実行確認を残す。評価履歴への転記と運用フロー確認が目的 |
 
 ### 次に最初にやること
 1. 実臨床テスト 5〜10 症例を開始
 2. 各症例で `C95` / `C99:C106` の妥当性をメモし、過不足のある文言を洗い出す
-3. 必要なら `C84:C87` への複数セル貼り付けでも onEdit 自動更新が起きるか確認
+3. live 再確認が必要なときは `node scripts/read_live_sheet_jassess.mjs` を実行する
+4. 任意で `saveToHistory()` 1回確認と `C84:C87` への複数セル貼り付け確認を行う

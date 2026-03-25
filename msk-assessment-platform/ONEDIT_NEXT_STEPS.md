@@ -3,6 +3,15 @@
 Date: 2026-03-25
 Project: JASSESS-01
 
+## Current State
+
+- Local files are the source of truth.
+- live Google Sheet read is now available through the shared service account.
+- JASSESS-01 is ready to begin 5-10 live clinical cases.
+- Optional remaining checks only:
+  - `saveToHistory()` one real run
+  - `C84:C87` multi-cell paste
+
 ## Apps Script Push
 
 - Local GAS sources to reflect:
@@ -16,7 +25,8 @@ Project: JASSESS-01
   - `logic_engine.js`
   - `setup_sheets.js`
   - `zz_clear_input_override.js`
-- Next human step is trigger setup and one-case verification.
+- Trigger setup and one-case verification are complete.
+- Current human step is live clinical use.
 
 ## Installable Trigger
 
@@ -46,8 +56,10 @@ Status on 2026-03-25:
 
 - Start with one case only.
 - The one-case check has passed.
-- Next checks before 5-10 clinical cases:
-  - optional extra confidence check on `C84:C87`
+- Pre-clinical checks are complete enough to begin live clinical cases.
+- Optional extra confidence checks:
+  - `saveToHistory()` one real run
+  - `C84:C87`
 - `clearInputSheet()` is now safe in UI-less execution contexts.
 - `saveToHistory()` is still intended for spreadsheet UI use.
 
@@ -73,3 +85,19 @@ Status on 2026-03-25:
   - score line = `【スコア】（スコア未入力）`
 - Practical conclusion:
   - pre-clinical checks are complete enough to begin 5-10 live clinical cases
+
+## Live Sheet Read Path
+
+Status on 2026-03-25:
+
+- service account sharing enabled direct live read
+- verified target:
+  - spreadsheet id: `1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY`
+  - spreadsheet title: `平山接骨院_運動器初期評価システム_JASSESS-01`
+  - sheet: `腰痛評価入力`
+- reusable command:
+  - `node scripts/read_live_sheet_jassess.mjs`
+- verified live consistency:
+  - `C95` readable
+  - `C99:C106` readable
+  - TC-EMPTY03-equivalent live state matched the expected local result
