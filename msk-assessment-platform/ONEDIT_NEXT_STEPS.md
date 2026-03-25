@@ -20,27 +20,34 @@ Project: JASSESS-01
 
 ## Installable Trigger
 
-1. Open the Apps Script editor bound to JASSESS-01.
-2. Open Triggers.
-3. Add a new trigger for `onEdit`.
-4. Select:
-   - Event source: `From spreadsheet`
-   - Event type: `On edit`
-   - Deployment: `Head`
+Status on 2026-03-25:
+
+- Confirmed 1 installable trigger for `onEdit`
+- Confirmed:
+  - Event source: `From spreadsheet`
+  - Event type: `On edit`
+  - Deployment: `Head`
+  - Error rate: `0%`
 
 ## One-Case Verification
 
-1. Run `clearInputSheet()`.
-2. Enter `C3` and `C4`.
-3. Input one simple case such as `TC-J01` or `TC-J10`.
-4. Make the last input on a trigger cell.
-5. Confirm that `C95` updates automatically.
-6. Confirm that `C99:C106` also updates automatically.
-7. If needed, run `runLogicAll()` once and confirm the result matches the onEdit result.
+Status on 2026-03-25:
+
+1. Ran `refreshInputSheetC33Formula()`.
+2. Ran `clearInputSheet()`.
+3. Entered one simple case: `TC-J01`.
+4. Made the last input on a trigger cell.
+5. Confirmed that `C95` updated automatically.
+6. Confirmed that `C99:C106` also updated automatically.
+7. Confirmed `C95` result:
+   - `機能改善・運動療法開始 — 段階的なエクササイズと日常活動の再開を促進`
 
 ## Pre-Clinical Notes
 
 - Start with one case only.
-- Move to 5-10 clinical cases only after the one-case check passes.
+- The one-case check has passed.
+- Next checks before 5-10 clinical cases:
+  - `TC-EMPTY03`
+  - multi-cell paste behavior on trigger ranges such as `C42:C51` and `C84:C87`
 - `clearInputSheet()` is now safe in UI-less execution contexts.
 - `saveToHistory()` is still intended for spreadsheet UI use.

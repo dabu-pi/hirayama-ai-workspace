@@ -270,6 +270,19 @@ const TRIGGER_CELLS = new Set([
 3. Choose `From spreadsheet` as the event source.
 4. Choose `On edit` as the event type.
 
+### 2026-03-25 verification result
+
+- Installable `onEdit` trigger inventory confirmed: 1 trigger only.
+- Trigger settings confirmed: `Head` / `From spreadsheet` / `On edit`.
+- `refreshInputSheetC33Formula()` executed once before verification.
+- `clearInputSheet()` executed successfully from the Apps Script editor.
+- One-case verification PASS with `TC-J01`.
+- Confirmed auto-update targets:
+  - `C95`
+  - `C99:C106`
+- Confirmed `C95` output:
+  - `機能改善・運動療法開始 — 段階的なエクササイズと日常活動の再開を促進`
+
 ### One-case verification
 
 1. Run `clearInputSheet()` once.
