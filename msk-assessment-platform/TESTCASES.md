@@ -312,3 +312,26 @@ const TRIGGER_CELLS = new Set([
 5. Confirm `C33=なし`.
 6. Reconfirm that the known normal flow used in `TC-J01` still behaves normally.
 7. If the live sheet still has the old formula, run `refreshInputSheetC33Formula()` once from the Apps Script editor after `clasp push`.
+
+## 2026-03-25 transfer validation refresh
+
+### Live-sheet issue
+
+- The source code already defines row-specific options for `C84:C87`.
+- The live sheet drifted so that `C84:C87` all used the `C84` list.
+- That blocks the intended transfer/ADL evaluation flow for the high fall-risk case.
+
+### Expected validation lists
+
+- `C84` -> `自立 / 見守り要 / 介助要 / 不可`
+- `C85` -> `自立 / 軽度障害 / 中等度障害 / 著明障害`
+- `C86` -> `自立 / 可能（手すり要） / 困難 / 不可`
+- `C87` -> `自立 / 可能（支持要） / 困難 / 不可`
+
+### Live refresh step
+
+1. Run `clasp push`.
+2. Open the Apps Script editor.
+3. Run `refreshInputSheetTransferValidations()` once.
+4. Re-open each dropdown in `C84:C87`.
+5. Confirm that `C85:C87` no longer reuse the `C84` choices.

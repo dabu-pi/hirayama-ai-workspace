@@ -169,6 +169,40 @@ function refreshInputSheetC33Formula() {
   return { ok: true, cell: 'C33' };
 }
 
+function getInputSheetTransferValidationSpecs_() {
+  return [
+    [84, '立ち上がり（椅子から）', ['自立', '見守り要', '介助要', '不可']],
+    [85, '歩行', ['自立', '軽度障害', '中等度障害', '著明障害']],
+    [86, '段差昇降', ['自立', '可能（手すり要）', '困難', '不可']],
+    [87, '床からの立ち上がり', ['自立', '可能（支持要）', '困難', '不可']],
+  ];
+}
+
+function applyInputSheetTransferValidations_(sheet) {
+  getInputSheetTransferValidationSpecs_().forEach(([row, _label, choices]) => {
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(choices, true)
+      .setAllowInvalid(false)
+      .build();
+
+    sheet.getRange(row, 3).setDataValidation(rule);
+  });
+}
+
+function refreshInputSheetTransferValidations() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.INPUT);
+
+  if (!sheet) {
+    throw new Error('Input sheet not found.');
+  }
+
+  applyInputSheetTransferValidations_(sheet);
+  SpreadsheetApp.flush();
+
+  return { ok: true, range: 'C84:C87' };
+}
+
 // ========== シート 1: 設定 ==========
 
 function setupConfigSheet(ss) {
@@ -450,12 +484,7 @@ function setupInputSheet(ss) {
   // ---- セクション I: 移乗動作 ----
   setHeader(sheet, 83, 2, 'I. 移乗動作評価', 2);
 
-  const transferItems = [
-    [84, '立ち上がり（椅子から）', ['自立', '見守り要', '介助要', '不可']],
-    [85, '歩行',                  ['自立', '軽度障害', '中等度障害', '著明障害']],
-    [86, '段差昇降',              ['自立', '可能（手すり要）', '困難', '不可']],
-    [87, '床からの立ち上がり',    ['自立', '可能（支持要）', '困難', '不可']],
-  ];
+  const transferItems = getInputSheetTransferValidationSpecs_();
 
   transferItems.forEach(([row, label, choices]) => {
     sheet.getRange(row, 2).setValue(label).setFontWeight('normal');
