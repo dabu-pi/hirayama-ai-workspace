@@ -115,11 +115,11 @@ const NS_COMMENT_KEY_MATRIX = {
   NS_REDFLAG: {
     summary: 'NS_REDFLAG_SUMMARY',
     caution: 'NS_REDFLAG_CAUTION',
-    explain: null,
-    priority: null,
-    selfcare: null,
-    reassess: null,
-    patient: null,
+    explain: 'NS_REDFLAG_EXPLAIN',
+    priority: 'NS_REDFLAG_PRIORITY',
+    selfcare: 'NS_REDFLAG_SELFCARE',
+    reassess: 'NS_REDFLAG_REASSESS',
+    patient: 'NS_REDFLAG_PATIENT',
     referral: 'NS_REDFLAG_REFERRAL',
   },
   NS_RADICULOPATHY: {
@@ -134,7 +134,7 @@ const NS_COMMENT_KEY_MATRIX = {
   },
   NS_CHRONIC_LIFE: {
     summary: 'NS_CHRONIC_LIFE_SUMMARY',
-    caution: 'NS_LIFESTYLE_CAUTION',
+    caution: 'NS_CHRONIC_LIFE_CAUTION',
     explain: 'NS_CHRONIC_EXPLAIN',
     priority: 'NS_CHRONIC_LIFE_PRIORITY',
     selfcare: 'NS_LIFESTYLE_SELFCARE',
@@ -144,9 +144,9 @@ const NS_COMMENT_KEY_MATRIX = {
   },
   NS_CHRONIC: {
     summary: 'NS_CHRONIC_SUMMARY',
-    caution: 'NS_STANDARD_CAUTION',
+    caution: 'NS_CHRONIC_CAUTION',
     explain: 'NS_CHRONIC_EXPLAIN',
-    priority: 'NS_STANDARD_PRIORITY',
+    priority: 'NS_CHRONIC_PRIORITY',
     selfcare: 'NS_CHRONIC_SELFCARE',
     reassess: 'NS_CHRONIC_REASSESS',
     patient: 'NS_CHRONIC_PATIENT',
@@ -156,7 +156,7 @@ const NS_COMMENT_KEY_MATRIX = {
     summary: 'NS_LIFESTYLE_SUMMARY',
     caution: 'NS_LIFESTYLE_CAUTION',
     explain: 'NS_LIFESTYLE_EXPLAIN',
-    priority: 'NS_STANDARD_PRIORITY',
+    priority: 'NS_LIFESTYLE_PRIORITY',
     selfcare: 'NS_LIFESTYLE_SELFCARE',
     reassess: 'NS_STANDARD_REASSESS',
     patient: 'NS_LIFESTYLE_PATIENT',
@@ -420,6 +420,48 @@ function nsBuildRedFlagText(data) {
   return '危険所見';
 }
 
+function nsBuildCommentContext(data, flags, decision) {
+  return {
+    POLICY: decision.policy || '',
+    NEXT_STEP: decision.nextStep || '',
+    PROFILE: decision.profile || '',
+    MAIN_SYMPTOM: data.mainSymptom || '頚肩こり',
+    NRS: data.nrsCurrent !== null ? `${data.nrsCurrent}/10` : '未入力',
+    NRS_WORST: data.nrsWorst !== null ? `${data.nrsWorst}/10` : '未入力',
+    ONSET_DURATION: data.onsetDuration || '未記載',
+    FIRST_OR_RECUR: data.firstOrRecur || '未記載',
+    REDFLAG_TEXT: nsBuildRedFlagText(data),
+    REDFLAG_SCORE: String(data.nsRedFlagScore ?? 0),
+    COMMON_REDFLAG_SCORE: String(data.commonRedFlagScore ?? 0),
+    NERVE_LEVEL: data.nerveLevel || 'なし',
+    RADIATE: data.radiate || 'なし',
+    DISTRIBUTION: data.distribution || 'なし',
+    ROM_TYPE: data.romType || '未評価',
+    LIFESTYLE_FLAG: data.lifestyleFlag || '標準',
+    PC_TIME: data.pcTime || '未記載',
+    SMARTPHONE_TIME: data.smartphoneTime || '未記載',
+    DRIVE_TIME: data.driveTime || '未記載',
+    AGGRAVATE: data.aggravate || '未記載',
+    RELIEF: data.relief || '未記載',
+    PSFS: data.psfsAverage !== null ? String(data.psfsAverage) : '未入力',
+    HAS_MYELOPATHY: flags.NS_FLAG_MYELOPATHY ? 'あり' : 'なし',
+    HAS_RADICULOPATHY: flags.NS_FLAG_RADICULOPATHY ? 'あり' : 'なし',
+    HAS_REDFLAG: flags.NS_FLAG_REDFLAG ? 'あり' : 'なし',
+    HAS_CHRONIC: flags.NS_FLAG_CHRONIC ? 'あり' : 'なし',
+    HAS_LIFESTYLE_HIGH: flags.NS_FLAG_LIFESTYLE_HIGH ? 'あり' : 'なし',
+  };
+}
+
+function nsRenderCommentTemplate(template, context) {
+  if (!template) return template;
+  return String(template).replace(/\{([A-Z0-9_]+)\}/g, (match, key) => {
+    if (Object.prototype.hasOwnProperty.call(context, key)) {
+      return context[key];
+    }
+    return match;
+  });
+}
+
 function nsBuildFallbackComments(data, flags, decision) {
   const summarySuffix = nsBuildDataSummary(data);
   const redFlagText = nsBuildRedFlagText(data);
@@ -452,24 +494,25 @@ function nsSelectCommentKeys(decisionProfile) {
   return NS_COMMENT_KEY_MATRIX[decisionProfile] || NS_COMMENT_KEY_MATRIX.NS_STANDARD;
 }
 
-function nsResolveCommentText(commentMap, key, fallbackText) {
-  if (key && commentMap.has(key)) return commentMap.get(key);
-  return fallbackText;
+function nsResolveCommentText(commentMap, key, fallbackText, context) {
+  const baseText = (key && commentMap.has(key)) ? commentMap.get(key) : fallbackText;
+  return nsRenderCommentTemplate(baseText, context);
 }
 
 function nsGenerateComments(data, flags, decision, commentMap) {
   const fallbacks = nsBuildFallbackComments(data, flags, decision);
   const keys = nsSelectCommentKeys(decision.profile || nsSelectProfile(flags));
+  const context = nsBuildCommentContext(data, flags, decision);
 
   return {
-    summary: nsResolveCommentText(commentMap, keys.summary, fallbacks.summary),
-    caution: nsResolveCommentText(commentMap, keys.caution, fallbacks.caution),
-    explain: nsResolveCommentText(commentMap, keys.explain, fallbacks.explain),
-    priority: nsResolveCommentText(commentMap, keys.priority, fallbacks.priority),
-    selfcare: nsResolveCommentText(commentMap, keys.selfcare, fallbacks.selfcare),
-    reassess: nsResolveCommentText(commentMap, keys.reassess, fallbacks.reassess),
-    patient: nsResolveCommentText(commentMap, keys.patient, fallbacks.patient),
-    referral: nsResolveCommentText(commentMap, keys.referral, fallbacks.referral),
+    summary: nsResolveCommentText(commentMap, keys.summary, fallbacks.summary, context),
+    caution: nsResolveCommentText(commentMap, keys.caution, fallbacks.caution, context),
+    explain: nsResolveCommentText(commentMap, keys.explain, fallbacks.explain, context),
+    priority: nsResolveCommentText(commentMap, keys.priority, fallbacks.priority, context),
+    selfcare: nsResolveCommentText(commentMap, keys.selfcare, fallbacks.selfcare, context),
+    reassess: nsResolveCommentText(commentMap, keys.reassess, fallbacks.reassess, context),
+    patient: nsResolveCommentText(commentMap, keys.patient, fallbacks.patient, context),
+    referral: nsResolveCommentText(commentMap, keys.referral, fallbacks.referral, context),
   };
 }
 

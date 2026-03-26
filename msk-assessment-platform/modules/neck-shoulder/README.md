@@ -21,6 +21,9 @@
 - 実装済みエントリーポイント: `runNeckShoulderLogicAll()` / `nsRunLogicAll()` / `nsOnEdit(e)`
 - Apps Script 側で `runNeckShoulderLogicAll()` 手動実行 OK、`nsOnEdit` 自動更新 OK、`頚肩こり_初期評価` の `C59/C60/C63:C70` 更新確認済み
 - 5パターン簡易分岐（頚髄症疑い / 赤旗 / 神経根性 / 慢性高負荷 / 標準）はローカルロジック評価で妥当性確認済み
+- `頚肩こり_コメントマスタ` はローカル正本側で placeholder 対応に更新中
+  - 例: `{NRS}` / `{ROM_TYPE}` / `{PC_TIME}`
+  - `logic_engine_neck_shoulder.js` 側で template 展開を行い、master にキーがあればそちらを優先する
 - 生成対象:
   - 新規5シート: `共通_初期評価` / `頚肩こり_初期評価` / `頚肩こり_コメントマスタ` / `頚肩こり_判定ロジック` / `初期評価サマリー`
   - 既存2シートへの追記: `設定` / `評価履歴`

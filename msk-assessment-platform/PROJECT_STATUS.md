@@ -13,6 +13,7 @@
   - 書き込み先: `C59` / `C60` / `C63:C70`
   - 実装済み関数: `runNeckShoulderLogicAll()` / `nsRunLogicAll()` / `nsOnEdit(e)`
   - コメント生成は「キー選択」と「本文取得」を分離し、`頚肩こり_コメントマスタ` 参照に寄せやすい構造で実装
+  - `頚肩こり_コメントマスタ` ベースの文言調整として、placeholder 展開（例: `{NRS}` / `{ROM_TYPE}` / `{PC_TIME}`）と不足キー補完をローカル正本へ反映
   - Apps Script 反映済み、`runNeckShoulderLogicAll()` 手動実行 OK、`nsOnEdit` 自動更新 OK を確認
   - live シートで `頚肩こり_初期評価` の `C59` / `C60` / `C63:C70` 更新を確認
   - 5パターン簡易分岐（頚髄症疑い / 赤旗 / 神経根性 / 慢性高負荷 / 標準）はローカルロジック評価で確認
@@ -207,6 +208,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-26 | `頚肩こり_コメントマスタ` ベースの文言調整。`logic_engine_neck_shoulder.js` に placeholder 展開を追加し、`setup_neck_shoulder.js` のコメントマスタ正本へ不足キーと可変文言を反映 | （このコミット） |
 | 2026-03-26 | Phase C 基本実機確認。Apps Script 反映、`runNeckShoulderLogicAll()` 手動実行、`nsOnEdit` 自動更新、`頚肩こり_初期評価` の `C59/C60/C63:C70` 更新を確認。5パターン簡易分岐はローカルロジック評価で妥当と判断し、最小修正なしで記録更新 | （このコミット） |
 | 2026-03-26 | Phase C 初版実装。`logic_engine_neck_shoulder.js` を新規作成し、頚肩こり用フラグ集計・総合方針判定・コメント生成・`nsOnEdit` を追加。Phase B live 反映確認済みだが、Phase C ロジックの live 実行は未確認 | （このコミット） |
 | 2026-03-26 | Phase B 文書整合修正。`setup_neck_shoulder.js`（501行）を正本として README / IMPLEMENTATION_PLAN_phase2 / PROJECT_STATUS の状態表記・主要セル番地・次工程記述を補正 | （このコミット） |
