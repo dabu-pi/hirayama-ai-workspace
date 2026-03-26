@@ -1,6 +1,15 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-27（nsOnEdit manual live 発火確認 PASS）
+最終更新: 2026-03-27（実臨床テスト再開ポイント整理）
+
+---
+
+## 2026-03-27 実臨床テスト再開ポイント
+
+- **本線:** Phase 1 腰痛評価モジュールの症例レビュー再開
+- **Phase C:** 必須作業完了。残り 4 パターンの live 手入力リプレイは任意確認
+- **記録場所:** `CLINICAL_FLOW.md` の「実臨床レビュー記録テンプレート（候補）」をそのまま使う
+- **再開時に最初に見る場所はこの節でよい**
 
 ---
 
@@ -275,16 +284,16 @@
 | 実臨床テスト（5〜10症例） | ✅ **開始可**（onEdit / 空欄安全性 / 複数貼り付け確認済み） |
 | live Google Sheet 読取 | ✅ 完了（service account 共有後に `腰痛評価入力` の `C95` / `C99:C106` 直接取得成功） |
 
-### 将来拡張モジュール（着手前）
+### 拡張モジュール整理
 
-| フェーズ | 追加モジュール | 着手条件 |
-|---|---|---|
-| Phase 2 | 頸部・肩こり評価モジュール（neck-shoulder） | Phase 1 実臨床テスト完了後 |
-| Phase 3 | 膝慢性痛評価モジュール（knee） | Phase 2 完了後 |
-| Phase 4a | 姿勢評価モジュール（posture） | Phase 3 完了後 |
-| Phase 4b | 高齢者機能・移乗評価モジュール（elderly-function） | Phase 3 完了後 |
-| Phase 5 | Claude API連携（AI判定層） | Phase 1〜2 実臨床データ蓄積後 |
-| Phase 6 | タブレット入力UI最適化 | Phase 5 完了後 |
+| フェーズ | 追加モジュール | 現在地 | 本格着手条件 |
+|---|---|---|---|
+| Phase 2 | 頸部・肩こり評価モジュール（neck-shoulder） | Phase C 完了（manual live 発火確認 PASS） | Phase 1 実臨床レビュー後に本格運用判断 |
+| Phase 3 | 膝慢性痛評価モジュール（knee） | 未着手 | Phase 2 完了後 |
+| Phase 4a | 姿勢評価モジュール（posture） | 未着手 | Phase 3 完了後 |
+| Phase 4b | 高齢者機能・移乗評価モジュール（elderly-function） | 未着手 | Phase 3 完了後 |
+| Phase 5 | Claude API連携（AI判定層） | 未着手 | Phase 1〜2 実臨床データ蓄積後 |
+| Phase 6 | タブレット入力UI最適化 | 未着手 | Phase 5 完了後 |
 
 ---
 
@@ -312,7 +321,7 @@
 
 ## 次回再開時に最初に確認すべき点
 
-1. このファイルで現在地・フェーズ確認
+1. このファイルの `2026-03-27 実臨床テスト再開ポイント` を確認
 2. `DESIGN_DECISIONS.md` でなぜこの構造かを確認
 3. `TESTCASES.md` で確認済みテストを確認（TC-J01〜J10・TC-EMPTY01〜02 全 PASS 済み）
 4. `gas/logic_engine.js` で Steps 8〜10 の判定ロジック確認（変更が必要な場合）
@@ -325,6 +334,7 @@
    - installable trigger を使う場合は既存腰痛 `onEdit` と別に `nsOnEdit` を追加する
 6. **Phase 1 側の次アクション**
    - 実臨床テスト 5〜10 症例を実施し、評価基準・コメントを微調整
+   - 記録は `CLINICAL_FLOW.md` の「実臨床レビュー記録テンプレート（候補）」を使用する
    - 途中確認は `scripts/read_live_sheet_jassess.mjs` で live の `C95` / `C99:C106` を読む
    - 任意で `C84:C87` の複数セル貼り付けでも onEdit を追加確認
 
@@ -334,6 +344,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-27 | 実臨床テスト再開ポイントを 1 か所に集約し、Phase 2 頚肩こりの進行済み状態が将来拡張表で未着手に見えないよう最小修正。症例レビュー記録テンプレートの参照先を `CLINICAL_FLOW.md` に固定 | （このコミット） |
 | 2026-03-27 | `標準` 1 ケースの manual live edit で `nsOnEdit` 実発火確認 PASS。Executions success と `C59/C60/C63:C70` 更新を確認し、blocker を「API書込では非発火・manual edit では発火済み」に更新。残り 4 パターンは任意確認扱いへ整理 | （このコミット） |
 | 2026-03-26 | `nsOnEdit` 実発火確認はコード修正不要と判断し、補助経路の最短手順を文書化。次アクションを `標準` 1 ケースの manual edit + Executions success 確認に限定 | （このコミット） |
 | 2026-03-26 | Phase C 実行基盤安定化。`gas/.clasp.json.example` / `.claspignore` / `PHASE_C_EXECUTION.md` を追加し、主経路を `ローカル修正 → node --check → clasp push -f → Sheets API smoke test` に固定。`gas` 直下からの push 成功、comment master 同期 `synced=true`、5 パターン smoke test は 5/5 write-read-restore 成功・0/5 `nsOnEdit` 発火で blocker を分離 | （このコミット） |
