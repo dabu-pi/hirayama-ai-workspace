@@ -1,12 +1,27 @@
 # 頚肩こり評価モジュール仕様 — modules/neck-shoulder/
 
 **位置づけ:** JASSESS-01 運動器初期評価システム の Phase 2 モジュール
-**最終更新:** 2026-03-26
-**ステータス:** 設計フェーズ（シート未作成）
+**最終更新:** 2026-03-26（Phase B 文書整合修正）
+**ステータス:** Phase B 完了（`gas/setup_neck_shoulder.js` 作成済み） / 次工程は Phase C（`gas/logic_engine_neck_shoulder.js`）
 
 > 共通基盤（患者情報・赤旗・NRS・PSFS）の仕様は SPEC.md / SHEET_DESIGN.md を参照。
 > 根拠IDの対応は `EVIDENCE_MAP_neck_shoulder.md` を参照。
 > 臨床フロー・位置づけは `CLINICAL_FLOW.md` を参照。
+> **Phase C 着手前の正本:** シート構造・セル番地・実装済み追記内容は `gas/setup_neck_shoulder.js` を正本とする。
+
+---
+
+## 実装ステータス
+
+- Phase B では `gas/setup_neck_shoulder.js` を作成済み
+- 実装済みエントリーポイント: `setupNeckShoulderSheets()`
+- 実機反映は未自動。Apps Script エディタで `setupNeckShoulderSheets()` を実行してシート生成を行う必要がある
+- 生成対象:
+  - 新規5シート: `共通_初期評価` / `頚肩こり_初期評価` / `頚肩こり_コメントマスタ` / `頚肩こり_判定ロジック` / `初期評価サマリー`
+  - 既存2シートへの追記: `設定` / `評価履歴`
+- 次工程は Phase C として `gas/logic_engine_neck_shoulder.js` を作成し、頚肩こり用の判定・コメント生成・onEdit を追加する
+
+> 以下の設計記述はモジュール仕様の説明であり、Phase C 実装時のセル番地参照は `gas/setup_neck_shoulder.js` と `IMPLEMENTATION_PLAN_phase2.md` の実装準拠版を優先する。
 
 ---
 
