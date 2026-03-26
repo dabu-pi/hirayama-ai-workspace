@@ -1,6 +1,6 @@
 # PHASE_C_EXECUTION.md — JASSESS-01 Phase C 実行主経路
 
-最終更新: 2026-03-26
+最終更新: 2026-03-26（nsOnEdit 実発火確認手順整理）
 
 ---
 
@@ -71,6 +71,75 @@ node scripts/ns-live-smoke-test.mjs --json true
 
 ---
 
+## `nsOnEdit` 実発火確認の最短手順
+
+コード修正は不要。確認対象は「manual edit で installable trigger の `nsOnEdit` が動くか」のみとする。
+
+### 最短ケース
+
+- パターンは 1 ケースだけ使う
+- 推奨ケースは `標準`
+- 目的は分岐網羅ではなく、`nsOnEdit` 実発火の有無だけを確認すること
+
+### 事前条件
+
+1. 主経路の反映が終わっている
+   - `clasp push -f` 済み
+   - comment master 同期済み
+2. Apps Script 側に `nsOnEdit` の installable trigger が存在する
+3. live シートを人手で編集できる
+
+### 入力値
+
+`共通_初期評価`
+
+- `C3`: 当日
+- `C4`: `NS-ONEDIT-STD`
+- `C18`: `2週間〜3か月`
+- `C20`: `再発`
+- `C34`: `3`
+- `C35`: `4`
+
+`頚肩こり_初期評価`
+
+- `C15`: `なし`
+- `C17`: オフ
+- `C23`: `肩こり`
+
+### 実行手順
+
+1. live スプレッドシートを開く
+2. `共通_初期評価` に上記 6 セルを入力する
+3. `頚肩こり_初期評価` で `C23` を人手で編集する
+4. 2〜5 秒待つ
+5. `C59` / `C60` / `C63:C70` が更新されたか確認する
+6. Apps Script エディタの Executions で `nsOnEdit` 成功実行が同時刻に 1 件あるか確認する
+
+### PASS 条件
+
+- `C59` が空欄から更新される
+- `C60` が空欄から更新される
+- `C63:C70` に 8 コメントが入る
+- Apps Script Executions で `nsOnEdit` が success
+
+### FAIL 時の切り分け
+
+1. 出力が更新されない
+   - `nsOnEdit` installable trigger の有無を確認
+   - 編集セルが trigger 対象セルか確認
+2. `runNeckShoulderLogicAll()` は動くが manual edit で更新されない
+   - trigger 設定だけの問題として扱う
+3. Executions に `nsOnEdit` が出ない
+   - 人手編集が反映されていないか、trigger 未設定
+
+### 今回の扱い
+
+- この確認は補助経路
+- 1 ケースの PASS が取れたら、Phase C の `nsOnEdit` 実発火確認は完了扱いとしてよい
+- 5 パターン全部を人手で回すのはその後の任意作業
+
+---
+
 ## `clasp push` 安定運用ルール
 
 ### 作業ディレクトリ
@@ -136,3 +205,5 @@ node scripts/ns-live-smoke-test.mjs --json true
   - 5 / 5 で `restored=true`
   - `triggerObservedCount=0`
   - `blockedByOnEditCount=5`
+- `nsOnEdit` 実発火確認は未実施
+  - 次は補助経路として `標準` 1 ケースの manual edit + Executions 確認を行う

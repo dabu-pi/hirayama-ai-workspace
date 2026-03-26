@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-26（Phase C 主経路固定 / clasp push 安定化 / API smoke test 整理）
+最終更新: 2026-03-26（nsOnEdit 実発火確認手順整理）
 
 ---
 
@@ -63,6 +63,41 @@
 
 ---
 
+## 2026-03-26 Phase C nsOnEdit 実発火確認の整理
+
+- コード修正は不要と判断
+- 今回は文書更新のみで、`nsOnEdit` 実発火確認の最短手順を固定
+- 補助経路での確認対象は 5 パターン全件ではなく、まず `標準` 1 ケースだけに絞る
+- 実行手順は `PHASE_C_EXECUTION.md` に集約
+
+### 最短手順
+
+1. 主経路の最新反映後、live シートを開く
+2. `共通_初期評価` に標準ケースの最小値を入力
+   - `C3` 当日
+   - `C4` `NS-ONEDIT-STD`
+   - `C18` `2週間〜3か月`
+   - `C20` `再発`
+   - `C34` `3`
+   - `C35` `4`
+3. `頚肩こり_初期評価` の `C23` を `肩こり` に人手で編集
+4. `C59` / `C60` / `C63:C70` 更新確認
+5. Apps Script Executions で `nsOnEdit` success を確認
+
+### PASS 条件
+
+- `C59` / `C60` が更新
+- `C63:C70` に 8 コメント出力
+- Executions に `nsOnEdit` success が 1 件出る
+
+### 現時点の結果
+
+- 手順整理完了
+- 実発火そのものは未実施
+- 次アクションは `標準` 1 ケースの manual edit 実行のみ
+
+---
+
 ## 2026-03-26 Phase C live sync メモ
 
 - `scripts/sync-jassess-ns-comment-master.mjs` を追加し、`gas/setup_neck_shoulder.js` の rows 定義を正本として live の `頚肩こり_コメントマスタ` を同期できるようにした
@@ -92,8 +127,8 @@
   - live シートで `頚肩こり_初期評価` の `C59` / `C60` / `C63:C70` 更新を確認
   - 5パターン簡易分岐（頚髄症疑い / 赤旗 / 神経根性 / 慢性高負荷 / 標準）はローカルロジック評価で確認
   - 上記5パターンはいずれも `C59` / `C60` 相当の分岐と 8 コメント生成が成立し、今回の最小修正は不要と判断
-  - **未確認:** 5パターンすべてを live シートへ手入力して最終文言まで突き合わせる詳細リプレイ
-  - **次のステップ:** comment master ベースへの文言調整、または 5パターンの live 手入力リプレイ記録化
+  - **未確認:** `nsOnEdit` 実発火の補助経路確認（標準 1 ケースの manual edit + Executions success）
+  - **次のステップ:** `標準` 1 ケースで `nsOnEdit` 実発火確認 → その後は任意で 5パターン live 手入力リプレイ
 - **Phase B 実機反映確認完了（2026-03-26）**
   - live シートで新規5シート作成、`設定` 追記、`評価履歴` 7列追加、`頚肩こり_判定ロジック` 非表示を確認
 - **Phase B 文書整合修正完了（2026-03-26）** ← 最新
@@ -268,7 +303,8 @@
 5. **Phase C を再開する場合**
    - `gas/setup_neck_shoulder.js` を正本として頚肩こりシートのセル番地を参照する
    - `IMPLEMENTATION_PLAN_phase2.md` の実装準拠セル番地を確認してから `gas/logic_engine_neck_shoulder.js` を更新する
-   - 基本実機確認は完了。必要なら 5パターンの live 手入力リプレイを追加で記録する
+   - 主経路の安定化は完了。次は `PHASE_C_EXECUTION.md` の `nsOnEdit` 実発火確認手順どおりに `標準` 1 ケースを手で流す
+   - その 1 ケースが通ったら、必要に応じて 5パターンの live 手入力リプレイを追加で記録する
    - 文言微調整を行う場合は `頚肩こり_コメントマスタ` と `logic_engine_neck_shoulder.js` のキー対応を優先確認する
    - installable trigger を使う場合は既存腰痛 `onEdit` と別に `nsOnEdit` を追加する
 6. **Phase 1 側の次アクション**
@@ -282,6 +318,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-26 | `nsOnEdit` 実発火確認はコード修正不要と判断し、補助経路の最短手順を文書化。次アクションを `標準` 1 ケースの manual edit + Executions success 確認に限定 | （このコミット） |
 | 2026-03-26 | Phase C 実行基盤安定化。`gas/.clasp.json.example` / `.claspignore` / `PHASE_C_EXECUTION.md` を追加し、主経路を `ローカル修正 → node --check → clasp push -f → Sheets API smoke test` に固定。`gas` 直下からの push 成功、comment master 同期 `synced=true`、5 パターン smoke test は 5/5 write-read-restore 成功・0/5 `nsOnEdit` 発火で blocker を分離 | （このコミット） |
 | 2026-03-26 | live `頚肩こり_コメントマスタ` 同期スクリプトと API smoke test 補助を追加。39 行→48 行の live 同期完了、Sheets API 書込では `nsOnEdit` が発火しないことを確認 | （このコミット） |
 | 2026-03-26 | `頚肩こり_コメントマスタ` ベースの文言調整。`logic_engine_neck_shoulder.js` に placeholder 展開を追加し、`setup_neck_shoulder.js` のコメントマスタ正本へ不足キーと可変文言を反映 | （このコミット） |
