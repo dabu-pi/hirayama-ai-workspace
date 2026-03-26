@@ -1,17 +1,28 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-26（Phase B 文書整合修正完了 / Phase C 着手前の正本整理）
+最終更新: 2026-03-26（Phase C 初版実装完了 / live ロジック未確認）
 
 ---
 
 ## 現在地
 
+- **Phase C 初版実装完了（2026-03-26）** ← 最新
+  - `gas/logic_engine_neck_shoulder.js` 新規作成
+  - 参照正本は **`gas/setup_neck_shoulder.js`** の実装セル番地
+  - 主要参照セル: `共通_初期評価` `C31` / `C34` / `C35` / `C48`、`頚肩こり_初期評価` `C12` / `C20` / `C34` / `C50`
+  - 書き込み先: `C59` / `C60` / `C63:C70`
+  - 実装済み関数: `runNeckShoulderLogicAll()` / `nsRunLogicAll()` / `nsOnEdit(e)`
+  - コメント生成は「キー選択」と「本文取得」を分離し、`頚肩こり_コメントマスタ` 参照に寄せやすい構造で実装
+  - **未確認:** Phase C ロジックの Apps Script 実機実行・`nsOnEdit` トリガー動作
+  - **次のステップ:** `clasp push` → `runNeckShoulderLogicAll()` 実行 or `nsOnEdit` トリガー設定 → サンプル入力で `C59/C60/C63:C70` 更新確認
+- **Phase B 実機反映確認完了（2026-03-26）**
+  - live シートで新規5シート作成、`設定` 追記、`評価履歴` 7列追加、`頚肩こり_判定ロジック` 非表示を確認
 - **Phase B 文書整合修正完了（2026-03-26）** ← 最新
   - `modules/neck-shoulder/README.md` / `IMPLEMENTATION_PLAN_phase2.md` / `PROJECT_STATUS.md` を更新
   - Phase C 着手前の正本を **`gas/setup_neck_shoulder.js`** に統一
   - `IMPLEMENTATION_PLAN_phase2.md` の主要セル番地を Phase B 実装に合わせて補正
   - `modules/neck-shoulder/README.md` の状態表記を「設計フェーズ」から「Phase B 完了」へ更新
-  - **次のステップ: `gas/logic_engine_neck_shoulder.js` を作成し、`setup_neck_shoulder.js` のセル番地を参照して Phase C を実装すること**
+  - 文書整合タスク自体は完了。次は Phase C ロジックの実機確認へ進む
 - **Phase 2 GAS セットアップスクリプト作成完了（2026-03-26）** ← 最新
   - `gas/setup_neck_shoulder.js` 新規作成（501行）
   - エントリーポイント: `setupNeckShoulderSheets()` — 7関数を順次呼び出し
@@ -20,7 +31,7 @@
   - 既存シート・既存コードは一切変更しない互換性優先設計
   - クロスシート参照: `='共通_初期評価'!C3` 等で頚肩こりシートから共通情報を自動取得
   - COMMENT_DESIGN_neck_shoulder.md の39コメント行を全埋め込み済み
-  - **次のステップ: Apps Script エディタで `setupNeckShoulderSheets()` を実行して実機反映すること**
+  - live シートへの Phase B 反映確認済み。次は `logic_engine_neck_shoulder.js` の実機確認へ進む
 - **CLINICAL_FLOW.md 内容改訂（2026-03-26）**
   - 目的・設計思想・臨床フロー（Step 0〜7）・実務使い分け・慢性疼痛強化プロジェクト接続を整理
   - 全11セクション構成に再整理（旧版を差し替え）
@@ -84,8 +95,8 @@
 | 日本語正式名 | **運動器初期評価システム** |
 | 英字フォルダ名 | **msk-assessment-platform** |
 | 目的 | 接骨院での運動器疾患評価の標準化・評価→方針→説明の一貫化・将来AI連携基盤 |
-| 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール運用可 / Phase 2 = Phase B（シート追加スクリプト）完了** |
-| ステータス | **Phase 1 実臨床テスト開始可 + Phase 2 は Phase C 着手待ち** |
+| 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール運用可 / Phase 2 = Phase C 初版ロジック作成済み** |
+| ステータス | **Phase 1 実臨床テスト開始可 + Phase 2 は Phase C 実機確認待ち** |
 | スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
 | スプレッドシート名 | **平山接骨院_運動器初期評価システム_JASSESS-01** |
 | Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
@@ -177,8 +188,9 @@
 4. `gas/logic_engine.js` で Steps 8〜10 の判定ロジック確認（変更が必要な場合）
 5. **Phase C を再開する場合**
    - `gas/setup_neck_shoulder.js` を正本として頚肩こりシートのセル番地を参照する
-   - `IMPLEMENTATION_PLAN_phase2.md` の実装準拠セル番地を確認してから `gas/logic_engine_neck_shoulder.js` を作成する
-   - 実機反映前なら Apps Script エディタで `setupNeckShoulderSheets()` 実行要否を確認する
+   - `IMPLEMENTATION_PLAN_phase2.md` の実装準拠セル番地を確認してから `gas/logic_engine_neck_shoulder.js` を更新する
+   - `clasp push` 後に `runNeckShoulderLogicAll()` または `nsOnEdit` の実機確認を行う
+   - installable trigger を使う場合は既存腰痛 `onEdit` と別に `nsOnEdit` を追加する
 6. **Phase 1 側の次アクション**
    - 実臨床テスト 5〜10 症例を実施し、評価基準・コメントを微調整
    - 途中確認は `scripts/read_live_sheet_jassess.mjs` で live の `C95` / `C99:C106` を読む
@@ -190,6 +202,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-26 | Phase C 初版実装。`logic_engine_neck_shoulder.js` を新規作成し、頚肩こり用フラグ集計・総合方針判定・コメント生成・`nsOnEdit` を追加。Phase B live 反映確認済みだが、Phase C ロジックの live 実行は未確認 | （このコミット） |
 | 2026-03-26 | Phase B 文書整合修正。`setup_neck_shoulder.js`（501行）を正本として README / IMPLEMENTATION_PLAN_phase2 / PROJECT_STATUS の状態表記・主要セル番地・次工程記述を補正 | （このコミット） |
 | 2026-03-25 | `saveToHistory()` 実機確認 PASS。評価履歴で `E0001` / `TEST` / 判定文一致 / 評価まとめ一致を確認し、残件を `C84:C87` 複数貼り付け確認のみに整理 | （このコミット） |
 | 2026-03-25 | service account 共有後、live `腰痛評価入力` から `C95` / `C99:C106` の直接読取に成功。ローカル正本へ反映し、再利用用スクリプトと access メモを整備 | （このコミット） |
