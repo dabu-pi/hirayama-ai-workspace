@@ -1,8 +1,8 @@
 # IMPLEMENTATION_PLAN_phase2.md — Phase 2 互換性優先追加設計
 
 **対象:** JASSESS-01 頚肩こりモジュール追加
-**最終更新:** 2026-03-26（Phase B 実装準拠の文書整合修正）
-**ステータス:** フェーズ A・B 完了 → フェーズ C（`logic_engine_neck_shoulder.js` 作成）が次工程
+**最終更新:** 2026-03-26（Phase C 主経路固定 / clasp push 安定化）
+**ステータス:** フェーズ A・B 完了 / フェーズ C 初版実装・主経路固定済み
 
 > **大原則: 既存腰痛版を壊さない。追加のみで対応する。**
 > 既存の `腰痛評価入力` / `判定ロジック` / `コメントマスタ` / `評価履歴` は
@@ -313,12 +313,13 @@ B(addAt + 7): NS: 前傾頭位 プルダウン選択肢    C(addAt + 7): なし,
 6. `頚肩こり_初期評価` シートを追加
 7. `初期評価サマリー` シートを追加
 
-### フェーズ C: GAS 追加（← 次の工程）
+### フェーズ C: GAS 追加（✅ 初版実装・主経路固定 2026-03-26）
 1. ~~`gas/setup_neck_shoulder.js` を作成~~ ✅ 完了（フェーズ B で作成済み）
-2. `gas/logic_engine_neck_shoulder.js` を作成
-3. Phase B 実装済みの `setup_neck_shoulder.js` を正本としてセル番地・書き込み先を参照する
-4. `setupAllSheets()` に頚肩こり用の呼び出しを追加
-5. clasp push して動作確認
+2. `gas/logic_engine_neck_shoulder.js` を作成 ✅
+3. Phase B 実装済みの `setup_neck_shoulder.js` を正本としてセル番地・書き込み先を参照する ✅
+4. `clasp run` は補助経路へ移し、主経路を `ローカル修正 → node --check → clasp push -f → Sheets API smoke test` に固定 ✅
+5. `gas/.clasp.json.example` / `gas/.claspignore` / `PHASE_C_EXECUTION.md` を追加し、`rootDir` / manifest / 作業ディレクトリを文書化 ✅
+6. 5 パターン live smoke test は `scripts/ns-live-smoke-test.mjs` で write/read back / restore / `nsOnEdit` blocker 記録までを標準化 ✅
 
 ### フェーズ D: 実臨床テスト
 1. 腰痛評価の通常運用を継続しながら、頚肩こり評価を並行テスト

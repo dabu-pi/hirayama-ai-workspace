@@ -178,6 +178,25 @@ function cloneRows(rows) {
   return rows.map((row) => [row?.[0] ?? '']);
 }
 
+function rowsEqual(left, right) {
+  if (left.length !== right.length) {
+    return false;
+  }
+  for (let i = 0; i < left.length; i += 1) {
+    const a = left[i] || [];
+    const b = right[i] || [];
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let j = 0; j < a.length; j += 1) {
+      if (String(a[j] ?? '') !== String(b[j] ?? '')) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 function applyA1Values(rows, startRow, valuesByA1) {
   const next = cloneRows(rows);
   Object.entries(valuesByA1).forEach(([a1, value]) => {
@@ -228,6 +247,65 @@ async function readRanges(context, ranges, valueRenderOption = 'FORMULA') {
   return ranges.map((range) => cloneRows(map.get(range) || []));
 }
 
+async function readCellMap(context, sheetName, cells, valueRenderOption = 'UNFORMATTED_VALUE') {
+  const ranges = cells.map((cell) => `${sheetName}!${cell}`);
+  const batch = await batchGetSheetValues({
+    spreadsheetId: context.spreadsheetId,
+    accessToken: context.accessToken,
+    ranges,
+    valueRenderOption,
+  });
+
+  const out = {};
+  (batch.valueRanges || []).forEach((item) => {
+    const normalized = normalizeRangeKey(item.range || '');
+    const cell = normalized.split('!')[1];
+    out[cell] = item.values?.[0]?.[0] ?? '';
+  });
+  return out;
+}
+
+function sameValue(left, right) {
+  if (
+    typeof left === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(left) &&
+    typeof right === 'number'
+  ) {
+    const normalized = new Date(Math.round((right - 25569) * 86400 * 1000))
+      .toISOString()
+      .slice(0, 10);
+    return left === normalized;
+  }
+  return String(left ?? '') === String(right ?? '');
+}
+
+function compareCellMap(expected, actual) {
+  const diffs = [];
+  Object.entries(expected).forEach(([cell, value]) => {
+    if (!sameValue(value, actual[cell])) {
+      diffs.push({
+        cell,
+        expected: value,
+        actual: actual[cell] ?? '',
+      });
+    }
+  });
+  return {
+    matched: diffs.length === 0,
+    diffs,
+  };
+}
+
+async function readPatternEcho(context, pattern) {
+  const commonCells = Object.keys(pattern.common || {});
+  const nsCells = Object.keys(pattern.ns || {});
+  const [common, ns] = await Promise.all([
+    readCellMap(context, COMMON_SHEET, commonCells),
+    readCellMap(context, NS_SHEET, nsCells),
+  ]);
+  return { common, ns };
+}
+
 async function writeColumnRange(context, sheetName, startRow, endRow, rows) {
   await updateSheetValues({
     spreadsheetId: context.spreadsheetId,
@@ -257,24 +335,55 @@ async function runPattern(context, pattern, waitMs) {
   const nsRange = `${NS_SHEET}!${toRangeA1(NS_START_ROW, NS_END_ROW)}`;
   const [commonSnapshot, nsSnapshot] = await readRanges(context, [commonRange, nsRange], 'FORMULA');
   const nextValues = buildPatternColumns(pattern);
+  let result = null;
+  let restored = false;
 
   try {
     await writeColumnRange(context, COMMON_SHEET, COMMON_START_ROW, COMMON_END_ROW, nextValues.common);
     await writeColumnRange(context, NS_SHEET, NS_START_ROW, NS_END_ROW, nextValues.ns);
     await sleep(waitMs);
+    const echoed = await readPatternEcho(context, pattern);
+    const commonEchoCheck = compareCellMap(pattern.common || {}, echoed.common);
+    const nsEchoCheck = compareCellMap(pattern.ns || {}, echoed.ns);
     const outputs = await collectOutputs(context);
-    return {
+    const triggerObserved = Boolean(
+      outputs.c59 ||
+      outputs.c60 ||
+      outputs.comments.some((comment) => comment),
+    );
+    result = {
       caseName: pattern.name,
       expectedProfile: pattern.expectedProfile,
+      inputsApplied: commonEchoCheck.matched && nsEchoCheck.matched,
+      triggerObserved,
+      liveRouteStatus: !(commonEchoCheck.matched && nsEchoCheck.matched)
+        ? 'write_read_mismatch'
+        : triggerObserved
+          ? 'trigger_observed'
+          : 'no_onedit_via_sheets_api',
       c59: outputs.c59,
       c60: outputs.c60,
       comments: outputs.comments,
+      echoedCommon: echoed.common,
+      echoedNs: echoed.ns,
+      echoDiffs: [
+        ...commonEchoCheck.diffs.map((diff) => ({ sheet: COMMON_SHEET, ...diff })),
+        ...nsEchoCheck.diffs.map((diff) => ({ sheet: NS_SHEET, ...diff })),
+      ],
     };
   } finally {
     await writeColumnRange(context, COMMON_SHEET, COMMON_START_ROW, COMMON_END_ROW, commonSnapshot);
     await writeColumnRange(context, NS_SHEET, NS_START_ROW, NS_END_ROW, nsSnapshot);
     await sleep(500);
+    const [restoredCommon, restoredNs] = await readRanges(context, [commonRange, nsRange], 'FORMULA');
+    restored = rowsEqual(commonSnapshot, restoredCommon) && rowsEqual(nsSnapshot, restoredNs);
   }
+
+  return {
+    ...result,
+    restored,
+    smokePass: Boolean(result?.inputsApplied) && restored,
+  };
 }
 
 async function main() {
@@ -318,6 +427,9 @@ async function main() {
   const report = {
     spreadsheetId,
     spreadsheetTitle: metadata.properties?.title || '(unknown)',
+    mainRouteStable: results.every((result) => result.smokePass),
+    triggerObservedCount: results.filter((result) => result.triggerObserved).length,
+    blockedByOnEditCount: results.filter((result) => result.liveRouteStatus === 'no_onedit_via_sheets_api').length,
     patterns: results,
   };
 
@@ -327,14 +439,25 @@ async function main() {
   }
 
   console.log(`Spreadsheet: ${report.spreadsheetTitle}`);
+  console.log(`Main route stable: ${report.mainRouteStable ? 'YES' : 'NO'}`);
+  console.log(`Trigger observed count: ${report.triggerObservedCount}`);
+  console.log(`Blocked by onEdit count: ${report.blockedByOnEditCount}`);
   results.forEach((result) => {
     console.log(`Case: ${result.caseName}`);
     console.log(`- Expected profile: ${result.expectedProfile}`);
+    console.log(`- Inputs applied: ${result.inputsApplied ? 'YES' : 'NO'}`);
+    console.log(`- Restored: ${result.restored ? 'YES' : 'NO'}`);
+    console.log(`- Live route status: ${result.liveRouteStatus}`);
     console.log(`- C59: ${result.c59}`);
     console.log(`- C60: ${result.c60}`);
     result.comments.forEach((comment, index) => {
       console.log(`- C${63 + index}: ${comment}`);
     });
+    if (result.echoDiffs.length > 0) {
+      result.echoDiffs.forEach((diff) => {
+        console.log(`- Echo diff ${diff.sheet} ${diff.cell}: expected=${diff.expected} actual=${diff.actual}`);
+      });
+    }
     console.log('');
   });
 }

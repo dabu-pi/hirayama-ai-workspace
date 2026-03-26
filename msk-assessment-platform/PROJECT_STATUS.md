@@ -1,6 +1,65 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-26（Phase C live comment master 同期 / API smoke test 経路確認）
+最終更新: 2026-03-26（Phase C 主経路固定 / clasp push 安定化 / API smoke test 整理）
+
+---
+
+## 2026-03-26 Phase C 実行基盤安定化
+
+- Phase C の主経路を `ローカル修正 → node --check → clasp push -f → Sheets API live read/write smoke test` に固定
+- `clasp run` は補助経路へ移し、今回の主経路から切り離した
+- `msk-assessment-platform/gas/.clasp.json` をローカル配置、`gas/.clasp.json.example` をコミット対象として追加
+- `rootDir` は `.` に固定し、`msk-assessment-platform/gas` を clasp 実行ディレクトリに統一
+- `gas/.claspignore` を追加し、ローカル `.clasp.json` を push 対象から除外
+- `PHASE_C_EXECUTION.md` を追加し、主経路・補助経路・停止要因・運用ルールを文書化
+- `clasp status` 実測:
+  - `msk-assessment-platform/` 直下: `Project settings not found.`
+  - `msk-assessment-platform/gas` 直下: tracked files を正常認識
+- `clasp push -f` 実測: `msk-assessment-platform/gas` 直下から 6 files push 成功
+- `scripts/ns-live-smoke-test.mjs` を更新し、5パターンすべてで
+  - write/read back 成否
+  - restore 成否
+  - `nsOnEdit` 発火有無
+  を JSON / テキストで明示できるようにした
+- `scripts/sync-jassess-ns-comment-master.mjs` は引き続き `gas/setup_neck_shoulder.js` の rows 定義を正本として live `頚肩こり_コメントマスタ` 同期に使用する
+- live 実測結果:
+  - comment master 同期: `synced=true` / 48 行→48 行
+  - 5 パターン smoke test: `mainRouteStable=true`
+  - 5 / 5 で `inputsApplied=true` かつ `restored=true`
+  - `triggerObservedCount=0` / `blockedByOnEditCount=5`
+  - 結論: 主経路の read/write/restore は安定、`nsOnEdit` 完全再現だけ補助経路へ分離
+
+### 主経路
+
+1. ローカル正本を修正
+   - `gas/setup_neck_shoulder.js`
+   - `gas/logic_engine_neck_shoulder.js`
+2. `node --check`
+3. `msk-assessment-platform/gas` で `clasp push -f`
+4. `node scripts/sync-jassess-ns-comment-master.mjs --json true`
+5. `node scripts/ns-live-smoke-test.mjs --json true`
+
+### 補助経路
+
+- `clasp run syncNsCommentMasterSheet`
+- `clasp run nsRunFivePatternSmokeTests`
+- Apps Script エディタからの関数実行
+- 人手による live シート編集
+
+### 既知の停止要因
+
+- `clasp` を `gas/` 以外で実行すると `.clasp.json` / `appsscript.json` の認識がずれて不安定になる
+- `clasp` は PATH で拾えないため、`C:\Users\pinsh\AppData\Roaming\npm\clasp.cmd` の絶対パス利用が安定
+- `clasp run` は permission error で止まりやすい
+- service account / Sheets API 書込では `nsOnEdit` が発火しない
+
+### 今後の運用ルール
+
+1. `clasp push -f` は必ず `msk-assessment-platform/gas` で実行する
+2. `gas/.clasp.json` はローカル専用、設定確認は `gas/.clasp.json.example` を正本にする
+3. `appsscript.json` は `gas/` 直下を manifest 正本として維持する
+4. 5パターン smoke test は `ns-live-smoke-test.mjs` を標準にし、`triggerObserved=false` は blocker として記録する
+5. `nsOnEdit` 実発火確認だけ補助経路へ切り替える
 
 ---
 
@@ -120,7 +179,7 @@
 | スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
 | スプレッドシート名 | **平山接骨院_運動器初期評価システム_JASSESS-01** |
 | Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
-| clasp 設定 | `gas/.clasp.json`（gitignore対象）/ `gas/appsscript.json`（コミット済み）|
+| clasp 設定 | `gas/.clasp.json`（ローカル専用）/ `gas/.clasp.json.example`（コミット済み）/ `gas/appsscript.json`（manifest 正本）|
 | live 読取経路 | `service_account.json` を shared viewer として使用 / `scripts/read_live_sheet_jassess.mjs` |
 
 ---
@@ -223,6 +282,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-26 | Phase C 実行基盤安定化。`gas/.clasp.json.example` / `.claspignore` / `PHASE_C_EXECUTION.md` を追加し、主経路を `ローカル修正 → node --check → clasp push -f → Sheets API smoke test` に固定。`gas` 直下からの push 成功、comment master 同期 `synced=true`、5 パターン smoke test は 5/5 write-read-restore 成功・0/5 `nsOnEdit` 発火で blocker を分離 | （このコミット） |
 | 2026-03-26 | live `頚肩こり_コメントマスタ` 同期スクリプトと API smoke test 補助を追加。39 行→48 行の live 同期完了、Sheets API 書込では `nsOnEdit` が発火しないことを確認 | （このコミット） |
 | 2026-03-26 | `頚肩こり_コメントマスタ` ベースの文言調整。`logic_engine_neck_shoulder.js` に placeholder 展開を追加し、`setup_neck_shoulder.js` のコメントマスタ正本へ不足キーと可変文言を反映 | （このコミット） |
 | 2026-03-26 | Phase C 基本実機確認。Apps Script 反映、`runNeckShoulderLogicAll()` 手動実行、`nsOnEdit` 自動更新、`頚肩こり_初期評価` の `C59/C60/C63:C70` 更新を確認。5パターン簡易分岐はローカルロジック評価で妥当と判断し、最小修正なしで記録更新 | （このコミット） |
