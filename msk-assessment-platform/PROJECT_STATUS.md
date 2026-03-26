@@ -1,20 +1,24 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-26（Phase C 初版実装完了 / live ロジック未確認）
+最終更新: 2026-03-26（Phase C 基本実機確認完了 / 5パターン分岐確認）
 
 ---
 
 ## 現在地
 
-- **Phase C 初版実装完了（2026-03-26）** ← 最新
+- **Phase C 基本実機確認完了（2026-03-26）** ← 最新
   - `gas/logic_engine_neck_shoulder.js` 新規作成
   - 参照正本は **`gas/setup_neck_shoulder.js`** の実装セル番地
   - 主要参照セル: `共通_初期評価` `C31` / `C34` / `C35` / `C48`、`頚肩こり_初期評価` `C12` / `C20` / `C34` / `C50`
   - 書き込み先: `C59` / `C60` / `C63:C70`
   - 実装済み関数: `runNeckShoulderLogicAll()` / `nsRunLogicAll()` / `nsOnEdit(e)`
   - コメント生成は「キー選択」と「本文取得」を分離し、`頚肩こり_コメントマスタ` 参照に寄せやすい構造で実装
-  - **未確認:** Phase C ロジックの Apps Script 実機実行・`nsOnEdit` トリガー動作
-  - **次のステップ:** `clasp push` → `runNeckShoulderLogicAll()` 実行 or `nsOnEdit` トリガー設定 → サンプル入力で `C59/C60/C63:C70` 更新確認
+  - Apps Script 反映済み、`runNeckShoulderLogicAll()` 手動実行 OK、`nsOnEdit` 自動更新 OK を確認
+  - live シートで `頚肩こり_初期評価` の `C59` / `C60` / `C63:C70` 更新を確認
+  - 5パターン簡易分岐（頚髄症疑い / 赤旗 / 神経根性 / 慢性高負荷 / 標準）はローカルロジック評価で確認
+  - 上記5パターンはいずれも `C59` / `C60` 相当の分岐と 8 コメント生成が成立し、今回の最小修正は不要と判断
+  - **未確認:** 5パターンすべてを live シートへ手入力して最終文言まで突き合わせる詳細リプレイ
+  - **次のステップ:** comment master ベースへの文言調整、または 5パターンの live 手入力リプレイ記録化
 - **Phase B 実機反映確認完了（2026-03-26）**
   - live シートで新規5シート作成、`設定` 追記、`評価履歴` 7列追加、`頚肩こり_判定ロジック` 非表示を確認
 - **Phase B 文書整合修正完了（2026-03-26）** ← 最新
@@ -96,7 +100,7 @@
 | 英字フォルダ名 | **msk-assessment-platform** |
 | 目的 | 接骨院での運動器疾患評価の標準化・評価→方針→説明の一貫化・将来AI連携基盤 |
 | 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール運用可 / Phase 2 = Phase C 初版ロジック作成済み** |
-| ステータス | **Phase 1 実臨床テスト開始可 + Phase 2 は Phase C 実機確認待ち** |
+| ステータス | **Phase 1 実臨床テスト開始可 + Phase 2 は Phase C 基本実機確認完了** |
 | スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
 | スプレッドシート名 | **平山接骨院_運動器初期評価システム_JASSESS-01** |
 | Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
@@ -189,7 +193,8 @@
 5. **Phase C を再開する場合**
    - `gas/setup_neck_shoulder.js` を正本として頚肩こりシートのセル番地を参照する
    - `IMPLEMENTATION_PLAN_phase2.md` の実装準拠セル番地を確認してから `gas/logic_engine_neck_shoulder.js` を更新する
-   - `clasp push` 後に `runNeckShoulderLogicAll()` または `nsOnEdit` の実機確認を行う
+   - 基本実機確認は完了。必要なら 5パターンの live 手入力リプレイを追加で記録する
+   - 文言微調整を行う場合は `頚肩こり_コメントマスタ` と `logic_engine_neck_shoulder.js` のキー対応を優先確認する
    - installable trigger を使う場合は既存腰痛 `onEdit` と別に `nsOnEdit` を追加する
 6. **Phase 1 側の次アクション**
    - 実臨床テスト 5〜10 症例を実施し、評価基準・コメントを微調整
@@ -202,6 +207,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-26 | Phase C 基本実機確認。Apps Script 反映、`runNeckShoulderLogicAll()` 手動実行、`nsOnEdit` 自動更新、`頚肩こり_初期評価` の `C59/C60/C63:C70` 更新を確認。5パターン簡易分岐はローカルロジック評価で妥当と判断し、最小修正なしで記録更新 | （このコミット） |
 | 2026-03-26 | Phase C 初版実装。`logic_engine_neck_shoulder.js` を新規作成し、頚肩こり用フラグ集計・総合方針判定・コメント生成・`nsOnEdit` を追加。Phase B live 反映確認済みだが、Phase C ロジックの live 実行は未確認 | （このコミット） |
 | 2026-03-26 | Phase B 文書整合修正。`setup_neck_shoulder.js`（501行）を正本として README / IMPLEMENTATION_PLAN_phase2 / PROJECT_STATUS の状態表記・主要セル番地・次工程記述を補正 | （このコミット） |
 | 2026-03-25 | `saveToHistory()` 実機確認 PASS。評価履歴で `E0001` / `TEST` / 判定文一致 / 評価まとめ一致を確認し、残件を `C84:C87` 複数貼り付け確認のみに整理 | （このコミット） |
