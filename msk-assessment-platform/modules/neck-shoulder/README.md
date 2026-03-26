@@ -1,8 +1,8 @@
 # 頚肩こり評価モジュール仕様 — modules/neck-shoulder/
 
 **位置づけ:** JASSESS-01 運動器初期評価システム の Phase 2 モジュール
-**最終更新:** 2026-03-26（Phase C 基本実機確認）
-**ステータス:** Phase C 初版実装・基本実機確認済み（`runNeckShoulderLogicAll()` / `nsOnEdit` / `C59/C60/C63:C70` 更新確認） / 5パターン分岐はローカル評価済み
+**最終更新:** 2026-03-26（live comment master 同期 / API smoke test）
+**ステータス:** Phase C 初版実装・基本実機確認済み（`runNeckShoulderLogicAll()` / `nsOnEdit` / `C59/C60/C63:C70` 更新確認） / live `頚肩こり_コメントマスタ` 同期済み / 5パターン完全 live リプレイは未完了
 
 > 共通基盤（患者情報・赤旗・NRS・PSFS）の仕様は SPEC.md / SHEET_DESIGN.md を参照。
 > 根拠IDの対応は `EVIDENCE_MAP_neck_shoulder.md` を参照。
@@ -24,6 +24,12 @@
 - `頚肩こり_コメントマスタ` はローカル正本側で placeholder 対応に更新中
   - 例: `{NRS}` / `{ROM_TYPE}` / `{PC_TIME}`
   - `logic_engine_neck_shoulder.js` 側で template 展開を行い、master にキーがあればそちらを優先する
+- 2026-03-26 時点で live `頚肩こり_コメントマスタ` は `gas/setup_neck_shoulder.js` 正本へ同期済み
+  - `scripts/sync-jassess-ns-comment-master.mjs` で rows 定義を直接読み、39 行から 48 行へ live 同期を確認
+  - Apps Script 側にも `syncNsCommentMasterSheet()` を追加済みだが、`clasp run` は permission error のため現状は direct Sheets API 同期が確実
+- `scripts/ns-live-smoke-test.mjs` で safe な live probe 経路を追加
+  - service account / Sheets API の書換では `nsOnEdit` が発火しないことを確認
+  - そのため 5パターンの完全な live リプレイは、Apps Script エディタからの関数実行か、人手によるシート編集で継続する
 - 生成対象:
   - 新規5シート: `共通_初期評価` / `頚肩こり_初期評価` / `頚肩こり_コメントマスタ` / `頚肩こり_判定ロジック` / `初期評価サマリー`
   - 既存2シートへの追記: `設定` / `評価履歴`

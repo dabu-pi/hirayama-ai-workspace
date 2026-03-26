@@ -596,3 +596,128 @@ function nsOnEdit(e) {
   SpreadsheetApp.flush();
   runNeckShoulderLogicAll();
 }
+
+function nsSnapshotColumnRange_(sheet, startRow, endRow) {
+  const range = sheet.getRange(startRow, 3, endRow - startRow + 1, 1);
+  return {
+    startRow,
+    values: range.getValues(),
+    formulas: range.getFormulasR1C1(),
+  };
+}
+
+function nsRestoreColumnSnapshot_(sheet, snapshot) {
+  for (let i = 0; i < snapshot.values.length; i += 1) {
+    const cell = sheet.getRange(snapshot.startRow + i, 3);
+    const formula = snapshot.formulas[i][0];
+    if (formula) {
+      cell.setFormulaR1C1(formula);
+    } else {
+      cell.setValue(snapshot.values[i][0]);
+    }
+  }
+}
+
+function nsSetValuesByA1_(sheet, valuesByA1) {
+  Object.keys(valuesByA1).forEach((a1) => {
+    sheet.getRange(a1).setValue(valuesByA1[a1]);
+  });
+}
+
+function nsApplySmokePattern_(commonSheet, nsSheet, pattern) {
+  const commonDefaults = {
+    C3: '', C4: '',
+    C18: '', C20: '',
+    C23: false, C24: false, C25: false, C26: false, C27: false, C28: false, C29: false, C30: false,
+    C34: '', C35: '',
+    C43: '', C45: '', C47: '',
+  };
+  const nsDefaults = {
+    C7: false, C8: false, C9: false, C10: false, C11: false,
+    C15: 'なし', C16: 'なし', C17: false, C18: false,
+    C23: '頚部痛', C24: '一定', C25: '', C26: '休むと楽',
+    C29: '1〜3時間', C30: '1〜3時間', C31: '30分未満', C32: '', C33: 'なし',
+    C37: 'なし', C38: 'なし', C39: '問題なし', C40: 'なし', C41: '',
+    C44: '正常', C45: '正常', C46: '正常', C47: '正常', C48: '正常', C49: '正常',
+    C53: '正常', C54: '陰性', C55: '変化なし', C56: '変化なし',
+  };
+
+  nsSetValuesByA1_(commonSheet, Object.assign({}, commonDefaults, pattern.common || {}));
+  nsSetValuesByA1_(nsSheet, Object.assign({}, nsDefaults, pattern.ns || {}));
+}
+
+function nsCollectSmokeResult_(nsSheet, decision, pattern) {
+  return {
+    caseName: pattern.name,
+    expectedProfile: pattern.expectedProfile,
+    actualProfile: decision.profile,
+    passed: decision.profile === pattern.expectedProfile,
+    ruleResult: nsSheet.getRange('C59').getDisplayValue(),
+    nextStep: nsSheet.getRange('C60').getDisplayValue(),
+    comments: nsSheet.getRange('C63:C70').getDisplayValues().map((row) => row[0]),
+  };
+}
+
+function nsRunFivePatternSmokeTests() {
+  const ss = nsGetSpreadsheet();
+  const { commonSheet, nsSheet } = nsGetRequiredSheets(ss);
+  if (!commonSheet || !nsSheet) {
+    throw new Error('共通_初期評価 または 頚肩こり_初期評価 が見つかりません。');
+  }
+
+  const commonSnapshot = nsSnapshotColumnRange_(commonSheet, 3, 48);
+  const nsSnapshot = nsSnapshotColumnRange_(nsSheet, 3, 70);
+
+  const patterns = [
+    {
+      name: '頚髄症疑い',
+      expectedProfile: 'NS_MYELOPATHY',
+      common: { C3: '2026-03-26', C4: 'NS-SMOKE-MYELO', C18: '2週〜3か月', C20: '初発', C34: '6', C35: '7' },
+      ns: { C15: '両側', C17: true, C23: '頚部痛' },
+    },
+    {
+      name: '赤旗',
+      expectedProfile: 'NS_REDFLAG',
+      common: { C3: '2026-03-26', C4: 'NS-SMOKE-RED', C18: '2週〜3か月', C20: '初発', C34: '5', C35: '6' },
+      ns: { C7: true, C23: '頚部痛' },
+    },
+    {
+      name: '神経根性',
+      expectedProfile: 'NS_RADICULOPATHY',
+      common: { C3: '2026-03-26', C4: 'NS-SMOKE-RAD', C18: '2週〜3か月', C20: '初発', C34: '8', C35: '9' },
+      ns: { C15: '片側', C23: '上肢症状主訴' },
+    },
+    {
+      name: '慢性高負荷',
+      expectedProfile: 'NS_CHRONIC_LIFE',
+      common: { C3: '2026-03-26', C4: 'NS-SMOKE-CHL', C18: '3か月以上', C20: '再発', C34: '5', C35: '6' },
+      ns: { C23: '肩こり', C29: '7時間以上/日', C30: '5時間以上' },
+    },
+    {
+      name: '標準',
+      expectedProfile: 'NS_STANDARD',
+      common: { C3: '2026-03-26', C4: 'NS-SMOKE-STD', C18: '2週〜3か月', C20: '初発', C34: '3', C35: '4' },
+      ns: { C23: '肩こり' },
+    },
+  ];
+
+  const results = [];
+
+  try {
+    patterns.forEach((pattern) => {
+      nsApplySmokePattern_(commonSheet, nsSheet, pattern);
+      SpreadsheetApp.flush();
+      Utilities.sleep(500);
+      const execution = runNeckShoulderLogicAll();
+      SpreadsheetApp.flush();
+      Utilities.sleep(300);
+      results.push(nsCollectSmokeResult_(nsSheet, execution.decision, pattern));
+    });
+  } finally {
+    nsRestoreColumnSnapshot_(commonSheet, commonSnapshot);
+    nsRestoreColumnSnapshot_(nsSheet, nsSnapshot);
+    SpreadsheetApp.flush();
+  }
+
+  return results;
+}

@@ -1,6 +1,21 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-26（Phase C 基本実機確認完了 / 5パターン分岐確認）
+最終更新: 2026-03-26（Phase C live comment master 同期 / API smoke test 経路確認）
+
+---
+
+## 2026-03-26 Phase C live sync メモ
+
+- `scripts/sync-jassess-ns-comment-master.mjs` を追加し、`gas/setup_neck_shoulder.js` の rows 定義を正本として live の `頚肩こり_コメントマスタ` を同期できるようにした
+- 2026-03-26 実行結果: live `頚肩こり_コメントマスタ` は 39 行から 48 行へ同期完了
+- `gas/setup_neck_shoulder.js` には再利用用の `syncNsCommentMasterSheet()` を追加済み
+- `gas/appsscript.json` に `executionApi` を追加して Apps Script 実行経路を整備したが、`clasp run syncNsCommentMasterSheet` / `clasp run nsRunFivePatternSmokeTests` は引き続き permission error
+- `scripts/ns-live-smoke-test.mjs` を追加し、service account 経由で値を退避・書換・復元する safe な live smoke test 補助を用意した
+- 1 パターン (`標準`) の live probe では、Sheets API 経由の書換中に `C59` / `C60` / `C63:C70` は空のままで、service account / Sheets API 書込では `nsOnEdit` が発火しないことを確認
+- 結論:
+  - live comment master 同期は完了
+  - 5 パターンの完全な live 再現確認は、Apps Script エディタからの関数実行か、人手によるシート編集で継続する必要がある
+  - 今回はこの blocker を記録し、ローカル正本と live comment master の不一致解消を優先して反映
 
 ---
 
@@ -208,6 +223,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-26 | live `頚肩こり_コメントマスタ` 同期スクリプトと API smoke test 補助を追加。39 行→48 行の live 同期完了、Sheets API 書込では `nsOnEdit` が発火しないことを確認 | （このコミット） |
 | 2026-03-26 | `頚肩こり_コメントマスタ` ベースの文言調整。`logic_engine_neck_shoulder.js` に placeholder 展開を追加し、`setup_neck_shoulder.js` のコメントマスタ正本へ不足キーと可変文言を反映 | （このコミット） |
 | 2026-03-26 | Phase C 基本実機確認。Apps Script 反映、`runNeckShoulderLogicAll()` 手動実行、`nsOnEdit` 自動更新、`頚肩こり_初期評価` の `C59/C60/C63:C70` 更新を確認。5パターン簡易分岐はローカルロジック評価で妥当と判断し、最小修正なしで記録更新 | （このコミット） |
 | 2026-03-26 | Phase C 初版実装。`logic_engine_neck_shoulder.js` を新規作成し、頚肩こり用フラグ集計・総合方針判定・コメント生成・`nsOnEdit` を追加。Phase B live 反映確認済みだが、Phase C ロジックの live 実行は未確認 | （このコミット） |

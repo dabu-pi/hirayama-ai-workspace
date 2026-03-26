@@ -423,6 +423,25 @@ function setupNsCommentsSheet(ss) {
   SpreadsheetApp.flush();
 }
 
+/**
+ * 頚肩こり_コメントマスタをローカル正本の定義で live シートへ再同期する。
+ * setupNsCommentsSheet() を正本として再利用し、既存シートを上書き更新する。
+ */
+function syncNsCommentMasterSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet() ||
+    SpreadsheetApp.openById('1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY');
+  const sh = getOrCreateSheet(ss, NS_SHEET_NAMES.NS_COMMENTS);
+
+  sh.clearContents();
+  setupNsCommentsSheet(ss);
+
+  return {
+    sheetName: NS_SHEET_NAMES.NS_COMMENTS,
+    syncedRows: Math.max(sh.getLastRow() - 1, 0),
+    syncedAt: new Date().toISOString(),
+  };
+}
+
 
 // ========== シート 4: 頚肩こり_判定ロジック（下準備用・非表示）==========
 
