@@ -1,20 +1,19 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-26（JASSESS-01 臨床位置づけ確定 / CLINICAL_FLOW.md 作成）
+最終更新: 2026-03-26（CLINICAL_FLOW.md 内容改訂 — 11セクション構成に整理）
 
 ---
 
 ## 現在地
 
-- **JASSESS-01 臨床位置づけ確定（2026-03-26）** ← 最新
-  - `CLINICAL_FLOW.md` を新規作成（msk-assessment-platform/ 直下）
-  - JASSESS-01 = **入口評価**（方針決定）/ 運動療法初回評価 = **介入設計評価** として明文化
-  - 分岐4分類（除外 / 疼痛優先 / 疼痛+軽運動 / 運動主軸）・引継ぎ項目を記録
-  - 上位プロジェクト: **平山接骨院 慢性疼痛強化プロジェクト** との関係も明記
-  - `DESIGN_DECISIONS.md` に第7項として設計判断を追記
-  - `hirayama-jyusei-strategy/strategy/patient-flow.md` に参照リンクを追加
+- **CLINICAL_FLOW.md 内容改訂（2026-03-26）** ← 最新
+  - 目的・設計思想・臨床フロー（Step 0〜7）・実務使い分け・慢性疼痛強化プロジェクト接続を整理
+  - 全11セクション構成に再整理（旧版を差し替え）
+  - JASSESS-01 = **入口評価** / 運動療法初回評価 = **介入設計評価** の定義を明文化・固定
   - **今後のコード修正・仕様修正・シート設計は `CLINICAL_FLOW.md` を前提として行うこと**
   - **次フェーズ: 実臨床テスト再開（5〜10症例）**
+- **JASSESS-01 臨床位置づけ確定（2026-03-26）**
+  - `CLINICAL_FLOW.md` 新規作成・`DESIGN_DECISIONS.md` §7 追記・`patient-flow.md` 参照追加
 - **実臨床テスト開始可（2026-03-25）**
   - ローカル正本を維持しつつ、service account 共有で live Google Sheet 読取に成功
   - live `腰痛評価入力` シートから `C95` と `C99:C106` を直接取得できる確認経路を整備
