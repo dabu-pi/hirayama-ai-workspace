@@ -2,7 +2,7 @@
 
 **対象:** JASSESS-01 頚肩こりモジュール追加
 **最終更新:** 2026-03-26
-**ステータス:** 設計フェーズ（実装前）
+**ステータス:** フェーズ A・B 完了 → フェーズ C（`logic_engine_neck_shoulder.js` 作成）が次工程
 
 > **大原則: 既存腰痛版を壊さない。追加のみで対応する。**
 > 既存の `腰痛評価入力` / `判定ロジック` / `コメントマスタ` / `評価履歴` は
@@ -276,13 +276,14 @@ B23: NS プルダウン: 前傾頭位        C23: なし,軽度,中等度,著明
 
 ## 8. 実装順と移行手順
 
-### フェーズ A: 設計・正本整備（今回実施済み）
+### フェーズ A: 設計・正本整備（✅ 完了 2026-03-26）
 1. `IMPLEMENTATION_PLAN_phase2.md` 作成（本ファイル）
 2. `COMMENT_DESIGN_neck_shoulder.md` 作成
 3. `LOGIC_neck_shoulder.md` 作成
 4. `modules/neck-shoulder/README.md` 更新
 
-### フェーズ B: シート追加（次回実施）
+### フェーズ B: シート追加（✅ 完了 2026-03-26 — `setup_neck_shoulder.js` 作成済み）
+> **実機反映手順:** Apps Script エディタで `setupNeckShoulderSheets()` を実行すること。
 1. `共通_初期評価` シートを追加
 2. `設定` シートに頚肩こり設定を末尾追加
 3. `評価履歴` に頚肩こり固有列を末尾追加
@@ -291,8 +292,8 @@ B23: NS プルダウン: 前傾頭位        C23: なし,軽度,中等度,著明
 6. `頚肩こり_初期評価` シートを追加
 7. `初期評価サマリー` シートを追加
 
-### フェーズ C: GAS 追加（フェーズ B 完了後）
-1. `gas/setup_neck_shoulder.js` を作成
+### フェーズ C: GAS 追加（← 次の工程）
+1. ~~`gas/setup_neck_shoulder.js` を作成~~ ✅ 完了（フェーズ B で作成済み）
 2. `gas/logic_engine_neck_shoulder.js` を作成
 3. `setupAllSheets()` に頚肩こり用の呼び出しを追加
 4. clasp push して動作確認
