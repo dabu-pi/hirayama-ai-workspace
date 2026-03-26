@@ -667,32 +667,78 @@ function setupStaffSheet(ss) {
  * 腰痛評価入力シートをクリアする（基本情報・評価データのみ。自動生成コメントも消去）
  * 「評価入力をクリア」ボタンから呼び出す
  */
-function clearInputSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAMES.INPUT);
-  if (!sheet) return;
+function getClearInputTargets_(ss) {
+  const phase2Names = (typeof NS_SHEET_NAMES !== 'undefined')
+    ? NS_SHEET_NAMES
+    : {
+        COMMON_INPUT: '共通_初期評価',
+        NS_INPUT: '頚肩こり_初期評価',
+      };
 
-  const ui = SpreadsheetApp.getUi();
-  const response = ui.alert('確認', '評価入力をクリアしますか？（評価履歴への転記は行われません）', ui.ButtonSet.YES_NO);
-  if (response !== ui.Button.YES) return;
-
-  // 入力エリアのみクリア（C列の黄色・水色セル）
-  const clearRanges = [
-    'C3:C13',   // 基本情報
-    'C16:C23',  // 赤旗
-    'C28:C32',  // 神経症状
-    'C36:C38',  // NRS
-    'C42:C51',  // RMDQ
-    'C56:C64',  // STarT
-    'C69:C71', 'D69:D71', 'D73', // PSFS
-    'C76:C80',  // 動作評価
-    'C84:C87',  // 移乗動作
-    'C91:C95',  // 総合所見・判定
-    'C108',     // 再評価予定日
+  const targets = [
+    {
+      sheet: ss.getSheetByName(SHEET_NAMES.INPUT),
+      ranges: [
+        'C3:C13',
+        'C16:C23',
+        'C28:C32',
+        'C36:C38',
+        'C42:C51',
+        'C56:C64',
+        'C69:C71', 'D69:D71', 'D73',
+        'C76:C80',
+        'C84:C87',
+        'C91:C95',
+        'C108',
+      ],
+    },
+    {
+      sheet: ss.getSheetByName(phase2Names.COMMON_INPUT),
+      ranges: [
+        'C3:C14',
+        'C17:C20',
+        'C23:C30',
+        'C34:C35',
+        'C38:C39',
+        'C42:C47',
+      ],
+    },
+    {
+      sheet: ss.getSheetByName(phase2Names.NS_INPUT),
+      ranges: [
+        'C7:C11',
+        'C15:C19',
+        'C23:C26',
+        'C29:C33',
+        'C37:C41',
+        'C44:C49',
+        'C53:C56',
+        'C59:C60',
+        'C63:C70',
+      ],
+    },
   ];
 
-  clearRanges.forEach(range => {
-    sheet.getRange(range).clearContent();
+  return targets.filter(target => target.sheet);
+}
+
+function clearInputSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const clearTargets = getClearInputTargets_(ss);
+  if (!clearTargets.length) return;
+
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    '確認',
+    '評価入力をクリアしますか？（Phase 2 の共通/頚肩こり入力を含む・評価履歴への転記は行われません）',
+    ui.ButtonSet.YES_NO
+  );
+  if (response !== ui.Button.YES) return;
+
+  clearTargets.forEach(target => {
+    target.ranges.forEach(range => {
+      target.sheet.getRange(range).clearContent();
+    });
   });
 
   ui.alert('クリアしました。新しい評価を入力してください。');

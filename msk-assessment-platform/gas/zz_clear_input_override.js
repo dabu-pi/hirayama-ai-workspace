@@ -30,19 +30,83 @@ function showOptionalAlert_(ui, title, message) {
   ui.alert(title, message, ui.ButtonSet.OK);
 }
 
+function getOverridePhase2SheetNames_() {
+  if (typeof NS_SHEET_NAMES !== 'undefined') {
+    return NS_SHEET_NAMES;
+  }
+  return {
+    COMMON_INPUT: '共通_初期評価',
+    NS_INPUT: '頚肩こり_初期評価',
+  };
+}
+
+function getOverrideClearInputTargets_(ss) {
+  const phase2Names = getOverridePhase2SheetNames_();
+
+  const targets = [
+    {
+      sheet: ss.getSheetByName(SHEET_NAMES.INPUT),
+      ranges: [
+        'C3:C13',
+        'C16:C23',
+        'C28:C32',
+        'C36:C38',
+        'C42:C51',
+        'C56:C64',
+        'C69:C71', 'D69:D71', 'D73',
+        'C76:C80',
+        'C84:C87',
+        'C91:C95',
+        'C108',
+      ],
+    },
+    {
+      sheet: ss.getSheetByName(phase2Names.COMMON_INPUT),
+      ranges: [
+        'C3:C14',
+        'C17:C20',
+        'C23:C30',
+        'C34:C35',
+        'C38:C39',
+        'C42:C47',
+      ],
+    },
+    {
+      sheet: ss.getSheetByName(phase2Names.NS_INPUT),
+      ranges: [
+        'C7:C11',
+        'C15:C19',
+        'C23:C26',
+        'C29:C33',
+        'C37:C41',
+        'C44:C49',
+        'C53:C56',
+        'C59:C60',
+        'C63:C70',
+      ],
+    },
+  ];
+
+  return targets.filter(target => target.sheet);
+}
+
 globalThis.clearInputSheet = function(options) {
   const opts = options || {};
   const ss = getJassessSpreadsheet_();
-  const sheet = ss.getSheetByName(SHEET_NAMES.INPUT);
+  const clearTargets = getOverrideClearInputTargets_(ss);
   const ui = tryGetUi_();
 
-  if (!sheet) {
+  if (!clearTargets.length) {
     showOptionalAlert_(ui, 'Error', 'Input sheet not found. Please rerun setupAllSheets().');
     return { ok: false, reason: 'missing_input_sheet', usedUi: !!ui };
   }
 
   if (!opts.skipConfirmation && ui) {
-    const response = ui.alert('Confirm', 'Clear the input sheet? History will not be updated.', ui.ButtonSet.YES_NO);
+    const response = ui.alert(
+      'Confirm',
+      'Clear the input sheets? Phase 2 common/neck-shoulder inputs will also be reset. History will not be updated.',
+      ui.ButtonSet.YES_NO
+    );
     if (response !== ui.Button.YES) {
       return { ok: false, reason: 'cancelled', usedUi: true };
     }
@@ -50,24 +114,14 @@ globalThis.clearInputSheet = function(options) {
     Logger.log('[clearInputSheet] UI unavailable. Proceeding without confirmation.');
   }
 
-  const clearRanges = [
-    'C3:C13',
-    'C16:C23',
-    'C28:C32',
-    'C36:C38',
-    'C42:C51',
-    'C56:C64',
-    'C69:C71', 'D69:D71', 'D73',
-    'C76:C80',
-    'C84:C87',
-    'C91:C95',
-    'C108',
-  ];
-
-  clearRanges.forEach(range => {
-    sheet.getRange(range).clearContent();
+  let clearedRanges = 0;
+  clearTargets.forEach(target => {
+    target.ranges.forEach(range => {
+      target.sheet.getRange(range).clearContent();
+      clearedRanges += 1;
+    });
   });
 
   showOptionalAlert_(ui, 'Cleared. You can enter a new evaluation.');
-  return { ok: true, usedUi: !!ui, clearedRanges: clearRanges.length };
+  return { ok: true, usedUi: !!ui, clearedSheets: clearTargets.length, clearedRanges: clearedRanges };
 };
