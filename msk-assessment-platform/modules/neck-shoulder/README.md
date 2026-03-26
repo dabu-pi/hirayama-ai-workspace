@@ -1,8 +1,8 @@
 # 頚肩こり評価モジュール仕様 — modules/neck-shoulder/
 
 **位置づけ:** JASSESS-01 運動器初期評価システム の Phase 2 モジュール
-**最終更新:** 2026-03-26（nsOnEdit 実発火確認手順整理）
-**ステータス:** Phase C 初版実装・基本実機確認済み（`runNeckShoulderLogicAll()` / `nsOnEdit` / `C59/C60/C63:C70` 更新確認） / live `頚肩こり_コメントマスタ` 同期済み / 主経路は固定済み / 次は `標準` 1 ケースの `nsOnEdit` 実発火確認
+**最終更新:** 2026-03-27（nsOnEdit manual live 発火確認 PASS）
+**ステータス:** Phase C 初版実装・manual live 発火確認 PASS（`標準` 1 ケースで `nsOnEdit` success / `C59/C60/C63:C70` 更新確認） / live `頚肩こり_コメントマスタ` 同期済み / 主経路は固定済み / 残り 4 パターンの live 手入力リプレイは任意確認
 
 > 共通基盤（患者情報・赤旗・NRS・PSFS）の仕様は SPEC.md / SHEET_DESIGN.md を参照。
 > 根拠IDの対応は `EVIDENCE_MAP_neck_shoulder.md` を参照。
@@ -30,19 +30,19 @@
   - Apps Script 側にも `syncNsCommentMasterSheet()` を追加済みだが、`clasp run` は permission error のため現状は direct Sheets API 同期が確実
 - `scripts/ns-live-smoke-test.mjs` で safe な live probe 経路を追加
   - 5パターンすべてで write/read back / restore / `nsOnEdit` 発火有無を記録できる
-  - service account / Sheets API の書換では `nsOnEdit` が発火しないことを blocker として明示する
+  - service account / Sheets API の書換では `nsOnEdit` が発火しない一方、manual live edit では `nsOnEdit` 発火確認済み
   - 2026-03-26 実測では 5 / 5 パターンで `inputsApplied=true` かつ `restored=true`、`triggerObservedCount=0`
-  - そのため 5パターンの完全な live リプレイは、Apps Script エディタからの関数実行か、人手によるシート編集で継続する
+  - そのため API smoke test は blocker 記録用に維持し、残り 4 パターンの完全な live リプレイは任意確認として扱う
 - `clasp push -f` は `msk-assessment-platform/gas` を作業ディレクトリに固定し、`gas/.clasp.json` の `rootDir: "."` で運用する
 - `clasp run` は補助経路とし、主経路から外した
 - `nsOnEdit` 実発火確認はコード修正不要
-  - 最短では `標準` 1 ケースだけを人手編集し、`C59` / `C60` / `C63:C70` 更新と Apps Script Executions の `nsOnEdit` success を確認する
+  - `標準` 1 ケースの人手編集で `C59` / `C60` / `C63:C70` 更新と Apps Script Executions の `nsOnEdit` success を確認済み
   - 手順正本は `PHASE_C_EXECUTION.md`
 - 生成対象:
   - 新規5シート: `共通_初期評価` / `頚肩こり_初期評価` / `頚肩こり_コメントマスタ` / `頚肩こり_判定ロジック` / `初期評価サマリー`
   - 既存2シートへの追記: `設定` / `評価履歴`
 - `logic_engine_neck_shoulder.js` は `setup_neck_shoulder.js` のセル番地を正本として参照し、既存腰痛 `logic_engine.js` とは別関数名で分離している
-- 次工程は `標準` 1 ケースの `nsOnEdit` 実発火確認。その後は任意で 5パターンの live 手入力リプレイ記録化、または `頚肩こり_コメントマスタ` ベースへの文言調整
+- 次工程は必須確認ではなく、必要時のみ残り 4 パターンの live 手入力リプレイ記録化、または `頚肩こり_コメントマスタ` ベースへの文言調整
 
 > 以下の設計記述はモジュール仕様の説明であり、Phase C 実装時のセル番地参照は `gas/setup_neck_shoulder.js` と `IMPLEMENTATION_PLAN_phase2.md` の実装準拠版を優先する。
 

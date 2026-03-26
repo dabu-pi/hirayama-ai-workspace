@@ -1,6 +1,18 @@
 # PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
 
-最終更新: 2026-03-26（nsOnEdit 実発火確認手順整理）
+最終更新: 2026-03-27（nsOnEdit manual live 発火確認 PASS）
+
+---
+
+## 2026-03-27 Phase C manual live 発火確認 PASS
+
+- `標準` 1 ケースの人手編集で `nsOnEdit` が Apps Script Executions 上で success 完了
+- live シートで `C59` / `C60` / `C63:C70` の更新を確認
+- blocker の切り分けを更新:
+  - service account / Sheets API 書込では `nsOnEdit` は発火しない
+  - manual live edit では `nsOnEdit` 発火を確認済み
+- `nsOnEdit` 実発火確認は完了扱いとする
+- 残り 4 パターンの live 手入力リプレイは任意確認へ変更し、未実施のまま保留可とする
 
 ---
 
@@ -27,7 +39,7 @@
   - 5 パターン smoke test: `mainRouteStable=true`
   - 5 / 5 で `inputsApplied=true` かつ `restored=true`
   - `triggerObservedCount=0` / `blockedByOnEditCount=5`
-  - 結論: 主経路の read/write/restore は安定、`nsOnEdit` 完全再現だけ補助経路へ分離
+  - 結論: 主経路の read/write/restore は安定。service account / Sheets API 書込では `nsOnEdit` 非発火、manual live edit では発火確認済み
 
 ### 主経路
 
@@ -59,7 +71,7 @@
 2. `gas/.clasp.json` はローカル専用、設定確認は `gas/.clasp.json.example` を正本にする
 3. `appsscript.json` は `gas/` 直下を manifest 正本として維持する
 4. 5パターン smoke test は `ns-live-smoke-test.mjs` を標準にし、`triggerObserved=false` は blocker として記録する
-5. `nsOnEdit` 実発火確認だけ補助経路へ切り替える
+5. `nsOnEdit` 実発火確認は manual live edit の `標準` 1 ケースで完了済みとし、残り 4 パターンは任意確認とする
 
 ---
 
@@ -92,9 +104,10 @@
 
 ### 現時点の結果
 
-- 手順整理完了
-- 実発火そのものは未実施
-- 次アクションは `標準` 1 ケースの manual edit 実行のみ
+- `標準` 1 ケースで manual live edit を実施し PASS
+- `nsOnEdit` は Executions 上で success を確認
+- `C59` / `C60` / `C63:C70` 更新を確認
+- 残り 4 パターンは任意確認扱い。必要時のみ live 手入力リプレイを追加実施する
 
 ---
 
@@ -127,8 +140,11 @@
   - live シートで `頚肩こり_初期評価` の `C59` / `C60` / `C63:C70` 更新を確認
   - 5パターン簡易分岐（頚髄症疑い / 赤旗 / 神経根性 / 慢性高負荷 / 標準）はローカルロジック評価で確認
   - 上記5パターンはいずれも `C59` / `C60` 相当の分岐と 8 コメント生成が成立し、今回の最小修正は不要と判断
-  - **未確認:** `nsOnEdit` 実発火の補助経路確認（標準 1 ケースの manual edit + Executions success）
-  - **次のステップ:** `標準` 1 ケースで `nsOnEdit` 実発火確認 → その後は任意で 5パターン live 手入力リプレイ
+- **Phase C manual live 発火確認 PASS（2026-03-27）** ← 最新
+  - `標準` 1 ケースの manual live edit で `nsOnEdit` success を Executions で確認
+  - `C59` / `C60` / `C63:C70` 更新を確認
+  - blocker を「service account / Sheets API 書込では非発火、manual live edit では発火確認済み」に更新
+  - 残り 4 パターンの live 手入力リプレイは任意確認扱い、現時点では未実施
 - **Phase B 実機反映確認完了（2026-03-26）**
   - live シートで新規5シート作成、`設定` 追記、`評価履歴` 7列追加、`頚肩こり_判定ロジック` 非表示を確認
 - **Phase B 文書整合修正完了（2026-03-26）** ← 最新
@@ -303,8 +319,8 @@
 5. **Phase C を再開する場合**
    - `gas/setup_neck_shoulder.js` を正本として頚肩こりシートのセル番地を参照する
    - `IMPLEMENTATION_PLAN_phase2.md` の実装準拠セル番地を確認してから `gas/logic_engine_neck_shoulder.js` を更新する
-   - 主経路の安定化は完了。次は `PHASE_C_EXECUTION.md` の `nsOnEdit` 実発火確認手順どおりに `標準` 1 ケースを手で流す
-   - その 1 ケースが通ったら、必要に応じて 5パターンの live 手入力リプレイを追加で記録する
+   - 主経路の安定化と `標準` 1 ケースの `nsOnEdit` 実発火確認は完了
+   - 必要時のみ、残り 4 パターンの live 手入力リプレイを任意で追加記録する
    - 文言微調整を行う場合は `頚肩こり_コメントマスタ` と `logic_engine_neck_shoulder.js` のキー対応を優先確認する
    - installable trigger を使う場合は既存腰痛 `onEdit` と別に `nsOnEdit` を追加する
 6. **Phase 1 側の次アクション**
@@ -318,6 +334,7 @@
 
 | 日付 | 内容 | commit |
 |---|---|---|
+| 2026-03-27 | `標準` 1 ケースの manual live edit で `nsOnEdit` 実発火確認 PASS。Executions success と `C59/C60/C63:C70` 更新を確認し、blocker を「API書込では非発火・manual edit では発火済み」に更新。残り 4 パターンは任意確認扱いへ整理 | （このコミット） |
 | 2026-03-26 | `nsOnEdit` 実発火確認はコード修正不要と判断し、補助経路の最短手順を文書化。次アクションを `標準` 1 ケースの manual edit + Executions success 確認に限定 | （このコミット） |
 | 2026-03-26 | Phase C 実行基盤安定化。`gas/.clasp.json.example` / `.claspignore` / `PHASE_C_EXECUTION.md` を追加し、主経路を `ローカル修正 → node --check → clasp push -f → Sheets API smoke test` に固定。`gas` 直下からの push 成功、comment master 同期 `synced=true`、5 パターン smoke test は 5/5 write-read-restore 成功・0/5 `nsOnEdit` 発火で blocker を分離 | （このコミット） |
 | 2026-03-26 | live `頚肩こり_コメントマスタ` 同期スクリプトと API smoke test 補助を追加。39 行→48 行の live 同期完了、Sheets API 書込では `nsOnEdit` が発火しないことを確認 | （このコミット） |
