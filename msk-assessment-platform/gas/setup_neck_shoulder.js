@@ -585,9 +585,6 @@ function addNsHistoryColumns(ss) {
   const sh = ss.getSheetByName(SHEET_NAMES.HISTORY);
   if (!sh) { Logger.log('[WARN] 評価履歴シートが見つかりません。スキップします。'); return; }
 
-  const lastCol = sh.getLastColumn();
-  const addAt = lastCol + 1;
-
   const nsHistoryCols = [
     'モジュール種別',
     'NS-NRS',
@@ -597,6 +594,21 @@ function addNsHistoryColumns(ss) {
     'NS-総合方針',
     'NS-次の介入先',
   ];
+
+  const headerValues = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const existingStart = headerValues.indexOf(nsHistoryCols[0]);
+
+  if (existingStart !== -1) {
+    const existingHeaders = headerValues.slice(existingStart, existingStart + nsHistoryCols.length);
+    const isComplete = nsHistoryCols.every((colName, i) => existingHeaders[i] === colName);
+    if (isComplete) {
+      Logger.log('[INFO] 評価履歴の NS 列は既存のため追加をスキップします。');
+      return;
+    }
+    throw new Error('評価履歴シートの NS 列ヘッダーが部分一致しており、安全に自動追記できません。ヘッダー状態を確認してください。');
+  }
+
+  const addAt = sh.getLastColumn() + 1;
 
   nsHistoryCols.forEach((colName, i) => {
     sh.getRange(1, addAt + i)

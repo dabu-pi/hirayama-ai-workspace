@@ -879,9 +879,6 @@ function saveToHistory() {
       ui.alert('エラー', '共通_初期評価 または 頚肩こり_初期評価 が見つかりません。Phase 2 シート構成を確認してください。', ui.ButtonSet.OK);
       return;
     }
-    if (typeof addNsHistoryColumns === 'function') {
-      addNsHistoryColumns(ss);
-    }
 
     data = [
       evalId,
