@@ -42,11 +42,21 @@ function getOverridePhase2SheetNames_() {
 
 function getOverrideClearInputTargets_(ss) {
   const phase2Names = getOverridePhase2SheetNames_();
-
-  const targets = [
-    {
-      sheet: ss.getSheetByName(SHEET_NAMES.INPUT),
-      ranges: [
+  const lowBackRanges = ss.getSheetByName(phase2Names.COMMON_INPUT)
+    ? [
+        'C9:C13',
+        'C16:C23',
+        'C28:C32',
+        'C36:C38',
+        'C42:C51',
+        'C56:C64',
+        'C69:C71', 'D69:D71', 'D73',
+        'C76:C80',
+        'C84:C87',
+        'C91:C95',
+        'C108',
+      ]
+    : [
         'C3:C13',
         'C16:C23',
         'C28:C32',
@@ -58,7 +68,12 @@ function getOverrideClearInputTargets_(ss) {
         'C84:C87',
         'C91:C95',
         'C108',
-      ],
+      ];
+
+  const targets = [
+    {
+      sheet: ss.getSheetByName(SHEET_NAMES.INPUT),
+      ranges: lowBackRanges,
     },
     {
       sheet: ss.getSheetByName(phase2Names.COMMON_INPUT),
@@ -93,6 +108,9 @@ function getOverrideClearInputTargets_(ss) {
 globalThis.clearInputSheet = function(options) {
   const opts = options || {};
   const ss = getJassessSpreadsheet_();
+  if (typeof syncLowBackInputToCommonSource_ === 'function') {
+    syncLowBackInputToCommonSource_(ss);
+  }
   const clearTargets = getOverrideClearInputTargets_(ss);
   const ui = tryGetUi_();
 

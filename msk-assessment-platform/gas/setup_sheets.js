@@ -203,6 +203,49 @@ function refreshInputSheetTransferValidations() {
   return { ok: true, range: 'C84:C87' };
 }
 
+function getPhase2SheetNames_() {
+  return (typeof NS_SHEET_NAMES !== 'undefined')
+    ? NS_SHEET_NAMES
+    : {
+        COMMON_INPUT: '共通_初期評価',
+        NS_INPUT: '頚肩こり_初期評価',
+      };
+}
+
+function getCommonInputSheet_(ss) {
+  return ss.getSheetByName(getPhase2SheetNames_().COMMON_INPUT);
+}
+
+function getLowBackCommonSourceBindings_() {
+  const commonName = getPhase2SheetNames_().COMMON_INPUT;
+  return {
+    C3: `='${commonName}'!C3`,
+    C4: `='${commonName}'!C4`,
+    C5: `='${commonName}'!C10`,
+    C6: `='${commonName}'!C11`,
+    C7: `='${commonName}'!C5`,
+    C8: `='${commonName}'!C6`,
+  };
+}
+
+function syncLowBackInputToCommonSource_(ss) {
+  const sheet = ss.getSheetByName(SHEET_NAMES.INPUT);
+  const commonSheet = getCommonInputSheet_(ss);
+
+  if (!sheet || !commonSheet) {
+    return { ok: false, reason: 'missing_sheet' };
+  }
+
+  const bindings = getLowBackCommonSourceBindings_();
+  Object.keys(bindings).forEach(cell => {
+    const range = sheet.getRange(cell);
+    range.clearDataValidations();
+    range.setFormula(bindings[cell]).setBackground(COLORS.AUTO);
+  });
+
+  return { ok: true, updatedCells: Object.keys(bindings) };
+}
+
 // ========== シート 1: 設定 ==========
 
 function setupConfigSheet(ss) {
@@ -318,6 +361,10 @@ function setupInputSheet(ss) {
     setLabelInput(sheet, row, label, color);
     if (choices) setDropdown(sheet, row, 3, choices.split(','));
   });
+
+  if (getCommonInputSheet_(ss)) {
+    syncLowBackInputToCommonSource_(ss);
+  }
 
   // ---- セクション B: 赤旗 ----
   setHeader(sheet, 15, 2, 'B. 赤旗スクリーニング（Red Flags）— 1つでも「あり」で要注意', 2);
@@ -668,17 +715,22 @@ function setupStaffSheet(ss) {
  * 「評価入力をクリア」ボタンから呼び出す
  */
 function getClearInputTargets_(ss) {
-  const phase2Names = (typeof NS_SHEET_NAMES !== 'undefined')
-    ? NS_SHEET_NAMES
-    : {
-        COMMON_INPUT: '共通_初期評価',
-        NS_INPUT: '頚肩こり_初期評価',
-      };
-
-  const targets = [
-    {
-      sheet: ss.getSheetByName(SHEET_NAMES.INPUT),
-      ranges: [
+  const phase2Names = getPhase2SheetNames_();
+  const lowBackRanges = getCommonInputSheet_(ss)
+    ? [
+        'C9:C13',
+        'C16:C23',
+        'C28:C32',
+        'C36:C38',
+        'C42:C51',
+        'C56:C64',
+        'C69:C71', 'D69:D71', 'D73',
+        'C76:C80',
+        'C84:C87',
+        'C91:C95',
+        'C108',
+      ]
+    : [
         'C3:C13',
         'C16:C23',
         'C28:C32',
@@ -690,7 +742,12 @@ function getClearInputTargets_(ss) {
         'C84:C87',
         'C91:C95',
         'C108',
-      ],
+      ];
+
+  const targets = [
+    {
+      sheet: ss.getSheetByName(SHEET_NAMES.INPUT),
+      ranges: lowBackRanges,
     },
     {
       sheet: ss.getSheetByName(phase2Names.COMMON_INPUT),
@@ -724,6 +781,7 @@ function getClearInputTargets_(ss) {
 
 function clearInputSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  syncLowBackInputToCommonSource_(ss);
   const clearTargets = getClearInputTargets_(ss);
   if (!clearTargets.length) return;
 
@@ -755,6 +813,9 @@ function saveToHistory() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const inputSheet = ss.getSheetByName(SHEET_NAMES.INPUT);
   const historySheet = ss.getSheetByName(SHEET_NAMES.HISTORY);
+  const commonSheet = getCommonInputSheet_(ss);
+  const phase2Names = getPhase2SheetNames_();
+  const nsSheet = ss.getSheetByName(phase2Names.NS_INPUT);
 
   if (!inputSheet || !historySheet) {
     SpreadsheetApp.getUi().alert('シートが見つかりません。setup_sheets.js を再実行してください。');
@@ -763,9 +824,19 @@ function saveToHistory() {
 
   const ui = SpreadsheetApp.getUi();
 
-  // 必須項目チェック（Phase 2 で詳細化）
-  const evalDate = inputSheet.getRange('C3').getValue();
-  const patientId = inputSheet.getRange('C4').getValue();
+  syncLowBackInputToCommonSource_(ss);
+
+  const evalDate = commonSheet ? commonSheet.getRange('C3').getValue() : inputSheet.getRange('C3').getValue();
+  const patientId = commonSheet ? commonSheet.getRange('C4').getValue() : inputSheet.getRange('C4').getValue();
+  const moduleType = commonSheet ? commonSheet.getRange('C7').getValue() : '腰痛';
+  const staffName = commonSheet ? commonSheet.getRange('C5').getValue() : inputSheet.getRange('C7').getValue();
+  const evalType = commonSheet ? commonSheet.getRange('C6').getValue() : inputSheet.getRange('C8').getValue();
+  const patientName = commonSheet ? commonSheet.getRange('C10').getValue() : inputSheet.getRange('C5').getValue();
+
+  if (commonSheet && typeof addNsHistoryColumns === 'function') {
+    addNsHistoryColumns(ss);
+  }
+
   if (!evalDate || !patientId) {
     ui.alert('エラー', '評価日と患者IDを入力してください。', ui.ButtonSet.OK);
     return;
@@ -778,29 +849,73 @@ function saveToHistory() {
   const lastRow = historySheet.getLastRow();
   const evalId = 'E' + String(lastRow).padStart(4, '0');
 
-  // 転記するデータを収集
-  const data = [
-    evalId,
-    evalDate,
-    patientId,
-    inputSheet.getRange('C5').getValue(),  // 患者名（自動表示）
-    inputSheet.getRange('C8').getValue(),  // 評価区分
-    inputSheet.getRange('C36').getValue(), // NRS現在
-    inputSheet.getRange('C37').getValue(), // NRS最悪
-    inputSheet.getRange('C52').getValue(), // RMDQ合計
-    inputSheet.getRange('C65').getValue(), // STarT合計
-    inputSheet.getRange('C66').getValue(), // STarT判定
-    inputSheet.getRange('D72').getValue(), // PSFS平均
-    inputSheet.getRange('C24').getValue(), // 赤旗スコア
-    inputSheet.getRange('C33').getValue(), // 神経症状レベル
-    inputSheet.getRange('C92').getValue(), // 施術者判定: 治療優先方針
-    inputSheet.getRange('C95').getValue(), // ルールベース判定
-    inputSheet.getRange('C96').getValue(), // AI判定（将来）
-    inputSheet.getRange('C99').getValue(), // 評価まとめ（自動）
-    inputSheet.getRange('C91').getValue(), // 施術者所見
-    inputSheet.getRange('C7').getValue(),  // 担当施術者
-    new Date(),                             // 記録日時
-  ];
+  let data;
+  if (moduleType === '腰痛' || moduleType === '') {
+    data = [
+      evalId,
+      evalDate,
+      patientId,
+      patientName,
+      evalType,
+      inputSheet.getRange('C36').getValue(),
+      inputSheet.getRange('C37').getValue(),
+      inputSheet.getRange('C52').getValue(),
+      inputSheet.getRange('C65').getValue(),
+      inputSheet.getRange('C66').getValue(),
+      inputSheet.getRange('D72').getValue(),
+      inputSheet.getRange('C24').getValue(),
+      inputSheet.getRange('C33').getValue(),
+      inputSheet.getRange('C92').getValue(),
+      inputSheet.getRange('C95').getValue(),
+      inputSheet.getRange('C96').getValue(),
+      inputSheet.getRange('C99').getValue(),
+      inputSheet.getRange('C91').getValue(),
+      staffName,
+      new Date(),
+      '腰痛', '', '', '', '', '', '',
+    ];
+  } else if (moduleType === '頚肩こり') {
+    if (!commonSheet || !nsSheet) {
+      ui.alert('エラー', '共通_初期評価 または 頚肩こり_初期評価 が見つかりません。Phase 2 シート構成を確認してください。', ui.ButtonSet.OK);
+      return;
+    }
+    if (typeof addNsHistoryColumns === 'function') {
+      addNsHistoryColumns(ss);
+    }
+
+    data = [
+      evalId,
+      evalDate,
+      patientId,
+      patientName,
+      evalType,
+      commonSheet.getRange('C34').getValue(),
+      commonSheet.getRange('C35').getValue(),
+      '',
+      '',
+      '',
+      commonSheet.getRange('C48').getValue(),
+      commonSheet.getRange('C31').getValue(),
+      nsSheet.getRange('C20').getValue(),
+      '',
+      nsSheet.getRange('C59').getValue(),
+      '',
+      nsSheet.getRange('C63').getValue(),
+      '',
+      staffName,
+      new Date(),
+      '頚肩こり',
+      commonSheet.getRange('C34').getValue(),
+      nsSheet.getRange('C20').getValue(),
+      nsSheet.getRange('C50').getValue(),
+      nsSheet.getRange('C34').getValue(),
+      nsSheet.getRange('C59').getValue(),
+      nsSheet.getRange('C60').getValue(),
+    ];
+  } else {
+    ui.alert('エラー', `評価対象症状「${moduleType}」の履歴保存はまだ未対応です。腰痛 または 頚肩こり を選択してください。`, ui.ButtonSet.OK);
+    return;
+  }
 
   historySheet.appendRow(data);
   ui.alert('記録完了', `評価ID: ${evalId} として評価履歴に保存しました。\n入力シートをクリアする場合は「評価入力をクリア」を実行してください。`, ui.ButtonSet.OK);
