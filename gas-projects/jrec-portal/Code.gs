@@ -19,6 +19,8 @@
  *
  * 【更新履歴】
  *   2026-03-30  v1.0  初版作成（13列 / 新患フロー最小セット11行）
+ *   2026-03-30  v1.1  onEdit(e) 追加（H列変更時に背景色を自動更新）
+ *               applyRowColorsForRows_() を共通ロジックとして切り出し
  */
 
 "use strict";
@@ -211,6 +213,45 @@ function onOpen() {
 function noop_() {}
 
 // ============================================================
+// 自動トリガー: onEdit
+// ============================================================
+
+/**
+ * H列（整備状況）がドロップダウンで変更されたとき、その行の背景色を自動更新する。
+ *
+ * ■ 動作条件
+ *   container-bound スクリプトとして設置した場合のみ自動実行される。
+ *   スタンドアロンの場合は「トリガー」設定で onEdit を登録する必要がある。
+ *
+ * ■ 安全策
+ *   - ポータルシート（PORTAL_SHEET_NAME）以外の編集には反応しない
+ *   - H列（COL.STATUS = 8）以外の編集には反応しない
+ *   - ヘッダー行（1行目）の変更には反応しない
+ *   → JREC-01 本体（来店管理施術録ver3.1）とは別 GAS プロジェクトのため
+ *      本体側への影響はない
+ */
+function onEdit(e) {
+  if (!e) { return; }
+  var range = e.range;
+  var sh    = range.getSheet();
+
+  // ポータルシート以外は無視
+  if (sh.getName() !== PORTAL_SHEET_NAME) { return; }
+
+  // H列（整備状況）が編集範囲に含まれない場合は無視
+  var col     = range.getColumn();
+  var lastCol = range.getLastColumn();
+  if (lastCol < COL.STATUS || col > COL.STATUS) { return; }
+
+  // ヘッダー行（1行目）は無視
+  var startRow = range.getRow();
+  if (startRow < DATA_START_ROW) { return; }
+
+  // 変更された行だけ背景色を更新（全行再スキャンしない）
+  applyRowColorsForRows_(sh, startRow, range.getNumRows());
+}
+
+// ============================================================
 // メイン関数
 // ============================================================
 
@@ -359,21 +400,30 @@ function writeInitialData_(sh) {
 }
 
 /**
- * H列（整備状況）の値に応じて各データ行の背景色を設定する。
- * ヘッダー行（1行目）は変更しない。
- * データがない場合（lastRow < DATA_START_ROW）はスキップする。
+ * 全データ行の背景色を整備状況（H列）の値に応じて設定する。
+ * setupOperationPortal_() / refreshFormatOnly_() から呼ばれる。
+ * ⚠️ H列を手動変更しても自動反映されない。自動反映は onEdit(e) が担う。
  */
 function applyRowColors_(sh) {
   var lastRow = sh.getLastRow();
   if (lastRow < DATA_START_ROW) { return; }
+  applyRowColorsForRows_(sh, DATA_START_ROW, lastRow - DATA_START_ROW + 1);
+}
 
-  var dataRowCount = lastRow - DATA_START_ROW + 1;
-  var statusCol    = sh.getRange(DATA_START_ROW, COL.STATUS, dataRowCount, 1).getValues();
-
-  // 全列 × 全データ行分の背景色配列を作成
+/**
+ * 指定した行範囲の背景色を整備状況（H列）の値に応じて設定する。
+ * applyRowColors_() と onEdit(e) の両方から呼ばれる共通ロジック。
+ *
+ * @param {Sheet}  sh       対象シート
+ * @param {number} startRow 開始行（1-indexed）
+ * @param {number} numRows  行数
+ */
+function applyRowColorsForRows_(sh, startRow, numRows) {
+  if (numRows <= 0) { return; }
+  var statusValues = sh.getRange(startRow, COL.STATUS, numRows, 1).getValues();
   var bgMatrix = [];
-  for (var r = 0; r < dataRowCount; r++) {
-    var s  = statusCol[r][0];
+  for (var i = 0; i < numRows; i++) {
+    var s  = statusValues[i][0];
     var bg = COLOR.DEFAULT;
     if      (s === "✅完了")      { bg = COLOR.COMPLETE;   }
     else if (s === "⚠️要確認")   { bg = COLOR.NEED_CHECK; }
@@ -382,8 +432,7 @@ function applyRowColors_(sh) {
     else if (s === "⏭️将来対応") { bg = COLOR.FUTURE;     }
     bgMatrix.push(new Array(NUM_COLS).fill(bg));
   }
-
-  sh.getRange(DATA_START_ROW, 1, dataRowCount, NUM_COLS).setBackgrounds(bgMatrix);
+  sh.getRange(startRow, 1, numRows, NUM_COLS).setBackgrounds(bgMatrix);
 }
 
 // ============================================================

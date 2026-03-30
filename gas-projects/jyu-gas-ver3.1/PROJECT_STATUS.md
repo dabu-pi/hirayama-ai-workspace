@@ -1545,11 +1545,14 @@ transferData 月次集計:
 
 | 項目 | 内容 |
 |---|---|
-| コード | `gas-projects/jrec-portal/Code.gs` |
+| コード | `gas-projects/jrec-portal/Code.gs` v1.1（onEdit追加）|
 | 対象 SS | `121BkW7jEnKUjmU_NNVAPyJRs_UVmmoqkHDPMHL-RJeA` |
-| 主要関数 | `setupOperationPortal_()` / `refreshFormatOnly_()` / `resetDataRows_()` |
+| 主要関数 | `setupOperationPortal_()` / `onEdit(e)` / `refreshFormatOnly_()` / `resetDataRows_()` |
 | 初期データ | 新患フロー最小セット 11行（OP-011〜OP-033） |
 | 再実行安全性 | 既存シートがある場合は書式のみ更新・データ行を保持する設計 |
+| H列自動反映 | container-bound なら onEdit(e) で背景色が自動更新される |
+| ディレクトリ分離理由 | 別SS = 別clasp設定が技術的必然。jyu-gas-ver3.1の clasp.json に混在不可 |
+| Dashboard同期 | 不要。今回は「保険請求システム機能」の実装ではなく「運用補助ツール」。次アクションに変化なし |
 | 次のステップ | 院長が Apps Script エディタにコードを貼り付けて実行するだけで完成 |
 
 ### 運用ポータル設計方針メモ（2026-03-30 v1.1）
