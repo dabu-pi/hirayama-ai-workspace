@@ -1498,7 +1498,7 @@ transferData 月次集計:
 ### 参考 commit
 
 - `ff7d0ab` — docs(JREC-01): mixed case 表示改善メモ追加
-- `5077920` — feat(JREC-01): 来院ヘッダ新5列実装（算定区分/Mixed区分/case要様）
+- `5077920` — feat(JREC-01): 来院ヘッダ新5列実装（算定区分/Mixed区分/case要約）
 - `e931fe5` — fix(JREC-01): chargeReason に「後療+再検 mixed」分岐を追加
 
 ---
