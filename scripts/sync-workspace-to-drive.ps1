@@ -226,11 +226,11 @@ function New-DriveIndexContent {
         '',
         '## Export Metadata',
         '',
-        "- SourceRoot: `$Source",
-        "- ExportRoot: `$Export",
-        "- Branch: `$Branch",
-        "- Commit: `$Commit",
-        "- SyncedAt: `$syncedAtText"
+        "- SourceRoot: $Source",
+        "- ExportRoot: $Export",
+        "- Branch: $Branch",
+        "- Commit: $Commit",
+        "- SyncedAt: $syncedAtText"
     ) -join [Environment]::NewLine)
 }
 

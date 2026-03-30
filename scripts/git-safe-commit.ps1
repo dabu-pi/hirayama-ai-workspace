@@ -82,7 +82,8 @@ function Invoke-GitLines {
     )
 
     $output = & git @gitBaseArgs @Arguments 2>&1
-    return @($output | Where-Object { $_ -and $_ -notmatch '^warning:' })
+    $filtered = @($output | Where-Object { $_ -and $_ -notmatch '^warning:' })
+    return ,$filtered
 }
 
 function Show-Check {
