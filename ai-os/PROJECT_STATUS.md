@@ -7,6 +7,9 @@
 - 既定 mode は `sync` のまま維持。理由は Drive 側を GitHub 正本に追従する export 状態へ保つため。
 - `de` の通常運用は export sync -> rclone upload のまま、rclone 未設定時は warning + summary のみで main handoff は継続。
 - `SETUP.md` は全文を正常な日本語へ再整文し、初回セットアップ手順として使える状態へ戻した。
+- `scripts/setup-gdrive-handoff.ps1` を追加し、Drive folder ID を起点にした初回セットアップを 1 本化。
+- upload script は `HIRAYAMA_RCLONE_EXE` と既知 install path からも `rclone` を見つけるようにして、User PATH 反映待ちの詰まりを減らした。
+- folder ID 直下に既存ファイルがあっても、upload 先は dedicated child path に固定する運用を docs へ明記。
 
 ## 2026-03-30 Google Drive upload 設計へ移行メモ
 

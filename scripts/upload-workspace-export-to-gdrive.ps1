@@ -79,6 +79,73 @@ function Write-SummaryFile {
     $Payload | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $SummaryPath -Encoding UTF8
 }
 
+function Get-RcloneCandidatePaths {
+    param(
+        [string]$Hint,
+        [string]$WorkspaceRoot
+    )
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+
+    if ($env:HIRAYAMA_RCLONE_EXE) {
+        $candidates.Add([Environment]::ExpandEnvironmentVariables($env:HIRAYAMA_RCLONE_EXE))
+    }
+
+    if ($Hint) {
+        $candidates.Add([Environment]::ExpandEnvironmentVariables($Hint))
+    }
+
+    if ($env:LOCALAPPDATA) {
+        $candidates.Add((Join-Path $env:LOCALAPPDATA 'Programs\rclone\rclone.exe'))
+    }
+
+    if ($env:ProgramFiles) {
+        $candidates.Add((Join-Path $env:ProgramFiles 'rclone\rclone.exe'))
+        $candidates.Add((Join-Path $env:ProgramFiles 'Rclone\rclone.exe'))
+    }
+
+    $programFilesX86 = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
+    if ($programFilesX86) {
+        $candidates.Add((Join-Path $programFilesX86 'rclone\rclone.exe'))
+        $candidates.Add((Join-Path $programFilesX86 'Rclone\rclone.exe'))
+    }
+
+    if ($WorkspaceRoot) {
+        $candidates.Add((Join-Path $WorkspaceRoot 'tools\rclone\rclone.exe'))
+    }
+
+    return @($candidates | Where-Object { $_ } | Select-Object -Unique)
+}
+
+function Resolve-RcloneExecutable {
+    param(
+        [string]$Hint,
+        [string]$WorkspaceRoot
+    )
+
+    if ($Hint) {
+        $command = Get-Command -Name $Hint -ErrorAction SilentlyContinue
+        if ($null -ne $command) {
+            return (if ($command.Path) { $command.Path } else { $command.Source })
+        }
+    }
+
+    if (-not $Hint -or $Hint -eq 'rclone') {
+        $command = Get-Command -Name 'rclone' -ErrorAction SilentlyContinue
+        if ($null -ne $command) {
+            return (if ($command.Path) { $command.Path } else { $command.Source })
+        }
+    }
+
+    foreach ($candidate in (Get-RcloneCandidatePaths -Hint $Hint -WorkspaceRoot $WorkspaceRoot)) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return (Resolve-Path -LiteralPath $candidate -ErrorAction Stop).Path
+        }
+    }
+
+    return ''
+}
+
 $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $sourceRoot = Split-Path -Parent $scriptDir
 
@@ -156,8 +223,8 @@ if ($remotePath -match '^\.+$') {
     throw 'RemotePath must point to a dedicated folder, not ".".'
 }
 
-$rcloneCommand = Get-Command -Name $RcloneExe -ErrorAction SilentlyContinue
-if ($null -eq $rcloneCommand) {
+$rclonePath = Resolve-RcloneExecutable -Hint $RcloneExe -WorkspaceRoot $sourceRoot
+if (-not $rclonePath) {
     $summary = [ordered]@{
         uploaded_at  = $uploadedAt.ToString('s')
         export_root  = $ExportRoot
@@ -167,18 +234,17 @@ if ($null -eq $rcloneCommand) {
         mode         = $Mode
         stage        = 'upload'
         result       = 'SKIPPED'
-        reason       = "rclone command was not found: $RcloneExe"
+        reason       = "rclone command was not found. Checked hint '$RcloneExe', HIRAYAMA_RCLONE_EXE, and known install paths."
         log_path     = $logPath
         summary_path = $summaryPath
     }
 
     Write-SummaryFile -SummaryPath $summaryPath -Payload $summary
-    Write-Warn "rclone was not found: $RcloneExe"
+    Write-Warn 'rclone was not found.'
+    Write-Warn 'Checked PATH, HIRAYAMA_RCLONE_EXE, and common install paths such as %LOCALAPPDATA%\Programs\rclone\rclone.exe.'
     Write-Warn "Summary: $summaryPath"
     exit 2
 }
-
-$rclonePath = if ($rcloneCommand.Path) { $rcloneCommand.Path } else { $rcloneCommand.Source }
 
 $listRemotes = & $rclonePath listremotes 2>&1
 if ($LASTEXITCODE -ne 0) {

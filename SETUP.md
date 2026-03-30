@@ -330,6 +330,21 @@ node scripts/sync-project-from-runlog.mjs --json $json --project-id AIOS-06 --ex
 - `de` 実行後に `workspace -> workspace-export` を更新し、その後 rclone で Google Drive へ upload する
 - Google Drive for desktop の常駐同期は前提にしない
 - Drive 側コピーや `workspace-export` 側では Git 作業をしない
+- Google Drive の指定フォルダ ID に既存ファイルがあっても、upload 先はその直下ではなく専用の child path に分ける
+
+### 推奨: 初回セットアップを一括実行
+
+次の bootstrap script を使うと、`rclone` の検出または導入、remote 作成確認、User 環境変数設定、`copy -DryRun`、初回 `copy` upload までをまとめて進められます。
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+.\scripts\setup-gdrive-handoff.ps1 `
+  -DriveFolderId '<Google Drive folder id>' `
+  -RemoteName 'hirayama_gdrive_handoff' `
+  -RemotePath 'hirayama-ai-workspace/workspace-export'
+```
+
+指定 folder ID 自体に既存ファイルがある場合でも、`RemotePath` は必ず `hirayama-ai-workspace/workspace-export` のような dedicated child path にします。
 
 ### export の確認
 
@@ -353,12 +368,17 @@ C:\hirayama-ai-workspace\workspace-export
 
 ### rclone の設定
 
+bootstrap script を使わず手動設定する場合は、次の順で進めます。
+
 ```powershell
 rclone config
 rclone listremotes
 [Environment]::SetEnvironmentVariable('HIRAYAMA_GDRIVE_REMOTE', 'gdrive', 'User')
 [Environment]::SetEnvironmentVariable('HIRAYAMA_GDRIVE_REMOTE_PATH', 'hirayama-ai-workspace/workspace-export', 'User')
+[Environment]::SetEnvironmentVariable('HIRAYAMA_RCLONE_EXE', 'C:\Users\<user>\AppData\Local\Programs\rclone\rclone.exe', 'User')
 ```
+
+`HIRAYAMA_GDRIVE_REMOTE_PATH` は dedicated child path にします。指定 folder ID 直下に既存ファイルが見えても、root へ直接 upload しません。
 
 ### 初回 upload の確認
 

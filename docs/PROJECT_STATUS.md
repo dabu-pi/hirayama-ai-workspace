@@ -6,6 +6,9 @@
 - wording を `README.md` / `CLAUDE.md` / `SETUP.md` / `docs/GOOGLE_DRIVE_SYNC.md` / `docs/PROJECT_STATUS.md` / `ai-os/PROJECT_STATUS.md` で統一。
 - 統一方針: GitHub / workspace が正本、`workspace-export` は upload 用 export、Drive for desktop 常駐同期は前提にしない、`de` の最後に rclone upload、Drive 側コピーでは Git 作業しない。
 - `SETUP.md` の文字化けを解消し、初回セットアップ手順として読める日本語へ再整文。
+- `scripts/setup-gdrive-handoff.ps1` を追加し、`rclone` 検出または user-local install、remote 作成確認、User 環境変数設定、初回 `copy` upload までを一括導線化。
+- `upload-workspace-export-to-gdrive.ps1` は `PATH` だけでなく `HIRAYAMA_RCLONE_EXE` と既知 install path からも `rclone` を自動解決するよう補強。
+- 指定 folder ID に既存ファイルがあっても、upload 先は dedicated child path に固定する方針を `SETUP.md` / `docs/GOOGLE_DRIVE_SYNC.md` に追記。
 
 ## 2026-03-30 Google Drive handoff を rclone upload 前提へ修正（進行中）
 - Drive for desktop 常駐同期前提は廃止し、`workspace -> workspace-export -> rclone -> Google Drive` の 2 段階 handoff へ修正。
