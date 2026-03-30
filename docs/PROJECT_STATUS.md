@@ -5,6 +5,7 @@
 - `docs/GOOGLE_DRIVE_SYNC.md` を最終版へ更新し、`copy` と `sync` の差分、推奨方針、既定 `sync` の理由を明記。
 - wording を `README.md` / `CLAUDE.md` / `SETUP.md` / `docs/GOOGLE_DRIVE_SYNC.md` / `docs/PROJECT_STATUS.md` / `ai-os/PROJECT_STATUS.md` で統一。
 - 統一方針: GitHub / workspace が正本、`workspace-export` は upload 用 export、Drive for desktop 常駐同期は前提にしない、`de` の最後に rclone upload、Drive 側コピーでは Git 作業しない。
+- `SETUP.md` の文字化けを解消し、初回セットアップ手順として読める日本語へ再整文。
 
 ## 2026-03-30 Google Drive handoff を rclone upload 前提へ修正（進行中）
 - Drive for desktop 常駐同期前提は廃止し、`workspace -> workspace-export -> rclone -> Google Drive` の 2 段階 handoff へ修正。

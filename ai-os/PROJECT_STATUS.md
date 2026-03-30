@@ -6,6 +6,7 @@
 - `copy` は初回確認用、`sync` は専用保存先確認後の通常 handoff 用、と明記。
 - 既定 mode は `sync` のまま維持。理由は Drive 側を GitHub 正本に追従する export 状態へ保つため。
 - `de` の通常運用は export sync -> rclone upload のまま、rclone 未設定時は warning + summary のみで main handoff は継続。
+- `SETUP.md` は全文を正常な日本語へ再整文し、初回セットアップ手順として使える状態へ戻した。
 
 ## 2026-03-30 Google Drive upload 設計へ移行メモ
 
