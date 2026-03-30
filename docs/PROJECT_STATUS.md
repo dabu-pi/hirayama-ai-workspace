@@ -1,5 +1,11 @@
 # PROJECT_STATUS.md — 現在地・進捗トラッキング
 
+## 2026-03-30 Google Drive handoff docs 最終整文（進行中）
+- `SETUP.md` の旧 Step 10 と新 Step 10B を統合し、rclone 前提の Step 10 のみへ整理。
+- `docs/GOOGLE_DRIVE_SYNC.md` を最終版へ更新し、`copy` と `sync` の差分、推奨方針、既定 `sync` の理由を明記。
+- wording を `README.md` / `CLAUDE.md` / `SETUP.md` / `docs/GOOGLE_DRIVE_SYNC.md` / `docs/PROJECT_STATUS.md` / `ai-os/PROJECT_STATUS.md` で統一。
+- 統一方針: GitHub / workspace が正本、`workspace-export` は upload 用 export、Drive for desktop 常駐同期は前提にしない、`de` の最後に rclone upload、Drive 側コピーでは Git 作業しない。
+
 ## 2026-03-30 Google Drive handoff を rclone upload 前提へ修正（進行中）
 - Drive for desktop 常駐同期前提は廃止し、`workspace -> workspace-export -> rclone -> Google Drive` の 2 段階 handoff へ修正。
 - `scripts/upload-workspace-export-to-gdrive.ps1` を追加し、`HIRAYAMA_GDRIVE_REMOTE` / `HIRAYAMA_GDRIVE_REMOTE_PATH` による一方向アップロードへ整理。
@@ -22,7 +28,7 @@
 
 - 現在地: Drive export script / de 統合 / docs 作成まで完了。
 - 次アクション: 初回 export 実行確認と、`de -ProjectId AIOS-06` で handoff 一式を検証。
-- 保留事項: Google Drive for desktop 側で `workspace-export` を同期対象に登録する PC ごとの初期設定。
+- 保留事項: 各 PC で `rclone config` と `HIRAYAMA_GDRIVE_REMOTE*` の初期設定を行い、最初の実 upload を確認する。
 - テスト状況: script dry-run / 実 sync / de handoff の順で確認予定。
 - 重要判断: Drive は補助導線であり、正本を GitHub から移さない。
 

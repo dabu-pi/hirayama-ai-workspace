@@ -490,21 +490,13 @@ RISKS:  未解決事項（あれば）
 
 > 上記報告とあわせて、`慢性疼痛_管理表_STATUS.md` の変更履歴・数値前提・未解決論点を必ず更新すること。
 
-### Google Drive export sync
+### Google Drive handoff
 
-- `workspace` 本体を Drive 配下へ置かず、`workspace-export` へ guarded mirror します。
-- 実行コマンドは `scripts/sync-workspace-to-drive.ps1` です。
-- `de` は push 成功後に Drive sync を呼びます。
-- Drive sync が失敗しても GitHub 正本運用は止めません。警告と `logs/drive-sync/` を確認します。
-- 一時的に回避したい場合は `de -SkipDriveSync` を使います。
-- Drive 側で見る入口は `workspace-export\INDEX.md` です。
-- 詳細運用は `docs/GOOGLE_DRIVE_SYNC.md` を正本とします。
-
-### Google Drive export / upload revision
-
+- GitHub / `workspace` を正本とし、Google Drive は参照・検索・共有・バックアップ用途として使う。
 - Google Drive for desktop の常駐同期は前提にしない。
-- `workspace` は正本、`workspace-export` は upload 用の guarded export として扱う。
+- `workspace-export` は upload 用の guarded export として扱い、Drive 側コピーや `workspace-export` 側では Git 作業をしない。
 - `de` は push 成功後に `scripts/sync-workspace-to-drive.ps1` で export を更新し、その後 `scripts/upload-workspace-export-to-gdrive.ps1` で rclone upload を試行する。
+- 通常運用の既定は `sync`。ただし初回確認や新しい remote path の安全確認は `-Mode copy` を先に使う。
 - rclone や remote 設定が未完でも、GitHub 正本 handoff は止めない。警告と `logs/gdrive-upload/` を確認する。
-- export も upload もまとめて止める場合は `de -SkipDriveSync`、export は維持して upload だけ止める場合は `de -SkipGDriveUpload` を使う。
-- Drive 側の入口は `workspace-export\INDEX.md` で、正本は GitHub / `workspace` 側である。
+- export と upload をまとめて止める場合は `de -SkipDriveSync`、export は維持して upload だけ止める場合は `de -SkipGDriveUpload` を使う。
+- Drive 側の入口は `workspace-export\INDEX.md`。詳細運用は `docs/GOOGLE_DRIVE_SYNC.md` を正本とする。

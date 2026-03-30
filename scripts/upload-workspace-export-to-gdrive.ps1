@@ -9,6 +9,10 @@
     folder such as `workspace-export`, then performs a one-way upload to a
     dedicated Google Drive path using rclone.
 
+    The default mode is `sync` because the normal handoff goal is to keep the
+    dedicated Drive folder aligned with the latest export. For the very first
+    verification on a new remote path, prefer `-Mode copy`.
+
     Missing rclone or missing remote configuration is treated as a skipped
     upload so that the main handoff flow can continue.
 #>

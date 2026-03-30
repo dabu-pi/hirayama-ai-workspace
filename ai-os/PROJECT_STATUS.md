@@ -1,5 +1,12 @@
 # PROJECT_STATUS.md - Hirayama AI OS 進捗トラッキング
 
+## 2026-03-30 Google Drive handoff docs finalization
+
+- `SETUP.md` と `docs/GOOGLE_DRIVE_SYNC.md` を rclone 前提の最終 wording へ整理。
+- `copy` は初回確認用、`sync` は専用保存先確認後の通常 handoff 用、と明記。
+- 既定 mode は `sync` のまま維持。理由は Drive 側を GitHub 正本に追従する export 状態へ保つため。
+- `de` の通常運用は export sync -> rclone upload のまま、rclone 未設定時は warning + summary のみで main handoff は継続。
+
 ## 2026-03-30 Google Drive upload 設計へ移行メモ
 
 - Drive for desktop 同期前提は廃止し、`workspace-export` を rclone で Google Drive へ upload する handoff 構成へ切り替える。
