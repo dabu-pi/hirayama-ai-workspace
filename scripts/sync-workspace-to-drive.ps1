@@ -1,11 +1,13 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Safely mirrors the workspace into a Google Drive export folder.
+    Safely mirrors the workspace into a local export folder for later Google Drive upload.
 
 .DESCRIPTION
     Keeps GitHub/local workspace as the source of truth and writes a guarded
     mirror into a separate export folder such as `workspace-export`.
+    The export folder is meant to be uploaded to Google Drive in a later step
+    such as `upload-workspace-export-to-gdrive.ps1`.
     Secrets, `.git`, and large generated folders are excluded by config.
     An `INDEX.md` file is generated in the export root for Drive readers.
 #>
@@ -182,9 +184,10 @@ function New-DriveIndexContent {
     return (@(
         '# INDEX.md',
         '',
-        'This folder is a Google Drive export of the workspace. GitHub and the local',
-        'workspace remain the source of truth. This export is for reading, searching,',
-        'sharing, and backup.',
+        'This folder is a prepared export of the workspace for Google Drive upload.',
+        'GitHub and the local workspace remain the source of truth.',
+        'The upload flow is: workspace -> workspace-export -> rclone -> Google Drive.',
+        'Treat this export as read-only. Do not perform Git work here or in the Drive copy.',
         '',
         '## Start Here',
         '',
@@ -192,6 +195,7 @@ function New-DriveIndexContent {
         '- [PROJECTS.md](PROJECTS.md)',
         '- [ROADMAP.md](ROADMAP.md)',
         '- [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)',
+        '- [docs/GOOGLE_DRIVE_SYNC.md](docs/GOOGLE_DRIVE_SYNC.md)',
         '',
         '## Key Status Docs',
         '',
@@ -222,7 +226,8 @@ function New-DriveIndexContent {
         '1. Read [README.md](README.md), [PROJECTS.md](PROJECTS.md),',
         '   [ROADMAP.md](ROADMAP.md), and [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md).',
         '2. Read the target project''s README, PROJECT_STATUS, and spec.',
-        '3. Do not perform Git work inside the export folder.',
+        '3. If this folder came from Google Drive, treat it as a read-only reference copy.',
+        '4. Do not perform Git work inside the export folder.',
         '',
         '## Export Metadata',
         '',
@@ -230,7 +235,8 @@ function New-DriveIndexContent {
         "- ExportRoot: $Export",
         "- Branch: $Branch",
         "- Commit: $Commit",
-        "- SyncedAt: $syncedAtText"
+        "- SyncedAt: $syncedAtText",
+        '- UploadFlow: workspace -> workspace-export -> rclone -> Google Drive'
     ) -join [Environment]::NewLine)
 }
 
@@ -273,7 +279,7 @@ $indexPath = Join-Path $ExportRoot 'INDEX.md'
 
 Write-Host ''
 Write-Host ('=' * 66)
-Write-Host "  sync-workspace-to-drive  |  $($syncedAt.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Host "  sync-workspace-to-drive (export) |  $($syncedAt.ToString('yyyy-MM-dd HH:mm:ss'))"
 Write-Host ('=' * 66)
 Write-Info "SourceRoot   : $SourceRoot"
 Write-Info "ExportRoot   : $ExportRoot"
@@ -356,6 +362,7 @@ if ($robocopyExit -ge 8) {
         branch             = $branch
         commit             = $commit
         robocopy_exit_code = $robocopyExit
+        stage              = 'export'
         result             = 'FAILED'
         log_path           = $logPath
         summary_path       = $summaryPath
@@ -385,6 +392,7 @@ $summary = [ordered]@{
     branch             = $branch
     commit             = $commit
     robocopy_exit_code = $robocopyExit
+    stage              = 'export'
     result             = 'SUCCESS'
     log_path           = $logPath
     summary_path       = $summaryPath
@@ -395,7 +403,7 @@ $summary = [ordered]@{
 $summary | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
 
 Write-Host ''
-Write-Ok "Drive export sync completed (robocopy exit: $robocopyExit)"
+Write-Ok "Workspace export sync completed (robocopy exit: $robocopyExit)"
 Write-Ok "Log     : $logPath"
 Write-Ok "Summary : $summaryPath"
 if (-not $DryRun -and -not $SkipIndex) {

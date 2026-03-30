@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
     Workspace handoff command: commit, push, Run_Log export, optional live sheet sync,
-    and optional Google Drive export sync.
+    optional workspace export sync, and optional Google Drive upload.
 #>
 
 param(
@@ -18,6 +18,7 @@ param(
     [switch]$SkipRunLogExport,
     [switch]$SkipRunLogSheetWrite,
     [switch]$SkipDriveSync,
+    [switch]$SkipGDriveUpload,
     [switch]$Yes
 )
 
@@ -31,6 +32,7 @@ $runLogSheetWritePath = Join-Path $scriptDir 'append-runlog-to-sheet.mjs'
 $projectRunLogSyncPath = Join-Path $scriptDir 'sync-project-from-runlog.mjs'
 $taskQueueCleanupPath = Join-Path $scriptDir 'cleanup-known-taskqueue-row.mjs'
 $driveSyncPath = Join-Path $scriptDir 'sync-workspace-to-drive.ps1'
+$gdriveUploadPath = Join-Path $scriptDir 'upload-workspace-export-to-gdrive.ps1'
 $gitBaseArgs = @('-c', 'core.excludesfile=')
 
 function Write-Line { Write-Host ('=' * 62) }
@@ -165,7 +167,8 @@ Write-Host "  Commit message : $Message"
 Write-Host "  Push to GitHub : $(if ($NoPush) { 'no (commit only)' } else { 'yes' })"
 Write-Host "  Run_Log export : $(if ($SkipRunLogExport) { 'skip' } else { 'enabled' })"
 Write-Host "  Run_Log sheet  : $(if ($canWriteRunLogSheet) { 'enabled' } elseif ($SkipRunLogSheetWrite) { 'skip' } else { 'not configured' })"
-Write-Host "  Drive sync     : $(if ($SkipDriveSync) { 'skip' } else { 'enabled after push' })"
+Write-Host "  Export sync    : $(if ($SkipDriveSync) { 'skip' } else { 'enabled after push' })"
+Write-Host "  GDrive upload  : $(if ($SkipDriveSync) { 'skip (Drive sync disabled)' } elseif ($SkipGDriveUpload) { 'skip' } else { 'enabled after export sync' })"
 Write-Host ''
 
 Write-Host '  Staging changes (git add -A)...'
@@ -196,8 +199,10 @@ try {
 $runLogExit = 0
 $runLogSheetExit = 0
 $projectRunLogSyncExit = 0
-$driveSyncExit = 0
-$driveSyncAttempted = $false
+$exportSyncExit = 0
+$exportSyncAttempted = $false
+$gdriveUploadExit = 0
+$gdriveUploadAttempted = $false
 $commitHash = ''
 $jsonPath = ''
 
@@ -242,16 +247,33 @@ if ($exitCode -eq 0) {
 
     if (-not $NoPush -and -not $SkipDriveSync) {
         if (Test-Path -LiteralPath $driveSyncPath) {
-            $driveSyncAttempted = $true
+            $exportSyncAttempted = $true
             try {
                 & $driveSyncPath
-                $driveSyncExit = $LASTEXITCODE
+                $exportSyncExit = $LASTEXITCODE
             } catch {
                 Write-Warn $_.Exception.Message
-                $driveSyncExit = 1
+                $exportSyncExit = 1
             }
         } else {
             Write-Warn "sync-workspace-to-drive.ps1 was not found: $driveSyncPath"
+        }
+
+        if ($exportSyncAttempted -and $exportSyncExit -eq 0 -and -not $SkipGDriveUpload) {
+            if (Test-Path -LiteralPath $gdriveUploadPath) {
+                $gdriveUploadAttempted = $true
+                try {
+                    & $gdriveUploadPath
+                    $gdriveUploadExit = $LASTEXITCODE
+                } catch {
+                    Write-Warn $_.Exception.Message
+                    $gdriveUploadExit = 1
+                }
+            } else {
+                Write-Warn "upload-workspace-export-to-gdrive.ps1 was not found: $gdriveUploadPath"
+            }
+        } elseif ($exportSyncAttempted -and $exportSyncExit -ne 0 -and -not $SkipGDriveUpload) {
+            Write-Warn 'Google Drive upload was skipped because workspace export sync failed.'
         }
     }
 }
@@ -289,14 +311,28 @@ if ($exitCode -eq 0) {
         Write-Ok 'Projects minimal sync completed.'
     }
 
-    if ($driveSyncAttempted) {
-        if ($driveSyncExit -eq 0) {
-            Write-Ok 'Google Drive export sync completed.'
+    if ($exportSyncAttempted) {
+        if ($exportSyncExit -eq 0) {
+            Write-Ok 'Workspace export sync completed.'
         } else {
-            Write-Warn "Google Drive export sync failed (exit code: $driveSyncExit)"
+            Write-Warn "Workspace export sync failed (exit code: $exportSyncExit)"
         }
     } elseif ($SkipDriveSync) {
-        Write-Host '  [INFO] Drive sync skipped.'
+        Write-Host '  [INFO] Workspace export sync skipped.'
+    }
+
+    if ($gdriveUploadAttempted) {
+        if ($gdriveUploadExit -eq 0) {
+            Write-Ok 'Google Drive upload completed.'
+        } elseif ($gdriveUploadExit -eq 2) {
+            Write-Warn 'Google Drive upload skipped because rclone or remote settings are not configured.'
+        } else {
+            Write-Warn "Google Drive upload failed (exit code: $gdriveUploadExit)"
+        }
+    } elseif ($SkipDriveSync) {
+        Write-Host '  [INFO] Google Drive upload skipped.'
+    } elseif ($SkipGDriveUpload) {
+        Write-Host '  [INFO] Google Drive upload skipped by option.'
     }
 } else {
     Write-Err "Commit or push failed (exit code: $exitCode)"

@@ -539,3 +539,58 @@ de -ProjectId AIOS-06 -SkipDriveSync "docs: skip drive sync for this handoff"
 - Google Drive for desktop 側で `workspace-export` が同期対象になっているか
 
 詳細: [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md)
+## Step 10B — Google Drive rclone upload への切り替え
+
+このセクションは、上の Google Drive for desktop 前提メモを置き換える最新運用です。今後は常駐同期ではなく、`de` 完了時に `workspace-export` を rclone で Google Drive へ一方向アップロードします。
+
+### 基本方針
+- `workspace` は GitHub 正本の作業ディレクトリとして運用する
+- `workspace-export` は Google Drive 送信用の安全な export として使う
+- `de` 実行後に `workspace -> workspace-export` を更新し、その後 rclone で Google Drive へ upload する
+- Google Drive for desktop の常駐同期は前提にしない
+
+### export の確認
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+.\scripts\sync-workspace-to-drive.ps1 -DryRun
+.\scripts\sync-workspace-to-drive.ps1
+```
+
+既定の export 先:
+
+```text
+C:\hirayama-ai-workspace\workspace-export
+```
+
+### export 先を変更したい場合
+```powershell
+[Environment]::SetEnvironmentVariable('HIRAYAMA_DRIVE_SYNC_EXPORT_ROOT', 'D:\shared\workspace-export', 'User')
+```
+
+### rclone の設定
+```powershell
+rclone config
+rclone listremotes
+[Environment]::SetEnvironmentVariable('HIRAYAMA_GDRIVE_REMOTE', 'gdrive', 'User')
+[Environment]::SetEnvironmentVariable('HIRAYAMA_GDRIVE_REMOTE_PATH', 'hirayama-ai-workspace/workspace-export', 'User')
+```
+
+### upload の確認
+```powershell
+.\scripts\upload-workspace-export-to-gdrive.ps1 -DryRun
+.\scripts\upload-workspace-export-to-gdrive.ps1
+```
+
+### de で一時的に回避したい場合
+```powershell
+de -ProjectId AIOS-06 -SkipDriveSync "docs: skip drive sync for this handoff"
+de -ProjectId AIOS-06 -SkipGDriveUpload "docs: export only for this handoff"
+```
+
+### 確認ポイント
+- `workspace-export\INDEX.md` が生成されているか
+- `logs/drive-sync/drive-sync_*.log` と `drive-sync_*.json` が生成されているか
+- `logs/gdrive-upload/gdrive-upload_*.json` が生成されているか
+- `rclone listremotes` に指定 remote が見えるか
+
+詳細: [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md)

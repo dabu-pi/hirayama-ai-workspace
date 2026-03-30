@@ -1,5 +1,13 @@
 # PROJECT_STATUS.md — 現在地・進捗トラッキング
 
+## 2026-03-30 Google Drive handoff を rclone upload 前提へ修正（進行中）
+- Drive for desktop 常駐同期前提は廃止し、`workspace -> workspace-export -> rclone -> Google Drive` の 2 段階 handoff へ修正。
+- `scripts/upload-workspace-export-to-gdrive.ps1` を追加し、`HIRAYAMA_GDRIVE_REMOTE` / `HIRAYAMA_GDRIVE_REMOTE_PATH` による一方向アップロードへ整理。
+- `scripts/sync-workspace-to-drive.ps1` は export 作成に責務を限定。`workspace-export\INDEX.md` は Drive 上の再開導線として継続生成。
+- `de` は push 成功後に export sync、続いて Google Drive upload を試行。upload が未設定または失敗でも commit / push / Run_Log / Projects は継続。
+- 記録先は `logs/drive-sync/` と `logs/gdrive-upload/` に分離。Dashboard の既存スキーマ追加は行わない。
+- 保留事項: 各 PC で `rclone config` と環境変数設定を完了し、最初の実 upload を確認する。
+
 ## 2026-03-30 Google Drive export sync 導入（進行中）
 
 - workspace 全体の handoff 導線として `scripts/sync-workspace-to-drive.ps1` を追加。

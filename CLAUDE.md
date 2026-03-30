@@ -500,3 +500,11 @@ RISKS:  未解決事項（あれば）
 - Drive 側で見る入口は `workspace-export\INDEX.md` です。
 - 詳細運用は `docs/GOOGLE_DRIVE_SYNC.md` を正本とします。
 
+### Google Drive export / upload revision
+
+- Google Drive for desktop の常駐同期は前提にしない。
+- `workspace` は正本、`workspace-export` は upload 用の guarded export として扱う。
+- `de` は push 成功後に `scripts/sync-workspace-to-drive.ps1` で export を更新し、その後 `scripts/upload-workspace-export-to-gdrive.ps1` で rclone upload を試行する。
+- rclone や remote 設定が未完でも、GitHub 正本 handoff は止めない。警告と `logs/gdrive-upload/` を確認する。
+- export も upload もまとめて止める場合は `de -SkipDriveSync`、export は維持して upload だけ止める場合は `de -SkipGDriveUpload` を使う。
+- Drive 側の入口は `workspace-export\INDEX.md` で、正本は GitHub / `workspace` 側である。

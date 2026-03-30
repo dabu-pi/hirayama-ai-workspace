@@ -1,5 +1,13 @@
 # PROJECT_STATUS.md - Hirayama AI OS 進捗トラッキング
 
+## 2026-03-30 Google Drive upload 設計へ移行メモ
+
+- Drive for desktop 同期前提は廃止し、`workspace-export` を rclone で Google Drive へ upload する handoff 構成へ切り替える。
+- `de` の後段は `sync-workspace-to-drive.ps1` による export 作成と、`upload-workspace-export-to-gdrive.ps1` による upload の 2 段構成へ整理。
+- `de -SkipDriveSync` は維持し、export は実行して upload だけ止めたいときのために `de -SkipGDriveUpload` を追加。
+- rclone 未設定時は warning + `logs/gdrive-upload/` 記録に留め、GitHub 正本 handoff は成功扱いのまま継続する。
+- `workspace-export\INDEX.md` は Drive 上の再開導線として継続利用する。
+
 ## 2026-03-30 Google Drive export handoff 導入メモ
 
 - `de` の handoff 後段として `scripts/sync-workspace-to-drive.ps1` を追加し、workspace 全体を `workspace-export` へ guarded mirror する方式を採用。
