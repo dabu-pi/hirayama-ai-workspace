@@ -43,3 +43,10 @@
 ---
 
 管理者: 平山克司 (Katsushi Hirayama)
+
+## Google Drive 同期運用
+
+- GitHub / `C:\hirayama-ai-workspace\workspace` を正本とし、Google Drive は export 参照先として使います。
+- `de` 成功後に `scripts/sync-workspace-to-drive.ps1` が `workspace-export` へ安全同期する運用を採用しました。
+- 詳細は [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md) を参照してください。
+

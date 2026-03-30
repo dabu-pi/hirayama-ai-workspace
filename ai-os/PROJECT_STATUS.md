@@ -1,5 +1,21 @@
 # PROJECT_STATUS.md - Hirayama AI OS 進捗トラッキング
 
+## 2026-03-30 Google Drive export handoff 導入メモ
+
+- `de` の handoff 後段として `scripts/sync-workspace-to-drive.ps1` を追加し、workspace 全体を `workspace-export` へ guarded mirror する方式を採用。
+- 正本は引き続き GitHub / local workspace。Drive は `INDEX.md` 付き参照 export とする。
+- `de` は push 成功後のみ Drive sync を実行し、失敗時も main handoff は成功扱いのまま警告ログを残す。
+- 除外設定は `config/drive-sync-exclude.txt` に集約。Dashboard の既存スキーマは変えず、Drive sync の詳細結果は `logs/drive-sync/` と状態ファイルで管理。
+- 参照 docs: `docs/GOOGLE_DRIVE_SYNC.md`
+
+### 現在地
+
+- フェーズ: Phase 3 handoff 強化
+- 実装: Drive export script / de non-blocking integration / setup docs 追加
+- 次アクション: 初回 export と de handoff の live 検証を完了させる
+- テスト予定: dry-run -> 実 sync -> de commit/push + Run_Log/Projects + Drive sync
+
+
 > AIセッション引き継ぎ用。このファイルの内容を再開プロンプトの冒頭に貼る。
 
 ---
@@ -859,3 +875,4 @@ Minimal Projects metadata set to carry in Dashboard-facing docs:
   start with append-only GAS for `Run_Log`, require no writes to `Projects /
   Task_Queue / Dashboard / Lists`, and treat automatic refresh/aggregation as a
   later design step after append reliability is proven.
+

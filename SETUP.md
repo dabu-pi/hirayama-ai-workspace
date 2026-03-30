@@ -1,4 +1,4 @@
-﻿# SETUP.md — 新PCセットアップ手順
+# SETUP.md — 新PCセットアップ手順
 
 このドキュメントは新しいPC（ジムPC・自宅PC・ノートPC）でこのワークスペースを使い始めるための手順書です。
 Codex / Claude Code のどちらを使う場合も、この手順を共通で使います。
@@ -491,3 +491,51 @@ node scripts/sync-project-from-runlog.mjs --json $json --project-id JREC-01 --ex
 ```
 
 詳細: [ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md](./ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md)
+
+## Step 10 — Google Drive export sync のセットアップ
+
+### 基本方針
+
+- `workspace` は GitHub 正本の作業ディレクトリとして維持する
+- Google Drive は `workspace-export` を同期する export 参照先として使う
+- `workspace` 本体を Drive 配下へ置かない
+- `de` 完了後に Drive export sync を走らせる
+
+### 初回確認
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+.\scripts\sync-workspace-to-drive.ps1 -DryRun
+.\scripts\sync-workspace-to-drive.ps1
+```
+
+既定の export 先:
+
+```text
+C:\hirayama-ai-workspace\workspace-export
+```
+
+### export 先を変更したい場合
+
+```powershell
+[Environment]::SetEnvironmentVariable('HIRAYAMA_DRIVE_SYNC_EXPORT_ROOT', 'D:\shared\workspace-export', 'User')
+```
+
+### Google Drive for desktop 側
+
+- `workspace-export` を「フォルダのバックアップ」または同期対象として登録する
+- `workspace` 本体は登録しない
+
+### de で一時的に回避したい場合
+
+```powershell
+de -ProjectId AIOS-06 -SkipDriveSync "docs: skip drive sync for this handoff"
+```
+
+### 確認ポイント
+
+- `workspace-export\INDEX.md` が生成されているか
+- `logs/drive-sync/drive-sync_*.log` と `drive-sync_*.json` が生成されているか
+- Google Drive for desktop 側で `workspace-export` が同期対象になっているか
+
+詳細: [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md)

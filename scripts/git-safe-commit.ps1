@@ -46,6 +46,8 @@ param(
 
 Set-StrictMode -Version Latest
 
+$gitBaseArgs = @('-c', 'core.excludesfile=')
+
 $FORBIDDEN_PATTERNS = @(
     '\.env$',
     '\.env\.',
@@ -73,6 +75,16 @@ $CO_AUTHOR = 'Co-Authored-By: OpenAI Codex <noreply@openai.com>'
 
 function Write-Sep { Write-Host ('=' * 60) }
 
+function Invoke-GitLines {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $output = & git @gitBaseArgs @Arguments 2>&1
+    return @($output | Where-Object { $_ -and $_ -notmatch '^warning:' })
+}
+
 function Show-Check {
     param([string]$Label, [bool]$Pass, [string]$Detail = '')
     $mark = if ($Pass) { '[PASS]' } else { '[FAIL]' }
@@ -83,13 +95,13 @@ function Show-Check {
     return $Pass
 }
 
-try { $null = git --version 2>&1 }
+try { $null = Invoke-GitLines -Arguments @('--version') }
 catch {
     Write-Error 'git not found. Install git and add it to PATH.'
     exit 1
 }
 
-$gitRoot = git rev-parse --show-toplevel 2>&1
+$gitRoot = Invoke-GitLines -Arguments @('rev-parse', '--show-toplevel')
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Not a git repository: $(Get-Location)"
     exit 1
@@ -100,7 +112,7 @@ Write-Sep
 Write-Host '  git-safe-commit'
 Write-Sep
 
-$currentBranch = (git rev-parse --abbrev-ref HEAD 2>&1).Trim()
+$currentBranch = ((Invoke-GitLines -Arguments @('rev-parse', '--abbrev-ref', 'HEAD')) -join "`n").Trim()
 Write-Host "  Branch  : $currentBranch"
 
 if (-not $SkipBranchWarn -and ($currentBranch -eq 'master' -or $currentBranch -eq 'main')) {
@@ -123,7 +135,7 @@ if ($Files.Count -gt 0) {
     Write-Host '  Staging files:'
     foreach ($f in $Files) {
         if (Test-Path $f) {
-            git add $f
+            & git @gitBaseArgs add $f
             Write-Host "    + $f"
         } else {
             Write-Host "    [WARN] Not found: $f"
@@ -131,7 +143,7 @@ if ($Files.Count -gt 0) {
     }
 }
 
-$stagedFiles = @(git diff --cached --name-only 2>&1 | Where-Object { $_ -ne '' })
+$stagedFiles = Invoke-GitLines -Arguments @('diff', '--cached', '--name-only')
 
 if ($stagedFiles.Count -eq 0) {
     Write-Host ''
@@ -147,7 +159,7 @@ foreach ($f in $stagedFiles) {
 
 Write-Host ''
 Write-Host '  Diff summary:'
-$diffStat = git diff --cached --stat 2>&1
+$diffStat = Invoke-GitLines -Arguments @('diff', '--cached', '--stat')
 foreach ($line in $diffStat) {
     Write-Host "    $line"
 }
@@ -207,7 +219,7 @@ if (-not $Yes) {
 }
 
 $fullMessage = "$Message`n`n$CO_AUTHOR"
-git commit -m $fullMessage
+& git @gitBaseArgs commit -m $fullMessage
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ''
@@ -215,14 +227,14 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-$commitHash = (git rev-parse --short HEAD 2>&1).Trim()
+$commitHash = ((Invoke-GitLines -Arguments @('rev-parse', '--short', 'HEAD')) -join "`n").Trim()
 Write-Host ''
 Write-Host "  [OK] Committed: $commitHash -- $Message"
 
 if ($Push) {
     Write-Host ''
     Write-Host "  Pushing to $Remote/$currentBranch ..."
-    git push $Remote $currentBranch
+    & git @gitBaseArgs push $Remote $currentBranch
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host '  [ERROR] git push failed.'

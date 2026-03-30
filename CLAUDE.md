@@ -489,3 +489,14 @@ RISKS:  未解決事項（あれば）
 ```
 
 > 上記報告とあわせて、`慢性疼痛_管理表_STATUS.md` の変更履歴・数値前提・未解決論点を必ず更新すること。
+
+### Google Drive export sync
+
+- `workspace` 本体を Drive 配下へ置かず、`workspace-export` へ guarded mirror します。
+- 実行コマンドは `scripts/sync-workspace-to-drive.ps1` です。
+- `de` は push 成功後に Drive sync を呼びます。
+- Drive sync が失敗しても GitHub 正本運用は止めません。警告と `logs/drive-sync/` を確認します。
+- 一時的に回避したい場合は `de -SkipDriveSync` を使います。
+- Drive 側で見る入口は `workspace-export\INDEX.md` です。
+- 詳細運用は `docs/GOOGLE_DRIVE_SYNC.md` を正本とします。
+

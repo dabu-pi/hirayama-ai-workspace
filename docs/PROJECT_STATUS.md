@@ -1,5 +1,24 @@
 # PROJECT_STATUS.md — 現在地・進捗トラッキング
 
+## 2026-03-30 Google Drive export sync 導入（進行中）
+
+- workspace 全体の handoff 導線として `scripts/sync-workspace-to-drive.ps1` を追加。
+- 方針は **GitHub 正本 / Drive は export 参照先**。`workspace` を Drive 配下で直接作業しない。
+- 既定 export 先は `C:\hirayama-ai-workspace\workspace-export`。必要に応じて `HIRAYAMA_DRIVE_SYNC_EXPORT_ROOT` で変更可能。
+- `config/drive-sync-exclude.txt` を追加し、`.git` / `.claude` / `node_modules` / `.venv` / `secrets` / `logs/runlog` / `*.log` などを除外。
+- `de` は push 成功後に Drive sync を呼ぶ構成へ拡張。失敗しても commit / push / Run_Log / Projects sync は継続。
+- Drive 側の再開導線として `workspace-export\INDEX.md` を毎回再生成する。
+- 運用文書を `docs/GOOGLE_DRIVE_SYNC.md` / `SETUP.md` / `README.md` / `CLAUDE.md` に反映する方針。
+
+### 現在地
+
+- 現在地: Drive export script / de 統合 / docs 作成まで完了。
+- 次アクション: 初回 export 実行確認と、`de -ProjectId AIOS-06` で handoff 一式を検証。
+- 保留事項: Google Drive for desktop 側で `workspace-export` を同期対象に登録する PC ごとの初期設定。
+- テスト状況: script dry-run / 実 sync / de handoff の順で確認予定。
+- 重要判断: Drive は補助導線であり、正本を GitHub から移さない。
+
+
 > **使い方:** 各開発サイクルの終わりにこのファイルを更新する。
 > Claude への引き継ぎ・再開プロンプトの冒頭にこのファイルの内容を貼る。
 
@@ -127,3 +146,4 @@
 - `docs/AUTO_DEV_MODE_PHASE3.md` — Phase3 仕様
 - `docs/ERROR_ANALYSIS.md` — エラー解析システム仕様
 - `scripts/auto-dev-checklist.md` — 各フェーズのチェックリスト
+
