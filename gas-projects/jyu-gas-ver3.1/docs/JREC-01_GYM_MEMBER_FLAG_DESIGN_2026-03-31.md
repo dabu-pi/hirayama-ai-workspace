@@ -1,7 +1,7 @@
 # JREC-01 ジム会員フラグ（A5/B5）設計調査レポート
 
 作成日: 2026-03-31
-ステータス: **Phase A 実装完了（2026-03-31）— clasp push と GAS メニュー実行が院長タスク**
+ステータス: **Phase B 実装完了（2026-03-31）— clasp push + 実機テストが院長タスク**
 実施者: Claude Code
 
 ---
@@ -263,11 +263,60 @@ Phase C（患者マスタ連携 — 運用データ蓄積後）
 
 ---
 
+## Phase B 実装完了（2026-03-31）
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `Ver3_core.js` — `getSelfPayMenuMaster_V3` | `memberPrice: Number(row[JBIZ_COL.memberPrice]) \|\| 0` を追加。fallback オブジェクトにも `memberPrice: 0` を追加 |
+| `Ver3_core.js` — `getCurrentVisitKey_V3` | バッチ読み取り範囲 `"B2:C4"` → `"B2:C5"` に拡張。`isGymMember = metaVals[3][0] === true` で B5 を読み取り、返却オブジェクトに追加 |
+| `selfPayDialog.html` | CSS に `#gymMemberBadge` スタイル追加。HTML にバッジ要素追加。`getCurrentVisitKey_V3` 成功時に `isGymMember` なら表示。`addRow` の option 生成で `effectivePrice = (isGymMember && memberPrice > 0) ? memberPrice : unitPrice` に切り替え |
+
+### 価格切替ロジック
+
+```
+B5 = true（ジム会員）
+  → JBIZ H列(memberPrice) > 0 なら H列を使用
+  → H列が 0 or 空なら G列(unitPrice) にフォールバック
+
+B5 = false（一般）
+  → G列(unitPrice) を使用
+```
+
+### フォールバック設計
+
+| 状況 | 動作 |
+|---|---|
+| JBIZ H列が空 / 0 の場合 | G列（一般料金）で表示。JBIZ に会員料金を設定すれば自動で切り替わる |
+| JBIZ シートに接続不可 | fallback 定数を使用（memberPrice: 0 なので G列相当で動作）|
+| B5 未チェックのまま dialog 開く | 一般料金で表示（Phase A 完了前の既存挙動と同じ）|
+
+### テスト観点（院長実機確認）
+
+| # | テスト内容 | 期待結果 |
+|---|---|---|
+| T-GYM-B1 | B5 チェックあり → 自費明細ダイアログを開く | バッジ「🏋 ジム会員料金 適用中」が表示される |
+| T-GYM-B2 | B5 チェックなし → 自費明細ダイアログを開く | バッジが表示されない |
+| T-GYM-B3 | B5 チェックあり → JBIZ H列に会員料金が設定されているメニューを選択 | 会員料金が単価欄に入る |
+| T-GYM-B4 | B5 チェックあり → JBIZ H列が 0（未設定）のメニューを選択 | G列の一般料金が入る（フォールバック）|
+| T-GYM-B5 | B5 チェックなし → 同じメニューを選択 | G列の一般料金が入る |
+
+### 院長の次アクション
+
+| # | 操作 |
+|---|---|
+| 1 | `clasp push` を実行 |
+| 2 | JBIZ「メニューマスタ（価格設定）」シートの H列（ジム会員料金）に金額を入力 |
+| 3 | T-GYM-B1〜B5 を実機確認 |
+
+---
+
 ## 次に院長が判断すべき1点
 
-> **Phase B（価格切替）をいつ実施するか？**
-> Phase A 安定確認後（T-GYM-01〜04 PASS 後）に進めてよい。
-> Phase B の実装は `getSelfPayMenuMaster_V3`・`getCurrentVisitKey_V3`・`selfPayDialog.html` の3ファイル変更。
+> **Phase C（患者マスタ連携）をいつ実施するか？**
+> Phase B 安定確認後に検討。患者マスタに「ジム会員」列を追加し、
+> B2 に患者 ID を入力したタイミングで B5 を自動セットする実装。
 
 ---
 
@@ -277,3 +326,4 @@ Phase C（患者マスタ連携 — 運用データ蓄積後）
 |---|---|
 | 2026-03-31 | 初版作成（調査フェーズ。実装なし）|
 | 2026-03-31 | Phase A 実装完了。ステータス更新・実装内容・院長タスク・テスト観点を追記 |
+| 2026-03-31 | T-GYM-01〜04 全件 OK。Phase A 完了確認。Phase B 実装完了。実装内容・価格切替ロジック・テスト観点を追記 |

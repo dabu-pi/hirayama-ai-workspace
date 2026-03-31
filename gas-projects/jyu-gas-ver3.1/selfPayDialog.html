@@ -122,11 +122,23 @@
       min-height: 16px;
     }
     #loading { color: #666; font-size: 12px; }
+    #gymMemberBadge {
+      display: none;
+      background: #e6f4ea;
+      color: #137333;
+      border: 1px solid #34a853;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
   <h3>自費明細入力</h3>
   <div id="visitKeyLabel">読み込み中...</div>
+  <div id="gymMemberBadge">🏋 ジム会員料金 適用中</div>
   <div id="loading">価格マスタを読み込んでいます...</div>
   <div id="main-content" style="display:none;">
     <table id="detail-table">
@@ -167,6 +179,10 @@
         visitKeyInfo = info;
         document.getElementById('visitKeyLabel').textContent =
           '来院キー: ' + (info.visitKey || '---') + ' / ' + (info.treatDate || '');
+        // Phase B: ジム会員フラグに応じてバッジ表示
+        if (info.isGymMember) {
+          document.getElementById('gymMemberBadge').style.display = 'inline-block';
+        }
         loadMenuMaster();
       })
       .withFailureHandler(function(e) {
@@ -217,9 +233,12 @@
       menuMaster.forEach(function(m) {
         var opt = document.createElement('option');
         opt.value = m.menuId;
-        opt.textContent = m.menuName + ' (¥' + m.unitPrice.toLocaleString() + ')';
-        opt.dataset.price = m.unitPrice;
-        opt.dataset.name  = m.menuName;
+        // Phase B: ジム会員なら H列(memberPrice)、0 or 未設定なら G列(unitPrice) にフォールバック
+        var isGymMember    = visitKeyInfo && visitKeyInfo.isGymMember;
+        var effectivePrice = (isGymMember && m.memberPrice > 0) ? m.memberPrice : m.unitPrice;
+        opt.textContent    = m.menuName + ' (¥' + effectivePrice.toLocaleString() + ')';
+        opt.dataset.price  = effectivePrice;
+        opt.dataset.name   = m.menuName;
         if (m.menuId === menuId) opt.selected = true;
         sel.appendChild(opt);
       });

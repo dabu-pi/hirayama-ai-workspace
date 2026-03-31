@@ -1715,3 +1715,32 @@ transferData 月次集計:
 - `getSelfPayMenuMaster_V3`: `JBIZ_COL.memberPrice`（H列）を返却に追加（定数は実装済み）
 - `getCurrentVisitKey_V3`: `isGymMember: B5値` を返却に追加
 - `selfPayDialog.html`: `visitKeyInfo.isGymMember` で一般/会員価格を切り替える
+
+---
+
+### ジム会員フラグ Phase B 実装完了（2026-03-31）
+
+T-GYM-01〜04 全件 OK（Phase A 完了）を受けて Phase B を実装。
+詳細設計: `docs/JREC-01_GYM_MEMBER_FLAG_DESIGN_2026-03-31.md`
+
+| 変更ファイル | 変更内容 |
+|---|---|
+| `Ver3_core.js` — `getSelfPayMenuMaster_V3` | `memberPrice` を JBIZ H列から読み取り返却。fallback にも `memberPrice: 0` を追加 |
+| `Ver3_core.js` — `getCurrentVisitKey_V3` | バッチ読み取り `"B2:C5"` に拡張。`isGymMember` を返却オブジェクトに追加 |
+| `selfPayDialog.html` | 会員バッジ（緑）表示・プルダウン価格を `isGymMember` で切替。H列 0 の場合は G列にフォールバック |
+
+#### 価格切替ロジック
+
+```
+B5=true かつ JBIZ H列 > 0 → H列（会員料金）
+B5=true かつ JBIZ H列 = 0 → G列（一般料金）にフォールバック
+B5=false                  → G列（一般料金）
+```
+
+#### 院長の次アクション
+
+| # | 操作 |
+|---|---|
+| 1 | `clasp push` |
+| 2 | JBIZ「メニューマスタ（価格設定）」H列に会員料金を入力 |
+| 3 | T-GYM-B1〜B5 を実機確認 |

@@ -3277,10 +3277,10 @@ function getJBIZMenuSheet_(jbizSS) {
 function getSelfPayMenuMaster_V3() {
   // フォールバック（JBIZ 不達時の業務継続用）
   var fallback = [
-    {menuId: "SELF_CHRONIC50",      menuName: "慢性ケア手技50分",          unitPrice: 5500},
-    {menuId: "TRAINING_PERSONAL60", menuName: "パーソナルトレーニング60分", unitPrice: 8800},
-    {menuId: "TRAINING_4PASS",      menuName: "4回集中コース",              unitPrice: 35200},
-    {menuId: "SELF_INITIAL_EVAL",   menuName: "症状別初回評価",             unitPrice: 3300},
+    {menuId: "SELF_CHRONIC50",      menuName: "慢性ケア手技50分",          unitPrice: 5500,  memberPrice: 0},
+    {menuId: "TRAINING_PERSONAL60", menuName: "パーソナルトレーニング60分", unitPrice: 8800,  memberPrice: 0},
+    {menuId: "TRAINING_4PASS",      menuName: "4回集中コース",              unitPrice: 35200, memberPrice: 0},
+    {menuId: "SELF_INITIAL_EVAL",   menuName: "症状別初回評価",             unitPrice: 3300,  memberPrice: 0},
   ];
 
   try {
@@ -3300,10 +3300,11 @@ function getSelfPayMenuMaster_V3() {
       if (!menuId) continue;
       var status = String(row[JBIZ_COL.status] || "").trim();
       if (status !== "確定") continue;
-      var menuName = String(row[JBIZ_COL.menuName] || "").trim();
+      var menuName    = String(row[JBIZ_COL.menuName] || "").trim();
       if (!menuName) continue;
-      var unitPrice = Number(row[JBIZ_COL.price]) || 0;
-      result.push({menuId: menuId, menuName: menuName, unitPrice: unitPrice});
+      var unitPrice   = Number(row[JBIZ_COL.price])       || 0;  // G列: 一般料金
+      var memberPrice = Number(row[JBIZ_COL.memberPrice]) || 0;  // H列: ジム会員料金（Phase B）
+      result.push({menuId: menuId, menuName: menuName, unitPrice: unitPrice, memberPrice: memberPrice});
     }
     if (result.length === 0) {
       Logger.log("getSelfPayMenuMaster_V3: JBIZ 確定メニュー 0件 → fallback");
@@ -3484,10 +3485,11 @@ function getCurrentVisitKey_V3() {
     var uiSh = ss.getSheetByName(SHEETS.ui);
     if (!uiSh) return {visitKey: "", patientId: "", existItems: [], error: "患者画面シートが見つかりません"};
 
-    // バッチ読み取り①: B2:C4 → patientId(C2=[0][1]) / treatDate(B4=[2][0])
-    var metaVals  = uiSh.getRange("B2:C4").getValues();
-    var patientId = String(metaVals[0][1] || "").trim();   // C2
-    var treatDate = metaVals[2][0];                        // B4
+    // バッチ読み取り①: B2:C5 → patientId(C2=[0][1]) / treatDate(B4=[2][0]) / isGymMember(B5=[3][0])
+    var metaVals    = uiSh.getRange("B2:C5").getValues();
+    var patientId   = String(metaVals[0][1] || "").trim();   // C2
+    var treatDate   = metaVals[2][0];                        // B4
+    var isGymMember = metaVals[3][0] === true;               // B5: Phase B ジム会員フラグ
 
     if (!patientId || !(treatDate instanceof Date)) {
       return {visitKey: "", patientId: "", existItems: [], error: "患者または来院日が未選択"};
@@ -3524,6 +3526,7 @@ function getCurrentVisitKey_V3() {
       chronicFlag:     chronic,
       nextReservation: nextResv,
       existItems:      existItems,
+      isGymMember:     isGymMember,  // Phase B: B5 チェックボックス値。dialog 側で価格切替に使う
     };
   } catch (e) {
     Logger.log("getCurrentVisitKey_V3 エラー: " + e.message);
