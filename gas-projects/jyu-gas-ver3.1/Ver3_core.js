@@ -1145,6 +1145,10 @@ function appendHeaderRow_V3_(headSh, headMap, obj) {
   setByName_(rowArr, headMap, HEADER_COLS.chronicCandidateFlag, obj.chronicCandidateFlag != null ? obj.chronicCandidateFlag : "");
   setByName_(rowArr, headMap, HEADER_COLS.nextReservation, obj.nextReservation != null ? obj.nextReservation : "");
   setByName_(rowArr, headMap, HEADER_COLS.firstVisitType, obj.firstVisitType != null ? obj.firstVisitType : "");
+  // Phase A (2026-03-31): ジム会員フラグ — boolean。列が存在しない旧シートでは setByName_ が無視する
+  if (headMap[HEADER_COLS.gymMemberFlag] !== undefined) {
+    setByName_(rowArr, headMap, HEADER_COLS.gymMemberFlag, obj.gymMemberFlag === true ? true : false);
+  }
   // HIGH-2: 同日2ケース活性時に第2ケースキーを記録（通常空）
   setByName_(rowArr, headMap, HEADER_COLS.caseKey2, obj.caseKey2 != null ? obj.caseKey2 : "");
   // mixed case 説明性列（列が存在しない場合は setByName_ が無視する）
