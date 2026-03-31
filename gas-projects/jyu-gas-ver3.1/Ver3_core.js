@@ -79,7 +79,9 @@ const UI = {
   patientId: "C2",        // B2は検索プルダウン、C2に患者ID自動抽出
   patientDisplay: "B2",   // 検索用表示文字列
   treatDate: "B4",
-  kubun: "B5",
+  gymMember: "B5",      // ジム会員フラグ（チェックボックス）— Phase A (2026-03-31)
+                        // Phase B で JBIZ 価格マスタの G列(一般料金)/H列(会員料金) 切替に使用予定
+                        // Phase C で患者マスタ既定値からの当日UI上書き方式に拡張予定
 
   // 表示専用：区分
   case1_kubunView: "C10",
@@ -218,6 +220,7 @@ const HEADER_COLS = {
   chronicCandidateFlag: "慢性候補フラグ",
   nextReservation: "次回予約あり",
   firstVisitType: "新規区分",
+  gymMemberFlag: "ジム会員フラグ",  // Phase A (2026-03-31): UI B5 から読み取り。将来: 患者マスタ既定値連携
   // HIGH-2: 同日2ケース活性時の第2ケースキー（通常は空）
   caseKey2: "caseKey2",
   // mixed case 説明性列（来院ヘッダの監査・見返し用）
@@ -275,7 +278,7 @@ function onOpen() {
       .addItem("入力バリデーション設定（傷病名プルダウン）", "setupValidation_V3")
       .addItem("設定シート初期セットアップ", "ensureSettingsRows_V3")
       .addItem("施術明細ヘッダーセットアップ", "ensureDetailHeaders_V3")
-      .addItem("会計ブロック自動生成（患者画面 行7〜8）", "setupSelfPayValidation_V3")
+      .addItem("UI初期設定（行5:ジム会員 / 行7〜8:会計ブロック）", "setupSelfPayValidation_V3")
       .addItem("自費明細入力（患者画面）", "openSelfPayDialog_V3")
       .addItem("自費明細シート初期化", "ensureSelfPayDetailSheet_V3")
       .addItem("【初回1回】JBIZ menu_id 列追加", "setupJBIZMenuMasterId_V3")
@@ -1047,6 +1050,7 @@ function saveVisit_V3() {
     chronicCandidateFlag: selfPayInfo.chronicCandidateFlag,
     nextReservation:      selfPayInfo.nextReservation,
     firstVisitType:       selfPayInfo.firstVisitType,
+    gymMemberFlag:        selfPayInfo.gymMemberFlag,    // Phase A: ジム会員フラグ
   });
 
   // ④ 施術明細upsert（保険処理ありの場合のみ）
@@ -1895,7 +1899,8 @@ function clearEntryUI_V3() {
   var uiSh = ss.getSheetByName(SHEETS.ui);
 
   uiSh.getRange(UI.patientDisplay).clearContent();  // B2（プルダウン）クリア → C2,B3は数式で自動クリア
-  uiSh.getRange("B5:B7").clearContent();
+  uiSh.getRange(UI.gymMember).setValue(false);       // B5: ジム会員チェックボックス → FALSE（Phase A）
+  uiSh.getRange("B6:B7").clearContent();             // B6: (空), B7: 会計区分 dropdown クリア
   // E列の会計値をクリア（D列のラベルは残す）
   uiSh.getRange("E2:E6").clearContent();
 
@@ -1974,16 +1979,20 @@ function clearAmountsUI_V3_(uiSh) {
 function readSelfPayFromUI_V3_(uiSh) {
   // selfPay_menuType(D7) / selfPay_amount(F7) / selfPay_menuCode(H8) は
   // 自費明細ダイアログの表示専用。来院ヘッダへの書き込みは 2026-03-23 撤去。
-  var accType  = String(uiSh.getRange(UI.selfPay_accountingType).getValue() || "").trim();
-  var chronic  = uiSh.getRange(UI.selfPay_chronicFlag).getValue() === true;
-  var nextResv = uiSh.getRange(UI.selfPay_nextReserv).getValue() === true;
-  var fvType   = String(uiSh.getRange(UI.selfPay_firstVisitType).getValue() || "").trim();
+  var accType   = String(uiSh.getRange(UI.selfPay_accountingType).getValue() || "").trim();
+  var chronic   = uiSh.getRange(UI.selfPay_chronicFlag).getValue() === true;
+  var nextResv  = uiSh.getRange(UI.selfPay_nextReserv).getValue() === true;
+  var fvType    = String(uiSh.getRange(UI.selfPay_firstVisitType).getValue() || "").trim();
+  // Phase A (2026-03-31): ジム会員フラグ — B5 チェックボックスから読み取り
+  // Phase B でこの値を getSelfPayMenuMaster_V3 へ渡し、一般/会員料金を切り替える予定
+  var gymMember = uiSh.getRange(UI.gymMember).getValue() === true;
 
   return {
     accountingType:       accType,
     chronicCandidateFlag: chronic,
     nextReservation:      nextResv,
     firstVisitType:       fvType,
+    gymMemberFlag:        gymMember,  // Phase A: boolean。来院ヘッダの「ジム会員フラグ」列に保存
   };
 }
 
@@ -2005,9 +2014,12 @@ function setupSelfPayValidation_V3() {
   if (!uiSh) throw new Error("患者画面シートが見つかりません");
   setupSelfPayValidation_V3_(uiSh);
   SpreadsheetApp.getUi().alert(
-    "会計・経営情報ブロック（行7〜8）の自動生成が完了しました（Phase 2）。\n" +
-    "Row 7: 会計区分(B7) / 自費メニュー[表示専用](D7) / 自費金額[表示専用](F7) / 会計合計(H7)\n" +
-    "Row 8: 慢性候補(B8) / 次回予約(D8) / 新規区分(F8) / 明細状態[状態表示](H8)\n" +
+    "UI初期設定が完了しました。\n\n" +
+    "【Row 5】ジム会員フラグ（Phase A）\n" +
+    "  A5: ラベル「ジム会員」/ B5: チェックボックス\n" +
+    "  ※当日の来院でジム会員なら B5 にチェック。来院ヘッダに「ジム会員フラグ」として記録。\n\n" +
+    "【Row 7】会計区分(B7) / 自費メニュー[表示専用](D7) / 自費金額[表示専用](F7) / 会計合計(H7)\n" +
+    "【Row 8】慢性候補(B8) / 次回予約(D8) / 新規区分(F8) / 明細状態[状態表示](H8)\n\n" +
     "D7/F7 は手入力不可。自費明細ダイアログから保存すると自動表示されます。\n" +
     "H8 は状態表示セル。Drawingボタンをシートに設置して openSelfPayDialog_V3 を割り当ててください。"
   );
@@ -2023,6 +2035,18 @@ function setupSelfPayValidation_V3_(uiSh) {
   var LABEL_BG   = "#e8e8e8";  // ラベルセル: ライトグレー
   var INPUT_BG   = "#ffffff";  // 入力セル: 白
   var FORMULA_BG = "#fff9c4";  // 会計合計(H7): 薄黄（表示専用・手入力不可）
+
+  // ── Row 5: ジム会員チェックボックス（Phase A / 2026-03-31）────────────
+  // Phase B で getSelfPayMenuMaster_V3 へ gymMemberFlag を渡し G列(一般)/H列(会員) を切替予定
+  // Phase C で患者マスタの既定値から自動設定 + 当日UI上書き方式に拡張予定
+  uiSh.getRange("A5").setValue("ジム会員").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("B5").setBackground(INPUT_BG).insertCheckboxes();
+  uiSh.getRange("A5:B5").setBorder(
+    true, true, true, true, null, null,
+    "#888888", SpreadsheetApp.BorderStyle.SOLID
+  );
+  // A6:B6 を白でクリア（旧「区分」表示の残骸除去・視覚的に行7会計ブロックと分離）
+  uiSh.getRange("A6:B6").clearContent().clearDataValidations().setBackground("#ffffff");
 
   // ── Row 7 ラベル書き込み ──────────────────────────────
   uiSh.getRange("A7").setValue("会計区分").setBackground(LABEL_BG).setFontWeight("bold");
@@ -2088,7 +2112,7 @@ function setupSelfPayValidation_V3_(uiSh) {
 /** ===== 保存後クリア ===== */
 function clearAfterSaveUI_V3_(uiSh) {
   uiSh.getRange(UI.patientDisplay).clearContent();  // B2クリア → C2,B3は数式で自動クリア
-  uiSh.getRange(UI.kubun).setValue("");
+  uiSh.getRange(UI.gymMember).setValue(false);      // B5: ジム会員チェックボックス → FALSE（Phase A）
 
   UI.case1_rows.forEach(function(r) { uiSh.getRange(r).clearContent(); });
   UI.case2_rows.forEach(function(r) { uiSh.getRange(r).clearContent(); });

@@ -1679,3 +1679,39 @@ transferData 月次集計:
 - フォルダ名: 変更しない。`gas-projects/jyu-gas-ver3.1/` を正本パスとして固定
 - スプレッドシート名: 変更しない。`【毎日記録】来店管理施術録ver3.1` を正本名として固定
 - Dashboard の `project_id = JREC-01` は既に正しく設定済みのため追加作業不要
+
+---
+
+### ジム会員フラグ Phase A 実装完了（2026-03-31）
+
+設計調査: `docs/JREC-01_GYM_MEMBER_FLAG_DESIGN_2026-03-31.md`
+
+#### 実装内容
+
+患者画面 A5/B5 に「ジム会員」チェックボックスを追加し、来院ヘッダに保存できるようにした。
+保険算定ロジック・申請書生成への影響なし。Phase B（価格切替）・Phase C（患者マスタ連携）への布石。
+
+| 変更項目 | 内容 |
+|---|---|
+| `UI.gymMember = "B5"` | `kubun: "B5"`（死セル）を `gymMember: "B5"` に改名 |
+| `HEADER_COLS.gymMemberFlag` | 来院ヘッダに `"ジム会員フラグ"` 列を追加（`ensureHeaderCols_` で自動追加・既存データ影響なし）|
+| `readSelfPayFromUI_V3_` | B5 チェック値を `gymMemberFlag` として返却 |
+| `appendHeaderRow_V3_` | `gymMemberFlag` を来院ヘッダ書き込みオブジェクトに追加 |
+| `clearAfterSaveUI_V3_` | B5 を `setValue(false)` でリセット（保存後・チェックボックス前提の明示的リセット）|
+| `clearEntryUI_V3` | `"B5:B7"` 一括クリア → B5 は `setValue(false)`・B6:B7 は `clearContent()` に分割 |
+| `setupSelfPayValidation_V3_` | A5="ジム会員"（LABEL_BG/太字）・B5=チェックボックス（INPUT_BG）・A5:B5 罫線・A6:B6 クリア |
+| メニューラベル | `"UI初期設定（行5:ジム会員 / 行7〜8:会計ブロック）"` に改称 |
+
+#### 院長の次アクション（clasp push 後）
+
+| # | 操作 |
+|---|---|
+| 1 | `clasp push` を実行 |
+| 2 | 来店管理施術録ver3.1 のメニュー「柔整システム」→「UI初期設定（行5:ジム会員 / 行7〜8:会計ブロック）」を実行 |
+| 3 | T-GYM-01〜04（チェックあり/なし保存・来院ヘッダ確認・保存後リセット確認）を実施 |
+
+#### Phase B（価格切替）への拡張ポイント
+
+- `getSelfPayMenuMaster_V3`: `JBIZ_COL.memberPrice`（H列）を返却に追加（定数は実装済み）
+- `getCurrentVisitKey_V3`: `isGymMember: B5値` を返却に追加
+- `selfPayDialog.html`: `visitKeyInfo.isGymMember` で一般/会員価格を切り替える
