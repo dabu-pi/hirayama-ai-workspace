@@ -1114,7 +1114,7 @@ function saveVisit_V3() {
       "来院合計: " + amounts.visitTotal + "\n" +
       "窓口負担: " + amounts.windowPay + "\n" +
       "保険請求: " + amounts.claimPay + "\n\n" +
-      "画面下部（J55〜）に会計サマリーを表示しました。"
+      "J2 右側に会計サマリーを表示しました。"
     );
   } else {
     SpreadsheetApp.getUi().alert(
@@ -1122,7 +1122,7 @@ function saveVisit_V3() {
       "visitKey: " + visitKey + "\n" +
       "※ 保険ケース保存・保険算定は行っていません\n" +
       "保険請求額: 0（会計区分 = 自費のみ）\n\n" +
-      "画面下部（J55〜）に会計サマリーを表示しました。"
+      "J2 右側に会計サマリーを表示しました。"
     );
   }
 }
@@ -2111,23 +2111,14 @@ function setupSelfPayValidation_V3_(uiSh) {
   uiSh.getRange("D9").clearContent().clearDataValidations();
   uiSh.getRange("F9").clearContent().clearDataValidations();
 
-  // ── 旧会計ブロック残骸クリア（Row55〜62: Phase0初回設置時の残り）──────
+  // ── 旧会計ブロック残骸クリア（A55:H62: Phase0初回設置時の残り）──────
   uiSh.getRange("A55:H62").clearContent().clearDataValidations();
 
-  // ── J2:N22: 会計サマリーエリア初期化（保存後に writeSavedSummaryUI_V3_ で書き込む）──
-  // breakApart → クリア → タイトル帯だけ設置（保存時に全レイアウトが書かれる）
-  uiSh.getRange(UI.summary_area).breakApart().clearContent().clearFormat();
-  uiSh.getRange("J2:N2").merge()
-    .setValue("■ 直前保存サマリー（来院保存後に表示）")
-    .setBackground("#1a73e8").setFontColor("#ffffff").setFontWeight("bold").setFontSize(11);
-  uiSh.getRange("J3:N3").merge()
-    .setValue("↑ 来院保存後にサマリーが表示されます ↑")
-    .setBackground("#f8f9fa").setFontColor("#9e9e9e").setFontStyle("italic").setFontSize(10)
-    .setHorizontalAlignment("center");
-  uiSh.getRange(UI.summary_area).setBorder(
-    true, true, true, true, null, null,
-    "#1a73e8", SpreadsheetApp.BorderStyle.SOLID_MEDIUM
-  );
+  // ── 旧サマリーv1残骸クリア（J55:Q62: v1実装時に書いた結合・文言の完全除去）──
+  uiSh.getRange("J55:Q62").breakApart().clearContent().clearFormat();
+
+  // ── J2:N22: 会計サマリーエリア初期化（空レイアウトを書いて旧文言を残さない）──
+  clearSummaryValuesUI_V3_(uiSh);
 
   // ── ブロック外枠（A7:H8）─────────────────────────────
   uiSh.getRange("A7:H8").setBorder(
@@ -2223,23 +2214,11 @@ function getClinicInfoFromSettings_V3_() {
  * clearEntryUI_V3 から呼ぶ。
  */
 function clearSummaryValuesUI_V3_(uiSh) {
-  // 患者固有の値セル（ラベル・罫線・固定テキストは対象外）
-  var valueCells = [
-    "L3:N3",   // 患者名
-    "L4:N4",   // 来院日
-    "L5:N5",   // 会計区分
-    "L7:N7",   // 保険分合計（参考）
-    "L8:N8",   // ①一部負担金
-    "L9:N9",   // ②保険外（自費）
-    "L11:N11", // 合計金額(①+②)
-    "L12:N12", // visitKey
-    "J14:N14", // 領収証: 受取人氏名
-    "L15:N15", // 領収証: 合計金額
-    "L16:N16", // 領収証: 一部負担金
-    "L17:N17", // 領収証: 保険外
-    "J22:N22", // 領収証: 来院日
-  ];
-  valueCells.forEach(function(addr) { uiSh.getRange(addr).clearContent(); });
+  // 空オブジェクトで writeSavedSummaryUI_V3_ を呼ぶことで
+  // ① breakApart().clearContent() による正規化
+  // ② レイアウト・ラベル・枠を維持したまま値セルを空欄表示（v_() が 0 → "" を返す）
+  // を同時に保証する。セルに旧文言を残さない。
+  writeSavedSummaryUI_V3_(uiSh, {});
 }
 
 /**
@@ -2256,12 +2235,15 @@ function writeSavedSummaryUI_V3_(uiSh, obj) {
   var dateFmt = (obj.treatDate instanceof Date)
     ? Utilities.formatDate(obj.treatDate, Session.getScriptTimeZone(), "yyyy/MM/dd")
     : String(obj.treatDate || "");
-  var acctType  = obj.accountingType || "（未選択）";
+  var acctType  = obj.accountingType || "";
   var insTotal  = Number(obj.visitTotal  || 0);
   var windowPay = Number(obj.windowPay   || 0);
   var spTotal   = Number(obj.selfPayTotal || 0);
   var total     = windowPay + spTotal;
   var visitKey  = obj.visitKey || "";
+
+  // 数値ヘルパー: 0 → "" で空欄表示（clearSummaryValues 呼び出し時に ¥0 を残さない）
+  function v_(n) { return n > 0 ? n : ""; }
 
   // ── 設定シートからクリニック情報を取得（全行検索）──────
   var clinic = getClinicInfoFromSettings_V3_();
@@ -2276,8 +2258,8 @@ function writeSavedSummaryUI_V3_(uiSh, obj) {
   var RECEIPT_BG = "#fff9c4";   // 薄黄: 領収証セクション
   var RECV_TOTAL = "#fce8b2";   // 濃い黄: 領収証合計金額
 
-  // ── 既存マージをリセット ─────────────────────────────
-  uiSh.getRange(UI.summary_area).breakApart();
+  // ── 既存マージをリセット＋全値クリア（想定外結合や旧文言を除去）──────────
+  uiSh.getRange(UI.summary_area).breakApart().clearContent();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // セクション 1: 直前保存サマリー（Row 2〜12）
@@ -2308,16 +2290,16 @@ function writeSavedSummaryUI_V3_(uiSh, obj) {
   // Row 7: 保険分合計（参考）
   uiSh.getRange("J7:K7").merge().setValue("保険分合計（参考）")
     .setBackground(LABEL_BG).setFontSize(9).setFontColor("#666666");
-  uiSh.getRange("L7:N7").merge().setValue(insTotal).setBackground(VALUE_BG)
+  uiSh.getRange("L7:N7").merge().setValue(v_(insTotal)).setBackground(VALUE_BG)
     .setNumberFormat("¥#,##0").setFontSize(9).setFontColor("#666666");
 
   // Row 8: ①一部負担金
   uiSh.getRange("J8:K8").merge().setValue("① 一部負担金").setBackground(LABEL_BG).setFontWeight("bold");
-  uiSh.getRange("L8:N8").merge().setValue(windowPay).setBackground(VALUE_BG).setNumberFormat("¥#,##0");
+  uiSh.getRange("L8:N8").merge().setValue(v_(windowPay)).setBackground(VALUE_BG).setNumberFormat("¥#,##0");
 
   // Row 9: ②保険外（自費）
   uiSh.getRange("J9:K9").merge().setValue("② 保険外（自費）").setBackground(LABEL_BG).setFontWeight("bold");
-  uiSh.getRange("L9:N9").merge().setValue(spTotal).setBackground(VALUE_BG).setNumberFormat("¥#,##0");
+  uiSh.getRange("L9:N9").merge().setValue(v_(spTotal)).setBackground(VALUE_BG).setNumberFormat("¥#,##0");
 
   // Row 10: 区切り線
   uiSh.getRange("J10:N10").merge()
@@ -2327,7 +2309,7 @@ function writeSavedSummaryUI_V3_(uiSh, obj) {
   uiSh.getRange("J11:K11").merge()
     .setValue("合計金額（①+②）").setBackground(TOTAL_BG).setFontWeight("bold").setFontSize(11);
   uiSh.getRange("L11:N11").merge()
-    .setValue(total).setBackground(TOTAL_BG)
+    .setValue(v_(total)).setBackground(TOTAL_BG)
     .setNumberFormat("¥#,##0").setFontWeight("bold").setFontSize(13);
 
   // Row 12: visitKey（小さく）
@@ -2348,28 +2330,28 @@ function writeSavedSummaryUI_V3_(uiSh, obj) {
 
   // Row 14: 受取人
   uiSh.getRange("J14:N14").merge()
-    .setValue(name + " 様")
+    .setValue(name ? name + " 様" : "")
     .setBackground(VALUE_BG).setFontWeight("bold").setFontSize(12);
 
   // Row 15: 合計金額（強調）
   uiSh.getRange("J15:K15").merge()
     .setValue("合計金額").setBackground(LABEL_BG).setFontWeight("bold");
   uiSh.getRange("L15:N15").merge()
-    .setValue(total).setBackground(RECV_TOTAL)
+    .setValue(v_(total)).setBackground(RECV_TOTAL)
     .setNumberFormat("¥#,##0").setFontWeight("bold").setFontSize(12);
 
   // Row 16: 一部負担金（内訳）
   uiSh.getRange("J16:K16").merge()
     .setValue("　一部負担金").setBackground(LABEL_BG).setFontSize(10);
   uiSh.getRange("L16:N16").merge()
-    .setValue(windowPay).setBackground(VALUE_BG)
+    .setValue(v_(windowPay)).setBackground(VALUE_BG)
     .setNumberFormat("¥#,##0").setFontSize(10);
 
   // Row 17: 保険外（内訳）
   uiSh.getRange("J17:K17").merge()
     .setValue("　保険外（自費）").setBackground(LABEL_BG).setFontSize(10);
   uiSh.getRange("L17:N17").merge()
-    .setValue(spTotal).setBackground(VALUE_BG)
+    .setValue(v_(spTotal)).setBackground(VALUE_BG)
     .setNumberFormat("¥#,##0").setFontSize(10);
 
   // Row 18: 締め文（固定）
@@ -2394,7 +2376,7 @@ function writeSavedSummaryUI_V3_(uiSh, obj) {
 
   // Row 22: 来院日（領収日として表示・値セル）
   uiSh.getRange("J22:N22").merge()
-    .setValue("来院日: " + dateFmt)
+    .setValue(dateFmt ? "来院日: " + dateFmt : "")
     .setBackground(RECEIPT_BG).setFontSize(9).setFontColor("#555555");
 
   // ── ボーダー ──────────────────────────────────────────
