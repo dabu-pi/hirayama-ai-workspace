@@ -143,6 +143,10 @@ const UI = {
   selfPay_nextReserv:      "D8",   // 次回予約あり（チェックボックス）
   selfPay_firstVisitType:  "F8",   // 新規区分（プルダウン: 保険新規/自費直新規/再来）
   selfPay_menuCode:        "H8",   // 自費メニューコード（将来: menu_id / Phase2価格マスタ連携用）
+
+  // 直前保存サマリー（保存後会計サマリー / 領収証参照元）— JREC-01 Case A (2026-03-31)
+  // writeSavedSummaryUI_V3_ / clearEntryUI_V3 / setupSelfPayValidation_V3_ で使用
+  summary_area: "J55:Q62",
 };
 
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
@@ -1080,22 +1084,45 @@ function saveVisit_V3() {
   }
 
   // ⑥ 経過履歴更新 / UIクリア
+  // JREC-01 サマリー用: B2（患者表示名）と自費合計を clearAfterSaveUI_V3_ 前に取得
+  var patientDisplayName_ = String(uiSh.getRange(UI.patientDisplay).getValue() || "").trim();
+  var selfPayDetailSh_ = ss.getSheetByName(SHEETS.selfPayDetail);
+  var selfPayItems_    = selfPayDetailSh_ ? readSelfPayDetailsForVisit_V3_(selfPayDetailSh_, visitKey) : [];
+  var selfPayTotal_    = selfPayItems_.reduce(function(sum, item) {
+    return sum + Number(item.subtotal || 0);
+  }, 0);
+
   refreshKeikaHistoryUI_V3();
   clearAfterSaveUI_V3_(uiSh);
+
+  // 保存後会計サマリー書き込み（JREC-01 Case A: J55:Q62）
+  writeSavedSummaryUI_V3_(uiSh, {
+    patientName:    patientDisplayName_,
+    treatDate:      treatDate,
+    accountingType: acctType,
+    visitTotal:     isInsuranceVisit ? (amounts.visitTotal || 0) : 0,
+    windowPay:      isInsuranceVisit ? (amounts.windowPay  || 0) : 0,
+    selfPayTotal:   selfPayTotal_,
+    savedAt:        now,
+    visitKey:       visitKey,
+  });
+
   if (isInsuranceVisit) {
     SpreadsheetApp.getUi().alert(
       "保存完了（統合：ケース＋金額＋ヘッダ）\n" +
       "visitKey: " + visitKey + "\n" +
       "来院合計: " + amounts.visitTotal + "\n" +
       "窓口負担: " + amounts.windowPay + "\n" +
-      "保険請求: " + amounts.claimPay
+      "保険請求: " + amounts.claimPay + "\n\n" +
+      "画面下部（J55〜）に会計サマリーを表示しました。"
     );
   } else {
     SpreadsheetApp.getUi().alert(
       "保存完了（自費のみ）\n" +
       "visitKey: " + visitKey + "\n" +
       "※ 保険ケース保存・保険算定は行っていません\n" +
-      "保険請求額: 0（会計区分 = 自費のみ）"
+      "保険請求額: 0（会計区分 = 自費のみ）\n\n" +
+      "画面下部（J55〜）に会計サマリーを表示しました。"
     );
   }
 }
@@ -1949,6 +1976,9 @@ function clearEntryUI_V3() {
   // Phase 0: 自費・経営情報ブロックをクリア
   clearSelfPayUI_V3_(uiSh);
 
+  // JREC-01 Case A: 保存後会計サマリーをクリア（手動全クリア時に消す）
+  uiSh.getRange(UI.summary_area).breakApart().clearContent().clearFormat();
+
   SpreadsheetApp.getUi().alert("自動入力エリアをクリアしました（B4は保持・書式は保持）。");
 }
 
@@ -2084,6 +2114,12 @@ function setupSelfPayValidation_V3_(uiSh) {
   // ── 旧会計ブロック残骸クリア（Row55〜62: Phase0初回設置時の残り）──────
   uiSh.getRange("A55:H62").clearContent().clearDataValidations();
 
+  // ── J55:Q62: 会計サマリーエリア初期化（保存後に writeSavedSummaryUI_V3_ で書き込む）──
+  uiSh.getRange(UI.summary_area).breakApart().clearContent().clearFormat()
+    .setBackground("#f8f9fa");
+  uiSh.getRange("J55").setValue("（来院保存後にサマリーが表示されます）")
+    .setFontColor("#9e9e9e").setFontStyle("italic").setFontSize(10);
+
   // ── ブロック外枠（A7:H8）─────────────────────────────
   uiSh.getRange("A7:H8").setBorder(
     true, true, true, true, null, null,
@@ -2151,6 +2187,164 @@ function clearAfterSaveUI_V3_(uiSh) {
   clearSelfPayUI_V3_(uiSh);
 
   // 会計ブロックは保存直後の確認用に残す（clearEntryUI_V3で初めてクリア）
+}
+
+/**
+ * 保存後会計サマリーを患者画面 J55:Q62 に書き込む（領収証参照元）。
+ * 毎回の保存で前回サマリーを上書きする。clearEntryUI_V3 で消える。
+ *
+ * @param {Sheet}  uiSh  患者画面シート
+ * @param {Object} obj   {patientName, treatDate, accountingType,
+ *                        visitTotal, windowPay, selfPayTotal, savedAt, visitKey}
+ */
+function writeSavedSummaryUI_V3_(uiSh, obj) {
+  // ── 値を準備 ──────────────────────────────────────────
+  var name    = obj.patientName || "";
+  var dateFmt = (obj.treatDate instanceof Date)
+    ? Utilities.formatDate(obj.treatDate, Session.getScriptTimeZone(), "yyyy/MM/dd")
+    : String(obj.treatDate || "");
+  var acctType  = obj.accountingType || "（未選択）";
+  var insTotal  = Number(obj.visitTotal  || 0);
+  var windowPay = Number(obj.windowPay   || 0);
+  var spTotal   = Number(obj.selfPayTotal || 0);
+  var total     = windowPay + spTotal;
+  var savedAtFmt = (obj.savedAt instanceof Date)
+    ? Utilities.formatDate(obj.savedAt, Session.getScriptTimeZone(), "yyyy/MM/dd HH:mm:ss")
+    : String(obj.savedAt || "");
+  var visitKey = obj.visitKey || "";
+
+  // 数値を "¥1,234" 形式に変換するローカルヘルパー
+  function n_(v) {
+    return "¥" + String(Math.round(Number(v) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  // ── クリニック情報を設定シートから取得（A列=ラベル / B列=値 の形式を検索）──
+  var clinicName = "", clinicAddr = "", clinicTel = "";
+  var ss         = SpreadsheetApp.getActive();
+  var settingsSh = ss.getSheetByName(SHEETS.settings);
+  if (settingsSh && settingsSh.getLastRow() > 0) {
+    var settingsRows = settingsSh.getRange(1, 1, Math.min(settingsSh.getLastRow(), 20), 2).getValues();
+    settingsRows.forEach(function(r) {
+      var lbl = String(r[0] || "").trim();
+      var val = String(r[1] || "").trim();
+      if (lbl === "施術所名") clinicName = val;
+      if (lbl === "住所")     clinicAddr = val;
+      if (lbl === "電話")     clinicTel  = val;
+    });
+  }
+  var clinicLine = [clinicName, clinicAddr ? "〒" + clinicAddr : "", clinicTel ? "TEL " + clinicTel : ""]
+    .filter(Boolean).join("  ／  ");
+  if (!clinicLine) clinicLine = "（設定シートの A列に「施術所名」「住所」「電話」と記入してください）";
+
+  // ── 色定数 ──────────────────────────────────────────
+  var TITLE_BG   = "#1a73e8";
+  var TITLE_FG   = "#ffffff";
+  var LABEL_BG   = "#e8f0fe";
+  var VALUE_BG   = "#ffffff";
+  var TOTAL_BG   = "#fff3e0";   // 薄オレンジ: 合計金額
+  var RECEIPT_BG = "#fff9c4";   // 薄黄: 領収証セクション
+  var RECV_TOTAL = "#fce8b2";   // 少し濃い黄: 領収証合計金額セル
+
+  // ── 既存サマリーをクリア（前回の merge / 書式をリセット）─
+  uiSh.getRange(UI.summary_area).breakApart().clearContent().clearFormat();
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // セクション 1: 直前保存サマリー（行 55〜58）
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // Row 55: タイトル
+  uiSh.getRange("J55:Q55").merge()
+    .setValue("■ 直前保存サマリー（領収証参照元）")
+    .setBackground(TITLE_BG)
+    .setFontColor(TITLE_FG)
+    .setFontWeight("bold")
+    .setFontSize(11)
+    .setVerticalAlignment("middle");
+
+  // Row 56: 患者名 / 来院日 / 会計区分
+  uiSh.getRange("J56").setValue("患者名").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("K56:L56").merge().setValue(name).setBackground(VALUE_BG).setFontWeight("bold");
+  uiSh.getRange("M56").setValue("来院日").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("N56").setValue(dateFmt).setBackground(VALUE_BG);
+  uiSh.getRange("O56").setValue("会計区分").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("P56:Q56").merge().setValue(acctType).setBackground(VALUE_BG);
+
+  // Row 57: 金額4項目
+  uiSh.getRange("J57").setValue("保険分合計（参考）").setBackground(LABEL_BG).setFontWeight("bold").setFontSize(9);
+  uiSh.getRange("K57").setValue(insTotal).setBackground(VALUE_BG).setNumberFormat("¥#,##0");
+  uiSh.getRange("L57").setValue("①一部負担金").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("M57").setValue(windowPay).setBackground(VALUE_BG).setNumberFormat("¥#,##0");
+  uiSh.getRange("N57").setValue("②保険外").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("O57").setValue(spTotal).setBackground(VALUE_BG).setNumberFormat("¥#,##0");
+  uiSh.getRange("P57").setValue("合計金額(①+②)").setBackground(TOTAL_BG).setFontWeight("bold");
+  uiSh.getRange("Q57").setValue(total).setBackground(TOTAL_BG).setFontWeight("bold")
+    .setNumberFormat("¥#,##0").setFontSize(11);
+
+  // Row 58: 保存時刻 / visitKey
+  uiSh.getRange("J58").setValue("保存時刻").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("K58:L58").merge().setValue(savedAtFmt).setBackground(VALUE_BG);
+  uiSh.getRange("M58").setValue("visitKey").setBackground(LABEL_BG).setFontWeight("bold");
+  uiSh.getRange("N58:Q58").merge().setValue(visitKey).setBackground(VALUE_BG).setFontSize(9);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // セクション 2: 領収証（行 59〜62）
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // Row 59: 領収証タイトル（セパレーター兼）
+  uiSh.getRange("J59:Q59").merge()
+    .setValue("――― 領 収 証 ―――")
+    .setBackground(RECEIPT_BG)
+    .setFontWeight("bold")
+    .setFontSize(11)
+    .setHorizontalAlignment("center");
+
+  // Row 60: 受取人氏名 / 合計金額
+  uiSh.getRange("J60:L60").merge()
+    .setValue(name + " 様")
+    .setBackground(VALUE_BG)
+    .setFontWeight("bold")
+    .setFontSize(12);
+  uiSh.getRange("M60:N60").merge()
+    .setValue("合計金額")
+    .setBackground(LABEL_BG)
+    .setFontWeight("bold");
+  uiSh.getRange("O60:Q60").merge()
+    .setValue(total)
+    .setBackground(RECV_TOTAL)
+    .setFontWeight("bold")
+    .setFontSize(12)
+    .setNumberFormat("¥#,##0")
+    .setHorizontalAlignment("right");
+
+  // Row 61: 内訳（一部負担金 / 保険外 / 保険算定参考）
+  uiSh.getRange("J61:Q61").merge()
+    .setValue(
+      "一部負担金 " + n_(windowPay) +
+      "  ／  保険外 " + n_(spTotal) +
+      "  （保険算定 " + n_(insTotal) + " は参考）"
+    )
+    .setBackground(VALUE_BG)
+    .setFontSize(10);
+
+  // Row 62: 締め文 / クリニック情報
+  uiSh.getRange("J62:L62").merge()
+    .setValue("上記合計金額を領収いたしました")
+    .setBackground(RECEIPT_BG)
+    .setFontWeight("bold");
+  uiSh.getRange("M62:Q62").merge()
+    .setValue(clinicLine)
+    .setBackground(RECEIPT_BG)
+    .setFontSize(9);
+
+  // ── 外枠ボーダー（全体・青実線）─────────────────────────
+  uiSh.getRange(UI.summary_area).setBorder(
+    true, true, true, true, null, null,
+    "#1a73e8", SpreadsheetApp.BorderStyle.SOLID_MEDIUM
+  );
+  // Row55 / Row58 の下 / Row59 の下に内側ボーダー
+  uiSh.getRange("J55:Q55").setBorder(null, null, true, null, null, null, "#1a73e8", SpreadsheetApp.BorderStyle.SOLID);
+  uiSh.getRange("J58:Q58").setBorder(null, null, true, null, null, null, "#cccccc", SpreadsheetApp.BorderStyle.DASHED);
+  uiSh.getRange("J59:Q59").setBorder(null, null, true, null, null, null, "#1a73e8", SpreadsheetApp.BorderStyle.SOLID);
 }
 
 /** ===== ヘッダー確認 ===== */
