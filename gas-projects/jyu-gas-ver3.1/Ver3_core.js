@@ -198,42 +198,58 @@ const CASE_COLS = {
   keikaNow: "経過_今回",
 };
 
-/** ===== 来院ヘッダ列名 ===== */
+/**
+ * ===== 来院ヘッダ列名 =====
+ * 論理グループ順（I-1: 2026-04-01 整理）:
+ *   A 基本識別 → B 保険算定 → C ケース識別 → D 来院状態 → E 経営KPI → F 保険監査
+ *
+ * 注意: この定義順は ensureHeaderCols_ が"不足列を末尾追加"する際の参照にもなる。
+ *       既存シートの列順は reorderHeaderCols_V3() で別途整理する。
+ */
 const HEADER_COLS = {
-  visitKey: "visitKey",
-  treatDate: "施術日",
-  patientId: "患者ID",
-  kubun: "区分",
-  injuryVisit: "受傷日_確定(来院)",
-  initFee: "初検料",
-  reFee: "再検料",
-  supportFee: "相談支援料",
-  detailSum: "明細合計",
-  visitTotal: "来院合計",
-  lastVisit: "最終来院日",
-  gapDays: "前回から日数",
-  needCheck: "要確認",
-  needCheckReason: "要確認理由",
-  createdAt: "作成日時",
-  windowPay: "窓口負担額",
-  claimPay: "保険請求額",
-  caseKey: "caseKey",
-  caseIndex: "caseIndex",
-  accountingType: "会計区分",
+  // ── A 基本識別 ──────────────────────────────
+  visitKey:            "visitKey",
+  treatDate:           "施術日",
+  patientId:           "患者ID",
+
+  // ── B 保険算定 ──────────────────────────────
+  kubun:               "区分",
+  injuryVisit:         "受傷日_確定(来院)",
+  initFee:             "初検料",
+  reFee:               "再検料",
+  supportFee:          "相談支援料",
+  detailSum:           "明細合計",
+  visitTotal:          "来院合計",
+  windowPay:           "窓口負担額",   // 旧定義: createdAt の後ろに後付け → I-1 で保険算定グループへ
+  claimPay:            "保険請求額",   // 同上
+
+  // ── C ケース識別 ────────────────────────────
+  caseKey:             "caseKey",
+  caseIndex:           "caseIndex",
+  caseKey2:            "caseKey2",     // HIGH-2: 同日2ケース活性時の第2ケースキー（通常は空）→ I-1 で経営KPIゾーンから移動
+
+  // ── D 来院状態・アラート・管理 ──────────────
+  lastVisit:           "最終来院日",
+  gapDays:             "前回から日数",
+  needCheck:           "要確認",
+  needCheckReason:     "要確認理由",
+  createdAt:           "作成日時",
+
+  // ── E 経営KPI ───────────────────────────────
   // selfPayMenuType / selfPayAmount / selfPayMenuCode は 2026-03-23 撤去。
   // 自費明細シートが正本。二重管理・陳腐化防止のため来院ヘッダから除外。
-  chronicCandidateFlag: "慢性候補フラグ",
-  nextReservation: "次回予約あり",
-  firstVisitType: "新規区分",
-  gymMemberFlag: "ジム会員フラグ",  // Phase A (2026-03-31): UI B5 から読み取り。将来: 患者マスタ既定値連携
-  // HIGH-2: 同日2ケース活性時の第2ケースキー（通常は空）
-  caseKey2: "caseKey2",
-  // mixed case 説明性列（来院ヘッダの監査・見返し用）
-  billedKubun: "算定区分",
-  mixedFlag: "Mixed区分",
-  case1Summary: "case1要約",
-  case2Summary: "case2要約",
-  chargeReason: "課金理由要約",
+  accountingType:         "会計区分",
+  gymMemberFlag:          "ジム会員フラグ",  // Phase A (2026-03-31): UI B5 から読み取り。将来: 患者マスタ既定値連携
+  chronicCandidateFlag:   "慢性候補フラグ",
+  nextReservation:        "次回予約あり",
+  firstVisitType:         "新規区分",
+
+  // ── F 保険監査（mixed case 説明性列） ────────
+  billedKubun:         "算定区分",
+  mixedFlag:           "Mixed区分",
+  case1Summary:        "case1要約",
+  case2Summary:        "case2要約",
+  chargeReason:        "課金理由要約",
 };
 
 /** ===== 設定シートの選択肢マスタ（E:I） ===== */
@@ -288,6 +304,8 @@ function onOpen() {
       .addItem("自費明細シート初期化", "ensureSelfPayDetailSheet_V3")
       .addItem("【初回1回】JBIZ menu_id 列追加", "setupJBIZMenuMasterId_V3")
       .addItem("【整理用】JBIZ 会員優待ルール移行", "migrateJBIZMemberRules_V3")
+      .addSeparator()
+      .addItem("【I-1】来院ヘッダ列順整理（バックアップ付き）", "reorderHeaderCols_V3")
       .addSeparator()
       .addItem("患者検索プルダウン設定", "setupPatientPicker_V3")
       .addItem("患者検索プルダウン更新", "refreshPatientPicker_V3")
@@ -3670,6 +3688,188 @@ function migrateJBIZMemberRules_V3() {
     + "「会員優待ルール」シートを確認してください。\n"
     + "移行後、不要になった空行はスプレッドシートで手動削除できます。"
   );
+}
+
+/* =======================================================================
+   I-1: 来院ヘッダ列順整理（2026-04-01）
+   論理グループ: A基本識別 → B保険算定 → Cケース識別 → D来院状態 → E経営KPI → F保険監査
+   ======================================================================= */
+
+/**
+ * 来院ヘッダシートの列を HEADER_COLS の論理グループ順に並び替える。
+ *
+ * 安全設計:
+ *   1. 実行前に「来院ヘッダ_BK_YYYYMMdd_HHmm」シートへバックアップを作成する。
+ *   2. 確認ダイアログ（ドライラン表示）で Before/After を提示してから実行する。
+ *   3. 来院ヘッダの全参照は buildHeaderColMap_（名前ベース）なので列順変更の機能影響はゼロ。
+ *   4. targetOrder に含まれない列（旧削除済みヘッダ等）は末尾へ残す。
+ *
+ * ロールバック: バックアップシートを来院ヘッダシートの前に手動コピーして元の名前に戻す。
+ */
+function reorderHeaderCols_V3() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+  var tz  = Session.getScriptTimeZone();
+
+  // ── 対象シート取得 ──────────────────────────
+  var headSh = ss.getSheetByName(SHEETS.header);
+  if (!headSh) {
+    ui.alert("[エラー] 来院ヘッダシートが見つかりません: " + SHEETS.header);
+    return;
+  }
+
+  // ── 目標列順（HEADER_COLS の論理グループ順） ──
+  var targetOrder = [
+    // A 基本識別
+    HEADER_COLS.visitKey, HEADER_COLS.treatDate, HEADER_COLS.patientId,
+    // B 保険算定
+    HEADER_COLS.kubun, HEADER_COLS.injuryVisit,
+    HEADER_COLS.initFee, HEADER_COLS.reFee, HEADER_COLS.supportFee,
+    HEADER_COLS.detailSum, HEADER_COLS.visitTotal,
+    HEADER_COLS.windowPay, HEADER_COLS.claimPay,
+    // C ケース識別
+    HEADER_COLS.caseKey, HEADER_COLS.caseIndex, HEADER_COLS.caseKey2,
+    // D 来院状態・アラート・管理
+    HEADER_COLS.lastVisit, HEADER_COLS.gapDays,
+    HEADER_COLS.needCheck, HEADER_COLS.needCheckReason, HEADER_COLS.createdAt,
+    // E 経営KPI
+    HEADER_COLS.accountingType, HEADER_COLS.gymMemberFlag,
+    HEADER_COLS.chronicCandidateFlag, HEADER_COLS.nextReservation, HEADER_COLS.firstVisitType,
+    // F 保険監査
+    HEADER_COLS.billedKubun, HEADER_COLS.mixedFlag,
+    HEADER_COLS.case1Summary, HEADER_COLS.case2Summary, HEADER_COLS.chargeReason,
+  ];
+
+  // ── 現在の列名を取得 ────────────────────────
+  var lastCol   = headSh.getLastColumn();
+  var curNames  = (lastCol >= 1)
+    ? headSh.getRange(1, 1, 1, lastCol).getValues()[0].map(function(v) { return String(v || "").trim(); })
+    : [];
+
+  if (curNames.length === 0) {
+    ui.alert("[エラー] 来院ヘッダシートにヘッダ行がありません。");
+    return;
+  }
+
+  // targetOrder のうちシートに存在する列だけを処理対象にする
+  var existingTarget = targetOrder.filter(function(name) {
+    return curNames.indexOf(name) >= 0;
+  });
+  // シートにあるが targetOrder に含まれない列（廃止済みヘッダ等）は末尾へ残す
+  var extraCols = curNames.filter(function(n) {
+    return n !== "" && existingTarget.indexOf(n) < 0;
+  });
+  // targetOrder に含まれるがシートにない列（まだ追加されていない列）
+  var missingCols = targetOrder.filter(function(name) {
+    return curNames.indexOf(name) < 0;
+  });
+
+  // ── ドライラン: Before/After を構築 ─────────
+  // After = existingTarget順 + extraCols（末尾）
+  var afterOrder = existingTarget.concat(extraCols);
+
+  // 変更が必要かチェック（現在と After が一致しているか）
+  var alreadySorted = curNames.every(function(n, i) { return n === (afterOrder[i] || ""); });
+  if (alreadySorted) {
+    ui.alert("[I-1] 来院ヘッダ列順整理\n\n列順は既に目標順と一致しています。変更不要です。");
+    return;
+  }
+
+  // ── 確認ダイアログ ───────────────────────────
+  var dryRunLines = [];
+  dryRunLines.push("【I-1】来院ヘッダ列順整理 — 実行前確認");
+  dryRunLines.push("現在の列数: " + curNames.filter(function(n){return n!=="";}).length);
+  dryRunLines.push("整理後の列数: " + afterOrder.length);
+  if (missingCols.length > 0) {
+    dryRunLines.push("シートにない列（未追加・スキップ）: " + missingCols.join(", "));
+  }
+  if (extraCols.length > 0) {
+    dryRunLines.push("未定義列（末尾に残す）: " + extraCols.join(", "));
+  }
+  dryRunLines.push("");
+  dryRunLines.push("── 変更される主な移動 ──");
+
+  // 変更点を最大10件表示
+  var changes = [];
+  afterOrder.forEach(function(name, idx) {
+    var oldIdx = curNames.indexOf(name);
+    var newIdx = idx;
+    if (oldIdx !== newIdx) changes.push((oldIdx + 1) + "列目「" + name + "」→ " + (newIdx + 1) + "列目");
+  });
+  changes.slice(0, 10).forEach(function(c) { dryRunLines.push("  " + c); });
+  if (changes.length > 10) dryRunLines.push("  ...他 " + (changes.length - 10) + " 件");
+
+  dryRunLines.push("");
+  dryRunLines.push("実行前にバックアップシートを自動作成します。");
+  dryRunLines.push("続行しますか？");
+
+  var resp = ui.alert("[I-1] 来院ヘッダ列順整理", dryRunLines.join("\n"), ui.ButtonSet.OK_CANCEL);
+  if (resp !== ui.Button.OK) {
+    ui.alert("キャンセルしました。シートは変更されていません。");
+    return;
+  }
+
+  // ── Step 1: バックアップ作成 ─────────────────
+  var stamp  = Utilities.formatDate(new Date(), tz, "yyyyMMdd_HHmm");
+  var bkName = SHEETS.header + "_BK_" + stamp;
+  headSh.copyTo(ss).setName(bkName);
+  SpreadsheetApp.flush();
+  Logger.log("reorderHeaderCols_V3: バックアップ作成 → " + bkName);
+
+  // ── Step 2: 列を並び替え ─────────────────────
+  // 処理対象は existingTarget のみ（extraCols は末尾に自然に残る）
+  var curArr = curNames.slice();  // 移動に伴う現在列インデックスの追跡用
+
+  for (var i = 0; i < existingTarget.length; i++) {
+    var targetName = existingTarget[i];
+    var targetPos  = i + 1;  // 1-based
+    var currentPos = curArr.indexOf(targetName) + 1;  // 1-based
+
+    if (currentPos <= 0 || currentPos === targetPos) continue;
+
+    // currentPos >= targetPos が常に成立（左移動のみ）
+    headSh.moveColumns(headSh.getRange(1, currentPos, 1, 1), targetPos);
+
+    // curArr を実際の移動に合わせて更新
+    var removed = curArr.splice(currentPos - 1, 1)[0];
+    curArr.splice(targetPos - 1, 0, removed);
+  }
+
+  SpreadsheetApp.flush();
+
+  // ── Step 3: 検証 ─────────────────────────────
+  var newLastCol = headSh.getLastColumn();
+  var newNames   = headSh.getRange(1, 1, 1, newLastCol).getValues()[0]
+    .map(function(v) { return String(v || "").trim(); });
+
+  var verifyLines = ["【I-1 完了】来院ヘッダ列順整理", ""];
+  verifyLines.push("バックアップシート: " + bkName);
+  verifyLines.push("整理後の列数: " + newNames.filter(function(n){return n!=="";}).length);
+  verifyLines.push("");
+  verifyLines.push("── 整理後の列順 ──");
+
+  var groups = [
+    { label: "A 基本識別",          end: 3 },
+    { label: "B 保険算定",          end: 12 },
+    { label: "C ケース識別",        end: 15 },
+    { label: "D 来院状態",          end: 20 },
+    { label: "E 経営KPI",           end: 25 },
+    { label: "F 保険監査 + その他", end: newNames.length },
+  ];
+  var groupIdx = 0;
+  newNames.forEach(function(name, idx) {
+    if (name === "") return;
+    if (groupIdx < groups.length && idx === groups[groupIdx].end) groupIdx++;
+    if (groupIdx < groups.length && idx === 0 ||
+        (groupIdx < groups.length && (idx === 0 ||
+         existingTarget.indexOf(name) === (groupIdx > 0 ? groups[groupIdx - 1].end : 0)))) {
+      // group label print handled below
+    }
+    verifyLines.push("  " + (idx + 1) + ". " + name);
+  });
+
+  Logger.log("reorderHeaderCols_V3 完了: " + newNames.join(", "));
+  ui.alert("[I-1 完了]", verifyLines.join("\n"), ui.ButtonSet.OK);
 }
 
 /* =======================================================================
