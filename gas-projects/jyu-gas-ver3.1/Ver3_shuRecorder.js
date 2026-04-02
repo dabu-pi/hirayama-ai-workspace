@@ -26,22 +26,22 @@ var SR_SUBFOLDER_NAME = '施術録';
 
 /**
  * 裏面 日別明細テーブル 列Indexマッピング
- * T-SR-10v2 修正: cold/warm を分離し様式通りの列へ出力する。
- * ★実機テスト後にインデックスがずれる場合はここだけ修正する。
+ * T-SR-10v4 修正:
+ * - 実テンプレの grouped cell 前提に寄せる。
+ * - 月/日は左端 1 セルに M/D 形式で出力する。
+ * - 初検料等は明細 baseOut のうち kubun=初検 を表示用に載せる。
+ * - 判定なしは blank 維持。0 は表示しない。
+ * ★最終的な fallback はこの定数。実テンプレ変更時の手修正起点にも使う。
  */
 var SR_URAME_COL = {
-  month:  0,   // 月
-  day:    1,   // 日
-  check:  2,   // ✓チェック
-  // 3: 初検料/時間外等 — 手入力残し
-  // 4: 整復料等 — 手入力残し
-  base:   5,   // 後療料
-  cold:   6,   // 冷罨法料
-  warm:   7,   // 温罨法料
-  elec:   8,   // 電療料
-  // 9: 明細書発行体制加算 — 手入力残し
-  copay:  10,  // 一部負担金
-  notes:  11,  // 整復・施術等の施術経過所見
+  date:    0,   // 月/日（左端 1 セル）
+  initial: 1,   // 初検料/再検料/初検時相談支援料 など grouped cell
+  base:    5,   // 後療料
+  cold:    7,   // 冷罨法料（combined header の場合は warm と同セル）
+  warm:    7,   // 温罨法料
+  elec:    8,   // 電療料
+  copay:   11,  // 一部負担金
+  notes:   13,  // 整復・施療等の施術経過所見
 };
 
 /**
@@ -168,6 +168,14 @@ function srGenerateDocument(patientId, yearMonth) {
          '\nPDF:   https://drive.google.com/file/d/' + pdfId;
 }
 
+/**
+ * 開発用: T-SR-10v2 再テストの固定ケースを no-arg で実行する。
+ * clasp run の JSON 引数崩れを避けるためのラッパー。
+ */
+function srRunTsr10v2Debug_() {
+  return srGenerateDocument('P001', '2026-03');
+}
+
 
 /* =======================================================================
    ③ データ取得 (T-SR-03, T-SR-04)
@@ -212,7 +220,9 @@ function srGetPatientData_(ss, patientId) {
  * 対象月の保険来院日一覧を日付昇順で返す。
  * ★Bug 1修正: 会計区分="自費のみ" の来院日を除外する。
  * ★Bug 2修正: cold / warm を別フィールドで返す。
- * @return {Array} [{month, day, date, baseOut, cold, warm, elecOut, copay, notes}, ...]
+ * @return {Array} [{month, day, date, initialAmount, baseOut, cold, warm, elecOut, copay, notes}, ...]
+ *   initialAmount: 施術録裏面の初検料等表示用。明細 baseOut のうち kubun=初検 を集約
+ *   baseOut:       施術録裏面の後療料表示用。明細 baseOut のうち kubun!=初検 を集約
  */
 function srGetVisitRows_(ss, patientId, yearMonth) {
   var ymParts    = yearMonth.split('-');
@@ -246,11 +256,11 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
     if (acctType === '自費のみ') continue;
 
     headerMap[vk] = {
-      month:    dt.getMonth() + 1,
-      day:      dt.getDate(),
-      date:     dt,
-      copay:    Number(hrow[hci(hc.windowPay)] || 0),
-      visitKey: vk,
+      month:         dt.getMonth() + 1,
+      day:           dt.getDate(),
+      date:          dt,
+      copay:         Number(hrow[hci(hc.windowPay)] || 0),
+      visitKey:      vk,
     };
   }
 
@@ -261,13 +271,19 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var dc      = AM_DETAIL_COLS;
   var dci     = function(n) { return dHdrs.indexOf(n); };
 
-  var amountMap = {};  // visitKey → {base, cold, warm, elec}
+  var amountMap = {};  // visitKey → {initial, base, cold, warm, elec}
   for (var r2 = 1; r2 < dtlData.length; r2++) {
     var drow = dtlData[r2];
     var vk2  = String(drow[dci(dc.visitKey)] || '');
     if (!headerMap[vk2]) continue;
-    if (!amountMap[vk2]) amountMap[vk2] = { base: 0, cold: 0, warm: 0, elec: 0 };
-    amountMap[vk2].base += Number(drow[dci(dc.baseOut)]    || 0);
+    if (!amountMap[vk2]) amountMap[vk2] = { initial: 0, base: 0, cold: 0, warm: 0, elec: 0 };
+    var kubun = String(drow[dci(dc.kubun)] || '').trim();
+    var base  = Number(drow[dci(dc.baseOut)] || 0);
+    if (kubun === '初検') {
+      amountMap[vk2].initial += base;
+    } else {
+      amountMap[vk2].base += base;
+    }
     amountMap[vk2].cold += Number(drow[dci(dc.coldOut)]    || 0);
     amountMap[vk2].warm += Number(drow[dci(dc.warmOut)]    || 0);
     amountMap[vk2].elec += Number(drow[dci(dc.electroOut)] || 0);
@@ -296,12 +312,13 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var result = [];
   for (var vk in headerMap) {
     var h  = headerMap[vk];
-    var am = amountMap[vk] || { base: 0, cold: 0, warm: 0, elec: 0 };
+    var am = amountMap[vk] || { initial: 0, base: 0, cold: 0, warm: 0, elec: 0 };
     result.push({
       visitKey:  vk,
       month:     h.month,
       day:       h.day,
       date:      h.date,
+      initialAmount: am.initial,
       baseOut:   am.base,
       cold:      am.cold,   // ★Bug 2修正: 冷罨法料（単独）
       warm:      am.warm,   // ★Bug 2修正: 温罨法料（単独）
@@ -361,6 +378,15 @@ function srGetCaseData_(ss, patientId, yearMonth) {
         tenki2: String(row[ci(cc.tenki2)] || ''),
       };
     }
+    // 月内の後続行にだけ case2 が入るケースを拾うため、空欄項目は後続行で補完する。
+    srBackfillCaseValue_(best, 'p1',     String(row[ci(cc.p1)] || ''));
+    srBackfillCaseValue_(best, 'd1',     String(row[ci(cc.d1)] || ''));
+    srBackfillCaseValue_(best, 'p2',     String(row[ci(cc.p2)] || ''));
+    srBackfillCaseValue_(best, 'd2',     String(row[ci(cc.d2)] || ''));
+    srBackfillCaseValue_(best, 'inj1',   row[ci(cc.inj1)]);
+    srBackfillCaseValue_(best, 'inj2',   row[ci(cc.inj2)]);
+    srBackfillCaseValue_(best, 'start1', row[ci(cc.start1)]);
+    srBackfillCaseValue_(best, 'start2', row[ci(cc.start2)]);
     // 転帰・終了日は月内の最終行で上書き（途中変更に対応）
     if (row[ci(cc.tenki1)]) best.tenki1 = String(row[ci(cc.tenki1)]);
     if (row[ci(cc.tenki2)]) best.tenki2 = String(row[ci(cc.tenki2)]);
@@ -417,6 +443,17 @@ function srGetCaseData_(ss, patientId, yearMonth) {
     count1:  days1 > 0 ? String(days1) : '',            // Bug 3修正: 施術回数=実日数
     count2:  (hasP2 && days2 > 0) ? String(days2) : '', // Bug 3修正
   };
+}
+
+function srHasCaseValue_(value) {
+  if (value instanceof Date) return !isNaN(value.getTime());
+  return String(value || '').trim() !== '';
+}
+
+function srBackfillCaseValue_(target, key, value) {
+  if (srHasCaseValue_(target[key])) return;
+  if (!srHasCaseValue_(value)) return;
+  target[key] = value;
 }
 
 /**
@@ -560,6 +597,7 @@ function srInsertUrameData_(docId, visitRows, targetMonth) {
   }
 
   var sumIdx = srFindSummaryRows_(uTable);  // {1: idx, 2: idx, 3: idx}
+  var uc     = srResolveUrameCols_(uTable);
 
   // データ書き込み可能範囲（header行の次 〜 ①行の前）
   var dataStart = 1;
@@ -574,16 +612,13 @@ function srInsertUrameData_(docId, visitRows, targetMonth) {
     }
     var vr  = visitRows[i];
     var row = uTable.getRow(rIdx);
-    var uc  = SR_URAME_COL;
 
-    srSetCell_(row, uc.month,  String(targetMonth));
-    srSetCell_(row, uc.day,    String(vr.day));
-    srSetCell_(row, uc.check,  '✓');
-    srSetCell_(row, uc.base,   vr.baseOut > 0 ? String(vr.baseOut) : '');
-    srSetCell_(row, uc.cold,   vr.cold    > 0 ? String(vr.cold)    : '');  // Bug 2修正
-    srSetCell_(row, uc.warm,   vr.warm    > 0 ? String(vr.warm)    : '');  // Bug 2修正
-    srSetCell_(row, uc.elec,   vr.elecOut > 0 ? String(vr.elecOut) : '');
-    srSetCell_(row, uc.copay,  vr.copay   > 0 ? String(vr.copay)   : '');
+    srSetCell_(row, uc.date,    srFormatUrameDate_(targetMonth, vr.day));
+    srSetCell_(row, uc.initial, srFormatUrameAmount_(vr.initialAmount));
+    srSetCell_(row, uc.base,    srFormatUrameAmount_(vr.baseOut));
+    srSetUrameThermal_(row, uc, vr.cold, vr.warm);
+    srSetCell_(row, uc.elec,    srFormatUrameAmount_(vr.elecOut));
+    srSetCell_(row, uc.copay,   srFormatUrameAmount_(vr.copay));
     srSetCell_(row, uc.notes,  vr.notes);
   }
 
@@ -591,16 +626,17 @@ function srInsertUrameData_(docId, visitRows, targetMonth) {
   if (sumIdx[1] >= 0) {
     var sRow       = uTable.getRow(sumIdx[1]);
     var sc         = SR_SUM_COL;
-    var totalBase = 0, totalCold = 0, totalWarm = 0, totalElec = 0, totalCopay = 0;
+    var totalInitial = 0, totalBase = 0, totalCold = 0, totalWarm = 0, totalElec = 0, totalCopay = 0;
 
     for (var j = 0; j < visitRows.length; j++) {
+      totalInitial += visitRows[j].initialAmount || 0;
       totalBase  += visitRows[j].baseOut;
       totalCold  += visitRows[j].cold;    // Bug 2修正
       totalWarm  += visitRows[j].warm;    // Bug 2修正
       totalElec  += visitRows[j].elecOut;
       totalCopay += visitRows[j].copay;
     }
-    var grandTotal = totalBase + totalCold + totalWarm + totalElec;
+    var grandTotal = totalInitial + totalBase + totalCold + totalWarm + totalElec;
 
     srSetCell_(sRow, sc.month,    String(targetMonth));
     srSetCell_(sRow, sc.countVal, String(visitRows.length) + '回');
@@ -617,6 +653,88 @@ function srInsertUrameData_(docId, visitRows, targetMonth) {
   }
 
   doc.saveAndClose();
+}
+
+/**
+ * 裏面テーブル header 行から列位置を再解決する。
+ * 実テンプレ変更で全体が左右にずれた場合は、後療料列の位置差を
+ * 基準オフセットとして grouped cell を含む主要列へ適用する。
+ * ラベルが見つかる主要列は個別に上書きする。
+ */
+function srResolveUrameCols_(table) {
+  var resolved = {};
+  for (var key in SR_URAME_COL) resolved[key] = SR_URAME_COL[key];
+  if (!table || table.getNumRows() === 0) return resolved;
+
+  var headerRow   = table.getRow(0);
+  var headerTexts = [];
+  for (var i = 0; i < headerRow.getNumCells(); i++) {
+    headerTexts.push(srNormalizeUrameHeader_(headerRow.getCell(i).getText()));
+  }
+
+  var found = {
+    date:  srFindUrameHeaderIndex_(headerTexts, ['月日', '月/日']),
+    initial: srFindUrameHeaderIndex_(headerTexts, ['初検料', '再検料']),
+    base:  srFindUrameHeaderIndex_(headerTexts, ['後療料']),
+    cold:  srFindUrameHeaderIndex_(headerTexts, ['冷罨法料']),
+    warm:  srFindUrameHeaderIndex_(headerTexts, ['温罨法料']),
+    elec:  srFindUrameHeaderIndex_(headerTexts, ['電療料']),
+    copay: srFindUrameHeaderIndex_(headerTexts, ['一部負担金']),
+    notes: srFindUrameHeaderIndex_(headerTexts, ['整復施術等の施術経過所見', '整復施療等の施術経過所見', '施術経過所見'])
+  };
+
+  var offset = (found.base >= 0) ? (found.base - SR_URAME_COL.base) : 0;
+  if (offset !== 0) {
+    for (var name in resolved) {
+      resolved[name] = Math.max(0, resolved[name] + offset);
+    }
+  }
+
+  for (var foundKey in found) {
+    if (found[foundKey] >= 0) resolved[foundKey] = found[foundKey];
+  }
+
+  Logger.log('[INFO] srResolveUrameCols_: offset=' + offset +
+             ' headers=' + JSON.stringify(headerTexts) +
+             ' resolved=' + JSON.stringify(resolved));
+  return resolved;
+}
+
+function srFormatUrameDate_(month, day) {
+  return String(month) + '/' + String(day);
+}
+
+function srNormalizeUrameHeader_(text) {
+  return String(text || '').replace(/\s+/g, '');
+}
+
+function srFindUrameHeaderIndex_(headerTexts, candidates) {
+  for (var i = 0; i < headerTexts.length; i++) {
+    for (var j = 0; j < candidates.length; j++) {
+      if (headerTexts[i].indexOf(srNormalizeUrameHeader_(candidates[j])) >= 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+/**
+ * 判定なし / 0 は blank のまま維持する。
+ */
+function srFormatUrameAmount_(value) {
+  var num = Number(value);
+  if (isNaN(num) || num <= 0) return '';
+  return String(num);
+}
+
+function srSetUrameThermal_(row, urameCols, cold, warm) {
+  if (urameCols.cold === urameCols.warm) {
+    srSetCell_(row, urameCols.cold, srFormatUrameAmount_((Number(cold) || 0) + (Number(warm) || 0)));
+    return;
+  }
+  srSetCell_(row, urameCols.cold, srFormatUrameAmount_(cold));
+  srSetCell_(row, urameCols.warm, srFormatUrameAmount_(warm));
 }
 
 /**
