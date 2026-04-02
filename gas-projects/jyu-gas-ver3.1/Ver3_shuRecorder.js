@@ -26,25 +26,27 @@ var SR_SUBFOLDER_NAME = '施術録';
 
 /**
  * 裏面 日別明細テーブル 列Indexマッピング
- * T-SR-10 実機テスト時にズレがあればここだけ修正する。
+ * T-SR-10v2 修正: cold/warm を分離し様式通りの列へ出力する。
+ * ★実機テスト後にインデックスがずれる場合はここだけ修正する。
  */
 var SR_URAME_COL = {
-  month:   0,  // 月
-  day:     1,  // 日
-  check:   2,  // ✓チェック
+  month:  0,   // 月
+  day:    1,   // 日
+  check:  2,   // ✓チェック
   // 3: 初検料/時間外等 — 手入力残し
   // 4: 整復料等 — 手入力残し
-  base:    5,  // 後療料
-  coldWarm:6,  // 冷罨法料/温電法料
-  elec:    7,  // 電療料
-  // 8: 明細書発行体制加算 — 手入力残し
-  copay:   9,  // 一部負担金
-  notes:   10, // 整復・施術等の施術経過所見
+  base:   5,   // 後療料
+  cold:   6,   // 冷罨法料
+  warm:   7,   // 温罨法料
+  elec:   8,   // 電療料
+  // 9: 明細書発行体制加算 — 手入力残し
+  copay:  10,  // 一部負担金
+  notes:  11,  // 整復・施術等の施術経過所見
 };
 
 /**
  * 裏面 ①集計行 列Indexマッピング
- * T-SR-10 実機テスト後に実態に合わせて修正すること。
+ * T-SR-10v2 実機テスト後に実態に合わせて修正すること。
  */
 var SR_SUM_COL = {
   month:     1,  // 月の値
@@ -129,7 +131,7 @@ function srGenerateDocument(patientId, yearMonth) {
   if (visitRows.length === 0)
     throw new Error(yearMonth + ' に来院記録がありません: ' + patientId);
 
-  var caseData = srGetCaseData_(ss, patientId, yearMonth, visitRows.length);
+  var caseData = srGetCaseData_(ss, patientId, yearMonth);
   var initExam = srGetInitExamData_(ss, patientId);
 
   // ----- 出力先 -----
@@ -207,8 +209,10 @@ function srGetPatientData_(ss, patientId) {
 
 /**
  * 来院ヘッダ + 施術明細 + 来院ケース所見 を結合し、
- * 対象月の来院日一覧を日付昇順で返す。
- * @return {Array} [{month, day, date, baseOut, coldWarm, elecOut, copay, notes}, ...]
+ * 対象月の保険来院日一覧を日付昇順で返す。
+ * ★Bug 1修正: 会計区分="自費のみ" の来院日を除外する。
+ * ★Bug 2修正: cold / warm を別フィールドで返す。
+ * @return {Array} [{month, day, date, baseOut, cold, warm, elecOut, copay, notes}, ...]
  */
 function srGetVisitRows_(ss, patientId, yearMonth) {
   var ymParts    = yearMonth.split('-');
@@ -224,6 +228,9 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var hc      = HEADER_COLS;
   var hci     = function(n) { return hHdrs.indexOf(n); };
 
+  // 会計区分列のインデックス（列なしなら -1）
+  var acctIdx = hci(hc.accountingType);  // "会計区分"
+
   var headerMap = {};  // visitKey → {month, day, date, copay}
   for (var r = 1; r < hdrData.length; r++) {
     var hrow = hdrData[r];
@@ -233,6 +240,11 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
     if (isNaN(dt) || dt < monthStart || dt > monthEnd) continue;
     var vk = String(hrow[hci(hc.visitKey)] || '');
     if (!vk) continue;
+
+    // ★Bug 1修正: 自費のみ来院を除外（保険なし日が裏面に混入しないよう防止）
+    var acctType = (acctIdx >= 0) ? String(hrow[acctIdx] || '') : '';
+    if (acctType === '自費のみ') continue;
+
     headerMap[vk] = {
       month:    dt.getMonth() + 1,
       day:      dt.getDate(),
@@ -249,7 +261,7 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var dc      = AM_DETAIL_COLS;
   var dci     = function(n) { return dHdrs.indexOf(n); };
 
-  var amountMap = {};  // visitKey → {base, coldWarm, elec}
+  var amountMap = {};  // visitKey → {base, cold, warm, elec}
   for (var r2 = 1; r2 < dtlData.length; r2++) {
     var drow = dtlData[r2];
     var vk2  = String(drow[dci(dc.visitKey)] || '');
@@ -291,7 +303,8 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
       day:       h.day,
       date:      h.date,
       baseOut:   am.base,
-      coldWarm:  am.cold + am.warm,
+      cold:      am.cold,   // ★Bug 2修正: 冷罨法料（単独）
+      warm:      am.warm,   // ★Bug 2修正: 温罨法料（単独）
       elecOut:   am.elec,
       copay:     h.copay,
       notes:     notesMap[vk] || '',
@@ -303,16 +316,19 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
 
 /**
  * 来院ケースシートから表面の負傷名・日付・日数・回数を返す。
- * 月内の最初の行で基本情報を取り、最終行で転帰・終了日を上書きする。
  *
- * @param {number} visitCount - srGetVisitRows_ が返した来院件数（施術回数1に使用）
+ * ★Bug 3修正: 施術回数 = V3TR_aggregateDetailMonthly_ の visitDays（実来院日数）
+ * ★Bug 4修正: 日数 = V3TR_aggregateDetailMonthly_ の visitDays（実来院日数）
+ * ★Bug 5修正: 負傷名 = 部位_部位1 + 傷病_部位1 を組み合わせる
  */
-function srGetCaseData_(ss, patientId, yearMonth, visitCount) {
+function srGetCaseData_(ss, patientId, yearMonth) {
   var ymParts  = yearMonth.split('-');
   var year     = parseInt(ymParts[0]);
   var month    = parseInt(ymParts[1]);
-  var monthEnd = new Date(year, month, 0);
+  var start    = new Date(year, month - 1, 1);
+  var end      = new Date(year, month, 1);  // exclusive
 
+  // ── 来院ケースから基本情報を取得（月内最初行で初期化、最終行で転帰・終了日を更新） ──
   var sh   = ss.getSheetByName(SHEETS.cases);
   var data = sh.getDataRange().getValues();
   var hdrs = data[0];
@@ -331,8 +347,10 @@ function srGetCaseData_(ss, patientId, yearMonth, visitCount) {
 
     if (!best) {
       best = {
-        d1:     String(row[ci(cc.d1)]     || ''),
-        d2:     String(row[ci(cc.d2)]     || ''),
+        p1:     String(row[ci(cc.p1)]     || ''),  // 部位_部位1（Bug 5修正）
+        d1:     String(row[ci(cc.d1)]     || ''),  // 傷病_部位1
+        p2:     String(row[ci(cc.p2)]     || ''),  // 部位_部位2（Bug 5修正）
+        d2:     String(row[ci(cc.d2)]     || ''),  // 傷病_部位2
         inj1:   row[ci(cc.inj1)],
         inj2:   row[ci(cc.inj2)],
         start1: row[ci(cc.start1)],
@@ -358,23 +376,46 @@ function srGetCaseData_(ss, patientId, yearMonth, visitCount) {
     };
   }
 
-  var hasP2 = !!best.d2;
+  // ── V3TR 月次集計から visitDays（実日数）取得（Bug 3・4修正） ──
+  var shDetail = ss.getSheetByName(SHEETS.detail);
+  var endDates = {
+    1: {
+      1: (best.end1 instanceof Date ? best.end1 : null),
+      2: (best.end2 instanceof Date ? best.end2 : null),
+    },
+    2: { 1: null, 2: null },
+  };
+  var detailAgg  = V3TR_aggregateDetailMonthly_(shDetail, patientId, start, end, endDates);
+  var agg1       = detailAgg.case1;
+  var visitDays  = agg1.visitDays || 0;      // ケース全体の実来院日数
+  var p1Agg      = agg1.parts[1];
+  var p2Agg      = agg1.parts[2];
+  var days1      = (p1Agg && p1Agg.visitDays > 0) ? p1Agg.visitDays : visitDays;
+  var days2      = (p2Agg && p2Agg.visitDays > 0) ? p2Agg.visitDays : visitDays;
+
+  // ── 負傷名 = 部位 + 傷病 で組み立て（Bug 5修正） ──
+  var name1 = (best.p1 && best.d1) ? (best.p1 + ' ' + best.d1).trim()
+            : (best.p1 || best.d1);
+  var hasP2 = !!(best.p2 || best.d2);
+  var name2 = hasP2
+    ? ((best.p2 && best.d2) ? (best.p2 + ' ' + best.d2).trim() : (best.p2 || best.d2))
+    : '';
+
   return {
-    d1:     best.d1,
-    d2:     hasP2 ? best.d2 : '',
-    inj1:   srFormatDate_(best.inj1,   'wareki'),
-    inj2:   hasP2 ? srFormatDate_(best.inj2,   'wareki') : '',
-    start1: srFormatDate_(best.start1, 'wareki'),
-    start2: hasP2 ? srFormatDate_(best.start2, 'wareki') : '',
-    end1:   best.end1  ? srFormatDate_(best.end1,  'wareki') : '',
-    end2:   (hasP2 && best.end2) ? srFormatDate_(best.end2, 'wareki') : '',
-    tenki1: best.tenki1,
-    tenki2: hasP2 ? best.tenki2 : '',
-    nissuu1: srCalcNissuu_(best.inj1, best.end1, monthEnd),
-    nissuu2: hasP2 ? srCalcNissuu_(best.inj2, best.end2, monthEnd) : '',
-    count1:  String(visitCount),
-    // Phase 1: 部位2の個別カウントは未実装（同日来院を前提に同数で近似）
-    count2:  hasP2 ? String(visitCount) : '',
+    d1:      name1,
+    d2:      name2,
+    inj1:    srFormatDate_(best.inj1,   'wareki'),
+    inj2:    hasP2 ? srFormatDate_(best.inj2,   'wareki') : '',
+    start1:  srFormatDate_(best.start1, 'wareki'),
+    start2:  hasP2 ? srFormatDate_(best.start2, 'wareki') : '',
+    end1:    best.end1  ? srFormatDate_(best.end1,  'wareki') : '',
+    end2:    (hasP2 && best.end2) ? srFormatDate_(best.end2, 'wareki') : '',
+    tenki1:  best.tenki1,
+    tenki2:  hasP2 ? best.tenki2 : '',
+    nissuu1: days1 > 0 ? String(days1) : '',            // Bug 4修正: 実日数
+    nissuu2: (hasP2 && days2 > 0) ? String(days2) : '', // Bug 4修正
+    count1:  days1 > 0 ? String(days1) : '',            // Bug 3修正: 施術回数=実日数
+    count2:  (hasP2 && days2 > 0) ? String(days2) : '', // Bug 3修正
   };
 }
 
@@ -535,29 +576,31 @@ function srInsertUrameData_(docId, visitRows, targetMonth) {
     var row = uTable.getRow(rIdx);
     var uc  = SR_URAME_COL;
 
-    srSetCell_(row, uc.month,    String(targetMonth));
-    srSetCell_(row, uc.day,      String(vr.day));
-    srSetCell_(row, uc.check,    '✓');
-    srSetCell_(row, uc.base,     vr.baseOut   > 0 ? String(vr.baseOut)   : '');
-    srSetCell_(row, uc.coldWarm, vr.coldWarm  > 0 ? String(vr.coldWarm)  : '');
-    srSetCell_(row, uc.elec,     vr.elecOut   > 0 ? String(vr.elecOut)   : '');
-    srSetCell_(row, uc.copay,    vr.copay     > 0 ? String(vr.copay)     : '');
-    srSetCell_(row, uc.notes,    vr.notes);
+    srSetCell_(row, uc.month,  String(targetMonth));
+    srSetCell_(row, uc.day,    String(vr.day));
+    srSetCell_(row, uc.check,  '✓');
+    srSetCell_(row, uc.base,   vr.baseOut > 0 ? String(vr.baseOut) : '');
+    srSetCell_(row, uc.cold,   vr.cold    > 0 ? String(vr.cold)    : '');  // Bug 2修正
+    srSetCell_(row, uc.warm,   vr.warm    > 0 ? String(vr.warm)    : '');  // Bug 2修正
+    srSetCell_(row, uc.elec,   vr.elecOut > 0 ? String(vr.elecOut) : '');
+    srSetCell_(row, uc.copay,  vr.copay   > 0 ? String(vr.copay)   : '');
+    srSetCell_(row, uc.notes,  vr.notes);
   }
 
   // ----- ① 月次集計行 -----
   if (sumIdx[1] >= 0) {
     var sRow       = uTable.getRow(sumIdx[1]);
     var sc         = SR_SUM_COL;
-    var totalBase  = 0, totalColdWarm = 0, totalElec = 0, totalCopay = 0;
+    var totalBase = 0, totalCold = 0, totalWarm = 0, totalElec = 0, totalCopay = 0;
 
     for (var j = 0; j < visitRows.length; j++) {
-      totalBase     += visitRows[j].baseOut;
-      totalColdWarm += visitRows[j].coldWarm;
-      totalElec     += visitRows[j].elecOut;
-      totalCopay    += visitRows[j].copay;
+      totalBase  += visitRows[j].baseOut;
+      totalCold  += visitRows[j].cold;    // Bug 2修正
+      totalWarm  += visitRows[j].warm;    // Bug 2修正
+      totalElec  += visitRows[j].elecOut;
+      totalCopay += visitRows[j].copay;
     }
-    var grandTotal = totalBase + totalColdWarm + totalElec;
+    var grandTotal = totalBase + totalCold + totalWarm + totalElec;
 
     srSetCell_(sRow, sc.month,    String(targetMonth));
     srSetCell_(sRow, sc.countVal, String(visitRows.length) + '回');
