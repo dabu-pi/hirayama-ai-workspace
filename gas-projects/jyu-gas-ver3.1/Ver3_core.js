@@ -313,6 +313,8 @@ function onOpen() {
       .addSeparator()
       .addItem("一括JSON出力（月指定）", "V3TR_menuBatchExportJson")
       .addItem("【B案】申請書を生成して Drive に保存", "V3TR_menuGenerateApplication_B")
+      .addSeparator()
+      .addItem("施術録を出力", "srShowDialog")
       .addToUi();
   } catch (err) {
     console.error(err);
