@@ -58,6 +58,16 @@ var SR_SUM_COL = {
   days:      13, // 日間
 };
 
+/**
+ * 施術終了年月日プレースホルダー（転帰なし=施術継続中）
+ * 転帰が記載されていない限り実日付は入れず、このプレースホルダーを表示する。
+ * 2026-04-03 T-SR-17 対応
+ */
+var SR_END_DATE_PLACEHOLDER = '　　年　　月　　日';
+
+/** 初検情報のデフォルト空オブジェクト（初検情報履歴なし時に使用） */
+var SR_EMPTY_INIT_EXAM_ = { injuryDatetime: '', injuryPlace: '', injuryStatus: '', initFindings: '' };
+
 
 /* =======================================================================
    ① ダイアログ / エントリポイント (T-SR-09)
@@ -132,7 +142,10 @@ function srGenerateDocument(patientId, yearMonth) {
     throw new Error(yearMonth + ' に来院記録がありません: ' + patientId);
 
   var caseData = srGetCaseData_(ss, patientId, yearMonth);
-  var initExam = srGetInitExamData_(ss, patientId);
+  // ★2件目対応(2026-04-03): 全件昇順取得。[0]=表面用(earliest=case1相当), [1]=裏面2件目用(case2相当)
+  var initExamAll = srGetAllInitExamData_(ss, patientId);
+  var initExam  = initExamAll.length > 0 ? initExamAll[0] : SR_EMPTY_INIT_EXAM_;
+  var initExam2 = initExamAll.length > 1 ? initExamAll[1] : null;
 
   // ----- 出力先 -----
   var filename  = '施術録_' + patient.name + '_' + ymParts[0] + '年' + ymParts[1] + '月';
@@ -157,7 +170,7 @@ function srGenerateDocument(patientId, yearMonth) {
 
   // ----- 差し込み -----
   srInsertHyomenData_(docId, patient, caseData, initExam);
-  srInsertUrameData_(docId, visitRows, parseInt(ymParts[1]));
+  srInsertUrameData_(docId, visitRows, parseInt(ymParts[1]), caseData, initExam2);
 
   // ----- PDF 出力 -----
   var pdfId = srExportPdf_(docId, outFolder, filename);
@@ -526,34 +539,52 @@ function srBackfillCaseValue_(target, key, value) {
 }
 
 /**
- * 初検情報履歴シートから patientId の最新1件を返す。
- * 該当なければ空文字のオブジェクトを返す。
+ * 初検情報履歴シートから patientId の全件を initDate 昇順で返す。
+ * - [0]: 最も早い initDate（表面 負傷原因欄 = case1 相当）
+ * - [1]: 2番目の initDate（裏面 2件目負傷情報 = case2 相当、存在しなければ配列長 < 2）
+ * 該当なければ空配列を返す。
+ * 2026-04-03 T-SR-18 対応: 複数負傷のある患者で earliest を表面に優先表示するために追加。
  */
-function srGetInitExamData_(ss, patientId) {
+function srGetAllInitExamData_(ss, patientId) {
   var sh   = ss.getSheetByName(SHEETS.history);
   var data = sh.getDataRange().getValues();
   var hdrs = data[0];
   var hc   = V3TR.CONFIG.historyCols;
   var ci   = function(n) { return hdrs.indexOf(n); };
 
-  var best = null, bestDate = null;
-
+  var records = [];
   for (var r = 1; r < data.length; r++) {
     var row = data[r];
     if (String(row[ci(hc.patientId)] || '').trim() !== patientId) continue;
     var raw = row[ci(hc.initDate)];
     var d   = (raw instanceof Date) ? raw : new Date(raw);
     if (isNaN(d)) continue;
-    if (!bestDate || d > bestDate) { bestDate = d; best = row; }
+    records.push({
+      _date:          d,
+      injuryDatetime: String(row[ci(hc.injuryDatetime)] || ''),
+      injuryPlace:    String(row[ci(hc.injuryPlace)]    || ''),
+      injuryStatus:   String(row[ci(hc.injuryStatus)]   || ''),
+      initFindings:   String(row[ci(hc.initFindings)]   || ''),
+    });
   }
+  records.sort(function(a, b) { return a._date - b._date; });
+  return records;
+}
 
-  if (!best) return { injuryDatetime: '', injuryPlace: '', injuryStatus: '', initFindings: '' };
-
+/**
+ * 初検情報履歴シートから patientId の最古1件を返す（表面表示用）。
+ * ★方針変更(2026-04-03 T-SR-18): 複数負傷がある場合は最も早い initDate を優先する。
+ *   旧実装は最新を取得していたが、2件目情報が表面に出る問題を修正。
+ * 該当なければ空文字のオブジェクトを返す。
+ */
+function srGetInitExamData_(ss, patientId) {
+  var all = srGetAllInitExamData_(ss, patientId);
+  if (all.length === 0) return SR_EMPTY_INIT_EXAM_;
   return {
-    injuryDatetime: String(best[ci(hc.injuryDatetime)] || ''),
-    injuryPlace:    String(best[ci(hc.injuryPlace)]    || ''),
-    injuryStatus:   String(best[ci(hc.injuryStatus)]   || ''),
-    initFindings:   String(best[ci(hc.initFindings)]   || ''),
+    injuryDatetime: all[0].injuryDatetime,
+    injuryPlace:    all[0].injuryPlace,
+    injuryStatus:   all[0].injuryStatus,
+    initFindings:   all[0].initFindings,
   };
 }
 
@@ -622,7 +653,15 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
   rep('負傷名1',         caseData.d1);
   rep('負傷年月日1',     caseData.inj1);
   rep('初検年月日1',     caseData.start1);
-  rep('施術終了年月日1', caseData.end1);
+  // ★施術終了年月日(T-SR-17): 転帰なしなら実日付を入れずプレースホルダーを表示（施術継続中）
+  //   転帰あり かつ 終了日あり → 実日付
+  //   転帰なし または 終了日なし → SR_END_DATE_PLACEHOLDER
+  //   ケース自体が存在しない → 空欄
+  var hasCase1 = !!(caseData.d1 || caseData.inj1 || caseData.start1);
+  rep('施術終了年月日1',
+      hasCase1
+        ? ((caseData.tenki1 && caseData.end1) ? caseData.end1 : SR_END_DATE_PLACEHOLDER)
+        : '');
   rep('日数1',           caseData.nissuu1);
   rep('施術回数1',       caseData.count1);
   rep('転帰1',           caseData.tenki1);
@@ -631,7 +670,11 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
   rep('負傷名2',         caseData.d2);
   rep('負傷年月日2',     caseData.inj2);
   rep('初検年月日2',     caseData.start2);
-  rep('施術終了年月日2', caseData.end2);
+  var hasCase2 = !!(caseData.d2 || caseData.inj2 || caseData.start2);
+  rep('施術終了年月日2',
+      hasCase2
+        ? ((caseData.tenki2 && caseData.end2) ? caseData.end2 : SR_END_DATE_PLACEHOLDER)
+        : '');
   rep('日数2',           caseData.nissuu2);
   rep('施術回数2',       caseData.count2);
   rep('転帰2',           caseData.tenki2);
@@ -652,9 +695,11 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
 
 /**
  * 裏面の日別明細行と ① 月次集計行を書き込む。
- * @param {number} targetMonth - 対象月の数字（例: 4）
+ * @param {number}      targetMonth - 対象月の数字（例: 4）
+ * @param {Object}      caseData    - srGetCaseData_ の戻り値（2件目表示判定に使用）
+ * @param {Object|null} initExam2   - srGetAllInitExamData_ の [1]（case2 初検情報、なければ null）
  */
-function srInsertUrameData_(docId, visitRows, targetMonth) {
+function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) {
   var doc  = DocumentApp.openById(docId);
   var body = doc.getBody();
 
@@ -718,6 +763,31 @@ function srInsertUrameData_(docId, visitRows, targetMonth) {
       srSetCell_(sRow, sc.dateFrom, targetMonth + '/' + first.day);
       srSetCell_(sRow, sc.dateTo,   targetMonth + '/' + last.day);
       srSetCell_(sRow, sc.days,     String(visitRows.length) + '日');
+    }
+  }
+
+  // ----- 2件目負傷情報（裏面所見欄下部）(T-SR-18) -----
+  // case2（別エピソード）が存在する場合のみ、所見列の空行または最終来院行末尾へ出力する。
+  // 金額列には一切書き込まない。
+  if (caseData && caseData.d2) {
+    var notesText2 = srBuild2ndCaseNotesText_(caseData, initExam2);
+    if (notesText2) {
+      var nextIdx = dataStart + visitRows.length;
+      if (nextIdx <= dataEnd) {
+        // 来院データ行の直後に空行がある → その notes セルのみ書き込む
+        srSetCell_(uTable.getRow(nextIdx), uc.notes, notesText2);
+        Logger.log('[INFO] 2件目負傷情報 → 裏面所見欄 row=' + nextIdx);
+      } else if (visitRows.length > 0) {
+        // 空行なし → 最終来院行の notes セルに追記（既存所見の後）
+        var lastDataIdx = dataStart + visitRows.length - 1;
+        var lastDataRow = uTable.getRow(lastDataIdx);
+        if (uc.notes < lastDataRow.getNumCells()) {
+          var existingNotes = lastDataRow.getCell(uc.notes).getText();
+          srSetCell_(lastDataRow, uc.notes,
+                     existingNotes ? (existingNotes + '\n' + notesText2) : notesText2);
+          Logger.log('[INFO] 2件目負傷情報 → 最終来院行 notes に追記 row=' + lastDataIdx);
+        }
+      }
     }
   }
 
@@ -898,6 +968,40 @@ function srFormatDate_(dateVal, format) {
 
   // slash
   return m + '/' + day;
+}
+
+/**
+ * 裏面所見欄に書き込む「2件目負傷情報」テキストブロックを生成する。
+ * caseData.d2 が存在する前提で呼び出すこと。
+ * 表示方針(2026-04-03 T-SR-18):
+ *   - 見出し「【2件目負傷情報】」を先頭に付ける
+ *   - 負傷名 / 負傷日時（またはcaseData.inj2）/ 負傷場所 / 負傷状況 / 初検所見 / 初検年月日 を出力
+ *   - initExam2 が null の場合は caseData から取れる情報のみ表示
+ *   - ヘッダーだけになるなら空文字を返す（書き込みスキップ）
+ * @param {Object}      caseData  - srGetCaseData_ の戻り値
+ * @param {Object|null} initExam2 - srGetAllInitExamData_ の [1]（なければ null）
+ * @return {string}
+ */
+function srBuild2ndCaseNotesText_(caseData, initExam2) {
+  var lines = ['【2件目負傷情報】'];
+  // 負傷名
+  if (caseData.d2) lines.push('負傷名: ' + caseData.d2);
+  // 負傷日時: initExam2 があれば詳細テキスト、なければ日付のみ
+  if (initExam2 && initExam2.injuryDatetime) {
+    lines.push('負傷日時: ' + initExam2.injuryDatetime);
+  } else if (caseData.inj2) {
+    lines.push('負傷年月日: ' + caseData.inj2);
+  }
+  // 負傷場所・状況・初検所見（initExam2 がある場合のみ）
+  if (initExam2) {
+    if (initExam2.injuryPlace)  lines.push('負傷場所: ' + initExam2.injuryPlace);
+    if (initExam2.injuryStatus) lines.push('負傷状況: ' + initExam2.injuryStatus);
+    if (initExam2.initFindings) lines.push('初検所見: ' + initExam2.initFindings);
+  }
+  // 初検年月日（常に表示）
+  if (caseData.start2) lines.push('初検年月日: ' + caseData.start2);
+  // ヘッダーのみなら空を返してスキップ
+  return lines.length > 1 ? lines.join('\n') : '';
 }
 
 /**
