@@ -220,9 +220,14 @@ function srGetPatientData_(ss, patientId) {
  * 対象月の保険来院日一覧を日付昇順で返す。
  * ★Bug 1修正: 会計区分="自費のみ" の来院日を除外する。
  * ★Bug 2修正: cold / warm を別フィールドで返す。
+ * ★正本統一修正(2026-04-02):
+ *   initialAmount = 来院ヘッダの initFee+supportFee+reFee（申請書算定結果を正本とする）
+ *   baseOut       = 施術明細 baseOut 全件合計（kubun 区別なし = 施療料・後療料を問わず全て後療料欄へ）
+ *   これにより「初検抑制日(case2同月2番目の初検)」でも initialAmount=0 となり申請書と整合する。
+ *   再検料も initialAmount に正しく反映される。
  * @return {Array} [{month, day, date, initialAmount, baseOut, cold, warm, elecOut, copay, notes}, ...]
- *   initialAmount: 施術録裏面の初検料等表示用。明細 baseOut のうち kubun=初検 を集約
- *   baseOut:       施術録裏面の後療料表示用。明細 baseOut のうち kubun!=初検 を集約
+ *   initialAmount: 施術録裏面の初検料等表示用 = initFee + supportFee + reFee（来院ヘッダ）
+ *   baseOut:       施術録裏面の後療料表示用  = 施術明細 baseOut 合計（kubun 区別なし）
  */
 function srGetVisitRows_(ss, patientId, yearMonth) {
   var ymParts    = yearMonth.split('-');
@@ -241,7 +246,7 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   // 会計区分列のインデックス（列なしなら -1）
   var acctIdx = hci(hc.accountingType);  // "会計区分"
 
-  var headerMap = {};  // visitKey → {month, day, date, copay}
+  var headerMap = {};  // visitKey → {month, day, date, initial, copay}
   for (var r = 1; r < hdrData.length; r++) {
     var hrow = hdrData[r];
     if (String(hrow[hci(hc.patientId)] || '').trim() !== patientId) continue;
@@ -255,12 +260,18 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
     var acctType = (acctIdx >= 0) ? String(hrow[acctIdx] || '') : '';
     if (acctType === '自費のみ') continue;
 
+    // ★正本統一修正: 初検料等は来院ヘッダの算定済み値を使う
+    var hInitFee   = Number(hrow[hci(hc.initFee)]    || 0);
+    var hSupportFee= Number(hrow[hci(hc.supportFee)] || 0);
+    var hReFee     = Number(hrow[hci(hc.reFee)]      || 0);
+
     headerMap[vk] = {
-      month:         dt.getMonth() + 1,
-      day:           dt.getDate(),
-      date:          dt,
-      copay:         Number(hrow[hci(hc.windowPay)] || 0),
-      visitKey:      vk,
+      month:    dt.getMonth() + 1,
+      day:      dt.getDate(),
+      date:     dt,
+      initial:  hInitFee + hSupportFee + hReFee,  // 申請書と同一ロジックの算定結果
+      copay:    Number(hrow[hci(hc.windowPay)] || 0),
+      visitKey: vk,
     };
   }
 
@@ -271,19 +282,14 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var dc      = AM_DETAIL_COLS;
   var dci     = function(n) { return dHdrs.indexOf(n); };
 
-  var amountMap = {};  // visitKey → {initial, base, cold, warm, elec}
+  // ★正本統一修正: kubun 区別なく全 baseOut を集計（施療料も後療料もまとめて後療料欄へ）
+  var amountMap = {};  // visitKey → {base, cold, warm, elec}
   for (var r2 = 1; r2 < dtlData.length; r2++) {
     var drow = dtlData[r2];
     var vk2  = String(drow[dci(dc.visitKey)] || '');
     if (!headerMap[vk2]) continue;
-    if (!amountMap[vk2]) amountMap[vk2] = { initial: 0, base: 0, cold: 0, warm: 0, elec: 0 };
-    var kubun = String(drow[dci(dc.kubun)] || '').trim();
-    var base  = Number(drow[dci(dc.baseOut)] || 0);
-    if (kubun === '初検') {
-      amountMap[vk2].initial += base;
-    } else {
-      amountMap[vk2].base += base;
-    }
+    if (!amountMap[vk2]) amountMap[vk2] = { base: 0, cold: 0, warm: 0, elec: 0 };
+    amountMap[vk2].base += Number(drow[dci(dc.baseOut)]    || 0);
     amountMap[vk2].cold += Number(drow[dci(dc.coldOut)]    || 0);
     amountMap[vk2].warm += Number(drow[dci(dc.warmOut)]    || 0);
     amountMap[vk2].elec += Number(drow[dci(dc.electroOut)] || 0);
@@ -312,19 +318,19 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var result = [];
   for (var vk in headerMap) {
     var h  = headerMap[vk];
-    var am = amountMap[vk] || { initial: 0, base: 0, cold: 0, warm: 0, elec: 0 };
+    var am = amountMap[vk] || { base: 0, cold: 0, warm: 0, elec: 0 };
     result.push({
-      visitKey:  vk,
-      month:     h.month,
-      day:       h.day,
-      date:      h.date,
-      initialAmount: am.initial,
-      baseOut:   am.base,
-      cold:      am.cold,   // ★Bug 2修正: 冷罨法料（単独）
-      warm:      am.warm,   // ★Bug 2修正: 温罨法料（単独）
-      elecOut:   am.elec,
-      copay:     h.copay,
-      notes:     notesMap[vk] || '',
+      visitKey:      vk,
+      month:         h.month,
+      day:           h.day,
+      date:          h.date,
+      initialAmount: h.initial,  // ★正本統一修正: 来院ヘッダの initFee+supportFee+reFee
+      baseOut:       am.base,    // ★正本統一修正: 施術明細 baseOut 合計（kubun 区別なし）
+      cold:          am.cold,    // ★Bug 2修正: 冷罨法料（単独）
+      warm:          am.warm,    // ★Bug 2修正: 温罨法料（単独）
+      elecOut:       am.elec,
+      copay:         h.copay,
+      notes:         notesMap[vk] || '',
     });
   }
   result.sort(function(a, b) { return a.date - b.date; });
@@ -337,6 +343,15 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
  * ★Bug 3修正: 施術回数 = V3TR_aggregateDetailMonthly_ の visitDays（実来院日数）
  * ★Bug 4修正: 日数 = V3TR_aggregateDetailMonthly_ の visitDays（実来院日数）
  * ★Bug 5修正: 負傷名 = 部位_部位1 + 傷病_部位1 を組み合わせる
+ * ★正本統一修正(2026-04-02):
+ *   来院ケース行を caseNo で分離して取得する。
+ *   - 負傷名1 = case1（caseNo=1）の部位_部位1 + 傷病_部位1
+ *   - 負傷名2 = case2（caseNo=2）が存在すれば case2 の部位_部位1 + 傷病_部位1
+ *              case2 なし かつ case1 に部位_部位2 があれば case1 の部位2
+ *              どちらもなければ空欄
+ *   旧実装は cc.p2/d2（= case1の部位_部位2）を負傷名2に使っていたため、
+ *   case2（別エピソード）がある患者で負傷名2 が欠落する問題があった。
+ *   visitDays も case2 用は detailAgg.case2 から取得するよう修正。
  */
 function srGetCaseData_(ss, patientId, yearMonth) {
   var ymParts  = yearMonth.split('-');
@@ -345,14 +360,15 @@ function srGetCaseData_(ss, patientId, yearMonth) {
   var start    = new Date(year, month - 1, 1);
   var end      = new Date(year, month, 1);  // exclusive
 
-  // ── 来院ケースから基本情報を取得（月内最初行で初期化、最終行で転帰・終了日を更新） ──
+  // ── 来院ケースを caseNo 別に収集 ──
   var sh   = ss.getSheetByName(SHEETS.cases);
   var data = sh.getDataRange().getValues();
   var hdrs = data[0];
   var cc   = CASE_COLS;
   var ci   = function(n) { return hdrs.indexOf(n); };
 
-  var best = null;
+  var c1 = null;  // case1 データ
+  var c2 = null;  // case2 データ（別エピソード）
 
   for (var r = 1; r < data.length; r++) {
     var row = data[r];
@@ -362,39 +378,58 @@ function srGetCaseData_(ss, patientId, yearMonth) {
     if (isNaN(dt)) continue;
     if (dt.getFullYear() !== year || dt.getMonth() + 1 !== month) continue;
 
-    if (!best) {
-      best = {
-        p1:     String(row[ci(cc.p1)]     || ''),  // 部位_部位1（Bug 5修正）
-        d1:     String(row[ci(cc.d1)]     || ''),  // 傷病_部位1
-        p2:     String(row[ci(cc.p2)]     || ''),  // 部位_部位2（Bug 5修正）
-        d2:     String(row[ci(cc.d2)]     || ''),  // 傷病_部位2
-        inj1:   row[ci(cc.inj1)],
-        inj2:   row[ci(cc.inj2)],
-        start1: row[ci(cc.start1)],
-        start2: row[ci(cc.start2)],
-        end1:   row[ci(cc.end1)],
-        end2:   row[ci(cc.end2)],
-        tenki1: String(row[ci(cc.tenki1)] || ''),
-        tenki2: String(row[ci(cc.tenki2)] || ''),
-      };
+    var cno = String(row[ci(cc.caseNo)] || '1').trim();
+
+    if (cno === '1' || cno === 1) {
+      // ── case1 ──
+      if (!c1) {
+        c1 = {
+          p1: String(row[ci(cc.p1)] || ''),   // 部位_部位1
+          d1: String(row[ci(cc.d1)] || ''),   // 傷病_部位1
+          p2: String(row[ci(cc.p2)] || ''),   // 部位_部位2（case1の2か所目）
+          d2: String(row[ci(cc.d2)] || ''),   // 傷病_部位2
+          inj1:   row[ci(cc.inj1)],
+          inj2:   row[ci(cc.inj2)],
+          start1: row[ci(cc.start1)],
+          start2: row[ci(cc.start2)],
+          end1: null, end2: null, tenki1: '', tenki2: '',
+        };
+      }
+      srBackfillCaseValue_(c1, 'p1',     String(row[ci(cc.p1)] || ''));
+      srBackfillCaseValue_(c1, 'd1',     String(row[ci(cc.d1)] || ''));
+      srBackfillCaseValue_(c1, 'p2',     String(row[ci(cc.p2)] || ''));
+      srBackfillCaseValue_(c1, 'd2',     String(row[ci(cc.d2)] || ''));
+      srBackfillCaseValue_(c1, 'inj1',   row[ci(cc.inj1)]);
+      srBackfillCaseValue_(c1, 'inj2',   row[ci(cc.inj2)]);
+      srBackfillCaseValue_(c1, 'start1', row[ci(cc.start1)]);
+      srBackfillCaseValue_(c1, 'start2', row[ci(cc.start2)]);
+      // 転帰・終了日は月内の最終行で上書き
+      if (row[ci(cc.tenki1)]) c1.tenki1 = String(row[ci(cc.tenki1)]);
+      if (row[ci(cc.tenki2)]) c1.tenki2 = String(row[ci(cc.tenki2)]);
+      if (row[ci(cc.end1)])   c1.end1   = row[ci(cc.end1)];
+      if (row[ci(cc.end2)])   c1.end2   = row[ci(cc.end2)];
+
+    } else {
+      // ── case2（別エピソード）── caseNo=2 の行から部位_部位1 を使う
+      if (!c2) {
+        c2 = {
+          p1:     String(row[ci(cc.p1)] || ''),  // case2 の部位1
+          d1:     String(row[ci(cc.d1)] || ''),  // case2 の傷病1
+          inj1:   row[ci(cc.inj1)],
+          start1: row[ci(cc.start1)],
+          end1: null, tenki1: '',
+        };
+      }
+      srBackfillCaseValue_(c2, 'p1',     String(row[ci(cc.p1)] || ''));
+      srBackfillCaseValue_(c2, 'd1',     String(row[ci(cc.d1)] || ''));
+      srBackfillCaseValue_(c2, 'inj1',   row[ci(cc.inj1)]);
+      srBackfillCaseValue_(c2, 'start1', row[ci(cc.start1)]);
+      if (row[ci(cc.tenki1)]) c2.tenki1 = String(row[ci(cc.tenki1)]);
+      if (row[ci(cc.end1)])   c2.end1   = row[ci(cc.end1)];
     }
-    // 月内の後続行にだけ case2 が入るケースを拾うため、空欄項目は後続行で補完する。
-    srBackfillCaseValue_(best, 'p1',     String(row[ci(cc.p1)] || ''));
-    srBackfillCaseValue_(best, 'd1',     String(row[ci(cc.d1)] || ''));
-    srBackfillCaseValue_(best, 'p2',     String(row[ci(cc.p2)] || ''));
-    srBackfillCaseValue_(best, 'd2',     String(row[ci(cc.d2)] || ''));
-    srBackfillCaseValue_(best, 'inj1',   row[ci(cc.inj1)]);
-    srBackfillCaseValue_(best, 'inj2',   row[ci(cc.inj2)]);
-    srBackfillCaseValue_(best, 'start1', row[ci(cc.start1)]);
-    srBackfillCaseValue_(best, 'start2', row[ci(cc.start2)]);
-    // 転帰・終了日は月内の最終行で上書き（途中変更に対応）
-    if (row[ci(cc.tenki1)]) best.tenki1 = String(row[ci(cc.tenki1)]);
-    if (row[ci(cc.tenki2)]) best.tenki2 = String(row[ci(cc.tenki2)]);
-    if (row[ci(cc.end1)])   best.end1   = row[ci(cc.end1)];
-    if (row[ci(cc.end2)])   best.end2   = row[ci(cc.end2)];
   }
 
-  if (!best) {
+  if (!c1 && !c2) {
     return {
       d1:'', d2:'', inj1:'', inj2:'', start1:'', start2:'',
       end1:'', end2:'', tenki1:'', tenki2:'',
@@ -402,46 +437,80 @@ function srGetCaseData_(ss, patientId, yearMonth) {
     };
   }
 
-  // ── V3TR 月次集計から visitDays（実日数）取得（Bug 3・4修正） ──
+  // ── V3TR 月次集計から visitDays（実日数）取得 ──
+  // endDates に case2 の終了日も渡す（正本統一修正）
   var shDetail = ss.getSheetByName(SHEETS.detail);
   var endDates = {
     1: {
-      1: (best.end1 instanceof Date ? best.end1 : null),
-      2: (best.end2 instanceof Date ? best.end2 : null),
+      1: (c1 && c1.end1 instanceof Date) ? c1.end1 : null,
+      2: (c1 && c1.end2 instanceof Date) ? c1.end2 : null,
     },
-    2: { 1: null, 2: null },
+    2: {
+      1: (c2 && c2.end1 instanceof Date) ? c2.end1 : null,
+      2: null,
+    },
   };
-  var detailAgg  = V3TR_aggregateDetailMonthly_(shDetail, patientId, start, end, endDates);
-  var agg1       = detailAgg.case1;
-  var visitDays  = agg1.visitDays || 0;      // ケース全体の実来院日数
-  var p1Agg      = agg1.parts[1];
-  var p2Agg      = agg1.parts[2];
-  var days1      = (p1Agg && p1Agg.visitDays > 0) ? p1Agg.visitDays : visitDays;
-  var days2      = (p2Agg && p2Agg.visitDays > 0) ? p2Agg.visitDays : visitDays;
+  var detailAgg = V3TR_aggregateDetailMonthly_(shDetail, patientId, start, end, endDates);
+  var agg1 = detailAgg.case1 || {};
+  var agg2 = detailAgg.case2 || {};
 
-  // ── 負傷名 = 部位 + 傷病 で組み立て（Bug 5修正） ──
-  var name1 = (best.p1 && best.d1) ? (best.p1 + ' ' + best.d1).trim()
-            : (best.p1 || best.d1);
-  var hasP2 = !!(best.p2 || best.d2);
-  var name2 = hasP2
-    ? ((best.p2 && best.d2) ? (best.p2 + ' ' + best.d2).trim() : (best.p2 || best.d2))
+  // days1: case1 part1 の来院日数
+  var days1 = ((agg1.parts && agg1.parts[1] && agg1.parts[1].visitDays > 0)
+               ? agg1.parts[1].visitDays
+               : (agg1.visitDays || 0));
+
+  // days2: case2 があれば case2.visitDays、なければ case1 part2
+  var days2 = 0;
+  if (c2) {
+    days2 = agg2.visitDays || 0;
+  } else if (c1 && (c1.p2 || c1.d2)) {
+    days2 = ((agg1.parts && agg1.parts[2] && agg1.parts[2].visitDays > 0)
+             ? agg1.parts[2].visitDays
+             : (agg1.visitDays || 0));
+  }
+
+  // ── 負傷名の組み立て ──
+  var name1 = c1
+    ? ((c1.p1 && c1.d1) ? (c1.p1 + ' ' + c1.d1).trim() : (c1.p1 || c1.d1 || ''))
     : '';
+
+  // 負傷名2: case2（別エピソード）優先 → case1 part2 → 空欄
+  var name2, inj2, start2, end2, tenki2;
+  if (c2) {
+    // ★正本統一修正: case2 の部位1 を使う
+    name2  = (c2.p1 && c2.d1) ? (c2.p1 + ' ' + c2.d1).trim() : (c2.p1 || c2.d1 || '');
+    inj2   = c2.inj1   ? srFormatDate_(c2.inj1,   'wareki') : '';
+    start2 = c2.start1 ? srFormatDate_(c2.start1, 'wareki') : '';
+    end2   = c2.end1   ? srFormatDate_(c2.end1,   'wareki') : '';
+    tenki2 = c2.tenki1 || '';
+  } else if (c1 && (c1.p2 || c1.d2)) {
+    // case2 なし・case1 に部位2 あり
+    name2  = (c1.p2 && c1.d2) ? (c1.p2 + ' ' + c1.d2).trim() : (c1.p2 || c1.d2 || '');
+    inj2   = c1.inj2   ? srFormatDate_(c1.inj2,   'wareki') : '';
+    start2 = c1.start2 ? srFormatDate_(c1.start2, 'wareki') : '';
+    end2   = c1.end2   ? srFormatDate_(c1.end2,   'wareki') : '';
+    tenki2 = c1.tenki2 || '';
+  } else {
+    name2 = inj2 = start2 = end2 = tenki2 = '';
+  }
+
+  var hasP2 = !!(name2);
 
   return {
     d1:      name1,
     d2:      name2,
-    inj1:    srFormatDate_(best.inj1,   'wareki'),
-    inj2:    hasP2 ? srFormatDate_(best.inj2,   'wareki') : '',
-    start1:  srFormatDate_(best.start1, 'wareki'),
-    start2:  hasP2 ? srFormatDate_(best.start2, 'wareki') : '',
-    end1:    best.end1  ? srFormatDate_(best.end1,  'wareki') : '',
-    end2:    (hasP2 && best.end2) ? srFormatDate_(best.end2, 'wareki') : '',
-    tenki1:  best.tenki1,
-    tenki2:  hasP2 ? best.tenki2 : '',
-    nissuu1: days1 > 0 ? String(days1) : '',            // Bug 4修正: 実日数
-    nissuu2: (hasP2 && days2 > 0) ? String(days2) : '', // Bug 4修正
-    count1:  days1 > 0 ? String(days1) : '',            // Bug 3修正: 施術回数=実日数
-    count2:  (hasP2 && days2 > 0) ? String(days2) : '', // Bug 3修正
+    inj1:    c1 ? srFormatDate_(c1.inj1,   'wareki') : '',
+    inj2:    inj2,
+    start1:  c1 ? srFormatDate_(c1.start1, 'wareki') : '',
+    start2:  start2,
+    end1:    (c1 && c1.end1) ? srFormatDate_(c1.end1, 'wareki') : '',
+    end2:    end2,
+    tenki1:  c1 ? (c1.tenki1 || '') : '',
+    tenki2:  tenki2,
+    nissuu1: days1 > 0 ? String(days1) : '',
+    nissuu2: (hasP2 && days2 > 0) ? String(days2) : '',
+    count1:  days1 > 0 ? String(days1) : '',
+    count2:  (hasP2 && days2 > 0) ? String(days2) : '',
   };
 }
 
