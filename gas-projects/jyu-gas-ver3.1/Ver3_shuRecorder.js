@@ -64,7 +64,7 @@ var SR_SUM_COL = {
  * 2026-04-03 T-SR-17: '　　年　　月　　日'（全角スペース）は文字ずれするため
  *   '年月日' に変更（見た目優先・ずれにくい最短表記）
  */
-var SR_END_DATE_PLACEHOLDER = '年月日';
+var SR_END_DATE_PLACEHOLDER = '年　月　日';  // 全角スペース1つ入り（詰まり防止）
 
 /** 初検情報のデフォルト空オブジェクト（初検情報履歴なし時に使用） */
 var SR_EMPTY_INIT_EXAM_ = { injuryDatetime: '', injuryPlace: '', injuryStatus: '', initFindings: '' };
@@ -719,6 +719,17 @@ function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) 
 
   var sumIdx = srFindSummaryRows_(uTable);  // {1: idx, 2: idx, 3: idx}
   var uc     = srResolveUrameCols_(uTable);
+
+  // ★ 後療料目印検出: テンプレートに「後療料はここ」が入っていれば、そのセルの列を base として採用
+  var ph_base = srFindPlaceholderRow_(uTable, '後療料はここ');
+  if (ph_base) {
+    Logger.log('[INFO] 後療料目印 発見 row=' + ph_base.rowIdx + ' col=' + ph_base.cellIdx);
+    uc.base = ph_base.cellIdx;
+    srSetCell_(ph_base.row, ph_base.cellIdx, '');  // 目印文字削除
+    Logger.log('[INFO] 後療料列 採用 col=' + uc.base + ' / 目印文字削除完了');
+  } else {
+    Logger.log('[WARN] 後療料目印 未発見 → fallback col=' + uc.base);
+  }
 
   // データ書き込み可能範囲（header行の次 〜 ①行の前）
   var dataStart = 1;
