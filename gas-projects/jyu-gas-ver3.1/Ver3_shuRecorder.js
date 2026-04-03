@@ -1012,8 +1012,7 @@ function srBuildSummary1Values_(visitRows, targetMonth) {
 
   var totalAmount = totalInitial + totalBase + totalCold + totalWarm + totalElec;
   var claimAmount = Math.max(totalAmount - totalCopay, 0);
-  var first = visitRows.length > 0 ? visitRows[0] : null;
-  var last = visitRows.length > 0 ? visitRows[visitRows.length - 1] : null;
+  var periodWindow = srGetSummary1PeriodWindow_(visitRows, targetMonth);
 
   // TODO(v6): ①日間の定義が「請求期間の日数」か「来院日数」か未確定。
   // 現状は既存実装と同じく来院行数を表示し、仕様確定後に必要なら差し替える。
@@ -1023,12 +1022,33 @@ function srBuildSummary1Values_(visitRows, targetMonth) {
     visitCount:  visitRows.length > 0 ? String(visitRows.length) + '回' : '',
     totalAmount: srFormatUrameAmount_(totalAmount),
     windowPay:   srFormatUrameAmount_(totalCopay),
-    periodFrom:  first ? (targetMonth + '/' + first.day) : '',
-    periodTo:    last ? (targetMonth + '/' + last.day) : '',
+    periodFrom:  periodWindow.periodFrom,
+    periodTo:    periodWindow.periodTo,
     periodDays:  visitRows.length > 0 ? String(visitRows.length) + '日' : '',
     claimAmount: srFormatUrameAmount_(claimAmount),
     claimDate:   '',
     receiptDate: '',
+  };
+}
+
+function srGetSummary1PeriodWindow_(visitRows, targetMonth) {
+  var firstVisit = null;
+  var lastVisit = null;
+
+  for (var i = 0; i < visitRows.length; i++) {
+    var vr = visitRows[i];
+    if (!vr || !(vr.date instanceof Date) || isNaN(vr.date.getTime())) continue;
+    if (!firstVisit || vr.date.getTime() < firstVisit.date.getTime()) firstVisit = vr;
+    if (!lastVisit || vr.date.getTime() > lastVisit.date.getTime()) lastVisit = vr;
+  }
+
+  var periodFrom = firstVisit ? (targetMonth + '/' + firstVisit.day) : '';
+  var periodTo = lastVisit ? (targetMonth + '/' + lastVisit.day) : '';
+  Logger.log('[INFO] ①請求期間 自=' + periodFrom + ' / 至=' + periodTo);
+
+  return {
+    periodFrom: periodFrom,
+    periodTo: periodTo,
   };
 }
 
