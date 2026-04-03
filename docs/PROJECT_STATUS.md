@@ -165,3 +165,14 @@
 - `docs/ERROR_ANALYSIS.md` — エラー解析システム仕様
 - `scripts/auto-dev-checklist.md` — 各フェーズのチェックリスト
 
+
+---
+
+## 2026-04-03 Handoff Sync
+
+- `feature/auto-dev-phase3-loop` は `67c7ac7` まで GitHub push 済み
+- `scripts/upload-workspace-export-to-gdrive.ps1` の PowerShell 5.1 非互換な `return (if (...))` を修正
+- `scripts/sync-workspace-to-drive.ps1` で `C:\hirayama-ai-workspace\workspace-export` へ MIRROR 同期済み
+- `scripts/upload-workspace-export-to-gdrive.ps1 -Mode copy` で `hirayama_gdrive_handoff:hirayama-ai-workspace/workspace-export` へアップロード済み
+- Google Drive アップロードログ: `logs/gdrive-upload/gdrive-upload_20260403_181301.log`
+- Google Drive アップロード結果JSON: `logs/gdrive-upload/gdrive-upload_20260403_181301.json`

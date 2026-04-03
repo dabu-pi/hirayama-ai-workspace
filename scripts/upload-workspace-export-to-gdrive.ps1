@@ -126,14 +126,20 @@ function Resolve-RcloneExecutable {
     if ($Hint) {
         $command = Get-Command -Name $Hint -ErrorAction SilentlyContinue
         if ($null -ne $command) {
-            return (if ($command.Path) { $command.Path } else { $command.Source })
+            if ($command.Path) {
+                return $command.Path
+            }
+            return $command.Source
         }
     }
 
     if (-not $Hint -or $Hint -eq 'rclone') {
         $command = Get-Command -Name 'rclone' -ErrorAction SilentlyContinue
         if ($null -ne $command) {
-            return (if ($command.Path) { $command.Path } else { $command.Source })
+            if ($command.Path) {
+                return $command.Path
+            }
+            return $command.Source
         }
     }
 
