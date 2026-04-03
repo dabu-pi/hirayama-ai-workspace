@@ -77,8 +77,7 @@ var SR_SUMMARY1_FALLBACK_COL = {
   visitCount:  3,    // ①合計回数
   totalAmount: 5,    // ①合計金額
   windowPay:   7,    // ①一部負担金額
-  periodFrom:  10,   // ①請求期間_自
-  periodTo:    12,   // ①請求期間_至
+  periodRange: null, // ①請求期間（同一セル2行構造のため marker 未発見時は blank 維持）
   periodDays:  13,   // ①日間
   claimAmount: null, // ①請求金額（未確定のため marker 未発見なら blank）
   claimDate:   null, // ①請求年月日（未確定のため marker 未発見なら blank）
@@ -1022,6 +1021,7 @@ function srBuildSummary1Values_(visitRows, targetMonth) {
     visitCount:  visitRows.length > 0 ? String(visitRows.length) + '回' : '',
     totalAmount: srFormatUrameAmount_(totalAmount),
     windowPay:   srFormatUrameAmount_(totalCopay),
+    periodRange: srBuildSummary1PeriodCellText_(periodWindow.periodFrom, periodWindow.periodTo),
     periodFrom:  periodWindow.periodFrom,
     periodTo:    periodWindow.periodTo,
     periodDays:  visitRows.length > 0 ? String(visitRows.length) + '日' : '',
@@ -1052,14 +1052,20 @@ function srGetSummary1PeriodWindow_(visitRows, targetMonth) {
   };
 }
 
+function srBuildSummary1PeriodCellText_(periodFrom, periodTo) {
+  if (!periodFrom && !periodTo) return '';
+  return String(periodFrom || '') + '\n' + String(periodTo || '');
+}
+
 function srResolveSummary1Positions_(table, summary1RowIdx) {
   var defs = [
     { key: 'month',       label: '①月',             markers: ['月はここ', '①月はここ'],                           fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.month },
     { key: 'visitCount',  label: '①合計回数',       markers: ['合計回数はここ', '①合計回数はここ'],               fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.visitCount },
     { key: 'totalAmount', label: '①合計金額',       markers: ['合計金額はここ', '①合計金額はここ'],               fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.totalAmount },
     { key: 'windowPay',   label: '①一部負担金額',   markers: ['一部負担金はここ', '①一部負担金額はここ'],         fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.windowPay },
-    { key: 'periodFrom',  label: '①請求期間自',     markers: ['自年月日はここ', '①請求期間自はここ'],             fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodFrom },
-    { key: 'periodTo',    label: '①請求期間至',     markers: ['至年月日はここ', '①請求期間至はここ'],             fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodTo },
+    // 実テンプレートでは「自年月日はここ」「至年月日はここ」が同一セル内2行のため、
+    // 「自」側 marker を含むセル1つだけ採用し、そこへ from/to を2行でまとめて書く。
+    { key: 'periodRange', label: '①請求期間セル',   markers: ['自年月日はここ', '①請求期間自はここ'],             fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodRange },
     { key: 'periodDays',  label: '①日間',           markers: ['日間はここ', '①日間はここ'],                       fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodDays },
     { key: 'claimAmount', label: '①請求金額',       markers: ['請求金額はここ', '①請求金額はここ'],               fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.claimAmount },
     { key: 'claimDate',   label: '①請求年月日',     markers: ['請求年月日はここ', '①請求年月日はここ'],           fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.claimDate },
@@ -1071,16 +1077,32 @@ function srResolveSummary1Positions_(table, summary1RowIdx) {
     var def = defs[i];
     var ph = srFindPlaceholderRowByMarkersNoDump_(table, def.markers);
     if (ph) {
-      Logger.log('[INFO] ' + def.label + '目印 発見 row=' + ph.rowIdx + ' col=' + ph.cellIdx);
+      if (def.key === 'periodRange') {
+        Logger.log('[INFO] ①請求期間セル 発見 row=' + ph.rowIdx + ' col=' + ph.cellIdx);
+      } else if (def.key === 'periodDays') {
+        Logger.log('[INFO] ①日間セル 発見 row=' + ph.rowIdx + ' col=' + ph.cellIdx);
+      } else {
+        Logger.log('[INFO] ' + def.label + '目印 発見 row=' + ph.rowIdx + ' col=' + ph.cellIdx);
+      }
       result[def.key] = { rowIdx: ph.rowIdx, cellIdx: ph.cellIdx };
       srSetCell_(ph.row, ph.cellIdx, '');
       Logger.log('[INFO] ' + def.label + ' 出力先採用 row=' + ph.rowIdx + ' col=' + ph.cellIdx + ' / 目印文字削除完了');
     } else if (summary1RowIdx >= 0 && def.fallbackCellIdx !== null && def.fallbackCellIdx !== undefined) {
       result[def.key] = { rowIdx: summary1RowIdx, cellIdx: def.fallbackCellIdx };
-      Logger.log('[WARN] ' + def.label + '目印 未発見 → fallback row=' + summary1RowIdx + ' col=' + def.fallbackCellIdx);
+      if (def.key === 'periodDays') {
+        Logger.log('[WARN] ①日間セル 未発見 → fallback row=' + summary1RowIdx + ' col=' + def.fallbackCellIdx);
+      } else {
+        Logger.log('[WARN] ' + def.label + '目印 未発見 → fallback row=' + summary1RowIdx + ' col=' + def.fallbackCellIdx);
+      }
     } else {
       result[def.key] = { rowIdx: -1, cellIdx: -1 };
-      Logger.log('[WARN] ' + def.label + '目印 未発見 かつ fallback 未定義 → blank維持');
+      if (def.key === 'periodRange') {
+        Logger.log('[WARN] ①請求期間セル 未発見 → blank維持');
+      } else if (def.key === 'periodDays') {
+        Logger.log('[WARN] ①日間セル 未発見 かつ fallback 未定義 → blank維持');
+      } else {
+        Logger.log('[WARN] ' + def.label + '目印 未発見 かつ fallback 未定義 → blank維持');
+      }
     }
   }
   return result;
@@ -1088,13 +1110,17 @@ function srResolveSummary1Positions_(table, summary1RowIdx) {
 
 function srWriteSummary1Values_(table, posMap, values) {
   var keys = [
-    'month', 'visitCount', 'totalAmount', 'windowPay', 'periodFrom',
-    'periodTo', 'periodDays', 'claimAmount', 'claimDate', 'receiptDate'
+    'month', 'visitCount', 'totalAmount', 'windowPay', 'periodRange',
+    'periodDays', 'claimAmount', 'claimDate', 'receiptDate'
   ];
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var value = values[key];
     var pos = posMap[key];
+    if (key === 'periodRange') {
+      Logger.log('[INFO] ①請求期間セルへ書込 from=' + String(values.periodFrom || '') +
+                 ' to=' + String(values.periodTo || ''));
+    }
     Logger.log('[INFO] ①集計項目 ' + key + ' 書き込み値=' + JSON.stringify(String(value || '')));
     srSetTableCellAtPos_(table, pos, value, '①集計項目 ' + key);
   }
