@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-03（**WS-SR 表示追加修正 v5: 施療料/後療料 列分離 — 目印検出・kubun分割・書き込みを完全独立**）
+最終更新: 2026-04-03（**WS-SR 表示追加修正 v6: 裏面①集計ブロックを項目別独立配置へ整理**）
 
 ---
 
@@ -17,9 +17,9 @@
 | **Phase A** | **ジム会員チェックボックス（UI B5 + 来院ヘッダ）** | **✅ 実機確認完了（2026-03-31）**|
 | **Phase B** | **自費ダイアログのジム会員料金自動切替** | **✅ 実機確認完了（2026-03-31）**|
 | **サマリー案A** | **保存後会計サマリー（J2:N22）v2.1 + 領収証レイアウト** | **✅ T-SUM-01〜06 全PASS 完了（2026-04-01）**|
-| **WS-SR 表示追加修正** | **施術終了年月日プレースホルダー / earliest case / 裏面2件目セクション** | **✅ 実装完了・実機確認待ち（2026-04-03）** |
+| **WS-SR 表示追加修正** | **施術終了年月日プレースホルダー / earliest case / 裏面2件目セクション / 裏面①集計ブロック項目別配置** | **✅ 実装完了・実機確認待ち（2026-04-03）** |
 
-**次の作業:** WS-SR — **T-SR-17 / T-SR-18 手動実機確認** → PASS確認後、T-SR-10v2 の再確認も併せて実施。改善候補 I-1 保留中。
+**次の作業:** WS-SR — `clasp push` → `srGenerateDocument('P001', '2026-03')` 手動実行 → **裏面①集計ブロック v6 の目視確認**。T-SR-17 / T-SR-18 と施療料/後療料の副作用も併せて確認。改善候補 I-1 保留中。
 
 ---
 
@@ -31,8 +31,8 @@
 |---|---|
 | 1. `ds` 実行 | `git pull` で最新を取得。ブランチ: `feature/auto-dev-phase3-loop` |
 | 2. 最終コミット確認 | `git log --oneline -3` で最新コミット確認 |
-| 3. 現状 | **WS-SR 表示追加修正 v5 実装完了・実機確認待ち（施療料/後療料 分離）** |
-| 4. 次の作業候補 | `clasp push` → `srGenerateDocument('P001', '2026-03')` → 施療料/後療料ログ確認 → 各列目視確認 |
+| 3. 現状 | **WS-SR 表示追加修正 v6 実装完了・実機確認待ち（裏面①集計ブロック項目別配置）** |
+| 4. 次の作業候補 | `clasp push` → `srGenerateDocument('P001', '2026-03')` → ①月/合計回数/合計金額/請求期間自至のログ確認 → ①集計欄目視確認 |
 
 **2026-04-03 作業記録（WS-SR 表示追加修正）:**
 
@@ -132,6 +132,56 @@
 | `clasp run srGenerateDocument --params ... --nondev` | `Script function not found. Please make sure script is deployed as API executable.` で未実行 |
 | `clasp run srRunTsr10v2Debug_` | devMode: `Unable to run script function. Please make sure you have permission to run the script function.` / `--nondev`: `Script function not found...` |
 | 次アクション | Apps Script エディタから `srGenerateDocument('P001', '2026-03')` を手動実行し、Apps Script ログの `[INFO] 施療料目印` / `[INFO] 後療料目印` と出力ドキュメントを目視確認する。必要なら「標準 Google Cloud プロジェクト紐付け」と Execution API の API executable 設定を再点検する。 |
+
+**2026-04-03 作業記録（WS-SR 追加修正 v6 — 裏面①集計ブロック項目別配置）:**
+
+**原因:** v5 までの①集計行は `SR_SUM_COL` の固定列へまとめて直接書き込む構造で、`3/1` / `3/9` など請求期間の自・至を「独立した項目」として位置管理できていなかった。請求金額・請求年月日・領収年月日も項目別の出力先マップを持っていなかった。
+
+**①ブロック項目一覧:**
+
+| 項目 | v6 方針 | データ元 / 状態 |
+|---|---|---|
+| ①月 | 独立項目 `month` | `targetMonth` → `3月` |
+| ①合計回数 | 独立項目 `visitCount` | `visitRows.length` → `6回` |
+| ①合計金額 | 独立項目 `totalAmount` | `initialAmount + shiryoOut + koryoOut + cold + warm + elecOut` |
+| ①一部負担金額 | 独立項目 `windowPay` | `visitRows[].copay` 合計（来院ヘッダ `窓口負担額`） |
+| ①請求期間_自 | 独立項目 `periodFrom` | `visitRows[0]` → `3/1` |
+| ①請求期間_至 | 独立項目 `periodTo` | `visitRows[last]` → `3/9` |
+| ①日間 | 独立項目 `periodDays` | **未確定**。現状は既存互換で `visitRows.length + "日"` |
+| ①請求金額 | 独立項目 `claimAmount` | **暫定表示** `totalAmount - windowPay`。申請書側ロジックは未変更 |
+| ①請求年月日 | 独立項目 `claimDate` | **未確定**。blank 維持 + TODO |
+| ①領収年月日 | 独立項目 `receiptDate` | **未確定**。blank 維持 + TODO |
+
+**配置方針:**
+- ①集計ブロックは `srBuildSummary1Values_` → `srResolveSummary1Positions_` → `srWriteSummary1Values_` の3段で、項目ごとに独立書き込みする。
+- テンプレートに `①月はここ` / `①合計回数はここ` / `①合計金額はここ` / `①請求期間自はここ` / `①請求期間至はここ` などの目印文字がある項目は、そのセル座標を優先採用して目印文字を削除する。
+- 目印未発見項目だけ `SR_SUMMARY1_FALLBACK_COL` を使う。`claimAmount / claimDate / receiptDate` は fallback 未確定のため、目印未発見なら blank 維持。
+- ②③ブロックは今回は書き込まない（空欄維持）。
+
+**実装内容:**
+
+| # | 内容 | 結果 |
+|---|---|---|
+| Task AE | `SR_SUMMARY1_FALLBACK_COL` を新設し、①項目を `month / visitCount / totalAmount / windowPay / periodFrom / periodTo / periodDays / claimAmount / claimDate / receiptDate` で管理 | ✅ 完了 |
+| Task AF | `srBuildSummary1Values_` 追加。①合計回数・①合計金額・①請求期間自/至を `visitRows` から独立算出 | ✅ 完了 |
+| Task AG | `srResolveSummary1Positions_` 追加。項目別 marker 探索 + fallback 採用 + 項目別 Logger | ✅ 完了 |
+| Task AH | `srWriteSummary1Values_` / `srSetTableCellAtPos_` / `srFindPlaceholderRowNoDump_` 追加。項目別書き込みと未確定項目の安全スキップを実装 | ✅ 完了 |
+| Task AI | `srInsertUrameData_` の①集計書き込みを v6 ヘルパー経由へ切替。旧直書きブロックは非実行化 | ✅ 完了 |
+| Task AJ | 申請書側 (`Ver3_transferData.js`) は未変更。WS-SR 側の表示・転記処理だけを修正 | ✅ 完了 |
+
+**確認ポイント（v6 実機テスト）:**
+- `[INFO] ①月目印 発見 row=X col=Y` / `[WARN] ①月目印 未発見 → fallback ...`
+- `[INFO] ①合計回数目印 発見 ...`
+- `[INFO] ①合計金額目印 発見 ...`
+- `[INFO] ①請求期間自目印 発見 ...`
+- `[INFO] ①請求期間至目印 発見 ...`
+- `[INFO] ①集計項目 month/visitCount/totalAmount/periodFrom/periodTo 書き込み値=...`
+- 出力ドキュメント目視: `3月` / `6回` / `6491` / `3/1` / `3/9` が①ブロックの正しいセルへ分離配置され、②③が空欄維持で、明細行・2件目情報・施療料/後療料に副作用がないこと。
+
+**未確定項目（v6 TODO）:**
+- ①日間: 「請求期間の日数」か「来院日数」か定義未確定。現状は既存互換で来院日数。
+- ①請求金額: WS-SR 表示専用として `合計金額 - 一部負担金額` を暫定採用。申請書側の月次請求金額ロジックとは分離維持。
+- ①請求年月日 / ①領収年月日: 埋め方ルール未確定のため blank 維持。テンプレート目印と業務ルールが固まったら実装。
 
 **表示方針（2026-04-03 確定・実機確認済み）:**
 
