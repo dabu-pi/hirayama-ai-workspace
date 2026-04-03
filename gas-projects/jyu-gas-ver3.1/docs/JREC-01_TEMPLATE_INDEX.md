@@ -10,8 +10,10 @@
 | 項目 | 内容 |
 |---|---|
 | テンプレ種別 | 療養費支給申請書（B案 Cloud Run） |
+| 正本 repo パス | `C:\hirayama-ai-workspace\workspace\gas-projects\jyu-gas-ver3.1\application_template.xlsx` |
 | 正本ファイル | `application_template.xlsx` |
-| 実装参照 | `write_application.py` の `TEMPLATE_FILE` / `Dockerfile` の `COPY` |
+| 実行時の使用場所 | Cloud Run コンテナのアプリ作業ディレクトリ直下 `./application_template.xlsx` |
+| 実装参照 | `write_application.py` の `TEMPLATE_FILE = "application_template.xlsx"` / `Dockerfile` の `COPY server.py write_application.py application_template.xlsx ./` |
 | 構造検査 | `inspect_merges.py` |
 | 成果物保存先 | `JREC-01_月次出力/YYYY-MM/01_申請書/` |
 | 旧版退避先 | `JREC-01_月次出力/YYYY-MM/90_再生成旧版/` |
@@ -34,8 +36,10 @@
 | テンプレ種別 | 施術録 Google Docs MASTER |
 | MASTER ファイル名 | `施術録様式参考例` |
 | 現行 Template ID | `1Tcq8kcwFfIzFixGF54xFoWyZcNz7IsgjYsT8NqV0mnY` |
+| 現行 親フォルダ ID | `1XMx2e1ufCRqp7bhpfRRjvPDyXCESL83V` |
+| 実行時参照元 | `srResolveTemplateId_(ss)` が返す Template ID の Drive ファイルを `DriveApp.getFileById(templateId).makeCopy(...)` で複製 |
 | 実装参照 | `Ver3_shuRecorder.js` の `srResolveTemplateId_()` / `srDuplicateTemplate_()` |
-| 設定キー | `設定!A:B` の `施術録テンプレートID`（未設定時は `SR_TEMPLATE_ID` fallback） |
+| 設定キー | `設定!A:B` の `施術録テンプレートID`（未設定時は `SR_TEMPLATE_ID = 1Tcq8kcwFfIzFixGF54xFoWyZcNz7IsgjYsT8NqV0mnY` fallback） |
 | 成果物保存先 | `JREC-01_月次出力/YYYY-MM/02_施術録/` |
 | 旧版退避先 | `JREC-01_月次出力/YYYY-MM/90_再生成旧版/` |
 | 修正時の必須作業 | **Google Docs MASTER 1本だけを編集** → `clasp push` → 1患者で再生成・目視確認 |

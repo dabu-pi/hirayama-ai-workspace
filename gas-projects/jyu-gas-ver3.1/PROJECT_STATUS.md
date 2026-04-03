@@ -45,6 +45,16 @@
 | OUT-4 | `Ver3_shuRecorder.js` の Template ID を `設定!A:B` の `施術録テンプレートID` 優先に変更し、未設定時は現行 `SR_TEMPLATE_ID` fallback | ✅ 完了 |
 | OUT-5 | `docs/JREC-01_出力物テンプレート管理.md` / `docs/JREC-01_TEMPLATE_INDEX.md` 新規作成、施術録導線 docs・月次運用フロー・申請書様式運用メモへ参照追記 | ✅ 完了 |
 
+**変更前後の出力先 / テンプレ実値メモ:**
+
+| 項目 | 変更前 | 変更後 / 正本 |
+|---|---|---|
+| 申請書出力先 | `V3TR_getOutputFolder_(ss)` 直下 `YYYY-MM/`（旧docs表記 `output/YYYY-MM/`） | `JREC-01_月次出力/YYYY-MM/01_申請書/` |
+| 施術録出力先 | `1XMx2e1ufCRqp7bhpfRRjvPDyXCESL83V/施術録/YYYY-MM/` | `JREC-01_月次出力/YYYY-MM/02_施術録/` |
+| 旧版退避先 | 申請書NDJSONは同名削除、施術録はトラッシュ移動 | `JREC-01_月次出力/YYYY-MM/90_再生成旧版/` |
+| 申請書テンプレ正本 | repo `application_template.xlsx` | repo `C:\hirayama-ai-workspace\workspace\gas-projects\jyu-gas-ver3.1\application_template.xlsx`（Cloud Run 再デプロイ必須） |
+| 施術録テンプレ正本 | `SR_TEMPLATE_ID = 1Tcq8kcwFfIzFixGF54xFoWyZcNz7IsgjYsT8NqV0mnY` | `設定!施術録テンプレートID` 優先。未設定時 fallback = `1Tcq8kcwFfIzFixGF54xFoWyZcNz7IsgjYsT8NqV0mnY`。現行MASTER親フォルダID = `1XMx2e1ufCRqp7bhpfRRjvPDyXCESL83V` |
+
 **2026-04-03 作業記録（WS-SR 表示追加修正）:**
 
 | # | 内容 | 結果 |
