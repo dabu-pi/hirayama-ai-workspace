@@ -36,7 +36,9 @@ var SR_SUBFOLDER_NAME = '施術録';
 var SR_URAME_COL = {
   date:    0,   // 月/日（左端 1 セル）
   initial: 1,   // 初検料/再検料/初検時相談支援料 など grouped cell
-  base:    5,   // 後療料
+  shiryo:  4,   // 施療料（初検日の基本料）— fallback: 目印「施療料はここ」で上書き
+  koryo:   5,   // 後療料（再検・後療日の基本料）— fallback: 目印「後療料はここ」で上書き
+  base:    5,   // 後方互換（srResolveUrameCols_ offset 計算の基準）
   cold:    7,   // 冷罨法料（combined header の場合は warm と同セル）
   warm:    7,   // 温罨法料
   elec:    8,   // 電療料
@@ -242,12 +244,13 @@ function srGetPatientData_(ss, patientId) {
  * ★Bug 2修正: cold / warm を別フィールドで返す。
  * ★正本統一修正(2026-04-02):
  *   initialAmount = 来院ヘッダの initFee+supportFee+reFee（申請書算定結果を正本とする）
- *   baseOut       = 施術明細 baseOut 全件合計（kubun 区別なし = 施療料・後療料を問わず全て後療料欄へ）
+ *   shiryoOut / koryoOut = kubun で分離（初検→施療料 / 再検・後療→後療料）
  *   これにより「初検抑制日(case2同月2番目の初検)」でも initialAmount=0 となり申請書と整合する。
  *   再検料も initialAmount に正しく反映される。
- * @return {Array} [{month, day, date, initialAmount, baseOut, cold, warm, elecOut, copay, notes}, ...]
+ * @return {Array} [{month, day, date, initialAmount, shiryoOut, koryoOut, cold, warm, elecOut, copay, notes}, ...]
  *   initialAmount: 施術録裏面の初検料等表示用 = initFee + supportFee + reFee（来院ヘッダ）
- *   baseOut:       施術録裏面の後療料表示用  = 施術明細 baseOut 合計（kubun 区別なし）
+ *   shiryoOut:     施術録裏面の施療料表示用 = kubun=初検 の baseOut 合計
+ *   koryoOut:      施術録裏面の後療料表示用 = kubun=再検/後療 の baseOut 合計
  */
 function srGetVisitRows_(ss, patientId, yearMonth) {
   var ymParts    = yearMonth.split('-');
@@ -302,14 +305,20 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var dc      = AM_DETAIL_COLS;
   var dci     = function(n) { return dHdrs.indexOf(n); };
 
-  // ★正本統一修正: kubun 区別なく全 baseOut を集計（施療料も後療料もまとめて後療料欄へ）
-  var amountMap = {};  // visitKey → {base, cold, warm, elec}
+  // ★施療料/後療料分離(v5): kubun=初検 → shiryo / それ以外(再検・後療) → koryo
+  var amountMap = {};  // visitKey → {shiryo, koryo, cold, warm, elec}
   for (var r2 = 1; r2 < dtlData.length; r2++) {
     var drow = dtlData[r2];
     var vk2  = String(drow[dci(dc.visitKey)] || '');
     if (!headerMap[vk2]) continue;
-    if (!amountMap[vk2]) amountMap[vk2] = { base: 0, cold: 0, warm: 0, elec: 0 };
-    amountMap[vk2].base += Number(drow[dci(dc.baseOut)]    || 0);
+    if (!amountMap[vk2]) amountMap[vk2] = { shiryo: 0, koryo: 0, cold: 0, warm: 0, elec: 0 };
+    var kubunVal2 = String(drow[dci(dc.kubun)] || '').trim();
+    var baseVal2  = Number(drow[dci(dc.baseOut)] || 0);
+    if (kubunVal2 === '初検') {
+      amountMap[vk2].shiryo += baseVal2;  // 施療料（初検日の基本料）
+    } else {
+      amountMap[vk2].koryo  += baseVal2;  // 後療料（再検・後療日の基本料）
+    }
     amountMap[vk2].cold += Number(drow[dci(dc.coldOut)]    || 0);
     amountMap[vk2].warm += Number(drow[dci(dc.warmOut)]    || 0);
     amountMap[vk2].elec += Number(drow[dci(dc.electroOut)] || 0);
@@ -338,14 +347,15 @@ function srGetVisitRows_(ss, patientId, yearMonth) {
   var result = [];
   for (var vk in headerMap) {
     var h  = headerMap[vk];
-    var am = amountMap[vk] || { base: 0, cold: 0, warm: 0, elec: 0 };
+    var am = amountMap[vk] || { shiryo: 0, koryo: 0, cold: 0, warm: 0, elec: 0 };
     result.push({
       visitKey:      vk,
       month:         h.month,
       day:           h.day,
       date:          h.date,
-      initialAmount: h.initial,  // ★正本統一修正: 来院ヘッダの initFee+supportFee+reFee
-      baseOut:       am.base,    // ★正本統一修正: 施術明細 baseOut 合計（kubun 区別なし）
+      initialAmount: h.initial,   // ★正本統一修正: 来院ヘッダの initFee+supportFee+reFee
+      shiryoOut:     am.shiryo,   // 施療料（初検日の基本料 / kubun=初検）
+      koryoOut:      am.koryo,    // 後療料（再検・後療日の基本料 / kubun≠初検）
       cold:          am.cold,    // ★Bug 2修正: 冷罨法料（単独）
       warm:          am.warm,    // ★Bug 2修正: 温罨法料（単独）
       elecOut:       am.elec,
@@ -720,15 +730,26 @@ function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) 
   var sumIdx = srFindSummaryRows_(uTable);  // {1: idx, 2: idx, 3: idx}
   var uc     = srResolveUrameCols_(uTable);
 
-  // ★ 後療料目印検出: テンプレートに「後療料はここ」が入っていれば、そのセルの列を base として採用
-  var ph_base = srFindPlaceholderRow_(uTable, '後療料はここ');
-  if (ph_base) {
-    Logger.log('[INFO] 後療料目印 発見 row=' + ph_base.rowIdx + ' col=' + ph_base.cellIdx);
-    uc.base = ph_base.cellIdx;
-    srSetCell_(ph_base.row, ph_base.cellIdx, '');  // 目印文字削除
-    Logger.log('[INFO] 後療料列 採用 col=' + uc.base + ' / 目印文字削除完了');
+  // ★ 施療料目印検出（施療料列は後療料列と完全に独立）
+  var ph_shiryo = srFindPlaceholderRow_(uTable, '施療料はここ');
+  if (ph_shiryo) {
+    Logger.log('[INFO] 施療料目印 発見 row=' + ph_shiryo.rowIdx + ' col=' + ph_shiryo.cellIdx);
+    uc.shiryo = ph_shiryo.cellIdx;
+    srSetCell_(ph_shiryo.row, ph_shiryo.cellIdx, '');  // 目印文字削除
+    Logger.log('[INFO] 施療料列 採用 col=' + uc.shiryo + ' / 目印文字削除完了');
   } else {
-    Logger.log('[WARN] 後療料目印 未発見 → fallback col=' + uc.base);
+    Logger.log('[WARN] 施療料目印 未発見 → fallback col=' + uc.shiryo);
+  }
+
+  // ★ 後療料目印検出（施療料列とは独立。uc.shiryo に影響しない）
+  var ph_koryo = srFindPlaceholderRow_(uTable, '後療料はここ');
+  if (ph_koryo) {
+    Logger.log('[INFO] 後療料目印 発見 row=' + ph_koryo.rowIdx + ' col=' + ph_koryo.cellIdx);
+    uc.koryo = ph_koryo.cellIdx;
+    srSetCell_(ph_koryo.row, ph_koryo.cellIdx, '');  // 目印文字削除
+    Logger.log('[INFO] 後療料列 採用 col=' + uc.koryo + ' / 目印文字削除完了');
+  } else {
+    Logger.log('[WARN] 後療料目印 未発見 → fallback col=' + uc.koryo);
   }
 
   // データ書き込み可能範囲（header行の次 〜 ①行の前）
@@ -747,7 +768,8 @@ function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) 
 
     srSetCell_(row, uc.date,    srFormatUrameDate_(targetMonth, vr.day));
     srSetCell_(row, uc.initial, srFormatUrameAmount_(vr.initialAmount));
-    srSetCell_(row, uc.base,    srFormatUrameAmount_(vr.baseOut));
+    srSetCell_(row, uc.shiryo,  srFormatUrameAmount_(vr.shiryoOut));  // 施療料（初検日）
+    srSetCell_(row, uc.koryo,   srFormatUrameAmount_(vr.koryoOut));   // 後療料（再検・後療日）
     srSetUrameThermal_(row, uc, vr.cold, vr.warm);
     srSetCell_(row, uc.elec,    srFormatUrameAmount_(vr.elecOut));
     srSetCell_(row, uc.copay,   srFormatUrameAmount_(vr.copay));
@@ -762,7 +784,7 @@ function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) 
 
     for (var j = 0; j < visitRows.length; j++) {
       totalInitial += visitRows[j].initialAmount || 0;
-      totalBase  += visitRows[j].baseOut;
+      totalBase  += (visitRows[j].shiryoOut || 0) + (visitRows[j].koryoOut || 0);  // 施療料+後療料
       totalCold  += visitRows[j].cold;    // Bug 2修正
       totalWarm  += visitRows[j].warm;    // Bug 2修正
       totalElec  += visitRows[j].elecOut;
@@ -849,14 +871,16 @@ function srResolveUrameCols_(table) {
   }
 
   var found = {
-    date:  srFindUrameHeaderIndex_(headerTexts, ['月日', '月/日']),
+    date:    srFindUrameHeaderIndex_(headerTexts, ['月日', '月/日']),
     initial: srFindUrameHeaderIndex_(headerTexts, ['初検料', '再検料']),
-    base:  srFindUrameHeaderIndex_(headerTexts, ['後療料']),
-    cold:  srFindUrameHeaderIndex_(headerTexts, ['冷罨法料']),
-    warm:  srFindUrameHeaderIndex_(headerTexts, ['温罨法料']),
-    elec:  srFindUrameHeaderIndex_(headerTexts, ['電療料']),
-    copay: srFindUrameHeaderIndex_(headerTexts, ['一部負担金']),
-    notes: srFindUrameHeaderIndex_(headerTexts, ['整復施術等の施術経過所見', '整復施療等の施術経過所見', '施術経過所見'])
+    shiryo:  srFindUrameHeaderIndex_(headerTexts, ['施療料']),
+    koryo:   srFindUrameHeaderIndex_(headerTexts, ['後療料']),
+    base:    srFindUrameHeaderIndex_(headerTexts, ['後療料']),  // offset 計算の基準（後方互換）
+    cold:    srFindUrameHeaderIndex_(headerTexts, ['冷罨法料']),
+    warm:    srFindUrameHeaderIndex_(headerTexts, ['温罨法料']),
+    elec:    srFindUrameHeaderIndex_(headerTexts, ['電療料']),
+    copay:   srFindUrameHeaderIndex_(headerTexts, ['一部負担金']),
+    notes:   srFindUrameHeaderIndex_(headerTexts, ['整復施術等の施術経過所見', '整復施療等の施術経過所見', '施術経過所見'])
   };
 
   var offset = (found.base >= 0) ? (found.base - SR_URAME_COL.base) : 0;

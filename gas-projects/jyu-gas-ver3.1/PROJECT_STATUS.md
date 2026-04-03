@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-03（**WS-SR 表示追加修正 v4: SR_END_DATE_PLACEHOLDER '年　月　日'に変更 / 後療料目印検出ロジック追加**）
+最終更新: 2026-04-03（**WS-SR 表示追加修正 v5: 施療料/後療料 列分離 — 目印検出・kubun分割・書き込みを完全独立**）
 
 ---
 
@@ -31,8 +31,8 @@
 |---|---|
 | 1. `ds` 実行 | `git pull` で最新を取得。ブランチ: `feature/auto-dev-phase3-loop` |
 | 2. 最終コミット確認 | `git log --oneline -3` で最新コミット確認 |
-| 3. 現状 | **WS-SR 表示追加修正 v4 実装完了・実機確認待ち（T-SR-17 / T-SR-18）** |
-| 4. 次の作業候補 | `clasp push` → `srGenerateDocument('P001', '2026-03')` 実機実行 → 後療料目印ログ確認 → T-SR-17/T-SR-18 目視確認 |
+| 3. 現状 | **WS-SR 表示追加修正 v5 実装完了・実機確認待ち（施療料/後療料 分離）** |
+| 4. 次の作業候補 | `clasp push` → `srGenerateDocument('P001', '2026-03')` → 施療料/後療料ログ確認 → 各列目視確認 |
 
 **2026-04-03 作業記録（WS-SR 表示追加修正）:**
 
@@ -77,6 +77,21 @@
 | Task V | 後療料目印発見時: `uc.base = ph_base.cellIdx` で列上書き + 目印文字削除 + Logger出力 | ✅ 完了 |
 | Task W | 後療料目印未発見時: WARN + 既存 `SR_URAME_COL.base` fallback 維持 | ✅ 完了 |
 
+**2026-04-03 作業記録（WS-SR 追加修正 v5 — 施療料/後療料 列分離）:**
+
+**原因:** v4 で `uc.base` に後療料列を上書きしたが、書き込みループは `uc.base` 1本で施療料・後療料を合算して書いていた。
+結果として施療料が後療料列に混入し、施療料列（別位置）には何も入らない状態だった。
+
+| # | 内容 | 結果 |
+|---|---|---|
+| Task X | `SR_URAME_COL` に `shiryo: 4`（施療料 fallback）/ `koryo: 5`（後療料 fallback）を追加 | ✅ 完了 |
+| Task Y | `srGetVisitRows_`: kubun=初検 → `shiryo` / それ以外 → `koryo` に分割集計 | ✅ 完了 |
+| Task Z | `srGetVisitRows_` 戻り値を `shiryoOut` / `koryoOut` に変更（`baseOut` 廃止） | ✅ 完了 |
+| Task AA | `srResolveUrameCols_` に `shiryo: ['施療料']` / `koryo: ['後療料']` ヘッダ検出を追加 | ✅ 完了 |
+| Task AB | `srInsertUrameData_`: `ph_base` → `ph_shiryo` / `ph_koryo` の2系統に分離 | ✅ 完了 |
+| Task AC | 書き込みループ: `uc.base`/`vr.baseOut` → `uc.shiryo`/`vr.shiryoOut` + `uc.koryo`/`vr.koryoOut` | ✅ 完了 |
+| Task AD | 月次集計 `totalBase`: `baseOut` → `shiryoOut + koryoOut` | ✅ 完了 |
+
 **診断 Logger 一覧（T-SR-18 調査用）:**
 
 | ログキー | 内容 | 確認ポイント |
@@ -96,13 +111,16 @@
 | v3 | `'年月日'` | 詰まりすぎ |
 | **v4（現行）** | **`'年　月　日'`**（全角スペース1つ） | **ちょうどよい間隔・採用** |
 
-**次回確認事項:**
+**次回確認事項（v5 実機テスト）:**
 - `clasp push` → `srGenerateDocument('P001', '2026-03')` → Apps Script ログを確認
-- `[DIAG-A]` の d2 が空でないか確認
+- `[INFO] 施療料目印 発見 row=X col=X` → 施療料列の列番号をメモ
+- `[INFO] 施療料列 採用 col=X / 目印文字削除完了` → 期待列と一致するか確認
+- `[INFO] 後療料目印 発見 row=X col=X` → 後療料列の列番号をメモ（施療料列と別のこと）
+- `[INFO] 後療料列 採用 col=X / 目印文字削除完了` → 期待列と一致するか確認
+- 出力ドキュメント目視: 施療料列・後療料列にそれぞれ正しい金額が入っているか確認
+- 施術終了年月日が `年　月　日` 表示になっているか確認
+- `[DIAG-A]` の d2 が空でないか確認（2件目患者の場合）
 - `[DIAG-C]` が null の場合は `[DUMP]` でテンプレートの実テキストを確認
-- 置換成功後: 施術終了年月日が `年　月　日` 表示になっているか確認
-- `[INFO] 後療料目印 発見` のログが出るか確認（→ テンプレートの「後療料はここ」セル列が採用されたことを確認）
-- `[INFO] 後療料列 採用 col=X / 目印文字削除完了` のログで列インデックスが正しいか確認
 
 **表示方針（2026-04-03 確定・実機確認済み）:**
 
