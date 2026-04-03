@@ -1034,22 +1034,22 @@ function srBuildSummary1Values_(visitRows, targetMonth) {
 
 function srResolveSummary1Positions_(table, summary1RowIdx) {
   var defs = [
-    { key: 'month',       label: '①月',             marker: '①月はここ',             fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.month },
-    { key: 'visitCount',  label: '①合計回数',       marker: '①合計回数はここ',       fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.visitCount },
-    { key: 'totalAmount', label: '①合計金額',       marker: '①合計金額はここ',       fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.totalAmount },
-    { key: 'windowPay',   label: '①一部負担金額',   marker: '①一部負担金額はここ',   fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.windowPay },
-    { key: 'periodFrom',  label: '①請求期間自',     marker: '①請求期間自はここ',     fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodFrom },
-    { key: 'periodTo',    label: '①請求期間至',     marker: '①請求期間至はここ',     fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodTo },
-    { key: 'periodDays',  label: '①日間',           marker: '①日間はここ',           fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodDays },
-    { key: 'claimAmount', label: '①請求金額',       marker: '①請求金額はここ',       fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.claimAmount },
-    { key: 'claimDate',   label: '①請求年月日',     marker: '①請求年月日はここ',     fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.claimDate },
-    { key: 'receiptDate', label: '①領収年月日',     marker: '①領収年月日はここ',     fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.receiptDate },
+    { key: 'month',       label: '①月',             markers: ['月はここ', '①月はここ'],                           fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.month },
+    { key: 'visitCount',  label: '①合計回数',       markers: ['合計回数はここ', '①合計回数はここ'],               fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.visitCount },
+    { key: 'totalAmount', label: '①合計金額',       markers: ['合計金額はここ', '①合計金額はここ'],               fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.totalAmount },
+    { key: 'windowPay',   label: '①一部負担金額',   markers: ['一部負担金はここ', '①一部負担金額はここ'],         fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.windowPay },
+    { key: 'periodFrom',  label: '①請求期間自',     markers: ['自年月日はここ', '①請求期間自はここ'],             fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodFrom },
+    { key: 'periodTo',    label: '①請求期間至',     markers: ['至年月日はここ', '①請求期間至はここ'],             fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodTo },
+    { key: 'periodDays',  label: '①日間',           markers: ['日間はここ', '①日間はここ'],                       fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.periodDays },
+    { key: 'claimAmount', label: '①請求金額',       markers: ['請求金額はここ', '①請求金額はここ'],               fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.claimAmount },
+    { key: 'claimDate',   label: '①請求年月日',     markers: ['請求年月日はここ', '①請求年月日はここ'],           fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.claimDate },
+    { key: 'receiptDate', label: '①領収年月日',     markers: ['領収年月日はここ', '①領収年月日はここ'],           fallbackCellIdx: SR_SUMMARY1_FALLBACK_COL.receiptDate },
   ];
 
   var result = {};
   for (var i = 0; i < defs.length; i++) {
     var def = defs[i];
-    var ph = srFindPlaceholderRowNoDump_(table, def.marker);
+    var ph = srFindPlaceholderRowByMarkersNoDump_(table, def.markers);
     if (ph) {
       Logger.log('[INFO] ' + def.label + '目印 発見 row=' + ph.rowIdx + ' col=' + ph.cellIdx);
       result[def.key] = { rowIdx: ph.rowIdx, cellIdx: ph.cellIdx };
@@ -1103,6 +1103,14 @@ function srFindPlaceholderRowNoDump_(table, searchText) {
         return { row: row, rowIdx: r, cellIdx: c };
       }
     }
+  }
+  return null;
+}
+
+function srFindPlaceholderRowByMarkersNoDump_(table, markers) {
+  for (var i = 0; i < markers.length; i++) {
+    var ph = srFindPlaceholderRowNoDump_(table, markers[i]);
+    if (ph) return ph;
   }
   return null;
 }
