@@ -122,6 +122,17 @@
 - `[DIAG-A]` の d2 が空でないか確認（2件目患者の場合）
 - `[DIAG-C]` が null の場合は `[DUMP]` でテンプレートの実テキストを確認
 
+**2026-04-03 Codex CLI 再確認メモ:**
+
+| 項目 | 結果 |
+|---|---|
+| Git 同期 | `git pull --ff-only` → Already up to date / HEAD=`ae1db82` |
+| `clasp push` | `Script is already up to date.` |
+| API 実行用 version/deployment | `clasp version "WS-SR v5 execution api live check"` → version 3 作成 / 既存 deployment `AKfycbxHhsl9qNDB2WJtoqXt_WzQ7q89mEOnaBPjlLB1u7TDgZrTXL9E6LSrHD7xHURB-WWdDg` を `@3` に更新 / 新規 deployment `AKfycbxYCVhEM0mCXkBGG6PadolAY_Tbr1mXss88Vo4kvxRf2gcGGkEMCPlyzrTZ8Oud0lwy_A @3` も作成 |
+| `clasp run srGenerateDocument --params ... --nondev` | `Script function not found. Please make sure script is deployed as API executable.` で未実行 |
+| `clasp run srRunTsr10v2Debug_` | devMode: `Unable to run script function. Please make sure you have permission to run the script function.` / `--nondev`: `Script function not found...` |
+| 次アクション | Apps Script エディタから `srGenerateDocument('P001', '2026-03')` を手動実行し、Apps Script ログの `[INFO] 施療料目印` / `[INFO] 後療料目印` と出力ドキュメントを目視確認する。必要なら「標準 Google Cloud プロジェクト紐付け」と Execution API の API executable 設定を再点検する。 |
+
 **表示方針（2026-04-03 確定・実機確認済み）:**
 
 | 方針 | 内容 |
