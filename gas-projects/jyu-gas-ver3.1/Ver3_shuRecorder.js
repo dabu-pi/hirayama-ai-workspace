@@ -12,8 +12,8 @@
  *   .addSeparator()
  *   .addItem('施術録を出力', 'srShowDialog')
  *
- * テンプレート ID  : 1Tcq8kcwFfIzFixGF54xFoWyZcNz7IsgjYsT8NqV0mnY
- * 出力フォルダ ID  : 1XMx2e1ufCRqp7bhpfRRjvPDyXCESL83V
+ * テンプレート ID  : 設定!A:B「施術録テンプレートID」優先（未設定時は SR_TEMPLATE_ID）
+ * 出力フォルダ ID  : 設定!A:B「出力フォルダID」優先（未設定時は SR_ROOT_FOLDER_ID）
  *
  * 設計書: docs/施術録導線/JREC-01_施術録実装設計.md
  * フェーズ: WS-SR Phase 1 (T-SR-02 〜 T-SR-09)
@@ -22,7 +22,8 @@
 // ===== 定数 (T-SR-02) =====
 var SR_TEMPLATE_ID    = '1Tcq8kcwFfIzFixGF54xFoWyZcNz7IsgjYsT8NqV0mnY';
 var SR_ROOT_FOLDER_ID = '1XMx2e1ufCRqp7bhpfRRjvPDyXCESL83V';
-var SR_SUBFOLDER_NAME = '施術録';
+var SR_SUBFOLDER_NAME = '02_施術録';
+var SR_TEMPLATE_ID_SETTING_KEY = '施術録テンプレートID';
 
 /**
  * 裏面 日別明細テーブル 列Indexマッピング
@@ -174,24 +175,26 @@ function srGenerateDocument(patientId, yearMonth) {
 
   // ----- 出力先 -----
   var filename  = '施術録_' + patient.name + '_' + ymParts[0] + '年' + ymParts[1] + '月';
-  var outFolder = srGetOrCreateOutputFolder_(yearMonth);
+  var outFolder     = srGetOrCreateOutputFolder_(ss, yearMonth);
+  var archiveFolder = srGetOrCreateArchiveFolder_(ss, yearMonth);
 
   // ----- 既存ファイル確認 (T-SR-09) -----
   var existing = srFindExistingFile_(outFolder, filename);
-  if (existing) {
+  var existingPdf = srFindExistingFile_(outFolder, filename + '.pdf');
+  if (existing || existingPdf) {
     var ui   = SpreadsheetApp.getUi();
     var resp = ui.alert(
       '上書き確認',
-      '[' + filename + '] が既に存在します。\n上書きしますか？',
+      '[' + filename + '] の旧版が既に存在します。\n90_再生成旧版へ退避して再生成しますか？',
       ui.ButtonSet.YES_NO
     );
     if (resp !== ui.Button.YES) return '施術録の出力をキャンセルしました。';
-    existing.setTrashed(true);
-    Utilities.sleep(500); // ゴミ箱移動の反映を待つ
+    srArchiveExistingOutputsByName_(outFolder, archiveFolder, filename);
+    srArchiveExistingOutputsByName_(outFolder, archiveFolder, filename + '.pdf');
   }
 
   // ----- テンプレート複製 -----
-  var docId = srDuplicateTemplate_(outFolder, filename);
+  var docId = srDuplicateTemplate_(ss, outFolder, filename);
 
   // ----- 差し込み -----
   srInsertHyomenData_(docId, patient, caseData, initExam);
@@ -626,13 +629,34 @@ function srGetInitExamData_(ss, patientId) {
    ④ ファイル操作 (T-SR-05)
    ======================================================================= */
 
-/** 出力フォルダ（施術録/YYYY-MM/）を取得または作成して返す */
-function srGetOrCreateOutputFolder_(yearMonth) {
-  var root     = DriveApp.getFolderById(SR_ROOT_FOLDER_ID);
-  var srIter   = root.getFoldersByName(SR_SUBFOLDER_NAME);
-  var srFolder = srIter.hasNext() ? srIter.next() : root.createFolder(SR_SUBFOLDER_NAME);
-  var ymIter   = srFolder.getFoldersByName(yearMonth);
-  return ymIter.hasNext() ? ymIter.next() : srFolder.createFolder(yearMonth);
+/** 出力フォルダ（JREC-01_月次出力/YYYY-MM/02_施術録/）を取得または作成して返す */
+function srGetOrCreateOutputFolder_(ss, yearMonth) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateDocTypeFolder_) {
+    return V3OUT.getOrCreateDocTypeFolder_(ss, yearMonth, 'shuroku', SR_ROOT_FOLDER_ID);
+  }
+
+  var root = DriveApp.getFolderById(SR_ROOT_FOLDER_ID);
+  var monthlyRootIter = root.getFoldersByName('JREC-01_月次出力');
+  var monthlyRoot = monthlyRootIter.hasNext() ? monthlyRootIter.next() : root.createFolder('JREC-01_月次出力');
+  var ymIter = monthlyRoot.getFoldersByName(yearMonth);
+  var ymFolder = ymIter.hasNext() ? ymIter.next() : monthlyRoot.createFolder(yearMonth);
+  var srIter = ymFolder.getFoldersByName(SR_SUBFOLDER_NAME);
+  return srIter.hasNext() ? srIter.next() : ymFolder.createFolder(SR_SUBFOLDER_NAME);
+}
+
+/** 再生成時の旧版退避フォルダ（JREC-01_月次出力/YYYY-MM/90_再生成旧版/）を返す */
+function srGetOrCreateArchiveFolder_(ss, yearMonth) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateArchiveFolder_) {
+    return V3OUT.getOrCreateArchiveFolder_(ss, yearMonth, SR_ROOT_FOLDER_ID);
+  }
+
+  var root = DriveApp.getFolderById(SR_ROOT_FOLDER_ID);
+  var monthlyRootIter = root.getFoldersByName('JREC-01_月次出力');
+  var monthlyRoot = monthlyRootIter.hasNext() ? monthlyRootIter.next() : root.createFolder('JREC-01_月次出力');
+  var ymIter = monthlyRoot.getFoldersByName(yearMonth);
+  var ymFolder = ymIter.hasNext() ? ymIter.next() : monthlyRoot.createFolder(yearMonth);
+  var archiveIter = ymFolder.getFoldersByName('90_再生成旧版');
+  return archiveIter.hasNext() ? archiveIter.next() : ymFolder.createFolder('90_再生成旧版');
 }
 
 /** フォルダ内の同名 Google Docs ファイルを返す（なければ null） */
@@ -641,9 +665,43 @@ function srFindExistingFile_(folder, filename) {
   return iter.hasNext() ? iter.next() : null;
 }
 
+/** 設定シート優先で施術録テンプレートIDを解決する */
+function srResolveTemplateId_(ss) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getSettingValue_) {
+    var configuredId = V3OUT.getSettingValue_(ss, SR_TEMPLATE_ID_SETTING_KEY);
+    if (configuredId) return configuredId;
+  }
+  return SR_TEMPLATE_ID;
+}
+
 /** テンプレートをフォルダに複製し、新ドキュメントの ID を返す */
-function srDuplicateTemplate_(folder, filename) {
-  return DriveApp.getFileById(SR_TEMPLATE_ID).makeCopy(filename, folder).getId();
+function srDuplicateTemplate_(ss, folder, filename) {
+  var templateId = srResolveTemplateId_(ss);
+  return DriveApp.getFileById(templateId).makeCopy(filename, folder).getId();
+}
+
+/** 既存の旧版ファイルを月次出力の 90_再生成旧版 へ退避する */
+function srArchiveExistingOutput_(fileObj, archiveFolder) {
+  if (!fileObj) return;
+  if (typeof V3OUT !== 'undefined' && V3OUT.archiveFileObject_) {
+    V3OUT.archiveFileObject_(fileObj, archiveFolder);
+    return;
+  }
+  fileObj.setTrashed(true);
+}
+
+function srArchiveExistingOutputsByName_(sourceFolder, archiveFolder, fileName) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.archiveFilesByExactName_) {
+    return V3OUT.archiveFilesByExactName_(sourceFolder, archiveFolder, fileName);
+  }
+
+  var iter = sourceFolder.getFilesByName(fileName);
+  var count = 0;
+  while (iter.hasNext()) {
+    srArchiveExistingOutput_(iter.next(), archiveFolder);
+    count++;
+  }
+  return count;
 }
 
 

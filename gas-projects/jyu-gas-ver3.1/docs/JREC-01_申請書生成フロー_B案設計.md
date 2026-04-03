@@ -20,7 +20,7 @@
   ↓
 [Python] openpyxl でテンプレ xlsx にセル書き込み
   ↓
-[人間]  output/YYYY-MM/申請書_XXX_YYYY-MM.xlsx を Excel で開いて確認
+[人間]  JREC-01_月次出力/YYYY-MM/01_申請書/申請書_XXX_YYYY-MM_HHMMSS.xlsx を Excel で開いて確認
         → 問題なければ印刷・提出
 ```
 

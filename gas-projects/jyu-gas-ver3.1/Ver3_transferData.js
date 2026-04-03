@@ -2281,12 +2281,9 @@ function V3TR_menuBatchExportJson() {
   // 3. Drive に NDJSON ファイルを出力
   var ndjsonContent = ndjsonLines.join("\n");
   var fileName = "transfer_batch_" + ym + ".ndjson";
-  var folder = V3TR_getOutputFolder_(ss);
-  // 既存の同名ファイルがあれば上書き（削除→新規作成）
-  var existing = folder.getFilesByName(fileName);
-  while (existing.hasNext()) {
-    existing.next().setTrashed(true);
-  }
+  var folder = V3TR_getApplicationOutputFolder_(ss, ym);
+  var archiveFolder = V3TR_getArchiveOutputFolder_(ss, ym);
+  V3TR_archiveExistingFilesByExactName_(folder, archiveFolder, fileName);
   var file = folder.createFile(fileName, ndjsonContent, "application/x-ndjson");
 
   // 4. _JSON出力シートにバックアップ
@@ -2365,6 +2362,10 @@ function V3TR_findPatientsForMonth_(ss, ym) {
  * 優先順: 設定シートの「出力フォルダID」→ スプレッドシート親フォルダ → ルート
  */
 function V3TR_getOutputFolder_(ss) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateMonthlyOutputRootFolder_) {
+    return V3OUT.getOrCreateMonthlyOutputRootFolder_(ss, '');
+  }
+
   // 設定シートから出力フォルダIDを取得
   var shSettings = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
   if (shSettings) {
@@ -2396,6 +2397,50 @@ function V3TR_getOutputFolder_(ss) {
 
   // 最終フォールバック: ルート
   return DriveApp.getRootFolder();
+}
+
+/**
+ * 申請書の月次保存先フォルダを返す。
+ * 新ルール: JREC-01_月次出力/YYYY-MM/01_申請書/
+ */
+function V3TR_getApplicationOutputFolder_(ss, ym) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateDocTypeFolder_) {
+    return V3OUT.getOrCreateDocTypeFolder_(ss, ym, 'application', '');
+  }
+  return V3TR_getOrCreateMonthFolder_(V3TR_getOutputFolder_(ss), ym);
+}
+
+/**
+ * 月次再生成の旧版退避先フォルダを返す。
+ * 新ルール: JREC-01_月次出力/YYYY-MM/90_再生成旧版/
+ */
+function V3TR_getArchiveOutputFolder_(ss, ym) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateArchiveFolder_) {
+    return V3OUT.getOrCreateArchiveFolder_(ss, ym, '');
+  }
+  return V3TR_getOrCreateMonthFolder_(V3TR_getOutputFolder_(ss), ym);
+}
+
+function V3TR_archiveExistingFilesByExactName_(sourceFolder, archiveFolder, fileName) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.archiveFilesByExactName_) {
+    return V3OUT.archiveFilesByExactName_(sourceFolder, archiveFolder, fileName);
+  }
+
+  var existing = sourceFolder.getFilesByName(fileName);
+  var movedCount = 0;
+  while (existing.hasNext()) {
+    existing.next().setTrashed(true);
+    movedCount++;
+  }
+  return movedCount;
+}
+
+function V3TR_archiveExistingApplicationFiles_(sourceFolder, archiveFolder, patientId, ym) {
+  var prefix = "申請書_" + String(patientId || "").trim() + "_" + String(ym || "").trim() + "_";
+  if (typeof V3OUT !== 'undefined' && V3OUT.archiveFilesByPrefix_) {
+    return V3OUT.archiveFilesByPrefix_(sourceFolder, archiveFolder, prefix);
+  }
+  return 0;
 }
 
 /**
@@ -2670,8 +2715,8 @@ function V3TR_menuGenerateApplication_B() {
   // ===== 5. Drive に保存 =====
   ss.toast("Drive に保存中...", "申請書生成", 10);
 
-  var folder = V3TR_getOutputFolder_(ss);
-  var monthFolder = V3TR_getOrCreateMonthFolder_(folder, ym);
+  var monthFolder = V3TR_getApplicationOutputFolder_(ss, ym);
+  var archiveFolder = V3TR_getArchiveOutputFolder_(ss, ym);
   var timestamp = Utilities.formatDate(new Date(), "Asia/Tokyo", "HHmmss");
 
   var savedFiles = [];
@@ -2685,6 +2730,7 @@ function V3TR_menuGenerateApplication_B() {
       continue;
     }
     try {
+      V3TR_archiveExistingApplicationFiles_(monthFolder, archiveFolder, p.patientId, ym);
       var fileName = "申請書_" + p.patientId + "_" + ym + "_" + timestamp + ".xlsx";
       var xlsxBlob = Utilities.newBlob(
         Utilities.base64Decode(p.content),
