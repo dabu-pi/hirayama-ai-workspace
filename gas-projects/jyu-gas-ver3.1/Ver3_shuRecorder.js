@@ -767,27 +767,42 @@ function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) 
   }
 
   // ----- 2件目負傷情報（裏面所見欄下部）(T-SR-18) -----
-  // case2（別エピソード）が存在する場合のみ、所見列の空行または最終来院行末尾へ出力する。
+  // ★挿入位置確定(2026-04-03実機確認):
+  //   テンプレートの「②ケース目負傷原因はここ」プレースホルダーセルを優先使用する。
+  //   - プレースホルダーあり + case2あり → 実データで置換
+  //   - プレースホルダーあり + case2なし → 空文字でクリア（単独負傷患者の出力を汚さない）
+  //   - プレースホルダーなし → 来院データ直後の空行へ fallback
   // 金額列には一切書き込まない。
+  var ph2 = srFindPlaceholderRow_(uTable, '２ケース目負傷原因はここ');
+
   if (caseData && caseData.d2) {
     var notesText2 = srBuild2ndCaseNotesText_(caseData, initExam2);
-    if (notesText2) {
-      var nextIdx = dataStart + visitRows.length;
-      if (nextIdx <= dataEnd) {
-        // 来院データ行の直後に空行がある → その notes セルのみ書き込む
-        srSetCell_(uTable.getRow(nextIdx), uc.notes, notesText2);
-        Logger.log('[INFO] 2件目負傷情報 → 裏面所見欄 row=' + nextIdx);
+    if (ph2) {
+      // プレースホルダー発見 → 実データで置換（最優先）
+      srSetCell_(ph2.row, ph2.cellIdx, notesText2 || '');
+      Logger.log('[INFO] 2件目負傷情報 → プレースホルダー置換 row=' + ph2.rowIdx + ' col=' + ph2.cellIdx);
+    } else if (notesText2) {
+      // プレースホルダーなし → 従来 fallback: 来院データ直後の空行 or 最終行末尾
+      var nextIdx2 = dataStart + visitRows.length;
+      if (nextIdx2 <= dataEnd) {
+        srSetCell_(uTable.getRow(nextIdx2), uc.notes, notesText2);
+        Logger.log('[INFO] 2件目負傷情報 → fallback 空行 row=' + nextIdx2);
       } else if (visitRows.length > 0) {
-        // 空行なし → 最終来院行の notes セルに追記（既存所見の後）
         var lastDataIdx = dataStart + visitRows.length - 1;
         var lastDataRow = uTable.getRow(lastDataIdx);
         if (uc.notes < lastDataRow.getNumCells()) {
           var existingNotes = lastDataRow.getCell(uc.notes).getText();
           srSetCell_(lastDataRow, uc.notes,
                      existingNotes ? (existingNotes + '\n' + notesText2) : notesText2);
-          Logger.log('[INFO] 2件目負傷情報 → 最終来院行 notes に追記 row=' + lastDataIdx);
+          Logger.log('[INFO] 2件目負傷情報 → fallback 最終行末尾 row=' + lastDataIdx);
         }
       }
+    }
+  } else {
+    // case2 なし → プレースホルダーが残っていれば消去（単独負傷患者の出力を汚さない）
+    if (ph2) {
+      srSetCell_(ph2.row, ph2.cellIdx, '');
+      Logger.log('[INFO] case2 なし → プレースホルダー消去 row=' + ph2.rowIdx);
     }
   }
 
@@ -918,6 +933,25 @@ function srSetCell_(row, cellIdx, text) {
   row.getCell(cellIdx).setText(String(text || ''));
 }
 
+/**
+ * テーブル全行を走査し、指定テキストを含むセルを最初に発見した行情報を返す。
+ * ★2026-04-03 実機確認: テンプレートの「２ケース目負傷原因はここ」プレースホルダー検索に使用。
+ * @param {GoogleAppsScript.Document.Table} table
+ * @param {string} searchText - 検索テキスト（部分一致）
+ * @return {{row: TableRow, rowIdx: number, cellIdx: number}|null}
+ */
+function srFindPlaceholderRow_(table, searchText) {
+  for (var r = 0; r < table.getNumRows(); r++) {
+    var row = table.getRow(r);
+    for (var c = 0; c < row.getNumCells(); c++) {
+      if (row.getCell(c).getText().indexOf(searchText) >= 0) {
+        return { row: row, rowIdx: r, cellIdx: c };
+      }
+    }
+  }
+  return null;
+}
+
 
 /* =======================================================================
    ⑦ PDF 出力 (T-SR-08)
@@ -973,11 +1007,16 @@ function srFormatDate_(dateVal, format) {
 /**
  * 裏面所見欄に書き込む「2件目負傷情報」テキストブロックを生成する。
  * caseData.d2 が存在する前提で呼び出すこと。
- * 表示方針(2026-04-03 T-SR-18):
- *   - 見出し「【2件目負傷情報】」を先頭に付ける
- *   - 負傷名 / 負傷日時（またはcaseData.inj2）/ 負傷場所 / 負傷状況 / 初検所見 / 初検年月日 を出力
- *   - initExam2 が null の場合は caseData から取れる情報のみ表示
+ *
+ * 表示方針(2026-04-03 T-SR-18 実機確認後確定):
+ *   - 見出し「【2件目負傷情報】」
+ *   - 負傷名 / 負傷日時 / 負傷場所 / 負傷時の状況 / 初検時所見 / 初検年月日
+ *   - initExam2 が null の場合は caseData から取れる日付情報のみ表示
  *   - ヘッダーだけになるなら空文字を返す（書き込みスキップ）
+ *
+ * 挿入先: テンプレートの「２ケース目負傷原因はここ」プレースホルダーセル
+ *   位置: 来院データ直後・①月合計回数ブロック直上・右端の大きな所見マス
+ *
  * @param {Object}      caseData  - srGetCaseData_ の戻り値
  * @param {Object|null} initExam2 - srGetAllInitExamData_ の [1]（なければ null）
  * @return {string}
@@ -990,13 +1029,13 @@ function srBuild2ndCaseNotesText_(caseData, initExam2) {
   if (initExam2 && initExam2.injuryDatetime) {
     lines.push('負傷日時: ' + initExam2.injuryDatetime);
   } else if (caseData.inj2) {
-    lines.push('負傷年月日: ' + caseData.inj2);
+    lines.push('負傷日時: ' + caseData.inj2);
   }
-  // 負傷場所・状況・初検所見（initExam2 がある場合のみ）
+  // 負傷場所・負傷時の状況・初検時所見（initExam2 がある場合のみ）
   if (initExam2) {
-    if (initExam2.injuryPlace)  lines.push('負傷場所: ' + initExam2.injuryPlace);
-    if (initExam2.injuryStatus) lines.push('負傷状況: ' + initExam2.injuryStatus);
-    if (initExam2.initFindings) lines.push('初検所見: ' + initExam2.initFindings);
+    if (initExam2.injuryPlace)  lines.push('負傷場所: '     + initExam2.injuryPlace);
+    if (initExam2.injuryStatus) lines.push('負傷時の状況: ' + initExam2.injuryStatus);
+    if (initExam2.initFindings) lines.push('初検時所見: '   + initExam2.initFindings);
   }
   // 初検年月日（常に表示）
   if (caseData.start2) lines.push('初検年月日: ' + caseData.start2);
