@@ -67,6 +67,7 @@ var SR_SUM_COL = {
  *   '年月日' に変更（見た目優先・ずれにくい最短表記）
  */
 var SR_END_DATE_PLACEHOLDER = '年　月　日';  // 全角スペース1つ入り（詰まり防止）
+var SR_TENKI_PLACEHOLDER = '治癒･中止･転医';
 
 /** 初検情報のデフォルト空オブジェクト（初検情報履歴なし時に使用） */
 // v6: ①集計ブロックを項目ごとに独立配置するための fallback 列。
@@ -696,7 +697,7 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
         : '');
   rep('日数1',           caseData.nissuu1);
   rep('施術回数1',       caseData.count1);
-  rep('転帰1',           caseData.tenki1);
+  rep('転帰1',           srFormatHyomenTenki_(hasCase1, caseData.tenki1, 1));
 
   // ── 負傷名一覧 部位2（部位2なし患者は全て空文字）─────────
   rep('負傷名2',         caseData.d2);
@@ -709,7 +710,7 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
         : '');
   rep('日数2',           caseData.nissuu2);
   rep('施術回数2',       caseData.count2);
-  rep('転帰2',           caseData.tenki2);
+  rep('転帰2',           srFormatHyomenTenki_(hasCase2, caseData.tenki2, 2));
 
   // ── 負傷記録（初検情報履歴）────────────────────────────
   rep('負傷日時', initExam.injuryDatetime);
@@ -949,6 +950,11 @@ function srFormatUrameAmount_(value) {
   return String(num);
 }
 
+function srFormatSummary1Amount_(value) {
+  var numText = srFormatUrameAmount_(value);
+  return numText ? (numText + '円') : '';
+}
+
 function srSetUrameThermal_(row, urameCols, cold, warm) {
   if (urameCols.cold === urameCols.warm) {
     srSetCell_(row, urameCols.cold, srFormatUrameAmount_((Number(cold) || 0) + (Number(warm) || 0)));
@@ -1019,13 +1025,13 @@ function srBuildSummary1Values_(visitRows, targetMonth) {
   return {
     month:       visitRows.length > 0 ? String(targetMonth) + '月' : '',
     visitCount:  visitRows.length > 0 ? String(visitRows.length) + '回' : '',
-    totalAmount: srFormatUrameAmount_(totalAmount),
-    windowPay:   srFormatUrameAmount_(totalCopay),
+    totalAmount: srFormatSummary1Amount_(totalAmount),
+    windowPay:   srFormatSummary1Amount_(totalCopay),
     periodRange: srBuildSummary1PeriodCellText_(periodWindow.periodFrom, periodWindow.periodTo),
     periodFrom:  periodWindow.periodFrom,
     periodTo:    periodWindow.periodTo,
     periodDays:  visitRows.length > 0 ? String(visitRows.length) + '日' : '',
-    claimAmount: srFormatUrameAmount_(claimAmount),
+    claimAmount: srFormatSummary1Amount_(claimAmount),
     claimDate:   '',
     receiptDate: '',
   };
@@ -1042,9 +1048,9 @@ function srGetSummary1PeriodWindow_(visitRows, targetMonth) {
     if (!lastVisit || vr.date.getTime() > lastVisit.date.getTime()) lastVisit = vr;
   }
 
-  var periodFrom = firstVisit ? (targetMonth + '/' + firstVisit.day) : '';
-  var periodTo = lastVisit ? (targetMonth + '/' + lastVisit.day) : '';
-  Logger.log('[INFO] ①請求期間 自=' + periodFrom + ' / 至=' + periodTo);
+  var periodFrom = firstVisit ? srFormatSummary1PeriodDate_(firstVisit.date) : '';
+  var periodTo = lastVisit ? srFormatSummary1PeriodDate_(lastVisit.date) : '';
+  Logger.log('[INFO] ①請求期間 表示値 from=' + periodFrom + ' to=' + periodTo);
 
   return {
     periodFrom: periodFrom,
@@ -1055,6 +1061,30 @@ function srGetSummary1PeriodWindow_(visitRows, targetMonth) {
 function srBuildSummary1PeriodCellText_(periodFrom, periodTo) {
   if (!periodFrom && !periodTo) return '';
   return String(periodFrom || '') + '\n' + String(periodTo || '');
+}
+
+function srFormatSummary1PeriodDate_(dateVal) {
+  if (!dateVal) return '';
+  var d = (dateVal instanceof Date) ? dateVal : new Date(dateVal);
+  if (isNaN(d.getTime())) return String(dateVal || '');
+
+  var y = d.getFullYear();
+  var m = d.getMonth() + 1;
+  var day = d.getDate();
+  var eraCode;
+  var eraYear;
+
+  if (y > 2019 || (y === 2019 && m >= 5)) {
+    eraCode = 'R';
+    eraYear = y - 2018;
+  } else if (y > 1989 || (y === 1989 && (m > 1 || day >= 8))) {
+    eraCode = 'H';
+    eraYear = y - 1988;
+  } else {
+    eraCode = 'S';
+    eraYear = y - 1925;
+  }
+  return eraCode + String(eraYear) + '.' + String(m) + '.' + String(day);
 }
 
 function srResolveSummary1Positions_(table, summary1RowIdx) {
@@ -1120,6 +1150,12 @@ function srWriteSummary1Values_(table, posMap, values) {
     if (key === 'periodRange') {
       Logger.log('[INFO] ①請求期間セルへ書込 from=' + String(values.periodFrom || '') +
                  ' to=' + String(values.periodTo || ''));
+    } else if (key === 'totalAmount') {
+      Logger.log('[INFO] ①合計金額 表示値=' + String(value || ''));
+    } else if (key === 'windowPay') {
+      Logger.log('[INFO] ①一部負担金額 表示値=' + String(value || ''));
+    } else if (key === 'claimAmount') {
+      Logger.log('[INFO] ①請求金額 表示値=' + String(value || ''));
     }
     Logger.log('[INFO] ①集計項目 ' + key + ' 書き込み値=' + JSON.stringify(String(value || '')));
     srSetTableCellAtPos_(table, pos, value, '①集計項目 ' + key);
@@ -1167,6 +1203,19 @@ function srSetCell_(row, cellIdx, text) {
     return;
   }
   row.getCell(cellIdx).setText(String(text || ''));
+}
+
+function srFormatHyomenTenki_(hasCase, tenkiValue, caseNo) {
+  if (!hasCase) return '';
+
+  var resolved = String(tenkiValue || '').trim();
+  if (resolved) {
+    Logger.log('[INFO] 転帰 実値表示 採用 row=' + caseNo + ' value=' + resolved);
+    return resolved;
+  }
+
+  Logger.log('[INFO] 転帰 既定表示 採用 row=' + caseNo + ' value=' + SR_TENKI_PLACEHOLDER);
+  return SR_TENKI_PLACEHOLDER;
 }
 
 /**
