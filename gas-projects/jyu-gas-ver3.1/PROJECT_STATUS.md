@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-03（**WS-SR 表示追加修正 v2: プレースホルダー置換方式確定 / ラベル修正 / case2なし消去対応**）
+最終更新: 2026-04-03（**WS-SR 表示追加修正 v3: 施術終了年月日'年月日'に変更 / srFindPlaceholderRow_ 強化 / 診断Logger追加**）
 
 ---
 
@@ -57,6 +57,40 @@
 | Task L | case2 なし患者のプレースホルダー消去処理追加 | ✅ 完了 |
 | Task M | `srBuild2ndCaseNotesText_` ラベル修正（「負傷時の状況」「初検時所見」に統一） | ✅ 完了 |
 | Task N | 「負傷年月日」→「負傷日時」ラベル統一 | ✅ 完了 |
+
+**2026-04-03 作業記録（WS-SR 追加修正 v3 — 原因調査・診断Logger追加）:**
+
+| # | 内容 | 結果 |
+|---|---|---|
+| Task O | `SR_END_DATE_PLACEHOLDER` を `'　　年　　月　　日'`（全角スペース→文字ずれ）から `'年月日'` に変更 | ✅ 完了 |
+| Task P | `srGenerateDocument` に DIAG-A/B Logger 追加（caseData.d2 / initExamAll.length / initExam2） | ✅ 完了 |
+| Task Q | `srInsertUrameData_` に DIAG-C/D Logger 追加（ph2 検索結果 / notesText2 冒頭） | ✅ 完了 |
+| Task R | `srNormalizePlaceholderText_` 新規追加（全角/半角スペース・改行・タブを除去） | ✅ 完了 |
+| Task S | `srFindPlaceholderRow_` を強化（正規化比較・未発見時全セルダンプ） | ✅ 完了 |
+
+**診断 Logger 一覧（T-SR-18 調査用）:**
+
+| ログキー | 内容 | 確認ポイント |
+|---|---|---|
+| `[DIAG-A]` | caseData.d2 / inj2 / start2 / tenki2 | `d2` が空 → case2 データ取得失敗 |
+| `[DIAG-B]` | initExamAll.length / initExam2 | length=1 → 初検情報履歴に2件目がない |
+| `[DIAG-C]` | ph2 検索結果（rowIdx/cellIdx または null） | null → プレースホルダー検出失敗（DUMP を確認）|
+| `[DIAG-D]` | caseData.d2 / notesText2 冒頭 | 空 → srBuild2ndCaseNotesText_ が空返却 |
+| `[DUMP]` | テーブル全セルのテキスト | `[DIAG-C]` が null のときに出力 |
+| `[INFO] srFindPlaceholderRow_` | 発見時の r/c/text | 正規化後に一致した際のみ出力 |
+
+**施術終了年月日プレースホルダー変更履歴:**
+
+| バージョン | 値 | 問題 |
+|---|---|---|
+| v1 | `'　　年　　月　　日'`（全角スペース） | 文字がずれて見える |
+| **v3（現行）** | **`'年月日'`** | **ずれにくい最短表記・採用** |
+
+**次回確認事項:**
+- `clasp push` → `srGenerateDocument('P001', '2026-03')` → Apps Script ログを確認
+- `[DIAG-A]` の d2 が空でないか確認
+- `[DIAG-C]` が null の場合は `[DUMP]` でテンプレートの実テキストを確認
+- 置換成功後: 施術終了年月日が `年月日` 表示になっているか確認
 
 **表示方針（2026-04-03 確定・実機確認済み）:**
 

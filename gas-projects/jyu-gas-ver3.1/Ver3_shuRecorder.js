@@ -61,9 +61,10 @@ var SR_SUM_COL = {
 /**
  * 施術終了年月日プレースホルダー（転帰なし=施術継続中）
  * 転帰が記載されていない限り実日付は入れず、このプレースホルダーを表示する。
- * 2026-04-03 T-SR-17 対応
+ * 2026-04-03 T-SR-17: '　　年　　月　　日'（全角スペース）は文字ずれするため
+ *   '年月日' に変更（見た目優先・ずれにくい最短表記）
  */
-var SR_END_DATE_PLACEHOLDER = '　　年　　月　　日';
+var SR_END_DATE_PLACEHOLDER = '年月日';
 
 /** 初検情報のデフォルト空オブジェクト（初検情報履歴なし時に使用） */
 var SR_EMPTY_INIT_EXAM_ = { injuryDatetime: '', injuryPlace: '', injuryStatus: '', initFindings: '' };
@@ -146,6 +147,12 @@ function srGenerateDocument(patientId, yearMonth) {
   var initExamAll = srGetAllInitExamData_(ss, patientId);
   var initExam  = initExamAll.length > 0 ? initExamAll[0] : SR_EMPTY_INIT_EXAM_;
   var initExam2 = initExamAll.length > 1 ? initExamAll[1] : null;
+
+  // ★診断 Logger (T-SR-18): 2件目情報の取得状況確認
+  Logger.log('[DIAG-A] caseData.d2="' + caseData.d2 + '" inj2="' + caseData.inj2 +
+             '" start2="' + caseData.start2 + '" tenki2="' + caseData.tenki2 + '"');
+  Logger.log('[DIAG-B] initExamAll.length=' + initExamAll.length +
+             ' initExam2=' + (initExam2 ? JSON.stringify(initExam2) : 'null'));
 
   // ----- 出力先 -----
   var filename  = '施術録_' + patient.name + '_' + ymParts[0] + '年' + ymParts[1] + '月';
@@ -775,8 +782,12 @@ function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) 
   // 金額列には一切書き込まない。
   var ph2 = srFindPlaceholderRow_(uTable, '２ケース目負傷原因はここ');
 
+  // ★診断 Logger (T-SR-18 C/D): プレースホルダー検索・notesText2 の確認
+  Logger.log('[DIAG-C] ph2=' + (ph2 ? ('row=' + ph2.rowIdx + ' col=' + ph2.cellIdx) : 'null(未発見)'));
   if (caseData && caseData.d2) {
     var notesText2 = srBuild2ndCaseNotesText_(caseData, initExam2);
+    Logger.log('[DIAG-D] caseData.d2="' + caseData.d2 +
+               '" notesText2先頭="' + (notesText2 ? notesText2.substring(0, 40) : '空') + '"');
     if (ph2) {
       // プレースホルダー発見 → 実データで置換（最優先）
       srSetCell_(ph2.row, ph2.cellIdx, notesText2 || '');
@@ -934,18 +945,47 @@ function srSetCell_(row, cellIdx, text) {
 }
 
 /**
+ * テキスト正規化: 全角/半角スペース・改行・タブをすべて除去して比較用文字列を返す。
+ * srFindPlaceholderRow_ の検索精度向上に使用。
+ */
+function srNormalizePlaceholderText_(text) {
+  return String(text || '')
+    .replace(/[\s\u3000\r\n\t]+/g, ''); // 半角スペース・全角スペース・改行・タブを除去
+}
+
+/**
  * テーブル全行を走査し、指定テキストを含むセルを最初に発見した行情報を返す。
  * ★2026-04-03 実機確認: テンプレートの「２ケース目負傷原因はここ」プレースホルダー検索に使用。
+ * ★強化(2026-04-03): srNormalizePlaceholderText_ で全角/半角差・改行差を吸収してから比較する。
+ *   見つからない場合は全セルテキストをダンプして原因調査を支援する。
  * @param {GoogleAppsScript.Document.Table} table
- * @param {string} searchText - 検索テキスト（部分一致）
+ * @param {string} searchText - 検索テキスト（部分一致・正規化後比較）
  * @return {{row: TableRow, rowIdx: number, cellIdx: number}|null}
  */
 function srFindPlaceholderRow_(table, searchText) {
+  var normSearch = srNormalizePlaceholderText_(searchText);
+
   for (var r = 0; r < table.getNumRows(); r++) {
     var row = table.getRow(r);
     for (var c = 0; c < row.getNumCells(); c++) {
-      if (row.getCell(c).getText().indexOf(searchText) >= 0) {
+      var raw     = row.getCell(c).getText();
+      var normRaw = srNormalizePlaceholderText_(raw);
+      if (normRaw.indexOf(normSearch) >= 0) {
+        Logger.log('[INFO] srFindPlaceholderRow_: 発見 r=' + r + ' c=' + c +
+                   ' raw=' + JSON.stringify(raw.substring(0, 50)));
         return { row: row, rowIdx: r, cellIdx: c };
+      }
+    }
+  }
+
+  // 見つからない場合: 全セルのテキストをダンプ（原因調査用）
+  Logger.log('[WARN] srFindPlaceholderRow_: "' + searchText + '" が見つかりません。全非空セルをダンプします:');
+  for (var rr = 0; rr < table.getNumRows(); rr++) {
+    var dumpRow = table.getRow(rr);
+    for (var cc = 0; cc < dumpRow.getNumCells(); cc++) {
+      var cellText = dumpRow.getCell(cc).getText();
+      if (cellText.trim()) {
+        Logger.log('  [DUMP] r=' + rr + ' c=' + cc + ' text=' + JSON.stringify(cellText.substring(0, 80)));
       }
     }
   }
