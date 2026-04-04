@@ -240,3 +240,55 @@
 
 - 役割が不明なタブや旧コピーは即削除候補にせず、`要確認` または `アーカイブ` として扱う。
 - 新システムでは、商品マスタ本体と WordPress/BASE などのチャネル別出力を分離し、見積・案件・競合価格・メディアを別ドメインとして設計する方針でたたき台を作成した。
+
+---
+
+## 2026-04-04 中古マシン販売システム再構築 調査フェーズ2
+
+### 目的
+
+初回棚卸しで残った未確定要素のうち、Apps Script実体、商品コード仕様、見積フロー正本、WordPress依存、新統合シートv0、products.json仕様を整理し、設計フェーズへ進める状態を作る。
+
+### 作成した成果物
+
+- `docs/apps-script-inventory.md`
+- `docs/product-code-spec.md`
+- `docs/quotation-flow-current.md`
+- `docs/wordpress-dependencies.md`
+- `docs/integrated-sheet-v0.md`
+- `docs/products-json-spec-draft.md`
+
+### 今回新たに確定したこと
+
+- 商品反映GASの入口は `ネットショップ商品一覧GAS.txt` の `sendHttpPost()` で、`https://machine-group.net/strongdepot-product-manager/generate.php` へ `ネットショップ商品一覧` 全行JSONをPOSTしている。
+- 見積テンプレートGASの実行トリガーは `createTrigger()` が作るインストール型 onEdit トリガー `myOnEdit` で、A/B/G/J/K列編集時に `mainFunc()` が走る。
+- 見積A列のSD商品コードは `ネットショップ商品一覧2018-10-22` を、B列のその他商品コードは `【商品追加用ページ】メーカー、同業者` / `その他の商品一覧` を参照する。
+- 競合取得の実行入口は `競合サイトGAS.txt` の `mainFunc()`、画像保存の実体は `downloadImages()`、保存先フォルダIDは `1Q0vGVu2N8Ouq8us0JIMSaH1oCdHVLiZl`。
+- 商品コード仕様は `店舗コード + メーカーコード + 仕入年コード + 通し番号3桁 + 部位コード`。ただしメーカーコード長例外、`MC` 衝突、`首` の空部位コード、未一致時の前行値流用バグなどを確認した。
+
+### まだ未確定のこと
+
+- 商品一覧GAS、見積テンプレートGAS、競合サイトGASの `scriptId`、Apps Script プロジェクト名、実ファイル名、`appsscript.json`、インストール済みトリガー一覧。
+- `【見積】見積もりテンプレート2.3` と `2.3freee連携API` のどちらが新規見積作成の現行正本か、`長谷川様ご依頼分` 顧客別タブへのコピー/転記手順。
+- `generate.php` / `Settings.php` のPHP側コード実体。
+- BASE出力の現役度、`TEST商品` / `画像` タブの用途、分類マスタをどこに一本化するか。
+
+### 設計に進めるようになった項目
+
+- `商品マスタ` / `設定マスタ` / `サイト出力ビュー` / `見積入力` / `見積履歴` / `競合価格データ` / `アーカイブ` の新統合シートv0列設計レビュー。
+- `sd_product_code` を保持しながら、コード構成要素を独立列で持つ商品マスタ設計。
+- WordPress taxonomy/post状態を使わない `products.json` の項目設計。
+
+### 次の一手
+
+1. 各対象ブックの Apps Script エディタURLから `scriptId` とファイル一覧とトリガー設定を回収し、`docs/apps-script-inventory.md` の `未回収` を埋める。
+2. `strongdepot-product-manager` の `generate.php` / `Settings.php` を回収し、WordPress反映ロジックを確定する。
+3. 実運用の見積作成手順を1件トレースし、`2.3` / `2.3freee連携API` / `長谷川様ご依頼分` の正本・派生・旧運用を最終確定する。
+4. `docs/integrated-sheet-v0.md` と `docs/products-json-spec-draft.md` をもとに、最小v0列だけに絞った実装用マッピング表を作る。
+
+### すぐ実装着手できる候補
+
+- 新統合シートv0の雛形生成
+- 現行 `ネットショップ商品一覧` → `商品マスタ` / `サイト出力ビュー` / `products.json` の変換マッピング表
+- 現行 `mitsumori` → `見積入力` / `見積履歴` の列マッピング表
+- 既存 `sd_product_code` のバリデーション/分解チェック仕様
