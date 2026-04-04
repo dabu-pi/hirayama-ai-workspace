@@ -1,75 +1,67 @@
-# 画像データ監査結果
+# 画像データ監査
+
+最終更新: 2026-04-05
 
 ## 対象
 
-- 現行CSV: `data/raw/current_product_master.full.csv`（ローカル専用・Git管理外）
-- v0変換出力: `data/output/product_master_v0.full.csv`（ローカル専用・Git管理外）
-- 集計CSV: `data/output/image_count_distribution.csv`
-- 画像0件レポート: `data/output/image_zero_count_report.md`
+- 実CSV: `data/raw/current_product_master.full.csv`
+- v0変換結果: `data/output/product_master_v0.full.csv`
+- 集計: `data/output/image_count_distribution.csv`
+- 0件レポート: `data/output/image_zero_count_report.md`
+- live sheet spot check: `scripts/inspect_sheet_cells.mjs`
 
-## 画像枚数分布
+## 件数サマリ
 
-| source_image_count | 商品数 |
-|---|---:|
-| 0 | 924 |
-| 1 | 0 |
-| 2 | 0 |
-| 3 | 0 |
-
-## 現行 `画像1〜3` の実態
-
-`画像1〜3` は、今回の values API エクスポートではURLとして取得できなかった。  
-`transform_current_to_v0.py` は `http://` / `https://` で始まる値だけを元画像URLとして採用し、それ以外は `image_url_suspicious` warning に分離する。
-
-`data/output/transform_warnings.csv` では、非URLの画像欄値が15件見つかった。代表例は次の通り。
-
-| 商品コード | 画像欄値 |
-|---|---|
-| `OOB116001AT` | `中村様`, `見積中` |
-| `OONT15094AM` | `池田`, `見積中` |
-| `OONT16118AB` | `ミッキー`, `見積中` |
-| `HYTG20502AT` | `池田` |
-| `HYNT20562AT` | `栗本`, `見積中` |
-
-## hyperlink / formula 切り分け
-
-`scripts/inspect_sheet_cells.mjs` で `'ネットショップ商品一覧'!P1:R8` を gridData 取得したところ、`画像1〜3` セルには `hyperlink` や `formulaValue` が付いておらず、`formattedValue` / `userEnteredValue` も文字列そのものだった。  
-少なくとも確認範囲では、URLがセル属性に隠れているわけではなかった。
-
-## 現時点の判断
-
-- `ネットショップ商品一覧` の `画像1〜3` は、次フェーズの700x700派生生成の入力URLとしてそのまま使えない
-- 画像ソースは WordPress メディア、旧 `generate.php` が参照している別ストア、または手動管理フォルダから回収する必要がある可能性が高い
-- `products.full.sample.json` は画像なしでも破綻なく生成できるが、現状は `images=[]` が全件になっているため、画像フェーズ着手前に元画像URLの所在確定が必須
-
-## 次の確認
-
-- `generate.php` / WordPress 側で商品コード→画像URLをどこから引いているか
-- 現行サイト上の商品画像URLを商品コード単位で逆引きできるか
-- 商品シート外に画像管理台帳や Drive フォルダ命名規則があるか
-## 2026-04-05 phase5B 再実行結果
-
-### 件数
-
-| 指標 | 件数 |
+| 項目 | 件数 |
 |---|---:|
 | 変換対象商品 | 924 |
-| `source_image_count=0` | 924 |
-| `source_image_count=1` | 0 |
-| `source_image_count=2` | 0 |
-| `source_image_count=3` | 0 |
-| `画像1` 非空 | 9 |
-| `画像2` 非空 | 0 |
-| `画像3` 非空 | 6 |
-| 非URL値 warning | 15 |
+| `source_image_count = 0` | 924 |
+| `source_image_count = 1` | 0 |
+| `source_image_count = 2` | 0 |
+| `source_image_count = 3` | 0 |
+| 現行 `画像1` 非空 | 9 |
+| 現行 `画像2` 非空 | 0 |
+| 現行 `画像3` 非空 | 6 |
+| `image_url_suspicious` warning | 15 |
 
-### 確認したこと
+## 非URL値の代表例
 
-- `画像1〜3` から URL は1件も取得できなかった
-- 非URL値として `中村様`、`見積中`、`池田`、`ミッキー`、`栗本` などが入っていた
-- `inspect_sheet_cells.mjs` で live sheet の `P:R` 列を確認したところ、少なくとも確認範囲では `userEnteredValue.stringValue` の plain text で、hyperlink や formula は見えなかった
+- 人名らしき値: `中村様`, `池田`, `ミッキー`, `栗本`
+- 状態メモらしき値: `見積中`
+- 案件メモらしき値: `菅野様預かり`, `請求中`
 
-### 判断
+## 分かったこと
 
-- 現行 `ネットショップ商品一覧` の `画像1〜3` は元画像URLの正本とはみなせない
-- 次に調べるべき候補は、WordPress側メディア参照、別シートの画像管理列、または旧出力CSV/バックアップ
+- phase5B で確認した範囲では、現行 `画像1〜3` は URL 列として機能していない。
+- `transform_current_to_v0.py` は `http://` / `https://` を画像URL候補として扱うが、実CSVでは該当値を確認できなかった。
+- `scripts/inspect_sheet_cells.mjs` で `ネットショップ商品一覧` の `画像1〜3` を `gridData` で確認したところ、確認セルは plain text で、`hyperlink` と `formulaValue` は見つからなかった。
+- そのため、現行シートの `画像1〜3` をそのまま `source_image_urls` に移す方針は成立しない。
+
+## `画像1〜3` 列の意味の再整理
+
+現時点では、`画像1〜3` は次のいずれかが混在している可能性が高い。
+
+1. 画像URLを入れるつもりだったが、運用途中でメモ欄化した
+2. 商品画像そのものではなく、案件担当者や進行状態の備忘欄として使われた
+3. 一部時期だけ別システムのキーや手入力メモが入り、列用途が崩れた
+
+少なくとも v0 移行で信頼できる画像正本として扱う列ではない。
+
+## 今後の扱い案
+
+- `画像1〜3` は画像正本としては移行しない
+- 非URL値は `transform_warnings.csv` と監査ドキュメントで追跡する
+- v0 の `source_image_urls_json` は、正本が確定するまで空配列のまま維持する
+- 必要なら現行列は「旧運用メモ由来の監査対象」として別途保全し、画像設計とは切り離す
+
+## 移行時の基本方針
+
+- 画像正本が確定するまで `products.json.images` は空配列を許容する
+- 700x700 派生画像生成には進まない
+- 次フェーズでは、WordPress 側の過去画像資産と Google Drive 側の候補を探索し、商品コードと画像群を結びつけられるかを先に確認する
+
+## 未解決
+
+- `画像1〜3` がいつからメモ欄化したか
+- 旧運用で実画像をどこから WordPress に渡していたか
+- 自社商品画像の正本が WordPress メディア、ローカル控え、Google Drive のどこに残っているか

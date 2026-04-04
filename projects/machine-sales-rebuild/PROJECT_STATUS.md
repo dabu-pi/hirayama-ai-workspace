@@ -1,31 +1,49 @@
 # PROJECT_STATUS
 
+最終更新: 2026-04-05
+
 ## 現在地
 
-- 実装フェーズ5B完了直後
-- 現行 `ネットショップ商品一覧2018-10-22` を実CSV化して v0 変換・監査済み
-- この案件専用ファイルは `projects/machine-sales-rebuild/` 配下へ再編済み
+- phase5B の実データ検証まで完了
+- 画像派生生成にはまだ進まず、画像正本探索フェーズへ移行
+- 案件フォルダ `projects/machine-sales-rebuild/` を正本として運用中
 
 ## 直近でやったこと
 
-- docs / data / scripts / tests を案件フォルダへ移動
-- seed を現行 `ルール` タブベースで拡張
-- `sd_product_code` 全件監査と画像入力監査を追加
-- `products.full.sample.json` を実データベースで再出力
-- 実行コマンドを project root 基準へ統一
+- 実CSV全量を `transform_current_to_v0` に流して seed / validator / warnings を補正
+- `sd_product_code` の全量監査結果を整理
+- `products.full.sample.json` を実データで再出力
+- `画像1〜3` が画像URL列ではなく plain text 混入列であることを再確認
+- 自社画像 / 競合画像の正本候補と保存先候補を整理
+
+## 完了済み
+
+- v0 雛形CSV
+- 現行 -> v0 変換スクリプト
+- v0 -> `products.json` 出力スクリプト
+- `sd_product_code` ライブラリとテスト
+- settings seed
+- phase5B 実データ監査
+- 画像正本探索メモ
 
 ## 次の一手
 
-1. `docs/image-data-audit.md` を起点に元画像URLの正本ソースを確定する
-2. `docs/sd-product-code-audit.md` の `KT` / `US` / 年 `AT` / メーカー不一致行を現場確認する
-3. `docs/image-generation-phase-plan.md` を元に 700x700 派生画像生成フェーズへ進む
+1. `strongdepot-product-manager` の PHP / WordPress 側資産を回収する
+2. Google Drive に自社商品画像フォルダがあるか確認する
+3. 商品コードと画像ファイル名の対応が見えたら、小規模サンプルで回収テストをする
+4. 条件が揃ったら 700x700 派生画像生成フェーズへ進む
 
 ## 保留事項
 
-- `KOMATSU=KT`, `UESAKA=US`, 年コード `AT` の扱い
-- `EVERLAST`, `LEGENDFITNESS`, `PT` を seed に追加するか
-- 売却済み商品の `sold_visible` 運用条件
-- 元画像URLが現行 `画像1〜3` に存在しない問題
+- 自社商品画像の正本保管先
+- 競合画像を同一設計に載せるかどうか
+- `KT` / `US` / 年コード `AT` の恒久扱い
+- 売却済み商品の公開方針
+
+## テスト状況
+
+- `uv run python -m unittest discover -s tests -v`
+- phase5B 時点で 14 tests OK
 
 ## 実行コマンド
 
@@ -35,39 +53,25 @@ $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
 
 uv run python -m scripts.generate_integrated_sheet_v0
 uv run python -m scripts.transform_current_to_v0
-uv run python -m scripts.export_products_json
 uv run python -m scripts.audit_sd_product_code
+uv run python -m scripts.export_products_json
 uv run python -m unittest discover -s tests -v
 ```
 
-実CSV取得:
+実CSV再取得:
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:AIOS_SERVICE_ACCOUNT_PATH='C:\hirayama-ai-workspace\workspace\secrets\credentials.json'
 node scripts\export_sheet_to_csv.mjs --sheet-name "ネットショップ商品一覧" --output data\raw\current_product_master.full.csv
-node scripts\export_sheet_to_csv.mjs --sheet-name "ルール" --output data\raw\current_rules.full.csv
 ```
 
 ## 参照すべき主要 docs
 
 - `docs/implementation-phase5-notes.md`
-- `docs/transform-current-to-v0.md`
-- `docs/products-json-generation.md`
-- `docs/sd-product-code-audit.md`
+- `docs/image-source-discovery.md`
+- `docs/image-file-naming-hypothesis.md`
+- `docs/image-storage-options.md`
 - `docs/image-data-audit.md`
 - `docs/image-generation-phase-plan.md`
-## 2026-04-05 phase5B 再実行メモ
-
-- `data/raw/current_product_master.full.csv` を案件ルートから再取得し、993行・33列を確認
-- `transform_current_to_v0` 再実行結果: 924行変換、issues 1124
-- `audit_sd_product_code` 再実行結果: ok 774 / warning 148 / error 2
-- `products.full.sample.json` 再出力済み。924件、`public` 66件、`private` 858件、`featured` 14件
-- `settings_maker.csv` を補正し、`EVERLAST`・`LEGENDFITNESS` を追加、`POWERTECH` に `PT` alias を付与
-- `sd_product_code` lenient で `KT -> KO`、`US -> UE`、年コード `AT` を旧コード警告として許容
-- なお `画像1〜3` は URL ではなく、今回の実CSVでは 924件すべて `source_image_count=0`
-
-## 次の一手（更新）
-
-1. `SANT21651AT` と `ATNT18190AT` のメーカー不一致を現行シート側で確認する
-2. 画像正本の候補を `ネットショップ商品一覧` 以外の列・シート・WordPress由来データから再調査する
-3. 元画像URLの取得元が見えた段階で 700x700 派生画像生成フェーズへ進む
+- `docs/sd-product-code-audit.md`
