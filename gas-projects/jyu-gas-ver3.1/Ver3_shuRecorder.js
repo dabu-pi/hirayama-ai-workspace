@@ -1192,6 +1192,13 @@ function srResolveSummary1Positions_(table, summary1RowIdx) {
   for (var i = 0; i < defs.length; i++) {
     var def = defs[i];
     var ph = srFindPlaceholderRowByMarkersNoDump_(table, def.markers);
+    if (!ph && (def.key === 'claimDate' || def.key === 'receiptDate')) {
+      ph = srFindSummary1DateValueCell_(table, def.key === 'claimDate' ? '請求年月日' : '領収年月日');
+      if (ph) {
+        Logger.log('[INFO] ' + def.label + ' markerなし実セル検出 row=' + ph.rowIdx + ' col=' + ph.cellIdx +
+                   ' text=' + JSON.stringify(ph.row.getCell(ph.cellIdx).getText()));
+      }
+    }
     if (ph) {
       if (def.key === 'periodRange') {
         Logger.log('[INFO] ①請求期間セル 発見 row=' + ph.rowIdx + ' col=' + ph.cellIdx);
@@ -1306,6 +1313,33 @@ function srFormatHyomenTenki_(hasCase, tenkiValue, caseNo) {
 
   Logger.log('[INFO] 転帰 既定表示 採用 row=' + caseNo + ' value=' + SR_TENKI_PLACEHOLDER);
   return SR_TENKI_PLACEHOLDER;
+}
+
+/**
+ * 「請求年月日」「領収年月日」の行をラベル列から探し、
+ * 同じ行にある ① の値セルを返す。
+ * 実テンプレートは `請求年月日はここ` / `領収年月日はここ` marker を持たず、
+ * `①　  　年 　　月　 　日` という実セルだけを持つため、この補助探索で吸収する。
+ */
+function srFindSummary1DateValueCell_(table, rowLabelText) {
+  var normLabel = srNormalizePlaceholderText_(rowLabelText);
+  for (var r = 0; r < table.getNumRows(); r++) {
+    var row = table.getRow(r);
+    var firstCellText = row.getNumCells() > 0 ? row.getCell(0).getText() : '';
+    if (srNormalizePlaceholderText_(firstCellText).indexOf(normLabel) < 0) continue;
+
+    for (var c = 1; c < row.getNumCells(); c++) {
+      var cellText = row.getCell(c).getText();
+      if (srNormalizePlaceholderText_(cellText).indexOf('\u2460') >= 0) {
+        return { row: row, rowIdx: r, cellIdx: c };
+      }
+    }
+    Logger.log('[WARN] ' + rowLabelText + ' 行は見つかったが①セルが見つからない row=' + r);
+    return null;
+  }
+
+  Logger.log('[WARN] ' + rowLabelText + ' 行自体が見つからない');
+  return null;
 }
 
 function srFormatHyomenEndDate_(hasCase, tenkiValue, endDateText, caseNo) {

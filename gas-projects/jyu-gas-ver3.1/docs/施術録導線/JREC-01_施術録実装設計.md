@@ -1,8 +1,8 @@
 # JREC-01 WS-SR 施術録出力 — 本実装設計
 
 作成日: 2026-04-02
-更新日: 2026-04-04（WS-SR 個別セル内容ルール反映 v12 — 施術終了年月日 / 請求年月日 / 領収年月日）
-ステータス: **WS-SR 個別セル内容ルール反映 v12 実装完了。施術終了年月日=転帰なし空欄/転帰あり実日付、①請求年月日=対象月末日（暫定運用）、①領収年月日=当月最終来院日。Node確認PASS。live 1患者1月の再生成目視は次確認。**
+更新日: 2026-04-04（WS-SR live未反映原因切り分け v13 — 請求年月日 / 領収年月日）
+ステータス: **WS-SR v13 修正済み。live未反映原因は「テンプレート現物に `請求年月日はここ` / `領収年月日はここ` marker がなく、既存コードが marker 前提で探索していたため、fallback null で書き込みスキップになったこと」と切り分け。左端ラベル行 + ①セル探索へ修正し、Node確認PASS、`clasp push --force` 反映済み。`clasp run` は権限エラーのため live再生成目視は手動確認待ち。**
 対象フェーズ: WS-SR Phase 1（保険施術録 月次 1患者出力）
 
 ---
@@ -546,10 +546,66 @@ assertEqual(summary.receiptDate, 'R8.3.9', 'receiptDate uses last visit day');
 
 ---
 
+## 14. WS-SR 請求年月日 / 領収年月日 live未反映の原因切り分け（2026-04-04）
+
+### 原因結論
+
+`clasp push --force` で bound script `1LROlc63TPr4Y2uV3nT6tAwOc-T0bOFflF0aXNzTlLEM_C3QbydHxCTzH` へ最新 `Ver3_shuRecorder.js` は反映できていた。
+一方で live テンプレート `1Tcq8kcwFfIzFixGF54xFoWyZcNz7IsgjYsT8NqV0mnY` を Drive API で確認すると、①月/合計回数/合計金額/請求期間/請求金額には `...はここ` marker があるが、**請求年月日 / 領収年月日には `請求年月日はここ` / `領収年月日はここ` marker がなく、行ラベル `請 求 年 月 日` / `領 収 年 月 日` と値セル `①　  　年 　　月　 　日` だけが存在**していた。
+
+そのため v12 の `srResolveSummary1Positions_()` が `claimDate` / `receiptDate` を marker 前提で探しても見つからず、`SR_SUMMARY1_FALLBACK_COL.claimDate = null` / `receiptDate = null` のため `rowIdx=-1, cellIdx=-1` になり、`srSetTableCellAtPos_()` で書き込みスキップ → live 出力が空欄のままになっていた、と判断した。
+
+### テンプレート現物確認結果
+
+| 確認対象 | 現物 |
+|---|---|
+| ①請求年月日 行ラベル | row 35 col 1 = `　請 求 年 月 日` |
+| ①請求年月日 値セル | row 35 col 5 = `①　  　年 　　月　 　日` |
+| ①領収年月日 行ラベル | row 36 col 1 = `　領 収 年 月 日` |
+| ①領収年月日 値セル | row 36 col 5 = `①　  　年 　　月　 　日` |
+| `請求年月日はここ` marker | **なし** |
+| `領収年月日はここ` marker | **なし** |
+
+### 修正内容
+
+| ファイル | 内容 |
+|---|---|
+| `Ver3_shuRecorder.js` | `srFindSummary1DateValueCell_()` を追加。`請求年月日` / `領収年月日` は marker 未検出時に、左端ラベル行を正規化比較で見つけ、同じ行の `①` を含むセルを出力先として採用する。`srResolveSummary1Positions_()` からこの補助探索を呼ぶ |
+
+### テスト方法
+
+1. `node --check Ver3_shuRecorder.js`
+2. Node の簡易 `FakeTable` で、marker なし・ラベル行 + `① 年 月 日` 実セルだけを持つ表を作り、`srFindSummary1DateValueCell_()` と `srResolveSummary1Positions_()` が claimDate / receiptDate の座標を解決できることを確認
+3. `srBuildSummary1Values_()` が `claimDate = R8.3.31`、`receiptDate = R8.3.9` を返すことを確認
+4. `clasp push --force` で bound script へ再反映
+
+### 確認結果
+
+| 観点 | 結果 |
+|---|---|
+| JS構文 | ✅ `node --check Ver3_shuRecorder.js` PASS |
+| `請求年月日` の出力先解決 | ✅ FakeTable テストで row=1 col=4 を解決 |
+| `領収年月日` の出力先解決 | ✅ FakeTable テストで row=2 col=4 を解決 |
+| `srResolveSummary1Positions_()` 経由の claimDate / receiptDate 解決 | ✅ PASS |
+| `claimDate = 対象月末日` | ✅ `R8.3.31` PASS |
+| `receiptDate = 当月最終来院日` | ✅ `R8.3.9` PASS |
+| bound script への反映 | ✅ `clasp push --force` で 10 files pushed |
+| 1患者1月 live再生成の自動実行 | ⚠️ `clasp run srRunTsr10v2Debug_` は `Unable to run script function. Please make sure you have permission to run the script function.` で実行不可。UI/Apps Script エディタからの手動再生成確認が次作業 |
+
+### 未確定事項 / 次確認事項
+
+| 項目 | 状態 |
+|---|---|
+| 1患者1月の live 再生成目視 | **次確認事項**。`clasp push --force` 済みなので、スプレッドシート UI から施術録を再生成し、`請求年月日=R8.3.31` / `領収年月日=当月最終来院日` が入るか確認する |
+| 請求年月日の公式ルール | **未確定**。現在は対象月末日の暫定運用を継続 |
+
+---
+
 ## 変更履歴
 
 | 日付 | 内容 |
 |---|---|
+| 2026-04-04 | v13: 請求年月日/領収年月日が live で空欄の原因を切り分け。テンプレート現物に marker がなく、marker 前提探索 + fallback null で書き込みスキップになっていたため、左端ラベル行 + ①セル探索に修正。Node確認PASS、clasp push反映済み、clasp run は権限エラーで手動目視待ち。 |
 | 2026-04-04 | v12: 個別セル内容ルールを実装へ反映。施術終了年月日は転帰なし=空欄/転帰あり=実日付、①請求年月日は対象月末日（暫定運用）、①領収年月日は当月最終来院日。Node確認PASS。 |
 | 2026-04-04 | 出力先を `JREC-01_月次出力/YYYY-MM/02_施術録/` へ統一、旧版退避 `90_再生成旧版/`、Template ID / 出力フォルダID の設定シート優先、出力物/テンプレ分離 docs への参照を追記 |
 | 2026-04-02 | 初版作成。sandbox 検証完了後の本実装設計として確定。 |
