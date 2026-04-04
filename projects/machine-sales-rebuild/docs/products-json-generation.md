@@ -42,8 +42,9 @@
 ## 実行コマンド
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.export_products_json
+uv run python -m scripts.export_products_json
 ```
 
 ## 実データ全量での再出力結果

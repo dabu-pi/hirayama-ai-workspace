@@ -74,8 +74,11 @@ artifacts/
 secrets/
 
 # STRONG DEPOT 実データのローカル専用フルエクスポート
-data/input/*.full.csv
-data/output/product_master_v0.full.csv
+projects/machine-sales-rebuild/data/raw/*.full.csv
+projects/machine-sales-rebuild/data/output/product_master_v0.full.csv
+projects/machine-sales-rebuild/data/output/*.full.log
+projects/machine-sales-rebuild/tmp/*
+!projects/machine-sales-rebuild/tmp/.gitkeep
 .uv-cache/
 
 # 参考資料PDF（制度資料など。Git管理対象外・ローカル保持）

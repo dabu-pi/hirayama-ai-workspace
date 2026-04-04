@@ -2,7 +2,7 @@
 
 ## 対象
 
-- 現行CSV: `data/input/current_product_master.full.csv`（ローカル専用・Git管理外）
+- 現行CSV: `data/raw/current_product_master.full.csv`（ローカル専用・Git管理外）
 - v0変換出力: `data/output/product_master_v0.full.csv`（ローカル専用・Git管理外）
 - 集計CSV: `data/output/image_count_distribution.csv`
 - 画像0件レポート: `data/output/image_zero_count_report.md`

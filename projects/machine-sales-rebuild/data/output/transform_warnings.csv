@@ -1,0 +1,4 @@
+﻿row_no,level,issue_code,message,sd_product_code,master_type,raw_value
+5,warning,maker_unregistered,maker is not registered: 謎メーカー.,SAOT25007CH,maker,謎メーカー
+5,warning,image_missing,No source image URLs found in 画像1〜3.,SAOT25007CH,,
+5,warning,sd_product_code_validation,"Maker legacy code OT is shared by ['OLYMPIC', 'OTHER'].",SAOT25007CH,,

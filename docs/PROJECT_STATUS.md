@@ -588,3 +588,22 @@ Apps Script 実体と WordPress/PHP 反映経路の未確定部分を、CLI/API/
 1. `docs/image-data-audit.md` の結果を起点に、商品コード→元画像URLを取得できる正本ソースを特定する。
 2. `docs/sd-product-code-audit.md` の `KT` / `US` / 年`AT` / メーカー不一致行を現場確認し、seed化するものと例外固定するものを分ける。
 3. 画像URLソースが確定したら、`docs/image-generation-phase-plan.md` をベースに 700x700 派生生成試作へ進む。
+
+---
+
+## 2026-04-05 中古マシン販売システム再構築 フォルダ再編
+
+### 現在地
+
+この案件専用の docs / data / scripts / tests は `projects/machine-sales-rebuild/` 配下へ移した。
+
+### 再開時の入口
+
+- 概要: `projects/machine-sales-rebuild/README.md`
+- 詳細進捗: `projects/machine-sales-rebuild/PROJECT_STATUS.md`
+- 構造説明: `projects/machine-sales-rebuild/docs/project-structure.md`
+
+### 補足
+
+- root の `docs/PROJECT_STATUS.md` は全体共通の入口として残す
+- この案件の詳細更新は今後 `projects/machine-sales-rebuild/PROJECT_STATUS.md` を正本にする

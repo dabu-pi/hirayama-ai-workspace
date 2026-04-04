@@ -42,7 +42,7 @@
 
 ## 実データ全量での結果
 
-- 入力 `data/input/current_product_master.full.csv`: 993行取得
+- 入力 `data/raw/current_product_master.full.csv`: 993行取得
 - 出力 `data/output/product_master_v0.full.csv`: 924商品行
 - issue数: 4,953件 → seed/変換補正後 1,126件
 
@@ -59,15 +59,17 @@
 ## 実行コマンド
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0
+uv run python -m scripts.transform_current_to_v0
 ```
 
 実CSV全量での実行例:
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0 --input data\input\current_product_master.full.csv --output data\output\product_master_v0.full.csv --log data\output\transform_current_to_v0.full.log --error-csv data\output\transform_current_to_v0.full_errors.csv --warnings-csv data\output\transform_warnings.csv --unknown-master-csv data\output\unknown_master_values.csv --legacy-code-exceptions-csv data\output\legacy_code_exceptions.csv --image-count-distribution-csv data\output\image_count_distribution.csv --image-zero-report data\output\image_zero_count_report.md --unmapped-json data\output\transform_current_to_v0.full_unmapped.json
+uv run python -m scripts.transform_current_to_v0 --input data\raw\current_product_master.full.csv --output data\output\product_master_v0.full.csv --log data\output\transform_current_to_v0.full.log --error-csv data\output\transform_current_to_v0.full_errors.csv --warnings-csv data\output\transform_warnings.csv --unknown-master-csv data\output\unknown_master_values.csv --legacy-code-exceptions-csv data\output\legacy_code_exceptions.csv --image-count-distribution-csv data\output\image_count_distribution.csv --image-zero-report data\output\image_zero_count_report.md --unmapped-json data\output\transform_current_to_v0.full_unmapped.json
 ```
 
 ## まだ仮の部分

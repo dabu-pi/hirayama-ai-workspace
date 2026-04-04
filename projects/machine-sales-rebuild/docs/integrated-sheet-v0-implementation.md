@@ -26,8 +26,9 @@
 ## 雛形生成コマンド
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.generate_integrated_sheet_v0
+uv run python -m scripts.generate_integrated_sheet_v0
 ```
 
 ## 注意

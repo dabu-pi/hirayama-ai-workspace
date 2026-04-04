@@ -20,7 +20,7 @@ const DEFAULT_OUTPUT = resolve(
   __dirname,
   '..',
   'data',
-  'input',
+  'raw',
   'current_product_master.full.csv',
 );
 

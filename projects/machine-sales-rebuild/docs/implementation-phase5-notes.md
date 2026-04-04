@@ -82,7 +82,7 @@
 - `画像1〜3` はURL形式のみ採用し、非URLテキストは `image_url_suspicious` warning に分離した
 - `sd_product_code` パース時に大文字化し、`Bm` / `Hs` / `Ig` などの小文字混在旧コードを吸収した
 - 商品実体がないプレースホルダ行は変換対象から除外し、`internal_id` は有効行順で採番するようにした
-- `data/input/*.full.csv` と `data/output/product_master_v0.full.csv` は仕入先/販売先の文字列を含み得るため、AGENTS.md に合わせて Git 管理外にした
+- `data/raw/*.full.csv` と `data/output/product_master_v0.full.csv` は仕入先/販売先の文字列を含み得るため、AGENTS.md に合わせて Git 管理外にした
 
 ## 2026-04-05 フェーズ5Bの実データ監査結果
 
@@ -106,22 +106,32 @@
 この環境では `python` ではなく `uv run python` を使う。`uv` の既定キャッシュ場所が衝突したため、`UV_CACHE_DIR` をワークスペース配下に寄せる。
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.generate_integrated_sheet_v0
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.export_products_json
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m unittest discover -s tests -v
+uv run python -m scripts.generate_integrated_sheet_v0
+uv run python -m scripts.transform_current_to_v0
+uv run python -m scripts.export_products_json
+uv run python -m unittest discover -s tests -v
 ```
 
 ### 実データ監査コマンド
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:AIOS_SERVICE_ACCOUNT_PATH='C:\hirayama-ai-workspace\workspace\secrets\credentials.json'
-node scripts\export_sheet_to_csv.mjs --sheet-name "ネットショップ商品一覧" --output data\input\current_product_master.full.csv
-node scripts\export_sheet_to_csv.mjs --sheet-name "ルール" --output data\input\current_rules.full.csv
+node scripts\export_sheet_to_csv.mjs --sheet-name "ネットショップ商品一覧" --output data\raw\current_product_master.full.csv
+node scripts\export_sheet_to_csv.mjs --sheet-name "ルール" --output data\raw\current_rules.full.csv
 
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0 --input data\input\current_product_master.full.csv --output data\output\product_master_v0.full.csv --log data\output\transform_current_to_v0.full.log --error-csv data\output\transform_current_to_v0.full_errors.csv --warnings-csv data\output\transform_warnings.csv --unknown-master-csv data\output\unknown_master_values.csv --legacy-code-exceptions-csv data\output\legacy_code_exceptions.csv --image-count-distribution-csv data\output\image_count_distribution.csv --image-zero-report data\output\image_zero_count_report.md --unmapped-json data\output\transform_current_to_v0.full_unmapped.json
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.audit_sd_product_code --input data\output\product_master_v0.full.csv --seed-dir data\seeds --output data\output\sd_product_code_audit.csv
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.export_products_json --input data\output\product_master_v0.full.csv --seed-dir data\seeds --output data\output\products.full.sample.json
+uv run python -m scripts.transform_current_to_v0 --input data\raw\current_product_master.full.csv --output data\output\product_master_v0.full.csv --log data\output\transform_current_to_v0.full.log --error-csv data\output\transform_current_to_v0.full_errors.csv --warnings-csv data\output\transform_warnings.csv --unknown-master-csv data\output\unknown_master_values.csv --legacy-code-exceptions-csv data\output\legacy_code_exceptions.csv --image-count-distribution-csv data\output\image_count_distribution.csv --image-zero-report data\output\image_zero_count_report.md --unmapped-json data\output\transform_current_to_v0.full_unmapped.json
+uv run python -m scripts.audit_sd_product_code --input data\output\product_master_v0.full.csv --seed-dir data\seeds --output data\output\sd_product_code_audit.csv
+uv run python -m scripts.export_products_json --input data\output\product_master_v0.full.csv --seed-dir data\seeds --output data\output\products.full.sample.json
 ```
+
+## 2026-04-05 フォルダ再編
+
+- この案件専用の docs / data / scripts / tests を `projects/machine-sales-rebuild/` 配下へ移動した
+- 今後の実行基準は「project root へ移動して `uv run python -m scripts...` を使う」に統一した
+- `data/raw/*.full.csv`、`data/output/product_master_v0.full.csv`、`data/output/*.full.log` はローカル専用のまま維持する
+- 参照入口として `README.md`、`PROJECT_STATUS.md`、`docs/project-structure.md` を追加した
+- 再編後の確認として `generate_integrated_sheet_v0`、`transform_current_to_v0`、`export_products_json`、`unittest discover -s tests -v` を project root で再実行し、すべて通過した

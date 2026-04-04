@@ -38,8 +38,9 @@ parse結果と期待値を照合し、`ok` / `warning` / `error` 相当の状態
 ## 実行コマンド
 
 ```powershell
+Set-Location C:\hirayama-ai-workspace\workspace\projects\machine-sales-rebuild
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
-& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m unittest tests.test_sd_product_code -v
+uv run python -m unittest tests.test_sd_product_code -v
 ```
 
 ## まだ仮の部分

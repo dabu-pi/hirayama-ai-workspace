@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-04-05T07:30:59+09:00",
+  "generatedAt": "2026-04-05T08:11:11+09:00",
   "source": {
     "sheetName": "product_master_v0_sample",
     "system": "integrated-sheet-v0"
@@ -78,7 +78,7 @@
         "canonicalPath": "/products/oocy16003lg"
       },
       "searchText": "CYBEX レッグプレス CYBEX 中古 脚 ストレングスマシン OOCY16003LG レッグプレス",
-      "updatedAt": "2026-04-05T07:30:51+09:00"
+      "updatedAt": "2026-04-05T08:11:11+09:00"
     },
     {
       "id": "P0000002",
@@ -143,7 +143,7 @@
         "canonicalPath": "/products/hyic24909at"
       },
       "searchText": "ICARIAN ショルダープレス ICARIAN 中古 肩 ストレングスマシン HYIC24909AT 肩トレ",
-      "updatedAt": "2026-04-05T07:30:51+09:00"
+      "updatedAt": "2026-04-05T08:11:11+09:00"
     },
     {
       "id": "P0000003",
@@ -208,7 +208,7 @@
         "canonicalPath": "/products/oob116001at"
       },
       "searchText": "B1 マルチラック B1 売却済み その他 フリーウェイト OOB116001AT ラック",
-      "updatedAt": "2026-04-05T07:30:51+09:00"
+      "updatedAt": "2026-04-05T08:11:11+09:00"
     },
     {
       "id": "P0000004",
@@ -263,7 +263,7 @@
         "canonicalPath": "/products/saot25007ch"
       },
       "searchText": "テスト登録 ベンチプレス 謎メーカー 中古 胸 ストレングスマシン SAOT25007CH",
-      "updatedAt": "2026-04-05T07:30:51+09:00"
+      "updatedAt": "2026-04-05T08:11:11+09:00"
     }
   ]
 }

@@ -1,0 +1,3 @@
+﻿level,message,count,sample_sd_product_codes
+warning,"Maker legacy code OT is shared by ['OLYMPIC', 'OTHER'].",1,SAOT25007CH
+error,"Part code mismatch: expected SH, got AT.",1,HYIC24909AT
