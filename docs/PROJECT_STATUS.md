@@ -176,3 +176,61 @@
 - `scripts/upload-workspace-export-to-gdrive.ps1 -Mode copy` で `hirayama_gdrive_handoff:hirayama-ai-workspace/workspace-export` へアップロード済み
 - Google Drive アップロードログ: `logs/gdrive-upload/gdrive-upload_20260403_181301.log`
 - Google Drive アップロード結果JSON: `logs/gdrive-upload/gdrive-upload_20260403_181301.json`
+
+---
+
+## 2026-04-04 中古マシン販売システム再構築 初回棚卸し
+
+### 目的
+
+現行の中古マシン販売システムを壊さず棚卸しし、WordPress を使わない次世代再構築に向けた調査ドキュメントを作成する。
+
+### 作成した成果物
+
+- `docs/current-system-overview.md`
+- `docs/sheet-inventory.md`
+- `docs/gas-responsibility-map.md`
+- `docs/rebuild-architecture-draft.md`
+- `docs/migration-strategy.md`
+- `docs/open-questions.md`
+- `docs/tab-classification.csv`
+
+### 現在地
+
+- 商品マスタ、見積テンプレート、案件進捗台帳、競合データの主要スプレッドシートを Drive から特定し、主要タブの役割を Markdown に整理した。
+- 商品マスタの中核候補は `ネットショップ商品一覧2018-10-22`。
+- 見積/案件進捗は `【見積】見積もりテンプレート2.3`、`【見積】長谷川様ご依頼分`、`2020マシンやグループ全案件進捗状況` の `2024長谷川さん` が連動している可能性が高い。
+- 競合価格データは `STRONGDEPOT 競合サイトデータ` を収集元とし、`他社競合データ` が `IMPORTRANGE` で中継していることを確認した。
+- ローカルの `freee-automation` は `2024長谷川さん` / `lines_json作成` を対象に、freee見積作成・Gmail下書き・メール貼り付けを担っていることを整理した。
+
+### 完了済み
+
+- ルート `README.md`、`PROJECTS.md`、`ROADMAP.md`、`docs/PROJECT_STATUS.md` を読み、作業前に `git status` と `git pull --ff-only` を確認した。
+- Drive 上の主要スプレッドシートを `中古`、`商品一覧`、`見積`、`競合` などで検索し、主要ブックIDとタブ構成を棚卸しした。
+- 主要タブのサンプル範囲を取得し、商品コード体系、WordPress/BASE出力、見積計算、競合収集、案件台帳、freee連携の流れを整理した。
+- `競合サイトデータまとめ` の `メーカー分類` に `#ERROR!` が出ていること、`リンク` タブの旧見積テンプレートID `1ZM5veZcu-WGifslyCRkBtQwjigSUiAccqvDOypkZ_zs` が 404 であることを確認した。
+
+### 次アクション
+
+1. `ネットショップ商品一覧2018-10-22`、`【見積】見積もりテンプレート2.3`、`STRONGDEPOT 競合サイトデータ` の Apps Script エディタからコンテナバインドGASの scriptId、`.gs`、トリガーを取得する。
+2. `ネットショップ商品一覧2018-10-22` が商品マスタ正本かどうか、旧コピー/バックアップ/試作ブックの現役度を現場確認する。
+3. 商品コード生成仕様、WordPress反映経路、見積テンプレート正本、BASE継続要否、競合分類エラー原因を優先確認する。
+4. 新統合スプレッドシート v0 の列定義と、現行正本からの変換マッピング表を作る。
+
+### 保留事項
+
+- 対象ブックに紐づくコンテナバインドGAS本体は、今回の CLI/Drive API 調査ではまだ取得できていない。
+- WordPress への実反映が GAS API 投稿なのか CSV 手動インポートなのか未確認。
+- `中古マシン販売管理アプリ`、`ネットショップ商品一覧2024`、`ネットショップ商品一覧3.24bk`、コピー系ブック、空白/旧版タブの現役度は未確定。
+- `お客様希望商品` や案件タブに個人情報が含まれるため、今後のドキュメント/移行設計では値そのものを不用意に転記しない。
+
+### テスト状況
+
+- Google Drive コネクタで主要スプレッドシートのメタデータと範囲データを取得し、ブック名・タブ名・サンプル値を確認した。
+- `clasp list` とローカル `.clasprc.json` の Drive API 呼び出しでは、今回対象の中古マシン系コンテナバインドGASは見つからず、別件の JREC 系スクリプト2件のみ確認した。
+- `rg` は Windows 環境でアクセス拒否になったため、PowerShell `Get-ChildItem` + `Select-String` でローカル全文検索を実施した。
+
+### 直近の重要判断
+
+- 役割が不明なタブや旧コピーは即削除候補にせず、`要確認` または `アーカイブ` として扱う。
+- 新システムでは、商品マスタ本体と WordPress/BASE などのチャネル別出力を分離し、見積・案件・競合価格・メディアを別ドメインとして設計する方針でたたき台を作成した。
