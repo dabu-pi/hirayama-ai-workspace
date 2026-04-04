@@ -1,0 +1,6 @@
+master_type,code,display_name,legacy_value,legacy_code,aliases,is_active,sort_order,site_label,remarks
+category,strength_machine,ストレングスマシン,ストレングスマシン,strength_machine,ストレングス,true,10,ストレングスマシン,
+category,free_weight,フリーウェイト,フリーウェイト,free_weight,フリーウエイト,true,20,フリーウェイト,
+category,cardio_machine,有酸素マシン,有酸素マシン,cardio_machine,有酸素,true,30,有酸素マシン,
+category,accessory,アクセサリー,アクセサリー,accessory,備品,true,40,アクセサリー,
+category,uncategorized,未分類,未分類,uncategorized,その他|未設定,true,999,未分類,旧データ互換の退避用

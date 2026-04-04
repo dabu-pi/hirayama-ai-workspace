@@ -448,3 +448,69 @@ Apps Script 実体と WordPress/PHP 反映経路の未確定部分を、CLI/API/
 2. 現行 `画像1〜3` → `source_image_urls` 変換と `main_image_index` 初期化を含む読み取り専用変換スクリプトを作る。
 3. 元画像URLから700x700正方形の表示用画像を生成し、`display_image_urls` と `products.json.images[].displayUrl` を出力する試作を作る。
 4. `products.json` 生成サンプルで、最大10枚、代表画像、売却済み、非公開、画像欠損要確認のケースを比較検証する。
+
+---
+
+## 2026-04-05 中古マシン販売システム再構築 実装フェーズ5A
+
+### 現在地
+
+既存スプレッドシート/GAS/PHP を触らず、ローカル分離のまま v0 雛形CSV、現行→v0変換、v0→`products.json` 出力、`sd_product_code` 検証、設定マスタ seed、最小テストまで試作実装を追加した。
+
+### 完了済み
+
+- 追加: `data/templates/integrated-sheet-v0/*.csv`
+- 追加: `data/seeds/settings_*.csv`
+- 追加: `data/samples/current_product_master_input_sample.csv`
+- 追加: `data/samples/product_master_v0_sample.csv`
+- 追加: `data/output/products.sample.json`
+- 追加: `data/output/transform_current_to_v0.log`
+- 追加: `data/output/transform_current_to_v0_errors.csv`
+- 追加: `data/output/transform_current_to_v0_unmapped.json`
+- 追加: `scripts/__init__.py`
+- 追加: `scripts/lib/__init__.py`
+- 追加: `scripts/lib/product_v0.py`
+- 追加: `scripts/lib/sd_product_code.py`
+- 追加: `scripts/generate_integrated_sheet_v0.py`
+- 追加: `scripts/transform_current_to_v0.py`
+- 追加: `scripts/export_products_json.py`
+- 追加: `tests/__init__.py`
+- 追加: `tests/test_sd_product_code.py`
+- 追加: `tests/test_transform_current_to_v0.py`
+- 追加: `tests/test_export_products_json.py`
+- 追加: `docs/integrated-sheet-v0-implementation.md`
+- 追加: `docs/transform-current-to-v0.md`
+- 追加: `docs/products-json-generation.md`
+- 追加: `docs/sd-product-code-library.md`
+- 追加: `docs/settings-master-seed-notes.md`
+- 追加: `docs/implementation-phase5-notes.md`
+
+### テスト状況
+
+- 実行済み: `uv run python -m scripts.generate_integrated_sheet_v0`
+- 実行済み: `uv run python -m scripts.transform_current_to_v0`
+- 実行済み: `uv run python -m scripts.export_products_json`
+- 実行済み: `uv run python -m unittest discover -s tests -v`（12件すべてOK）
+- このPCでは `python` / `py` が PATH に無いため、`C:\Users\pinsh\.local\bin\uv.exe` と `UV_CACHE_DIR=C:\hirayama-ai-workspace\workspace\.uv-cache` を使う
+
+### 直近の重要判断
+
+- `product_master` の画像正本は `source_image_urls_json` + `source_image_count` + `main_image_index` + `main_source_image_url` で保持する。表示用700x700 URLは派生データ側に寄せる。
+- 画像0件行は除外せず残し、変換ログに `image_missing` warning を出す。
+- 未登録マスタ値は fallback code を入れて行を残し、警告ログで検知する。
+- `sd_product_code` は可変長メーカーコードを考慮し、店舗プレフィックス + 部位サフィックスの最長一致で分解する。
+- サンプル `HYIC24909AT` は部位コード不一致エラーの確認用に残している。
+
+### 保留事項
+
+- 実データCSV全量を流したときの未登録マスタ・旧コード例外・画像0件の件数確認
+- `displayUrl` の生成先・ファイル命名・余白背景・再生成タイミング
+- `internal_id` の正式採番ルール
+- `description_html` / SEO文面生成ルール
+- WordPress隔離列とBASE隔離列の最終要否
+
+### 次アクション
+
+1. 現行 `ネットショップ商品一覧` の実CSVエクスポートを `scripts/transform_current_to_v0.py` に流し、seed不足と変換例外を洗い出す。
+2. 画像派生生成フェーズに向けて、`displayUrl` の出力先・命名規則・余白背景ルールを決める。
+3. 問題なければ、`data/templates/integrated-sheet-v0/*.csv` を元に Google Sheets v0 実体化へ進む。

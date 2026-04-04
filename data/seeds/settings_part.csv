@@ -1,0 +1,7 @@
+master_type,code,display_name,legacy_value,legacy_code,aliases,is_active,sort_order,site_label,remarks
+part,LG,脚,脚,LG,足|下肢,true,10,脚,
+part,SH,肩,肩,SH,ショルダー,true,20,肩,
+part,CH,胸,胸,CH,チェスト,true,30,胸,
+part,BK,背中,背中,BK,バック,true,40,背中,
+part,AT,その他,その他,AT,全身|その他,true,90,その他,
+part,NECK,首,首,,ネック,true,100,首,旧商品コードでは末尾コード空欄の例外あり

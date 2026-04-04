@@ -1,0 +1,8 @@
+master_type,code,display_name,legacy_value,legacy_code,aliases,is_active,sort_order,site_label,remarks
+maker,CYBEX,CYBEX,CYBEX,CY,サイベックス,true,10,CYBEX,
+maker,ICARIAN,ICARIAN,ICARIAN,IC,イカリアン,true,20,ICARIAN,
+maker,B1,B1,B1,B1,,true,30,B1,
+maker,OLYMPIC,OLYMPIC,OLYMPIC,OT,オリンピック,true,40,OLYMPIC,
+maker,MAXICAM,MAXICAM,MAXICAM,MC,,true,50,MAXICAM,旧コードMC衝突あり
+maker,MUSCLE_CLAMP,MUSCLE CLAMP,MUSCLE CLAMP,MC,MUSCLECLAMP,true,60,MUSCLE CLAMP,旧コードMC衝突あり
+maker,UNKNOWN_MAKER,未設定,未設定,OT,その他|未設定,true,999,未設定,旧データ互換の退避用

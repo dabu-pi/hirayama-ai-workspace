@@ -1,0 +1,6 @@
+master_type,code,display_name,legacy_value,legacy_code,aliases,is_active,sort_order,site_label,remarks
+condition,used,中古,中古,used,used|USED,true,10,中古,
+condition,brandnew,新品,新品,brandnew,brandnew|NEW,true,20,新品,
+condition,refurbish,リファービッシュ品,リファービッシュ品,refurbish,整備済み,true,30,リファービッシュ品,
+condition,sold,売却済み,売却済み,sold,SOLD,true,40,売却済み,
+condition,unknown,未設定,未設定,unknown,その他|不明,true,999,未設定,旧データ互換の退避用

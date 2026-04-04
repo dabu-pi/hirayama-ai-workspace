@@ -1,0 +1,5 @@
+master_type,code,display_name,legacy_value,legacy_code,aliases,is_active,sort_order,site_label,remarks
+store,OO,大阪本部,大阪本部,OO,大阪|大阪本部,true,10,大阪本部,
+store,HY,兵庫,兵庫,HY,兵庫|兵庫倉庫,true,20,兵庫,
+store,SA,埼玉,埼玉,SA,埼玉|埼玉倉庫,true,30,埼玉,
+store,AT,未設定,未設定,AT,その他|未設定,true,999,未設定,旧データ互換の退避用
