@@ -62,18 +62,16 @@ var SR_SUM_COL = {
 };
 
 /**
- * 施術終了年月日プレースホルダー（転帰なし=施術継続中）
- * 転帰が記載されていない限り実日付は入れず、このプレースホルダーを表示する。
- * 2026-04-03 T-SR-17: '　　年　　月　　日'（全角スペース）は文字ずれするため
- *   '年月日' に変更（見た目優先・ずれにくい最短表記）
+ * 施術終了年月日ルール（2026-04-04確定）:
+ * 転帰なし = 空欄、転帰あり + 終了日あり = その日付を表示。
+ * 表示ルールは srFormatHyomenEndDate_ に集約する。
  */
-var SR_END_DATE_PLACEHOLDER = '年　月　日';  // 全角スペース1つ入り（詰まり防止）
 var SR_TENKI_PLACEHOLDER = '治癒･中止･転医';
 
 /** 初検情報のデフォルト空オブジェクト（初検情報履歴なし時に使用） */
 // v6: ①集計ブロックを項目ごとに独立配置するための fallback 列。
 // marker が見つかった項目は marker 座標を優先し、未発見項目だけここを使う。
-// TODO(v6): claimAmount / claimDate / receiptDate の fallback 列はテンプレート現物で確定後に固定する。
+// claimAmount / claimDate / receiptDate は marker 座標を正とし、fallback 列は未定義なら blank 維持。
 var SR_SUMMARY1_FALLBACK_COL = {
   month:       1,    // ①月
   visitCount:  3,    // ①合計回数
@@ -81,9 +79,9 @@ var SR_SUMMARY1_FALLBACK_COL = {
   windowPay:   7,    // ①一部負担金額
   periodRange: null, // ①請求期間（同一セル2行構造のため marker 未発見時は blank 維持）
   periodDays:  13,   // ①日間
-  claimAmount: null, // ①請求金額（未確定のため marker 未発見なら blank）
-  claimDate:   null, // ①請求年月日（未確定のため marker 未発見なら blank）
-  receiptDate: null, // ①領収年月日（未確定のため marker 未発見なら blank）
+  claimAmount: null, // ①請求金額（marker 未発見なら blank）
+  claimDate:   null, // ①請求年月日（marker 未発見なら blank）
+  receiptDate: null, // ①領収年月日（marker 未発見なら blank）
 };
 
 var SR_EMPTY_INIT_EXAM_ = { injuryDatetime: '', injuryPlace: '', injuryStatus: '', initFindings: '' };
@@ -198,7 +196,7 @@ function srGenerateDocument(patientId, yearMonth) {
 
   // ----- 差し込み -----
   srInsertHyomenData_(docId, patient, caseData, initExam);
-  srInsertUrameData_(docId, visitRows, parseInt(ymParts[1]), caseData, initExam2);
+  srInsertUrameData_(docId, visitRows, yearMonth, parseInt(ymParts[1]), caseData, initExam2);
 
   // ----- PDF 出力 -----
   var pdfId = srExportPdf_(docId, outFolder, filename);
@@ -453,10 +451,18 @@ function srGetCaseData_(ss, patientId, yearMonth) {
       srBackfillCaseValue_(c1, 'start1', row[ci(cc.start1)]);
       srBackfillCaseValue_(c1, 'start2', row[ci(cc.start2)]);
       // 転帰・終了日は月内の最終行で上書き
-      if (row[ci(cc.tenki1)]) c1.tenki1 = String(row[ci(cc.tenki1)]);
-      if (row[ci(cc.tenki2)]) c1.tenki2 = String(row[ci(cc.tenki2)]);
-      if (row[ci(cc.end1)])   c1.end1   = row[ci(cc.end1)];
-      if (row[ci(cc.end2)])   c1.end2   = row[ci(cc.end2)];
+      if (row[ci(cc.tenki1)]) {
+        c1.tenki1 = String(row[ci(cc.tenki1)]);
+        c1.end1 = row[ci(cc.end1)] || dt;
+      } else if (row[ci(cc.end1)]) {
+        c1.end1 = row[ci(cc.end1)];
+      }
+      if (row[ci(cc.tenki2)]) {
+        c1.tenki2 = String(row[ci(cc.tenki2)]);
+        c1.end2 = row[ci(cc.end2)] || dt;
+      } else if (row[ci(cc.end2)]) {
+        c1.end2 = row[ci(cc.end2)];
+      }
 
     } else {
       // ── case2（別エピソード）── caseNo=2 の行から部位_部位1 を使う
@@ -473,8 +479,12 @@ function srGetCaseData_(ss, patientId, yearMonth) {
       srBackfillCaseValue_(c2, 'd1',     String(row[ci(cc.d1)] || ''));
       srBackfillCaseValue_(c2, 'inj1',   row[ci(cc.inj1)]);
       srBackfillCaseValue_(c2, 'start1', row[ci(cc.start1)]);
-      if (row[ci(cc.tenki1)]) c2.tenki1 = String(row[ci(cc.tenki1)]);
-      if (row[ci(cc.end1)])   c2.end1   = row[ci(cc.end1)];
+      if (row[ci(cc.tenki1)]) {
+        c2.tenki1 = String(row[ci(cc.tenki1)]);
+        c2.end1 = row[ci(cc.end1)] || dt;
+      } else if (row[ci(cc.end1)]) {
+        c2.end1 = row[ci(cc.end1)];
+      }
     }
   }
 
@@ -744,15 +754,8 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
   rep('負傷名1',         caseData.d1);
   rep('負傷年月日1',     caseData.inj1);
   rep('初検年月日1',     caseData.start1);
-  // ★施術終了年月日(T-SR-17): 転帰なしなら実日付を入れずプレースホルダーを表示（施術継続中）
-  //   転帰あり かつ 終了日あり → 実日付
-  //   転帰なし または 終了日なし → SR_END_DATE_PLACEHOLDER
-  //   ケース自体が存在しない → 空欄
   var hasCase1 = !!(caseData.d1 || caseData.inj1 || caseData.start1);
-  rep('施術終了年月日1',
-      hasCase1
-        ? ((caseData.tenki1 && caseData.end1) ? caseData.end1 : SR_END_DATE_PLACEHOLDER)
-        : '');
+  rep('施術終了年月日1', srFormatHyomenEndDate_(hasCase1, caseData.tenki1, caseData.end1, 1));
   rep('日数1',           caseData.nissuu1);
   rep('施術回数1',       caseData.count1);
   rep('転帰1',           srFormatHyomenTenki_(hasCase1, caseData.tenki1, 1));
@@ -762,10 +765,7 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
   rep('負傷年月日2',     caseData.inj2);
   rep('初検年月日2',     caseData.start2);
   var hasCase2 = !!(caseData.d2 || caseData.inj2 || caseData.start2);
-  rep('施術終了年月日2',
-      hasCase2
-        ? ((caseData.tenki2 && caseData.end2) ? caseData.end2 : SR_END_DATE_PLACEHOLDER)
-        : '');
+  rep('施術終了年月日2', srFormatHyomenEndDate_(hasCase2, caseData.tenki2, caseData.end2, 2));
   rep('日数2',           caseData.nissuu2);
   rep('施術回数2',       caseData.count2);
   rep('転帰2',           srFormatHyomenTenki_(hasCase2, caseData.tenki2, 2));
@@ -786,11 +786,12 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
 
 /**
  * 裏面の日別明細行と ① 月次集計行を書き込む。
+ * @param {string}      yearMonth   - 対象年月 "YYYY-MM"
  * @param {number}      targetMonth - 対象月の数字（例: 4）
  * @param {Object}      caseData    - srGetCaseData_ の戻り値（2件目表示判定に使用）
  * @param {Object|null} initExam2   - srGetAllInitExamData_ の [1]（case2 初検情報、なければ null）
  */
-function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) {
+function srInsertUrameData_(docId, visitRows, yearMonth, targetMonth, caseData, initExam2) {
   var doc  = DocumentApp.openById(docId);
   var body = doc.getBody();
 
@@ -852,7 +853,7 @@ function srInsertUrameData_(docId, visitRows, targetMonth, caseData, initExam2) 
 
   // ----- ① 月次集計行 -----
   if (sumIdx[1] >= 0) {
-    var summary1Values = srBuildSummary1Values_(visitRows, targetMonth);
+    var summary1Values = srBuildSummary1Values_(visitRows, targetMonth, yearMonth);
     var summary1PosMap = srResolveSummary1Positions_(uTable, sumIdx[1]);
     srWriteSummary1Values_(uTable, summary1PosMap, summary1Values);
   }
@@ -1053,10 +1054,10 @@ function srFindSummaryRows_(table) {
 }
 
 /**
- * テーブル行の指定セルにテキストを書き込む。
- * セルインデックスが行のセル数を超える場合は WARN ログのみ（エラーにしない）。
+ * 裏面① 月次集計値を組み立てる。
+ * 請求年月日 = 対象月末日（暫定運用）、領収年月日 = 当月最終来院日。
  */
-function srBuildSummary1Values_(visitRows, targetMonth) {
+function srBuildSummary1Values_(visitRows, targetMonth, yearMonth) {
   var totalInitial = 0;
   var totalBase = 0;
   var totalCold = 0;
@@ -1079,7 +1080,8 @@ function srBuildSummary1Values_(visitRows, targetMonth) {
 
   // TODO(v6): ①日間の定義が「請求期間の日数」か「来院日数」か未確定。
   // 現状は既存実装と同じく来院行数を表示し、仕様確定後に必要なら差し替える。
-  // TODO(v6): ①請求年月日 / ①領収年月日の業務ルールが未確定のため blank 維持。
+  // ①請求年月日: 現時点の公式ルール未確定のため、暫定運用として対象月末日を入れる。
+  // ①領収年月日: 当月の最終来院日を代表日として入れる。
   return {
     month:       visitRows.length > 0 ? String(targetMonth) + '月' : '',
     visitCount:  visitRows.length > 0 ? String(visitRows.length) + '回' : '',
@@ -1090,8 +1092,8 @@ function srBuildSummary1Values_(visitRows, targetMonth) {
     periodTo:    periodWindow.periodTo,
     periodDays:  visitRows.length > 0 ? String(visitRows.length) + '日' : '',
     claimAmount: srFormatSummary1Amount_(claimAmount),
-    claimDate:   '',
-    receiptDate: '',
+    claimDate:   srFormatSummary1ClaimDate_(visitRows, yearMonth),
+    receiptDate: srFormatSummary1ReceiptDate_(periodWindow),
   };
 }
 
@@ -1113,6 +1115,7 @@ function srGetSummary1PeriodWindow_(visitRows, targetMonth) {
   return {
     periodFrom: periodFrom,
     periodTo: periodTo,
+    lastVisitDate: lastVisit ? lastVisit.date : null,
   };
 }
 
@@ -1143,6 +1146,31 @@ function srFormatSummary1PeriodDate_(dateVal) {
     eraYear = y - 1925;
   }
   return eraCode + String(eraYear) + '.' + String(m) + '.' + String(day);
+}
+
+function srFormatSummary1ClaimDate_(visitRows, yearMonth) {
+  if (!visitRows || visitRows.length === 0) return '';
+
+  var ym = String(yearMonth || '').trim().split('-');
+  var year = parseInt(ym[0], 10);
+  var month = parseInt(ym[1], 10);
+  if (isNaN(year) || isNaN(month)) {
+    Logger.log('[WARN] ①請求年月日 対象年月を解釈できないため blank: yearMonth=' + yearMonth);
+    return '';
+  }
+
+  var monthEnd = new Date(year, month, 0);
+  var claimDate = srFormatSummary1PeriodDate_(monthEnd);
+  Logger.log('[INFO] ①請求年月日 暫定運用=対象月末日 value=' + claimDate);
+  return claimDate;
+}
+
+function srFormatSummary1ReceiptDate_(periodWindow) {
+  var receiptDate = (periodWindow && periodWindow.lastVisitDate)
+    ? srFormatSummary1PeriodDate_(periodWindow.lastVisitDate)
+    : '';
+  Logger.log('[INFO] ①領収年月日 最終来院日 value=' + String(receiptDate || ''));
+  return receiptDate;
 }
 
 function srResolveSummary1Positions_(table, summary1RowIdx) {
@@ -1214,6 +1242,10 @@ function srWriteSummary1Values_(table, posMap, values) {
       Logger.log('[INFO] ①一部負担金額 表示値=' + String(value || ''));
     } else if (key === 'claimAmount') {
       Logger.log('[INFO] ①請求金額 表示値=' + String(value || ''));
+    } else if (key === 'claimDate') {
+      Logger.log('[INFO] ①請求年月日 表示値=' + String(value || ''));
+    } else if (key === 'receiptDate') {
+      Logger.log('[INFO] ①領収年月日 表示値=' + String(value || ''));
     }
     Logger.log('[INFO] ①集計項目 ' + key + ' 書き込み値=' + JSON.stringify(String(value || '')));
     srSetTableCellAtPos_(table, pos, value, '①集計項目 ' + key);
@@ -1274,6 +1306,24 @@ function srFormatHyomenTenki_(hasCase, tenkiValue, caseNo) {
 
   Logger.log('[INFO] 転帰 既定表示 採用 row=' + caseNo + ' value=' + SR_TENKI_PLACEHOLDER);
   return SR_TENKI_PLACEHOLDER;
+}
+
+function srFormatHyomenEndDate_(hasCase, tenkiValue, endDateText, caseNo) {
+  if (!hasCase) return '';
+
+  var resolvedTenki = String(tenkiValue || '').trim();
+  var resolvedEndDate = String(endDateText || '').trim();
+  if (!resolvedTenki) {
+    Logger.log('[INFO] 施術終了年月日 空欄採用 row=' + caseNo + ' reason=転帰なし');
+    return '';
+  }
+  if (resolvedEndDate) {
+    Logger.log('[INFO] 施術終了年月日 実日付採用 row=' + caseNo + ' value=' + resolvedEndDate);
+    return resolvedEndDate;
+  }
+
+  Logger.log('[WARN] 転帰ありだが施術終了年月日が空欄 row=' + caseNo + ' tenki=' + resolvedTenki);
+  return '';
 }
 
 /**
