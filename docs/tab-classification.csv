@@ -12,6 +12,9 @@ spreadsheet_name,spreadsheet_id,sheet_name,current_role,decision,usage_status,ev
 ネットショップ商品一覧2018-10-22 のコピー,1pceh0YsHVGbBf1PS3OjUmy_Z2OtpMzayf8euAiJNIwY,全タブ,商品マスタ旧コピー候補,アーカイブ,要確認,コピー名,凍結対象候補
 ネットショップ商品一覧3.24bk,1MbQbJdNWFSmQs24kfJnv06Eh62yt3nGIj-zAqnafxFs,全タブ,商品マスタバックアップ候補,アーカイブ,要確認,bk名称,最終更新と差分確認が必要
 中古マシン販売管理アプリ,1tZEHQU45zTDKDm1lWYC-wob2SHuK4DNdnqi08k1mIog,used,簡易商品管理表,要確認,要確認,13列程度の簡易商品項目のみ,本流か試作か確認
+【商品追加用ページ】メーカー、同業者,1oyelesEq-Hw2Nlr6nNdxqWoR6RsftvWyZw0b-uNUVyQ,その他の商品一覧,見積B列から参照するその他商品マスタ,残す,使用中の可能性が高い,見積もりテンプレートGASが直接参照し品番・商品名・定価・仕入値・掛率・メーカー名を保持,ネットショップ商品一覧2018-10-22のその他商品一覧とは別ブック
+【商品追加用ページ】メーカー、同業者,1oyelesEq-Hw2Nlr6nNdxqWoR6RsftvWyZw0b-uNUVyQ,TEST商品,テスト商品タブ,要確認,要確認,メタデータで存在確認,内容と現役度未確認
+【商品追加用ページ】メーカー、同業者,1oyelesEq-Hw2Nlr6nNdxqWoR6RsftvWyZw0b-uNUVyQ,画像,画像タブ,要確認,要確認,メタデータで存在確認,その他商品マスタとの関係確認
 【見積】見積もりテンプレート2.3,1LAbKaOuuOKKLByXCLGurjVBglwCTOpdfomC2x8u6Yaw,mitsumori,商品コード起点の見積行/割引/運搬費,残す,使用中の可能性が高い,SD商品コード・運搬設置費・割引率列あり,自動入力GAS未取得
 【見積】見積もりテンプレート2.3,1LAbKaOuuOKKLByXCLGurjVBglwCTOpdfomC2x8u6Yaw,見積書(簡易),顧客提出用簡易見積帳票,統合,使用中/派生利用の可能性,小計・税・合計のセル式あり,固定行式のため再設計時注意
 【見積】見積もりテンプレート2.3,1LAbKaOuuOKKLByXCLGurjVBglwCTOpdfomC2x8u6Yaw,運搬費計算,運搬設置費計算,統合,使用中の可能性,距離・高速代・燃費・人件費・車代の式あり,配送費モジュール候補
