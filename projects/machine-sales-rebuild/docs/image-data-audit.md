@@ -47,3 +47,29 @@
 - `generate.php` / WordPress 側で商品コード→画像URLをどこから引いているか
 - 現行サイト上の商品画像URLを商品コード単位で逆引きできるか
 - 商品シート外に画像管理台帳や Drive フォルダ命名規則があるか
+## 2026-04-05 phase5B 再実行結果
+
+### 件数
+
+| 指標 | 件数 |
+|---|---:|
+| 変換対象商品 | 924 |
+| `source_image_count=0` | 924 |
+| `source_image_count=1` | 0 |
+| `source_image_count=2` | 0 |
+| `source_image_count=3` | 0 |
+| `画像1` 非空 | 9 |
+| `画像2` 非空 | 0 |
+| `画像3` 非空 | 6 |
+| 非URL値 warning | 15 |
+
+### 確認したこと
+
+- `画像1〜3` から URL は1件も取得できなかった
+- 非URL値として `中村様`、`見積中`、`池田`、`ミッキー`、`栗本` などが入っていた
+- `inspect_sheet_cells.mjs` で live sheet の `P:R` 列を確認したところ、少なくとも確認範囲では `userEnteredValue.stringValue` の plain text で、hyperlink や formula は見えなかった
+
+### 判断
+
+- 現行 `ネットショップ商品一覧` の `画像1〜3` は元画像URLの正本とはみなせない
+- 次に調べるべき候補は、WordPress側メディア参照、別シートの画像管理列、または旧出力CSV/バックアップ

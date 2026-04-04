@@ -54,3 +54,8 @@ uv run python -m unittest tests.test_sd_product_code -v
 - `data/output/sd_product_code_audit.csv` では 924 件中 775 ok / 112 warning / 37 error
 - warning の中心は `OT`, `LF`, `HS`, `MC`, `BM`, `IG`, `PB` の旧メーカーコード重複
 - error の中心は `OOISAT041AT` など「年コード位置が `AT`」の旧例外26件、`KT` / `US` の未知メーカー旧コード、商品メーカー名とコードの不一致2件
+## 2026-04-05 追記
+
+- lenient mode では `KT -> KO`、`US -> UE` を既存データ互換 warning として扱う
+- lenient mode では年コード `AT` も既存データ互換 warning として扱う
+- expected maker が `EVERLAST` のときは既存コード `EL`、`LEGENDFITNESS` のときは既存コード `IV` を warning で許容する

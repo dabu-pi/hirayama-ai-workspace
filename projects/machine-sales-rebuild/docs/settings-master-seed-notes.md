@@ -43,3 +43,20 @@
 - `KOMATSU=KT`, `UESAKA=US` のように `ルール` 表と実商品コードがずれている旧コードを seed に昇格させるか
 - `OT` など旧コード重複の実例と、strict運用へ切り替える境界
 - `is_active=false` をどの画面/出力で除外するか
+## 2026-04-05 phase5B 再実行での補正
+
+- `settings_maker.csv` に `EVERLAST` を追加した
+- `settings_maker.csv` に `LEGENDFITNESS` を追加した
+- `settings_maker.csv` の `POWERTECH` に `PT` alias を付与し、raw値 `PT` を seed で吸収するようにした
+
+## 2026-04-05 時点で seed に入れなかった値
+
+- メーカー空欄 20件: 自動補完せず warning のまま残した
+- 店舗空欄 3件: `UNREGISTERED_STORE` のまま残した
+- 店舗値 `売却済み` 1件: 店舗seedへは入れず、入力誤り候補として保留
+- カテゴリ空欄 11件: `uncategorized` fallback と warning のまま残した
+
+## 旧コード互換の扱い
+
+- `KT` / `US` は seed 追加ではなく、`sd_product_code` lenient で既存データ互換 warning として扱う
+- `EVERLAST` の既存コード `EL`、`LEGENDFITNESS` の既存コード `IV` も、validator 側で expected maker に対する warning として扱う

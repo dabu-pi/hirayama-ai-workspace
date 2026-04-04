@@ -85,3 +85,16 @@
 | OQ-033 | 商品画像 | 表示用700x700正方形画像の保存先、余白背景色、再生成タイミング、サムネイル派生要否 | 元画像と表示用派生画像の役割は固まったが、実装方式によってURL形式や更新フローが変わる | Drive派生画像、オブジェクトストレージ、CDNのどれに置くか、背景色を白固定にするか、元画像差し替え時に即時/バッチどちらで再生成するかを実装フェーズで決める | 高 | `docs/image-spec-v0.md`, `docs/site-output-view-v0.md`, `docs/products-json-spec.md` |
 | OQ-034 | 商品画像 | 現行 `ネットショップ商品一覧` の `画像1〜3` に元画像URLが入っておらず、どこから商品画像URLを回収するか | 700x700派生画像生成の入力URLを確定できず、次フェーズが止まる | values API と gridData で確認した範囲では `画像1〜3` は空欄または `中村様` / `見積中` のような文字列で、hyperlink/formula も付いていなかった | `generate.php` / WordPressメディア / Drive画像フォルダ / 別画像台帳のどこが画像正本かを特定する | 高 | `docs/image-data-audit.md`, `docs/image-generation-phase-plan.md` |
 | OQ-035 | 商品コード | `KOMATSU=KT`, `UESAKA=US`, 年コード位置が `AT` になる旧商品コードを seed に正式採用するか、例外データとして補正対象にするか | 既存コード互換と新規採番ルールの境界が変わる。誤って seed に入れると将来の自動採番が曖昧になる | 実データ監査で `KT` 4件、`US` 5件、年コード`AT` 26件、メーカー不一致2件を確認した | 対象行を現場確認し、旧コード互換の許容範囲と新規採番禁止条件を決める | 高 | `docs/sd-product-code-audit.md`, `docs/product-code-validation-spec.md` |
+## 2026-04-05 phase5B 再実行後の保留
+
+- `SANT21651AT` は raw maker が `MATRIX` なのにコードは `NT`。シート値修正か旧コード例外化かを判断する
+- `ATNT18190AT` は raw maker が `PB/POWERTECH` 系なのにコードは `NT`。シート値修正か旧コード例外化かを判断する
+- 店舗空欄 3件と店舗値 `売却済み` 1件を、入力補正対象にするか fallback 運用に留めるかを決める
+- カテゴリ空欄 11件を `uncategorized` のまま許容するか、カテゴリseedを補うかを決める
+- 画像正本が `ネットショップ商品一覧` の `画像1〜3` ではない可能性が高い。次にどのデータ源を調べるかを決める
+
+## 今回確定したこと
+
+- `EVERLAST` と `LEGENDFITNESS` は maker seed に追加する
+- `PT` は `POWERTECH` alias として seed 側で吸収する
+- `KT -> KO`、`US -> UE`、年コード `AT` は lenient warning として許容する

@@ -3,6 +3,22 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+LEGACY_MAKER_CODE_ALIASES = {
+    "KT": "KO",
+    "US": "UE",
+}
+
+EXPECTED_MAKER_LEGACY_ALIASES = {
+    "KO": {"KT"},
+    "UE": {"US"},
+    "EV": {"EL"},
+    "LGF": {"IV"},
+}
+
+LEGACY_PURCHASE_YEAR_CODES = {
+    "AT",
+}
+
 
 @dataclass(frozen=True)
 class ParsedSdProductCode:
@@ -65,6 +81,8 @@ def parse_sd_product_code(
     maker_legacy_codes: list[str],
     part_legacy_codes: list[str],
     allow_legacy_empty_part: bool = False,
+    legacy_maker_code_aliases: dict[str, str] | None = None,
+    legacy_purchase_year_codes: set[str] | None = None,
 ) -> ParsedSdProductCode:
     code = sd_product_code.strip().upper()
     if not code:
@@ -90,12 +108,20 @@ def parse_sd_product_code(
     serial_no_text = core[-3:]
     purchase_year_code = core[-5:-3]
     maker_code = core[:-5]
+    allowed_maker_codes = set(maker_legacy_codes)
+    if legacy_maker_code_aliases:
+        allowed_maker_codes.update(legacy_maker_code_aliases.keys())
+    legacy_purchase_year_codes = legacy_purchase_year_codes or set()
 
     if not re.fullmatch(r"\d{3}", serial_no_text):
         raise ValueError(f"Serial segment must be 3 digits: {serial_no_text}.")
-    if not (purchase_year_code == "MD" or re.fullmatch(r"\d{2}", purchase_year_code)):
+    if not (
+        purchase_year_code == "MD"
+        or re.fullmatch(r"\d{2}", purchase_year_code)
+        or purchase_year_code in legacy_purchase_year_codes
+    ):
         raise ValueError(f"Year segment must be YY or MD: {purchase_year_code}.")
-    if maker_code not in maker_legacy_codes:
+    if maker_code not in allowed_maker_codes:
         raise ValueError(f"Unknown maker legacy code in {code}: {maker_code}.")
 
     return ParsedSdProductCode(
@@ -125,6 +151,12 @@ def validate_sd_product_code(
 ) -> SdProductCodeValidationResult:
     issues: list[ValidationIssue] = []
     parsed: ParsedSdProductCode | None = None
+    legacy_maker_code_aliases = (
+        LEGACY_MAKER_CODE_ALIASES if mode == "lenient" else {}
+    )
+    legacy_purchase_year_codes = (
+        LEGACY_PURCHASE_YEAR_CODES if mode == "lenient" else set()
+    )
 
     try:
         parsed = parse_sd_product_code(
@@ -133,6 +165,8 @@ def validate_sd_product_code(
             maker_legacy_codes=maker_legacy_codes,
             part_legacy_codes=part_legacy_codes,
             allow_legacy_empty_part=allow_legacy_empty_part,
+            legacy_maker_code_aliases=legacy_maker_code_aliases,
+            legacy_purchase_year_codes=legacy_purchase_year_codes,
         )
     except ValueError as exc:
         return SdProductCodeValidationResult(
@@ -151,6 +185,29 @@ def validate_sd_product_code(
     expected_maker_legacy_code = expected_maker_legacy_code.upper()
     expected_purchase_year_code = expected_purchase_year_code.upper()
     expected_part_legacy_code = expected_part_legacy_code.upper()
+    if parsed.maker_legacy_code in legacy_maker_code_aliases and not expected_maker_legacy_code:
+        issues.append(
+            ValidationIssue(
+                level="warning",
+                code="legacy_maker_code_alias",
+                message=(
+                    f"Legacy maker code alias {parsed.maker_legacy_code} is accepted "
+                    f"as {legacy_maker_code_aliases[parsed.maker_legacy_code]}."
+                ),
+            )
+        )
+
+    if parsed.purchase_year_code in legacy_purchase_year_codes:
+        issues.append(
+            ValidationIssue(
+                level="warning",
+                code="legacy_purchase_year_code",
+                message=(
+                    f"Legacy purchase year code {parsed.purchase_year_code} is accepted "
+                    "for existing data."
+                ),
+            )
+        )
 
     if expected_store_legacy_code and parsed.store_legacy_code != expected_store_legacy_code:
         issues.append(
@@ -164,17 +221,35 @@ def validate_sd_product_code(
             )
         )
 
-    if expected_maker_legacy_code and parsed.maker_legacy_code != expected_maker_legacy_code:
-        issues.append(
-            ValidationIssue(
-                level="error",
-                code="maker_mismatch",
-                message=(
-                    f"Maker code mismatch: expected {expected_maker_legacy_code}, "
-                    f"got {parsed.maker_legacy_code}."
-                ),
-            )
+    if expected_maker_legacy_code:
+        expected_aliases = EXPECTED_MAKER_LEGACY_ALIASES.get(
+            expected_maker_legacy_code,
+            set(),
         )
+        if parsed.maker_legacy_code == expected_maker_legacy_code:
+            pass
+        elif parsed.maker_legacy_code in expected_aliases:
+            issues.append(
+                ValidationIssue(
+                    level="warning",
+                    code="legacy_maker_code_alias",
+                    message=(
+                        f"Legacy maker code {parsed.maker_legacy_code} is accepted "
+                        f"for expected {expected_maker_legacy_code}."
+                    ),
+                )
+            )
+        else:
+            issues.append(
+                ValidationIssue(
+                    level="error",
+                    code="maker_mismatch",
+                    message=(
+                        f"Maker code mismatch: expected {expected_maker_legacy_code}, "
+                        f"got {parsed.maker_legacy_code}."
+                    ),
+                )
+            )
 
     if expected_purchase_year_code and parsed.purchase_year_code != expected_purchase_year_code:
         issues.append(

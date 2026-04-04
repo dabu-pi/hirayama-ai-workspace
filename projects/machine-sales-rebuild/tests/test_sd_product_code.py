@@ -63,6 +63,46 @@ class SdProductCodeTest(unittest.TestCase):
         self.assertEqual(result.status(), "error")
         self.assertIn("Unknown maker legacy code", " ".join(result.messages()))
 
+    def test_legacy_maker_code_alias_is_warning_in_lenient_mode(self) -> None:
+        result = validate_sd_product_code(
+            "HYKT16087AT",
+            store_legacy_codes=self.registry.all_legacy_codes("store"),
+            maker_legacy_codes=self.registry.all_legacy_codes("maker"),
+            part_legacy_codes=self.registry.all_legacy_codes("part"),
+            maker_legacy_code_map=self.registry.legacy_code_map("maker"),
+            expected_store_legacy_code="HY",
+            expected_maker_legacy_code="KO",
+            expected_purchase_year_code="16",
+            expected_serial_no=87,
+            expected_part_legacy_code="AT",
+            mode="lenient",
+            allow_legacy_empty_part=True,
+        )
+
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.status(), "warning")
+        self.assertIn("Legacy maker code KT is accepted for expected KO.", result.messages())
+
+    def test_legacy_purchase_year_code_is_warning_in_lenient_mode(self) -> None:
+        result = validate_sd_product_code(
+            "OOISAT041AT",
+            store_legacy_codes=self.registry.all_legacy_codes("store"),
+            maker_legacy_codes=self.registry.all_legacy_codes("maker"),
+            part_legacy_codes=self.registry.all_legacy_codes("part"),
+            maker_legacy_code_map=self.registry.legacy_code_map("maker"),
+            expected_store_legacy_code="OO",
+            expected_maker_legacy_code="IS",
+            expected_purchase_year_code="",
+            expected_serial_no=41,
+            expected_part_legacy_code="AT",
+            mode="lenient",
+            allow_legacy_empty_part=True,
+        )
+
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.status(), "warning")
+        self.assertIn("Legacy purchase year code AT is accepted for existing data.", result.messages())
+
 
 if __name__ == "__main__":
     unittest.main()

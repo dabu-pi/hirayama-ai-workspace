@@ -16,7 +16,7 @@
 16,P0000015,OOEL15015AT,12.5kgディスクダンベル・ペア・未使用品,ok,,,OO,EL,15,015,AT,OO,EL,15,15,AT
 17,P0000016,OOEL15016AT,6kgダンベル・ペア・未使用品,ok,,,OO,EL,15,016,AT,OO,EL,15,16,AT
 18,P0000017,OOEL15017AT,アジャスタブルベンチ・未使用品,ok,,,OO,EL,15,017,AT,OO,EL,15,17,AT
-19,P0000018,OOEL15018AT,サンドバック,ok,,,OO,EL,15,018,AT,OO,,15,18,AT
+19,P0000018,OOEL15018AT,サンドバック,warning,legacy_maker_code_alias,Legacy maker code EL is accepted for expected EV.,OO,EL,15,018,AT,OO,EV,15,18,AT
 20,P0000019,OOFL16019AT,プラットホーム,ok,,,OO,FL,16,019,AT,OO,FL,16,19,AT
 21,P0000020,OOFL16020AT,オリンピックミリタリーベンチ,ok,,,OO,FL,16,020,AT,OO,FL,16,20,AT
 22,P0000021,OOFL16021AT,アクセサリーラック,ok,,,OO,FL,16,021,AT,OO,FL,16,21,AT
@@ -39,7 +39,7 @@
 39,P0000038,OOIC16038SH,ショルダープレス,ok,,,OO,IC,16,038,SH,OO,IC,16,38,SH
 40,P0000039,OOIC16039CH,ベンチプレス,ok,,,OO,IC,16,039,CH,OO,IC,16,39,CH
 41,P0000040,OOIC17040AT,アブドミナルベンチ,ok,,,OO,IC,17,040,AT,OO,IC,17,40,AT
-42,P0000041,OOISAT041AT,パワーラック,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,IS,,41,AT
+42,P0000041,OOISAT041AT,パワーラック,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,OO,IS,AT,041,AT,OO,IS,,41,AT
 43,P0000042,OOIG15042AT,ラバーダンベル55ポンド(約25キロ)ペア,warning,maker_legacy_code_ambiguous,"Maker legacy code IG is shared by ['IGNIO', 'IRON_GRIP'].",OO,IG,15,042,AT,OO,IG,15,42,AT
 44,P0000043,OOIG15043AT,ソリッドプレート2.5kg1枚,warning,maker_legacy_code_ambiguous,"Maker legacy code IG is shared by ['IGNIO', 'IRON_GRIP'].",OO,IG,15,043,AT,OO,IG,15,43,AT
 45,P0000044,OOIG15044AT,20kgソリッドプレート1枚,warning,maker_legacy_code_ambiguous,"Maker legacy code IG is shared by ['IGNIO', 'IRON_GRIP'].",OO,IG,15,044,AT,OO,IG,15,44,AT
@@ -58,7 +58,7 @@
 58,P0000057,OOIV16057AT,ソリッドプレート 1.25kg,ok,,,OO,IV,16,057,AT,OO,IV,16,57,AT
 59,P0000058,OOIV16058AT,トライセップスロープ・未使用品,ok,,,OO,IV,16,058,AT,OO,IV,16,58,AT
 60,P0000059,OOIV16059AT,リボルビングカールバー・中古,ok,,,OO,IV,16,059,AT,OO,IV,16,59,AT
-61,P0000060,OOIVAT060BK,45度バックエクステンション,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,,,60,BK
+61,P0000060,OOIVAT060BK,45度バックエクステンション,warning,legacy_purchase_year_code | legacy_maker_code_alias,Legacy purchase year code AT is accepted for existing data. | Legacy maker code IV is accepted for expected LGF.,OO,IV,AT,060,BK,OO,LGF,,60,BK
 62,P0000061,OOLF16061AB,アブドミナルマシン,warning,maker_legacy_code_ambiguous,"Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,16,061,AB,OO,LF,16,61,AB
 63,P0000062,OOLF16062AM,バイセップス,warning,maker_legacy_code_ambiguous,"Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,16,062,AM,OO,LF,16,62,AM
 64,P0000063,OOLF15063AT,クロストレーナー,warning,maker_legacy_code_ambiguous,"Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,15,063,AT,OO,LF,15,63,AT
@@ -72,7 +72,7 @@
 72,P0000071,OONS15071AT,スクワットラック,ok,,,OO,NS,15,071,AT,OO,NS,15,71,AT
 73,P0000072,OOPR18072CH,シーテッドベンチプレス,ok,,,OO,PR,18,072,CH,OO,PR,18,72,CH
 74,P0000073,OOPR18073SH,シーテッドショルダープレス,ok,,,OO,PR,18,073,SH,OO,PR,18,73,SH
-75,P0000074,OOPT17074AT,プラッツ介護用マシン4台,ok,,,OO,PT,17,074,AT,OO,,17,74,AT
+75,P0000074,OOPT17074AT,プラッツ介護用マシン4台,ok,,,OO,PT,17,074,AT,OO,PT,17,74,AT
 76,P0000075,HYRB16075LG,カーフレイズステップ,ok,,,HY,RB,16,075,LG,HY,RB,16,75,LG
 77,P0000076,HYRG20076AT,セーフティスクワットバー,ok,,,HY,RG,20,076,AT,HY,RG,20,76,AT
 78,P0000077,OOSW15077AT,スピニングバイク,ok,,,OO,SW,15,077,AT,OO,SW,15,77,AT
@@ -85,7 +85,7 @@
 85,P0000084,HYYK15084AT,ローマンチェアー,ok,,,HY,YK,15,084,AT,HY,YK,15,84,AT
 86,P0000085,OOGX15085AT,4WAYネック,ok,,,OO,GX,15,085,AT,OO,GX,15,85,AT
 87,P0000086,OOGX15086SH,ショルダープレスベンチ,ok,,,OO,GX,15,086,SH,OO,GX,15,86,SH
-88,P0000087,HYKT16087AT,ブラックターフ,error,parse_error,Unknown maker legacy code in HYKT16087AT: KT.,,,,,,HY,KO,16,87,AT
+88,P0000087,HYKT16087AT,ブラックターフ,warning,legacy_maker_code_alias,Legacy maker code KT is accepted for expected KO.,HY,KT,16,087,AT,HY,KO,16,87,AT
 89,P0000088,OONT17088LG,ヒップアダクション,ok,,,OO,NT,17,088,LG,OO,NT,17,88,LG
 90,P0000089,OONT18089BK,プルダウン,ok,,,OO,NT,18,089,BK,OO,NT,18,89,BK
 91,P0000090,OONT15090AT,レッグエクステンション,ok,,,OO,NT,15,090,AT,OO,NT,15,90,AT
@@ -173,14 +173,14 @@
 173,P0000172,OOBL16172AT,クリップカラー,ok,,,OO,BL,16,172,AT,OO,BL,16,172,AT
 174,P0000173,OOHT16173AB,ロータリートーソー,ok,,,OO,HT,16,173,AB,OO,HT,16,173,AB
 175,P0000174,OOHT15174LG,ハックスクワット,ok,,,OO,HT,15,174,LG,OO,HT,15,174,LG
-176,P0000175,ATBMAT175AT,シーテッドカーフレイズ,error,parse_error,Year segment must be YY or MD: AT.,,,,,,,BM,,175,AT
+176,P0000175,ATBMAT175AT,シーテッドカーフレイズ,warning,legacy_purchase_year_code | maker_legacy_code_ambiguous,"Legacy purchase year code AT is accepted for existing data. | Maker legacy code BM is shared by ['BODY_MAKER', 'BODY_MASTERS'].",AT,BM,AT,175,AT,,BM,,175,AT
 177,P0000176,OOBM16176LG,ハックスクワット,warning,maker_legacy_code_ambiguous,"Maker legacy code BM is shared by ['BODY_MAKER', 'BODY_MASTERS'].",OO,BM,16,176,LG,OO,BM,16,176,LG
 178,P0000177,OOBM15177AT,シーテッドトライセップスエクステンション,warning,maker_legacy_code_ambiguous,"Maker legacy code BM is shared by ['BODY_MAKER', 'BODY_MASTERS'].",OO,BM,15,177,AT,OO,BM,15,177,AT
 179,P0000178,OOBM15178AT,スタンディングカーフ,warning,maker_legacy_code_ambiguous,"Maker legacy code BM is shared by ['BODY_MAKER', 'BODY_MASTERS'].",OO,BM,15,178,AT,OO,BM,15,178,AT
 180,P0000179,OOBM15179AT,スタンディングロータリーヒップ,warning,maker_legacy_code_ambiguous,"Maker legacy code BM is shared by ['BODY_MAKER', 'BODY_MASTERS'].",OO,BM,15,179,AT,OO,BM,15,179,AT
 181,P0000180,OOBM15180AT,ローワーバック,warning,maker_legacy_code_ambiguous,"Maker legacy code BM is shared by ['BODY_MAKER', 'BODY_MASTERS'].",OO,BM,15,180,AT,OO,BM,15,180,AT
 182,P0000181,OOBM15181AT,アダクター,warning,maker_legacy_code_ambiguous,"Maker legacy code BM is shared by ['BODY_MAKER', 'BODY_MASTERS'].",OO,BM,15,181,AT,OO,BM,15,181,AT
-183,P0000182,OOMGAT182AT,ラットプルダウン,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,MG,,182,AT
+183,P0000182,OOMGAT182AT,ラットプルダウン,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,OO,MG,AT,182,AT,OO,MG,,182,AT
 184,P0000183,HYMC15183AT,クリップカラー・未使用品,warning,maker_legacy_code_ambiguous,"Maker legacy code MC is shared by ['MAXICAM', 'MUSCLE_CLAMP'].",HY,MC,15,183,AT,HY,MC,15,183,AT
 185,P0000184,OONT18184AT,ラットプルダウン,ok,,,OO,NT,18,184,AT,OO,NT,18,184,AT
 186,P0000185,OOPM18185AT,シーテッドロー,ok,,,OO,PM,18,185,AT,OO,PM,18,185,AT
@@ -192,8 +192,8 @@
 192,P0000191,HYBL18191AT,ラバープレート200,ok,,,HY,BL,18,191,AT,HY,BL,18,191,AT
 193,P0000192,HYBL18192AT,アームカールバー,ok,,,HY,BL,18,192,AT,HY,BL,18,192,AT
 194,P0000193,HYBL18193AT,オリンピックシャフト+クリップカラー,ok,,,HY,BL,18,193,AT,HY,BL,18,193,AT
-195,P0000194,HYKT18194AT,ラバーマット,error,parse_error,Unknown maker legacy code in HYKT18194AT: KT.,,,,,,HY,KO,18,194,AT
-196,P0000195,HYKT18195AT,ラバーマット,error,parse_error,Unknown maker legacy code in HYKT18195AT: KT.,,,,,,HY,KO,18,195,AT
+195,P0000194,HYKT18194AT,ラバーマット,warning,legacy_maker_code_alias,Legacy maker code KT is accepted for expected KO.,HY,KT,18,194,AT,HY,KO,18,194,AT
+196,P0000195,HYKT18195AT,ラバーマット,warning,legacy_maker_code_alias,Legacy maker code KT is accepted for expected KO.,HY,KT,18,195,AT,HY,KO,18,195,AT
 197,P0000196,SASN18196AT,シーテッドロウ,ok,,,SA,SN,18,196,AT,SA,SN,18,196,AT
 198,P0000197,SASN18197AT,ヒップアダクション・アブダクション,ok,,,SA,SN,18,197,AT,SA,SN,18,197,AT
 199,P0000198,SASN18198AT,ショルダープレス,ok,,,SA,SN,18,198,AT,SA,SN,18,198,AT
@@ -318,7 +318,7 @@
 318,P0000317,HYPR19317AT,グルートマシン,ok,,,HY,PR,19,317,AT,HY,PR,19,317,AT
 319,P0000318,OOPR19318AT,トレッドミル(業務用),ok,,,OO,PR,19,318,AT,OO,PR,19,318,AT
 320,P0000319,HYNT16319AT,オリジナル15台セット,ok,,,HY,NT,16,319,AT,HY,NT,16,319,AT
-321,P0000320,ATOTAT320AT,シート交換・チェーン交換一式18台,error,parse_error,Year segment must be YY or MD: AT.,,,,,,,,,320,AT
+321,P0000320,ATOTAT320AT,シート交換・チェーン交換一式18台,warning,legacy_purchase_year_code | maker_legacy_code_ambiguous,"Legacy purchase year code AT is accepted for existing data. | Maker legacy code OT is shared by ['OLYMPIC', 'OTHER'].",AT,OT,AT,320,AT,,,,320,AT
 322,P0000321,OOBL19321AT,オリンピックシャフト,ok,,,OO,BL,19,321,AT,OO,BL,19,321,AT
 323,P0000322,OOCY19322AT,アブダクション,ok,,,OO,CY,19,322,AT,OO,CY,19,322,AT
 324,P0000323,OOCY19323AT,トライセプスマシン,ok,,,OO,CY,19,323,AT,OO,CY,19,323,AT
@@ -342,7 +342,7 @@
 342,P0000341,OOLF19341AT,PRO2 アームエクステンション,warning,maker_legacy_code_ambiguous,"Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,19,341,AT,OO,LF,19,341,AT
 343,P0000342,OOLF19342AT,PRO インナーサイ,warning,maker_legacy_code_ambiguous,"Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,19,342,AT,OO,LF,19,342,AT
 344,P0000343,OOLF19343AT,ハイパーエクステンション,warning,maker_legacy_code_ambiguous,"Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,19,343,AT,OO,LF,19,343,AT
-345,P0000344,OOUS19344AT,"メッキダンベル3ペア27.5kg,30kg,35kg",error,parse_error,Unknown maker legacy code in OOUS19344AT: US.,,,,,,OO,UE,19,344,AT
+345,P0000344,OOUS19344AT,"メッキダンベル3ペア27.5kg,30kg,35kg",warning,legacy_maker_code_alias,Legacy maker code US is accepted for expected UE.,OO,US,19,344,AT,OO,UE,19,344,AT
 346,P0000345,HYIV19345AT,CDS2kg,ok,,,HY,IV,19,345,AT,HY,IV,19,345,AT
 347,P0000346,OOMX19346AT,クランクサイクル,ok,,,OO,MX,19,346,AT,OO,MX,19,346,AT
 348,P0000347,SACY19347AT,ベントレッグアブドミナルボード(1),ok,,,SA,CY,19,347,AT,SA,CY,19,347,AT
@@ -355,19 +355,19 @@
 355,P0000354,MDHZMD354AT,CITTA TT5.0,ok,,,MD,HZ,MD,354,AT,MD,HZ,MD,354,AT
 356,P0000355,SAMX19355AT,ラットプルダウン,ok,,,SA,MX,19,355,AT,SA,MX,19,355,AT
 357,P0000356,OOLF19356AT,ラットプルダウン,warning,maker_legacy_code_ambiguous,"Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,19,356,AT,OO,LF,19,356,AT
-358,P0000357,SANBAT357AT,パワーラック,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,NB,,357,AT
-359,P0000358,SANBAT358AT,スクワットラック,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,NB,,358,AT
-360,P0000359,SATCAT359AT,ベンチプレス,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,TC,,359,AT
-361,P0000360,SANBAT360AT,バックエクステンション,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,NB,,360,AT
-362,P0000361,SASNAT361AT,シーテッド・ロー,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,SN,,361,AT
-363,P0000362,OOCYAT362AT,VRクラッシック ディップス,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,CY,,362,AT
-364,P0000363,OOPMAT363AT,チェストプレス,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,PM,,363,AT
-365,P0000364,OOLFAT364AT,PRO シーテッドロウ,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,LF,,364,AT
-366,P0000365,OOMXAT365AT,G2 ラットプルダウン,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,MX,,365,AT
-367,P0000366,OOMXAT366AT,G2 ケーブルクロス,error,parse_error,Year segment must be YY or MD: AT.,,,,,,OO,MX,,366,AT
-368,P0000367,SAELAT367AT,バーティカルディスクラック,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,EL,,367,AT
-369,P0000368,SAELAT368AT,バーティカルディスクラック 最上部無し,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,EL,,368,AT
-370,P0000369,SANBAT369AT,木製木箱4段セット,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,NB,,369,AT
+358,P0000357,SANBAT357AT,パワーラック,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,NB,AT,357,AT,SA,NB,,357,AT
+359,P0000358,SANBAT358AT,スクワットラック,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,NB,AT,358,AT,SA,NB,,358,AT
+360,P0000359,SATCAT359AT,ベンチプレス,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,TC,AT,359,AT,SA,TC,,359,AT
+361,P0000360,SANBAT360AT,バックエクステンション,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,NB,AT,360,AT,SA,NB,,360,AT
+362,P0000361,SASNAT361AT,シーテッド・ロー,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,SN,AT,361,AT,SA,SN,,361,AT
+363,P0000362,OOCYAT362AT,VRクラッシック ディップス,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,OO,CY,AT,362,AT,OO,CY,,362,AT
+364,P0000363,OOPMAT363AT,チェストプレス,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,OO,PM,AT,363,AT,OO,PM,,363,AT
+365,P0000364,OOLFAT364AT,PRO シーテッドロウ,warning,legacy_purchase_year_code | maker_legacy_code_ambiguous,"Legacy purchase year code AT is accepted for existing data. | Maker legacy code LF is shared by ['LAFITNESS', 'LIFE_FITNESS'].",OO,LF,AT,364,AT,OO,LF,,364,AT
+366,P0000365,OOMXAT365AT,G2 ラットプルダウン,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,OO,MX,AT,365,AT,OO,MX,,365,AT
+367,P0000366,OOMXAT366AT,G2 ケーブルクロス,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,OO,MX,AT,366,AT,OO,MX,,366,AT
+368,P0000367,SAELAT367AT,バーティカルディスクラック,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,EL,AT,367,AT,SA,EL,,367,AT
+369,P0000368,SAELAT368AT,バーティカルディスクラック 最上部無し,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,EL,AT,368,AT,SA,EL,,368,AT
+370,P0000369,SANBAT369AT,木製木箱4段セット,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,NB,AT,369,AT,SA,NB,,369,AT
 371,P0000370,OOKS19370AT,8フィートハーフラックwith out /AIR,ok,,,OO,KS,19,370,AT,OO,KS,19,370,AT
 372,P0000371,HYTS19371AT,オリンピックベンチ,ok,,,HY,TS,19,371,AT,HY,TS,19,371,AT
 373,P0000372,SAPR19372AT,エリプティカル EFX546,ok,,,SA,PR,19,372,AT,SA,PR,19,372,AT
@@ -471,7 +471,7 @@
 471,P0000470,SANB20470AT,LPN ストレッチポール,ok,,,SA,NB,20,470,AT,SA,NB,20,470,AT
 472,P0000471,SASN20471AT,ベンチプレス,ok,,,SA,SN,20,471,AT,SA,SN,20,471,AT
 473,P0000472,SATS20472AT,プレートツリー,ok,,,SA,TS,20,472,AT,SA,TS,20,472,AT
-474,P0000473,SAUS20473AT,ハックスクワット,error,parse_error,Unknown maker legacy code in SAUS20473AT: US.,,,,,,SA,UE,20,473,AT
+474,P0000473,SAUS20473AT,ハックスクワット,warning,legacy_maker_code_alias,Legacy maker code US is accepted for expected UE.,SA,US,20,473,AT,SA,UE,20,473,AT
 475,P0000474,SANB20474AT,空気清浄機・加湿器セット,ok,,,SA,NB,20,474,AT,SA,NB,20,474,AT
 476,P0000475,SANB20475AT,丸型ダストボックス5個セット,ok,,,SA,NB,20,475,AT,SA,NB,20,475,AT
 477,P0000476,SANB20476AT,ダストボックス 黒 5個セット,ok,,,SA,NB,20,476,AT,SA,NB,20,476,AT
@@ -483,9 +483,9 @@
 483,P0000482,SATS20482AT,マルチパーパスベンチ,ok,,,SA,TS,20,482,AT,SA,TS,20,482,AT
 484,P0000483,SAPB20483AT,パワーブロックSP50,warning,maker_legacy_code_ambiguous,"Maker legacy code PB is shared by ['PB', 'POWER_BLOCK'].",SA,PB,20,483,AT,SA,PB,20,483,AT
 485,P0000484,SApt20484AT,パワーラック,ok,,,SA,PT,20,484,AT,SA,PT,20,484,AT
-486,P0000485,HYUS20485AT,メッキダンベル27.5kg,error,parse_error,Unknown maker legacy code in HYUS20485AT: US.,,,,,,HY,UE,20,485,AT
-487,P0000486,HYUS20486AT,メッキダンベル30kg,error,parse_error,Unknown maker legacy code in HYUS20486AT: US.,,,,,,HY,UE,20,486,AT
-488,P0000487,HYUS20487AT,メッキダンベル35kg,error,parse_error,Unknown maker legacy code in HYUS20487AT: US.,,,,,,HY,UE,20,487,AT
+486,P0000485,HYUS20485AT,メッキダンベル27.5kg,warning,legacy_maker_code_alias,Legacy maker code US is accepted for expected UE.,HY,US,20,485,AT,HY,UE,20,485,AT
+487,P0000486,HYUS20486AT,メッキダンベル30kg,warning,legacy_maker_code_alias,Legacy maker code US is accepted for expected UE.,HY,US,20,486,AT,HY,UE,20,486,AT
+488,P0000487,HYUS20487AT,メッキダンベル35kg,warning,legacy_maker_code_alias,Legacy maker code US is accepted for expected UE.,HY,US,20,487,AT,HY,UE,20,487,AT
 489,P0000488,HYEL15488AT,25kgディスクダンベル・ペア・未使用品,ok,,,HY,EL,15,488,AT,HY,EL,15,488,AT
 490,P0000489,HYCY19489AT,ロータリートルソー,ok,,,HY,CY,19,489,AT,HY,CY,19,489,AT
 491,P0000490,HYNT20490AT,バーティカルチェスト,ok,,,HY,NT,20,490,AT,HY,NT,20,490,AT
@@ -663,7 +663,7 @@
 663,P0000662,HYIV21662AT,オリンピックプレート2.5,ok,,,HY,IV,21,662,AT,HY,IV,21,662,AT
 664,P0000663,HYIV21663AT,オリンピックプレート1.25,ok,,,HY,IV,21,663,AT,HY,IV,21,663,AT
 665,P0000664,HYSN21664AT,スクワットラック,ok,,,HY,SN,21,664,AT,HY,SN,21,664,AT
-666,P0000665,HYKT21665AT,ゴムマット,error,parse_error,Unknown maker legacy code in HYKT21665AT: KT.,,,,,,HY,KO,21,665,AT
+666,P0000665,HYKT21665AT,ゴムマット,warning,legacy_maker_code_alias,Legacy maker code KT is accepted for expected KO.,HY,KT,21,665,AT,HY,KO,21,665,AT
 667,P0000666,HYMG21666AT,レッグプレス,ok,,,HY,MG,21,666,AT,HY,MG,21,666,AT
 668,P0000667,HYCP21667AT,レッグプレス、チェストプレス、レッグエクステンション&カールの3台セット,ok,,,HY,CP,21,667,AT,HY,CP,21,667,AT
 669,P0000668,HYIC21668AT,ショルダープレス,ok,,,HY,IC,21,668,AT,HY,IC,21,668,AT
@@ -704,14 +704,14 @@
 704,P0000703,HYMX21703AT,ショルダープレス,ok,,,HY,MX,21,703,AT,HY,MX,21,703,AT
 705,P0000704,HYIG21704AT,オリンピックプレート2.5kg,warning,maker_legacy_code_ambiguous,"Maker legacy code IG is shared by ['IGNIO', 'IRON_GRIP'].",HY,IG,21,704,AT,HY,IG,21,704,AT
 706,P0000705,SASN21705AT,5台セット,ok,,,SA,SN,21,705,AT,SA,SN,21,705,AT
-707,P0000706,SANTAT706AT,レッグエクステンション,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,NT,,706,AT
-708,P0000707,SAKSAT707AT,バックエクステンション,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,KS,,707,AT
-709,P0000708,SAOTAT708AT,WEIDER ベンチプレス,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,,,708,AT
-710,P0000709,SASNAT709AT,ラットプルダウン,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,SN,,709,AT
-711,P0000710,SASNAT710AT,チンニング&ディップス,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,SN,,710,AT
-712,P0000711,SAOTAT711AT,WEIDER ショルダープレス,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,,,711,AT
-713,P0000712,SAOTAT712AT,アダクション&アダクション,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,,,712,AT
-714,P0000713,SAKSAT713AT,8台セット,error,parse_error,Year segment must be YY or MD: AT.,,,,,,SA,KS,,713,AT
+707,P0000706,SANTAT706AT,レッグエクステンション,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,NT,AT,706,AT,SA,NT,,706,AT
+708,P0000707,SAKSAT707AT,バックエクステンション,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,KS,AT,707,AT,SA,KS,,707,AT
+709,P0000708,SAOTAT708AT,WEIDER ベンチプレス,warning,legacy_purchase_year_code | maker_legacy_code_ambiguous,"Legacy purchase year code AT is accepted for existing data. | Maker legacy code OT is shared by ['OLYMPIC', 'OTHER'].",SA,OT,AT,708,AT,SA,,,708,AT
+710,P0000709,SASNAT709AT,ラットプルダウン,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,SN,AT,709,AT,SA,SN,,709,AT
+711,P0000710,SASNAT710AT,チンニング&ディップス,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,SN,AT,710,AT,SA,SN,,710,AT
+712,P0000711,SAOTAT711AT,WEIDER ショルダープレス,warning,legacy_purchase_year_code | maker_legacy_code_ambiguous,"Legacy purchase year code AT is accepted for existing data. | Maker legacy code OT is shared by ['OLYMPIC', 'OTHER'].",SA,OT,AT,711,AT,SA,,,711,AT
+713,P0000712,SAOTAT712AT,アダクション&アダクション,warning,legacy_purchase_year_code | maker_legacy_code_ambiguous,"Legacy purchase year code AT is accepted for existing data. | Maker legacy code OT is shared by ['OLYMPIC', 'OTHER'].",SA,OT,AT,712,AT,SA,,,712,AT
+714,P0000713,SAKSAT713AT,8台セット,warning,legacy_purchase_year_code,Legacy purchase year code AT is accepted for existing data.,SA,KS,AT,713,AT,SA,KS,,713,AT
 715,P0000714,SANT21714AT,Next generation レッグエクステンション&シーテッドレッグカール2台セット,ok,,,SA,NT,21,714,AT,SA,NT,21,714,AT
 716,P0000715,SANT21715AT,Next generation ベンチプレス,ok,,,SA,NT,21,715,AT,SA,NT,21,715,AT
 717,P0000716,SANT21716AT,Next generation アブドミナル、ローワーバック、ロータリトルソー3台セット,ok,,,SA,NT,21,716,AT,SA,NT,21,716,AT

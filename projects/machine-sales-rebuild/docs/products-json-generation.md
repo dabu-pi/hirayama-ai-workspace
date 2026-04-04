@@ -67,3 +67,19 @@ uv run python -m scripts.export_products_json
 - 画像0枚商品のサイト側フォールバック表示
 - SEO title / description の確定生成ルール
 - 元画像URLの回収元。現行 `ネットショップ商品一覧` の `画像1〜3` からはURLが取れていない
+## 2026-04-05 phase5B 再実行結果
+
+- 入力: `data/output/product_master_v0.full.csv`
+- 出力: `data/output/products.full.sample.json`
+- 商品件数: 924
+- `visibility.status=public`: 66件
+- `visibility.status=private`: 858件
+- `featured_flag=true`: 14件
+- `sold_visible`: 0件
+- `images[]`: 全件空配列
+
+## 補足
+
+- `displayUrl` は未生成のまま
+- 今回の実CSVでは `source_image_urls_json` が全件空なので、`products.full.sample.json` でも `images` は空になる
+- まず元画像URLの正本を別経路で確定しないと、画像派生生成フェーズへは進めない

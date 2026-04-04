@@ -56,3 +56,18 @@ node scripts\export_sheet_to_csv.mjs --sheet-name "ルール" --output data\raw\
 - `docs/sd-product-code-audit.md`
 - `docs/image-data-audit.md`
 - `docs/image-generation-phase-plan.md`
+## 2026-04-05 phase5B 再実行メモ
+
+- `data/raw/current_product_master.full.csv` を案件ルートから再取得し、993行・33列を確認
+- `transform_current_to_v0` 再実行結果: 924行変換、issues 1124
+- `audit_sd_product_code` 再実行結果: ok 774 / warning 148 / error 2
+- `products.full.sample.json` 再出力済み。924件、`public` 66件、`private` 858件、`featured` 14件
+- `settings_maker.csv` を補正し、`EVERLAST`・`LEGENDFITNESS` を追加、`POWERTECH` に `PT` alias を付与
+- `sd_product_code` lenient で `KT -> KO`、`US -> UE`、年コード `AT` を旧コード警告として許容
+- なお `画像1〜3` は URL ではなく、今回の実CSVでは 924件すべて `source_image_count=0`
+
+## 次の一手（更新）
+
+1. `SANT21651AT` と `ATNT18190AT` のメーカー不一致を現行シート側で確認する
+2. 画像正本の候補を `ネットショップ商品一覧` 以外の列・シート・WordPress由来データから再調査する
+3. 元画像URLの取得元が見えた段階で 700x700 派生画像生成フェーズへ進む

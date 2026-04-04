@@ -135,3 +135,15 @@ uv run python -m scripts.export_products_json --input data\output\product_master
 - `data/raw/*.full.csv`、`data/output/product_master_v0.full.csv`、`data/output/*.full.log` はローカル専用のまま維持する
 - 参照入口として `README.md`、`PROJECT_STATUS.md`、`docs/project-structure.md` を追加した
 - 再編後の確認として `generate_integrated_sheet_v0`、`transform_current_to_v0`、`export_products_json`、`unittest discover -s tests -v` を project root で再実行し、すべて通過した
+## 2026-04-05 phase5B 再実行
+
+- `node scripts\export_sheet_to_csv.mjs` を案件ルートから再実行し、`data/raw/current_product_master.full.csv` を更新した
+- 実CSVは 993行・33列、v0変換後は 924行
+- 今回補正した seed は `settings_maker.csv` のみで、`EVERLAST`・`LEGENDFITNESS` を追加し、`POWERTECH` に `PT` alias を付与した
+- 今回補正した変換/検証ルールは `sd_product_code` lenient の旧コード許容で、`KT -> KO`、`US -> UE`、年コード `AT` を warning に落とした
+- `EVERLAST` は旧コード `EL`、`LEGENDFITNESS` は旧コード `IV` を expected maker に対する互換 warning として扱う
+- 再実行後の `sd_product_code` 集計は ok 774 / warning 148 / error 2
+- 残る error は `SANT21651AT` と `ATNT18190AT` のメーカー不一致のみ
+- 画像は 924件すべて `source_image_count=0`、`画像1〜3` 非空は `画像1=9`、`画像2=0`、`画像3=6`、うち15件は非URL値だった
+- live sheet の `画像1〜3` を `inspect_sheet_cells.mjs` で確認したところ、少なくとも確認範囲では hyperlink / formula ではなく plain text (`中村様`, `見積中`, `池田`) だった
+- このため、現行 `ネットショップ商品一覧` の `画像1〜3` を元画像URLの正本とは見なせない

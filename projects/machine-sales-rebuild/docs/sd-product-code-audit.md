@@ -56,3 +56,30 @@
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
 & 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.audit_sd_product_code --input data\output\product_master_v0.full.csv --seed-dir data\seeds --output data\output\sd_product_code_audit.csv
 ```
+## 2026-04-05 phase5B 再実行（案件フォルダ再編後）
+
+### 集計
+
+| status | 件数 |
+|---|---:|
+| ok | 774 |
+| warning | 148 |
+| error | 2 |
+
+### 今回 warning に落とした旧コード
+
+- `KT -> KO` (`KOMATSU`) 4件
+- `US -> UE` (`UESAKA`) 5件
+- 年コード `AT` 19件
+- `EL` を `EVERLAST` の既存コードとして許容 1件
+- `IV` を `LEGENDFITNESS` の既存コードとして許容 1件
+
+### まだ error のまま残るもの
+
+- `SANT21651AT`: expected `MX`, got `NT`
+- `ATNT18190AT`: expected `PB`, got `NT`
+
+### 判断
+
+- 上記2件は seed で吸収せず、現行シート値または旧コードのどちらが正しいかを個別確認する
+- `KT` / `US` / 年コード `AT` は既存データ互換として継続許容でよい
