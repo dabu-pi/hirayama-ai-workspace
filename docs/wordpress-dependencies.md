@@ -36,6 +36,7 @@
 | GAS `formatCategoryText(text)` | taxonomy文字列の余分なカンマ除去 | 配列/リレーションでカテゴリを保持すれば不要 | B | 1列カンマ文字列へ押し込む副作用処理 |
 | GAS `sendHttpPost()` | 商品JSONを `generate.php` へPOSTしてサイト反映 | 新サイト向け同期API、静的JSON生成、またはDB更新ジョブ | A | 反映先PHP内部が未回収のため、切替前に必ず棚卸しが必要 |
 | `https://machine-group.net/strongdepot-product-manager/generate.php` | サイト反映の受け口PHP | 新システムの ingest API / 管理バッチ / 静的ビルド処理 | A | WordPress依存の本体がここにある可能性が高い |
+| `sendHttpPost()` の認証なしPOST | GAS側では認証ヘッダー/APIキー/署名を付けず、`payload` だけをPOSTしているように見える | 新システムでは認証付き管理API、署名付きジョブ、IP制限などを明示 | A | PHP側で別途IP制限や秘密値検証をしているかは未回収 |
 | `Settings.php` | コメント上、カテゴリ設定の更新先 | 新システムの単一マスタ管理 | A | GASコメントに `kohakuwebdesign/strongdepot-product-manager` の `Settings.php` 更新が必要とある |
 | `https://strongdepot.com/wp-login.php` | WordPress管理画面への運用導線 | 新管理画面URLへ置換 | B | `Wordpress用csv` 先頭行にURLがある |
 | `shops,xxx` / `maker,xxx` / `trainingmachine,xxx` / `trainingparts,xxx` / `status,xxx` | taxonomy名前空間付きslug | 非WPカテゴリモデル `location_categories` / `maker_tags` / `product_categories` / `condition_tags` | A | 現行カテゴリ体系の業務意味だけ抽出し、WP namespaceは捨てる |
@@ -71,6 +72,7 @@
 |---|---|---|
 | `generate.php` | POSTされた商品JSONをどう保存し、WordPress投稿/DBへどう反映するか | PHPファイルを回収して処理フローを読解する |
 | `Settings.php` | カテゴリ定義や投稿タイプ設定の実体 | GitHub `kohakuwebdesign/strongdepot-product-manager` またはサーバー上のPHPを回収する |
+| `strongdepot-product-manager` リポジトリ所在 | 公開GitHub URLは `Repository not found.`、接続済みGitHubコネクタ検索でも見えず、OneDriveにも控えなし | サーバー側配置場所、別リポジトリ名、または権限付きGitHubアクセスを確認する |
 | WordPress 管理画面運用 | `Wordpress用csv` 手動インポートと GAS POST の使い分け | 現場手順を確認する |
 | 既存URL仕様 | 商品詳細URLやslugの現行ルール | strongdepot.com の現行URLパターンと `generate.php` を突き合わせる |
 

@@ -292,3 +292,52 @@
 - 現行 `ネットショップ商品一覧` → `商品マスタ` / `サイト出力ビュー` / `products.json` の変換マッピング表
 - 現行 `mitsumori` → `見積入力` / `見積履歴` の列マッピング表
 - 既存 `sd_product_code` のバリデーション/分解チェック仕様
+
+---
+
+## 2026-04-04 中古マシン販売システム再構築 調査フェーズ3
+
+### 目的
+
+Apps Script 実体と WordPress/PHP 反映経路の未確定部分を、CLI/API/接続済み資産で回収できる範囲まで詰め、どこを止めると何が止まるかを設計判断できる状態へ近づける。
+
+### 作成・更新した成果物
+
+- 新規: `docs/apps-script-runtime-audit.md`
+- 新規: `docs/php-publish-flow.md`
+- 新規: `docs/design-readiness-check.md`
+- 更新: `docs/wordpress-dependencies.md`
+- 更新: `docs/sheet-inventory.md`
+- 更新: `docs/tab-classification.csv`
+- 更新: `docs/open-questions.md`
+
+### 今回新たに確定したこと
+
+- Apps Script API の `processes:listScriptProcesses` は、`.clasprc.json` の refresh_token で access_token を更新しても `403 ACCESS_TOKEN_SCOPE_INSUFFICIENT` になり、このCLI権限では対象GASの `scriptId` / トリガー一覧を自動回収できない。
+- `strongdepot-product-manager` は、接続済みGitHubコネクタ検索で見つからず、`git ls-remote https://github.com/kohakuwebdesign/strongdepot-product-manager.git` も `Repository not found.`、`C:\Users\pinsh\OneDrive` 配下にも `generate.php` / `Settings.php` 控えが見つからなかった。
+- そのため、`sendHttpPost()` → `generate.php` という入口とPOST payload構造はGAS側から確定できたが、PHP内部のWordPress投稿更新処理はこの環境だけでは未回収のまま。
+- 商品一覧GAS・見積GAS・競合GASのコード本文は提供テキストから読めているが、「そのテキストが今ブックに紐づいている最新の実体コードと一致するか」は、Apps Script エディタURL回収なしでは断定できない。
+
+### まだ未確定のこと
+
+- `ネットショップ商品一覧2018-10-22`、`【見積】見積もりテンプレート2.3`、`STRONGDEPOT 競合サイトデータ` の script名、scriptId、実ファイル一覧、トリガー種別/対象関数、デプロイ設定、最終更新情報。
+- `generate.php` / `Settings.php` のPHPコード、WordPress DB/投稿/taxonomy 更新方式、認証/アクセス制限の有無。
+- `2.3` と `2.3freee連携API` のどちらが見積正本か、BASE出力が現役か、旧コピー/試作ブックの最終現役度。
+
+### 次に設計へ進める項目
+
+- 商品マスタv0、設定マスタ、サイト出力ビュー、`products.json` は先行設計に進める。
+- 見積は `mitsumori` 中心の新入力/明細モデル設計に進めるが、正本ブック確定後に最終調整が必要。
+- WordPress切替停止順序と現行GAS停止順序は、scriptId/トリガーとPHPコード回収後に確定する。
+
+### 次の一手
+
+1. ユーザー側で対象ブックの Apps Script エディタを開き、`/projects/<scriptId>/edit` のURL、左ペインのファイル一覧、トリガー画面の設定を控えて共有する。
+2. サーバー側または権限付きGitHubから `strongdepot-product-manager` の `generate.php` / `Settings.php` を含むPHP一式を回収する。
+3. 共有された scriptId/PHPソースを `docs/apps-script-runtime-audit.md` と `docs/php-publish-flow.md` に追記し、停止影響マップを確定する。
+
+### すぐ実装着手できる候補
+
+- 現行商品マスタ → 新統合シートv0 / `products.json` の変換マッピング
+- `sd_product_code` バリデーション/分解テスト仕様
+- PHPソース回収後の `generate.php` 入出力差分表

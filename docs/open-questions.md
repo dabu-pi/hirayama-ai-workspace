@@ -45,6 +45,8 @@
 | OQ-021 | タイムゾーン不一致 | `ネットショップ商品一覧2018-10-22` のタイムゾーンが `America/Los_Angeles` | 日付処理やトリガー実行時刻のずれ | 現行GASの日時依存有無を確認し、新系では Asia/Tokyo 統一を検討 |
 | OQ-022 | 競合分類エラー | `メーカー分類` のメーカー列が `#ERROR!` | 競合価格判断の信頼性低下 | 数式/カスタム関数/参照元シートを確認 |
 | OQ-024 | 分類マスタ二重/三重管理 | 店舗/メーカー/部位/状態/カテゴリが `ルール` シート、商品一覧GAS配列、PHP `Settings.php` に分散している | どれか1箇所だけ更新するとコード生成やサイトカテゴリがずれる | GAS側配列と `Settings.php` 更新コメントは確認済み。PHP側実体は未取得 | 3者の差分表を作り、次世代では単一マスタへ統合する |
+| OQ-025 | Apps Script API権限 | `.clasprc.json` の refresh_token で access_token を更新しても `processes:listScriptProcesses` が `403 ACCESS_TOKEN_SCOPE_INSUFFICIENT` になる | CLI/APIから scriptId / トリガー一覧を自動回収できず、手作業確認が残る | `script.googleapis.com` への直接呼び出しで 403 を確認済み | 必要なら別OAuthスコープで再ログインするか、まずは Apps Script エディタURLを人手回収する |
+| OQ-026 | PHPソース所在 | `strongdepot-product-manager` の `generate.php` / `Settings.php` が GitHubコネクタ・公開GitHub URL・OneDrive控えで見つからない | WordPress反映処理の副作用とDB更新先を確定できない | `git ls-remote https://github.com/kohakuwebdesign/strongdepot-product-manager.git` は `Repository not found.`、OneDrive配下にもPHP控え無し | サーバー側配置場所、別リポジトリ名、または権限付きGitHub URLを確認する |
 
 ## 今回わかったこと
 
