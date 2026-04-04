@@ -71,3 +71,14 @@
 - 商品コード代表例の分解表
 - 現行見積テンプレートの1案件トレース表
 - 競合分類エラーの原因切り分けメモ
+
+## 2026-04-04 設計フェーズ4 追加論点
+
+| ID | 分類 | 未確定事項 | 影響 | 次の確認アクション | 優先度 | 関連ドキュメント |
+|---|---|---|---|---|---|---|
+| OQ-027 | 商品コード/設定マスタ | メーカー `MC` 衝突の新規採番ルール | `MAXICAM` と `MUSCLE CLAMP` が同じ旧コード `MC` のため、新規 `sd_product_code` 自動採番で曖昧になる | 新規採番時に旧コード `MC` を維持するか、新コードを別途割り当てるか業務判断する | 高 | `docs/settings-master-v0.md`, `docs/product-code-validation-spec.md` |
+| OQ-028 | 商品コード/部位マスタ | `首` の旧部位コード空欄を新規採番でどう扱うか | 互換維持を優先すると空コードが残り、検索/検証が不安定になる | 既存コード保持と新規採番ルールを分け、`NECK` の非空コードを使うか決める | 中 | `docs/settings-master-v0.md`, `docs/product-code-validation-spec.md` |
+| OQ-029 | サイト公開 | 売却済み商品のサイト掲載方針 | `publish_status` / `is_published` / `inquiry_enabled` の判定が変わる | 売却済みを非公開にするか、実績として公開し問い合わせ停止にするか現場ルールを確認する | 中 | `docs/site-output-view-v0.md` |
+| OQ-030 | 競合価格 | 競合価格の税込/税抜扱い | 自社税抜売価との価格差分計算がずれる可能性がある | recyfit 表示仕様と現行判断基準を確認し、`*_ex_tax` 列でよいか確定する | 中 | `docs/competitor-data-v0.md` |
+| OQ-031 | products.json | `products.json` に非公開商品を含めるか | 公開配信用JSONと管理検証用JSONの境界が変わる | 実装方式比較フェーズで「公開JSON」と「検証JSON」を分けるか決める | 中 | `docs/products-json-spec.md` |
+| OQ-032 | 商品マスタ | `stock_quantity` の初期値ルール | 中古単品中心なら `1` 固定で足りるが、備品/複数台在庫では実数管理が必要 | カテゴリ別に `1` 固定/実数入力/空欄禁止のどれを採るか確認する | 低 | `docs/product-master-v0.md` |

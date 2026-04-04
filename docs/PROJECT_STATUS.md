@@ -341,3 +341,67 @@ Apps Script 実体と WordPress/PHP 反映経路の未確定部分を、CLI/API/
 - 現行商品マスタ → 新統合シートv0 / `products.json` の変換マッピング
 - `sd_product_code` バリデーション/分解テスト仕様
 - PHPソース回収後の `generate.php` 入出力差分表
+
+---
+
+## 2026-04-04 中古マシン販売システム再構築 設計フェーズ4
+
+### 目的
+
+未確定な PHP / scriptId を追い続けるのではなく、調査フェーズ1〜3で「もう設計に進める」と判断できた商品マスタ・設定マスタ・サイト出力ビュー・`products.json`・現行→新構造マッピングを具体化する。
+
+### 作成/更新した成果物
+
+- 新規: `docs/product-master-v0.md`
+- 新規: `docs/settings-master-v0.md`
+- 新規: `docs/site-output-view-v0.md`
+- 新規: `docs/products-json-spec.md`
+- 新規: `docs/current-to-v0-mapping.md`
+- 新規: `docs/product-code-validation-spec.md`
+- 新規: `docs/competitor-data-v0.md`
+- 更新: `docs/integrated-sheet-v0.md`
+- 更新: `docs/design-readiness-check.md`
+- 更新: `docs/open-questions.md`
+- 更新: `docs/rebuild-architecture-draft.md`
+
+### 今回確定した設計要素
+
+- 新統合スプレッドシート v0 は `商品マスタ`, `設定マスタ`, `サイト出力ビュー`, `競合価格データ`, `見積入力`, `見積履歴`, `アーカイブ` の7タブ構成で進める。
+- 商品マスタ v0 は `internal_id` を新内部主キー、`sd_product_code` を既存互換コードとして分離保持し、価格・公開状態・画像・SEO・`legacy_wp_*` 隔離列まで定義した。
+- 設定マスタ v0 は `master_type + code` を主キーにし、`display_name`, `legacy_value`, `legacy_code`, `aliases`, `is_active` を持つ構成で進める。
+- サイト出力ビュー v0 は商品マスタの派生生成物とし、一覧/詳細/検索/ソート/SEO/公開判定に必要な列だけを持つ。
+- `products.json` は WordPress 非依存の `schemaVersion + products[]` 構造で定義し、完全例・売却済み例・非公開例をサンプル化した。
+- 現行 `ネットショップ商品一覧` 列から新商品マスタ/サイト出力ビュー/JSONへのマッピングと、加工/廃止/隔離保持の判定を整理した。
+- `sd_product_code` は既存値保持を原則とし、新規採番と検証では設定マスタ参照、重複チェック、未登録マスタ停止、可変長メーカーコード対応、旧例外処理を分けて扱う。
+- 競合価格データ v0 は収集結果、自社商品紐付け候補、レビュー状態、価格差分、画像URLを持つ独立タブとして残す。
+
+### まだ保留の設計要素
+
+- `generate.php` / `Settings.php` の実装未回収により、旧WordPressカテゴリ最終一覧と旧投稿更新ロジックの完全突合は未完了。
+- 商品/見積/競合GASの `scriptId` と実トリガー一覧は未回収のまま。
+- 見積の正本が `2.3` / `2.3freee連携API` のどちらか、案件別コピーとの最終関係は未確定のため、`見積入力` / `見積履歴` は概要設計に留めた。
+- BASE出力の現役度、`売値計算式` 列の実運用度、売却済み商品をサイト掲載するかどうか、競合価格の税込/税抜区分、`products.json` に非公開商品を含めるかは保留。
+
+### 実装に近づいたもの
+
+- 新統合スプレッドシート v0 のタブ雛形生成
+- 商品マスタ v0 と設定マスタ v0 の列定義作成
+- 現行商品マスタ → 新v0シート/サイト出力ビュー/`products.json` の変換スクリプト試作
+- `sd_product_code` の検証/分解ユニットテスト作成
+- `products.json` 静的生成プロトタイプ
+
+### 次の一手
+
+1. `docs/product-master-v0.md` / `docs/settings-master-v0.md` / `docs/site-output-view-v0.md` をもとに、新統合スプレッドシート v0 の実タブ雛形を別ブックとして作る。
+2. `docs/current-to-v0-mapping.md` を入力にして、現行 `ネットショップ商品一覧` の読み取り専用変換スクリプトを作る。
+3. 変換結果から `products.json` を生成し、売却済み/非公開/画像なし/未登録マスタ行のサンプルを比較検証する。
+4. `docs/settings-master-v0.md` のメーカー/カテゴリ一覧を、現行 `ルール` シートとGAS配列の完全表で埋める。
+5. 見積正本ブック確定後に `見積入力` / `見積履歴` の詳細列設計へ進む。
+
+### すぐ着手できる実装候補
+
+- 新統合スプレッドシート v0 雛形生成スクリプト
+- 現行商品マスタCSV/Sheets → 商品マスタ v0 変換スクリプト
+- 商品コード `sd_product_code` 検証ライブラリ
+- `products.json` 生成スクリプトとサンプル出力
+- 設定マスタ初期データ投入スクリプト

@@ -1,101 +1,143 @@
-# 新統合スプレッドシート v0 列定義たたき台
-
-最終更新: 2026-04-04
+# 新統合スプレッドシート v0 設計
 
 ## 目的
 
-現行の複数ブック・複数タブ・GAS/WordPress混在構造を、新システム用の別スプレッドシートv0として再設計するための初期列定義を整理する。
+現行の `ネットショップ商品一覧2018-10-22` を中核にしつつ、WordPress 前提の出力列や見積・競合収集の責務を分離し、次世代システム向けの「商品正本 + 派生ビュー + 設定マスタ + 業務ログ」構造へ整理する。
 
-## 設計方針
+## v0 タブ構成
 
-- 現行正本は壊さず、新統合シートv0は別ブックとして作る
-- 商品マスタ本体、設定マスタ、サイト出力ビュー、見積、競合、アーカイブを明確に分ける
-- WordPress固有列は商品マスタ本体に直接入れず、サイト出力ビューまたは `legacy_*` 列に隔離する
-- 見積・案件・競合・画像は ID で関連付け、タブ名や固定セル参照に依存しない
-- 最初から完璧なDB正規化を狙わず、スプレッドシートで運用しやすい最小構造を優先する
+| タブ名 | 位置づけ | 更新主体 | 主キー候補 | 備考 |
+|---|---|---|---|---|
+| 商品マスタ | 商品データの正本 | 人 + GAS | `internal_id` | `sd_product_code` は互換維持の業務コードとして保持するが、内部主キーにはしない |
+| 設定マスタ | 店舗/メーカー/部位/状態/カテゴリ等の統一マスタ | 人 + 管理GAS | `master_type + code` | 現行の `ルール` シート、GAS配列、PHP `Settings.php` 分散をここへ寄せる |
+| サイト出力ビュー | 新サイト公開用の派生ビュー | GAS/出力処理 | `internal_id` | 商品マスタから生成する。WordPress taxonomy/post_status は持ち込まない |
+| 競合価格データ | 競合収集結果とレビュー状態 | GAS + 人 | `competitor_record_id` | 自社商品への紐付け候補を保持し、価格判断に使う |
+| 見積入力 | 見積作成の明細入力 | 人 + GAS | `quote_id + line_no` | 今回は概要のみ。現行 `mitsumori` の列依存をそのまま持ち込まない |
+| 見積履歴 | 確定見積/案件の履歴管理 | GAS + 人 | `quote_id` | 今回は概要のみ。案件別コピー乱立の代替候補 |
+| アーカイブ | 旧ブック/旧タブの退避台帳 | 人 | `archive_id` | すぐ削除しない前提で、置換先と保留理由を記録する |
 
-## タブ構成案
+---
 
-| タブ名案 | タブの目的 | 主キー候補 | 必須列 | 任意列 | 現行のどの列を引き継ぐか | 新しく追加すべき列 | このタブに持たせないもの |
-|---|---|---|---|---|---|---|---|
-| `商品マスタ` | 商品1件ごとの正本データを管理する | `product_id`、`sd_product_code` | `product_id`、`sd_product_code`、`product_name`、`maker_id`、`location_code`、`purchase_year_code`、`body_part_code`、`category_code`、`condition_status`、`sales_status`、`list_price_ex_tax`、`current_price_ex_tax`、`is_published` | `description_html`、`description_text`、`size_text`、`weight_text`、`search_keywords`、`cost_ex_tax`、`shipping_cost_ex_tax`、`supplier_name`、`purchased_at`、`sold_at`、`sold_to`、`notes` | `ネットショップ商品一覧` の商品名、説明、状態、店舗、仕入れ年、鍛える部位、トレーニングマシンの種類、サイズ、重量、検索キーワード、公開状態、商品コード、値引き後価格、仕入年月日、仕入先、原価、送料、販売年月日、売却価格、販売先 | `product_id`、`maker_id`、`category_code`、`sales_status`、`created_at`、`updated_at`、`source_sheet_name`、`source_row_no`、`legacy_wp_post_id` | WordPress taxonomy文字列、`post_type`、`post_status`、見積の小計/税/合計、競合価格の生ログ |
-| `設定マスタ` | 店舗/メーカー/年/部位/カテゴリ/状態/チャネル変換などの共通マスタを一元化する | `master_type + master_key` | `master_type`、`master_key`、`display_name`、`is_active`、`sort_order` | `code_value`、`legacy_wp_slug`、`aliases`、`notes` | `ルール` シート、GAS配列 `shops` / `makers` / `machines` / `bodyParts` / `productStatus` / `postStatus` / `topPages` | `master_id`、`normalized_name`、`effective_from`、`effective_to`、`validation_rule` | 個別商品の価格・在庫、見積案件ごとの値引き結果、競合商品ごとの取得ログ |
-| `サイト出力ビュー` | 新サイト/BASE等へ渡す公開用商品ビューを生成・確認する | `product_id + channel_code` | `product_id`、`channel_code`、`slug`、`title`、`description`、`price_ex_tax`、`price_in_tax`、`visibility_status`、`main_image_url` | `category_paths`、`maker_label`、`location_label`、`condition_label`、`seo_title`、`seo_description`、`canonical_url`、`legacy_wp_category_text` | `Wordpress用csv`、`BASE用csv` のうち商品表示に必要な列 | `channel_code`、`export_status`、`exported_at`、`export_error`、`json_payload_preview` | 原価、仕入先、社内メモ、顧客個人情報、freee partner_id |
-| `見積入力` | 作成中の見積ヘッダと明細を行ベースで管理し、旧 `mitsumori` の役割を置き換える | `quote_id + line_no` | `quote_id`、`line_no`、`line_type`、`item_source_type`、`item_code`、`item_name`、`quantity`、`unit_price_ex_tax`、`line_amount_ex_tax` | `maker_name`、`sd_product_code`、`product_id`、`discount_amount_ex_tax`、`cost_ex_tax`、`shipping_cost_ex_tax`、`installation_fee_ex_tax`、`tax_rate`、`line_note` | `mitsumori` のA〜M列、N〜AB列の割引候補、K2/K3、`その他の商品一覧` の品番/商品名/定価/仕入値/メーカー名 | `quote_id`、`line_no`、`item_source_type`、`product_id`、`calculation_status`、`validation_message` | 顧客提出用帳票レイアウトそのもの、`商品名（現状価格xxx円）` の文字列埋め込み前提 |
-| `見積履歴` | 見積ヘッダ、案件状態、freee/Gmail連携状態、提出版帳票URLを管理する | `quote_id` | `quote_id`、`deal_id`、`customer_name`、`quote_subject`、`quote_status`、`subtotal_ex_tax`、`tax_amount`、`total_in_tax`、`quoted_at` | `customer_email`、`owner_name`、`quote_sheet_url`、`freee_partner_id`、`freee_quotation_id`、`gmail_message_id`、`draft_created_at`、`check_required_reason`、`source_quote_tab` | `2024長谷川さん`、`【見積】長谷川様ご依頼分` 顧客別タブ、`見積書テンプレート` | `quote_id`、`deal_id`、`source_spreadsheet_id`、`source_sheet_name`、`source_total_cell`、`sync_status` | 商品マスタの全属性、競合HTML、WordPress taxonomy文字列 |
-| `競合価格データ` | 競合サイトから取得した商品スナップショットと分類/比較状態を管理する | `competitor_product_id` | `competitor_product_id`、`source_site`、`source_url`、`fetched_at`、`product_name_raw`、`maker_name_raw`、`maintenance_price`、`current_price` | `description_html`、`image_urls`、`category_raw`、`maker_id_matched`、`category_code_matched`、`linked_product_id`、`price_gap_note`、`review_status` | `STRONGDEPOT 競合サイトデータ` / `リサイフィット`、`競合サイトデータまとめ`、`他社競合データ` | `review_status`、`matched_confidence`、`normalized_price_ex_tax`、`source_html_version` | 自社商品の仕入原価、見積合計、顧客個人情報 |
-| `アーカイブ` | 旧コピー・旧テンプレ・要確認タブの凍結参照リストを管理する | `archive_id` | `archive_id`、`source_type`、`spreadsheet_name`、`spreadsheet_id`、`sheet_name`、`archive_reason`、`status` | `last_known_updated_at`、`owner`、`replacement_link`、`notes` | `ネットショップ商品一覧2024`、`ネットショップ商品一覧3.24bk`、`旧見積もりシート`、`シート10`、`リンク` の旧IDなど | `archive_id`、`replacement_sheet_or_doc`、`review_due_at` | 現役商品の更新データ、実行中GAS設定 |
+## 1. 商品マスタ
 
-## タブ別の補足設計
+| 項目 | 内容 |
+|---|---|
+| タブの目的 | 中古マシン商品データの業務正本。サイト表示、見積参照、競合突合の元データを持つ |
+| 主キー候補 | `internal_id` |
+| 必須列 | `internal_id`, `sd_product_code`, `product_name`, `maker_code`, `condition_code`, `store_code`, `purchase_year`, `part_code`, `category_code`, `base_price_ex_tax`, `sale_price_ex_tax`, `publish_status`, `inquiry_enabled`, `created_at`, `updated_at` |
+| 任意列 | `legacy_product_code`, `discount_price_ex_tax`, `shipping_fee_ex_tax`, `description_text`, `description_html`, `image_urls`, `featured_flag`, `seo_slug`, `seo_title`, `seo_description`, `remarks`, `legacy_wp_post_id`, `legacy_wp_category_text`, `source_sheet_name`, `source_row_no` |
+| 現行から引き継ぐ列 | `新規自動生成商品コード`, `商品名`, `メーカー名`, `状態`, `店舗`, `仕入れ年`, `鍛える部位`, `トレーニングマシンの種類`, `定価（税抜き）`, `値引き後の価格（税抜き）`, `送料`, `公開状態`, `トップページ掲載`, `商品説明`, `画像1〜3`, `通し番号` |
+| 新しく追加する列 | `internal_id`, `legacy_product_code`, `inquiry_enabled`, `seo_slug`, `seo_title`, `seo_description`, `created_at`, `updated_at`, `legacy_wp_post_id`, `legacy_wp_category_text` |
+| このタブに入れないもの | WordPress taxonomy/post_type/post_status を正本列として持たない。BASE専用CSV列、見積小計/消費税/合計、競合生HTML、顧客個人情報を入れない |
+| 更新主体 | 人が商品属性を入力し、GASがコード検証・派生値補完・出力ビュー生成を担当する |
+| 備考 | 詳細列定義は `docs/product-master-v0.md` に分離する |
 
-### 1. 商品マスタ
+---
 
-- `sd_product_code` は現行互換の外部業務コードとして必ず保持する。
-- ただし、メーカー・店舗・年・部位は `sd_product_code` から毎回復元せず、独立列を正として持つ。
-- 画像はこのタブに `Photo1`〜`Photo5` のような横持ち列で埋め続けず、必要なら別途 `商品画像` 補助タブを切る。v0では `main_image_url` と `sub_image_urls_json` の併用でもよい。
+## 2. 設定マスタ
 
-### 2. 設定マスタ
+| 項目 | 内容 |
+|---|---|
+| タブの目的 | 店舗・メーカー・部位・状態・カテゴリ・公開状態などのコード体系を一元管理する |
+| 主キー候補 | `master_type + code` |
+| 必須列 | `master_type`, `code`, `display_name`, `legacy_value`, `is_active`, `sort_order` |
+| 任意列 | `canonical_key`, `aliases`, `validation_rule`, `site_label`, `remarks` |
+| 現行から引き継ぐ列 | `ルール` シートのコード表、商品一覧GASの `shops/makers/bodyParts/productStatus/postStatus` 配列、PHP `Settings.php` の分類定義（未回収分は後で突合） |
+| 新しく追加する列 | `master_type`, `canonical_key`, `is_active`, `sort_order`, `validation_rule`, `site_label` |
+| このタブに入れないもの | 商品個別の価格、在庫、画像、見積明細、競合収集ログを持たない |
+| 更新主体 | 人がマスタを保守し、GASが参照・整合性チェックに使う |
+| 備考 | v0 は1タブ集約でもよいが、運用が重くなったら `店舗マスタ` 等へ分割する |
 
-- まずは1タブで `master_type` に `location` / `maker` / `purchase_year` / `body_part` / `category` / `condition_status` / `sales_status` / `channel` を入れる方式でもよい。
-- 現行の `ルール` シートと GAS配列と `Settings.php` の差分を吸収する場所として設計する。
-- 表記ゆれは `aliases` に寄せ、商品コード生成用の `code_value` とサイト出力用の `legacy_wp_slug` を分ける。
+---
 
-### 3. サイト出力ビュー
+## 3. サイト出力ビュー
 
-- 商品マスタ本体とは別に、公開対象・表示名・価格・カテゴリ・画像・SEO・エクスポート状態だけを持つビューとして作る。
-- ここから `products.json` を生成する前提にすると、WordPress列を中核商品マスタへ戻さずに済む。
+| 項目 | 内容 |
+|---|---|
+| タブの目的 | 新サイトが読むための公開向け派生データを、商品マスタから正規化して並べる |
+| 主キー候補 | `internal_id` |
+| 必須列 | `internal_id`, `sd_product_code`, `slug`, `title`, `display_price_ex_tax`, `publish_status`, `is_published`, `main_image_url`, `maker_code`, `maker_label`, `store_code`, `store_label`, `condition_code`, `condition_label`, `part_code`, `part_label`, `category_code`, `category_label`, `search_text`, `sort_updated_at` |
+| 任意列 | `description_text`, `description_html`, `image_urls`, `featured_flag`, `seo_title`, `seo_description`, `inquiry_enabled`, `sold_out_flag`, `shipping_fee_ex_tax` |
+| 現行から引き継ぐ列 | 商品マスタ由来の公開系列。特に `商品名`, `商品説明`, `画像`, `状態`, `公開状態`, `トップページ掲載`, `新規自動生成商品コード` |
+| 新しく追加する列 | `slug`, `maker_label`, `store_label`, `condition_label`, `part_label`, `category_label`, `search_text`, `sort_updated_at`, `is_published`, `sold_out_flag` |
+| このタブに入れないもの | `原価`, `仕入先`, `販売先`, `freee_*`, `legacy_wp_*`, WordPress taxonomy/post_type/post_status, 競合レビュー状態 |
+| 更新主体 | 原則 GAS/変換処理が商品マスタから再生成する。手入力しない |
+| 備考 | 詳細列定義は `docs/site-output-view-v0.md` に分離する |
 
-### 4. 見積入力 / 見積履歴
+---
 
-- 現行 `mitsumori` の「商品入力と金額計算」と、`長谷川様ご依頼分` の「顧客提出版帳票保存」と、`2024長谷川さん` の「案件台帳/freee状態」を分けて、`見積入力` と `見積履歴` に寄せる。
-- `見積入力` は明細行ベース、`見積履歴` はヘッダ/案件ベースにする。
-- 旧GASの `現状価格` 文字列split依存は引き継がず、金額は数値列を正にする。
+## 4. 競合価格データ
 
-### 5. 競合価格データ
+| 項目 | 内容 |
+|---|---|
+| タブの目的 | 競合サイトから収集した商品情報と価格を、レビュー・自社商品候補紐付けつきで保管する |
+| 主キー候補 | `competitor_record_id` |
+| 必須列 | `competitor_record_id`, `source_site`, `fetched_at`, `source_url`, `product_name`, `maker_name`, `current_price_ex_tax`, `collect_status`, `review_status` |
+| 任意列 | `maintenance_price_ex_tax`, `category_name`, `image_urls`, `linked_internal_id`, `match_confidence`, `memo` |
+| 現行から引き継ぐ列 | `STRONGDEPOT 競合サイトデータ` の `収集日時`, `URL`, `商品名`, `メーカー`, `整備価格`, `現状価格`, `商品説明`, `画像1〜3`, `カテゴリ` |
+| 新しく追加する列 | `competitor_record_id`, `collect_status`, `review_status`, `linked_internal_id`, `match_confidence`, `normalized_category_code` |
+| このタブに入れないもの | 自社原価、見積明細、WordPress投稿情報、顧客情報 |
+| 更新主体 | GAS が収集し、人がレビュー・紐付け判定を補完する |
+| 備考 | 詳細列定義は `docs/competitor-data-v0.md` に分離する |
 
-- `リサイフィット` のスクレイピング生データと、メーカー/カテゴリ正規化結果、レビュー状態を同居させる。
-- `競合サイトデータまとめ` の `メーカー分類` エラーをそのまま持ち込まず、`review_status` と `matched_confidence` を入れて人手確認できるようにする。
+---
 
-### 6. アーカイブ
+## 5. 見積入力（概要）
 
-- 旧ブック/旧タブを消さず、どれが旧運用か、何に置き換えたか、いつ再確認するかを管理する。
-- `削除候補` を急いで作るのではなく、まず `旧運用` / `要確認` / `凍結` を明示する。
+| 項目 | 内容 |
+|---|---|
+| タブの目的 | 商品コードやその他商品コードを入力し、見積明細を作る業務入力面 |
+| 主キー候補 | `quote_id + line_no` |
+| 必須列 | `quote_id`, `line_no`, `item_source_type`, `item_code`, `item_name`, `quantity`, `unit_price_ex_tax`, `discount_amount_ex_tax`, `line_amount_ex_tax` |
+| 任意列 | `internal_id`, `sd_product_code`, `maker_name`, `cost_ex_tax`, `shipping_fee_ex_tax`, `installation_fee_ex_tax`, `tax_rate`, `line_note`, `validation_status`, `validation_message` |
+| 現行から引き継ぐ列 | `mitsumori` の A/B/C/D/E/F/G/H/J/K/L/M 列相当、値引き候補列 N:AB |
+| 新しく追加する列 | `quote_id`, `line_no`, `item_source_type`, `internal_id`, `validation_status`, `validation_message` |
+| このタブに入れないもの | 画面整形用の帳票レイアウト、商品名文字列に価格を埋め込む運用、案件別タブ乱立を前提にした列 |
+| 更新主体 | 人が行入力し、GASが商品補完・計算・検証を行う |
+| 備考 | 今回は概要のみ。正本フロー確定後に別ドキュメントで詳細化する |
 
-## 最初に決めるべきID設計
+---
 
-| ID | 用途 | 方針 |
-|---|---|---|
-| `product_id` | 新システム内部の商品主キー | `P-000001` など現行商品コードと独立したID |
-| `sd_product_code` | 現行互換の商品コード | 既存値を保持し、生成要素も別列で保存 |
-| `quote_id` | 見積ヘッダ主キー | `Q-YYYYMMDD-001` など案件と独立して管理 |
-| `deal_id` | 案件主キー | `D-YYYYMMDD-001` など |
-| `competitor_product_id` | 競合商品スナップショット主キー | ソースサイト + 収集日時 + 通番、または連番ID |
-| `archive_id` | 旧資産参照リスト主キー | `A-0001` など |
+## 6. 見積履歴（概要）
 
-## 今回新たに確定したこと
+| 項目 | 内容 |
+|---|---|
+| タブの目的 | 作成済み見積のヘッダ情報、合計、外部連携結果、元シート参照を集約する |
+| 主キー候補 | `quote_id` |
+| 必須列 | `quote_id`, `customer_name`, `quote_status`, `subtotal_ex_tax`, `tax_amount`, `total_in_tax`, `quoted_at` |
+| 任意列 | `deal_id`, `source_spreadsheet_id`, `source_sheet_name`, `quote_sheet_url`, `freee_partner_id`, `freee_quotation_id`, `gmail_message_id`, `owner_name`, `memo` |
+| 現行から引き継ぐ列 | `2024長谷川さん` の案件ヘッダ列、`見積`, `受注`, `請求書`, `入金確認`, `freee quotation_id`, `Gmail Message-ID` |
+| 新しく追加する列 | `quote_id`, `source_spreadsheet_id`, `source_sheet_name`, `sync_status` |
+| このタブに入れないもの | 明細全量を横持ちしない。WordPress出力項目、競合収集項目を混在させない |
+| 更新主体 | GAS + 人 |
+| 備考 | 現行正本が `2.3` / `2.3freee連携API` のどちらか最終確定後に粒度を詰める |
 
-- 新統合シートv0では、現行の `ネットショップ商品一覧`、`ルール`、`Wordpress用csv`、`mitsumori`、`2024長谷川さん`、`リサイフィット` をそれぞれ別責務のタブに分けて設計するのが自然。
-- `見積入力` は A列/B列の二系統商品参照を吸収できるよう、`item_source_type` と `item_code` を必須列にした方がよい。
+---
 
-## まだ未確定のこと
+## 7. アーカイブ
 
-- `商品画像` をv0で別タブ化するか、まず `商品マスタ` にJSON文字列列として持つか
-- `設定マスタ` を1タブ汎用型で始めるか、`maker_master` 等に分割して始めるか
-- `見積履歴` に案件管理を全部寄せるか、別途 `案件マスタ` を切るか
+| 項目 | 内容 |
+|---|---|
+| タブの目的 | 旧コピー、試作ブック、役割不明タブを即削除せず、安全に棚卸し・退避管理する |
+| 主キー候補 | `archive_id` |
+| 必須列 | `archive_id`, `spreadsheet_name`, `sheet_name`, `current_judgement`, `archive_reason`, `replacement_doc_or_sheet`, `checked_at` |
+| 任意列 | `spreadsheet_id`, `sheet_gid`, `owner`, `last_seen_updated_at`, `risk_note`, `memo` |
+| 現行から引き継ぐ列 | `docs/sheet-inventory.md` の `要確認` / `アーカイブ` 判定結果 |
+| 新しく追加する列 | `archive_id`, `replacement_doc_or_sheet`, `checked_at`, `risk_note` |
+| このタブに入れないもの | 現役業務データの正本行。アーカイブ台帳と実データを混ぜない |
+| 更新主体 | 人 |
+| 備考 | 「削除候補」でも即削除せず、根拠と依存関係の確認が終わるまで保持する |
 
-## 設計に進めるようになった項目
+---
 
-- `商品マスタ` / `設定マスタ` / `サイト出力ビュー` / `見積入力` / `見積履歴` / `競合価格データ` / `アーカイブ` のv0スキーマレビュー
-- 現行列から新列へのマッピング表作成
+## v0 設計方針
 
-## 次の一手
-
-1. この列定義案をもとに、必須列だけに絞った最小v0シート定義へ削る。
-2. `products.json` の項目名と `サイト出力ビュー` の列名を揃える。
-3. 見積正本フロー確定後に `見積入力` / `見積履歴` の分割粒度を調整する。
-
-## すぐ実装着手できる候補
-
-- 新統合スプレッドシートv0の雛形CSV/Markdown列定義
-- 現行 `ネットショップ商品一覧` → `商品マスタ` の列マッピング表
-- 現行 `mitsumori` → `見積入力` の列マッピング表
+| 論点 | 方針 |
+|---|---|
+| 商品ID | 新規に `internal_id` を採番し、`sd_product_code` と分離する |
+| 既存商品コード互換 | `sd_product_code` を維持し、新規採番・検証仕様は `docs/product-code-validation-spec.md` に分離する |
+| 分類マスタ | 現行の三重管理をやめ、設定マスタを正本に寄せる |
+| サイト公開 | 商品マスタを直接サイトに読ませず、サイト出力ビューまたは `products.json` を派生生成する |
+| WordPress依存 | `legacy_wp_*` に隔離し、新サイトの中核設計へ taxonomy/post_type/post_status を混ぜない |
+| 見積統合 | 今回は概要に留めるが、商品マスタ参照とその他商品参照を明示的に分離した入力モデルへ寄せる |
+| 競合価格 | 新サイト本体と別責務として残し、価格判断用レビュー状態と自社商品紐付け候補を持つ |
