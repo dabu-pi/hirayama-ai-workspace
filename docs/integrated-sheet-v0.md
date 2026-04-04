@@ -24,13 +24,13 @@
 |---|---|
 | タブの目的 | 中古マシン商品データの業務正本。サイト表示、見積参照、競合突合の元データを持つ |
 | 主キー候補 | `internal_id` |
-| 必須列 | `internal_id`, `sd_product_code`, `product_name`, `maker_code`, `condition_code`, `store_code`, `purchase_year`, `part_code`, `category_code`, `base_price_ex_tax`, `sale_price_ex_tax`, `publish_status`, `inquiry_enabled`, `created_at`, `updated_at` |
-| 任意列 | `legacy_product_code`, `discount_price_ex_tax`, `shipping_fee_ex_tax`, `description_text`, `description_html`, `image_urls`, `featured_flag`, `seo_slug`, `seo_title`, `seo_description`, `remarks`, `legacy_wp_post_id`, `legacy_wp_category_text`, `source_sheet_name`, `source_row_no` |
+| 必須列 | `internal_id`, `sd_product_code`, `product_name`, `maker_code`, `condition_code`, `store_code`, `purchase_year`, `part_code`, `category_code`, `base_price_ex_tax`, `sale_price_ex_tax`, `publish_status`, `inquiry_enabled`, `source_image_urls`, `image_count`, `created_at`, `updated_at` |
+| 任意列 | `legacy_product_code`, `discount_price_ex_tax`, `shipping_fee_ex_tax`, `description_text`, `description_html`, `main_image_index`, `main_source_image_url`, `featured_flag`, `seo_slug`, `seo_title`, `seo_description`, `remarks`, `legacy_wp_post_id`, `legacy_wp_category_text`, `source_sheet_name`, `source_row_no` |
 | 現行から引き継ぐ列 | `新規自動生成商品コード`, `商品名`, `メーカー名`, `状態`, `店舗`, `仕入れ年`, `鍛える部位`, `トレーニングマシンの種類`, `定価（税抜き）`, `値引き後の価格（税抜き）`, `送料`, `公開状態`, `トップページ掲載`, `商品説明`, `画像1〜3`, `通し番号` |
-| 新しく追加する列 | `internal_id`, `legacy_product_code`, `inquiry_enabled`, `seo_slug`, `seo_title`, `seo_description`, `created_at`, `updated_at`, `legacy_wp_post_id`, `legacy_wp_category_text` |
+| 新しく追加する列 | `internal_id`, `legacy_product_code`, `inquiry_enabled`, `source_image_urls`, `image_count`, `main_image_index`, `main_source_image_url`, `seo_slug`, `seo_title`, `seo_description`, `created_at`, `updated_at`, `legacy_wp_post_id`, `legacy_wp_category_text` |
 | このタブに入れないもの | WordPress taxonomy/post_type/post_status を正本列として持たない。BASE専用CSV列、見積小計/消費税/合計、競合生HTML、顧客個人情報を入れない |
-| 更新主体 | 人が商品属性を入力し、GASがコード検証・派生値補完・出力ビュー生成を担当する |
-| 備考 | 詳細列定義は `docs/product-master-v0.md` に分離する |
+| 更新主体 | 人が商品属性と元画像URLを入力し、GASがコード検証・派生値補完・出力ビュー生成を担当する |
+| 備考 | 画像は元画像URL群を正本として保持し、表示用700x700正方形画像URLはこのタブではなく派生処理側で生成する。詳細列定義は `docs/product-master-v0.md`、画像共通ルールは `docs/image-spec-v0.md` に分離する |
 
 ---
 
@@ -56,12 +56,12 @@
 |---|---|
 | タブの目的 | 新サイトが読むための公開向け派生データを、商品マスタから正規化して並べる |
 | 主キー候補 | `internal_id` |
-| 必須列 | `internal_id`, `sd_product_code`, `slug`, `title`, `display_price_ex_tax`, `publish_status`, `is_published`, `main_image_url`, `maker_code`, `maker_label`, `store_code`, `store_label`, `condition_code`, `condition_label`, `part_code`, `part_label`, `category_code`, `category_label`, `search_text`, `sort_updated_at` |
-| 任意列 | `description_text`, `description_html`, `image_urls`, `featured_flag`, `seo_title`, `seo_description`, `inquiry_enabled`, `sold_out_flag`, `shipping_fee_ex_tax` |
+| 必須列 | `internal_id`, `sd_product_code`, `slug`, `title`, `display_price_ex_tax`, `publish_status`, `is_published`, `main_display_image_url`, `display_image_urls`, `maker_code`, `maker_label`, `store_code`, `store_label`, `condition_code`, `condition_label`, `part_code`, `part_label`, `category_code`, `category_label`, `search_text`, `sort_updated_at` |
+| 任意列 | `description_text`, `description_html`, `source_image_urls`, `display_image_size`, `image_alt`, `featured_flag`, `seo_title`, `seo_description`, `inquiry_enabled`, `sold_out_flag`, `shipping_fee_ex_tax` |
 | 現行から引き継ぐ列 | 商品マスタ由来の公開系列。特に `商品名`, `商品説明`, `画像`, `状態`, `公開状態`, `トップページ掲載`, `新規自動生成商品コード` |
-| 新しく追加する列 | `slug`, `maker_label`, `store_label`, `condition_label`, `part_label`, `category_label`, `search_text`, `sort_updated_at`, `is_published`, `sold_out_flag` |
+| 新しく追加する列 | `slug`, `maker_label`, `store_label`, `condition_label`, `part_label`, `category_label`, `display_image_urls`, `main_display_image_url`, `display_image_size`, `search_text`, `sort_updated_at`, `is_published`, `sold_out_flag` |
 | このタブに入れないもの | `原価`, `仕入先`, `販売先`, `freee_*`, `legacy_wp_*`, WordPress taxonomy/post_type/post_status, 競合レビュー状態 |
-| 更新主体 | 原則 GAS/変換処理が商品マスタから再生成する。手入力しない |
+| 更新主体 | 原則 GAS/変換処理が商品マスタから再生成し、元画像URLから表示用正方形画像URLを生成する。手入力しない |
 | 備考 | 詳細列定義は `docs/site-output-view-v0.md` に分離する |
 
 ---
@@ -130,6 +130,20 @@
 
 ---
 
+## 商品画像の分離方針
+
+| 論点 | 商品マスタ | サイト出力ビュー / products.json |
+|---|---|---|
+| 元画像URL群 | `source_image_urls` で保持する | 必要なら参照用に引き継ぐが、表示描画は表示用画像URLを優先する |
+| 表示用画像URL群 | 持たない | `display_image_urls` / `images[].displayUrl` として派生生成する |
+| 代表画像 | `main_image_index` と `main_source_image_url` で管理する | `main_display_image_url` または `images[].isMain=true` として出力する |
+| 枚数制限 | `image_count` で検証し、v0運用は1〜10枚とする | 元画像順を維持し、1〜10件の表示用画像配列を出力する |
+| 画像変換責務 | 元画像の保持まで。正方形化やリサイズ処理を商品マスタの正本列に混ぜない | 700x700正方形の派生画像生成を担当し、商品全体の収まり優先で余白背景を付ける |
+
+共通画像仕様は `docs/image-spec-v0.md` を参照する。
+
+---
+
 ## v0 設計方針
 
 | 論点 | 方針 |
@@ -138,6 +152,7 @@
 | 既存商品コード互換 | `sd_product_code` を維持し、新規採番・検証仕様は `docs/product-code-validation-spec.md` に分離する |
 | 分類マスタ | 現行の三重管理をやめ、設定マスタを正本に寄せる |
 | サイト公開 | 商品マスタを直接サイトに読ませず、サイト出力ビューまたは `products.json` を派生生成する |
+| 画像管理 | 商品マスタには元画像URL群と代表画像位置だけを持ち、700x700正方形の表示用画像はサイト出力ビュー/`products.json` 側の派生生成物として別管理する。登録は最低1枚、最大10枚 |
 | WordPress依存 | `legacy_wp_*` に隔離し、新サイトの中核設計へ taxonomy/post_type/post_status を混ぜない |
 | 見積統合 | 今回は概要に留めるが、商品マスタ参照とその他商品参照を明示的に分離した入力モデルへ寄せる |
 | 競合価格 | 新サイト本体と別責務として残し、価格判断用レビュー状態と自社商品紐付け候補を持つ |

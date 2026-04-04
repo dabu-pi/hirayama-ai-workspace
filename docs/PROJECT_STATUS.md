@@ -405,3 +405,46 @@ Apps Script 実体と WordPress/PHP 反映経路の未確定部分を、CLI/API/
 - 商品コード `sd_product_code` 検証ライブラリ
 - `products.json` 生成スクリプトとサンプル出力
 - 設定マスタ初期データ投入スクリプト
+
+---
+
+## 2026-04-05 中古マシン販売システム再構築 画像仕様反映タスク
+
+### 目的
+
+設計フェーズ4で作成した新システム設計ドキュメントへ、商品画像の正式仕様「最低1枚、最大10枚、元画像は縦横比自由、表示用は700x700正方形の派生生成物、収まり優先で余白背景を付ける」を反映する。
+
+### 作成/更新した成果物
+
+- 新規: `docs/image-spec-v0.md`
+- 更新: `docs/integrated-sheet-v0.md`
+- 更新: `docs/product-master-v0.md`
+- 更新: `docs/site-output-view-v0.md`
+- 更新: `docs/products-json-spec.md`
+- 更新: `docs/current-to-v0-mapping.md`
+- 更新: `docs/rebuild-architecture-draft.md`
+- 更新: `docs/open-questions.md`
+- 更新: `docs/PROJECT_STATUS.md`
+
+### 今回確定した画像仕様
+
+- 商品1件あたり画像は最低1枚、最大10枚。現行 `画像1〜3` は初回移行で順序を保ってそのまま取り込み、4枚目以降は新構造で追加できる。
+- 商品マスタの正本画像は元画像URL配列 `source_image_urls`。元画像は縦横比を問わず保持し、`image_count`, `main_image_index`, `main_source_image_url` で枚数と代表画像を管理する。
+- 700x700正方形の表示用画像は商品マスタの正本列に持たず、`サイト出力ビュー` / `products.json` 生成時の派生画像として `display_image_urls`, `main_display_image_url`, `images[].displayUrl` に分けて持つ。
+- 表示用画像生成は商品全体の収まりを優先し、過度な自動トリミングではなく余白背景で正方形化する。
+- `products.json.images[]` は `sourceUrl`, `displayUrl`, `width`, `height`, `alt`, `isMain`, `sortOrder` を持つv0仕様とし、`thumbnailUrl` はまだ必須化しない。
+
+### まだ実装時に決めること
+
+- 表示用画像の保存先を Drive派生画像、オブジェクトストレージ、CDN のどれにするか。
+- 余白背景色を白固定にするか、サイトデザイン側の背景色に合わせるか。
+- 元画像差し替え時の派生画像再生成を即時処理、バッチ処理、手動再生成のどれにするか。
+- `thumbnailUrl` など追加派生をv0から持つか、必要になった時点で後方互換追加するか。
+- 画像0枚の既存行が見つかった場合に、移行時エラー停止にするか、`draft/private` 限定の要確認データとして一時許容するか。
+
+### 次に着手しやすい実装候補
+
+1. 新統合スプレッドシート v0 雛形へ `source_image_urls`, `image_count`, `main_image_index`, `display_image_urls`, `main_display_image_url` を反映する。
+2. 現行 `画像1〜3` → `source_image_urls` 変換と `main_image_index` 初期化を含む読み取り専用変換スクリプトを作る。
+3. 元画像URLから700x700正方形の表示用画像を生成し、`display_image_urls` と `products.json.images[].displayUrl` を出力する試作を作る。
+4. `products.json` 生成サンプルで、最大10枚、代表画像、売却済み、非公開、画像欠損要確認のケースを比較検証する。

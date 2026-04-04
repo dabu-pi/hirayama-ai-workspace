@@ -15,6 +15,7 @@
 | 公開制御 | `publish_status`, `is_published`, `sold_out_flag`, `inquiry_enabled` を分けて持つ |
 | 分類 | メーカー/店舗/状態/部位/カテゴリは code と label を両方持ち、サイト側で再JOINしなくても表示できるようにする |
 | URL | `slug` をビューに持つ。WordPress `post_name` をそのまま正本にしない |
+| 画像 | 一覧代表画像と詳細画像配列は、元画像から生成した700x700正方形の表示用画像URLを使う。商品全体の収まりを優先し、過度な自動トリミングではなく余白背景で整える |
 
 ## 列一覧
 
@@ -42,8 +43,10 @@
 | `discount_price_ex_tax` | number | 任意 | 値引き価格表示 | 商品マスタ `discount_price_ex_tax` |
 | `shipping_fee_ex_tax` | number | 任意 | 送料目安表示 | 商品マスタ `shipping_fee_ex_tax` |
 | `price_label` | string | 任意 | 「お問い合わせください」等の価格表示補助 | `display_price_ex_tax` や公開状態から生成 |
-| `image_urls` | string/JSON | 任意 | 詳細ページ画像一覧 | 商品マスタ `image_urls` |
-| `main_image_url` | string | 任意 | 一覧代表画像 | 商品マスタ `main_image_url` |
+| `display_image_urls` | string/JSON | 必須 | 詳細ページ画像一覧。700x700正方形の表示用画像URL配列 | 商品マスタ `source_image_urls` から画像生成処理で派生 |
+| `main_display_image_url` | string | 必須 | 一覧代表画像。`display_image_urls` の代表画像URL | 商品マスタ `main_image_index`, `source_image_urls` から派生 |
+| `source_image_urls` | string/JSON | 任意 | 元画像URL配列の参照保持。サイト描画では原則 `display_image_urls` を使う | 商品マスタ `source_image_urls` |
+| `display_image_size` | string | 任意 | 表示用画像の基本サイズ。v0は原則 `700x700` | 画像生成処理の固定仕様 |
 | `image_alt` | string | 任意 | 画像alt補助 | `title + maker_label + category_label` などから生成 |
 | `publish_status` | string | 必須 | 公開状態の業務値 | 商品マスタ `publish_status` |
 | `is_published` | boolean | 必須 | サイト配信対象判定 | `publish_status` + `condition_code` から生成 |
@@ -62,7 +65,7 @@
 
 | 用途 | 列 |
 |---|---|
-| カード表示 | `title`, `main_image_url`, `maker_label`, `category_label`, `condition_label`, `display_price_ex_tax`, `price_label`, `sold_out_flag` |
+| カード表示 | `title`, `main_display_image_url`, `maker_label`, `category_label`, `condition_label`, `display_price_ex_tax`, `price_label`, `sold_out_flag` |
 | バッジ表示 | `condition_label`, `sold_out_flag`, `featured_flag` |
 | リンク | `slug`, `internal_id`, `sd_product_code` |
 | 並び順 | `sort_updated_at`, `sort_price_ex_tax`, `featured_flag` |
@@ -74,9 +77,22 @@
 | 基本情報 | `title`, `maker_label`, `store_label`, `condition_label`, `part_label`, `category_label`, `sd_product_code` |
 | 本文 | `description_text`, `description_html` |
 | 価格 | `display_price_ex_tax`, `base_price_ex_tax`, `discount_price_ex_tax`, `shipping_fee_ex_tax`, `price_label` |
-| 画像 | `main_image_url`, `image_urls`, `image_alt` |
+| 画像 | `main_display_image_url`, `display_image_urls`, `source_image_urls`, `display_image_size`, `image_alt` |
 | 問い合わせ | `inquiry_enabled`, `sd_product_code`, `title` |
 | SEO | `slug`, `seo_title`, `seo_description`, `canonical_path` |
+
+## 画像生成ルール
+
+| 論点 | 方針 |
+|---|---|
+| 元画像と表示用画像 | `source_image_urls` は元画像参照、`display_image_urls` と `main_display_image_url` はサイト表示用の派生画像として別管理する |
+| 枚数 | `display_image_urls` は `source_image_urls` の順序を引き継ぎ、最低1件・最大10件を原則とする |
+| 一覧代表画像 | `main_display_image_url` は `main_image_index` で選んだ画像、未指定なら1枚目を使う |
+| 詳細画像配列 | 詳細ページでは `display_image_urls` の順序をそのまま表示順とする |
+| 画像サイズ | v0の表示用画像は 700x700 正方形を基本とする |
+| 整形方式 | 元画像の縦横比は問わず、商品全体ができるだけ収まるようにリサイズし、不足余白を背景で埋める。自動中央クロップ前提にはしない |
+| 生成責務 | 正方形化やリサイズは `商品マスタ` ではなく、このビュー生成または `products.json` 生成の派生処理で行う |
+| 詳細ルール | 共通画像仕様は `docs/image-spec-v0.md` を参照する |
 
 ## フィルタ/検索/ソート設計
 
@@ -108,7 +124,7 @@
 
 | 観点 | 方針 |
 |---|---|
-| 生成元 | `サイト出力ビュー` をそのまま JSON 化するか、商品マスタから直接 JSON 生成するかはどちらでもよいが、v0 では項目整形済みの `サイト出力ビュー` を中間確認面として置く |
+| 生成元 | `サイト出力ビュー` をそのまま JSON 化するか、商品マスタから直接 JSON 生成するかはどちらでもよいが、v0 では画像URLも含めて項目整形済みの `サイト出力ビュー` を中間確認面として置く |
 | JSONキー | `site-output-view-v0.md` の code/label/slug/SEO/公開判定列が `products.json` の元になる |
 | 非公開行 | `is_published=false` を JSON 出力対象から除外するか、管理用途で残すかはAPI設計時に最終決定する |
 
@@ -131,4 +147,4 @@
 | `Wordpress用csv.tax_products-category` | `maker_code/label`, `store_code/label`, `condition_code/label`, `part_code/label`, `category_code/label` |
 | `Wordpress用csv.post_status` | `publish_status`, `is_published` |
 | `Wordpress用csv.product_keyword` + 現行検索語 | `search_text` |
-| `画像1〜3` | `main_image_url`, `image_urls` |
+| `画像1〜3` | `source_image_urls`, `display_image_urls`, `main_display_image_url` |
