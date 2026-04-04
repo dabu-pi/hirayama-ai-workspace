@@ -72,6 +72,35 @@
 
 ただし、Google Sheets 実体作成へ進む前に、実データエクスポートを1回流して未登録マスタ・旧コード例外・画像0件の件数を確認し、seed と変換ルールの補正を入れるのが安全。
 
+## 2026-04-05 フェーズ5Bで補正したこと
+
+- `scripts/export_sheet_to_csv.mjs` を追加し、現行ブックをサービスアカウントで読み取り専用CSV化できるようにした
+- `scripts/inspect_sheet_cells.mjs` を追加し、画像列セルの hyperlink / formula 有無を gridData で確認できるようにした
+- `scripts/audit_sd_product_code.py` を追加し、`sd_product_code` 監査CSVを全件出力できるようにした
+- `data/seeds/settings_*.csv` を現行 `ルール` タブに合わせて大幅拡張した
+- 部位空欄は現行ルールの `AT=その他` に寄せた
+- `画像1〜3` はURL形式のみ採用し、非URLテキストは `image_url_suspicious` warning に分離した
+- `sd_product_code` パース時に大文字化し、`Bm` / `Hs` / `Ig` などの小文字混在旧コードを吸収した
+- 商品実体がないプレースホルダ行は変換対象から除外し、`internal_id` は有効行順で採番するようにした
+- `data/input/*.full.csv` と `data/output/product_master_v0.full.csv` は仕入先/販売先の文字列を含み得るため、AGENTS.md に合わせて Git 管理外にした
+
+## 2026-04-05 フェーズ5Bの実データ監査結果
+
+- 現行 `ネットショップ商品一覧` CSVエクスポート: 993行取得
+- v0変換後の有効商品行: 924件
+- 変換issue: 4,953件 → 1,126件に減少
+- `sd_product_code` 監査: 775 ok / 112 warning / 37 error
+- `products.full.sample.json`: 924件生成
+- 画像枚数分布: `source_image_count=0` が 924件、1〜3枚は 0件
+
+## フェーズ5Bで新たに見つかった例外
+
+- `KOMATSU` の実商品コードで `KT` が使われている行があるが、`ルール` タブは `KO`
+- `UESAKA` の実商品コードで `US` が使われている行があるが、`ルール` タブは `UE`
+- `OOISAT041AT` など、年コード位置が `AT` になっている旧例外候補が26件ある
+- `SANT21651AT`, `ATNT18190AT` は、商品メーカー名と既存商品コードのメーカー部が一致していない疑いがある
+- 現行 `画像1〜3` からURLが取れず、`中村様` / `池田` / `見積中` のような非URLテキストが入っている行がある
+
 ## 実行コマンド
 
 この環境では `python` ではなく `uv run python` を使う。`uv` の既定キャッシュ場所が衝突したため、`UV_CACHE_DIR` をワークスペース配下に寄せる。
@@ -82,4 +111,17 @@ $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
 & 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0
 & 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.export_products_json
 & 'C:\Users\pinsh\.local\bin\uv.exe' run python -m unittest discover -s tests -v
+```
+
+### 実データ監査コマンド
+
+```powershell
+$env:AIOS_SERVICE_ACCOUNT_PATH='C:\hirayama-ai-workspace\workspace\secrets\credentials.json'
+node scripts\export_sheet_to_csv.mjs --sheet-name "ネットショップ商品一覧" --output data\input\current_product_master.full.csv
+node scripts\export_sheet_to_csv.mjs --sheet-name "ルール" --output data\input\current_rules.full.csv
+
+$env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
+& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0 --input data\input\current_product_master.full.csv --output data\output\product_master_v0.full.csv --log data\output\transform_current_to_v0.full.log --error-csv data\output\transform_current_to_v0.full_errors.csv --warnings-csv data\output\transform_warnings.csv --unknown-master-csv data\output\unknown_master_values.csv --legacy-code-exceptions-csv data\output\legacy_code_exceptions.csv --image-count-distribution-csv data\output\image_count_distribution.csv --image-zero-report data\output\image_zero_count_report.md --unmapped-json data\output\transform_current_to_v0.full_unmapped.json
+& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.audit_sd_product_code --input data\output\product_master_v0.full.csv --seed-dir data\seeds --output data\output\sd_product_code_audit.csv
+& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.export_products_json --input data\output\product_master_v0.full.csv --seed-dir data\seeds --output data\output\products.full.sample.json
 ```

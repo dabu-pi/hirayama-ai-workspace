@@ -27,6 +27,7 @@ parse結果と期待値を照合し、`ok` / `warning` / `error` 相当の状態
 
 - 空文字
 - 半角英数字以外
+- 小文字混在コードは監査時に大文字化して分解
 - 未知の店舗コード / メーカーコード / 部位コード
 - 仕入年コードが `YY` または `MD` 以外
 - 通し番号が3桁数字でない
@@ -46,3 +47,9 @@ $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
 - 新規採番生成そのものは未実装
 - 未登録コード検知は seed CSV ベースであり、本番マスタ連携はまだ
 - 旧コード例外の扱いは lenient モード中心で、最終的な運用境界は実データ確認が必要
+
+## 実データ監査で見つかったこと
+
+- `data/output/sd_product_code_audit.csv` では 924 件中 775 ok / 112 warning / 37 error
+- warning の中心は `OT`, `LF`, `HS`, `MC`, `BM`, `IG`, `PB` の旧メーカーコード重複
+- error の中心は `OOISAT041AT` など「年コード位置が `AT`」の旧例外26件、`KT` / `US` の未知メーカー旧コード、商品メーカー名とコードの不一致2件

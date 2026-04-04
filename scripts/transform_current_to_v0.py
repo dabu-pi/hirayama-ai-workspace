@@ -10,6 +10,7 @@ from scripts.lib.product_v0 import (
     PRODUCT_MASTER_COLUMNS,
     SettingsRegistry,
     build_search_text,
+    collect_suspicious_image_values,
     derive_purchase_year_code,
     infer_publish_status,
     infer_visibility_fields,
@@ -32,6 +33,11 @@ DEFAULT_OUTPUT = Path("data/samples/product_master_v0_sample.csv")
 DEFAULT_SEED_DIR = Path("data/seeds")
 DEFAULT_LOG = Path("data/output/transform_current_to_v0.log")
 DEFAULT_ERROR_CSV = Path("data/output/transform_current_to_v0_errors.csv")
+DEFAULT_WARNINGS_CSV = Path("data/output/transform_warnings.csv")
+DEFAULT_UNKNOWN_MASTER_CSV = Path("data/output/unknown_master_values.csv")
+DEFAULT_LEGACY_CODE_EXCEPTIONS_CSV = Path("data/output/legacy_code_exceptions.csv")
+DEFAULT_IMAGE_COUNT_DISTRIBUTION_CSV = Path("data/output/image_count_distribution.csv")
+DEFAULT_IMAGE_ZERO_REPORT = Path("data/output/image_zero_count_report.md")
 DEFAULT_UNMAPPED_JSON = Path("data/output/transform_current_to_v0_unmapped.json")
 
 CURRENT_COLUMNS_USED = {
@@ -70,6 +76,21 @@ CURRENT_COLUMNS_USED = {
     "Wordpress用csv.post_name",
 }
 
+ROW_CONTENT_COLUMNS = (
+    "メーカー名",
+    "商品名",
+    "商品説明",
+    "状態",
+    "店舗",
+    "仕入れ年",
+    "鍛える部位",
+    "トレーニングマシンの種類",
+    "新規自動生成商品コード",
+    "画像1",
+    "画像2",
+    "画像3",
+)
+
 
 @dataclass
 class TransformIssue:
@@ -78,6 +99,8 @@ class TransformIssue:
     issue_code: str
     message: str
     sd_product_code: str = ""
+    master_type: str = ""
+    raw_value: str = ""
 
     def as_row(self) -> dict[str, object]:
         return {
@@ -86,6 +109,8 @@ class TransformIssue:
             "issue_code": self.issue_code,
             "message": self.message,
             "sd_product_code": self.sd_product_code,
+            "master_type": self.master_type,
+            "raw_value": self.raw_value,
         }
 
 
@@ -101,18 +126,34 @@ def _resolve_master(
     master_type: str,
     raw_value: str,
     fallback_code: str,
-) -> tuple[str, str, str, str]:
+    *,
+    empty_label: str = "未設定",
+    empty_is_valid: bool = False,
+) -> tuple[str, str, str, str, str]:
     source_value = normalize_text(raw_value)
     record = registry.find(master_type, source_value)
     if record:
-        return record.code, record.label, record.legacy_code, ""
+        return record.code, record.label, record.legacy_code, "", source_value
     if not source_value:
-        return fallback_code, "未設定", "", f"{master_type} is empty."
+        fallback_record = registry.by_type.get(master_type, {}).get(fallback_code)
+        fallback_label = fallback_record.label if fallback_record else empty_label
+        fallback_legacy_code = fallback_record.legacy_code if fallback_record else ""
+        message = "" if empty_is_valid else f"{master_type} is empty."
+        return (
+            fallback_code,
+            fallback_label,
+            fallback_legacy_code,
+            message,
+            source_value,
+        )
+    fallback_record = registry.by_type.get(master_type, {}).get(fallback_code)
+    fallback_legacy_code = fallback_record.legacy_code if fallback_record else ""
     return (
         fallback_code,
         source_value,
-        "",
+        fallback_legacy_code,
         f"{master_type} is not registered: {source_value}.",
+        source_value,
     )
 
 
@@ -156,6 +197,13 @@ def _number_or_default(value: str, default_value: int | float) -> int | float:
     return parsed if parsed is not None else default_value
 
 
+def _is_placeholder_row(current_row: dict[str, str]) -> bool:
+    return not any(
+        normalize_text(current_row.get(column_name, ""))
+        for column_name in ROW_CONTENT_COLUMNS
+    )
+
+
 def transform_rows(
     rows: list[dict[str, str]],
     registry: SettingsRegistry,
@@ -170,35 +218,70 @@ def transform_rows(
     }
 
     for row_index, current_row in enumerate(rows, start=2):
+        if _is_placeholder_row(current_row):
+            continue
+
         for column_name in result.unmapped_columns:
             if normalize_text(current_row.get(column_name, "")):
                 result.unmapped_columns[column_name] += 1
 
-        maker_code, maker_name, maker_legacy_code, maker_issue = _resolve_master(
+        (
+            maker_code,
+            maker_name,
+            maker_legacy_code,
+            maker_issue,
+            maker_raw_value,
+        ) = _resolve_master(
             registry,
             "maker",
             current_row.get("メーカー名", ""),
             "UNREGISTERED_MAKER",
         )
-        store_code, store_name, store_legacy_code, store_issue = _resolve_master(
+        (
+            store_code,
+            store_name,
+            store_legacy_code,
+            store_issue,
+            store_raw_value,
+        ) = _resolve_master(
             registry,
             "store",
             current_row.get("店舗", ""),
             "UNREGISTERED_STORE",
         )
-        part_code, part_label, part_legacy_code, part_issue = _resolve_master(
+        (
+            part_code,
+            part_label,
+            part_legacy_code,
+            part_issue,
+            part_raw_value,
+        ) = _resolve_master(
             registry,
             "part",
             current_row.get("鍛える部位", ""),
-            "UNREGISTERED_PART",
+            "AT",
+            empty_label="その他",
+            empty_is_valid=True,
         )
-        condition_code, condition_label, _, condition_issue = _resolve_master(
+        (
+            condition_code,
+            condition_label,
+            _condition_legacy_code,
+            condition_issue,
+            condition_raw_value,
+        ) = _resolve_master(
             registry,
             "condition",
             current_row.get("状態", ""),
             "unknown",
         )
-        category_code, category_label, _, category_issue = _resolve_master(
+        (
+            category_code,
+            category_label,
+            _category_legacy_code,
+            category_issue,
+            category_raw_value,
+        ) = _resolve_master(
             registry,
             "category",
             current_row.get("トレーニングマシンの種類", ""),
@@ -206,6 +289,7 @@ def transform_rows(
         )
 
         source_images = parse_source_images(current_row, max_images=10)
+        suspicious_images = collect_suspicious_image_values(current_row)
         source_image_count = len(source_images)
         main_image_index = 1 if source_image_count else ""
         main_source_image_url = source_images[0] if source_images else ""
@@ -230,7 +314,7 @@ def transform_rows(
         sd_product_code = normalize_text(current_row.get("新規自動生成商品コード", ""))
 
         output_row: dict[str, object] = {
-            "internal_id": make_internal_id(row_index - 1),
+            "internal_id": make_internal_id(len(result.rows) + 1),
             "sd_product_code": sd_product_code,
             "legacy_product_code": "",
             "serial_no": serial_no if serial_no is not None else "",
@@ -318,12 +402,22 @@ def transform_rows(
 
         result.rows.append(output_row)
 
-        for issue_code, message in (
-            ("maker_unregistered", maker_issue),
-            ("store_unregistered", store_issue),
-            ("part_unregistered", part_issue),
-            ("condition_unregistered", condition_issue),
-            ("category_unregistered", category_issue),
+        for issue_code, master_type, raw_value, message in (
+            ("maker_unregistered", "maker", maker_raw_value, maker_issue),
+            ("store_unregistered", "store", store_raw_value, store_issue),
+            ("part_unregistered", "part", part_raw_value, part_issue),
+            (
+                "condition_unregistered",
+                "condition",
+                condition_raw_value,
+                condition_issue,
+            ),
+            (
+                "category_unregistered",
+                "category",
+                category_raw_value,
+                category_issue,
+            ),
         ):
             if message:
                 result.issues.append(
@@ -333,8 +427,23 @@ def transform_rows(
                         issue_code=issue_code,
                         message=message,
                         sd_product_code=sd_product_code,
+                        master_type=master_type,
+                        raw_value=raw_value,
                     )
                 )
+
+        for image_column, image_value in suspicious_images:
+            result.issues.append(
+                TransformIssue(
+                    row_no=row_index,
+                    level="warning",
+                    issue_code="image_url_suspicious",
+                    message=f"{image_column} is not a URL and was excluded from source_image_urls_json.",
+                    sd_product_code=sd_product_code,
+                    master_type="image",
+                    raw_value=image_value,
+                )
+            )
 
         if source_image_count == 0:
             result.issues.append(
@@ -382,6 +491,148 @@ def write_transform_log(log_path: Path, result: TransformResult) -> None:
     log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_warnings_csv(path: Path, issues: list[TransformIssue]) -> None:
+    warning_rows = [issue.as_row() for issue in issues if issue.level == "warning"]
+    write_csv(
+        path,
+        warning_rows,
+        [
+            "row_no",
+            "level",
+            "issue_code",
+            "message",
+            "sd_product_code",
+            "master_type",
+            "raw_value",
+        ],
+    )
+
+
+def write_unknown_master_values_csv(path: Path, issues: list[TransformIssue]) -> None:
+    counter: dict[tuple[str, str, str], dict[str, object]] = {}
+    for issue in issues:
+        if not issue.issue_code.endswith("_unregistered"):
+            continue
+        key = (issue.master_type, issue.raw_value, issue.issue_code)
+        entry = counter.setdefault(
+            key,
+            {
+                "master_type": issue.master_type,
+                "raw_value": issue.raw_value,
+                "issue_code": issue.issue_code,
+                "count": 0,
+                "sample_sd_product_codes": [],
+            },
+        )
+        entry["count"] = int(entry["count"]) + 1
+        sample_codes = entry["sample_sd_product_codes"]
+        if issue.sd_product_code and issue.sd_product_code not in sample_codes and len(sample_codes) < 10:
+            sample_codes.append(issue.sd_product_code)
+
+    rows = []
+    for entry in sorted(
+        counter.values(),
+        key=lambda value: (-int(value["count"]), str(value["master_type"]), str(value["raw_value"])),
+    ):
+        rows.append(
+            {
+                "master_type": entry["master_type"],
+                "raw_value": entry["raw_value"],
+                "issue_code": entry["issue_code"],
+                "count": entry["count"],
+                "sample_sd_product_codes": " | ".join(entry["sample_sd_product_codes"]),
+            }
+        )
+    write_csv(
+        path,
+        rows,
+        [
+            "master_type",
+            "raw_value",
+            "issue_code",
+            "count",
+            "sample_sd_product_codes",
+        ],
+    )
+
+
+def write_legacy_code_exceptions_csv(path: Path, issues: list[TransformIssue]) -> None:
+    counter: dict[tuple[str, str], dict[str, object]] = {}
+    for issue in issues:
+        if issue.issue_code != "sd_product_code_validation":
+            continue
+        key = (issue.level, issue.message)
+        entry = counter.setdefault(
+            key,
+            {
+                "level": issue.level,
+                "message": issue.message,
+                "count": 0,
+                "sample_sd_product_codes": [],
+            },
+        )
+        entry["count"] = int(entry["count"]) + 1
+        sample_codes = entry["sample_sd_product_codes"]
+        if issue.sd_product_code and issue.sd_product_code not in sample_codes and len(sample_codes) < 20:
+            sample_codes.append(issue.sd_product_code)
+
+    rows = []
+    for entry in sorted(counter.values(), key=lambda value: (-int(value["count"]), str(value["message"]))):
+        rows.append(
+            {
+                "level": entry["level"],
+                "message": entry["message"],
+                "count": entry["count"],
+                "sample_sd_product_codes": " | ".join(entry["sample_sd_product_codes"]),
+            }
+        )
+    write_csv(
+        path,
+        rows,
+        ["level", "message", "count", "sample_sd_product_codes"],
+    )
+
+
+def write_image_count_distribution_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    counter: dict[int, int] = {}
+    for row in rows:
+        image_count = parse_number(row.get("source_image_count", 0)) or 0
+        counter[image_count] = counter.get(image_count, 0) + 1
+    write_csv(
+        path,
+        [
+            {"source_image_count": image_count, "product_count": counter[image_count]}
+            for image_count in sorted(counter)
+        ],
+        ["source_image_count", "product_count"],
+    )
+
+
+def write_image_zero_report(path: Path, rows: list[dict[str, object]]) -> None:
+    zero_rows = [
+        row
+        for row in rows
+        if (parse_number(row.get("source_image_count", 0)) or 0) == 0
+    ]
+    lines = [
+        "# 画像0件レポート",
+        "",
+        f"- 対象商品数: {len(rows)}",
+        f"- 画像0件商品数: {len(zero_rows)}",
+        f"- 画像0件割合: {len(zero_rows) / len(rows):.1%}" if rows else "- 画像0件割合: 0.0%",
+        "",
+        "## 画像0件商品コードサンプル",
+        "",
+    ]
+    for row in zero_rows[:100]:
+        lines.append(
+            f"- {normalize_text(row.get('sd_product_code', '')) or '(empty)'} / "
+            f"{normalize_text(row.get('product_name', ''))}"
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def write_unmapped_report(path: Path, unmapped_columns: dict[str, int]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -402,6 +653,11 @@ def run_transform(
     seed_dir: Path,
     log_path: Path,
     error_csv_path: Path,
+    warnings_csv_path: Path,
+    unknown_master_csv_path: Path,
+    legacy_code_exceptions_csv_path: Path,
+    image_count_distribution_csv_path: Path,
+    image_zero_report_path: Path,
     unmapped_json_path: Path,
 ) -> TransformResult:
     rows = load_current_rows(input_path)
@@ -416,8 +672,21 @@ def run_transform(
     write_csv(
         error_csv_path,
         [issue.as_row() for issue in result.issues],
-        ["row_no", "level", "issue_code", "message", "sd_product_code"],
+        [
+            "row_no",
+            "level",
+            "issue_code",
+            "message",
+            "sd_product_code",
+            "master_type",
+            "raw_value",
+        ],
     )
+    write_warnings_csv(warnings_csv_path, result.issues)
+    write_unknown_master_values_csv(unknown_master_csv_path, result.issues)
+    write_legacy_code_exceptions_csv(legacy_code_exceptions_csv_path, result.issues)
+    write_image_count_distribution_csv(image_count_distribution_csv_path, result.rows)
+    write_image_zero_report(image_zero_report_path, result.rows)
     write_transform_log(log_path, result)
     write_unmapped_report(unmapped_json_path, result.unmapped_columns)
     return result
@@ -437,6 +706,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Error/warning row CSV output path.",
     )
     parser.add_argument(
+        "--warnings-csv",
+        default=str(DEFAULT_WARNINGS_CSV),
+        help="Warning-only CSV output path.",
+    )
+    parser.add_argument(
+        "--unknown-master-csv",
+        default=str(DEFAULT_UNKNOWN_MASTER_CSV),
+        help="Aggregated unknown master values CSV output path.",
+    )
+    parser.add_argument(
+        "--legacy-code-exceptions-csv",
+        default=str(DEFAULT_LEGACY_CODE_EXCEPTIONS_CSV),
+        help="Aggregated sd_product_code validation issues CSV output path.",
+    )
+    parser.add_argument(
+        "--image-count-distribution-csv",
+        default=str(DEFAULT_IMAGE_COUNT_DISTRIBUTION_CSV),
+        help="Image count distribution CSV output path.",
+    )
+    parser.add_argument(
+        "--image-zero-report",
+        default=str(DEFAULT_IMAGE_ZERO_REPORT),
+        help="Image-zero markdown report path.",
+    )
+    parser.add_argument(
         "--unmapped-json",
         default=str(DEFAULT_UNMAPPED_JSON),
         help="Unmapped current-column report path.",
@@ -452,6 +746,11 @@ def main() -> int:
         seed_dir=Path(args.seed_dir),
         log_path=Path(args.log),
         error_csv_path=Path(args.error_csv),
+        warnings_csv_path=Path(args.warnings_csv),
+        unknown_master_csv_path=Path(args.unknown_master_csv),
+        legacy_code_exceptions_csv_path=Path(args.legacy_code_exceptions_csv),
+        image_count_distribution_csv_path=Path(args.image_count_distribution_csv),
+        image_zero_report_path=Path(args.image_zero_report),
         unmapped_json_path=Path(args.unmapped_json),
     )
     print(f"rows={len(result.rows)}")

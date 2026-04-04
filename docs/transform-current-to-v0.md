@@ -7,6 +7,11 @@
 - サンプル出力: `data/samples/product_master_v0_sample.csv`
 - 変換ログ: `data/output/transform_current_to_v0.log`
 - エラー/警告一覧: `data/output/transform_current_to_v0_errors.csv`
+- warningのみ抽出: `data/output/transform_warnings.csv`
+- 未登録マスタ集計: `data/output/unknown_master_values.csv`
+- 商品コード旧例外集計: `data/output/legacy_code_exceptions.csv`
+- 画像枚数分布: `data/output/image_count_distribution.csv`
+- 画像0件レポート: `data/output/image_zero_count_report.md`
 - 未変換項目一覧: `data/output/transform_current_to_v0_unmapped.json`
 
 ## 変換方針
@@ -27,6 +32,22 @@
 - `source_image_urls_json = []`, `source_image_count = 0`, `main_image_index = ""`
 - `image_missing` warning をログに出す
 
+## フェーズ5Bで補正した変換ルール
+
+- `メーカー名`, `状態`, `店舗`, `カテゴリ` などは seed を現行 `ルール` タブに合わせて拡張した
+- `鍛える部位` が空欄の行は、現行ルールに合わせて `AT=その他` として扱い、空欄警告を出さない
+- `画像1〜3` は `http://` / `https://` で始まる値だけを `source_image_urls_json` に採用し、それ以外は `image_url_suspicious` warning に分離する
+- 商品名・メーカー・状態・店舗・部位・カテゴリ・説明・画像・商品コードがすべて空のプレースホルダ行は、`通し番号` だけ残っていても変換対象から除外する
+- `internal_id` は変換後の有効行順で採番し、プレースホルダ行除外後に欠番だらけにならないようにした
+
+## 実データ全量での結果
+
+- 入力 `data/input/current_product_master.full.csv`: 993行取得
+- 出力 `data/output/product_master_v0.full.csv`: 924商品行
+- issue数: 4,953件 → seed/変換補正後 1,126件
+
+残っている主な issue は `image_missing` 924件、`sd_product_code_validation` 149件、未登録メーカー23件、非URL画像欄15件、未登録カテゴリ11件、未登録店舗4件。
+
 ## 検証ログの読み方
 
 - `maker_unregistered`: seedマスタにメーカーがない
@@ -40,6 +61,13 @@
 ```powershell
 $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
 & 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0
+```
+
+実CSV全量での実行例:
+
+```powershell
+$env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
+& 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.transform_current_to_v0 --input data\input\current_product_master.full.csv --output data\output\product_master_v0.full.csv --log data\output\transform_current_to_v0.full.log --error-csv data\output\transform_current_to_v0.full_errors.csv --warnings-csv data\output\transform_warnings.csv --unknown-master-csv data\output\unknown_master_values.csv --legacy-code-exceptions-csv data\output\legacy_code_exceptions.csv --image-count-distribution-csv data\output\image_count_distribution.csv --image-zero-report data\output\image_zero_count_report.md --unmapped-json data\output\transform_current_to_v0.full_unmapped.json
 ```
 
 ## まだ仮の部分

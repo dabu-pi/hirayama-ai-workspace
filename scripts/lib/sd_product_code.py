@@ -66,7 +66,7 @@ def parse_sd_product_code(
     part_legacy_codes: list[str],
     allow_legacy_empty_part: bool = False,
 ) -> ParsedSdProductCode:
-    code = sd_product_code.strip()
+    code = sd_product_code.strip().upper()
     if not code:
         raise ValueError("sd_product_code is empty.")
     if not re.fullmatch(r"[A-Za-z0-9]+", code):
@@ -146,6 +146,11 @@ def validate_sd_product_code(
                 )
             ],
         )
+
+    expected_store_legacy_code = expected_store_legacy_code.upper()
+    expected_maker_legacy_code = expected_maker_legacy_code.upper()
+    expected_purchase_year_code = expected_purchase_year_code.upper()
+    expected_part_legacy_code = expected_part_legacy_code.upper()
 
     if expected_store_legacy_code and parsed.store_legacy_code != expected_store_legacy_code:
         issues.append(

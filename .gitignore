@@ -73,6 +73,11 @@ artifacts/
 # local secrets
 secrets/
 
+# STRONG DEPOT 実データのローカル専用フルエクスポート
+data/input/*.full.csv
+data/output/product_master_v0.full.csv
+.uv-cache/
+
 # 参考資料PDF（制度資料など。Git管理対象外・ローカル保持）
 gas-projects/**/*.pdf
 

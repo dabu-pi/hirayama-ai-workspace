@@ -17,22 +17,29 @@
 | 列 | 役割 |
 |---|---|
 | `code` | v0内部コード |
-| `label` | サイト表示・シート表示に使う名称 |
+| `display_name` | シート表示に使う名称 |
+| `site_label` | サイト表示名。空なら `display_name` を使う |
 | `legacy_code` | `sd_product_code` 分解/照合や現行値移行で使う旧コード |
-| `legacy_label` | 現行シート側の表記 |
+| `legacy_value` | 現行シート側の表記 |
+| `aliases` | 表記ゆれの吸収候補。`|` 区切り |
 | `sort_order` | 表示順 |
 | `is_active` | 今後の候補表示制御用 |
-| `notes` | 表記ゆれや暫定判断のメモ |
+| `remarks` | 表記ゆれや暫定判断のメモ |
 
 ## 今回の暫定判断
 
-- メーカー旧コード `MC` は `MAXICAM` と `MUSCLE_CLAMP` の重複例として残し、lenient検証では warning にする
+- `ルール` タブの現行値を seed に広げ、店舗/メーカー/部位/状態/カテゴリの大半は機械変換できる状態に寄せた
+- メーカー旧コード `MC`, `OT`, `LF`, `HS`, `BM`, `IG`, `PB` は重複例として残し、lenient検証では warning にする
 - 部位「その他」は `AT` に正規化
+- 現行ルール上の「部位空欄」は `AT` 扱いなので、変換時は空欄を `AT=その他` に寄せる
 - 旧ネック空コード確認用に `settings_part.csv` へ `NECK` 行を残し、`legacy_code` を空欄許容にしている
 - サンプル変換で未登録メーカーを残せるよう、`UNKNOWN_MAKER` の fallback を許容する
+- `HOIST=HT` は実データ監査で見つかったため seed に追加した
 
 ## まだ実データ確認が必要な点
 
-- 店舗・メーカー・部位・カテゴリの全現行表記ゆれ
+- 空欄メーカー20件、空欄カテゴリ11件、空欄店舗3件を「許容欠損」と見るか「要補完」と見るか
+- `EVERLAST`, `LEGENDFITNESS`, `PT` を seed に追加するか、旧例外のまま残すか
+- `KOMATSU=KT`, `UESAKA=US` のように `ルール` 表と実商品コードがずれている旧コードを seed に昇格させるか
 - `OT` など旧コード重複の実例と、strict運用へ切り替える境界
 - `is_active=false` をどの画面/出力で除外するか

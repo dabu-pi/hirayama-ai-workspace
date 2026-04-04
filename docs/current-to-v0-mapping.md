@@ -24,9 +24,9 @@
 | `検索キーワード` | WP CSV `product_keyword` 補助/サイト検索語 | `search_keywords` | `search_text` | `searchText` | 商品名/分類/メーカーと結合し検索文字列化 | 加工 | 現行 `Wordpress用csv.product_keyword='products'` は廃止 |
 | `公開状態` | WordPress `post_status` 生成元 | `publish_status` | `publish_status`, `is_published` | `visibility.status`, `visibility.isPublished` | 空欄=`public`、`非公開`=`private` など設定マスタで変換 | 加工 | WordPress `publish/private` を正本値にしない |
 | `新規自動生成商品コード` | SD商品コード、slug、見積参照キー | `sd_product_code`, `seo_slug` | `sd_product_code`, `slug`, `search_text` | `sdProductCode`, `slug`, `seo.canonicalPath`, `searchText` | 既存値は原則維持。`seo_slug` は小文字化などURL安全化して生成 | 加工 | 再採番禁止。生成/検証仕様は別ドキュメント参照 |
-| `画像1` | 代表画像 | `source_image_urls`, `image_count`, `main_image_index`, `main_source_image_url` | `source_image_urls`, `display_image_urls`, `main_display_image_url`, `image_alt` | `images[0].sourceUrl`, `images[0].displayUrl`, `images[0].width`, `images[0].height`, `images[0].isMain=true`, `images[0].alt` | 初回移行では空でなければ `source_image_urls[0]` へ入れ、`main_image_index=1` として代表画像扱いにする。表示用700x700正方形画像は派生生成して `displayUrl` に入れる | 加工 | 現行は3枚だが新構造は最大10枚。元画像は縦横比自由、表示用は収まり優先で余白背景付き正方形化する |
-| `画像2` | 追加画像 | `source_image_urls`, `image_count` | `source_image_urls`, `display_image_urls` | `images[1].sourceUrl`, `images[1].displayUrl` | 空欄除外して2枚目として配列化し、派生生成した表示用URLを対応する `displayUrl` に入れる | 加工 | 4枚目以降は将来追加可能 |
-| `画像3` | 追加画像 | `source_image_urls`, `image_count` | `source_image_urls`, `display_image_urls` | `images[2].sourceUrl`, `images[2].displayUrl` | 空欄除外して3枚目として配列化し、派生生成した表示用URLを対応する `displayUrl` に入れる | 加工 | v0運用の登録上限は10枚 |
+| `画像1` | 代表画像 | `source_image_urls`, `image_count`, `main_image_index`, `main_source_image_url` | `source_image_urls`, `display_image_urls`, `main_display_image_url`, `image_alt` | `images[0].sourceUrl`, `images[0].displayUrl`, `images[0].width`, `images[0].height`, `images[0].isMain=true`, `images[0].alt` | 初回移行では `http://` / `https://` で始まる値だけを `source_image_urls[0]` に入れ、`main_image_index=1` として代表画像扱いにする。非URL文字列は `image_url_suspicious` warning に分離する。表示用700x700正方形画像は派生生成して `displayUrl` に入れる | 加工 | 実データ監査では `画像1〜3` からURLが取れず `images=[]` が全件になった。元画像URLの回収元は別途要確認 |
+| `画像2` | 追加画像 | `source_image_urls`, `image_count` | `source_image_urls`, `display_image_urls` | `images[1].sourceUrl`, `images[1].displayUrl` | URL値だけを2枚目として配列化し、非URL文字列は警告ログへ分離する | 加工 | 4枚目以降は将来追加可能 |
+| `画像3` | 追加画像 | `source_image_urls`, `image_count` | `source_image_urls`, `display_image_urls` | `images[2].sourceUrl`, `images[2].displayUrl` | URL値だけを3枚目として配列化し、非URL文字列は警告ログへ分離する | 加工 | v0運用の登録上限は10枚 |
 | `BASEで販売しない場合は「いいえ」を入力` | BASE出力対象制御 | `legacy_base_export_flag` | なし | なし | 現行値を隔離列へ保持。新サイト中核ロジックからは除外 | 隔離保持 | BASE継続要否が未確定のため、今は廃止確定にしない |
 | `トップページ掲載` | トップカテゴリ付与/表示優先 | `featured_flag` | `featured_flag` | `visibility.isFeatured` | 入力値を boolean 化 | 加工 | 現行 `topPages` taxonomy 文字列ではなくフラグ化 |
 | `値引き後の価格（税抜き）` | 値引後売価 | `discount_price_ex_tax`, `sale_price_ex_tax` | `discount_price_ex_tax`, `display_price_ex_tax` | `price.discountPrice`, `price.salePrice` | 数値化。空欄なら null。`sale_price_ex_tax` は値引後優先で計算 | 加工 | 見積値引き候補列とは別物 |
@@ -86,7 +86,7 @@
 | 順番 | 処理 |
 |---|---|
 | 1 | 現行行を読み込み、`通し番号` と `新規自動生成商品コード` を保持したまま `internal_id` を新規採番 |
-| 2 | `メーカー名`, `店舗`, `鍛える部位`, `トレーニングマシンの種類`, `状態`, `公開状態` を設定マスタへ突合 |
+| 2 | `メーカー名`, `店舗`, `鍛える部位`, `トレーニングマシンの種類`, `状態`, `公開状態` を設定マスタへ突合。現行ルール上の部位空欄は `AT=その他` に寄せる |
 | 3 | 未登録マスタ、`MC` 衝突、`首` 空コード、商品コード構造不一致などを `要確認` として検出 |
 | 4 | 価格/送料/在庫/日付/元画像URLを型変換し、`source_image_urls`, `image_count`, `main_image_index`, `main_source_image_url` を含めて商品マスタ列へ格納 |
 | 5 | `sale_price_ex_tax`, `sold_out_flag`, `seo_slug`, 表示ラベル列、`display_image_urls`, `main_display_image_url` を派生生成 |
@@ -101,3 +101,4 @@
 | BASE出力の継続要否 | 未確定。中核設計からは分離するが、隔離列として現行フラグは残す |
 | 画像4枚目以降の移行範囲 | 初回移行では現行商品マスタ主系統の `画像1〜3` をそのまま移す。4枚目以降は新構造で最大10枚まで追加可能だが、どの既存チャネル列を取り込むかは実装時に確認する |
 | `Settings.php` のカテゴリ一覧 | 未回収。現行GAS/ルールシートとの差分があれば、設定マスタ値の最終調整が必要 |
+| 元画像URLの取得元 | 実データ監査では `画像1〜3` からURLを取れなかったため、WordPress側または別画像台帳の所在確認が必要 |

@@ -35,8 +35,8 @@
 
 - 公開商品: `status=public`, `isPublished=true`
 - トップ掲載商品: `isFeatured=true`
-- 売却済み商品: `status=sold_visible`, `condition.isSoldOut=true`, `price.priceLabel="売却済み"`
 - 非公開商品: `status=private`, `isPublished=false`, `inquiryEnabled=false`
+- 売却済み商品: `condition.isSoldOut=true`, `price.priceLabel="売却済み"`。ただし `公開状態=非公開` が優先なので、現行データでは `status=private` の売却済み行が多い。`sold_visible` は「売却済みを公開する」運用が確定した行だけに使う
 - 画像なし商品: `images=[]` のまま出力し、生成処理側で未整備を検知できるようにする
 
 ## 実行コマンド
@@ -46,9 +46,23 @@ $env:UV_CACHE_DIR='C:\hirayama-ai-workspace\workspace\.uv-cache'
 & 'C:\Users\pinsh\.local\bin\uv.exe' run python -m scripts.export_products_json
 ```
 
+## 実データ全量での再出力結果
+
+- 入力: `data/output/product_master_v0.full.csv`
+- 出力: `data/output/products.full.sample.json`
+- 件数: 924商品
+- `visibility.status` 内訳: `private` 858件、`public` 66件
+- `images[]` 内訳: 924件すべて空配列
+
+### 補足
+
+現行フルデータでは `状態=売却済み` でも `公開状態=非公開` の行が多く、変換ロジックは `private` を優先している。
+`sold_visible` は「売却済み商品を実績として公開したい」業務ルールが確定した段階で、条件を見直す。
+
 ## まだ仮の部分
 
 - `displayUrl` の実URL生成ルール
 - サムネイル専用URLを別項目で持つかどうか
 - 画像0枚商品のサイト側フォールバック表示
 - SEO title / description の確定生成ルール
+- 元画像URLの回収元。現行 `ネットショップ商品一覧` の `画像1〜3` からはURLが取れていない

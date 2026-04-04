@@ -11,6 +11,7 @@ from typing import Iterable
 
 
 JST = timezone(timedelta(hours=9))
+IMAGE_URL_PATTERN = re.compile(r"^https?://", re.IGNORECASE)
 
 SETTINGS_COLUMNS = [
     "master_type",
@@ -351,13 +352,26 @@ def slugify(value: str, fallback: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", fallback_text).strip("-") or "product"
 
 
+def is_probable_image_url(value: object) -> bool:
+    return bool(IMAGE_URL_PATTERN.match(normalize_text(value)))
+
+
 def parse_source_images(row: dict[str, str], max_images: int = 10) -> list[str]:
     urls: list[str] = []
     for column_name in ("画像1", "画像2", "画像3"):
         url = normalize_text(row.get(column_name, ""))
-        if url:
+        if url and is_probable_image_url(url):
             urls.append(url)
     return urls[:max_images]
+
+
+def collect_suspicious_image_values(row: dict[str, str]) -> list[tuple[str, str]]:
+    suspicious_values: list[tuple[str, str]] = []
+    for column_name in ("画像1", "画像2", "画像3"):
+        value = normalize_text(row.get(column_name, ""))
+        if value and not is_probable_image_url(value):
+            suspicious_values.append((column_name, value))
+    return suspicious_values
 
 
 def parse_source_image_json(raw_json: str, max_images: int = 10) -> list[str]:

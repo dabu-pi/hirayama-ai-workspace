@@ -514,3 +514,77 @@ Apps Script 実体と WordPress/PHP 反映経路の未確定部分を、CLI/API/
 1. 現行 `ネットショップ商品一覧` の実CSVエクスポートを `scripts/transform_current_to_v0.py` に流し、seed不足と変換例外を洗い出す。
 2. 画像派生生成フェーズに向けて、`displayUrl` の出力先・命名規則・余白背景ルールを決める。
 3. 問題なければ、`data/templates/integrated-sheet-v0/*.csv` を元に Google Sheets v0 実体化へ進む。
+
+---
+
+## 2026-04-05 中古マシン販売システム再構築 実装フェーズ5B
+
+### 現在地
+
+現行 `ネットショップ商品一覧2018-10-22` をサービスアカウントで読み取り専用CSV化し、5A試作の変換/監査/JSON出力を実データ全量へ適用した。既存スプレッドシート/GAS/PHP は未変更。
+
+### 完了済み
+
+- 追加: `scripts/export_sheet_to_csv.mjs`
+- 追加: `scripts/inspect_sheet_cells.mjs`
+- 追加: `scripts/audit_sd_product_code.py`
+- 追加: `docs/sd-product-code-audit.md`
+- 追加: `docs/image-data-audit.md`
+- 追加: `docs/image-generation-phase-plan.md`
+- 更新: `data/seeds/settings_store.csv`
+- 更新: `data/seeds/settings_maker.csv`
+- 更新: `data/seeds/settings_part.csv`
+- 更新: `data/seeds/settings_condition.csv`
+- 更新: `data/seeds/settings_category.csv`
+- 更新: `scripts/lib/product_v0.py`
+- 更新: `scripts/lib/sd_product_code.py`
+- 更新: `scripts/transform_current_to_v0.py`
+- 更新: `docs/transform-current-to-v0.md`
+- 更新: `docs/settings-master-seed-notes.md`
+- 更新: `docs/sd-product-code-library.md`
+- 更新: `docs/product-code-validation-spec.md`
+- 更新: `docs/current-to-v0-mapping.md`
+- 更新: `docs/products-json-generation.md`
+- 更新: `docs/implementation-phase5-notes.md`
+- 更新: `docs/open-questions.md`
+
+### 実行結果
+
+- 現行商品マスタCSVエクスポート: 993行取得
+- v0変換後の有効商品行: 924件
+- 変換issue: 4,953件 → 1,126件に削減
+- `sd_product_code` 監査: 775 ok / 112 warning / 37 error
+- `products.full.sample.json`: 924件生成
+- 画像枚数分布: `source_image_count=0` が 924件、1〜3枚は 0件
+- `products.full.sample.json` の `visibility.status`: `private` 858件、`public` 66件
+- 実行済みテスト: `uv run python -m unittest discover -s tests -v`（12件すべてOK）
+
+### 今回補正した seed / 変換ルール
+
+- 現行 `ルール` タブに合わせて店舗・メーカー・部位・状態・カテゴリ seed を拡張した
+- `HOIST=HT` を追加した
+- 部位空欄は現行ルールに合わせて `AT=その他` として扱う
+- `画像1〜3` はURL形式のみ採用し、非URL文字列は `image_url_suspicious` warning に分離する
+- 商品実体がないプレースホルダ行を除外し、`internal_id` は有効行順で採番する
+- `sd_product_code` パース時に大文字化し、旧コードの小文字混在を吸収する
+
+### 新たに見つかった例外
+
+- `KOMATSU` の実コード `KT`、`UESAKA` の実コード `US` が `ルール` タブ記載と一致しない
+- 年コード位置が `AT` になる旧例外候補が26件ある
+- `SANT21651AT`, `ATNT18190AT` は商品メーカー名とコードのメーカー部が一致していない疑いがある
+- `EVERLAST`, `LEGENDFITNESS`, `PT` は seed 未登録のまま残っている
+- 現行 `画像1〜3` から元画像URLが取れず、`中村様` / `見積中` のような非URLテキストが入っている
+
+### まだ保留の値/判断
+
+- `KT`, `US`, 年コード`AT` の旧例外を seed に昇格させるか、データ修正対象として残すか
+- 空欄メーカー20件、空欄カテゴリ11件、空欄店舗3件を許容欠損と見るか補完対象にするか
+- 売却済み商品を `private` のままにするか、実績公開用 `sold_visible` へ切り替える条件
+- 700x700 派生画像生成の元画像URLをどこから回収するか
+
+### 次アクション
+
+1. `docs/image-data-audit.md` の結果を起点に、商品コード→元画像URLを取得できる正本ソースを特定する。
+2. `docs/sd-product-code-audit.md` の `KT` / `US` / 年`AT` / メーカー不一致行を現場確認し、seed化するものと例外固定するものを分ける。
+3. 画像URLソースが確定したら、`docs/image-generation-phase-plan.md` をベースに 700x700 派生生成試作へ進む。
