@@ -1,50 +1,27 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-06（**患者画面ボタン — 画像自動挿入を廃止・手動配置に移行**）
+最終更新: 2026-04-06（**患者画面ボタン — 手動図形配置＋スクリプト割当で確定・実機確認済み**）
 
 ---
 
-## 2026-04-06 患者画面ボタン 画像自動挿入廃止
+## ✅ 2026-04-06 患者画面ボタン 確定・実機確認完了
 
-- `insertImage()` による PNG OverGridImage 方式が live で継続失敗（"画像を挿入できませんでした"）。
-- 原因切り分けコストが高いため、画像生成経路を中止し手動配置に移行した。
+**方針: 手動図形配置 + スクリプト割当（自動画像挿入は廃止）**
 
-**廃止した関数（Ver3_core.js から削除）:**
-- `insertPatientScreenButtonOverlay_`
-- `buildPatientScreenButtonBlob_`
-- `validatePngBlob_`
-- `PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE` / `PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64` 定数
-
-**変更した関数:**
-- `ensurePatientScreenButtons_V3_` → no-op（onOpen での自動画像挿入を停止）
-- `rebuildPatientScreenButtons_` → `insertPatientScreenButtonOverlay_` 呼び出しを除去
-- `setupPatientScreenButtons_V3` → 手動配置ガイドダイアログに変更
-- メニュー `患者画面ボタン再配置` → `手動ボタン配置ガイド`
-- `onOpen` → `ensurePatientScreenButtons_V3_()` の呼び出しをコメントアウト
-
-**残存関数（削除しない理由）:**
-- `removePatientScreenButtons_` / `isPatientScreenButtonImage_` — 旧来の自動挿入画像を除去するために保持
-- `countPatientScreenButtons_` / `inspectPatientScreenButtons_V3` — 診断・確認用に保持
-- `setupPatientScreenButtonCell_` — セル色・罫線の見た目設定に使用
-- `buttonSavePatientScreen` / `buttonClearPatientScreen` — 手動配置ボタンへの割当対象として維持
-
-**手動配置ルール（恒久運用）:**
-
-| ボタン | 割当スクリプト名 | 推奨配置位置 |
+| ボタン | 割当スクリプト名 | 実機確認 |
 |---|---|---|
-| 保存ボタン | `buttonSavePatientScreen` | 患者画面 F1:G2 付近 |
-| 入力クリアボタン | `buttonClearPatientScreen` | 患者画面 H1:I2 付近 |
+| 保存ボタン | `buttonSavePatientScreen` | ✅ 実行確認済み |
+| 入力クリアボタン | `buttonClearPatientScreen` | ✅ 確認ダイアログ→実行確認済み |
 
-配置手順: 患者画面シートを開く → 挿入 → 図形描画 → 図形を右クリック → スクリプトを割り当て → 上記関数名を入力
+**廃止した方式:** `insertImage()` + OverGridImage 方式（SVG / PNG Blob ともに live で失敗）
+
+**注意点:** 図形割当の関数名に余分なスペースがあると「スクリプト関数が見つかりません」になる。括弧なし・前後スペースなしで入力する。
+
+**詳細:** `docs/JREC-01_patient_screen_buttons_2026-04-05.md`
 
 ---
 
-## 2026-04-05 患者画面ボタン追加（初期実装・一部廃止）
-
-- `buttonSavePatientScreen()` / `buttonClearPatientScreen()` を追加（`saveVisit_V3()` / `clearEntryUI_V3()` のラッパー）。
-- `buttonClearPatientScreen()` には OK/CANCEL 確認ダイアログを追加。
-- SVG Blob → PNG Blob → insertImage 方式を試みたが、いずれも live で失敗。2026-04-06 に画像方式を廃止。
-- 詳細記録: `docs/JREC-01_patient_screen_buttons_2026-04-05.md`
+## 2026-04-05 柔整ツールメニュー整理
 
 ---
 
