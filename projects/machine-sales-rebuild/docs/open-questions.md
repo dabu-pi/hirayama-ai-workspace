@@ -46,3 +46,4 @@
 - 派生画像は JPEG 統一、白背景パディング、クロップなしで生成した
 - 画像パスは `public-700x700/<sd_product_code>/<file>.jpg` を採用した
 - 公開商品 66件の `products.public.with-images.json` では `displayUrl` / `galleryUrls` を 66件すべてに反映できた
+- フロント確認の結果、通常商品の表示品質は許容範囲で、placeholder 3件だけ軽微な表示分岐候補として残った
