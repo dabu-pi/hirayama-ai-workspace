@@ -62,6 +62,15 @@
 - 横長 / 縦長画像では白余白がはっきり見える
 - 透過PNGの白背景合成も実用上は大きな違和感なし
 
+## products.json 連携状況
+
+- `products.public.with-images.json` を生成済み
+- 対象は公開商品 66件
+- `displayUrl` あり: 66件
+- `galleryUrls` あり: 66件
+- `displayUrl` / `galleryUrls` は `public-700x700/<sd_product_code>/<file>.jpg` 形式の相対パスで保持
+- 公開商品 3件は `sourceUrl=noimage.jpg` のため、派生画像は使えるが元画像正本としては要再確認
+
 ## 想定構造
 
 - 元画像置き場: `data/raw-images/`
@@ -84,12 +93,13 @@
 
 ## 次に必要な調査
 
-1. `products.json` に派生画像パスを反映する
-2. フロント表示で白余白の見え方を確認する
-3. `strongdepot-product-manager` の PHP / WordPress 側実装を回収する
-4. Google Drive に自社商品画像フォルダが存在するか確認する
-5. 非公開商品・売却済み商品の画像回収経路を別途確認する
-6. 競合画像と自社画像の正本を同じ設計に載せるか、別管理にするか決める
+1. フロント表示で白余白の見え方を確認する
+2. `products.json` の画像パスに base URL をどう前置するか決める
+3. `sourceUrl=noimage.jpg` の 3商品をどう扱うか決める
+4. `strongdepot-product-manager` の PHP / WordPress 側実装を回収する
+5. Google Drive に自社商品画像フォルダが存在するか確認する
+6. 非公開商品・売却済み商品の画像回収経路を別途確認する
+7. 競合画像と自社画像の正本を同じ設計に載せるか、別管理にするか決める
 
 ## 進める / 止める判断基準
 
@@ -117,6 +127,9 @@
 - `data/output/public_derived_image_manifest.csv`
 - `data/output/public_derived_image_results.csv`
 - `data/derived-images/public-700x700/`
+- `data/output/products.public.with-images.json`
+- `data/output/products_public_image_binding_report.csv`
+- `data/output/frontend_image_check_targets.csv`
 
 ## Drive 正本化へ向けた最低限の整理項目
 

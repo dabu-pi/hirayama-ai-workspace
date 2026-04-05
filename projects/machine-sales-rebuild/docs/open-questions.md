@@ -14,6 +14,8 @@
 | IMG-008 | 非公開商品・売却済み商品の画像を公開側だけで回収できるか | 公開商品 66件は全件成功したが、非公開系は未検証 | 別経路確認、または WordPress/PHP 側資産探索 |
 | IMG-009 | 公開商品の回収済み画像をどう Drive 正本へ移すか | `public_image_manifest.csv` までは生成済み | Drive フォルダ規則、対応表、移行手順の整理 |
 | IMG-010 | 派生画像の公開URLをどう確定するか | `public_derived_image_manifest.csv` の `derived_url_candidate` はストレージ相対パス止まり | products.json 反映ルール、フロント参照規則を決める |
+| IMG-011 | `sourceUrl` が `noimage.jpg` の公開商品をどう扱うか | 3商品で placeholder_source_image を検出 | 元画像の再回収可否、公開継続可否、表示方針を確認 |
+| IMG-012 | 公開用 `displayUrl` にどの base URL を前置するか | 現在は `public-700x700/<sd_product_code>/<file>.jpg` の相対パス運用 | フロント配信方法、Drive URL 置換規則、公開URL層の決定 |
 
 ## 優先度B
 
@@ -36,8 +38,11 @@
 
 - 公開商品の範囲なら 700x700 生成フェーズへ進める
 - 公開商品の範囲では 700x700 生成フェーズを完了できた
+- 公開商品の `products.public.with-images.json` まで生成できた
 - 自社画像の第一候補は `machine-group.net` の WordPress 由来画像と、その背後にある過去資産
 - 今後の正本保存先の第一候補は Google Drive
 - 公開商品全件回収では 66商品・163画像の保存に成功した
 - 抽出の主ソースは `og:image` ではなく本文ギャラリー `img src` を維持する
 - 派生画像は JPEG 統一、白背景パディング、クロップなしで生成した
+- 画像パスは `public-700x700/<sd_product_code>/<file>.jpg` を採用した
+- 公開商品 66件の `products.public.with-images.json` では `displayUrl` / `galleryUrls` を 66件すべてに反映できた

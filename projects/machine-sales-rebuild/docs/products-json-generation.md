@@ -31,6 +31,46 @@
 | `isMain` | 代表画像かどうか |
 | `sortOrder` | 1始まりの表示順 |
 
+## 2026-04-05 採用した画像フィールド構造
+
+公開商品向けの `products.public.with-images.json` では、次の構造を採用した。
+
+- `displayUrl`
+  - 一覧や詳細の primary 表示に使う代表画像
+- `galleryUrls`
+  - 表示用 700x700 画像の配列
+- `images[]`
+  - `sourceUrl` / `displayUrl` / `isMain` / `sortOrder` を持つ詳細オブジェクト
+
+今回の判断:
+
+- フロントで扱いやすい `displayUrl` と `galleryUrls` を前面に出す
+- 既存契約との整合のため `images[]` も維持する
+- primary は `image_seq=1` を原則にする
+- gallery の並び順は `image_seq` 順に固定する
+
+## 採用したパス表現
+
+今回の `displayUrl` / `galleryUrls` には、将来差し替えしやすい相対パス表現を使う。
+
+```text
+public-700x700/<sd_product_code>/<file>.jpg
+```
+
+例:
+
+```text
+public-700x700/HYEL15009AT/HYEL15009AT-01-700x700.jpg
+```
+
+この形にしておくと、将来は
+
+```text
+<baseImageUrl> + '/' + displayUrl
+```
+
+で公開URLへ置換しやすい。
+
 ## visibility 変換
 
 - 公開商品: `status=public`, `isPublished=true`
@@ -84,14 +124,48 @@ uv run python -m scripts.export_products_json
 - 今回の実CSVでは `source_image_urls_json` が全件空なので、`products.full.sample.json` でも `images` は空になる
 - まず元画像URLの正本を別経路で確定しないと、画像派生生成フェーズへは進めない
 
+## 2026-04-05 公開商品画像パス反映結果
+
+- 出力: `data/output/products.public.with-images.json`
+- 対象商品: 66件
+- `displayUrl` あり: 66件
+- `displayUrl` なし: 0件
+- `galleryUrls` あり: 66件
+- `galleryUrls` 0件: 0件
+- gallery 件数分布:
+  - 1枚: 21商品
+  - 2枚: 16商品
+  - 3枚: 16商品
+  - 4枚: 7商品
+  - 5枚: 3商品
+  - 6枚: 2商品
+  - 7枚: 1商品
+
+関連出力:
+
+- `data/output/products_public_image_binding_report.csv`
+- `data/output/products_public_image_binding_summary.csv`
+- `data/output/products_public_image_binding_summary.md`
+- `data/output/frontend_image_check_targets.csv`
+
+### 注意点
+
+- `sourceUrl` が WordPress テーマの `noimage.jpg` になっている公開商品が 3件ある
+- 該当:
+  - `HYEL15009AT`
+  - `OOEL15011AT`
+  - `HYKT16087AT`
+- これらは `displayUrl` 自体は埋まるが、元画像としては要再確認
+
 ## 2026-04-05 公開商品派生画像生成後の次ステップ
 
 - 公開商品 66件・163枚については `public_derived_image_manifest.csv` まで生成済み
-- 次の `products.json` 更新では、`public_image_manifest.csv` と `public_derived_image_manifest.csv` を使って `images[].sourceUrl` / `images[].displayUrl` を埋める
+- 今回の `products.public.with-images.json` では、`public_image_manifest.csv` と `public_derived_image_manifest.csv` を使って `displayUrl` / `galleryUrls` / `images[].sourceUrl` / `images[].displayUrl` を埋めた
 - ただし今回の派生画像は公開商品のみで、非公開・売却済み・下書き相当は未対応
+- 画像パスはローカル相対パスとして保持し、将来 `baseImageUrl` を前置するだけで公開URLへ差し替えられる前提にした
 
 次フェーズで最低限やること:
 
-1. `displayUrl` の仮規則を `public_derived_image_manifest.csv.derived_url_candidate` にそろえる
-2. `public` 商品 66件だけでも `images[]` を埋めた `products.json` を再出力する
-3. フロント表示で白余白と primary 画像の見え方を確認する
+1. フロント表示で白余白と primary 画像の見え方を確認する
+2. `sourceUrl=noimage.jpg` の 3商品をどう扱うか決める
+3. `displayUrl` の base URL 差し替え規則を決める
