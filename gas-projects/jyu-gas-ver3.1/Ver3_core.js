@@ -280,42 +280,75 @@ const MASTER_COLS = {
 
 
 /** ===== メニュー ===== */
+var JUSEI_TOOL_MENU_SECTIONS = [
+  {
+    title: "柔整入力",
+    items: [
+      { label: "保存", functionName: "saveVisit_V3" },
+      { label: "自動引継ぎ", functionName: "autofillFromPreviousVisit_V3" },
+      { label: "自費明細入力", functionName: "openSelfPayDialog_V3" },
+      { label: "経過履歴更新", functionName: "refreshKeikaHistoryUI_V3" },
+      { label: "画面クリア", functionName: "clearEntryUI_V3" },
+      { label: "施術録を出力", functionName: "srShowDialog" }
+    ]
+  },
+  {
+    title: "柔整管理",
+    items: [
+      { label: "ヘッダ再出力", functionName: "exportHeaderFromCases_V3" },
+      { label: "金額再計算", functionName: "menuRecalcAmounts_V3" },
+      { label: "申請書転記データ作成", functionName: "V3TR_menuBuildTransferData" },
+      { label: "患者検索プルダウン更新", functionName: "refreshPatientPicker_V3" },
+      { label: "保険者情報を患者マスタへ反映", functionName: "copyInsurerToMaster_V3" }
+    ]
+  },
+  {
+    title: "柔整設定",
+    items: [
+      { label: "転帰ドロップダウン設定", functionName: "menuSetupTenkiValidation_V3" },
+      { label: "入力バリデーション設定", functionName: "setupValidation_V3" },
+      { label: "設定シート初期セットアップ", functionName: "ensureSettingsRows_V3" },
+      { label: "施術明細ヘッダセットアップ", functionName: "ensureDetailHeaders_V3" },
+      { label: "UI初期設定", functionName: "setupSelfPayValidation_V3" },
+      { label: "自費明細シート初期化", functionName: "ensureSelfPayDetailSheet_V3" },
+      { label: "患者検索プルダウン設定", functionName: "setupPatientPicker_V3" }
+    ]
+  },
+  {
+    title: "管理者用",
+    items: [
+      { label: "ヘッダ確認（デバッグ）", functionName: "checkHeaders_V3" },
+      { label: "JBIZ menu_id 追加", functionName: "setupJBIZMenuMasterId_V3" },
+      { label: "JBIZ 会員傷行レコード移行", functionName: "migrateJBIZMemberRules_V3" },
+      { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
+      { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
+      { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
+    ]
+  }
+];
+
+function buildJuseiToolSubMenu_(ui, section) {
+  var subMenu = ui.createMenu(section.title);
+  (section.items || []).forEach(function(item) {
+    subMenu.addItem(item.label, item.functionName);
+  });
+  return subMenu;
+}
+
+function buildJuseiToolMenu_() {
+  var ui = SpreadsheetApp.getUi();
+  var menu = ui.createMenu("柔整ツール");
+
+  JUSEI_TOOL_MENU_SECTIONS.forEach(function(section) {
+    menu.addSubMenu(buildJuseiToolSubMenu_(ui, section));
+  });
+
+  menu.addToUi();
+}
+
 function onOpen() {
   try {
-    SpreadsheetApp.getUi()
-      .createMenu("柔整ツール")
-      .addItem("来院ケースへ保存（統合：保存＋金額＋ヘッダ）", "saveVisit_V3")
-      .addItem("経過履歴を更新（患者画面）", "refreshKeikaHistoryUI_V3")
-      .addItem("自動引継ぎを実行（2回目以降）", "autofillFromPreviousVisit_V3")
-      .addSeparator()
-      .addItem("来院ケース → 来院ヘッダへ出力（高速）", "exportHeaderFromCases_V3")
-      .addSeparator()
-      .addItem("患者画面クリア（入力のみ）", "clearEntryUI_V3")
-      .addItem("転帰ドロップダウン設定", "menuSetupTenkiValidation_V3")
-      .addSeparator()
-      .addItem("ヘッダー確認（デバッグ）", "checkHeaders_V3")
-      .addItem("金額再計算（施術明細→ヘッダ）", "menuRecalcAmounts_V3")
-      .addItem("申請書_転記データ作成（患者×月）", "V3TR_menuBuildTransferData")
-      .addItem("入力バリデーション設定（傷病名プルダウン）", "setupValidation_V3")
-      .addItem("設定シート初期セットアップ", "ensureSettingsRows_V3")
-      .addItem("施術明細ヘッダーセットアップ", "ensureDetailHeaders_V3")
-      .addItem("UI初期設定（行5:ジム会員 / 行7〜8:会計ブロック）", "setupSelfPayValidation_V3")
-      .addItem("自費明細入力（患者画面）", "openSelfPayDialog_V3")
-      .addItem("自費明細シート初期化", "ensureSelfPayDetailSheet_V3")
-      .addItem("【初回1回】JBIZ menu_id 列追加", "setupJBIZMenuMasterId_V3")
-      .addItem("【整理用】JBIZ 会員優待ルール移行", "migrateJBIZMemberRules_V3")
-      .addSeparator()
-      .addItem("【I-1】来院ヘッダ列順整理（バックアップ付き）", "reorderHeaderCols_V3")
-      .addSeparator()
-      .addItem("患者検索プルダウン設定", "setupPatientPicker_V3")
-      .addItem("患者検索プルダウン更新", "refreshPatientPicker_V3")
-      .addItem("保険者情報 → 患者マスタへ転記", "copyInsurerToMaster_V3")
-      .addSeparator()
-      .addItem("一括JSON出力（月指定）", "V3TR_menuBatchExportJson")
-      .addItem("【B案】申請書を生成して Drive に保存", "V3TR_menuGenerateApplication_B")
-      .addSeparator()
-      .addItem("施術録を出力", "srShowDialog")
-      .addToUi();
+    buildJuseiToolMenu_();
   } catch (err) {
     console.error(err);
   }
