@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-04-05T10:23:59+09:00",
+  "generatedAt": "2026-04-05T10:49:04+09:00",
   "source": {
     "sheetName": "product_master_v0.full",
     "system": "integrated-sheet-v0"
@@ -50,6 +50,8 @@
       "galleryUrls": [
         "public-700x700/HYEL15009AT/HYEL15009AT-01-700x700.jpg"
       ],
+      "imageStatus": "placeholder",
+      "hasRealImage": false,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/themes/strongdepot/images/noimage.jpg",
@@ -58,7 +60,9 @@
           "height": 700,
           "alt": "30kgディスクダンベル・ペア ELEIKO HYEL15009AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "placeholder",
+          "hasRealImage": false
         }
       ],
       "visibility": {
@@ -119,6 +123,8 @@
       "galleryUrls": [
         "public-700x700/OOEL15011AT/OOEL15011AT-01-700x700.jpg"
       ],
+      "imageStatus": "placeholder",
+      "hasRealImage": false,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/themes/strongdepot/images/noimage.jpg",
@@ -127,7 +133,9 @@
           "height": 700,
           "alt": "ダンベルラック ELEIKO OOEL15011AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "placeholder",
+          "hasRealImage": false
         }
       ],
       "visibility": {
@@ -188,6 +196,8 @@
       "galleryUrls": [
         "public-700x700/HYRB16075LG/HYRB16075LG-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYRB16075LG_1.jpg",
@@ -196,7 +206,9 @@
           "height": 700,
           "alt": "カーフレイズステップ RB HYRB16075LG 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -257,6 +269,8 @@
       "galleryUrls": [
         "public-700x700/HYKT16087AT/HYKT16087AT-01-700x700.jpg"
       ],
+      "imageStatus": "placeholder",
+      "hasRealImage": false,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/themes/strongdepot/images/noimage.jpg",
@@ -265,7 +279,9 @@
           "height": 700,
           "alt": "ブラックターフ KOMATSU HYKT16087AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "placeholder",
+          "hasRealImage": false
         }
       ],
       "visibility": {
@@ -327,6 +343,8 @@
         "public-700x700/HYBL16161AT/HYBL16161AT-01-700x700.jpg",
         "public-700x700/HYBL16161AT/HYBL16161AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYBL16161AT_1.jpg",
@@ -335,7 +353,9 @@
           "height": 700,
           "alt": "トレーニングロープ 40F/2インチ BULL HYBL16161AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYBL16161AT_2.jpg",
@@ -344,7 +364,9 @@
           "height": 700,
           "alt": "トレーニングロープ 40F/2インチ BULL HYBL16161AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -405,6 +427,8 @@
       "galleryUrls": [
         "public-700x700/HYMC15183AT/HYMC15183AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMC15183AT_1.jpg",
@@ -413,7 +437,9 @@
           "height": 700,
           "alt": "クリップカラー・未使用品 MUSCLE CLAMP HYMC15183AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -474,6 +500,8 @@
       "galleryUrls": [
         "public-700x700/MIYY18214AT/MIYY18214AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIYY18214AT_1.jpg",
@@ -482,7 +510,9 @@
           "height": 700,
           "alt": "シッシースクワット YY MIYY18214AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -544,6 +574,8 @@
         "public-700x700/HYIV18231AT/HYIV18231AT-01-700x700.jpg",
         "public-700x700/HYIV18231AT/HYIV18231AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV18231AT_1.jpg",
@@ -552,7 +584,9 @@
           "height": 700,
           "alt": "CDS-1 IVANKO HYIV18231AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV18231AT_2.jpg",
@@ -561,7 +595,9 @@
           "height": 700,
           "alt": "CDS-1 IVANKO HYIV18231AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -624,6 +660,8 @@
         "public-700x700/MDHZMD249AT/MDHZMD249AT-02-700x700.jpg",
         "public-700x700/MDHZMD249AT/MDHZMD249AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MDHZMD249AT_1.jpg",
@@ -632,7 +670,9 @@
           "height": 700,
           "alt": "GR 7 HORIZON MDHZMD249AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MDHZMD249AT_2.jpg",
@@ -641,7 +681,9 @@
           "height": 700,
           "alt": "GR 7 HORIZON MDHZMD249AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MDHZMD249AT_3.jpg",
@@ -650,7 +692,9 @@
           "height": 700,
           "alt": "GR 7 HORIZON MDHZMD249AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -711,6 +755,8 @@
       "galleryUrls": [
         "public-700x700/HYHS19287AT/HYHS19287AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYHS19287AT_1.jpg",
@@ -719,7 +765,9 @@
           "height": 700,
           "alt": "ハイパーエクステンション HAMMER STRENGTH HYHS19287AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -781,6 +829,8 @@
         "public-700x700/HYIV19345AT/HYIV19345AT-01-700x700.jpg",
         "public-700x700/HYIV19345AT/HYIV19345AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV19345AT_1.jpg",
@@ -789,7 +839,9 @@
           "height": 700,
           "alt": "CDS2kg IVANKO HYIV19345AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV19345AT_2.jpg",
@@ -798,7 +850,9 @@
           "height": 700,
           "alt": "CDS2kg IVANKO HYIV19345AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -860,6 +914,8 @@
         "public-700x700/HYEL15488AT/HYEL15488AT-01-700x700.jpg",
         "public-700x700/HYEL15488AT/HYEL15488AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYEL15488AT_1.jpg",
@@ -868,7 +924,9 @@
           "height": 700,
           "alt": "25kgディスクダンベル・ペア・未使用品 ELEIKO HYEL15488AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYEL15488AT_2.jpg",
@@ -877,7 +935,9 @@
           "height": 700,
           "alt": "25kgディスクダンベル・ペア・未使用品 ELEIKO HYEL15488AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -938,6 +998,8 @@
       "galleryUrls": [
         "public-700x700/HYNB20588AT/HYNB20588AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNB20588AT_1.jpg",
@@ -946,7 +1008,9 @@
           "height": 700,
           "alt": "ストレートバー ショートバー NO BRAND HYNB20588AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1007,6 +1071,8 @@
       "galleryUrls": [
         "public-700x700/HYNB20589AT/HYNB20589AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNB20589AT_1.jpg",
@@ -1015,7 +1081,9 @@
           "height": 700,
           "alt": "ストレートバー ショートバー NO BRAND HYNB20589AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1081,6 +1149,8 @@
         "public-700x700/HYCP20610AT/HYCP20610AT-05-700x700.jpg",
         "public-700x700/HYCP20610AT/HYCP20610AT-06-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP20610AT_1.jpg",
@@ -1089,7 +1159,9 @@
           "height": 700,
           "alt": "アブドミナルベンチ COMPASS HYCP20610AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP20610AT_2.jpg",
@@ -1098,7 +1170,9 @@
           "height": 700,
           "alt": "アブドミナルベンチ COMPASS HYCP20610AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP20610AT_3.jpg",
@@ -1107,7 +1181,9 @@
           "height": 700,
           "alt": "アブドミナルベンチ COMPASS HYCP20610AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP20610AT_4.jpg",
@@ -1116,7 +1192,9 @@
           "height": 700,
           "alt": "アブドミナルベンチ COMPASS HYCP20610AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP20610AT_5.jpg",
@@ -1125,7 +1203,9 @@
           "height": 700,
           "alt": "アブドミナルベンチ COMPASS HYCP20610AT 画像5",
           "isMain": false,
-          "sortOrder": 5
+          "sortOrder": 5,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP20610AT_6.jpg",
@@ -1134,7 +1214,9 @@
           "height": 700,
           "alt": "アブドミナルベンチ COMPASS HYCP20610AT 画像6",
           "isMain": false,
-          "sortOrder": 6
+          "sortOrder": 6,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1197,6 +1279,8 @@
         "public-700x700/HYSN21620AT/HYSN21620AT-02-700x700.jpg",
         "public-700x700/HYSN21620AT/HYSN21620AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYSN21620AT_1.jpg",
@@ -1205,7 +1289,9 @@
           "height": 700,
           "alt": "ハイプーリー SENOH HYSN21620AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYSN21620AT_2.jpg",
@@ -1214,7 +1300,9 @@
           "height": 700,
           "alt": "ハイプーリー SENOH HYSN21620AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYSN21620AT_3.jpg",
@@ -1223,7 +1311,9 @@
           "height": 700,
           "alt": "ハイプーリー SENOH HYSN21620AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1284,6 +1374,8 @@
       "galleryUrls": [
         "public-700x700/MINB21638AT/MINB21638AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MINB21638AT_1.jpg",
@@ -1292,7 +1384,9 @@
           "height": 700,
           "alt": "オリンピックシャフト150cm 15kg NO BRAND MINB21638AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1356,6 +1450,8 @@
         "public-700x700/HYSN21664AT/HYSN21664AT-03-700x700.jpg",
         "public-700x700/HYSN21664AT/HYSN21664AT-04-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYSN21664AT_1.jpg",
@@ -1364,7 +1460,9 @@
           "height": 700,
           "alt": "スクワットラック SENOH HYSN21664AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYSN21664AT_2.jpg",
@@ -1373,7 +1471,9 @@
           "height": 700,
           "alt": "スクワットラック SENOH HYSN21664AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYSN21664AT_3.jpg",
@@ -1382,7 +1482,9 @@
           "height": 700,
           "alt": "スクワットラック SENOH HYSN21664AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYSN21664AT_4.jpg",
@@ -1391,7 +1493,9 @@
           "height": 700,
           "alt": "スクワットラック SENOH HYSN21664AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1456,6 +1560,8 @@
         "public-700x700/HYMX21687AT/HYMX21687AT-04-700x700.jpg",
         "public-700x700/HYMX21687AT/HYMX21687AT-05-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21687AT_1.jpg",
@@ -1464,7 +1570,9 @@
           "height": 700,
           "alt": "アジャスタブルディクラインベンチ(赤) MATRIX HYMX21687AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21687AT_2.jpg",
@@ -1473,7 +1581,9 @@
           "height": 700,
           "alt": "アジャスタブルディクラインベンチ(赤) MATRIX HYMX21687AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21687AT_3.jpg",
@@ -1482,7 +1592,9 @@
           "height": 700,
           "alt": "アジャスタブルディクラインベンチ(赤) MATRIX HYMX21687AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21687AT_4.jpg",
@@ -1491,7 +1603,9 @@
           "height": 700,
           "alt": "アジャスタブルディクラインベンチ(赤) MATRIX HYMX21687AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21687AT_5.jpg",
@@ -1500,7 +1614,9 @@
           "height": 700,
           "alt": "アジャスタブルディクラインベンチ(赤) MATRIX HYMX21687AT 画像5",
           "isMain": false,
-          "sortOrder": 5
+          "sortOrder": 5,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1566,6 +1682,8 @@
         "public-700x700/HYTG21690AT/HYTG21690AT-05-700x700.jpg",
         "public-700x700/HYTG21690AT/HYTG21690AT-06-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG21690AT_1.jpg",
@@ -1574,7 +1692,9 @@
           "height": 700,
           "alt": "レッグプレス TECHNOGYM HYTG21690AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG21690AT_2.jpg",
@@ -1583,7 +1703,9 @@
           "height": 700,
           "alt": "レッグプレス TECHNOGYM HYTG21690AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG21690AT_3.jpg",
@@ -1592,7 +1714,9 @@
           "height": 700,
           "alt": "レッグプレス TECHNOGYM HYTG21690AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG21690AT_4.jpg",
@@ -1601,7 +1725,9 @@
           "height": 700,
           "alt": "レッグプレス TECHNOGYM HYTG21690AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG21690AT_5.jpg",
@@ -1610,7 +1736,9 @@
           "height": 700,
           "alt": "レッグプレス TECHNOGYM HYTG21690AT 画像5",
           "isMain": false,
-          "sortOrder": 5
+          "sortOrder": 5,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG21690AT_6.jpg",
@@ -1619,7 +1747,9 @@
           "height": 700,
           "alt": "レッグプレス TECHNOGYM HYTG21690AT 画像6",
           "isMain": false,
-          "sortOrder": 6
+          "sortOrder": 6,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1682,6 +1812,8 @@
         "public-700x700/HYMX21698AT/HYMX21698AT-02-700x700.jpg",
         "public-700x700/HYMX21698AT/HYMX21698AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21698AT_1.jpg",
@@ -1690,7 +1822,9 @@
           "height": 700,
           "alt": "バックエクステンション MATRIX HYMX21698AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21698AT_2.jpg",
@@ -1699,7 +1833,9 @@
           "height": 700,
           "alt": "バックエクステンション MATRIX HYMX21698AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX21698AT_3.jpg",
@@ -1708,7 +1844,9 @@
           "height": 700,
           "alt": "バックエクステンション MATRIX HYMX21698AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1772,6 +1910,8 @@
         "public-700x700/HYMX22720AT/HYMX22720AT-03-700x700.jpg",
         "public-700x700/HYMX22720AT/HYMX22720AT-04-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22720AT_1.jpg",
@@ -1780,7 +1920,9 @@
           "height": 700,
           "alt": "グルート MATRIX HYMX22720AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22720AT_2.jpg",
@@ -1789,7 +1931,9 @@
           "height": 700,
           "alt": "グルート MATRIX HYMX22720AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22720AT_3.jpg",
@@ -1798,7 +1942,9 @@
           "height": 700,
           "alt": "グルート MATRIX HYMX22720AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22720AT_4.jpg",
@@ -1807,7 +1953,9 @@
           "height": 700,
           "alt": "グルート MATRIX HYMX22720AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1870,6 +2018,8 @@
         "public-700x700/HYOT22742AT/HYOT22742AT-02-700x700.jpg",
         "public-700x700/HYOT22742AT/HYOT22742AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT22742AT_1.jpg",
@@ -1878,7 +2028,9 @@
           "height": 700,
           "alt": "ボディプランナー DF870 未設定 HYOT22742AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT22742AT_2.png",
@@ -1887,7 +2039,9 @@
           "height": 700,
           "alt": "ボディプランナー DF870 未設定 HYOT22742AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT22742AT_3.png",
@@ -1896,7 +2050,9 @@
           "height": 700,
           "alt": "ボディプランナー DF870 未設定 HYOT22742AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -1958,6 +2114,8 @@
         "public-700x700/HYMX22744AT/HYMX22744AT-01-700x700.jpg",
         "public-700x700/HYMX22744AT/HYMX22744AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22744AT_1.jpg",
@@ -1966,7 +2124,9 @@
           "height": 700,
           "alt": "ダンベルラック10ペア用 MATRIX HYMX22744AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22744AT_2.jpg",
@@ -1975,7 +2135,9 @@
           "height": 700,
           "alt": "ダンベルラック10ペア用 MATRIX HYMX22744AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2038,6 +2200,8 @@
         "public-700x700/HYMX22746AT/HYMX22746AT-02-700x700.jpg",
         "public-700x700/HYMX22746AT/HYMX22746AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22746AT_1.jpg",
@@ -2046,7 +2210,9 @@
           "height": 700,
           "alt": "シーテッドロウ MATRIX HYMX22746AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22746AT_2.jpg",
@@ -2055,7 +2221,9 @@
           "height": 700,
           "alt": "シーテッドロウ MATRIX HYMX22746AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22746AT_3.jpg",
@@ -2064,7 +2232,9 @@
           "height": 700,
           "alt": "シーテッドロウ MATRIX HYMX22746AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2128,6 +2298,8 @@
         "public-700x700/HYMX22754AT/HYMX22754AT-03-700x700.jpg",
         "public-700x700/HYMX22754AT/HYMX22754AT-04-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22754AT_1.jpg",
@@ -2136,7 +2308,9 @@
           "height": 700,
           "alt": "トライセプスプレス MATRIX HYMX22754AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22754AT_2.jpg",
@@ -2145,7 +2319,9 @@
           "height": 700,
           "alt": "トライセプスプレス MATRIX HYMX22754AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22754AT_3.jpg",
@@ -2154,7 +2330,9 @@
           "height": 700,
           "alt": "トライセプスプレス MATRIX HYMX22754AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX22754AT_4.jpg",
@@ -2163,7 +2341,9 @@
           "height": 700,
           "alt": "トライセプスプレス MATRIX HYMX22754AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2225,6 +2405,8 @@
         "public-700x700/MIBL22768AT/MIBL22768AT-01-700x700.jpg",
         "public-700x700/MIBL22768AT/MIBL22768AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIBL22768AT_1.jpg",
@@ -2233,7 +2415,9 @@
           "height": 700,
           "alt": "IPF公認 セラミックシャフト BULL MIBL22768AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIBL22768AT_2.jpg",
@@ -2242,7 +2426,9 @@
           "height": 700,
           "alt": "IPF公認 セラミックシャフト BULL MIBL22768AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2307,6 +2493,8 @@
         "public-700x700/EHTC22772AT/EHTC22772AT-04-700x700.jpg",
         "public-700x700/EHTC22772AT/EHTC22772AT-05-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/EHTC22772AT_1.jpg",
@@ -2315,7 +2503,9 @@
           "height": 700,
           "alt": "パワーラック TECA EHTC22772AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/EHTC22772AT_2.jpg",
@@ -2324,7 +2514,9 @@
           "height": 700,
           "alt": "パワーラック TECA EHTC22772AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/EHTC22772AT_3.jpg",
@@ -2333,7 +2525,9 @@
           "height": 700,
           "alt": "パワーラック TECA EHTC22772AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/EHTC22772AT_4.jpg",
@@ -2342,7 +2536,9 @@
           "height": 700,
           "alt": "パワーラック TECA EHTC22772AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/EHTC22772AT_5.jpg",
@@ -2351,7 +2547,9 @@
           "height": 700,
           "alt": "パワーラック TECA EHTC22772AT 画像5",
           "isMain": false,
-          "sortOrder": 5
+          "sortOrder": 5,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2413,6 +2611,8 @@
         "public-700x700/OYNT22775AT/OYNT22775AT-01-700x700.jpg",
         "public-700x700/OYNT22775AT/OYNT22775AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYNT22775AT_1.png",
@@ -2421,7 +2621,9 @@
           "height": 700,
           "alt": "アブドミナル NAUTILUS OYNT22775AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYNT22775AT_2.png",
@@ -2430,7 +2632,9 @@
           "height": 700,
           "alt": "アブドミナル NAUTILUS OYNT22775AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2493,6 +2697,8 @@
         "public-700x700/OYNT22776AT/OYNT22776AT-02-700x700.jpg",
         "public-700x700/OYNT22776AT/OYNT22776AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYNT22776AT_1.png",
@@ -2501,7 +2707,9 @@
           "height": 700,
           "alt": "コンパウンドロウ NAUTILUS OYNT22776AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYNT22776AT_2.png",
@@ -2510,7 +2718,9 @@
           "height": 700,
           "alt": "コンパウンドロウ NAUTILUS OYNT22776AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYNT22776AT_3.png",
@@ -2519,7 +2729,9 @@
           "height": 700,
           "alt": "コンパウンドロウ NAUTILUS OYNT22776AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2581,6 +2793,8 @@
         "public-700x700/OYNT22777AT/OYNT22777AT-01-700x700.jpg",
         "public-700x700/OYNT22777AT/OYNT22777AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYNT22777AT_1.png",
@@ -2589,7 +2803,9 @@
           "height": 700,
           "alt": "バーティカルチェスト NAUTILUS OYNT22777AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYNT22777AT_2.png",
@@ -2598,7 +2814,9 @@
           "height": 700,
           "alt": "バーティカルチェスト NAUTILUS OYNT22777AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2659,6 +2877,8 @@
       "galleryUrls": [
         "public-700x700/OYGX22780AT/OYGX22780AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/OYGX22780AT_1.png",
@@ -2667,7 +2887,9 @@
           "height": 700,
           "alt": "スミスマシン GARAXY OYGX22780AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2730,6 +2952,8 @@
         "public-700x700/HYTG23807AT/HYTG23807AT-02-700x700.jpg",
         "public-700x700/HYTG23807AT/HYTG23807AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23807AT_1.jpg",
@@ -2738,7 +2962,9 @@
           "height": 700,
           "alt": "クランチベンチ TECHNOGYM HYTG23807AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23807AT_2.jpg",
@@ -2747,7 +2973,9 @@
           "height": 700,
           "alt": "クランチベンチ TECHNOGYM HYTG23807AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23807AT_3.jpg",
@@ -2756,7 +2984,9 @@
           "height": 700,
           "alt": "クランチベンチ TECHNOGYM HYTG23807AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2819,6 +3049,8 @@
         "public-700x700/HYCY23809AT/HYCY23809AT-02-700x700.jpg",
         "public-700x700/HYCY23809AT/HYCY23809AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23809AT_1.jpg",
@@ -2827,7 +3059,9 @@
           "height": 700,
           "alt": "VR3 プルダウン CYBEX HYCY23809AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23809AT_2.jpg",
@@ -2836,7 +3070,9 @@
           "height": 700,
           "alt": "VR3 プルダウン CYBEX HYCY23809AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23809AT_3.jpg",
@@ -2845,7 +3081,9 @@
           "height": 700,
           "alt": "VR3 プルダウン CYBEX HYCY23809AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2908,6 +3146,8 @@
         "public-700x700/HYZV23810AT/HYZV23810AT-02-700x700.jpg",
         "public-700x700/HYZV23810AT/HYZV23810AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYZV23810AT_1.jpg",
@@ -2916,7 +3156,9 @@
           "height": 700,
           "alt": "訳アリ良品 オリンピックラバープレート20kg(未使用品) ZIVA HYZV23810AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYZV23810AT_2.jpg",
@@ -2925,7 +3167,9 @@
           "height": 700,
           "alt": "訳アリ良品 オリンピックラバープレート20kg(未使用品) ZIVA HYZV23810AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYZV23810AT_3.jpg",
@@ -2934,7 +3178,9 @@
           "height": 700,
           "alt": "訳アリ良品 オリンピックラバープレート20kg(未使用品) ZIVA HYZV23810AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -2997,6 +3243,8 @@
         "public-700x700/HYIV23823AT/HYIV23823AT-02-700x700.jpg",
         "public-700x700/HYIV23823AT/HYIV23823AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23823AT_1.jpg",
@@ -3005,7 +3253,9 @@
           "height": 700,
           "alt": "トライセップVバー(エンドキャップ無し) IVANKO HYIV23823AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23823AT_2.jpg",
@@ -3014,7 +3264,9 @@
           "height": 700,
           "alt": "トライセップVバー(エンドキャップ無し) IVANKO HYIV23823AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23823AT_3.jpg",
@@ -3023,7 +3275,9 @@
           "height": 700,
           "alt": "トライセップVバー(エンドキャップ無し) IVANKO HYIV23823AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3086,6 +3340,8 @@
         "public-700x700/HYIV23824AT/HYIV23824AT-02-700x700.jpg",
         "public-700x700/HYIV23824AT/HYIV23824AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23824AT_1.jpg",
@@ -3094,7 +3350,9 @@
           "height": 700,
           "alt": "ストレートバー(エンドキャップ無し) IVANKO HYIV23824AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23824AT_2.jpg",
@@ -3103,7 +3361,9 @@
           "height": 700,
           "alt": "ストレートバー(エンドキャップ無し) IVANKO HYIV23824AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23824AT_3.jpg",
@@ -3112,7 +3372,9 @@
           "height": 700,
           "alt": "ストレートバー(エンドキャップ無し) IVANKO HYIV23824AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3173,6 +3435,8 @@
       "galleryUrls": [
         "public-700x700/HYNB23828AT/HYNB23828AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNB23828AT_1.jpg",
@@ -3181,7 +3445,9 @@
           "height": 700,
           "alt": "ストレートバーアタッチメント NO BRAND HYNB23828AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3244,6 +3510,8 @@
         "public-700x700/HYRE23832AT/HYRE23832AT-02-700x700.jpg",
         "public-700x700/HYRE23832AT/HYRE23832AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYRE23832AT_1.jpg",
@@ -3252,7 +3520,9 @@
           "height": 700,
           "alt": "ダンベル0.5kg (1ペア) ReeBok HYRE23832AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYRE23832AT_2.jpg",
@@ -3261,7 +3531,9 @@
           "height": 700,
           "alt": "ダンベル0.5kg (1ペア) ReeBok HYRE23832AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYRE23832AT_3.jpg",
@@ -3270,7 +3542,9 @@
           "height": 700,
           "alt": "ダンベル0.5kg (1ペア) ReeBok HYRE23832AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3334,6 +3608,8 @@
         "public-700x700/MIOT23836AT/MIOT23836AT-03-700x700.jpg",
         "public-700x700/MIOT23836AT/MIOT23836AT-04-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIOT23836AT_1.jpg",
@@ -3342,7 +3618,9 @@
           "height": 700,
           "alt": "フィットネスショップ アブコースター 未設定 MIOT23836AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIOT23836AT_2.jpg",
@@ -3351,7 +3629,9 @@
           "height": 700,
           "alt": "フィットネスショップ アブコースター 未設定 MIOT23836AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIOT23836AT_3.jpg",
@@ -3360,7 +3640,9 @@
           "height": 700,
           "alt": "フィットネスショップ アブコースター 未設定 MIOT23836AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIOT23836AT_4.jpg",
@@ -3369,7 +3651,9 @@
           "height": 700,
           "alt": "フィットネスショップ アブコースター 未設定 MIOT23836AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3430,6 +3714,8 @@
       "galleryUrls": [
         "public-700x700/MIOT23838AT/MIOT23838AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIOT23838AT_1.jpg",
@@ -3438,7 +3724,9 @@
           "height": 700,
           "alt": "バンパープレート 25kg 1ペア 未設定 MIOT23838AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3499,6 +3787,8 @@
       "galleryUrls": [
         "public-700x700/HYTG23840AT/HYTG23840AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23840AT_1.jpg",
@@ -3507,7 +3797,9 @@
           "height": 700,
           "alt": "ショルダープレス TECHNOGYM HYTG23840AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3568,6 +3860,8 @@
       "galleryUrls": [
         "public-700x700/HYTG23841AT/HYTG23841AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23841AT_1.jpg",
@@ -3576,7 +3870,9 @@
           "height": 700,
           "alt": "レッグプレス TECHNOGYM HYTG23841AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3640,6 +3936,8 @@
         "public-700x700/HYIV23843AT/HYIV23843AT-03-700x700.jpg",
         "public-700x700/HYIV23843AT/HYIV23843AT-04-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23843AT_1.jpg",
@@ -3648,7 +3946,9 @@
           "height": 700,
           "alt": "ダンベルセット1-10kg(ダンベルラック付き) IVANKO HYIV23843AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23843AT_2.jpg",
@@ -3657,7 +3957,9 @@
           "height": 700,
           "alt": "ダンベルセット1-10kg(ダンベルラック付き) IVANKO HYIV23843AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23843AT_3.jpg",
@@ -3666,7 +3968,9 @@
           "height": 700,
           "alt": "ダンベルセット1-10kg(ダンベルラック付き) IVANKO HYIV23843AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYIV23843AT_4.jpg",
@@ -3675,7 +3979,9 @@
           "height": 700,
           "alt": "ダンベルセット1-10kg(ダンベルラック付き) IVANKO HYIV23843AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3736,6 +4042,8 @@
       "galleryUrls": [
         "public-700x700/HYTG23850AT/HYTG23850AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23850AT_1.jpg",
@@ -3744,7 +4052,9 @@
           "height": 700,
           "alt": "アブドミナル TECHNOGYM HYTG23850AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3807,6 +4117,8 @@
         "public-700x700/HYTG23851AT/HYTG23851AT-02-700x700.jpg",
         "public-700x700/HYTG23851AT/HYTG23851AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23851AT_1.jpg",
@@ -3815,7 +4127,9 @@
           "height": 700,
           "alt": "ラットプルダウン TECHNOGYM HYTG23851AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23851AT_2.jpg",
@@ -3824,7 +4138,9 @@
           "height": 700,
           "alt": "ラットプルダウン TECHNOGYM HYTG23851AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYTG23851AT_3.jpg",
@@ -3833,7 +4149,9 @@
           "height": 700,
           "alt": "ラットプルダウン TECHNOGYM HYTG23851AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3897,6 +4215,8 @@
         "public-700x700/HYPB23852AT/HYPB23852AT-03-700x700.jpg",
         "public-700x700/HYPB23852AT/HYPB23852AT-04-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYPB23852AT_1.jpg",
@@ -3905,7 +4225,9 @@
           "height": 700,
           "alt": "パワーブロック SPORT 9.0 スタンド付き POWER BLOCK HYPB23852AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYPB23852AT_2.jpg",
@@ -3914,7 +4236,9 @@
           "height": 700,
           "alt": "パワーブロック SPORT 9.0 スタンド付き POWER BLOCK HYPB23852AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYPB23852AT_3.jpg",
@@ -3923,7 +4247,9 @@
           "height": 700,
           "alt": "パワーブロック SPORT 9.0 スタンド付き POWER BLOCK HYPB23852AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYPB23852AT_4.jpg",
@@ -3932,7 +4258,9 @@
           "height": 700,
           "alt": "パワーブロック SPORT 9.0 スタンド付き POWER BLOCK HYPB23852AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -3993,6 +4321,8 @@
       "galleryUrls": [
         "public-700x700/HYOT23856AT/HYOT23856AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23856AT_1.jpg",
@@ -4001,7 +4331,9 @@
           "height": 700,
           "alt": "WILD FIT オリンピックラバープレート10kg 1ペア 未設定 HYOT23856AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4062,6 +4394,8 @@
       "galleryUrls": [
         "public-700x700/MIOT23857AT/MIOT23857AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIOT23857AT_1.jpg",
@@ -4070,7 +4404,9 @@
           "height": 700,
           "alt": "WILD FIT オリンピックシャフト180cm 15kg(50mm口径) 未設定 MIOT23857AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4131,6 +4467,8 @@
       "galleryUrls": [
         "public-700x700/MIIV23861AT/MIIV23861AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/MIIV23861AT_1.jpg",
@@ -4139,7 +4477,9 @@
           "height": 700,
           "alt": "28mm口径プレート 5kg IVANKO MIIV23861AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4203,6 +4543,8 @@
         "public-700x700/HYCY23874AT/HYCY23874AT-03-700x700.jpg",
         "public-700x700/HYCY23874AT/HYCY23874AT-04-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23874AT_1.jpg",
@@ -4211,7 +4553,9 @@
           "height": 700,
           "alt": "フライ CYBEX HYCY23874AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23874AT_2.jpg",
@@ -4220,7 +4564,9 @@
           "height": 700,
           "alt": "フライ CYBEX HYCY23874AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23874AT_3.jpg",
@@ -4229,7 +4575,9 @@
           "height": 700,
           "alt": "フライ CYBEX HYCY23874AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23874AT_4.jpg",
@@ -4238,7 +4586,9 @@
           "height": 700,
           "alt": "フライ CYBEX HYCY23874AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4300,6 +4650,8 @@
         "public-700x700/HYCP23875AT/HYCP23875AT-01-700x700.jpg",
         "public-700x700/HYCP23875AT/HYCP23875AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP23875AT_1.jpg",
@@ -4308,7 +4660,9 @@
           "height": 700,
           "alt": "レッグエクステンション&レッグカール COMPASS HYCP23875AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCP23875AT_2.jpg",
@@ -4317,7 +4671,9 @@
           "height": 700,
           "alt": "レッグエクステンション&レッグカール COMPASS HYCP23875AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4384,6 +4740,8 @@
         "public-700x700/HYOT23878AT/HYOT23878AT-06-700x700.jpg",
         "public-700x700/HYOT23878AT/HYOT23878AT-07-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23878AT_1.jpg",
@@ -4392,7 +4750,9 @@
           "height": 700,
           "alt": "ULTiMABODY トレーニングセット一式 未設定 HYOT23878AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23878AT_2.jpg",
@@ -4401,7 +4761,9 @@
           "height": 700,
           "alt": "ULTiMABODY トレーニングセット一式 未設定 HYOT23878AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23878AT_3.jpg",
@@ -4410,7 +4772,9 @@
           "height": 700,
           "alt": "ULTiMABODY トレーニングセット一式 未設定 HYOT23878AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23878AT_4.jpg",
@@ -4419,7 +4783,9 @@
           "height": 700,
           "alt": "ULTiMABODY トレーニングセット一式 未設定 HYOT23878AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23878AT_5.jpg",
@@ -4428,7 +4794,9 @@
           "height": 700,
           "alt": "ULTiMABODY トレーニングセット一式 未設定 HYOT23878AT 画像5",
           "isMain": false,
-          "sortOrder": 5
+          "sortOrder": 5,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23878AT_6.jpg",
@@ -4437,7 +4805,9 @@
           "height": 700,
           "alt": "ULTiMABODY トレーニングセット一式 未設定 HYOT23878AT 画像6",
           "isMain": false,
-          "sortOrder": 6
+          "sortOrder": 6,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23878AT_7.jpg",
@@ -4446,7 +4816,9 @@
           "height": 700,
           "alt": "ULTiMABODY トレーニングセット一式 未設定 HYOT23878AT 画像7",
           "isMain": false,
-          "sortOrder": 7
+          "sortOrder": 7,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4511,6 +4883,8 @@
         "public-700x700/HYOT23888AT/HYOT23888AT-04-700x700.jpg",
         "public-700x700/HYOT23888AT/HYOT23888AT-05-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23888AT_1.jpg",
@@ -4519,7 +4893,9 @@
           "height": 700,
           "alt": "チェーントレーニング用フック 未設定 HYOT23888AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23888AT_2.jpg",
@@ -4528,7 +4904,9 @@
           "height": 700,
           "alt": "チェーントレーニング用フック 未設定 HYOT23888AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23888AT_3.jpg",
@@ -4537,7 +4915,9 @@
           "height": 700,
           "alt": "チェーントレーニング用フック 未設定 HYOT23888AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23888AT_4.jpg",
@@ -4546,7 +4926,9 @@
           "height": 700,
           "alt": "チェーントレーニング用フック 未設定 HYOT23888AT 画像4",
           "isMain": false,
-          "sortOrder": 4
+          "sortOrder": 4,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYOT23888AT_5.jpg",
@@ -4555,7 +4937,9 @@
           "height": 700,
           "alt": "チェーントレーニング用フック 未設定 HYOT23888AT 画像5",
           "isMain": false,
-          "sortOrder": 5
+          "sortOrder": 5,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4618,6 +5002,8 @@
         "public-700x700/HYCY23891AT/HYCY23891AT-02-700x700.jpg",
         "public-700x700/HYCY23891AT/HYCY23891AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23891AT_1.jpg",
@@ -4626,7 +5012,9 @@
           "height": 700,
           "alt": "アブドミナルVR1 CYBEX HYCY23891AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23891AT_2.jpg",
@@ -4635,7 +5023,9 @@
           "height": 700,
           "alt": "アブドミナルVR1 CYBEX HYCY23891AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23891AT_3.jpg",
@@ -4644,7 +5034,9 @@
           "height": 700,
           "alt": "アブドミナルVR1 CYBEX HYCY23891AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4707,6 +5099,8 @@
         "public-700x700/HYCY23893AT/HYCY23893AT-02-700x700.jpg",
         "public-700x700/HYCY23893AT/HYCY23893AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23893AT_1.jpg",
@@ -4715,7 +5109,9 @@
           "height": 700,
           "alt": "レッグプレスVR1 CYBEX HYCY23893AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23893AT_2.jpg",
@@ -4724,7 +5120,9 @@
           "height": 700,
           "alt": "レッグプレスVR1 CYBEX HYCY23893AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23893AT_3.jpg",
@@ -4733,7 +5131,9 @@
           "height": 700,
           "alt": "レッグプレスVR1 CYBEX HYCY23893AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4795,6 +5195,8 @@
         "public-700x700/HYCY23894AT/HYCY23894AT-01-700x700.jpg",
         "public-700x700/HYCY23894AT/HYCY23894AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23894AT_1.jpg",
@@ -4803,7 +5205,9 @@
           "height": 700,
           "alt": "チェストプレスVR1 CYBEX HYCY23894AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY23894AT_2.jpg",
@@ -4812,7 +5216,9 @@
           "height": 700,
           "alt": "チェストプレスVR1 CYBEX HYCY23894AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4875,6 +5281,8 @@
         "public-700x700/HYNP23895AT/HYNP23895AT-02-700x700.jpg",
         "public-700x700/HYNP23895AT/HYNP23895AT-03-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNP23895AT_1.jpg",
@@ -4883,7 +5291,9 @@
           "height": 700,
           "alt": "オリンピックフラットベンチ NIPPYO HYNP23895AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNP23895AT_2.jpg",
@@ -4892,7 +5302,9 @@
           "height": 700,
           "alt": "オリンピックフラットベンチ NIPPYO HYNP23895AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNP23895AT_3.jpg",
@@ -4901,7 +5313,9 @@
           "height": 700,
           "alt": "オリンピックフラットベンチ NIPPYO HYNP23895AT 画像3",
           "isMain": false,
-          "sortOrder": 3
+          "sortOrder": 3,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -4962,6 +5376,8 @@
       "galleryUrls": [
         "public-700x700/HYNT23897AT/HYNT23897AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNT23897AT_1.jpg",
@@ -4970,7 +5386,9 @@
           "height": 700,
           "alt": "ロータリトルソー NAUTILUS HYNT23897AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -5031,6 +5449,8 @@
       "galleryUrls": [
         "public-700x700/HYNT23898AT/HYNT23898AT-01-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNT23898AT_1.jpg",
@@ -5039,7 +5459,9 @@
           "height": 700,
           "alt": "NITRO ローワーバック NAUTILUS HYNT23898AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -5101,6 +5523,8 @@
         "public-700x700/HYNT23899AT/HYNT23899AT-01-700x700.jpg",
         "public-700x700/HYNT23899AT/HYNT23899AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNT23899AT_1.jpg",
@@ -5109,7 +5533,9 @@
           "height": 700,
           "alt": "NITRO アブドミナル NAUTILUS HYNT23899AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNT23899AT_2.jpg",
@@ -5118,7 +5544,9 @@
           "height": 700,
           "alt": "NITRO アブドミナル NAUTILUS HYNT23899AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -5180,6 +5608,8 @@
         "public-700x700/HYNT23900AT/HYNT23900AT-01-700x700.jpg",
         "public-700x700/HYNT23900AT/HYNT23900AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNT23900AT_1.jpg",
@@ -5188,7 +5618,9 @@
           "height": 700,
           "alt": "NITRO レッグカール NAUTILUS HYNT23900AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYNT23900AT_2.jpg",
@@ -5197,7 +5629,9 @@
           "height": 700,
           "alt": "NITRO レッグカール NAUTILUS HYNT23900AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -5259,6 +5693,8 @@
         "public-700x700/HNOT24906AT/HNOT24906AT-01-700x700.jpg",
         "public-700x700/HNOT24906AT/HNOT24906AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HNOT24906AT_1.jpg",
@@ -5267,7 +5703,9 @@
           "height": 700,
           "alt": "WILD FIT ラバーダンベル 40kg×2 未設定 HNOT24906AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HNOT24906AT_2.jpg",
@@ -5276,7 +5714,9 @@
           "height": 700,
           "alt": "WILD FIT ラバーダンベル 40kg×2 未設定 HNOT24906AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -5338,6 +5778,8 @@
         "public-700x700/HNOT24914AT/HNOT24914AT-01-700x700.jpg",
         "public-700x700/HNOT24914AT/HNOT24914AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HNOT24914AT_1.jpg",
@@ -5346,7 +5788,9 @@
           "height": 700,
           "alt": "クロームメッキダンベル1~10kgペア ラックセット(未使用品) 未設定 HNOT24914AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HNOT24914AT_2.jpg",
@@ -5355,7 +5799,9 @@
           "height": 700,
           "alt": "クロームメッキダンベル1~10kgペア ラックセット(未使用品) 未設定 HNOT24914AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -5417,6 +5863,8 @@
         "public-700x700/HYMX26923AT/HYMX26923AT-01-700x700.jpg",
         "public-700x700/HYMX26923AT/HYMX26923AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX26923AT_1.png",
@@ -5425,7 +5873,9 @@
           "height": 700,
           "alt": "S-Drive Performance Trainer MATRIX HYMX26923AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYMX26923AT_2.png",
@@ -5434,7 +5884,9 @@
           "height": 700,
           "alt": "S-Drive Performance Trainer MATRIX HYMX26923AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {
@@ -5496,6 +5948,8 @@
         "public-700x700/HYCY26924AT/HYCY26924AT-01-700x700.jpg",
         "public-700x700/HYCY26924AT/HYCY26924AT-02-700x700.jpg"
       ],
+      "imageStatus": "ready",
+      "hasRealImage": true,
       "images": [
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY26924AT_1.png",
@@ -5504,7 +5958,9 @@
           "height": 700,
           "alt": "スクワットプレス CYBEX HYCY26924AT 画像1",
           "isMain": true,
-          "sortOrder": 1
+          "sortOrder": 1,
+          "imageStatus": "ready",
+          "hasRealImage": true
         },
         {
           "sourceUrl": "https://machine-group.net/wp-content/uploads/HYCY26924AT_2.png",
@@ -5513,7 +5969,9 @@
           "height": 700,
           "alt": "スクワットプレス CYBEX HYCY26924AT 画像2",
           "isMain": false,
-          "sortOrder": 2
+          "sortOrder": 2,
+          "imageStatus": "ready",
+          "hasRealImage": true
         }
       ],
       "visibility": {

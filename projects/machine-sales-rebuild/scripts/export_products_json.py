@@ -31,6 +31,7 @@ DEFAULT_BINDING_SUMMARY_CSV = Path("data/output/products_public_image_binding_su
 DEFAULT_BINDING_SUMMARY_MD = Path("data/output/products_public_image_binding_summary.md")
 DEFAULT_FRONTEND_TARGETS_CSV = Path("data/output/frontend_image_check_targets.csv")
 DEFAULT_DERIVED_RESULTS = Path("data/output/public_derived_image_results.csv")
+DEFAULT_PLACEHOLDER_REPORT = Path("data/output/products_public_placeholder_report.csv")
 SCHEMA_VERSION = "1.0.0"
 
 
@@ -80,6 +81,19 @@ def _build_gallery_fields(bindings: list[object]) -> tuple[str | None, list[str]
     return main_binding.display_url, gallery_urls
 
 
+def _compute_image_status(bindings: list[object]) -> tuple[str, bool]:
+    if not bindings:
+        return "missing", False
+    has_real_image = any(
+        normalize_text(getattr(binding, "original_image_url", "")).casefold().find("noimage") == -1
+        and normalize_text(getattr(binding, "original_image_url", "")) != ""
+        for binding in bindings
+    )
+    if has_real_image:
+        return "ready", True
+    return "placeholder", False
+
+
 def _build_product(
     row: dict[str, str],
     registry: SettingsRegistry,
@@ -119,6 +133,7 @@ def _build_product(
 
     if bindings:
         display_url, gallery_urls = _build_gallery_fields(bindings)
+        image_status, has_real_image = _compute_image_status(bindings)
         images = build_image_objects(
             bindings=bindings,
             product_name=normalize_text(row.get("product_name", "")),
@@ -128,6 +143,8 @@ def _build_product(
     else:
         display_url = None
         gallery_urls = []
+        image_status = "missing"
+        has_real_image = False
         images = _build_images(row)
 
     return {
@@ -192,6 +209,8 @@ def _build_product(
         },
         "displayUrl": display_url,
         "galleryUrls": gallery_urls,
+        "imageStatus": image_status,
+        "hasRealImage": has_real_image,
         "images": images,
         "visibility": {
             "status": publish_status,
@@ -247,10 +266,11 @@ def _build_binding_report_rows(
         code = normalize_text(row.get("sd_product_code", "")).upper()
         bindings = image_binding_map.get(code, [])
         display_url, gallery_urls = _build_gallery_fields(bindings)
+        image_status, has_real_image = _compute_image_status(bindings)
         notes: list[str] = []
         if _is_public_row(row) and not bindings:
             notes.append("public_product_missing_manifest")
-        if bindings and any("noimage" in normalize_text(binding.original_image_url).casefold() for binding in bindings):
+        if image_status == "placeholder":
             notes.append("placeholder_source_image")
         report_rows.append(
             {
@@ -258,6 +278,8 @@ def _build_binding_report_rows(
                 "slug": normalize_text(row.get("seo_slug", "")).lower(),
                 "publish_status": normalize_text(row.get("publish_status", "")),
                 "sold_out_flag": normalize_text(row.get("sold_out_flag", "")),
+                "image_status": image_status,
+                "has_real_image": "true" if has_real_image else "false",
                 "primary_image_found": "true" if display_url else "false",
                 "gallery_image_count": len(gallery_urls),
                 "display_url": display_url or "",
@@ -402,6 +424,25 @@ def _build_frontend_check_targets(
     return targets
 
 
+def _build_placeholder_report_rows(report_rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    placeholder_rows: list[dict[str, object]] = []
+    for row in report_rows:
+        if normalize_text(str(row.get("image_status", ""))) != "placeholder":
+            continue
+        placeholder_rows.append(
+            {
+                "sd_product_code": row.get("sd_product_code", ""),
+                "slug": row.get("slug", ""),
+                "image_status": row.get("image_status", ""),
+                "has_real_image": row.get("has_real_image", ""),
+                "display_url": row.get("display_url", ""),
+                "gallery_count": row.get("gallery_image_count", 0),
+                "notes": normalize_text(str(row.get("notes", ""))) or "show_image_preparing_state",
+            }
+        )
+    return placeholder_rows
+
+
 def export_products_json(
     input_path: Path,
     output_path: Path,
@@ -416,6 +457,7 @@ def export_products_json(
     binding_summary_md_path: Path | None = None,
     frontend_check_targets_path: Path | None = None,
     derived_results_path: Path | None = None,
+    placeholder_report_path: Path | None = None,
 ) -> dict[str, object]:
     registry = load_settings_registry(seed_dir)
     rows = load_product_rows(input_path)
@@ -462,12 +504,29 @@ def export_products_json(
                 "slug",
                 "publish_status",
                 "sold_out_flag",
+                "image_status",
+                "has_real_image",
                 "primary_image_found",
                 "gallery_image_count",
                 "display_url",
                 "notes",
             ],
         )
+        if placeholder_report_path:
+            placeholder_rows = _build_placeholder_report_rows(report_rows)
+            write_csv(
+                placeholder_report_path,
+                placeholder_rows,
+                [
+                    "sd_product_code",
+                    "slug",
+                    "image_status",
+                    "has_real_image",
+                    "display_url",
+                    "gallery_count",
+                    "notes",
+                ],
+            )
         if binding_summary_csv_path:
             summary_rows = _build_binding_summary_rows(report_rows)
             write_csv(binding_summary_csv_path, summary_rows, ["metric", "value", "notes"])
@@ -502,6 +561,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--binding-summary-md", default=str(DEFAULT_BINDING_SUMMARY_MD), help="Binding summary markdown path.")
     parser.add_argument("--frontend-check-targets", default=str(DEFAULT_FRONTEND_TARGETS_CSV), help="Frontend image check target CSV path.")
     parser.add_argument("--derived-results", default=str(DEFAULT_DERIVED_RESULTS), help="Derived image results CSV path.")
+    parser.add_argument("--placeholder-report", default=str(DEFAULT_PLACEHOLDER_REPORT), help="Placeholder image report CSV path.")
     return parser
 
 
@@ -520,6 +580,7 @@ def main() -> int:
         binding_summary_md_path=Path(args.binding_summary_md),
         frontend_check_targets_path=Path(args.frontend_check_targets),
         derived_results_path=Path(args.derived_results),
+        placeholder_report_path=Path(args.placeholder_report),
     )
     print(f"products={len(payload['products'])}")
     print(Path(args.output).as_posix())

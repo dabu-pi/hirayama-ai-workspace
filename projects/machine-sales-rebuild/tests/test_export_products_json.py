@@ -34,6 +34,7 @@ class ExportProductsJsonTest(unittest.TestCase):
         cls.binding_summary_md = cls.temp_dir / "binding_summary.md"
         cls.frontend_targets_csv = cls.temp_dir / "frontend_targets.csv"
         cls.derived_results_csv = cls.temp_dir / "public_derived_image_results.csv"
+        cls.placeholder_report_csv = cls.temp_dir / "placeholder_report.csv"
 
         write_csv(cls.product_csv, result.rows, PRODUCT_MASTER_COLUMNS)
         write_csv(
@@ -65,7 +66,7 @@ class ExportProductsJsonTest(unittest.TestCase):
                     "sd_product_code": "HYIC24909AT",
                     "slug": "hyic24909at",
                     "image_seq": 1,
-                    "original_image_url": "https://example.com/source-images/HYIC24909AT-1-original.jpg",
+                    "original_image_url": "https://machine-group.net/wp-content/themes/strongdepot/images/noimage.jpg",
                     "saved_path": "data/raw-images/wordpress-public/HYIC24909AT/HYIC24909AT_1.png",
                     "file_ext": "png",
                     "source_type": "gallery",
@@ -195,6 +196,7 @@ class ExportProductsJsonTest(unittest.TestCase):
             binding_summary_md_path=cls.binding_summary_md,
             frontend_check_targets_path=cls.frontend_targets_csv,
             derived_results_path=cls.derived_results_csv,
+            placeholder_report_path=cls.placeholder_report_csv,
         )
 
     def test_export_contains_schema_version_and_public_products(self) -> None:
@@ -227,6 +229,8 @@ class ExportProductsJsonTest(unittest.TestCase):
             "public-700x700/OOCY16003LG/OOCY16003LG-01-700x700.jpg",
         )
         self.assertTrue(first_product["images"][0]["isMain"])
+        self.assertEqual(first_product["imageStatus"], "ready")
+        self.assertTrue(first_product["hasRealImage"])
 
     def test_private_and_sold_products_are_excluded_in_public_only_mode(self) -> None:
         product_codes = [product["sdProductCode"] for product in self.payload["products"]]
@@ -234,13 +238,30 @@ class ExportProductsJsonTest(unittest.TestCase):
         self.assertNotIn("SAOT25007CH", product_codes)
         self.assertNotIn("OOB116001AT", product_codes)
 
+    def test_placeholder_product_gets_placeholder_flags(self) -> None:
+        placeholder_product = next(
+            product for product in self.payload["products"] if product["sdProductCode"] == "HYIC24909AT"
+        )
+
+        self.assertEqual(placeholder_product["imageStatus"], "placeholder")
+        self.assertFalse(placeholder_product["hasRealImage"])
+        self.assertEqual(placeholder_product["images"][0]["imageStatus"], "placeholder")
+        self.assertFalse(placeholder_product["images"][0]["hasRealImage"])
+
     def test_binding_report_summary_and_frontend_targets_are_generated(self) -> None:
         with self.binding_report_csv.open("r", encoding="utf-8-sig", newline="") as handle:
             report_rows = list(csv.DictReader(handle))
 
+        with self.placeholder_report_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+            placeholder_rows = list(csv.DictReader(handle))
+
         self.assertEqual(len(report_rows), 2)
         self.assertEqual(report_rows[0]["primary_image_found"], "true")
         self.assertEqual(report_rows[0]["gallery_image_count"], "2")
+        self.assertEqual(report_rows[1]["image_status"], "placeholder")
+        self.assertEqual(report_rows[1]["has_real_image"], "false")
+        self.assertEqual(len(placeholder_rows), 1)
+        self.assertEqual(placeholder_rows[0]["sd_product_code"], "HYIC24909AT")
         self.assertTrue(self.binding_summary_csv.exists())
         self.assertTrue(self.binding_summary_md.exists())
         self.assertTrue(self.frontend_targets_csv.exists())

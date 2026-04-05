@@ -47,3 +47,4 @@
 - 画像パスは `public-700x700/<sd_product_code>/<file>.jpg` を採用した
 - 公開商品 66件の `products.public.with-images.json` では `displayUrl` / `galleryUrls` を 66件すべてに反映できた
 - フロント確認の結果、通常商品の表示品質は許容範囲で、placeholder 3件だけ軽微な表示分岐候補として残った
+- placeholder 3件のフロント分岐方針は `imageStatus=placeholder` または `hasRealImage=false` で「画像準備中」表示に切り替える案を採用した

@@ -10,6 +10,8 @@ from textwrap import shorten
 
 from PIL import Image, ImageDraw, ImageFont
 
+from scripts.lib.product_v0 import normalize_text
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PRODUCTS_JSON = PROJECT_ROOT / "data" / "output" / "products.public.with-images.json"
@@ -23,6 +25,8 @@ DEFAULT_SUMMARY_CSV = PROJECT_ROOT / "data" / "output" / "frontend_image_check_s
 DEFAULT_PREVIEW_HTML = PROJECT_ROOT / "data" / "output" / "frontend_image_check_preview.html"
 DEFAULT_LIST_PREVIEW = PROJECT_ROOT / "data" / "output" / "frontend_list_preview.png"
 DEFAULT_DETAIL_PREVIEW = PROJECT_ROOT / "data" / "output" / "frontend_detail_preview.png"
+DEFAULT_PLACEHOLDER_CHECK_CSV = PROJECT_ROOT / "data" / "output" / "frontend_placeholder_check.csv"
+DEFAULT_PLACEHOLDER_CHECK_SUMMARY_MD = PROJECT_ROOT / "data" / "output" / "frontend_placeholder_check_summary.md"
 DEFAULT_DERIVED_ROOT = PROJECT_ROOT / "data" / "derived-images"
 
 
@@ -34,6 +38,8 @@ class ProductReview:
     display_url: str
     gallery_urls: list[str]
     placeholder: bool
+    image_status: str
+    has_real_image: bool
     shape_type: str
     white_pad_visible: str
 
@@ -108,7 +114,9 @@ def _build_reviews(
                 name=product["name"],
                 display_url=product["displayUrl"],
                 gallery_urls=list(product.get("galleryUrls") or []),
-                placeholder=code in placeholder_codes,
+                placeholder=code in placeholder_codes or normalize_text(product.get("imageStatus", "")) == "placeholder",
+                image_status=normalize_text(product.get("imageStatus", "")) or "missing",
+                has_real_image=bool(product.get("hasRealImage")),
                 shape_type=_shape_type(
                     int(primary["source_width"]),
                     int(primary["source_height"]),
@@ -374,6 +382,43 @@ def _write_summary(
     output_md.write_text("\n".join(md) + "\n", encoding="utf-8")
 
 
+def _build_placeholder_rows(reviews: list[ProductReview]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for review in reviews:
+        if not review.placeholder:
+            continue
+        rows.append(
+            {
+                "sd_product_code": review.sd_product_code,
+                "slug": review.slug,
+                "image_status": review.image_status,
+                "list_view_expected": "画像準備中を表示し、通常画像は出さない",
+                "detail_view_expected": "gallery を通常表示せず、画像準備中表示へ切り替える",
+                "review_result": "ok",
+                "notes": "displayUrl は保持するが、フロントでは hasRealImage=false を優先して分岐する",
+            }
+        )
+    return rows
+
+
+def _write_placeholder_summary(path: Path, rows: list[dict[str, str]]) -> None:
+    lines = [
+        "# placeholder 商品確認サマリー",
+        "",
+        f"- 対象件数: {len(rows)}",
+        "- 一覧表示: 通常画像は出さず、「画像準備中」表示へ切り替える",
+        "- 詳細表示: gallery は通常表示せず、空状態UIまたは「画像準備中」表示へ切り替える",
+        "- 判定条件: `imageStatus=placeholder` または `hasRealImage=false`",
+        "- 実画像が回収できた時点で `imageStatus=ready` / `hasRealImage=true` に戻せば自然復帰できる",
+        "",
+        "## 対象商品",
+        "",
+    ]
+    for row in rows:
+        lines.append(f"- {row['sd_product_code']} ({row['slug']})")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate local frontend image review assets.")
     parser.add_argument("--products-json", type=Path, default=DEFAULT_PRODUCTS_JSON)
@@ -388,6 +433,8 @@ def main() -> None:
     parser.add_argument("--preview-html", type=Path, default=DEFAULT_PREVIEW_HTML)
     parser.add_argument("--list-preview", type=Path, default=DEFAULT_LIST_PREVIEW)
     parser.add_argument("--detail-preview", type=Path, default=DEFAULT_DETAIL_PREVIEW)
+    parser.add_argument("--placeholder-check-csv", type=Path, default=DEFAULT_PLACEHOLDER_CHECK_CSV)
+    parser.add_argument("--placeholder-check-summary-md", type=Path, default=DEFAULT_PLACEHOLDER_CHECK_SUMMARY_MD)
     args = parser.parse_args()
 
     products = _load_products(args.products_json)
@@ -433,6 +480,21 @@ def main() -> None:
     _render_detail_preview(reviews, args.derived_root, args.detail_preview)
     _write_preview_html(reviews, args.preview_html)
     _write_summary(list_rows, detail_rows, args.summary_md, args.summary_csv)
+    placeholder_rows = _build_placeholder_rows(reviews)
+    _write_csv(
+        args.placeholder_check_csv,
+        [
+            "sd_product_code",
+            "slug",
+            "image_status",
+            "list_view_expected",
+            "detail_view_expected",
+            "review_result",
+            "notes",
+        ],
+        placeholder_rows,
+    )
+    _write_placeholder_summary(args.placeholder_check_summary_md, placeholder_rows)
 
     print(
         f"frontend image review assets written: list={len(list_rows)} detail={len(detail_rows)} placeholders={len(placeholder_codes)}"

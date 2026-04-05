@@ -22,6 +22,10 @@ class PublicImageBinding:
     is_primary_candidate: bool
     notes: str
 
+    @property
+    def is_placeholder(self) -> bool:
+        return "noimage" in self.original_image_url.casefold()
+
 
 def _load_csv_rows(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
@@ -104,6 +108,8 @@ def build_image_objects(
                 ),
                 "isMain": binding.image_seq == main_seq,
                 "sortOrder": binding.image_seq,
+                "imageStatus": "placeholder" if binding.is_placeholder else "ready",
+                "hasRealImage": not binding.is_placeholder,
             }
         )
     return image_objects

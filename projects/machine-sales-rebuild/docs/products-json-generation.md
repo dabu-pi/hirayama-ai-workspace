@@ -39,12 +39,17 @@
   - 一覧や詳細の primary 表示に使う代表画像
 - `galleryUrls`
   - 表示用 700x700 画像の配列
+- `imageStatus`
+  - `ready` / `placeholder` / `missing`
+- `hasRealImage`
+  - 実画像がある商品かどうか
 - `images[]`
-  - `sourceUrl` / `displayUrl` / `isMain` / `sortOrder` を持つ詳細オブジェクト
+  - `sourceUrl` / `displayUrl` / `isMain` / `sortOrder` / `imageStatus` / `hasRealImage` を持つ詳細オブジェクト
 
 今回の判断:
 
 - フロントで扱いやすい `displayUrl` と `galleryUrls` を前面に出す
+- placeholder 商品だけは `imageStatus` / `hasRealImage` で分岐できるようにする
 - 既存契約との整合のため `images[]` も維持する
 - primary は `image_seq=1` を原則にする
 - gallery の並び順は `image_seq` 順に固定する
@@ -155,7 +160,26 @@ uv run python -m scripts.export_products_json
   - `HYEL15009AT`
   - `OOEL15011AT`
   - `HYKT16087AT`
-- これらは `displayUrl` 自体は埋まるが、元画像としては要再確認
+- これらは `displayUrl` 自体は埋まるが、JSON では `imageStatus="placeholder"` / `hasRealImage=false` として出力する
+- `products_public_placeholder_report.csv` にも分離して記録する
+
+## placeholder 商品の扱い方針
+
+- 通常商品:
+  - `imageStatus="ready"`
+  - `hasRealImage=true`
+  - `displayUrl` / `galleryUrls` を通常表示する
+- placeholder 商品:
+  - `imageStatus="placeholder"`
+  - `hasRealImage=false`
+  - `displayUrl` は保持するが、フロントでは通常画像として使わない
+  - 一覧では「画像準備中」表示へ切り替える
+  - 詳細では gallery を通常表示せず、「画像準備中」表示または空状態UIへ切り替える
+
+将来の戻し方:
+
+- 実画像を回収して manifest を更新し、再出力すれば `imageStatus="ready"` / `hasRealImage=true` に戻る
+- その時点で特別分岐は自動的に外せる
 
 ## 2026-04-05 公開商品派生画像生成後の次ステップ
 
@@ -175,5 +199,5 @@ uv run python -m scripts.export_products_json
 次フェーズで最低限やること:
 
 1. フロント表示で白余白と primary 画像の見え方を確認する
-2. `sourceUrl=noimage.jpg` の 3商品をどう扱うか決める
-3. `displayUrl` の base URL 差し替え規則を決める
+2. `displayUrl` の base URL 差し替え規則を決める
+3. placeholder 3商品の実画像を回収できるか確認する
