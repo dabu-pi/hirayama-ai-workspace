@@ -487,8 +487,10 @@ function insertPatientScreenButtonOverlay_(uiSh, config) {
   var topLeft = range.getCell(1, 1);
   var width = getRangePixelWidth_(uiSh, range);
   var height = getRangePixelHeight_(uiSh, range);
+  var blob = buildPatientScreenButtonBlob_(config, width, height);
+  validatePngBlob_(blob, config.key); // insertImage 前に PNG 検証
   var image = uiSh.insertImage(
-    buildPatientScreenButtonBlob_(config, width, height),
+    blob,
     topLeft.getColumn(),
     topLeft.getRow(),
     0,
@@ -535,11 +537,37 @@ function isPatientScreenButtonImage_(image) {
 }
 
 function buildPatientScreenButtonBlob_(config) {
-  return Utilities.newBlob(
-    Utilities.base64Decode(PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64),
-    PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE,
-    config.key.toLowerCase() + ".png"
-  );
+  var b64 = PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64.replace(/^data:image\/png;base64,/, "");
+  var bytes = Utilities.base64Decode(b64);
+  return Utilities.newBlob(bytes, PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE, config.key.toLowerCase() + ".png");
+}
+
+/**
+ * PNG Blob の簡易検証。異常時は insertImage 前に明示エラーを投げる。
+ * GAS の getBytes() は符号付き整数を返すため、137 → -119 の変換を考慮する。
+ */
+function validatePngBlob_(blob, label) {
+  var PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+  var contentType = blob.getContentType();
+  var bytes = blob.getBytes();
+  Logger.log("[validatePngBlob_] " + label + " contentType=" + contentType + " bytes.length=" + bytes.length);
+  if (contentType !== "image/png") {
+    throw new Error("[" + label + "] contentType が image/png ではありません: " + contentType);
+  }
+  if (bytes.length < 8) {
+    throw new Error("[" + label + "] bytes が短すぎます（" + bytes.length + " bytes）");
+  }
+  for (var i = 0; i < 8; i++) {
+    var b = bytes[i];
+    if (b < 0) b += 256; // 符号付き → 符号なし変換
+    if (b !== PNG_SIGNATURE[i]) {
+      throw new Error(
+        "[" + label + "] PNG signature 不一致 index=" + i +
+        " expected=" + PNG_SIGNATURE[i] + " actual=" + b
+      );
+    }
+  }
+  Logger.log("[validatePngBlob_] " + label + " OK (valid PNG, " + bytes.length + " bytes)");
 }
 
 function getRangePixelWidth_(sheet, range) {
