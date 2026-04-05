@@ -1,0 +1,154 @@
+# WordPress画像回収可能性調査
+
+最終更新: 2026-04-05
+
+## 目的
+
+`machine-group.net` の公開側から、WordPress メディア由来の画像 URL と商品ページの対応をどこまで回収できるかを確認する。
+
+## 今回確認したURL
+
+- `https://machine-group.net/`
+- `https://machine-group.net/products/hycy26924at/`
+- `https://machine-group.net/products/hynt23899at/`
+
+## 今回確認できた事実
+
+### 1. 公開トップページに WordPress メディア由来の画像パターンがある
+
+トップページの新着商品カードで、次のような対応を確認した。
+
+| 商品ページURL | 画像URL断片 | 見えた規則 |
+|---|---|---|
+| `https://machine-group.net/products/hycy26924at/` | `wp-content/uploads/HYCY26924AT_1.png` | slug は小文字商品コード、画像は大文字商品コード + `_1` |
+| `https://machine-group.net/products/hynt23899at/` | `wp-content/uploads/HYNT23899AT_1.jpg` | 同上 |
+| `https://machine-group.net/products/hyot23888at/` | `wp-content/uploads/HYOT23888AT_1.jpg` | 同上 |
+
+トップページのHTML断片では、少なくとも 13 件の商品カードで
+
+- `/products/<小文字の商品コード>/`
+- `wp-content/uploads/<大文字の商品コード>_1.<拡張子>`
+
+の組み合わせが見えた。
+
+### 2. 商品詳細ページに画像ギャラリーと商品コードが同居している
+
+詳細ページ 2 件で、次の情報を確認した。
+
+- `og:url` は `/products/<小文字の商品コード>/`
+- ギャラリー画像は `../../wp-content/uploads//<大文字の商品コード>_<枝番>.<拡張子>`
+- ページ内テーブルに商品コード表示がある
+- hidden input `product-code` にも同じ商品コードが入っている
+
+確認例:
+
+| 商品ページURL | 商品コード表示 | 画像例 |
+|---|---|---|
+| `https://machine-group.net/products/hycy26924at/` | `HYCY26924AT` | `HYCY26924AT_1.png`, `HYCY26924AT_2.png` |
+| `https://machine-group.net/products/hynt23899at/` | `HYNT23899AT` | `HYNT23899AT_1.jpg`, `HYNT23899AT_2.jpg` |
+
+### 3. 公開画像URLは実際に取得できる
+
+サンプル確認:
+
+| URL | 確認結果 |
+|---|---|
+| `https://machine-group.net/wp-content/uploads/HYCY26924AT_1.png` | `200` |
+| `https://machine-group.net/wp-content/uploads/HYNT23899AT_1.jpg` | `200` |
+| `https://machine-group.net/wp-content/uploads/HYCY26924AT_1.jpg` | `404` |
+
+このため、公開HTMLに見える URL をそのまま回収候補にできる可能性は高い。ただし、拡張子違いの当て推量は危険。
+
+### 4. `og:image` は補助情報としては弱い
+
+`hycy26924at` の詳細ページでは
+
+- `og:image = ../../wp-content/uploads//HYCY26924AT_1.jpg`
+- 実際のギャラリー本文 = `HYCY26924AT_1.png`, `HYCY26924AT_2.png`
+
+になっていた。実ファイル確認では `.jpg` は `404`、`.png` は `200` だった。
+
+したがって、回収時の優先順位は
+
+1. 本文ギャラリーの `img src`
+2. サムネイル画像
+3. hidden `product-code`
+4. `og:image`
+
+の順にする方が安全。
+
+## 今回の観察から分かるURLパターン
+
+### 商品ページ
+
+```text
+https://machine-group.net/products/{sd_product_code_lower}/
+```
+
+### 画像URL
+
+```text
+https://machine-group.net/wp-content/uploads/{SD_PRODUCT_CODE_UPPER}_{seq}.{ext}
+```
+
+例:
+
+```text
+https://machine-group.net/wp-content/uploads/HYCY26924AT_1.png
+https://machine-group.net/wp-content/uploads/HYCY26924AT_2.png
+https://machine-group.net/wp-content/uploads/HYNT23899AT_1.jpg
+https://machine-group.net/wp-content/uploads/HYNT23899AT_2.jpg
+```
+
+## 今回のサンプルで見えなかったもの
+
+- `uploads/yyyy/mm/` の日付フォルダ
+- `-300x300` / `-700x700` のサイズサフィックス
+- `srcset` によるサイズ違い配信
+
+少なくとも今回見た公開HTMLでは、`uploads` 直下に商品コードベースのファイルが置かれているように見える。
+
+## 商品との紐付け可能性
+
+現時点では、`sd_product_code` による紐付け可能性が高い。
+
+根拠:
+
+- 商品ページ slug が商品コード小文字
+- ページ内商品コード表示が商品コード大文字
+- 画像ファイル名が商品コード大文字 + 枝番
+
+この 3 点が一致している。
+
+## 回収元候補としての評価
+
+### 使える点
+
+- 公開HTMLだけで商品ページと画像URLの対応がある程度拾える
+- 商品コードベースで機械的に結び付けやすい
+- 1商品複数画像の痕跡がある
+
+### 弱い点
+
+- `og:image` と本文ギャラリーで拡張子が食い違う例がある
+- 公開されていない商品、売却済み商品、下書き商品の画像は拾えない可能性がある
+- WordPress 側で手作業更新された履歴があるため、公開HTMLだけでは元画像の完全性を保証できない
+
+## 現時点の判断
+
+`machine-group.net` の WordPress メディアは、**過去資産の回収元候補としては現実的**。
+
+ただし、**今後の正本そのものとしては弱い**。
+
+したがって、
+
+- 短期: WordPress 公開画像から回収可能性を検証する
+- 中期: 回収した画像を Google Drive 正本へ寄せる
+
+という二段構えが妥当。
+
+## 次にやること
+
+1. 5〜10 商品で `sd_product_code` ベースの小規模回収テストをする
+2. 公開されていない商品の画像が WordPress から拾えるかどうかを別経路で確認する
+3. `strongdepot-product-manager` / 旧 WordPress 資産の実体を引き続き探索する

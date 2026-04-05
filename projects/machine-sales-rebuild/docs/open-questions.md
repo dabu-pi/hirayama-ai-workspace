@@ -6,10 +6,11 @@
 
 | ID | 論点 | 現状 | 次の確認先 |
 |---|---|---|---|
-| IMG-001 | 自社商品画像の正本はどこにあるか | 現行 `画像1〜3` は正本ではない | WordPress 側資産、旧ローカル控え、Google Drive |
+| IMG-001 | 自社商品画像の正本はどこにあるか | 現行 `画像1〜3` は正本ではない。`machine-group.net` 公開 WordPress メディアは回収元候補として有力 | WordPress 側資産、旧ローカル控え、Google Drive |
 | IMG-002 | `strongdepot-product-manager` の PHP 実装を回収できるか | `generate.php` / `Settings.php` は workspace 内にない | サーバー側、別PC、別リポジトリ |
 | IMG-003 | 自社画像も Google Drive にすでに存在するか | 未確認 | Drive フォルダ実地確認 |
 | IMG-004 | 競合画像を自社画像と同じ正本設計に載せるか | 競合側は Drive 保存の痕跡あり | 競合運用と自社運用を分離して整理 |
+| IMG-007 | WordPress 公開画像の拡張子揺れをどう扱うか | `og:image` が `.jpg`、本文ギャラリーが `.png` の例あり | 本文ギャラリー優先で回収し、拡張子推測を避ける |
 
 ## 優先度B
 
@@ -31,5 +32,5 @@
 ## 今回の判断メモ
 
 - 700x700 生成フェーズにはまだ進めない
-- 自社画像の第一候補は WordPress 由来の過去資産
+- 自社画像の第一候補は `machine-group.net` の WordPress 由来画像と、その背後にある過去資産
 - 今後の正本保存先の第一候補は Google Drive

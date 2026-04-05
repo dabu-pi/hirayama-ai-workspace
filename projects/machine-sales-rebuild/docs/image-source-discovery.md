@@ -11,6 +11,7 @@
 | 候補場所 | 対象 | 根拠 | この環境で確認できたこと | 取得可能性 | 優先度 |
 |---|---|---|---|---|---|
 | 現行 `ネットショップ商品一覧` の `画像1〜3` | 自社 | 一見すると画像列名だが、phase5B で再監査した | 実CSVは非URL、live sheet spot check でも plain text | 低い | 低 |
+| `https://machine-group.net/products/*` と `https://machine-group.net/wp-content/uploads/*` | 自社 | 公開商品ページと公開画像URLの対応が見える | 商品ページ slug と画像ファイル名の両方に商品コードが入っている。公開HTMLから 13 件のカード、2 件の詳細ページを確認 | 高い | 最優先 |
 | `sendHttpPost()` -> `https://machine-group.net/strongdepot-product-manager/generate.php` -> WordPress 系 | 自社 | `docs/current-system-overview.md`、`docs/wordpress-dependencies.md`、`docs/php-publish-flow.md` に反映経路あり | 入口URLと依存関係は確認済み、PHP実体は未回収 | 高い | 最優先 |
 | WordPress メディア / 過去アップロード資産 | 自社 | ユーザー申告「過去は WordPress メディアフォルダに商品コードベースで保存」 | workspace / OneDrive の手元確認では未発見 | 中 | 最優先 |
 | 旧ローカル控え / OneDrive フォルダ | 自社 | 過去運用の画像控えがローカル同期されていた可能性 | OneDrive 直下の粗い確認では強い手掛かりなし | 中 | 高 |
@@ -23,9 +24,12 @@
 ### 自社商品画像
 
 - 現行 `画像1〜3` は正本URLではない。
+- `machine-group.net` の公開商品ページでは、`/products/<小文字商品コード>/` と `wp-content/uploads/<大文字商品コード>_枝番.<拡張子>` の対応が確認できた。
+- 詳細ページ内には商品コード表示と hidden `product-code` があり、公開画像と商品を `sd_product_code` で紐付けられる可能性が高い。
+- 一方で `og:image` が実画像拡張子と食い違う例もあり、メタタグだけを正本扱いするのは危険。
 - WordPress / PHP 反映経路は今も設計上の重要依存として残っている。
 - `generate.php` / `Settings.php` の実コードが見つかっていないため、自社画像の投入元と保存先は未確定。
-- したがって、自社商品の正本候補は「旧 WordPress 反映資産」が最も有力。
+- したがって、自社商品の正本候補は「machine-group.net の公開 WordPress メディア」および「旧 WordPress 反映資産」が最も有力。
 
 ### 競合画像
 
@@ -39,10 +43,12 @@
 - サーバー上の `strongdepot-product-manager`
 - 自社商品画像の Google Drive フォルダ
 - 旧 PC / OneDrive 上の画像控え
+- 非公開商品 / 売却済み商品の画像が公開側から拾えるか
 
 ## 優先アクション
 
-1. `strongdepot-product-manager` の配置場所を特定する
-2. WordPress メディアまたはそのエクスポート控えを回収する
-3. Google Drive に自社商品画像フォルダがあるか確認する
-4. 競合画像の保管系統は自社画像と別設計で扱う前提を固める
+1. `machine-group.net` 公開側で 5〜10 商品の画像回収サンプルを作る
+2. `strongdepot-product-manager` の配置場所を特定する
+3. WordPress メディアまたはそのエクスポート控えを回収する
+4. Google Drive に自社商品画像フォルダがあるか確認する
+5. 競合画像の保管系統は自社画像と別設計で扱う前提を固める
