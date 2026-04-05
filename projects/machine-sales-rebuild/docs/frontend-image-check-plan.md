@@ -13,26 +13,36 @@
 
 ## JSON を読む経路
 
-この案件フォルダ内には、現時点で本番相当のフロント実装やルーティング実装は存在しない。
-そのため今回は、`products.public.with-images.json` を直接読み込むローカル確認用スクリプトを使い、一覧相当・詳細相当の表示を再現した。
+この案件フォルダ内に、ローカル確認用の最小フロントを追加した。
 
-- 実行スクリプト: `scripts/generate_frontend_image_review.py`
-- ローカル確認HTML: `data/output/frontend_image_check_preview.html`
-- 一覧プレビュー画像: `data/output/frontend_list_preview.png`
-- 詳細プレビュー画像: `data/output/frontend_detail_preview.png`
+- 画面: `frontend/public-preview/index.html`
+- ロジック: `frontend/public-preview/app.js`
+- スタイル: `frontend/public-preview/styles.css`
+
+読込元:
+
+- 商品JSON: `data/output/products.public.with-images.json`
+- 画像ベース: `data/derived-images/`
+
+`app.js` では次の設定を入り口にしている。
+
+- `CONFIG.productsJsonUrl`
+- `CONFIG.baseImageUrl`
+
+将来の `baseImageUrl` 差し替えは、この `CONFIG.baseImageUrl` を本番配信先へ切り替えるだけで済む形にしている。
 
 ## 画像参照の前提
 
 - `displayUrl` / `galleryUrls` は `public-700x700/<sd_product_code>/<file>.jpg`
-- ローカル確認では `data/derived-images/` を基点に解決する
+- ローカル確認では `CONFIG.baseImageUrl = ../../data/derived-images/` として解決する
 - 本番反映ではなく、あくまでローカル確認用の接続
 
 ## 今回の確認方法
 
-1. `products.public.with-images.json` を読み込む
-2. `displayUrl` で一覧カード相当のプレビューを出す
-3. `galleryUrls` を `image_seq` 順に詳細ギャラリー相当へ並べる
-4. `sourceUrl=noimage.jpg` の 3商品を別扱いで確認する
+1. `uv run python -m http.server 8010` で project root を配信する
+2. `http://127.0.0.1:8010/frontend/public-preview/index.html` を開く
+3. `products.public.with-images.json` を読み込み、一覧カードを表示する
+4. 通常商品は `displayUrl` / `galleryUrls`、placeholder 商品は `画像準備中` 分岐を確認する
 
 ## 一覧表示の評価
 
@@ -104,3 +114,4 @@
 - 通常商品の表示品質は、次のフロント連携確認へ進めてよい
 - 白余白は許容範囲
 - 先に手を入れるべきなのは placeholder 3件への軽微な表示分岐だけ
+- ローカル確認用の最小フロントで、通常商品 63件 / placeholder 3件の分岐を実装済み

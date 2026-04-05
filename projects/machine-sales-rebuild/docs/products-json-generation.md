@@ -76,6 +76,13 @@ public-700x700/HYEL15009AT/HYEL15009AT-01-700x700.jpg
 
 で公開URLへ置換しやすい。
 
+現在のローカルフロント確認では、`frontend/public-preview/app.js` の
+
+- `CONFIG.productsJsonUrl`
+- `CONFIG.baseImageUrl`
+
+を入り口にしており、`baseImageUrl` を差し替えるだけで配信先を切り替えられる。
+
 ## visibility 変換
 
 - 公開商品: `status=public`, `isPublished=true`
@@ -196,8 +203,19 @@ uv run python -m scripts.export_products_json
 - 問題が残るのは `sourceUrl=noimage.jpg` の 3商品だけ
 - この 3商品は通常画像として出すより、フロントで「画像準備中」扱いに寄せる方が自然
 
+## 2026-04-05 公開商品フロント組み込み結果
+
+- ローカル確認用の最小フロントを `frontend/public-preview/` に追加
+- 通常商品 63件:
+  - 一覧で `displayUrl` を表示
+  - 詳細で `galleryUrls` を表示
+- placeholder 商品 3件:
+  - 一覧で `画像準備中`
+  - 詳細で `画像準備中` と空状態UIへ分岐
+- 確認結果は `data/output/frontend_integration_check.csv` と `data/output/frontend_integration_check_summary.md` に整理
+
 次フェーズで最低限やること:
 
-1. フロント表示で白余白と primary 画像の見え方を確認する
-2. `displayUrl` の base URL 差し替え規則を決める
-3. placeholder 3商品の実画像を回収できるか確認する
+1. `displayUrl` の base URL 差し替え規則を決める
+2. placeholder 3商品の実画像を回収できるか確認する
+3. ローカルフロントを本番寄りの配置へ移すか判断する
