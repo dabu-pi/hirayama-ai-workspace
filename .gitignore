@@ -80,6 +80,9 @@ projects/machine-sales-rebuild/data/output/*.full.log
 projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/**
 !projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/
 !projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/.gitkeep
+projects/machine-sales-rebuild/data/raw-images/wordpress-public/**
+!projects/machine-sales-rebuild/data/raw-images/wordpress-public/
+!projects/machine-sales-rebuild/data/raw-images/wordpress-public/.gitkeep
 projects/machine-sales-rebuild/tmp/*
 !projects/machine-sales-rebuild/tmp/.gitkeep
 .uv-cache/

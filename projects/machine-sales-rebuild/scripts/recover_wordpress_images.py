@@ -61,6 +61,7 @@ def run_recovery(
     retry_count: int,
     allow_og_fallback: bool,
     max_images_per_product: int,
+    request_interval_seconds: float,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     targets = load_targets_csv(input_path)
     results: list[dict[str, object]] = []
@@ -68,7 +69,7 @@ def run_recovery(
 
     for target_index, target in enumerate(targets):
         if target_index > 0:
-            time.sleep(sleep_seconds)
+            time.sleep(request_interval_seconds)
 
         try:
             page_response = fetch_url(
@@ -120,6 +121,7 @@ def run_recovery(
             continue
 
         for candidate in candidates:
+            time.sleep(request_interval_seconds)
             try:
                 image_response = fetch_url(
                     candidate.image_url,
@@ -222,6 +224,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum images to download per product page.",
     )
     parser.add_argument(
+        "--request-interval-seconds",
+        type=float,
+        default=0.3,
+        help="Minimum interval between HTTP requests.",
+    )
+    parser.add_argument(
         "--disable-og-fallback",
         action="store_true",
         help="Disable og:image fallback when gallery images are not found.",
@@ -246,6 +254,7 @@ def main() -> int:
         retry_count=int(args.retry_count),
         allow_og_fallback=not args.disable_og_fallback,
         max_images_per_product=int(args.max_images_per_product),
+        request_interval_seconds=float(args.request_interval_seconds),
     )
     print(f"targets={len(targets)}")
     print(f"success_products={_count_unique_products(results)}")

@@ -200,8 +200,68 @@ data/raw-images/wordpress-recovery-sample/HYOT23888AT/HYOT23888AT_5.jpg
 - 今回は `srcset` 優先取得が必要なページには当たらなかった
 - 公開HTMLだけで全件分の元画像が揃うかはまだ不明
 
+## 公開商品の全件回収結果
+
+2026-04-05 時点で、`product_master_v0.full.csv` から抽出した `public` 商品 66 件を対象に、公開側の全件回収を実施した。
+
+- 対象商品数: 66
+- 成功商品数: 66
+- 失敗商品数: 0
+- 保存画像総数: 163
+- 画像0枚商品数: 0
+
+画像枚数分布:
+
+| 画像枚数 | 商品数 |
+|---:|---:|
+| 1枚 | 21 |
+| 2枚 | 16 |
+| 3枚 | 16 |
+| 4枚 | 7 |
+| 5枚 | 3 |
+| 6枚 | 2 |
+| 7枚 | 1 |
+
+拡張子分布:
+
+| 拡張子 | 枚数 |
+|---|---:|
+| jpg | 149 |
+| png | 14 |
+
+保存先:
+
+```text
+data/raw-images/wordpress-public/<sd_product_code>/<元URLファイル名>
+```
+
+manifest:
+
+- `data/output/public_image_manifest.csv`
+
+回収結果:
+
+- `data/output/wordpress_recovery_public_results.csv`
+- `data/output/wordpress_recovery_public_failures.csv`
+- `data/output/wordpress_public_recovery_summary.csv`
+
+## 公開商品の全件回収で安定していたルール
+
+- 対象抽出は `publish_status=public` かつ `sold_out_flag=False`
+- 商品ページURLは `/products/<sd_product_code小文字>/`
+- ページ内 hidden `product-code` と `sd_product_code` の整合が取れていた
+- 本文ギャラリー `img src` から `wp-content/uploads/<SD_PRODUCT_CODE>_<seq>.<ext>` を安定して取得できた
+- 画像ファイル名の連番で manifest の `image_seq` を組めた
+- `jpg` / `png` 混在でも、HTMLに出ている URL をそのまま使えば問題なかった
+
+## 公開商品の全件回収で見えたこと
+
+- 公開商品の範囲では、WordPress 公開側を「回収元」として実務上使える水準にある
+- 少なくとも今回の `public` 66 件については、次フェーズの 700x700 生成に必要な元画像入力を揃えられた
+- 一方で、これはあくまで公開商品に限った話であり、非公開・売却済み・下書き相当までは保証しない
+
 ## 次にやること
 
-1. 小規模回収で成功したルールをもとに、対象件数を少し広げて再現性を確認する
-2. 公開されていない商品の画像が WordPress から拾えるかどうかを別経路で確認する
+1. 公開商品について、700x700 派生画像生成フェーズへ進む
+2. 非公開商品・売却済み商品の画像が WordPress から拾えるかどうかを別経路で確認する
 3. `strongdepot-product-manager` / 旧 WordPress 資産の実体を引き続き探索する

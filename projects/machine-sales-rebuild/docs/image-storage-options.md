@@ -60,4 +60,5 @@
 - 過去資産の探索元としては WordPress メディアを優先調査する
 - 公開側から回収できる範囲は使うが、将来の元画像正本は Google Drive 側へ寄せる前提を維持する
 - 全件回収へ進む前に、非公開商品や売却済み商品の回収可否を確認する
+- 公開商品 66件・163画像の回収結果は `data/raw-images/wordpress-public/` と `data/output/public_image_manifest.csv` に整理済み
 - 将来の表示配信層は、Drive 直配信ではなく別公開層に分ける余地を残す
