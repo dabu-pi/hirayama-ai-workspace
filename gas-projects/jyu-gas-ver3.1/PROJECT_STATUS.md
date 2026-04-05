@@ -10,11 +10,12 @@
 - `Ver3_core.js` で既存の保存処理 `saveVisit_V3()` と画面クリア処理 `clearEntryUI_V3()` を特定し、図形/画像ボタン割当用のトップレベル関数 `buttonSavePatientScreen()` / `buttonClearPatientScreen()` を追加。
 - `buttonClearPatientScreen()` には `OK / CANCEL` の確認ダイアログを追加し、誤操作で入力が消えないようにした。
 - ボタン配置は `setupPatientScreenButtons_V3()` で再生成できるようにし、患者画面上部 `F1:G2=保存`、`H1:I2=入力クリア` の順で見た目を固定。
-- Apps Script から再現可能な形を優先し、見た目はセル＋見える画像ボタン、クリック割当は OverGridImage への `assignScript()` で構成。
+- Apps Script から再現可能な形を優先し、見た目はセル、クリック割当は PNG の OverGridImage への `assignScript()` で構成。
 - ボタン重複防止のため、再配置時は alt text / script 名で既存ボタンを除去してから作り直す。
 - `onOpen()` でもボタン不足時の自動再配置を呼ぶようにし、シート再読込後も復元しやすい構成にした。
 - 管理メニューに `患者画面ボタン再配置` を追加し、`onOpen()` で画像配置まで通らない場合でも手動再配置できるようにした。
 - `inspectPatientScreenButtons_V3()` は全シートの OverGridImage 一覧を `sheetName / script / anchorA1 / width / height` 付きで `Logger.log` 出力する。
+- SVG Blob は `blob の形式がサポートされていません` で失敗したため廃止し、PNG Blob へ修正。
 - 詳細記録: `docs/JREC-01_patient_screen_buttons_2026-04-05.md`
 
 **次アクション:** live シートへ `setupPatientScreenButtons_V3()` を反映し、`保存` / `入力クリア` の実クリック導線と確認ダイアログを確認する。

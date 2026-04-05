@@ -174,7 +174,9 @@ const PATIENT_SCREEN_BUTTONS = {
   },
 };
 const PATIENT_SCREEN_BUTTON_KEY_PREFIX = "JREC_BUTTON_";
-const PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE = "image/svg+xml";
+const PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE = "image/png";
+const PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==";
 
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
 const CASE_COLS = {
@@ -532,24 +534,12 @@ function isPatientScreenButtonImage_(image) {
   );
 }
 
-function buildPatientScreenButtonBlob_(config, width, height) {
-  var svg = buildPatientScreenButtonSvg_(config, width, height);
+function buildPatientScreenButtonBlob_(config) {
   return Utilities.newBlob(
-    svg,
+    Utilities.base64Decode(PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64),
     PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE,
-    config.key.toLowerCase() + ".svg"
+    config.key.toLowerCase() + ".png"
   );
-}
-
-function buildPatientScreenButtonSvg_(config, width, height) {
-  var rx = 10;
-  var safeLabel = escapeXml_(config.label);
-  var fontSize = config.label.length <= 2 ? 22 : 18;
-  return ''
-    + '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
-    + '<rect x="1" y="1" width="' + (width - 2) + '" height="' + (height - 2) + '" rx="' + rx + '" ry="' + rx + '" fill="' + config.fillColor + '" stroke="' + config.borderColor + '" stroke-width="2"/>'
-    + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Yu Gothic UI, Meiryo, sans-serif" font-size="' + fontSize + '" font-weight="700" fill="' + config.fontColor + '">' + safeLabel + '</text>'
-    + '</svg>';
 }
 
 function getRangePixelWidth_(sheet, range) {
@@ -575,15 +565,6 @@ function safeGetImageMeta_(image, methodName) {
   } catch (err) {
     return "";
   }
-}
-
-function escapeXml_(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 /** ===== onEdit ===== */
