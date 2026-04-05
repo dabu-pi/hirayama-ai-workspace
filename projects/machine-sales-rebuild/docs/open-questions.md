@@ -15,7 +15,7 @@
 | IMG-009 | 公開商品の回収済み画像をどう Drive 正本へ移すか | `public_image_manifest.csv` までは生成済み | Drive フォルダ規則、対応表、移行手順の整理 |
 | IMG-010 | 派生画像の公開URLをどう確定するか | `public_derived_image_manifest.csv` の `derived_url_candidate` はストレージ相対パス止まり | products.json 反映ルール、フロント参照規則を決める |
 | IMG-011 | `sourceUrl` が `noimage.jpg` の公開商品をどう扱うか | 3商品で placeholder_source_image を検出 | 元画像の再回収可否、公開継続可否、表示方針を確認 |
-| IMG-012 | 公開用 `displayUrl` にどの base URL を前置するか | ローカル確認では `frontend/public-preview/app.js` の `CONFIG.baseImageUrl` を使用 | フロント配信方法、Drive URL 置換規則、公開URL層の決定 |
+| IMG-012 | 公開用 `displayUrl` にどの base URL を前置するか | 第一候補は同一サイト配下の静的配信。差し替え点は `frontend/public-preview/config.js` | 本番URL値の確定、公開URL層の決定 |
 
 ## 優先度B
 
@@ -49,3 +49,4 @@
 - フロント確認の結果、通常商品の表示品質は許容範囲で、placeholder 3件だけ軽微な表示分岐候補として残った
 - placeholder 3件のフロント分岐方針は `imageStatus=placeholder` または `hasRealImage=false` で「画像準備中」表示に切り替える案を採用した
 - ローカルフロント `frontend/public-preview/` で通常商品 63件 / placeholder 3件の分岐を実装済み
+- `baseImageUrl` は JSON ではなくフロント設定で前置し、同一サイト配下の静的配信を第一候補とする

@@ -81,7 +81,16 @@ public-700x700/HYEL15009AT/HYEL15009AT-01-700x700.jpg
 - `CONFIG.productsJsonUrl`
 - `CONFIG.baseImageUrl`
 
-を入り口にしており、`baseImageUrl` を差し替えるだけで配信先を切り替えられる。
+を入り口にしており、実際の差し替え点は `frontend/public-preview/config.js` に寄せた。
+
+責務分担:
+
+- JSON:
+  - `displayUrl` / `galleryUrls` は相対パス維持
+- フロント:
+  - `baseImageUrl` を前置して絶対URL化する
+- placeholder 商品:
+  - URL 解決はできても通常表示には使わない
 
 ## visibility 変換
 
@@ -213,6 +222,8 @@ uv run python -m scripts.export_products_json
   - 一覧で `画像準備中`
   - 詳細で `画像準備中` と空状態UIへ分岐
 - 確認結果は `data/output/frontend_integration_check.csv` と `data/output/frontend_integration_check_summary.md` に整理
+- `baseImageUrl` は `frontend/public-preview/config.js` で一箇所差し替えする
+- 本番第一候補は同一サイト配下の静的配信とする
 
 次フェーズで最低限やること:
 

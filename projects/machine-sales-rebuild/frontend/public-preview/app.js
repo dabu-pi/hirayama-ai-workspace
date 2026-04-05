@@ -1,6 +1,11 @@
-const CONFIG = {
+const DEFAULT_CONFIG = {
   productsJsonUrl: new URL("../../data/output/products.public.with-images.json", window.location.href).href,
   baseImageUrl: new URL("../../data/derived-images/", window.location.href).href,
+};
+
+const CONFIG = {
+  ...DEFAULT_CONFIG,
+  ...(window.__MACHINE_SALES_PREVIEW_CONFIG__ || {}),
 };
 
 const state = {

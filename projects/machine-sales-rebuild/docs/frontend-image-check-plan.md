@@ -29,13 +29,14 @@
 - `CONFIG.productsJsonUrl`
 - `CONFIG.baseImageUrl`
 
-将来の `baseImageUrl` 差し替えは、この `CONFIG.baseImageUrl` を本番配信先へ切り替えるだけで済む形にしている。
+現在は `frontend/public-preview/config.js` を設定ファイルとして使い、将来の `baseImageUrl` 差し替えはこの1ファイルだけで済む形にしている。
 
 ## 画像参照の前提
 
 - `displayUrl` / `galleryUrls` は `public-700x700/<sd_product_code>/<file>.jpg`
 - ローカル確認では `CONFIG.baseImageUrl = ../../data/derived-images/` として解決する
 - 本番反映ではなく、あくまでローカル確認用の接続
+- 本番第一候補は同一サイト配下の静的配信とし、`baseImageUrl` だけを本番URLへ差し替える
 
 ## 今回の確認方法
 
@@ -115,3 +116,4 @@
 - 白余白は許容範囲
 - 先に手を入れるべきなのは placeholder 3件への軽微な表示分岐だけ
 - ローカル確認用の最小フロントで、通常商品 63件 / placeholder 3件の分岐を実装済み
+- `baseImageUrl` 本番ルールは「同一サイト配下の静的配信」を第一候補とし、`config.js` 1箇所で差し替える
