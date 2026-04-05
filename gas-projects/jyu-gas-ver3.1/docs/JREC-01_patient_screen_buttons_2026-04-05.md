@@ -19,8 +19,10 @@
   - `buttonSavePatientScreen()`
   - `buttonClearPatientScreen()`
 - `buttonClearPatientScreen()` には確認ダイアログを追加した
-- ボタンのクリック割当は、透明オーバーグリッド画像をセルボタンの上に重ねて `assignScript()` する方式にした
+- ボタンのクリック割当は、OverGridImage に `assignScript()` する方式にした
 - `onOpen()` でも不足時の自動再配置を呼ぶようにし、シート再読込時にボタンが消えていても復元されるようにした
+- 透明画像での切り分けが難しかったため、修正版では **見える SVG 画像ボタン** をセル上に重ねる方式へ変更した
+- 管理メニューから再配置できるよう、`患者画面ボタン再配置` を追加した
 
 ## 既存処理との対応関係
 
@@ -50,6 +52,7 @@
 - `setupPatientScreenButtons_V3()` を実行すると、既存の患者画面ボタンを除去してから再配置する
 - 再配置対象は alt text / script 名で判定する
 - 順序は常に `保存` → `入力クリア`
+- `inspectPatientScreenButtons_V3()` は全シートの OverGridImage を走査し、`sheetName / script / anchorA1 / width / height` を `Logger.log` に出す
 
 ## 確認観点
 
@@ -67,6 +70,8 @@
 - `clasp run setupPatientScreenButtons_V3`
   - 権限エラーで headless 実行不可
   - そのため、live 上の即時自動配置確認は `onOpen()` 側の不足時再配置で補完する構成に変更した
+- `clasp run inspectPatientScreenButtons_V3`
+  - この環境では Execution API 側の権限制約があるため、headless 検証は継続課題
 
 ## 今後の追加ルール
 

@@ -174,8 +174,7 @@ const PATIENT_SCREEN_BUTTONS = {
   },
 };
 const PATIENT_SCREEN_BUTTON_KEY_PREFIX = "JREC_BUTTON_";
-const PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==";
+const PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE = "image/svg+xml";
 
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
 const CASE_COLS = {
@@ -344,6 +343,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
   {
     title: "管理者用",
     items: [
+      { label: "患者画面ボタン再配置", functionName: "setupPatientScreenButtons_V3" },
       { label: "ヘッダ確認（デバッグ）", functionName: "checkHeaders_V3" },
       { label: "JBIZ menu_id 追加", functionName: "setupJBIZMenuMasterId_V3" },
       { label: "JBIZ 会員傷行レコード移行", functionName: "migrateJBIZMemberRules_V3" },
@@ -417,22 +417,32 @@ function setupPatientScreenButtons_V3() {
 
 function inspectPatientScreenButtons_V3() {
   var ss = SpreadsheetApp.getActive();
-  var uiSh = ss.getSheetByName(SHEETS.ui);
-  if (!uiSh) throw new Error("患者画面シートが見つかりません");
+  var logs = [];
 
-  return uiSh.getImages()
-    .filter(isPatientScreenButtonImage_)
-    .map(function(image) {
+  ss.getSheets().forEach(function(sheet) {
+    sheet.getImages().forEach(function(image, index) {
       var anchorCell = image.getAnchorCell();
-      return {
+      var item = {
+        sheetName: sheet.getName(),
+        index: index + 1,
         key: safeGetImageMeta_(image, "getAltTextTitle"),
         description: safeGetImageMeta_(image, "getAltTextDescription"),
         script: safeGetImageMeta_(image, "getScript"),
         anchorA1: anchorCell ? anchorCell.getA1Notation() : "",
-        width: safeGetImageMeta_(image, "getWidth"),
-        height: safeGetImageMeta_(image, "getHeight"),
+        width: Number(safeGetImageMeta_(image, "getWidth") || 0),
+        height: Number(safeGetImageMeta_(image, "getHeight") || 0),
+        isPatientButton: isPatientScreenButtonImage_(image),
       };
+      logs.push(item);
+      Logger.log("[inspectPatientScreenButtons_V3] " + JSON.stringify(item));
     });
+  });
+
+  Logger.log("[inspectPatientScreenButtons_V3] totalImages=" + logs.length);
+  Logger.log("[inspectPatientScreenButtons_V3] patientButtonImages=" + logs.filter(function(item) {
+    return item.isPatientButton;
+  }).length);
+  return logs;
 }
 
 function setupPatientScreenButtonCell_(uiSh, config) {
@@ -473,21 +483,31 @@ function rebuildPatientScreenButtons_(uiSh) {
 function insertPatientScreenButtonOverlay_(uiSh, config) {
   var range = uiSh.getRange(config.rangeA1);
   var topLeft = range.getCell(1, 1);
+  var width = getRangePixelWidth_(uiSh, range);
+  var height = getRangePixelHeight_(uiSh, range);
   var image = uiSh.insertImage(
-    getTransparentButtonOverlayBlob_(),
+    buildPatientScreenButtonBlob_(config, width, height),
     topLeft.getColumn(),
     topLeft.getRow(),
     0,
     0
   );
 
-  if (typeof image.setWidth === "function") image.setWidth(getRangePixelWidth_(uiSh, range));
-  if (typeof image.setHeight === "function") image.setHeight(getRangePixelHeight_(uiSh, range));
+  if (typeof image.setWidth === "function") image.setWidth(width);
+  if (typeof image.setHeight === "function") image.setHeight(height);
   if (typeof image.setAltTextTitle === "function") image.setAltTextTitle(config.key);
   if (typeof image.setAltTextDescription === "function") {
     image.setAltTextDescription("患者画面ボタン:" + config.label);
   }
   image.assignScript(config.functionName);
+  Logger.log("[insertPatientScreenButtonOverlay_] " + JSON.stringify({
+    sheetName: uiSh.getName(),
+    key: config.key,
+    functionName: config.functionName,
+    anchorA1: topLeft.getA1Notation(),
+    width: width,
+    height: height,
+  }));
 }
 
 function removePatientScreenButtons_(uiSh) {
@@ -512,12 +532,24 @@ function isPatientScreenButtonImage_(image) {
   );
 }
 
-function getTransparentButtonOverlayBlob_() {
+function buildPatientScreenButtonBlob_(config, width, height) {
+  var svg = buildPatientScreenButtonSvg_(config, width, height);
   return Utilities.newBlob(
-    Utilities.base64Decode(PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64),
-    "image/png",
-    "patient-screen-button-overlay.png"
+    svg,
+    PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE,
+    config.key.toLowerCase() + ".svg"
   );
+}
+
+function buildPatientScreenButtonSvg_(config, width, height) {
+  var rx = 10;
+  var safeLabel = escapeXml_(config.label);
+  var fontSize = config.label.length <= 2 ? 22 : 18;
+  return ''
+    + '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
+    + '<rect x="1" y="1" width="' + (width - 2) + '" height="' + (height - 2) + '" rx="' + rx + '" ry="' + rx + '" fill="' + config.fillColor + '" stroke="' + config.borderColor + '" stroke-width="2"/>'
+    + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Yu Gothic UI, Meiryo, sans-serif" font-size="' + fontSize + '" font-weight="700" fill="' + config.fontColor + '">' + safeLabel + '</text>'
+    + '</svg>';
 }
 
 function getRangePixelWidth_(sheet, range) {
@@ -543,6 +575,15 @@ function safeGetImageMeta_(image, methodName) {
   } catch (err) {
     return "";
   }
+}
+
+function escapeXml_(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 /** ===== onEdit ===== */
