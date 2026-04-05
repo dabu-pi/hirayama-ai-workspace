@@ -5,7 +5,7 @@
 ## 現在地
 
 - phase5B の実データ検証まで完了
-- 画像派生生成にはまだ進まず、`machine-group.net` を対象に WordPress 画像回収可能性を調査中
+- 画像派生生成にはまだ進まず、`machine-group.net` を対象に WordPress 画像小規模回収テストまで実施
 - 案件フォルダ `projects/machine-sales-rebuild/` を正本として運用中
 
 ## 直近でやったこと
@@ -16,6 +16,7 @@
 - `画像1〜3` が画像URL列ではなく plain text 混入列であることを再確認
 - 自社画像 / 競合画像の正本候補と保存先候補を整理
 - `machine-group.net` の公開商品ページで、商品コードと WordPress 画像URLの対応パターンを確認
+- 6商品の小規模回収テストで 15画像の保存に成功し、本文ギャラリー抽出ルールを確認
 
 ## 完了済み
 
@@ -29,8 +30,8 @@
 
 ## 次の一手
 
-1. `strongdepot-product-manager` の PHP / WordPress 側資産を回収する
-2. `machine-group.net` 公開側で 5〜10 商品の小規模回収テストをする
+1. 非公開商品や売却済み商品の画像を公開側だけで拾えるか確認する
+2. `strongdepot-product-manager` の PHP / WordPress 側資産を回収する
 3. Google Drive に自社商品画像フォルダがあるか確認する
 4. 条件が揃ったら 700x700 派生画像生成フェーズへ進む
 
@@ -44,7 +45,7 @@
 ## テスト状況
 
 - `uv run python -m unittest discover -s tests -v`
-- phase5B 時点で 14 tests OK
+- 現在は 16 tests OK
 
 ## 実行コマンド
 

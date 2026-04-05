@@ -147,8 +147,61 @@ https://machine-group.net/wp-content/uploads/HYNT23899AT_2.jpg
 
 という二段構えが妥当。
 
+## 小規模回収テスト結果
+
+2026-04-05 時点で、公開商品 6 件を対象に小規模回収テストを実施した。
+
+- 対象商品数: 6
+- 成功商品数: 6
+- 失敗商品数: 0
+- 保存できた画像枚数: 15
+- 抽出元: すべて本文ギャラリー `img src`
+
+商品別の取得結果:
+
+| sd_product_code | slug | 取得枚数 | 主な拡張子 | 結果 |
+|---|---|---:|---|---|
+| `HYCY26924AT` | `hycy26924at` | 2 | png | 成功 |
+| `HYNT23899AT` | `hynt23899at` | 2 | jpg | 成功 |
+| `HYMX26923AT` | `hymx26923at` | 2 | png | 成功 |
+| `HNOT24914AT` | `hnot24914at` | 2 | jpg | 成功 |
+| `HYNT23900AT` | `hynt23900at` | 2 | jpg | 成功 |
+| `HYOT23888AT` | `hyot23888at` | 5 | jpg | 成功 |
+
+保存先は次の一時回収構造にそろえた。
+
+```text
+data/raw-images/wordpress-recovery-sample/<sd_product_code>/<元URLのファイル名>
+```
+
+例:
+
+```text
+data/raw-images/wordpress-recovery-sample/HYCY26924AT/HYCY26924AT_1.png
+data/raw-images/wordpress-recovery-sample/HYOT23888AT/HYOT23888AT_5.jpg
+```
+
+補足:
+
+- 回収画像は一時回収物としてローカル保存し、Git 管理対象にはしていない
+- 元URL、HTTP status、保存先は `data/output/wordpress_recovery_results.csv` に残している
+
+## 小規模回収で安定していたルール
+
+- 商品ページURLは `/products/<sd_product_code小文字>/`
+- ページ内 hidden `product-code` は target の `sd_product_code` と一致した
+- 本文ギャラリー `img` の `src` から、商品コードを含む `wp-content/uploads/<SD_PRODUCT_CODE>_<seq>.<ext>` を安定して拾えた
+- `jpg` / `png` 混在でも、HTMLに出ている実URLをそのまま使えば問題なかった
+
+## 小規模回収で不安定または未確認の点
+
+- `og:image` は本文ギャラリーと拡張子が食い違う例があるため、主ソースにしない
+- 今回の 6 件はすべて公開商品で、非公開商品や売却済み商品の回収可否は未確認
+- 今回は `srcset` 優先取得が必要なページには当たらなかった
+- 公開HTMLだけで全件分の元画像が揃うかはまだ不明
+
 ## 次にやること
 
-1. 5〜10 商品で `sd_product_code` ベースの小規模回収テストをする
+1. 小規模回収で成功したルールをもとに、対象件数を少し広げて再現性を確認する
 2. 公開されていない商品の画像が WordPress から拾えるかどうかを別経路で確認する
 3. `strongdepot-product-manager` / 旧 WordPress 資産の実体を引き続き探索する

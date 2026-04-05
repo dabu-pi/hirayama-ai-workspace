@@ -77,6 +77,9 @@ secrets/
 projects/machine-sales-rebuild/data/raw/*.full.csv
 projects/machine-sales-rebuild/data/output/product_master_v0.full.csv
 projects/machine-sales-rebuild/data/output/*.full.log
+projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/**
+!projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/
+!projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/.gitkeep
 projects/machine-sales-rebuild/tmp/*
 !projects/machine-sales-rebuild/tmp/.gitkeep
 .uv-cache/
