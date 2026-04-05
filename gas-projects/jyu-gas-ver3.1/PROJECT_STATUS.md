@@ -1,24 +1,50 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-05（**患者画面 保存/入力クリアボタン追加実装・記録更新対応中**）
+最終更新: 2026-04-06（**患者画面ボタン — 画像自動挿入を廃止・手動配置に移行**）
 
 ---
 
-## 2026-04-05 患者画面ボタン追加
+## 2026-04-06 患者画面ボタン 画像自動挿入廃止
 
-- 対象: `【毎日記録】来店管理施術録ver3.1` の `患者画面`
-- `Ver3_core.js` で既存の保存処理 `saveVisit_V3()` と画面クリア処理 `clearEntryUI_V3()` を特定し、図形/画像ボタン割当用のトップレベル関数 `buttonSavePatientScreen()` / `buttonClearPatientScreen()` を追加。
-- `buttonClearPatientScreen()` には `OK / CANCEL` の確認ダイアログを追加し、誤操作で入力が消えないようにした。
-- ボタン配置は `setupPatientScreenButtons_V3()` で再生成できるようにし、患者画面上部 `F1:G2=保存`、`H1:I2=入力クリア` の順で見た目を固定。
-- Apps Script から再現可能な形を優先し、見た目はセル、クリック割当は PNG の OverGridImage への `assignScript()` で構成。
-- ボタン重複防止のため、再配置時は alt text / script 名で既存ボタンを除去してから作り直す。
-- `onOpen()` でもボタン不足時の自動再配置を呼ぶようにし、シート再読込後も復元しやすい構成にした。
-- 管理メニューに `患者画面ボタン再配置` を追加し、`onOpen()` で画像配置まで通らない場合でも手動再配置できるようにした。
-- `inspectPatientScreenButtons_V3()` は全シートの OverGridImage 一覧を `sheetName / script / anchorA1 / width / height` 付きで `Logger.log` 出力する。
-- SVG Blob は `blob の形式がサポートされていません` で失敗したため廃止し、PNG Blob へ修正。
+- `insertImage()` による PNG OverGridImage 方式が live で継続失敗（"画像を挿入できませんでした"）。
+- 原因切り分けコストが高いため、画像生成経路を中止し手動配置に移行した。
+
+**廃止した関数（Ver3_core.js から削除）:**
+- `insertPatientScreenButtonOverlay_`
+- `buildPatientScreenButtonBlob_`
+- `validatePngBlob_`
+- `PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE` / `PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64` 定数
+
+**変更した関数:**
+- `ensurePatientScreenButtons_V3_` → no-op（onOpen での自動画像挿入を停止）
+- `rebuildPatientScreenButtons_` → `insertPatientScreenButtonOverlay_` 呼び出しを除去
+- `setupPatientScreenButtons_V3` → 手動配置ガイドダイアログに変更
+- メニュー `患者画面ボタン再配置` → `手動ボタン配置ガイド`
+- `onOpen` → `ensurePatientScreenButtons_V3_()` の呼び出しをコメントアウト
+
+**残存関数（削除しない理由）:**
+- `removePatientScreenButtons_` / `isPatientScreenButtonImage_` — 旧来の自動挿入画像を除去するために保持
+- `countPatientScreenButtons_` / `inspectPatientScreenButtons_V3` — 診断・確認用に保持
+- `setupPatientScreenButtonCell_` — セル色・罫線の見た目設定に使用
+- `buttonSavePatientScreen` / `buttonClearPatientScreen` — 手動配置ボタンへの割当対象として維持
+
+**手動配置ルール（恒久運用）:**
+
+| ボタン | 割当スクリプト名 | 推奨配置位置 |
+|---|---|---|
+| 保存ボタン | `buttonSavePatientScreen` | 患者画面 F1:G2 付近 |
+| 入力クリアボタン | `buttonClearPatientScreen` | 患者画面 H1:I2 付近 |
+
+配置手順: 患者画面シートを開く → 挿入 → 図形描画 → 図形を右クリック → スクリプトを割り当て → 上記関数名を入力
+
+---
+
+## 2026-04-05 患者画面ボタン追加（初期実装・一部廃止）
+
+- `buttonSavePatientScreen()` / `buttonClearPatientScreen()` を追加（`saveVisit_V3()` / `clearEntryUI_V3()` のラッパー）。
+- `buttonClearPatientScreen()` には OK/CANCEL 確認ダイアログを追加。
+- SVG Blob → PNG Blob → insertImage 方式を試みたが、いずれも live で失敗。2026-04-06 に画像方式を廃止。
 - 詳細記録: `docs/JREC-01_patient_screen_buttons_2026-04-05.md`
-
-**次アクション:** live シートへ `setupPatientScreenButtons_V3()` を反映し、`保存` / `入力クリア` の実クリック導線と確認ダイアログを確認する。
 
 ---
 

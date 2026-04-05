@@ -174,9 +174,7 @@ const PATIENT_SCREEN_BUTTONS = {
   },
 };
 const PATIENT_SCREEN_BUTTON_KEY_PREFIX = "JREC_BUTTON_";
-const PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE = "image/png";
-const PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==";
+// 画像自動挿入は廃止（insertImage 失敗のため手動配置に移行）。PNG 定数は削除済み。
 
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
 const CASE_COLS = {
@@ -345,7 +343,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
   {
     title: "管理者用",
     items: [
-      { label: "患者画面ボタン再配置", functionName: "setupPatientScreenButtons_V3" },
+      { label: "手動ボタン配置ガイド", functionName: "setupPatientScreenButtons_V3" },
       { label: "ヘッダ確認（デバッグ）", functionName: "checkHeaders_V3" },
       { label: "JBIZ menu_id 追加", functionName: "setupJBIZMenuMasterId_V3" },
       { label: "JBIZ 会員傷行レコード移行", functionName: "migrateJBIZMemberRules_V3" },
@@ -378,7 +376,7 @@ function buildJuseiToolMenu_() {
 function onOpen() {
   try {
     buildJuseiToolMenu_();
-    ensurePatientScreenButtons_V3_();
+    // ensurePatientScreenButtons_V3_() は廃止（画像自動挿入を中止）
   } catch (err) {
     console.error(err);
   }
@@ -401,19 +399,21 @@ function buttonClearPatientScreen() {
 }
 
 /**
- * 患者画面上部に「保存」「入力クリア」ボタンを再配置する。
- * 見た目はシートセル、クリック割当は透明オーバーグリッド画像で扱う。
+ * 患者画面ボタンの手動配置ガイドを表示する。
+ * ※ 画像自動挿入は廃止（insertImage 失敗のため）。
+ *    スプレッドシートの「挿入 → 図形描画」で手動配置し、スクリプトを割り当ててください。
  */
 function setupPatientScreenButtons_V3() {
-  var ss = SpreadsheetApp.getActive();
-  var uiSh = ss.getSheetByName(SHEETS.ui);
-  if (!uiSh) throw new Error("患者画面シートが見つかりません");
-
-  rebuildPatientScreenButtons_(uiSh);
-
-  SpreadsheetApp.flush();
   SpreadsheetApp.getUi().alert(
-    "患者画面ボタンを配置しました。\n保存 → 入力クリア の順で、患者画面上部に配置しています。"
+    "【患者画面ボタン — 手動配置ガイド】\n\n" +
+    "画像の自動挿入は廃止しました。\n" +
+    "以下の手順で手動配置してください。\n\n" +
+    "① 患者画面シートを開く\n" +
+    "② 挿入 → 図形描画 で図形を作成\n" +
+    "③ 図形を右クリック → 「スクリプトを割り当て」\n\n" +
+    "割当スクリプト名:\n" +
+    "  保存ボタン:        buttonSavePatientScreen\n" +
+    "  入力クリアボタン:  buttonClearPatientScreen"
   );
 }
 
@@ -466,52 +466,14 @@ function setupPatientScreenButtonCell_(uiSh, config) {
 }
 
 function ensurePatientScreenButtons_V3_() {
-  var ss = SpreadsheetApp.getActive();
-  var uiSh = ss.getSheetByName(SHEETS.ui);
-  if (!uiSh) return;
-  if (countPatientScreenButtons_(uiSh) >= 2) return;
-  rebuildPatientScreenButtons_(uiSh);
-  SpreadsheetApp.flush();
+  // 画像自動挿入は廃止。手動配置前提のため何もしない。
 }
 
 function rebuildPatientScreenButtons_(uiSh) {
-  removePatientScreenButtons_(uiSh);
+  removePatientScreenButtons_(uiSh); // 既存の自動挿入画像を削除
   setupPatientScreenButtonCell_(uiSh, PATIENT_SCREEN_BUTTONS.save);
   setupPatientScreenButtonCell_(uiSh, PATIENT_SCREEN_BUTTONS.clear);
-  insertPatientScreenButtonOverlay_(uiSh, PATIENT_SCREEN_BUTTONS.save);
-  insertPatientScreenButtonOverlay_(uiSh, PATIENT_SCREEN_BUTTONS.clear);
-}
-
-function insertPatientScreenButtonOverlay_(uiSh, config) {
-  var range = uiSh.getRange(config.rangeA1);
-  var topLeft = range.getCell(1, 1);
-  var width = getRangePixelWidth_(uiSh, range);
-  var height = getRangePixelHeight_(uiSh, range);
-  var blob = buildPatientScreenButtonBlob_(config, width, height);
-  validatePngBlob_(blob, config.key); // insertImage 前に PNG 検証
-  var image = uiSh.insertImage(
-    blob,
-    topLeft.getColumn(),
-    topLeft.getRow(),
-    0,
-    0
-  );
-
-  if (typeof image.setWidth === "function") image.setWidth(width);
-  if (typeof image.setHeight === "function") image.setHeight(height);
-  if (typeof image.setAltTextTitle === "function") image.setAltTextTitle(config.key);
-  if (typeof image.setAltTextDescription === "function") {
-    image.setAltTextDescription("患者画面ボタン:" + config.label);
-  }
-  image.assignScript(config.functionName);
-  Logger.log("[insertPatientScreenButtonOverlay_] " + JSON.stringify({
-    sheetName: uiSh.getName(),
-    key: config.key,
-    functionName: config.functionName,
-    anchorA1: topLeft.getA1Notation(),
-    width: width,
-    height: height,
-  }));
+  // insertPatientScreenButtonOverlay_ は廃止（insertImage失敗のため手動配置に移行）
 }
 
 function removePatientScreenButtons_(uiSh) {
@@ -534,40 +496,6 @@ function isPatientScreenButtonImage_(image) {
     script === PATIENT_SCREEN_BUTTONS.save.functionName ||
     script === PATIENT_SCREEN_BUTTONS.clear.functionName
   );
-}
-
-function buildPatientScreenButtonBlob_(config) {
-  var b64 = PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64.replace(/^data:image\/png;base64,/, "");
-  var bytes = Utilities.base64Decode(b64);
-  return Utilities.newBlob(bytes, PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE, config.key.toLowerCase() + ".png");
-}
-
-/**
- * PNG Blob の簡易検証。異常時は insertImage 前に明示エラーを投げる。
- * GAS の getBytes() は符号付き整数を返すため、137 → -119 の変換を考慮する。
- */
-function validatePngBlob_(blob, label) {
-  var PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
-  var contentType = blob.getContentType();
-  var bytes = blob.getBytes();
-  Logger.log("[validatePngBlob_] " + label + " contentType=" + contentType + " bytes.length=" + bytes.length);
-  if (contentType !== "image/png") {
-    throw new Error("[" + label + "] contentType が image/png ではありません: " + contentType);
-  }
-  if (bytes.length < 8) {
-    throw new Error("[" + label + "] bytes が短すぎます（" + bytes.length + " bytes）");
-  }
-  for (var i = 0; i < 8; i++) {
-    var b = bytes[i];
-    if (b < 0) b += 256; // 符号付き → 符号なし変換
-    if (b !== PNG_SIGNATURE[i]) {
-      throw new Error(
-        "[" + label + "] PNG signature 不一致 index=" + i +
-        " expected=" + PNG_SIGNATURE[i] + " actual=" + b
-      );
-    }
-  }
-  Logger.log("[validatePngBlob_] " + label + " OK (valid PNG, " + bytes.length + " bytes)");
 }
 
 function getRangePixelWidth_(sheet, range) {

@@ -84,3 +84,39 @@
 
 - 今回のボタンは公開シート UI 上の見やすさを優先し、`入力クリア` のみ確認ダイアログ付き
 - placeholder 的な仮関数は置かず、既存関数へ直接接続している
+
+---
+
+## 2026-04-06 追記 — 画像自動挿入廃止・手動配置に移行
+
+### 廃止の経緯
+
+PNG OverGridImage 方式（`insertImage()` + `assignScript()`）は、SVG / PNG Blob を通じた複数の試みで live 上で継続的に以下のエラーが発生した：
+
+> `Exception: 画像を挿入できませんでした。画像が有効であることを確認して、もう一度お試しください。`
+
+Blob の検証コード（PNG シグネチャ確認）を追加しても解消せず、GAS 側の制約と判断。原因切り分けのコストが高いため、画像生成経路を中止し**手動配置に移行**した。
+
+### 廃止した実装
+
+| 廃止対象 | 内容 |
+|---|---|
+| `insertPatientScreenButtonOverlay_` | `insertImage()` を呼ぶ関数。削除。 |
+| `buildPatientScreenButtonBlob_` | PNG Blob を生成する関数。削除。 |
+| `validatePngBlob_` | PNG シグネチャ検証関数。削除。 |
+| PNG 定数 | `PATIENT_SCREEN_BUTTON_IMAGE_MIME_TYPE` / `PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64`。削除。 |
+| `ensurePatientScreenButtons_V3_` | no-op に変更（onOpen での自動挿入を停止）。 |
+| `setupPatientScreenButtons_V3` | 手動配置ガイドダイアログに変更。 |
+| メニュー項目 | `患者画面ボタン再配置` → `手動ボタン配置ガイド` に変更。 |
+
+### 手動配置ルール（恒久）
+
+スプレッドシートの「挿入 → 図形描画」で図形を作成し、右クリック →「スクリプトを割り当て」で以下の関数名を入力する。
+
+| ボタン | 割当スクリプト名 | 推奨配置位置 |
+|---|---|---|
+| 保存ボタン | `buttonSavePatientScreen` | 患者画面 F1:G2 付近 |
+| 入力クリアボタン | `buttonClearPatientScreen` | 患者画面 H1:I2 付近 |
+
+- `buttonSavePatientScreen` / `buttonClearPatientScreen` 関数本体は引き続き `Ver3_core.js` に存在する
+- メニュー `手動ボタン配置ガイド` を選ぶと、上記割当スクリプト名を含む案内ダイアログが表示される
