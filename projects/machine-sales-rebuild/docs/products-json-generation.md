@@ -83,3 +83,15 @@ uv run python -m scripts.export_products_json
 - `displayUrl` は未生成のまま
 - 今回の実CSVでは `source_image_urls_json` が全件空なので、`products.full.sample.json` でも `images` は空になる
 - まず元画像URLの正本を別経路で確定しないと、画像派生生成フェーズへは進めない
+
+## 2026-04-05 公開商品派生画像生成後の次ステップ
+
+- 公開商品 66件・163枚については `public_derived_image_manifest.csv` まで生成済み
+- 次の `products.json` 更新では、`public_image_manifest.csv` と `public_derived_image_manifest.csv` を使って `images[].sourceUrl` / `images[].displayUrl` を埋める
+- ただし今回の派生画像は公開商品のみで、非公開・売却済み・下書き相当は未対応
+
+次フェーズで最低限やること:
+
+1. `displayUrl` の仮規則を `public_derived_image_manifest.csv.derived_url_candidate` にそろえる
+2. `public` 商品 66件だけでも `images[]` を埋めた `products.json` を再出力する
+3. フロント表示で白余白と primary 画像の見え方を確認する
