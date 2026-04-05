@@ -1,6 +1,21 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-05（**柔整ツールメニュー整理実装・記録更新完了**）
+最終更新: 2026-04-05（**患者画面 保存/入力クリアボタン追加実装・記録更新対応中**）
+
+---
+
+## 2026-04-05 患者画面ボタン追加
+
+- 対象: `【毎日記録】来店管理施術録ver3.1` の `患者画面`
+- `Ver3_core.js` で既存の保存処理 `saveVisit_V3()` と画面クリア処理 `clearEntryUI_V3()` を特定し、図形/画像ボタン割当用のトップレベル関数 `buttonSavePatientScreen()` / `buttonClearPatientScreen()` を追加。
+- `buttonClearPatientScreen()` には `OK / CANCEL` の確認ダイアログを追加し、誤操作で入力が消えないようにした。
+- ボタン配置は `setupPatientScreenButtons_V3()` で再生成できるようにし、患者画面上部 `F1:G2=保存`、`H1:I2=入力クリア` の順で見た目を固定。
+- Apps Script から再現可能な形を優先し、見た目はセルボタン、クリック割当は透明オーバーグリッド画像への `assignScript()` で構成。
+- ボタン重複防止のため、再配置時は alt text / script 名で既存ボタンを除去してから作り直す。
+- `onOpen()` でもボタン不足時の自動再配置を呼ぶようにし、シート再読込後も復元しやすい構成にした。
+- 詳細記録: `docs/JREC-01_patient_screen_buttons_2026-04-05.md`
+
+**次アクション:** live シートへ `setupPatientScreenButtons_V3()` を反映し、`保存` / `入力クリア` の実クリック導線と確認ダイアログを確認する。
 
 ---
 

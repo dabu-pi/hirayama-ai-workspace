@@ -150,6 +150,33 @@ const UI = {
   summary_area: "J2:N22",
 };
 
+/** ===== 患者画面ボタン設定 ===== */
+const PATIENT_SCREEN_BUTTONS = {
+  save: {
+    key: "JREC_BUTTON_SAVE",
+    label: "保存",
+    functionName: "buttonSavePatientScreen",
+    rangeA1: "F1:G2",
+    fillColor: "#2563eb",
+    fontColor: "#ffffff",
+    borderColor: "#1d4ed8",
+    note: "患者画面の主操作ボタン（保存）",
+  },
+  clear: {
+    key: "JREC_BUTTON_CLEAR",
+    label: "入力クリア",
+    functionName: "buttonClearPatientScreen",
+    rangeA1: "H1:I2",
+    fillColor: "#e5e7eb",
+    fontColor: "#374151",
+    borderColor: "#9ca3af",
+    note: "患者画面の主操作ボタン（入力クリア）",
+  },
+};
+const PATIENT_SCREEN_BUTTON_KEY_PREFIX = "JREC_BUTTON_";
+const PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==";
+
 /** ===== 来院ケース列名（誤解ゼロ命名：部位1/2） ===== */
 const CASE_COLS = {
   visitKey: "visitKey",
@@ -349,8 +376,172 @@ function buildJuseiToolMenu_() {
 function onOpen() {
   try {
     buildJuseiToolMenu_();
+    ensurePatientScreenButtons_V3_();
   } catch (err) {
     console.error(err);
+  }
+}
+
+/** ===== 患者画面 Drawing/画像ボタン用 公開ラッパー ===== */
+function buttonSavePatientScreen() {
+  return saveVisit_V3();
+}
+
+function buttonClearPatientScreen() {
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.alert(
+    "確認",
+    "患者画面の入力をクリアします。よろしいですか？",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (result !== ui.Button.OK) return;
+  return clearEntryUI_V3();
+}
+
+/**
+ * 患者画面上部に「保存」「入力クリア」ボタンを再配置する。
+ * 見た目はシートセル、クリック割当は透明オーバーグリッド画像で扱う。
+ */
+function setupPatientScreenButtons_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  if (!uiSh) throw new Error("患者画面シートが見つかりません");
+
+  rebuildPatientScreenButtons_(uiSh);
+
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert(
+    "患者画面ボタンを配置しました。\n保存 → 入力クリア の順で、患者画面上部に配置しています。"
+  );
+}
+
+function inspectPatientScreenButtons_V3() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  if (!uiSh) throw new Error("患者画面シートが見つかりません");
+
+  return uiSh.getImages()
+    .filter(isPatientScreenButtonImage_)
+    .map(function(image) {
+      var anchorCell = image.getAnchorCell();
+      return {
+        key: safeGetImageMeta_(image, "getAltTextTitle"),
+        description: safeGetImageMeta_(image, "getAltTextDescription"),
+        script: safeGetImageMeta_(image, "getScript"),
+        anchorA1: anchorCell ? anchorCell.getA1Notation() : "",
+        width: safeGetImageMeta_(image, "getWidth"),
+        height: safeGetImageMeta_(image, "getHeight"),
+      };
+    });
+}
+
+function setupPatientScreenButtonCell_(uiSh, config) {
+  var range = uiSh.getRange(config.rangeA1);
+  range.breakApart();
+  range.clearFormat();
+  range.clearNote();
+  range.merge();
+  range
+    .setValue(config.label)
+    .setFontWeight("bold")
+    .setFontSize(12)
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setBackground(config.fillColor)
+    .setFontColor(config.fontColor)
+    .setBorder(true, true, true, true, true, true, config.borderColor, SpreadsheetApp.BorderStyle.SOLID_MEDIUM)
+    .setNote(config.note);
+}
+
+function ensurePatientScreenButtons_V3_() {
+  var ss = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  if (!uiSh) return;
+  if (countPatientScreenButtons_(uiSh) >= 2) return;
+  rebuildPatientScreenButtons_(uiSh);
+  SpreadsheetApp.flush();
+}
+
+function rebuildPatientScreenButtons_(uiSh) {
+  removePatientScreenButtons_(uiSh);
+  setupPatientScreenButtonCell_(uiSh, PATIENT_SCREEN_BUTTONS.save);
+  setupPatientScreenButtonCell_(uiSh, PATIENT_SCREEN_BUTTONS.clear);
+  insertPatientScreenButtonOverlay_(uiSh, PATIENT_SCREEN_BUTTONS.save);
+  insertPatientScreenButtonOverlay_(uiSh, PATIENT_SCREEN_BUTTONS.clear);
+}
+
+function insertPatientScreenButtonOverlay_(uiSh, config) {
+  var range = uiSh.getRange(config.rangeA1);
+  var topLeft = range.getCell(1, 1);
+  var image = uiSh.insertImage(
+    getTransparentButtonOverlayBlob_(),
+    topLeft.getColumn(),
+    topLeft.getRow(),
+    0,
+    0
+  );
+
+  if (typeof image.setWidth === "function") image.setWidth(getRangePixelWidth_(uiSh, range));
+  if (typeof image.setHeight === "function") image.setHeight(getRangePixelHeight_(uiSh, range));
+  if (typeof image.setAltTextTitle === "function") image.setAltTextTitle(config.key);
+  if (typeof image.setAltTextDescription === "function") {
+    image.setAltTextDescription("患者画面ボタン:" + config.label);
+  }
+  image.assignScript(config.functionName);
+}
+
+function removePatientScreenButtons_(uiSh) {
+  uiSh.getImages().forEach(function(image) {
+    if (isPatientScreenButtonImage_(image)) image.remove();
+  });
+}
+
+function countPatientScreenButtons_(uiSh) {
+  return uiSh.getImages().filter(isPatientScreenButtonImage_).length;
+}
+
+function isPatientScreenButtonImage_(image) {
+  var title = String(safeGetImageMeta_(image, "getAltTextTitle") || "");
+  var description = String(safeGetImageMeta_(image, "getAltTextDescription") || "");
+  var script = String(safeGetImageMeta_(image, "getScript") || "");
+  return (
+    title.indexOf(PATIENT_SCREEN_BUTTON_KEY_PREFIX) === 0 ||
+    description.indexOf("患者画面ボタン:") === 0 ||
+    script === PATIENT_SCREEN_BUTTONS.save.functionName ||
+    script === PATIENT_SCREEN_BUTTONS.clear.functionName
+  );
+}
+
+function getTransparentButtonOverlayBlob_() {
+  return Utilities.newBlob(
+    Utilities.base64Decode(PATIENT_SCREEN_BUTTON_TRANSPARENT_PNG_BASE64),
+    "image/png",
+    "patient-screen-button-overlay.png"
+  );
+}
+
+function getRangePixelWidth_(sheet, range) {
+  var width = 0;
+  for (var col = range.getColumn(); col < range.getColumn() + range.getNumColumns(); col++) {
+    width += sheet.getColumnWidth(col);
+  }
+  return width;
+}
+
+function getRangePixelHeight_(sheet, range) {
+  var height = 0;
+  for (var row = range.getRow(); row < range.getRow() + range.getNumRows(); row++) {
+    height += sheet.getRowHeight(row);
+  }
+  return height;
+}
+
+function safeGetImageMeta_(image, methodName) {
+  if (!image || typeof image[methodName] !== "function") return "";
+  try {
+    return image[methodName]();
+  } catch (err) {
+    return "";
   }
 }
 
