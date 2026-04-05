@@ -321,6 +321,8 @@ var JUSEI_TOOL_MENU_SECTIONS = [
   {
     title: "柔整管理",
     items: [
+      { label: "当日内容を再読み込み", functionName: "reloadVisitToUI_V3" },
+      { label: "転帰を更新",           functionName: "updateOutcomeFromUI_V3" },
       { label: "ヘッダ再出力", functionName: "exportHeaderFromCases_V3" },
       { label: "金額再計算", functionName: "menuRecalcAmounts_V3" },
       { label: "申請書転記データ作成", functionName: "V3TR_menuBuildTransferData" },
@@ -1977,6 +1979,307 @@ function applyCaseRowToUI_Safe_(uiSh, src, caseNo, treatDate, opt) {
   // ★終了済み部位の視覚保護（取消線 + 入力ロック）
   applyEndedProtection_(uiSh, rows[0], ended1 && hasSrc1);
   applyEndedProtection_(uiSh, rows[1], ended2 && hasSrc2);
+}
+
+/* =======================================================================
+   reloadVisitToUI_V3 ― 過去日の来院内容を患者画面へ再読み込み
+   =======================================================================
+   設計方針:
+   - 患者ID + 来院日 で来院ケースを検索し、その日の入力内容をそのまま UI に復元する
+   - 自動引継ぎ（autofillFromPreviousVisit_V3）とは異なり「前回値の補完」ではなく
+     「その日の実記録をそのまま表示」する
+   - 金額・初検/再検ロジックは再計算しない（閲覧・転帰更新用途のみ）
+   ======================================================================= */
+
+/**
+ * 来院ケースシートから visitKey + caseNo で kubun（区分）を読む。
+ * findCaseRowByPatientDateCaseNo_ は kubun を返さないため個別に取得する。
+ */
+function readCaseKubun_(caseSh, caseMap, visitKey, caseNo) {
+  var rowIndex = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, caseNo);
+  if (!rowIndex) return "";
+  var kubunCol = caseMap[CASE_COLS.kubun];
+  if (!kubunCol) return "";
+  return String(caseSh.getRange(rowIndex, kubunCol).getValue() || "");
+}
+
+/**
+ * 来院ケースデータをそのまま UI の2行にセットする（自動引継ぎとは別ロジック）。
+ * 既存 UI の値は上書きする。金額・初検/再検ロジックは触らない。
+ * [A=部位, B=傷病, C=受傷日, D=冷, E=温, F=電, G=終了日, H=転帰]
+ */
+function writeExactCaseSrcToUI_(uiSh, src, caseNo, treatDate) {
+  var rows = (caseNo === 1) ? UI.case1_rows : UI.case2_rows;
+  var rng1 = uiSh.getRange(rows[0]);
+  var rng2 = uiSh.getRange(rows[1]);
+
+  if (!src) {
+    rng1.setValues([["", "", "", false, false, false, "", ""]]);
+    rng2.setValues([["", "", "", false, false, false, "", ""]]);
+    applyEndedProtection_(uiSh, rows[0], false);
+    applyEndedProtection_(uiSh, rows[1], false);
+    return;
+  }
+
+  var hasSrc1 = !!(src.p1 || src.d1 || (src.inj1 instanceof Date));
+  var hasSrc2 = !!(src.p2 || src.d2 || (src.inj2 instanceof Date));
+  var ended1  = isEnded_(src.end1, treatDate);
+  var ended2  = isEnded_(src.end2, treatDate);
+
+  // 部位1: A〜H
+  var row1 = [
+    src.p1   || "",
+    src.d1   || "",
+    src.inj1 || "",
+    hasSrc1 ? src.cold1 : false,
+    hasSrc1 ? src.warm1 : false,
+    hasSrc1 ? src.elec1 : false,
+    src.end1   || "",
+    src.tenki1 || ""
+  ];
+  // 部位2: A〜H
+  var row2 = [
+    src.p2   || "",
+    src.d2   || "",
+    src.inj2 || "",
+    hasSrc2 ? src.cold2 : false,
+    hasSrc2 ? src.warm2 : false,
+    hasSrc2 ? src.elec2 : false,
+    src.end2   || "",
+    src.tenki2 || ""
+  ];
+
+  rng1.setValues([row1]);
+  rng2.setValues([row2]);
+
+  // 終了済み部位の視覚保護（取消線 + 入力ロック）
+  applyEndedProtection_(uiSh, rows[0], ended1 && hasSrc1);
+  applyEndedProtection_(uiSh, rows[1], ended2 && hasSrc2);
+}
+
+/**
+ * 患者画面の患者ID・来院日に一致する来院ケースを検索し、
+ * その日の入力内容を患者画面に復元する。
+ * メニュー: 柔整管理 > 当日内容を再読み込み
+ */
+function reloadVisitToUI_V3() {
+  var ss   = SpreadsheetApp.getActive();
+  var uiSh = ss.getSheetByName(SHEETS.ui);
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  var ui   = SpreadsheetApp.getUi();
+
+  if (!uiSh || !caseSh) {
+    ui.alert("必要なシートが見つかりません（患者画面 / 来院ケース）。");
+    return;
+  }
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+  if (!patientId) {
+    ui.alert("患者を選択してください（B2で検索→選択）。");
+    return;
+  }
+  if (!(treatDate instanceof Date)) {
+    ui.alert("来院日（B4）が日付になっていません。");
+    return;
+  }
+
+  // 未保存の入力チェック（部位などが入力済みの場合は確認を取る）
+  if (hasCaseDataInUI_(uiSh, 1) || hasCaseDataInUI_(uiSh, 2)) {
+    var ans = ui.alert(
+      "現在の入力を破棄して再読み込みしますか？\n（未保存の入力は失われます）",
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (ans !== ui.Button.OK) return;
+  }
+
+  var caseMap = buildHeaderColMap_(caseSh);
+  var src1 = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, treatDate, 1);
+  var src2 = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, treatDate, 2);
+
+  if (!src1 && !src2) {
+    ui.alert(
+      "来院記録が見つかりませんでした。\n\n" +
+      "患者ID: " + patientId + "\n" +
+      "来院日: " + fmt_(treatDate, "yyyy/MM/dd") + "\n\n" +
+      "患者IDと来院日を確認してください。"
+    );
+    return;
+  }
+
+  // ケース1 / ケース2 を UI に書き込む
+  writeExactCaseSrcToUI_(uiSh, src1, 1, treatDate);
+  writeExactCaseSrcToUI_(uiSh, src2, 2, treatDate);
+
+  // 区分表示（来院ケースシートから直接取得）
+  var visitKey = buildVisitKey_(patientId, treatDate);
+  uiSh.getRange(UI.case1_kubunView).setValue(readCaseKubun_(caseSh, caseMap, visitKey, 1));
+  uiSh.getRange(UI.case2_kubunView).setValue(readCaseKubun_(caseSh, caseMap, visitKey, 2));
+
+  // 所見を書き込む（値があるときのみ）
+  if (src1 && String(src1.shoken || "").trim()) {
+    setMergedValue_(uiSh, UI.case1_shoken, src1.shoken);
+  }
+  if (src2 && String(src2.shoken || "").trim()) {
+    setMergedValue_(uiSh, UI.case2_shoken, src2.shoken);
+  }
+
+  var dateStr = fmt_(treatDate, "yyyy/MM/dd");
+  Logger.log("[reloadVisitToUI_V3] patientId=" + patientId + " treatDate=" + dateStr +
+    " src1=" + (src1 ? "found" : "none") + " src2=" + (src2 ? "found" : "none"));
+  ss.toast(
+    patientId + " / " + dateStr + " の内容を復元しました",
+    "再読み込み完了", 4
+  );
+}
+
+/* =======================================================================
+   updateOutcomeFromUI_V3 ― 転帰・終了日を来院ケースへ後付け更新
+   =======================================================================
+   設計方針:
+   - UI 上の転帰（H列）と終了日（G列）だけを来院ケースに書き込む
+   - 更新対象: ケース1の end1/tenki1/end2/tenki2、ケース2の end1/tenki1/end2/tenki2
+   - 更新しない: 部位・傷病・受傷日・治療法フラグ・金額・初検/再検区分
+   - 終了日⇔転帰の整合チェック後に確認ダイアログを表示してから書き込む
+   ======================================================================= */
+
+/**
+ * UI の転帰・終了日を来院ケースに後付けで書き込む。
+ * メニュー: 柔整管理 > 転帰を更新
+ */
+function updateOutcomeFromUI_V3() {
+  var ss     = SpreadsheetApp.getActive();
+  var uiSh   = ss.getSheetByName(SHEETS.ui);
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  var ui     = SpreadsheetApp.getUi();
+
+  if (!uiSh || !caseSh) {
+    ui.alert("必要なシートが見つかりません（患者画面 / 来院ケース）。");
+    return;
+  }
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+  if (!patientId) {
+    ui.alert("患者を選択してください（B2で検索→選択）。");
+    return;
+  }
+  if (!(treatDate instanceof Date)) {
+    ui.alert("来院日（B4）が日付になっていません。");
+    return;
+  }
+
+  // UIから転帰・終了日を読み取る
+  // ケース1: case1_rows[0]=部位1 / case1_rows[1]=部位2
+  // ケース2: case2_rows[0]=部位1 / case2_rows[1]=部位2
+  var lc1p1 = readRowNewUI_(uiSh, UI.case1_rows[0]);  // ケース1 部位1
+  var lc1p2 = readRowNewUI_(uiSh, UI.case1_rows[1]);  // ケース1 部位2
+  var lc2p1 = readRowNewUI_(uiSh, UI.case2_rows[0]);  // ケース2 部位1
+  var lc2p2 = readRowNewUI_(uiSh, UI.case2_rows[1]);  // ケース2 部位2
+
+  // 終了日⇔転帰の整合チェック（BLOCKING）
+  var checks = [
+    { label: "ケース1 部位1", line: lc1p1 },
+    { label: "ケース1 部位2", line: lc1p2 },
+    { label: "ケース2 部位1", line: lc2p1 },
+    { label: "ケース2 部位2", line: lc2p2 }
+  ];
+  var errors = [];
+  for (var i = 0; i < checks.length; i++) {
+    var c = checks[i];
+    var hasEnd   = (c.line.endVal !== "" && c.line.endVal != null);
+    var hasTenki = !!c.line.tenki;
+    if (hasEnd   && !hasTenki) errors.push(c.label + ": 終了日がありますが転帰が未選択です");
+    if (!hasEnd  && hasTenki)  errors.push(c.label + ": 転帰がありますが終了日が未入力です");
+  }
+  if (errors.length > 0) {
+    ui.alert("終了日と転帰の整合性エラー:\n\n" + errors.join("\n"));
+    return;
+  }
+
+  var visitKey = buildVisitKey_(patientId, treatDate);
+  var caseMap  = buildHeaderColMap_(caseSh);
+  var row1 = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, 1);
+  var row2 = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, 2);
+
+  if (!row1 && !row2) {
+    ui.alert(
+      "来院記録が見つかりませんでした。\n\n" +
+      "患者ID: " + patientId + "\n" +
+      "来院日: " + fmt_(treatDate, "yyyy/MM/dd") + "\n\n" +
+      "先に「当日内容を再読み込み」で確認してから更新してください。"
+    );
+    return;
+  }
+
+  // 更新内容のサマリーを作成（確認ダイアログ用）
+  function fmtEndVal_(v) {
+    if (!v || v === "") return "（空欄）";
+    return (v instanceof Date) ? fmt_(v, "yyyy/MM/dd") : String(v);
+  }
+  var summary = [];
+  if (row1) {
+    if (lc1p1.tenki || (lc1p1.endVal !== "" && lc1p1.endVal != null)) {
+      summary.push("ケース1 部位1: 転帰=" + (lc1p1.tenki || "（なし）") + " / 終了日=" + fmtEndVal_(lc1p1.endVal));
+    }
+    if (lc1p2.tenki || (lc1p2.endVal !== "" && lc1p2.endVal != null)) {
+      summary.push("ケース1 部位2: 転帰=" + (lc1p2.tenki || "（なし）") + " / 終了日=" + fmtEndVal_(lc1p2.endVal));
+    }
+  }
+  if (row2) {
+    if (lc2p1.tenki || (lc2p1.endVal !== "" && lc2p1.endVal != null)) {
+      summary.push("ケース2 部位1: 転帰=" + (lc2p1.tenki || "（なし）") + " / 終了日=" + fmtEndVal_(lc2p1.endVal));
+    }
+    if (lc2p2.tenki || (lc2p2.endVal !== "" && lc2p2.endVal != null)) {
+      summary.push("ケース2 部位2: 転帰=" + (lc2p2.tenki || "（なし）") + " / 終了日=" + fmtEndVal_(lc2p2.endVal));
+    }
+  }
+
+  if (summary.length === 0) {
+    ui.alert(
+      "更新する転帰・終了日が入力されていません。\n" +
+      "ケース行の H列（転帰）と G列（終了日）を入力してから実行してください。"
+    );
+    return;
+  }
+
+  var confirmed = ui.alert(
+    "以下の転帰・終了日を来院ケースに書き込みます。\n\n" +
+    summary.join("\n") + "\n\n" +
+    "患者: " + patientId + " / " + fmt_(treatDate, "yyyy/MM/dd") + "\n\n" +
+    "よろしいですか？\n（部位・治療法・金額は変更しません）",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (confirmed !== ui.Button.OK) return;
+
+  // ケース1 行を更新（end1/tenki1/end2/tenki2 のみ）
+  if (row1) {
+    var lastCol1 = caseSh.getLastColumn();
+    var arr1 = caseSh.getRange(row1, 1, 1, lastCol1).getValues()[0];
+    if (lc1p1.endVal !== "" && lc1p1.endVal != null) setByName_(arr1, caseMap, CASE_COLS.end1,   lc1p1.endVal);
+    if (lc1p1.tenki)                                 setByName_(arr1, caseMap, CASE_COLS.tenki1, lc1p1.tenki);
+    if (lc1p2.endVal !== "" && lc1p2.endVal != null) setByName_(arr1, caseMap, CASE_COLS.end2,   lc1p2.endVal);
+    if (lc1p2.tenki)                                 setByName_(arr1, caseMap, CASE_COLS.tenki2, lc1p2.tenki);
+    caseSh.getRange(row1, 1, 1, lastCol1).setValues([arr1]);
+  }
+
+  // ケース2 行を更新（end1/tenki1/end2/tenki2 のみ）
+  if (row2) {
+    var lastCol2 = caseSh.getLastColumn();
+    var arr2 = caseSh.getRange(row2, 1, 1, lastCol2).getValues()[0];
+    if (lc2p1.endVal !== "" && lc2p1.endVal != null) setByName_(arr2, caseMap, CASE_COLS.end1,   lc2p1.endVal);
+    if (lc2p1.tenki)                                 setByName_(arr2, caseMap, CASE_COLS.tenki1, lc2p1.tenki);
+    if (lc2p2.endVal !== "" && lc2p2.endVal != null) setByName_(arr2, caseMap, CASE_COLS.end2,   lc2p2.endVal);
+    if (lc2p2.tenki)                                 setByName_(arr2, caseMap, CASE_COLS.tenki2, lc2p2.tenki);
+    caseSh.getRange(row2, 1, 1, lastCol2).setValues([arr2]);
+  }
+
+  Logger.log("[updateOutcomeFromUI_V3] patientId=" + patientId +
+    " treatDate=" + fmt_(treatDate, "yyyy/MM/dd") +
+    " row1=" + row1 + " row2=" + row2);
+  ss.toast("転帰・終了日を来院ケースに更新しました", "転帰更新完了", 4);
 }
 
 /**
