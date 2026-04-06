@@ -323,6 +323,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
     items: [
       { label: "当日内容を再読み込み", functionName: "reloadVisitToUI_V3" },
       { label: "転帰を更新",           functionName: "updateOutcomeFromUI_V3" },
+      { label: "経過を更新",           functionName: "updateProgressFromUI_V3" },
       { label: "ヘッダ再出力", functionName: "exportHeaderFromCases_V3" },
       { label: "金額再計算", functionName: "menuRecalcAmounts_V3" },
       { label: "申請書転記データ作成", functionName: "V3TR_menuBuildTransferData" },
@@ -2280,6 +2281,107 @@ function updateOutcomeFromUI_V3() {
     " treatDate=" + fmt_(treatDate, "yyyy/MM/dd") +
     " row1=" + row1 + " row2=" + row2);
   ss.toast("転帰・終了日を来院ケースに更新しました", "転帰更新完了", 4);
+}
+
+/* =======================================================================
+   updateProgressFromUI_V3 ― 経過を来院ケースへ後付け更新
+   =======================================================================
+   設計方針:
+   - UI 上の経過（case1_keikaNow / case2_keikaNow）だけを来院ケースに書き込む
+   - 更新対象: CASE_COLS.keikaNow（"経過_今回"）のみ
+   - 更新しない: 転帰・終了日・金額・初検/再検区分・治療法フラグ・所見・自費明細
+   - 空欄での上書きも許可するが、確認ダイアログで内容を明示する
+   ======================================================================= */
+
+/**
+ * UI から Case1 / Case2 の経過テキストを収集して返す。
+ */
+function collectProgressPatchFromUI_(uiSh) {
+  return {
+    keika1: String(getMergedValue_(uiSh, UI.case1_keikaNow) || ""),
+    keika2: String(getMergedValue_(uiSh, UI.case2_keikaNow) || "")
+  };
+}
+
+/**
+ * UI 上の経過（case1_keikaNow / case2_keikaNow）を来院ケースに後付けで書き込む。
+ * メニュー: 柔整管理 > 経過を更新
+ */
+function updateProgressFromUI_V3() {
+  var ss     = SpreadsheetApp.getActive();
+  var uiSh   = ss.getSheetByName(SHEETS.ui);
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+  var ui     = SpreadsheetApp.getUi();
+
+  if (!uiSh || !caseSh) {
+    ui.alert("必要なシートが見つかりません（患者画面 / 来院ケース）。");
+    return;
+  }
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+  if (!patientId) {
+    ui.alert("患者を選択してください（B2で検索→選択）。");
+    return;
+  }
+  if (!(treatDate instanceof Date)) {
+    ui.alert("来院日（B4）が日付になっていません。");
+    return;
+  }
+
+  var visitKey = buildVisitKey_(patientId, treatDate);
+  var caseMap  = buildHeaderColMap_(caseSh);
+  var row1 = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, 1);
+  var row2 = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, 2);
+
+  if (!row1 && !row2) {
+    ui.alert(
+      "来院記録が見つかりませんでした。\n\n" +
+      "患者ID: " + patientId + "\n" +
+      "来院日: " + fmt_(treatDate, "yyyy/MM/dd") + "\n\n" +
+      "先に「当日内容を再読み込み」で確認してから更新してください。"
+    );
+    return;
+  }
+
+  var patch = collectProgressPatchFromUI_(uiSh);
+
+  // 確認ダイアログ（空欄も明示）
+  var lines = [];
+  if (row1) lines.push("ケース1 経過: " + (patch.keika1 || "（空欄）"));
+  if (row2) lines.push("ケース2 経過: " + (patch.keika2 || "（空欄）"));
+
+  var confirmed = ui.alert(
+    "以下の経過を来院ケースに書き込みます。\n\n" +
+    lines.join("\n") + "\n\n" +
+    "患者: " + patientId + " / " + fmt_(treatDate, "yyyy/MM/dd") + "\n\n" +
+    "よろしいですか？\n（転帰・終了日・金額・治療法は変更しません）",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (confirmed !== ui.Button.OK) return;
+
+  // ケース1 経過を更新
+  if (row1) {
+    var lastCol1 = caseSh.getLastColumn();
+    var arr1 = caseSh.getRange(row1, 1, 1, lastCol1).getValues()[0];
+    setByName_(arr1, caseMap, CASE_COLS.keikaNow, patch.keika1);
+    caseSh.getRange(row1, 1, 1, lastCol1).setValues([arr1]);
+  }
+
+  // ケース2 経過を更新
+  if (row2) {
+    var lastCol2 = caseSh.getLastColumn();
+    var arr2 = caseSh.getRange(row2, 1, 1, lastCol2).getValues()[0];
+    setByName_(arr2, caseMap, CASE_COLS.keikaNow, patch.keika2);
+    caseSh.getRange(row2, 1, 1, lastCol2).setValues([arr2]);
+  }
+
+  Logger.log("[updateProgressFromUI_V3] patientId=" + patientId +
+    " treatDate=" + fmt_(treatDate, "yyyy/MM/dd") +
+    " row1=" + row1 + " row2=" + row2 +
+    " keika1=" + patch.keika1.slice(0, 30) + " keika2=" + patch.keika2.slice(0, 30));
+  ss.toast("経過を来院ケースに更新しました", "経過更新完了", 4);
 }
 
 /**
