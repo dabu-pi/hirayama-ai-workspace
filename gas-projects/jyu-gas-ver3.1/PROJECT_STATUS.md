@@ -1,32 +1,32 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-06（**当日再読み込みボタン用関数を追加 — 実機確認待ち**）
+最終更新: 2026-04-06（**当日再読み込みボタン対応 実機確認OK — 通常運用開始**）
 
 ---
 
-## 🆕 2026-04-06 当日再読み込みボタン用関数を追加（`buttonReloadPatientScreen`）
+## ✅ 2026-04-06 当日再読み込みボタン対応 — 実機確認完了
 
 | 項目 | 内容 |
 |---|---|
 | 追加関数 | `buttonReloadPatientScreen` / `_reloadResultFail_` |
 | ボタン割当名 | `buttonReloadPatientScreen` |
-| 実機確認 | 🔄 実機確認待ち（clasp push 完了済み） |
+| 実機確認 | ✅ OK（2026-04-06） |
+
+**確認済み項目:**
+- ボタン押下で当日データを再読み込みできる ✅
+- 経過（今回）に対象日の keikaNow が表示される ✅
+- 経過履歴に当日・以降が混ざらない（cutoff 動作） ✅
+- 当日データなし時に toast で通知される ✅
+- 金額・初検/再検・転帰/終了日・治療法フラグが変わらない ✅
 
 **`reloadVisitToUI_V3`（メニュー版）との違い:**
 - 未保存チェックのダイアログなし（ボタン押下を明示的な意図とみなす）
 - エラー通知は toast のみ（`ui.alert` でなく）
 - 戻り値あり: `{ok, message, visitKey, updatedFields, warnings}`
-  → `google.script.run.withSuccessHandler` で受け取れる
 
-**更新対象外（既存安全設計を維持）:**
-金額 / 初検/再検区分 / 転帰/終了日 / 治療法フラグ / 請求系
+**次アクション:** 現場運用しながら必要に応じて UI 微調整。将来フェーズで所見後修正（`updateShokenFromUI_V3` 等）を検討する。
 
-**次アクション:**
-1. スプレッドシートで図形ボタンを作成し `buttonReloadPatientScreen` を割り当て
-2. ボタン押下 → 再読み込み動作・経過（今回）表示・経過履歴 cutoff を実機確認
-3. 確認OK後 PROJECT_STATUS.md の 🔄 → ✅ に更新
-
-**詳細:** `docs/JREC-01_reload_and_outcome_2026-04-06.md`（ボタン割当関数セクション参照）
+**詳細:** `docs/JREC-01_reload_and_outcome_2026-04-06.md`
 
 ---
 
