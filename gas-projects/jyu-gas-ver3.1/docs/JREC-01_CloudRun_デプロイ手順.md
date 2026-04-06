@@ -244,6 +244,55 @@ Apps Script エディタを開く:
 
 ---
 
+## ★ 再デプロイ待ち（2026-04-06）
+
+`write_application.py` に負傷名・負傷の原因の出力修正が入った（commit: 9af6fc4）。
+Cloud Run は 5542ed9（2026-03-19）時点のコードで動いており、**修正未反映**。
+
+再デプロイで有効になる修正内容:
+- 負傷名 1行目に（1）、2行目に（2）を prefix
+- 負傷の原因の並び順 場所→状況→日時 → 日時→場所→状況
+- 負傷の原因を1ケース1行・行頭番号付き・改行区切りに変更
+
+**再デプロイ手順（上記手順 §6〜§7 を再実行すること）:**
+
+```bash
+# 1. jyu-gas-ver3.1 ディレクトリへ移動
+cd gas-projects/jyu-gas-ver3.1
+
+# 2. イメージをビルド
+docker build -t jrec-appgen-server .
+
+# 3. タグ付け
+docker tag jrec-appgen-server \
+  asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/server:latest
+
+# 4. push
+docker push \
+  asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/server:latest
+
+# 5. Cloud Run デプロイ
+gcloud run deploy jrec-appgen-server \
+  --image=asia-northeast1-docker.pkg.dev/hirayama-jrec-appgen/jrec-appgen/server:latest \
+  --platform=managed \
+  --region=asia-northeast1 \
+  --allow-unauthenticated \
+  --set-secrets=SECRET_KEY=JREC_APPGEN_SECRET_KEY:latest \
+  --memory=512Mi \
+  --timeout=120 \
+  --min-instances=0 \
+  --max-instances=3 \
+  --port=8080
+
+# 6. ヘルスチェック
+curl https://jrec-appgen-server-xxxxxxxxxx-an.a.run.app/health
+# 期待値: {"status": "ok"}
+```
+
+デプロイ完了後、「申請書を生成して Drive に保存」を実行して生成 xlsx を確認すること。
+
+---
+
 ## 変更履歴
 
 | 日付 | 内容 |
@@ -251,3 +300,4 @@ Apps Script エディタを開く:
 | 2026-03-19 | 初版作成 |
 | 2026-03-19 | デプロイ完了・チェックリスト全項目確認済み |
 | 2026-03-21 | 起動安定化メモ追記（gunicorn 23.0.0 固定・--preload廃止・遅延import化）/ 次ステップ完了マーク |
+| 2026-04-06 | 再デプロイ待ちメモ追記（9af6fc4 の修正を反映するため再ビルド・再デプロイが必要）|
