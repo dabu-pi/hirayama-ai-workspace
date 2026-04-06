@@ -1719,7 +1719,12 @@ function V3TR_writeToApplication_(ss, row1, row2) {
     const m = injRows[i];
     if (!d.name) continue;
 
-    put(m.name, d.name);
+    // 行26（i=0）→（1）、行27（i=1）→（2）を先頭に付ける
+    // 行28以降はテンプレートに (3)(4)(5) が既存のため番号不要
+    var injName = d.name;
+    if (i === 0) injName = "（1）" + injName;
+    else if (i === 1) injName = "（2）" + injName;
+    put(m.name, injName);
     V3TR_putDateYMD_(sh, m.injY, m.injM, m.injD, d.injuryDate);
     V3TR_putDateYMD_(sh, m.iniY, m.iniM, m.iniD, d.firstDate);
     V3TR_putDateYMD_(sh, m.stY, m.stM, m.stD, d.startDate);
@@ -1830,7 +1835,7 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   // 出力条件: case2の部位1に金額あり = 申請書3部位目が存在 = 「3部位目を100分の60で算定することとなる場合」
   // 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
   // ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定。docs §4 D4 参照
-  // ソース: 初検情報履歴シート由来の「負傷の状況」「負傷の場所」「負傷の日時」（transferCols登録済み）
+  // ソース: 初検情報履歴シート由来の「負傷の日時」「負傷の場所」「負傷の状況」（transferCols登録済み）
   var part3HasData = (row2 != null) && (
     Number(row2["部位1_計"] || 0) > 0 ||
     Number(row2["部位1_後療料_金額"] || 0) > 0
@@ -1839,19 +1844,21 @@ function V3TR_writeToApplication_(ss, row1, row2) {
     var d4Parts = [];
     function V3TR_buildInjuryText_(r) {
       var seg = [];
+      var dt     = String(r["負傷の日時"] || "").trim();  // 日時→場所→状況
       var place  = String(r["負傷の場所"] || "").trim();
       var status = String(r["負傷の状況"] || "").trim();
-      var dt     = String(r["負傷の日時"] || "").trim();
+      if (dt)     seg.push(dt);
       if (place)  seg.push(place);
       if (status) seg.push(status);
-      if (dt)     seg.push(dt);
       return seg.join("\u3000"); // 全角スペース区切り
     }
     var d4T1 = V3TR_buildInjuryText_(row1);
     var d4T2 = row2 ? V3TR_buildInjuryText_(row2) : "";
     if (d4T1) d4Parts.push(d4T1);
     if (d4T2 && d4T2 !== d4T1) d4Parts.push(d4T2);
-    var d4Text = d4Parts.join(" / ");
+    // 1ケースにつき1行・行頭に（1）（2）番号付き・改行区切り
+    var d4Lines = d4Parts.map(function(t, idx) { return "（" + (idx + 1) + "）" + t; });
+    var d4Text = d4Lines.join("\n");
     if (d4Text) put(CM.負傷原因, d4Text);
   }
 
