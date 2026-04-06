@@ -1659,7 +1659,7 @@ function refreshKeikaHistoryUI_V3() {
   setMergedValue_(uiSh, UI.case2_keikaHistory, hist2);
 }
 
-function buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, caseNo, limit) {
+function buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, caseNo, limit, cutoffDate) {
   var cPid = caseMap[CASE_COLS.patientId];
   var cNo  = caseMap[CASE_COLS.caseNo];
   var cDt  = caseMap[CASE_COLS.treatDate];
@@ -1681,6 +1681,8 @@ function buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, caseNo, lim
     var d = dtVals[i];
     var kv = String(kVals[i] || "").trim();
     if (!(d instanceof Date)) continue;
+    // cutoffDate が指定された場合は対象日当日・以降を除外する（再読み込み用）
+    if (cutoffDate instanceof Date && sameDateKey_(d) >= sameDateKey_(cutoffDate)) continue;
     if (!kv) continue;
     rows.push({ d: d, k: kv });
   }
@@ -1887,6 +1889,7 @@ function findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, dateObj, ca
       tenki2: String(get(CASE_COLS.tenki2) || ""),
 
       shoken: String(get(CASE_COLS.shoken) || ""),
+      keikaNow: String(get(CASE_COLS.keikaNow) || ""),
     };
   }
   return null;
@@ -2125,6 +2128,16 @@ function reloadVisitToUI_V3() {
   if (src2 && String(src2.shoken || "").trim()) {
     setMergedValue_(uiSh, UI.case2_shoken, src2.shoken);
   }
+
+  // 経過（今回）を復元する（対象来院日の keikaNow をそのまま表示）
+  setMergedValue_(uiSh, UI.case1_keikaNow, src1 ? String(src1.keikaNow || "") : "");
+  setMergedValue_(uiSh, UI.case2_keikaNow, src2 ? String(src2.keikaNow || "") : "");
+
+  // 経過履歴を復元する（対象来院日より前の記録のみ。当日・以降は除外）
+  var hist1 = buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, 1, 5, treatDate);
+  var hist2 = buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, 2, 5, treatDate);
+  setMergedValue_(uiSh, UI.case1_keikaHistory, hist1);
+  setMergedValue_(uiSh, UI.case2_keikaHistory, hist2);
 
   var dateStr = fmt_(treatDate, "yyyy/MM/dd");
   Logger.log("[reloadVisitToUI_V3] patientId=" + patientId + " treatDate=" + dateStr +
