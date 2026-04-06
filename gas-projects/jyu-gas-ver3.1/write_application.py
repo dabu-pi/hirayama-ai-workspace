@@ -643,7 +643,14 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         if i >= len(INJURY_ROWS):
             break
         m = INJURY_ROWS[i]
-        put(m["name"], d["name"])
+        # 行26（1行目）→（1）、行27（2行目）→（2）を先頭に付ける
+        # 行28以降はテンプレートに (3)(4)(5) が既存のため番号不要
+        name = d["name"]
+        if i == 0:
+            name = f"（1）{name}"
+        elif i == 1:
+            name = f"（2）{name}"
+        put(m["name"], name)
         put_wareki_ymd(ws, m["injY"], m["injM"], m["injD"], d.get("injuryDate"))
         put_wareki_ymd(ws, m["iniY"], m["iniM"], m["iniD"], d.get("firstDate"))
         put_wareki_ymd(ws, m["stY"], m["stM"], m["stD"], d.get("startDate"))
@@ -767,7 +774,7 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     #   BR20:DV20 = ラベル行「負傷の原因」（固定）
     #   BR21:DV24 = コンテンツ行（ここに書込む）
     # ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定
-    # ソース: 「負傷の状況」「負傷の場所」「負傷の日時」（初検情報履歴シート由来）
+    # ソース: 「負傷の日時」「負傷の場所」「負傷の状況」（初検情報履歴シート由来）
     part3_has_data = (
         row2 is not None and (
             (safe_num(row2.get("部位1_計")) or 0) > 0 or
@@ -777,7 +784,7 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     if part3_has_data:
         def _build_injury_text(row):
             segs = []
-            for k in ("負傷の場所", "負傷の状況", "負傷の日時"):
+            for k in ("負傷の日時", "負傷の場所", "負傷の状況"):  # 日時→場所→状況
                 v = str(row.get(k) or "").strip()
                 if v:
                     # 英語日付文字列（GAS String型セル由来）をYYYY/MM/DDに正規化
@@ -792,7 +799,9 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
             if t and t not in seen:
                 seen.add(t)
                 unique_texts.append(t)
-        injury_text = " / ".join(unique_texts)
+        # 1ケースにつき1行・行頭に（1）（2）番号付き・改行区切り
+        injury_lines = [f"（{idx + 1}）{t}" for idx, t in enumerate(unique_texts)]
+        injury_text = "\n".join(injury_lines)
         if injury_text:
             # BR21: コンテンツ行（_apply_selection_splits で分離済み）
             ws[D4_INJURY_CONTENT_CELL] = injury_text
