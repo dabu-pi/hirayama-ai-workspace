@@ -70,14 +70,57 @@
 
 ---
 
+## 追加したボタン割当関数（2026-04-06）
+
+| 関数名 | ボタン用途 |
+|---|---|
+| `buttonReloadPatientScreen` | 患者画面ボタン → 当日再読み込み |
+
+### `buttonReloadPatientScreen` の設計
+
+`reloadVisitToUI_V3`（メニュー版）との違い:
+
+| 項目 | `reloadVisitToUI_V3` | `buttonReloadPatientScreen` |
+|---|---|---|
+| 未保存チェック | 確認ダイアログあり | なし（ボタン押下を明示的な意図とみなす） |
+| エラー通知 | `ui.alert()`（ブロッキング） | `ss.toast()`（非ブロッキング） |
+| 戻り値 | なし（`undefined`） | `{ok, message, visitKey, updatedFields, warnings}` |
+| `google.script.run` 対応 | ○（戻り値なし） | ○（`withSuccessHandler` で受け取れる） |
+
+**戻り値フィールド:**
+
+| フィールド | 型 | 内容 |
+|---|---|---|
+| `ok` | boolean | 成功 / 失敗 |
+| `message` | string | トースト通知と同じメッセージ |
+| `visitKey` | string | 再読み込みした visitKey（失敗時は空文字） |
+| `updatedFields` | string[] | 更新した UI 欄の識別子リスト |
+| `warnings` | string[] | 非致命的な注意事項（現在は常に空） |
+
+**ボタン図形への割り当て手順:**
+1. 図形を右クリック → 「スクリプトを割り当て」
+2. 関数名欄に `buttonReloadPatientScreen` と入力（スペース・括弧不要）
+3. OK を押して保存
+
+**更新対象外（`reloadVisitToUI_V3` と同じ安全設計）:**
+- 金額 / visitTotal / windowPay / claimPay
+- 初検/再検区分（kubun）
+- 転帰・終了日（end1/tenki1/end2/tenki2）
+- 治療法フラグ（冷/温/電）
+- 請求系全般
+
+---
+
 ## 追加した関数
 
 | 関数名 | 種別 | 役割 |
 |---|---|---|
-| `reloadVisitToUI_V3` | 公開 | 過去日の来院内容を UI に復元 |
-| `updateOutcomeFromUI_V3` | 公開 | 転帰・終了日を来院ケースに後付け書き込み |
+| `reloadVisitToUI_V3` | 公開（メニュー） | 過去日の来院内容を UI に復元（確認ダイアログあり） |
+| `buttonReloadPatientScreen` | 公開（ボタン） | 当日再読み込みボタン用エントリポイント（戻り値あり） |
+| `updateOutcomeFromUI_V3` | 公開（メニュー） | 転帰・終了日を来院ケースに後付け書き込み |
 | `writeExactCaseSrcToUI_` | 内部ヘルパー | ケースデータをそのまま UI 2行にセット |
 | `readCaseKubun_` | 内部ヘルパー | visitKey+caseNo で区分を補完取得 |
+| `_reloadResultFail_` | 内部ヘルパー | ボタン再読み込み失敗時の統一 return |
 
 ---
 

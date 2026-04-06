@@ -2149,6 +2149,116 @@ function reloadVisitToUI_V3() {
 }
 
 /* =======================================================================
+   buttonReloadPatientScreen ― ボタン押下用「当日再読み込み」エントリポイント
+   =======================================================================
+   設計方針:
+   - 図形ボタンに割り当てる関数名: buttonReloadPatientScreen
+   - reloadVisitToUI_V3 との違い:
+     ① 未保存チェックのダイアログなし（ボタン押下を明示的な意図とみなす）
+     ② 戻り値: {ok, message, visitKey, updatedFields, warnings}
+        → google.script.run.withSuccessHandler で受け取れる
+     ③ エラー通知は toast のみ（alert ではなく）
+   - 内部ロジックはすべて既存ヘルパーを流用（重複実装なし）:
+     writeExactCaseSrcToUI_ / readCaseKubun_ / buildKeikaHistoryTextFromCases_ 等
+   - 更新対象外（reloadVisitToUI_V3 と同じ安全設計を維持）:
+     金額 / 初検/再検区分 / 転帰/終了日 / 治療法フラグ / 請求系
+   ======================================================================= */
+
+/**
+ * 患者画面ボタン用「当日再読み込み」エントリポイント。
+ * 図形ボタンに割り当てる関数名: buttonReloadPatientScreen
+ *
+ * @return {{ok:boolean, message:string, visitKey:string, updatedFields:string[], warnings:string[]}}
+ */
+function buttonReloadPatientScreen() {
+  var ss     = SpreadsheetApp.getActive();
+  var uiSh   = ss.getSheetByName(SHEETS.ui);
+  var caseSh = ss.getSheetByName(SHEETS.cases);
+
+  // --- バリデーション ---
+  if (!uiSh || !caseSh) {
+    return _reloadResultFail_("必要なシートが見つかりません（患者画面 / 来院ケース）。", ss);
+  }
+
+  var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+  var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+  if (!patientId) {
+    return _reloadResultFail_("患者を選択してください（B2で検索→選択）。", ss);
+  }
+  if (!(treatDate instanceof Date)) {
+    return _reloadResultFail_("来院日（B4）が日付になっていません。", ss);
+  }
+
+  // --- データ取得 ---
+  var caseMap  = buildHeaderColMap_(caseSh);
+  var visitKey = buildVisitKey_(patientId, treatDate);
+  var src1     = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, treatDate, 1);
+  var src2     = findCaseRowByPatientDateCaseNo_(caseSh, caseMap, patientId, treatDate, 2);
+
+  if (!src1 && !src2) {
+    var notFoundMsg = "来院記録が見つかりませんでした（" +
+      patientId + " / " + fmt_(treatDate, "yyyy/MM/dd") + "）。";
+    Logger.log("[buttonReloadPatientScreen] NOT FOUND visitKey=" + visitKey);
+    return _reloadResultFail_(notFoundMsg, ss);
+  }
+
+  var warnings = [];
+
+  // --- UI 書き込み（既存ヘルパーを流用）---
+
+  // ケース行（部位・傷病・受傷日・治療法フラグ・転帰/終了日）
+  writeExactCaseSrcToUI_(uiSh, src1, 1, treatDate);
+  writeExactCaseSrcToUI_(uiSh, src2, 2, treatDate);
+
+  // 区分表示
+  uiSh.getRange(UI.case1_kubunView).setValue(readCaseKubun_(caseSh, caseMap, visitKey, 1));
+  uiSh.getRange(UI.case2_kubunView).setValue(readCaseKubun_(caseSh, caseMap, visitKey, 2));
+
+  // 所見（値があるときのみ）
+  if (src1 && String(src1.shoken || "").trim()) {
+    setMergedValue_(uiSh, UI.case1_shoken, src1.shoken);
+  }
+  if (src2 && String(src2.shoken || "").trim()) {
+    setMergedValue_(uiSh, UI.case2_shoken, src2.shoken);
+  }
+
+  // 経過（今回）= 対象来院日の keikaNow
+  setMergedValue_(uiSh, UI.case1_keikaNow, src1 ? String(src1.keikaNow || "") : "");
+  setMergedValue_(uiSh, UI.case2_keikaNow, src2 ? String(src2.keikaNow || "") : "");
+
+  // 経過履歴 = 対象来院日より前のみ（当日・以降は cutoff で除外）
+  var hist1 = buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, 1, 5, treatDate);
+  var hist2 = buildKeikaHistoryTextFromCases_(caseSh, caseMap, patientId, 2, 5, treatDate);
+  setMergedValue_(uiSh, UI.case1_keikaHistory, hist1);
+  setMergedValue_(uiSh, UI.case2_keikaHistory, hist2);
+
+  // --- 完了通知・ログ ---
+  var dateStr = fmt_(treatDate, "yyyy/MM/dd");
+  var okMsg   = patientId + " / " + dateStr + " を再読み込みしました";
+  Logger.log("[buttonReloadPatientScreen] OK visitKey=" + visitKey +
+    " src1=" + (src1 ? "found" : "none") +
+    " src2=" + (src2 ? "found" : "none") +
+    " warnings=" + warnings.length);
+  ss.toast(okMsg, "再読み込み完了", 4);
+
+  return {
+    ok:            true,
+    message:       okMsg,
+    visitKey:      visitKey,
+    updatedFields: ["caseRows", "kubunView", "shoken", "keikaNow", "keikaHistory"],
+    warnings:      warnings
+  };
+}
+
+/** @private ボタン再読み込み失敗時の統一 return ヘルパー */
+function _reloadResultFail_(message, ss) {
+  if (ss) ss.toast(message, "再読み込み", 5);
+  Logger.log("[buttonReloadPatientScreen] FAIL: " + message);
+  return { ok: false, message: message, visitKey: "", updatedFields: [], warnings: [] };
+}
+
+/* =======================================================================
    updateOutcomeFromUI_V3 ― 転帰・終了日を来院ケースへ後付け更新
    =======================================================================
    設計方針:

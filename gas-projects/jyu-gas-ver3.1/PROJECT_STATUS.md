@@ -1,6 +1,32 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-06（**経過後修正・再読み込み経過表示 全機能 実機確認OK — 通常運用開始**）
+最終更新: 2026-04-06（**当日再読み込みボタン用関数を追加 — 実機確認待ち**）
+
+---
+
+## 🆕 2026-04-06 当日再読み込みボタン用関数を追加（`buttonReloadPatientScreen`）
+
+| 項目 | 内容 |
+|---|---|
+| 追加関数 | `buttonReloadPatientScreen` / `_reloadResultFail_` |
+| ボタン割当名 | `buttonReloadPatientScreen` |
+| 実機確認 | 🔄 実機確認待ち（clasp push 完了済み） |
+
+**`reloadVisitToUI_V3`（メニュー版）との違い:**
+- 未保存チェックのダイアログなし（ボタン押下を明示的な意図とみなす）
+- エラー通知は toast のみ（`ui.alert` でなく）
+- 戻り値あり: `{ok, message, visitKey, updatedFields, warnings}`
+  → `google.script.run.withSuccessHandler` で受け取れる
+
+**更新対象外（既存安全設計を維持）:**
+金額 / 初検/再検区分 / 転帰/終了日 / 治療法フラグ / 請求系
+
+**次アクション:**
+1. スプレッドシートで図形ボタンを作成し `buttonReloadPatientScreen` を割り当て
+2. ボタン押下 → 再読み込み動作・経過（今回）表示・経過履歴 cutoff を実機確認
+3. 確認OK後 PROJECT_STATUS.md の 🔄 → ✅ に更新
+
+**詳細:** `docs/JREC-01_reload_and_outcome_2026-04-06.md`（ボタン割当関数セクション参照）
 
 ---
 
