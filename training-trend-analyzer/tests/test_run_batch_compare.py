@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.run_batch import (
     DEFAULT_COMPARE_THRESHOLD,
     COMPARE_SOURCE_SET_DEFS,
+    _calculate_impact_score,
     _build_delta_summary,
     _combine_delta_summaries,
     _fmt_compare_delta,
@@ -23,6 +24,7 @@ from scripts.run_batch import (
     build_comparison_rows,
     calculate_scores_for_sets,
     filter_significant_rows,
+    sort_significant_rows,
 )
 
 
@@ -149,3 +151,22 @@ def test_rank_change_is_significant_even_below_threshold():
     }
     assert _has_rank_change(row) is True
     assert _is_significant_row(row, threshold=0.5) is True
+
+
+def test_impact_score_uses_max_abs_delta():
+    row = {"delta_gt_to_gs": -11.19, "delta_gs_to_all": -2.72}
+    assert _calculate_impact_score(row) == 11.19
+
+
+def test_sort_significant_rows_prioritizes_rank_change_then_impact():
+    rows = [
+        {"model": "LowImpactRankChange", "impact_score": 0.1, "has_rank_change": True, "_compare_order": 2},
+        {"model": "HighImpactNoRankChange", "impact_score": 10.0, "has_rank_change": False, "_compare_order": 0},
+        {"model": "MidImpactNoRankChange", "impact_score": 4.6, "has_rank_change": False, "_compare_order": 1},
+    ]
+    sorted_rows = sort_significant_rows(rows)
+    assert [row["model"] for row in sorted_rows] == [
+        "LowImpactRankChange",
+        "HighImpactNoRankChange",
+        "MidImpactNoRankChange",
+    ]

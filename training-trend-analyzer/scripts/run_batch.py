@@ -250,10 +250,12 @@ def build_comparison_rows(
 
 def annotate_significance(rows: list[dict], threshold: float) -> list[dict]:
     annotated = []
-    for row in rows:
+    for index, row in enumerate(rows):
         annotated_row = dict(row)
+        annotated_row["impact_score"] = _calculate_impact_score(row)
         annotated_row["has_rank_change"] = _has_rank_change(row)
         annotated_row["is_significant"] = _is_significant_row(row, threshold)
+        annotated_row["_compare_order"] = index
         annotated.append(annotated_row)
     return annotated
 
@@ -262,7 +264,37 @@ def filter_significant_rows(rows: list[dict]) -> list[dict]:
     return [row for row in rows if row.get("is_significant")]
 
 
-def print_comparison_summary(rows: list[dict], week_start: str, category_filter: str | None = None) -> None:
+def sort_significant_rows(rows: list[dict]) -> list[dict]:
+    return sorted(
+        rows,
+        key=lambda row: (
+            not row.get("has_rank_change", False),
+            -(row.get("impact_score") or 0.0),
+            row.get("_compare_order", 0),
+        ),
+    )
+
+
+def print_significant_summary(display_rows: list[dict], total_rows: int) -> None:
+    print(f"[COMPARE] significant rows: {len(display_rows)} / {total_rows}")
+    if not display_rows:
+        return
+    top_row = display_rows[0]
+    top_label = f"{top_row['brand']} {top_row['model']}".strip()
+    rank_change = "yes" if top_row.get("has_rank_change") else "no"
+    print(
+        f"[COMPARE] top priority: {top_label} "
+        f"impact={_fmt_impact(top_row.get('impact_score'))} "
+        f"rank_change={rank_change}"
+    )
+
+
+def print_comparison_summary(
+    rows: list[dict],
+    week_start: str,
+    category_filter: str | None = None,
+    show_impact: bool = False,
+) -> None:
     print(f"\n=== Source Set Comparison {week_start} ===")
     if category_filter:
         print(f"Category: {category_filter}")
@@ -285,9 +317,11 @@ def print_comparison_summary(rows: list[dict], week_start: str, category_filter:
                 _fmt_compare_delta(row["delta_gt_to_gs"]),
                 _fmt_compare_delta(row["delta_gs_to_all"]),
                 row["delta_summary"],
-                row["rank_path"],
             ]
         )
+        if show_impact:
+            table_rows[-1].append(_fmt_impact(row.get("impact_score")))
+        table_rows[-1].append(row["rank_path"])
 
     headers = [
         "#",
@@ -300,8 +334,10 @@ def print_comparison_summary(rows: list[dict], week_start: str, category_filter:
         "d(GT->GS)",
         "d(GS->3)",
         "Why",
-        "Rank path",
     ]
+    if show_impact:
+        headers.append("Impact")
+    headers.append("Rank path")
 
     print()
     if HAS_TABULATE:
@@ -331,6 +367,7 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                 "gt_to_gs_summary",
                 "gs_to_all_summary",
                 "delta_summary",
+                "impact_score",
                 "is_significant",
                 "has_rank_change",
                 "gt_only_rank",
@@ -353,6 +390,7 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                     row["gt_to_gs_summary"],
                     row["gs_to_all_summary"],
                     row["delta_summary"],
+                    row.get("impact_score"),
                     row.get("is_significant", False),
                     row.get("has_rank_change", False),
                     row["gt_only_rank"],
@@ -386,8 +424,18 @@ def _fmt_compare_delta(value: float | None) -> str:
     return _fmt_delta(value)
 
 
+def _fmt_impact(value: float | None) -> str:
+    return f"{value:.1f}" if value is not None else "N/A"
+
+
 def _is_delta_significant(value: float | None, threshold: float) -> bool:
     return value is not None and abs(value) >= threshold
+
+
+def _calculate_impact_score(row: dict) -> float:
+    delta_gt_to_gs = abs(row.get("delta_gt_to_gs") or 0.0)
+    delta_gs_to_all = abs(row.get("delta_gs_to_all") or 0.0)
+    return round(max(delta_gt_to_gs, delta_gs_to_all), 2)
 
 
 def _has_rank_change(row: dict) -> bool:
@@ -510,14 +558,24 @@ def main() -> None:
         score_sets = calculate_scores_for_sets(metrics_by_model, COMPARE_SOURCE_SET_DEFS)
         comparison_rows = build_comparison_rows(score_sets, category_filter=args.category)
         comparison_rows = annotate_significance(comparison_rows, threshold=args.compare_threshold)
-        display_rows = filter_significant_rows(comparison_rows) if args.compare_only_significant else comparison_rows
+        if args.compare_only_significant:
+            display_rows = sort_significant_rows(filter_significant_rows(comparison_rows))
+        else:
+            display_rows = comparison_rows
         print("[COMPARE] source_sets=GT only / GT + GS / GT + GS + YT")
         print(
             f"[COMPARE] threshold={args.compare_threshold:.1f} "
             f"only_significant={'yes' if args.compare_only_significant else 'no'} "
             f"rank_change_included=yes"
         )
-        print_comparison_summary(display_rows, args.week, category_filter=args.category)
+        if args.compare_only_significant:
+            print_significant_summary(display_rows, total_rows=len(comparison_rows))
+        print_comparison_summary(
+            display_rows,
+            args.week,
+            category_filter=args.category,
+            show_impact=args.compare_only_significant,
+        )
         if args.output_csv:
             timestamp = args.week.replace("-", "")
             export_comparison_csv(display_rows, Path(f"data/output/ranking_compare_{timestamp}.csv"))

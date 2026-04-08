@@ -200,6 +200,7 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-
 - 比較表と比較 CSV に `GS:+x.x / YT:+y.y` 形式の差分要約を付け、`+0.0 / -0.0` は省略して seed / weight 調整の当たりを見やすくする
 - console の compare 表では raw delta 列 (`d(GT->GS)` / `d(GS->3)`) も丸め後ゼロなら `-` 表示にする
 - `--compare-threshold` と `--compare-only-significant` で、有意差分だけを compare 表から拾える
+- `--compare-only-significant` では `Impact` を出し、priority 高い順に tuning 対象を見やすくする
 - `--show-metric-details` で source / metric ごとの寄与を確認できる
 - `google_trends_interest`、`search_suggest_count`、`youtube_suggest_count` はどれも軽量補助指標として扱う
 - 観測不足や低値のモデルは metric rule で score 対象から外す
@@ -231,9 +232,12 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 - significance 判定は `abs(d(GT->GS)) >= threshold` または `abs(d(GS->3)) >= threshold`
 - rank path が変わる行は、delta が threshold 未満でも tuning 対象として `significant` 扱い
 - `--compare-only-significant` 指定時だけ、この判定を満たす行に絞って表示
+- `Impact` は `max(abs(d(GT->GS)), abs(d(GS->3)))`
+- significant-only の並び順は `rank change あり` → `Impact 大きい順` → 元の compare 順
 - compare CSV の raw delta 列は downstream 用に数値のまま保持
-- compare CSV には `is_significant`, `has_rank_change` の軽い補助列を追加
+- compare CSV には `is_significant`, `has_rank_change`, `impact_score` の軽い補助列を追加
 - `-` 整形は console compare 表だけに適用
+- significant-only 実行時は summary として `significant rows` と `top priority` を短く出す
 
 ## 関連ドキュメント
 
