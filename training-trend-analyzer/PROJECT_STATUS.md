@@ -1,141 +1,109 @@
-# PROJECT_STATUS.md — トレーニングマシントレンド分析基盤
+# PROJECT_STATUS.md
 
 最終更新: 2026-04-08
 
----
+## 現在地
 
-## プロジェクト目的
+Phase 4 の入口として、Google Trends を補完する軽量ソース `google_suggest` の初版を追加しました。
 
-トレーニングマシンのトレンドを複数ソースから継続収集し、ブランド・カテゴリ・機種単位でデータベース化し、時系列変化をスコア化してランキング提示する。
+直近で完了している主要項目:
 
-**短期目標（MVP）:** 自社仕入れ判断を数字で支援するローカルツール
-**中期目標:** ジムオーナー・仕入れ担当者向け参照サイトとして公開
-
----
+- alias 拡充の保守フロー整備
+- Google Trends collector の live / mock / auto 運用
+- `google_trends_interest` の初期安定化
+- Google Suggest collector 初版
+- `source_metrics` と `run_batch.py` への接続確認
 
 ## プロジェクト境界
 
-| 項目 | パス |
-|---|---|
-| **このプロジェクトルート** | `C:\hirayama-ai-workspace\workspace\training-trend-analyzer\` |
-| 更新対象（全て内包） | `training-trend-analyzer/` 配下のみ |
-| DB ファイル | `training-trend-analyzer/data/db/trend.db` |
-| 設定ファイル | `training-trend-analyzer/config/` |
-| ドキュメント | `training-trend-analyzer/docs/` |
-| マスタデータ | `training-trend-analyzer/data/master/` |
-| スクリプト | `training-trend-analyzer/scripts/` |
-| ソースコード | `training-trend-analyzer/src/` |
-| テスト | `training-trend-analyzer/tests/` |
+今回の作業対象は `C:\hirayama-ai-workspace\workspace\training-trend-analyzer` 配下のみです。
 
-**触らない他プロジェクト領域:**
-- `workspace/gas-projects/` — 柔整GASシステム
-- `workspace/freee-automation/` — freee自動化
-- `workspace/patient-management/` — 患者管理Webアプリ
-- `workspace/scripts/` — workspace共通スクリプト（AIOS/handoff系）
-- `workspace/docs/` — workspace共通ドキュメント
-- `workspace/config/` — workspace共通設定
+今回変更した領域:
 
-**混合リスクなしの根拠:**
-- DB は `training-trend-analyzer/data/db/` に分離（他プロジェクトの DB なし）
-- Python パッケージ（`src/`）はこのプロジェクト配下のみ
-- `workspace/scripts/` とは独立した `training-trend-analyzer/scripts/` を使用
+- `config/`
+- `data/mock/google_suggest/`
+- `docs/`
+- `scripts/`
+- `src/collectors/`
+- `src/scorer/`
+- `tests/`
+- `README.md`
+- `PROJECT_STATUS.md`
 
----
+触っていない領域:
 
-## 現在地
+- `C:\hirayama-ai-workspace\workspace\scripts`
+- `C:\hirayama-ai-workspace\workspace\docs`
+- `C:\hirayama-ai-workspace\workspace\config`
+- 他プロジェクト配下すべて
 
-| 項目 | 状態 |
-|---|---|
-| 設計ドキュメント整備 | 完了（Phase 0） |
-| DB スキーマ作成（SQLite） | 完了 |
-| 初期マスタデータ整備 | 完了（Phase 1） |
-| マスタ投入スクリプト | 完了 |
-| 正規化エンジン初版 | 完了（Phase 1） |
-| 検証テストケース | 完了（16/16 passed） |
-| モックデータでのランキング出力 | 完了 |
-| **CSV インポートパイプライン** | **完了（Phase 2）** |
-| **DB への実データ投入・ランキング反映** | **完了（Phase 2）** |
-| **重複検知・未解決キュー管理** | **完了（Phase 2）** |
-| Google Trends 自動収集 | 未着手 |
-| HTML レポート生成 | 未着手 |
+混在していない根拠:
 
----
+- collector / fixture / score / docs / tests をすべて当該プロジェクト配下に配置
+- import 先 DB も `training-trend-analyzer/data/db/trend.db` のみを使用
 
-## 今のフェーズ
+## 完了済み
 
-**Phase 2 — CSV インポートパイプライン 完了**
+### Google Trends
 
-- `scripts/import_csv.py` — CSV→正規化→DB投入パイプライン
-- `scripts/migrate_add_import_meta.py` — import_batches テーブル追加・列追加（冪等マイグレーション）
-- `src/collectors/db.py` — 実DBデータを使う DbCollector
-- `run_batch.py` — `--use-db` / `--no-discontinued` / `--only-commercial` 追加
-- dry-run / 実投入 / 重複検知 / ランキング反映 すべて検証済み
+- `pytrends==4.9.2` と `urllib3<2` を requirements へ整理
+- live / mock / auto の挙動を CLI と docs に反映
+- live 成功と fail-safe artifact を確認
+- `google_trends_interest` に軽量補助指標としての安定化を追加
 
-### Phase 2 検証結果（sample_metrics.csv 20行）
+### Google Suggest
 
-```
-dry-run:     合計=20  OK=16  レビュー=4  スキップ=0
-実投入 1回目: 合計=20  OK=15  レビュー=4  スキップ=1（TRM445 は行8と重複）
-実投入 2回目: 合計=20  OK=0   レビュー=4  スキップ=16（全て重複検知）
-ランキング:   14 機種表示（--use-db --week 2026-04-06）
-```
+- `src/collectors/google_suggest.py` を追加
+- `scripts/run_google_suggest.py` を追加
+- `data/mock/google_suggest/jp_seed_fixture.json` を追加
+- live / mock 両対応で raw / observation / import-ready を出力
+- `search_suggest_count` と `search_suggest_presence` を import 可能化
+- `search_suggest_count` を低ウェイトで ranking に接続
 
----
+### scoring / ranking
 
-## 次アクション（優先順）
+- `config/score_weights.json` に `search_suggest_count` を追加
+- `calculator.py` に `min_value` 対応を追加
+- 軽量検索系 metric だけで前週比較を作らない change suppression を維持
+- `run_batch.py` で metric 除外比較と寄与明細確認を継続利用
 
-1. **aliases.json の拡充** — 実務で見かける表記ゆれを追加登録し `load_master_data.py` で再投入
-2. **Google Trends 収集器の動作確認** — `collectors/google_trends.py` の初版を実装し、主要キーワードで取得テストをする
-3. **HTMLレポート生成** — Jinja2で週次ランキングHTMLを自動生成する（Phase 3）
-4. **unclassified_queue 確認 UI** — レビューキューをブラウザで確認・承認する仕組み（Phase 3）
+## 直近の重要判断
 
----
+- Google Suggest は Google Trends の代替ではなく、低ウェイト補助指標として扱う
+- 初版は model seed のみ import-ready に流し、category / compare は ranking に入れない
+- query と完全一致する suggestion は count しない
+- `search_suggest_presence` は import しても score には使わない
+- `search_suggest_count` は `min_value=2` と低 weight で過大評価を抑える
+- Google Suggest endpoint は軽量利用に留め、仕様変更前提で mock fixture を維持する
 
-## マスタデータ現状（2026-04-08）
+## テスト状況
 
-| テーブル | 件数 | 内容 |
-|---|---|---|
-| brands | 20 | 業務用中心の主要メーカー |
-| categories | 23 | 有酸素系・筋力系・機能的トレーニング |
-| models | 22 | 主力業務用機種 |
-| aliases | 88 | ブランド・カテゴリ・モデルの別名・表記ゆれ |
+実行済み:
 
----
+- `python -m pytest tests/test_normalizer.py tests/test_google_trends_collector.py tests/test_google_suggest_collector.py tests/test_score_calculator.py -q`
+  - 結果: `26 passed`
+- `python scripts/run_google_suggest.py --mode live --seed-id concept2_skierg_model --seed-id technogym_run_model --max-seeds 2`
+  - 結果: `mode_used=live`, `observations=39`, `import_rows=4`, error 0
+- `python scripts/run_google_suggest.py --mode mock --max-seeds 4`
+  - 結果: `observations=28`, `import_rows=8`, error 0
+- `python scripts/run_google_suggest.py --mode mock --max-seeds 4 --import-db --replace-existing`
+  - 結果: 8 行 import
+- `python scripts/check_source_metrics.py --source-name google_suggest`
+  - 結果: `source_metrics` に 8 行を確認
+- `python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-metric-details`
+  - 結果: Google Suggest を含む ranking を確認
+- `python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --exclude-metric search_suggest_count`
+  - 結果: Suggest 除外時の比較を確認
 
-## リスク
+## 残課題
 
-| リスク | 深刻度 | 対策 |
-|---|---|---|
-| 表記ゆれによる同一機種の重複登録 | 高 | 正規化エンジン + aliases テーブルで吸収済み |
-| 家庭用/業務用の混在 | 高 | `use_type` カラム + brands の `market_type` で分離 |
-| aliases.json のメンテナンスコスト | 中 | 未分類キューで発見 → 手動追記の運用フローを確立 |
-| pytrends の非公式API依存 | 中 | 手動CSVで代替フローを確保 |
-| confidence 0.5〜0.7 の LOW 判定の扱い | 中 | LOW は自動確定せず未分類キューに入れる方針を検討 |
-| DB スキーマ変更時のマイグレーション | 低 | Alembic 導入は Phase 3 で対応 |
+- Google Suggest は非公式 endpoint 依存なので、仕様変更時の fallback 設計が今後必要
+- live seed によって suggestion 0 件や偏りが出やすく、seed 設計の見直し余地がある
+- `search_suggest_presence` の活用はまだ raw / import 保持段階で、score 反映は未実施
+- compare seed / category seed の raw 活用ルールは今後整理が必要
 
----
+## 次アクション
 
-## 未決事項
-
-| 事項 | 優先度 | 備考 |
-|---|---|---|
-| Google Trends pytrends の IP ブロック対策 | 高 | リクエスト間隔を長めに設定 |
-| aliases.json の `_section` コメント行の扱い | 中 | load_master_data.py では除去済み。問題なし |
-| LOW 信頼度レコードの自動処理 vs 手動確認 | 中 | 現状は MEDIUM 以上を自動確定、LOW は保留方針を推奨 |
-| DB の `data/db/trend.db` を git 管理するか | 中 | `.gitignore` に追加推奨（バイナリ・実データ混入回避） |
-| unclassified_queue の確認 UI | 低 | Phase 2 以降 |
-
----
-
-## 関連ドキュメント
-
-| ドキュメント | 内容 |
-|---|---|
-| [README.md](./README.md) | プロジェクト概要・ユースケース |
-| [docs/SPEC.md](./docs/SPEC.md) | 要件定義 |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | システム構成 |
-| [docs/DB_SCHEMA.md](./docs/DB_SCHEMA.md) | DB テーブル設計 |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | Phase 別開発計画 |
-| [docs/DATA_SOURCES.md](./docs/DATA_SOURCES.md) | 収集ソース一覧と方針 |
-| [docs/NORMALIZER.md](./docs/NORMALIZER.md) | 正規化エンジン仕様 |
-| [docs/IMPORT_PIPELINE.md](./docs/IMPORT_PIPELINE.md) | CSV インポートパイプライン仕様 |
+1. Google Suggest と相性の良い第 3 ソースを 1 本選び、同じ seed 群で小さく接続する
+2. Google Suggest seed を 0 件が続きにくい model 中心に整理する
+3. 検索系軽量ソースの複合寄与を score detail に見やすく出す

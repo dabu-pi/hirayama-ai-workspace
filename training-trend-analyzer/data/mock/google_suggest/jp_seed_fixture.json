@@ -1,0 +1,99 @@
+{
+  "mode": "mock",
+  "generated_at": "2026-04-08T00:00:00+09:00",
+  "series": [
+    {
+      "seed_id": "technogym_run_model",
+      "queries": [
+        {
+          "query_term": "technogym run",
+          "suggestions": [
+            "technogym run review",
+            "technogym run price",
+            "technogym run specs",
+            "technogym run treadmill"
+          ]
+        },
+        {
+          "query_term": "テクノジム run",
+          "suggestions": [
+            "テクノジム run 価格",
+            "テクノジム run 中古",
+            "テクノジム run 評判"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "lifefitness_t5_model",
+      "queries": [
+        {
+          "query_term": "life fitness t5",
+          "suggestions": [
+            "life fitness t5 review",
+            "life fitness t5 price",
+            "life fitness t5 treadmill",
+            "life fitness t5 used",
+            "life fitness t5 manual"
+          ]
+        },
+        {
+          "query_term": "ライフフィットネス t5",
+          "suggestions": [
+            "ライフフィットネス t5 価格",
+            "ライフフィットネス t5 レビュー",
+            "ライフフィットネス t5 中古"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "precor_trm445_model",
+      "queries": [
+        {
+          "query_term": "precor trm 445",
+          "suggestions": [
+            "precor trm 445 review",
+            "precor trm 445 manual"
+          ]
+        },
+        {
+          "query_term": "trm445",
+          "suggestions": [
+            "trm445 review"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "concept2_skierg_model",
+      "queries": [
+        {
+          "query_term": "concept2 ski erg",
+          "suggestions": [
+            "concept2 skierg",
+            "concept2 ski erg review",
+            "concept2 ski erg dimensions",
+            "concept2 ski erg parts",
+            "concept2 ski erg uk"
+          ]
+        },
+        {
+          "query_term": "c2 ski erg",
+          "suggestions": [
+            "c2 ski erg review",
+            "c2 ski erg dimensions"
+          ]
+        },
+        {
+          "query_term": "skierg",
+          "suggestions": [
+            "skierg review",
+            "skierg muscles",
+            "skierg workout"
+          ]
+        }
+      ]
+    }
+  ]
+}

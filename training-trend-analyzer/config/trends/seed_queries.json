@@ -1,0 +1,92 @@
+{
+  "_comment": "Google Trends Phase 3 starter seeds. Keep volume small and expand only after review.",
+  "defaults": {
+    "geo": "JP",
+    "region": "jp",
+    "timeframe": "today 3-m",
+    "collection_mode": "auto",
+    "max_terms_per_seed": 5
+  },
+  "seeds": [
+    {
+      "seed_id": "technogym_run_model",
+      "label": "Technogym Run",
+      "seed_type": "model",
+      "canonical_target": "TECHNOGYM::Run",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["technogym run", "テクノジム run"]
+    },
+    {
+      "seed_id": "lifefitness_t5_model",
+      "label": "Life Fitness T5",
+      "seed_type": "model",
+      "canonical_target": "Life Fitness::T5",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["life fitness t5", "ライフフィットネス t5"]
+    },
+    {
+      "seed_id": "precor_trm445_model",
+      "label": "Precor TRM 445",
+      "seed_type": "model",
+      "canonical_target": "Precor::TRM 445",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["precor trm 445", "trm445"]
+    },
+    {
+      "seed_id": "concept2_skierg_model",
+      "label": "Concept2 SkiErg",
+      "seed_type": "model",
+      "canonical_target": "Concept2::SkiErg",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["concept2 ski erg", "c2 ski erg", "skierg"]
+    },
+    {
+      "seed_id": "leg_press_category",
+      "label": "Leg Press Category",
+      "seed_type": "category",
+      "canonical_target": "leg_press",
+      "query_group": "category_watch",
+      "emit_to_source_metrics": false,
+      "queries": ["leg press", "レッグプレス"]
+    },
+    {
+      "seed_id": "hack_squat_category",
+      "label": "Hack Squat Category",
+      "seed_type": "category",
+      "canonical_target": "hack_squat",
+      "query_group": "category_watch",
+      "emit_to_source_metrics": false,
+      "queries": ["hack squat", "ハックスクワット"]
+    },
+    {
+      "seed_id": "belt_squat_category",
+      "label": "Belt Squat Category",
+      "seed_type": "category",
+      "canonical_target": "belt_squat",
+      "query_group": "category_watch",
+      "emit_to_source_metrics": false,
+      "queries": ["belt squat", "ベルトスクワット"]
+    },
+    {
+      "seed_id": "stair_climber_compare",
+      "label": "Stair Climber Compare",
+      "seed_type": "category_compare",
+      "canonical_target": "stair_climber",
+      "query_group": "compare_watch",
+      "emit_to_source_metrics": false,
+      "queries": ["stair climber", "stairmaster", "stair master"]
+    },
+    {
+      "seed_id": "commercial_brand_compare",
+      "label": "Commercial Brands Compare",
+      "seed_type": "brand_compare",
+      "query_group": "compare_watch",
+      "emit_to_source_metrics": false,
+      "queries": ["cybex", "life fitness", "matrix", "hammer strength"]
+    }
+  ]
+}

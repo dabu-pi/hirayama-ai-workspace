@@ -45,6 +45,17 @@ METRIC_TYPE_MAP = {
     "search_volume":   "search_volume",
     "search":          "search_volume",
     "検索ボリューム":   "search_volume",
+    "google_trends_interest": "google_trends_interest",
+    "google trends interest": "google_trends_interest",
+    "gt_interest": "google_trends_interest",
+    "trends_interest": "google_trends_interest",
+    "google_trends": "google_trends_interest",
+    "search_suggest_count": "search_suggest_count",
+    "suggest_count": "search_suggest_count",
+    "google_suggest_count": "search_suggest_count",
+    "search_suggest_presence": "search_suggest_presence",
+    "suggest_presence": "search_suggest_presence",
+    "google_suggest_presence": "search_suggest_presence",
     "mention_count":   "mention_count",
     "mention":         "mention_count",
     "言及数":          "mention_count",
@@ -64,7 +75,11 @@ METRIC_TYPE_MAP = {
 
 REQUIRED_COLS  = {"collected_date", "source_name", "metric_type", "metric_value"}
 OPTIONAL_COLS  = {"raw_brand", "raw_category", "raw_name", "region", "note",
-                  "source_url", "country", "language"}
+                  "source_url", "country", "language",
+                  "query_term", "seed_id", "seed_label", "seed_type",
+                  "query_group", "timeframe", "geo", "collection_mode",
+                  "canonical_target", "metadata_json", "week_start", "sample_size",
+                  "suggestion_text", "suggestion_rank"}
 
 
 # -------------------------------------------------------------------------
@@ -268,7 +283,8 @@ def run_import(
                 continue
 
             # --- 3. week_start 計算 ---
-            week_start = _date_to_week_start(row["collected_date"])
+            explicit_week_start = row.get("week_start", "").strip()
+            week_start = explicit_week_start or _date_to_week_start(row["collected_date"])
 
             # --- 4. 正規化エンジンに通す ---
             # raw_name が「ブランド名 + モデル名」の複合形なら raw_name を優先する。
@@ -406,9 +422,9 @@ def run_import(
                 conn.execute("""
                     INSERT OR IGNORE INTO source_metrics
                         (source_id, model_id, brand_id, week_start, metric_type,
-                         value, is_estimated, raw_data,
+                         value, sample_size, is_estimated, raw_data,
                          import_batch_id, raw_input, imported_at, review_status)
-                    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, datetime('now'), 'ok')
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, datetime('now'), 'ok')
                 """, (
                     source_id,
                     model_id,
@@ -416,6 +432,7 @@ def run_import(
                     week_start,
                     norm_metric,
                     float(row["metric_value"]),
+                    int(row["sample_size"]) if row.get("sample_size", "").strip() else None,
                     raw_input_json,
                     batch_db_id,
                     raw_input_json,

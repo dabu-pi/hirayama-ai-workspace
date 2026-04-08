@@ -1,23 +1,49 @@
 {
-  "_comment": "スコア重み設定。変更したら必ず score_version を上げること",
-  "version": "1.0",
+  "_comment": "Scoring weights and metric-specific stabilization rules.",
+  "version": "1.2",
   "weights": {
-    "search_volume":  0.30,
-    "mention_count":  0.25,
-    "review_count":   0.20,
-    "media_count":    0.15,
-    "inquiry_count":  0.10
+    "search_volume": 0.22,
+    "google_trends_interest": 0.08,
+    "search_suggest_count": 0.03,
+    "mention_count": 0.25,
+    "review_count": 0.18,
+    "media_count": 0.15,
+    "inquiry_count": 0.09
   },
   "rank_labels": {
-    "rising_fast":  30,
-    "rising":       10,
-    "stable_upper":  0,
-    "falling":     -10,
+    "rising_fast": 30,
+    "rising": 10,
+    "stable_upper": 0,
+    "falling": -10,
     "falling_fast": -30
   },
+  "change_rules": {
+    "min_prev_metrics": 1,
+    "ignore_if_only_metrics": ["google_trends_interest", "search_suggest_count", "search_suggest_presence"]
+  },
+  "metric_rules": {
+    "google_trends_interest": {
+      "min_models": 3,
+      "min_observation_weeks": 3,
+      "min_query_terms": 2,
+      "smoothing_prev_weight": 0.35,
+      "contribution_scale": 0.65,
+      "norm_cap": 0.75
+    },
+    "search_suggest_count": {
+      "min_models": 2,
+      "min_query_terms": 2,
+      "min_value": 2,
+      "contribution_scale": 0.5,
+      "norm_cap": 0.5
+    }
+  },
   "_notes": {
-    "weights_sum": "合計は必ず 1.0 になること",
-    "rank_labels": "change_rate(%) の閾値。rising_fast: >30%, rising: >10%, falling: <-10%, falling_fast: <-30%",
-    "missing_metric": "欠損指標の重みは他の指標に按分する（再正規化）"
+    "weights_sum": "Configured base weights sum to 1.0 before metric-specific scaling.",
+    "google_trends_interest": "Google Trends is a relative index, so it starts lighter than search_volume and is dampened again by metric_rules.",
+    "search_suggest_count": "Google Suggest is a lighter support source than Google Trends, so it uses a small base weight and additional dampening.",
+    "metric_rules": "Phase 3b/4 adds minimum support, smoothing, contribution scaling, and normalized-value caps for unstable search-derived metrics.",
+    "change_rules": "If previous-week support exists only through lightweight search-derived metrics, change_rate is suppressed.",
+    "missing_metric": "When a metric is missing or ruled ineligible, scoring renormalizes across the remaining eligible metrics."
   }
 }

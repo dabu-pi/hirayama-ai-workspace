@@ -113,6 +113,22 @@
     "status": "active"
   },
   {
+    "canonical_name": "hack_squat",
+    "name_ja": "ハックスクワット",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "プレートロード機と一体型で用語がぶれやすい。英日 alias で吸収する"
+  },
+  {
+    "canonical_name": "belt_squat",
+    "name_ja": "ベルトスクワット",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "rack / sled と混同しやすいため独立カテゴリで扱う"
+  },
+  {
     "canonical_name": "leg_extension",
     "name_ja": "レッグエクステンション",
     "parent": "strength",

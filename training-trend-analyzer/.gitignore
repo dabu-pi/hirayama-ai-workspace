@@ -3,6 +3,7 @@ data/db/
 
 # 出力ファイル
 data/output/
+data/collected/
 
 # レビューCSV（実データ混入防止）
 data/review/

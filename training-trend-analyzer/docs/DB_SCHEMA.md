@@ -1,308 +1,119 @@
-# DB_SCHEMA.md — データベーステーブル設計
+# DB_SCHEMA.md
 
 最終更新: 2026-04-08
-DB: SQLite（MVP）→ PostgreSQL（公開版）
 
----
+## 主なテーブル
 
-## テーブル一覧
-
-| テーブル名 | 役割 |
+| テーブル | 役割 |
 |---|---|
-| brands | ブランドマスタ |
-| categories | カテゴリマスタ |
-| models | 機種マスタ |
-| aliases | ブランド・機種の別名・表記ゆれ辞書 |
-| sources | データソースマスタ |
-| source_metrics | ソース別・週次の生指標値 |
-| trend_scores | 合成トレンドスコア・変化率・ランクラベル |
-| unclassified_queue | 未正規化の生テキストキュー |
-| batch_logs | バッチ実行ログ |
+| `brands` | canonical brand master |
+| `categories` | canonical category master |
+| `models` | canonical model master |
+| `aliases` | normalizer が参照する alias |
+| `sources` | source master |
+| `source_metrics` | source ごとの週次 metric |
+| `trend_scores` | 週次ランキング結果 |
+| `unclassified_queue` | unresolved / review キュー |
+| `import_batches` | import batch 追跡 |
 
----
+## `source_metrics`
 
-## brands（ブランドマスタ）
+collector や CSV import の最終投入先です。Google Trends と Google Suggest の import-ready CSV はここへ流れます。
 
-```sql
-CREATE TABLE brands (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    name         TEXT    NOT NULL UNIQUE,       -- 正規ブランド名（英語表記を基本とする）
-    name_ja      TEXT,                           -- 日本語表記
-    country      TEXT,                           -- 本社所在国（ISO 3166-1 alpha-2）
-    market_type  TEXT    NOT NULL                -- 'commercial'（業務用）/ 'consumer'（家庭用）/ 'both'
-                 DEFAULT 'commercial',
-    website_url  TEXT,
-    notes        TEXT,
-    is_active    INTEGER NOT NULL DEFAULT 1,     -- 0: 廃業・非アクティブ
-    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
-);
-```
+主なカラム:
 
-**補足:**
-- `market_type` で業務用/家庭用を分類。`both` は両方展開しているブランド
-- `is_active = 0` は廃業ブランド（データ履歴は保持）
+| カラム | 説明 |
+|---|---|
+| `source_id` | `sources.name` から解決した source |
+| `model_id` | canonical model |
+| `brand_id` | canonical brand |
+| `week_start` | 集計週の開始日 |
+| `metric_type` | metric 名 |
+| `value` | 集計済み metric 値 |
+| `sample_size` | その値に使った query 数や観測件数 |
+| `raw_data` | import 時の metadata JSON |
+| `raw_input` | import-ready CSV 行の JSON |
+| `import_batch_id` | import batch 追跡 |
+| `review_status` | `ok` / `review` / `skipped` |
 
----
+## 現在の主要 `metric_type`
 
-## categories（カテゴリマスタ）
+- `search_volume`
+- `google_trends_interest`
+- `search_suggest_count`
+- `search_suggest_presence`
+- `mention_count`
+- `review_count`
+- `avg_rating`
+- `media_count`
+- `inquiry_count`
+- `price_index`
 
-```sql
-CREATE TABLE categories (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    name         TEXT    NOT NULL UNIQUE,        -- 例: 'treadmill', 'cable_machine', 'smith_machine'
-    name_ja      TEXT,                           -- 例: 'トレッドミル', 'ケーブルマシン'
-    parent_id    INTEGER REFERENCES categories(id), -- 親カテゴリ（階層構造対応）
-    use_type     TEXT    NOT NULL                -- 'commercial' / 'consumer' / 'both'
-                 DEFAULT 'both',
-    notes        TEXT,
-    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
-);
-```
+## Google Trends metric
 
-**カテゴリ例（初期データ）:**
-```
-有酸素系
-  ├── treadmill（トレッドミル）
-  ├── bike（バイク・エルゴメーター）
-  ├── rowing（ローイングマシン）
-  └── elliptical（クロストレーナー）
-筋力系
-  ├── smith_machine（スミスマシン）
-  ├── cable_machine（ケーブルマシン）
-  ├── leg_press（レッグプレス）
-  ├── chest_press（チェストプレス）
-  └── functional_trainer（ファンクショナルトレーナー）
-```
+### `google_trends_interest`
 
----
+- Google Trends の相対指数
+- import-ready では model seed のみを `source_metrics` へ流す
+- compare / category seed は raw artifact 側に保持する
+- `sample_size` には集計に使った query term 数を入れる
+- `raw_data` / `raw_input` には `seed_id`, `query_group`, `timeframe`, `geo`, `collection_mode` などを残す
 
-## models（機種マスタ）
+## Google Suggest metric
 
-```sql
-CREATE TABLE models (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    brand_id         INTEGER NOT NULL REFERENCES brands(id),
-    category_id      INTEGER NOT NULL REFERENCES categories(id),
-    name             TEXT    NOT NULL,           -- 正規機種名
-    model_number     TEXT,                       -- 型番（例: T100, E-CF300）
-    use_type         TEXT    NOT NULL            -- 'commercial' / 'consumer'
-                     DEFAULT 'commercial',
-    release_year     INTEGER,                    -- 発売年
-    discontinued     INTEGER NOT NULL DEFAULT 0, -- 1: 廃番
-    parent_model_id  INTEGER REFERENCES models(id), -- バリエーション親機種
-    notes            TEXT,
-    is_active        INTEGER NOT NULL DEFAULT 1,
-    created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at       TEXT    NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (brand_id, name)
-);
-```
+### `search_suggest_count`
 
-**補足:**
-- `parent_model_id` でバリエーション（色違い・仕様違い）を親機種に紐付け
-- `discontinued = 1` でも `source_metrics` の履歴は保持
+- query ごとの有効 suggestion 件数の平均
+- ranking に入れる対象
+- 初版では model seed のみ import-ready へ流す
+- `sample_size` には試行した query term 数を入れる
+- `raw_data` / `raw_input` に `suggestion_count_by_query`, `query_terms`, `seed_id`, `collection_mode` を保持する
 
----
+### `search_suggest_presence`
 
-## aliases（別名・表記ゆれ辞書）
+- suggestion が 1 件以上あったかの補助フラグ
+- raw / import 保持用
+- 初版では `score_weights.json` に weight を持たせず、ranking には使わない
 
-```sql
-CREATE TABLE aliases (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    alias_text     TEXT    NOT NULL UNIQUE,      -- 別名テキスト（正規化前処理済み）
-    entity_type    TEXT    NOT NULL,             -- 'brand' または 'model'
-    brand_id       INTEGER REFERENCES brands(id),
-    model_id       INTEGER REFERENCES models(id),
-    source         TEXT,                         -- どこで見つけた別名か（例: 'amazon', 'instagram'）
-    confidence     REAL    NOT NULL DEFAULT 1.0, -- マッチング信頼度 0〜1
-    created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
-);
-```
+## import-ready CSV の補助列
 
-**aliases の例:**
-```
-alias_text         entity_type  brand_id  model_id
-"テクノジム"        brand        1         NULL
-"TECHNOGYM"        brand        1         NULL      ← 正規名称も登録
-"T100"             model        NULL      5
-"Treadmill T100"   model        NULL      5
-"ライフフィットネス" brand        3         NULL
-```
+collector から import-ready CSV へ残す代表列:
 
----
+- `query_term`
+- `seed_id`
+- `seed_label`
+- `seed_type`
+- `query_group`
+- `timeframe`
+- `geo`
+- `language`
+- `collection_mode`
+- `canonical_target`
+- `sample_size`
+- `metadata_json`
+- `week_start`
+- `suggestion_text`
+- `suggestion_rank`
 
-## sources（データソースマスタ）
+## raw / observation / import の分離
 
-```sql
-CREATE TABLE sources (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    name         TEXT    NOT NULL UNIQUE,        -- 例: 'google_trends', 'amazon_jp', 'instagram'
-    source_type  TEXT    NOT NULL,               -- 'search', 'ec', 'sns', 'media', 'internal'
-    region       TEXT    NOT NULL DEFAULT 'jp',  -- 'jp' / 'global'
-    is_active    INTEGER NOT NULL DEFAULT 1,
-    notes        TEXT,
-    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
-);
-```
+### raw JSON
 
----
+- live / mock のレスポンスや status を保持する
+- 失敗時も artifact を残す
 
-## source_metrics（ソース別・週次の生指標値）
+### observation CSV
 
-```sql
-CREATE TABLE source_metrics (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    source_id        INTEGER NOT NULL REFERENCES sources(id),
-    model_id         INTEGER REFERENCES models(id),
-    brand_id         INTEGER REFERENCES brands(id),  -- ブランド単位のメトリクス用
-    week_start       TEXT    NOT NULL,               -- ISO 8601 週初（月曜日）例: '2026-03-30'
-    metric_type      TEXT    NOT NULL,               -- 'search_volume', 'mention_count', etc.
-    value            REAL,                           -- 指標値（NULL = データ欠損）
-    value_prev       REAL,                           -- 前週値（計算用キャッシュ）
-    sample_size      INTEGER,                        -- サンプル数（信頼性の参考）
-    is_estimated     INTEGER NOT NULL DEFAULT 0,     -- 1: 推定値・補完値
-    raw_data         TEXT,                           -- 生データJSON（デバッグ・再計算用）
-    collected_at     TEXT    NOT NULL DEFAULT (datetime('now')),
-    -- Phase 2 追加: CSV インポート追跡
-    import_batch_id  INTEGER REFERENCES import_batches(id), -- インポートバッチ
-    raw_input        TEXT,                           -- インポート元の生 CSV 行（JSON）
-    imported_at      TEXT,                           -- インポート日時
-    review_status    TEXT    NOT NULL DEFAULT 'ok',  -- 'ok' / 'review' / 'skipped'
-    UNIQUE (source_id, model_id, brand_id, week_start, metric_type)
-);
-```
+- query 単位、または suggestion 単位の観測を残す
+- Google Suggest では suggestion text と rank を保持する
 
-**metric_type の候補:**
-```
-search_volume     Google Trends の相対検索ボリューム（0〜100）
-mention_count     SNS 言及数
-review_count      EC レビュー件数
-avg_rating        EC 平均評価（1〜5）
-media_count       メディア掲載回数
-inquiry_count     自社問い合わせ数（社内用）
-price_index       価格指数
-```
+### import-ready CSV
 
----
+- model seed / week / metric に集約した投入用データ
+- duplicate 回避や再投入のために collector とは分離して保存する
 
-## trend_scores（合成トレンドスコア）
+## schema 上の注意
 
-```sql
-CREATE TABLE trend_scores (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    model_id        INTEGER NOT NULL REFERENCES models(id),
-    week_start      TEXT    NOT NULL,            -- ISO 8601 週初
-    score           REAL,                        -- 合成トレンドスコア 0〜100
-    score_prev      REAL,                        -- 前週スコア
-    change_rate     REAL,                        -- 変化率（%）
-    rank_label      TEXT,                        -- 'rising_fast' / 'rising' / 'stable' / 'falling' / 'falling_fast'
-    rank_in_all     INTEGER,                     -- 全体ランキング順位
-    rank_in_cat     INTEGER,                     -- カテゴリ内ランキング順位
-    score_version   TEXT    NOT NULL DEFAULT '1.0', -- スコア計算バージョン
-    weights_snapshot TEXT,                       -- 計算時の重みJSONスナップショット
-    missing_sources TEXT,                        -- 欠損ソースのJSON配列
-    calculated_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (model_id, week_start, score_version)
-);
-```
-
----
-
-## unclassified_queue（未正規化キュー）
-
-```sql
-CREATE TABLE unclassified_queue (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    raw_text         TEXT    NOT NULL,               -- 正規化できなかった生テキスト
-    source_id        INTEGER REFERENCES sources(id),
-    context          TEXT,                           -- どの文脈で見つかったか（URL等）
-    status           TEXT    NOT NULL DEFAULT 'pending', -- 'pending' / 'resolved' / 'ignored'
-    resolved_to      TEXT,                           -- 解決後の紐付け先（brand_id / model_id）
-    notes            TEXT,
-    created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
-    resolved_at      TEXT,
-    -- Phase 2 追加: CSV インポート追跡
-    import_batch_id  INTEGER REFERENCES import_batches(id),
-    raw_brand        TEXT,                           -- CSV の raw_brand 列
-    raw_category     TEXT,                           -- CSV の raw_category 列
-    raw_name         TEXT,                           -- CSV の raw_name 列
-    certainty_label  TEXT,                           -- 信頼度ラベル（high/medium/low/unknown）
-    unresolved_reason TEXT,                          -- 未解決の理由
-    metric_type      TEXT,                           -- 指標種別
-    metric_value     REAL,                           -- 指標値
-    week_start       TEXT,                           -- 週開始日
-    file_row_num     INTEGER                         -- CSV の行番号
-);
-```
-
----
-
-## import_batches（インポートバッチ管理）
-
-Phase 2 で追加。`migrate_add_import_meta.py` で作成。
-
-```sql
-CREATE TABLE import_batches (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    batch_id      TEXT    NOT NULL UNIQUE,        -- 例: "20260408_153615_sample_metrics"
-    file_name     TEXT    NOT NULL,               -- 取り込んだCSVファイル名
-    imported_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-    rows_total    INTEGER NOT NULL DEFAULT 0,
-    rows_ok       INTEGER NOT NULL DEFAULT 0,
-    rows_review   INTEGER NOT NULL DEFAULT 0,
-    rows_skipped  INTEGER NOT NULL DEFAULT 0,
-    rows_error    INTEGER NOT NULL DEFAULT 0,
-    is_dry_run    INTEGER NOT NULL DEFAULT 0,     -- 1: dry-run 実行
-    notes         TEXT
-);
-```
-
----
-
-## batch_logs（バッチ実行ログ）
-
-```sql
-CREATE TABLE batch_logs (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    batch_type      TEXT    NOT NULL,            -- 'collect' / 'normalize' / 'score' / 'full'
-    week_start      TEXT,
-    status          TEXT    NOT NULL,            -- 'success' / 'partial' / 'failed'
-    records_input   INTEGER,
-    records_output  INTEGER,
-    errors_count    INTEGER NOT NULL DEFAULT 0,
-    error_detail    TEXT,                        -- エラーサマリJSON
-    started_at      TEXT    NOT NULL,
-    finished_at     TEXT
-);
-```
-
----
-
-## インデックス（パフォーマンス最適化）
-
-```sql
--- 週次ランキング取得
-CREATE INDEX idx_trend_scores_week ON trend_scores (week_start, rank_in_all);
-CREATE INDEX idx_trend_scores_model_week ON trend_scores (model_id, week_start);
-
--- ソース別・機種別の指標検索
-CREATE INDEX idx_source_metrics_model_week ON source_metrics (model_id, week_start);
-CREATE INDEX idx_source_metrics_source_week ON source_metrics (source_id, week_start);
-
--- 別名検索
-CREATE INDEX idx_aliases_text ON aliases (alias_text);
-```
-
----
-
-## ERD（概念図）
-
-```
-brands ──┐
-         ├── models ──┬── source_metrics ──── sources
-categories─┘           │       └──────────── batch_logs
-                        └── trend_scores
-                        └── aliases (brand または model に紐付く)
-                        └── unclassified_queue
-```
+- 検索系 metric は補助指標であり、`value` を絶対需要と見なさない
+- `source_name=google_trends` や `source_name=google_suggest` で絞るより、必要に応じて `metric_type` でも絞って検証する
+- `sample_size` と `raw_data` を見れば、観測不足や source 固有の癖を後から追いやすい
