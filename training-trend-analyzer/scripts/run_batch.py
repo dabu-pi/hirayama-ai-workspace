@@ -49,6 +49,11 @@ COMPARE_SOURCE_SET_DEFS = [
     ("all_three", "GT + GS + YT", set()),
 ]
 
+COMPARE_DELTA_LABELS = {
+    "delta_gt_to_gs": "GS",
+    "delta_gs_to_all": "YT",
+}
+
 
 def _parse_raw_data(raw_data: str | None) -> tuple[dict, dict]:
     if not raw_data:
@@ -215,6 +220,10 @@ def build_comparison_rows(
         gt_only_score = gt_only.get("score") if gt_only else None
         gt_plus_gs_score = gt_plus_gs.get("score") if gt_plus_gs else None
         all_three_score = all_three.get("score") if all_three else None
+        delta_gt_to_gs = _safe_delta(gt_only_score, gt_plus_gs_score)
+        delta_gs_to_all = _safe_delta(gt_plus_gs_score, all_three_score)
+        gt_to_gs_summary = _build_delta_summary(COMPARE_DELTA_LABELS["delta_gt_to_gs"], delta_gt_to_gs)
+        gs_to_all_summary = _build_delta_summary(COMPARE_DELTA_LABELS["delta_gs_to_all"], delta_gs_to_all)
 
         rows.append(
             {
@@ -224,8 +233,11 @@ def build_comparison_rows(
                 "gt_only_score": gt_only_score,
                 "gt_plus_gs_score": gt_plus_gs_score,
                 "all_three_score": all_three_score,
-                "delta_gt_to_gs": _safe_delta(gt_only_score, gt_plus_gs_score),
-                "delta_gs_to_all": _safe_delta(gt_plus_gs_score, all_three_score),
+                "delta_gt_to_gs": delta_gt_to_gs,
+                "delta_gs_to_all": delta_gs_to_all,
+                "gt_to_gs_summary": gt_to_gs_summary,
+                "gs_to_all_summary": gs_to_all_summary,
+                "delta_summary": _combine_delta_summaries(gt_to_gs_summary, gs_to_all_summary),
                 "gt_only_rank": gt_only.get("rank") if gt_only else None,
                 "gt_plus_gs_rank": gt_plus_gs.get("rank") if gt_plus_gs else None,
                 "all_three_rank": all_three.get("rank") if all_three else None,
@@ -257,6 +269,7 @@ def print_comparison_summary(rows: list[dict], week_start: str, category_filter:
                 _fmt_score(row["all_three_score"]),
                 _fmt_delta(row["delta_gt_to_gs"]),
                 _fmt_delta(row["delta_gs_to_all"]),
+                row["delta_summary"],
                 row["rank_path"],
             ]
         )
@@ -271,6 +284,7 @@ def print_comparison_summary(rows: list[dict], week_start: str, category_filter:
         "GT + GS + YT",
         "d(GT->GS)",
         "d(GS->3)",
+        "Why",
         "Rank path",
     ]
 
@@ -299,6 +313,9 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                 "all_three_score",
                 "delta_gt_to_gs",
                 "delta_gs_to_all",
+                "gt_to_gs_summary",
+                "gs_to_all_summary",
+                "delta_summary",
                 "gt_only_rank",
                 "gt_plus_gs_rank",
                 "all_three_rank",
@@ -316,6 +333,9 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                     row["all_three_score"],
                     row["delta_gt_to_gs"],
                     row["delta_gs_to_all"],
+                    row["gt_to_gs_summary"],
+                    row["gs_to_all_summary"],
+                    row["delta_summary"],
                     row["gt_only_rank"],
                     row["gt_plus_gs_rank"],
                     row["all_three_rank"],
@@ -339,13 +359,24 @@ def _fmt_delta(value: float | None) -> str:
     return f"{value:+.1f}" if value is not None else "N/A"
 
 
+def _build_delta_summary(label: str, value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{label}:{_fmt_delta(value)}"
+
+
+def _combine_delta_summaries(*parts: str) -> str:
+    visible = [part for part in parts if part and part != "N/A"]
+    return " / ".join(visible) if visible else "N/A"
+
+
 def _rank_path(*entries: dict | None) -> str:
     parts = []
     for entry in entries:
         if not entry:
             parts.append("N/A")
             continue
-        parts.append(f"{entry['rank']}{LABEL_ICONS.get(entry['rank_label'], '')}")
+        parts.append(str(entry["rank"]))
     return " -> ".join(parts)
 
 

@@ -70,7 +70,11 @@ def test_comparison_rows_include_deltas_and_rank_path():
     assert run_row["all_three_score"] is not None
     assert run_row["delta_gt_to_gs"] is not None
     assert run_row["delta_gs_to_all"] is not None
+    assert run_row["gt_to_gs_summary"].startswith("GS:")
+    assert run_row["gs_to_all_summary"].startswith("YT:")
+    assert " / " in run_row["delta_summary"]
     assert "->" in run_row["rank_path"]
+    assert "?" not in run_row["rank_path"]
 
 
 def test_comparison_rows_allow_category_filter():
