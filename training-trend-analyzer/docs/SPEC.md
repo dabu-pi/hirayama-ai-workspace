@@ -59,6 +59,7 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 | F-04-5 | commercial / discontinued フィルタと整合する | 検証済み |
 | F-04-6 | metric を含める / 除く比較ができる | 完了 |
 | F-04-7 | source / metric ごとの寄与を後から追える | 完了 |
+| F-04-8 | `GT only / GT + GS / GT + GS + YT` の 3 パターン比較を 1 コマンドで見られる | 完了 |
 
 ## 非機能要件
 

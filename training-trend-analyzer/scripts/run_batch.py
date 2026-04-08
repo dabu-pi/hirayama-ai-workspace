@@ -34,6 +34,21 @@ try:
 except ImportError:
     HAS_TABULATE = False
 
+LABEL_ICONS = {
+    "rising_fast": "++",
+    "rising": "+",
+    "stable": "=",
+    "falling": "-",
+    "falling_fast": "--",
+    "unknown": "?",
+}
+
+COMPARE_SOURCE_SET_DEFS = [
+    ("gt_only", "GT only", {"search_suggest_count", "youtube_suggest_count"}),
+    ("gt_plus_gs", "GT + GS", {"youtube_suggest_count"}),
+    ("all_three", "GT + GS + YT", set()),
+]
+
 
 def _parse_raw_data(raw_data: str | None) -> tuple[dict, dict]:
     if not raw_data:
@@ -90,14 +105,7 @@ def print_ranking(scores: list, category_filter: str | None = None) -> None:
     show_notes = any(score.eligibility_notes for score in filtered)
     rows = []
     for index, score in enumerate(filtered, 1):
-        label_icon = {
-            "rising_fast": "++",
-            "rising": "+",
-            "stable": "=",
-            "falling": "-",
-            "falling_fast": "--",
-            "unknown": "?",
-        }.get(score.rank_label, "")
+        label_icon = LABEL_ICONS.get(score.rank_label, "")
         change_str = f"{score.change_rate:+.1f}%" if score.change_rate is not None else "N/A"
         row = [
             index,
@@ -147,6 +155,200 @@ def print_metric_details(scores: list, limit: int = 10) -> None:
             )
 
 
+def calculate_scores_for_sets(metrics_by_model: dict, set_defs: list[tuple[str, str, set[str]]]) -> dict[str, dict]:
+    result = {}
+    for key, label, excluded_metrics in set_defs:
+        calculator = ScoreCalculator(excluded_metrics=excluded_metrics)
+        scores = calculator.calculate(metrics_by_model)
+        indexed_scores = {
+            f"{score.brand_name}::{score.model_name}::{score.category_name}": {
+                "brand": score.brand_name,
+                "model": score.model_name,
+                "category": score.category_name,
+                "score": score.score,
+                "score_prev": score.score_prev,
+                "change_rate": score.change_rate,
+                "rank_label": score.rank_label,
+                "rank": rank,
+                "eligibility_notes": list(score.eligibility_notes),
+            }
+            for rank, score in enumerate(scores, 1)
+        }
+        result[key] = {"label": label, "scores": scores, "indexed": indexed_scores}
+    return result
+
+
+def build_comparison_rows(
+    score_sets: dict[str, dict],
+    category_filter: str | None = None,
+) -> list[dict]:
+    ordered_keys = [key for key, _, _ in COMPARE_SOURCE_SET_DEFS]
+    all_models = set()
+    for key in ordered_keys:
+        all_models.update(score_sets[key]["indexed"].keys())
+
+    rows = []
+    for model_key in sorted(
+        all_models,
+        key=lambda item: (
+            -(score_sets["all_three"]["indexed"].get(item, {}).get("score") or -1),
+            item,
+        ),
+    ):
+        final_entry = score_sets["all_three"]["indexed"].get(model_key)
+        sample_entry = final_entry
+        if sample_entry is None:
+            for key in ordered_keys:
+                sample_entry = score_sets[key]["indexed"].get(model_key)
+                if sample_entry:
+                    break
+        if sample_entry is None:
+            continue
+
+        if category_filter and sample_entry["category"] != category_filter:
+            continue
+
+        gt_only = score_sets["gt_only"]["indexed"].get(model_key)
+        gt_plus_gs = score_sets["gt_plus_gs"]["indexed"].get(model_key)
+        all_three = score_sets["all_three"]["indexed"].get(model_key)
+
+        gt_only_score = gt_only.get("score") if gt_only else None
+        gt_plus_gs_score = gt_plus_gs.get("score") if gt_plus_gs else None
+        all_three_score = all_three.get("score") if all_three else None
+
+        rows.append(
+            {
+                "brand": sample_entry["brand"],
+                "model": sample_entry["model"],
+                "category": sample_entry["category"],
+                "gt_only_score": gt_only_score,
+                "gt_plus_gs_score": gt_plus_gs_score,
+                "all_three_score": all_three_score,
+                "delta_gt_to_gs": _safe_delta(gt_only_score, gt_plus_gs_score),
+                "delta_gs_to_all": _safe_delta(gt_plus_gs_score, all_three_score),
+                "gt_only_rank": gt_only.get("rank") if gt_only else None,
+                "gt_plus_gs_rank": gt_plus_gs.get("rank") if gt_plus_gs else None,
+                "all_three_rank": all_three.get("rank") if all_three else None,
+                "rank_path": _rank_path(gt_only, gt_plus_gs, all_three),
+            }
+        )
+    return rows
+
+
+def print_comparison_summary(rows: list[dict], week_start: str, category_filter: str | None = None) -> None:
+    print(f"\n=== Source Set Comparison {week_start} ===")
+    if category_filter:
+        print(f"Category: {category_filter}")
+
+    if not rows:
+        print("No data")
+        return
+
+    table_rows = []
+    for index, row in enumerate(rows, 1):
+        table_rows.append(
+            [
+                index,
+                row["brand"],
+                row["model"],
+                row["category"],
+                _fmt_score(row["gt_only_score"]),
+                _fmt_score(row["gt_plus_gs_score"]),
+                _fmt_score(row["all_three_score"]),
+                _fmt_delta(row["delta_gt_to_gs"]),
+                _fmt_delta(row["delta_gs_to_all"]),
+                row["rank_path"],
+            ]
+        )
+
+    headers = [
+        "#",
+        "Brand",
+        "Model",
+        "Category",
+        "GT only",
+        "GT + GS",
+        "GT + GS + YT",
+        "d(GT->GS)",
+        "d(GS->3)",
+        "Rank path",
+    ]
+
+    print()
+    if HAS_TABULATE:
+        print(tabulate(table_rows, headers=headers, tablefmt="simple"))
+    else:
+        print("\t".join(headers))
+        for row in table_rows:
+            print("\t".join(str(cell) for cell in row))
+
+    print(f"\nTotal {len(rows)} models")
+
+
+def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "brand",
+                "model",
+                "category",
+                "gt_only_score",
+                "gt_plus_gs_score",
+                "all_three_score",
+                "delta_gt_to_gs",
+                "delta_gs_to_all",
+                "gt_only_rank",
+                "gt_plus_gs_rank",
+                "all_three_rank",
+                "rank_path",
+            ]
+        )
+        for row in rows:
+            writer.writerow(
+                [
+                    row["brand"],
+                    row["model"],
+                    row["category"],
+                    row["gt_only_score"],
+                    row["gt_plus_gs_score"],
+                    row["all_three_score"],
+                    row["delta_gt_to_gs"],
+                    row["delta_gs_to_all"],
+                    row["gt_only_rank"],
+                    row["gt_plus_gs_rank"],
+                    row["all_three_rank"],
+                    row["rank_path"],
+                ]
+            )
+    print(f"\n[CSV] {output_path.resolve()}")
+
+
+def _safe_delta(left: float | None, right: float | None) -> float | None:
+    if left is None or right is None:
+        return None
+    return round(right - left, 2)
+
+
+def _fmt_score(value: float | None) -> str:
+    return f"{value:.1f}" if value is not None else "N/A"
+
+
+def _fmt_delta(value: float | None) -> str:
+    return f"{value:+.1f}" if value is not None else "N/A"
+
+
+def _rank_path(*entries: dict | None) -> str:
+    parts = []
+    for entry in entries:
+        if not entry:
+            parts.append("N/A")
+            continue
+        parts.append(f"{entry['rank']}{LABEL_ICONS.get(entry['rank_label'], '')}")
+    return " -> ".join(parts)
+
+
 def export_csv(scores: list, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", newline="", encoding="utf-8-sig") as handle:
@@ -194,6 +396,7 @@ def main() -> None:
     parser.add_argument("--only-commercial", action="store_true")
     parser.add_argument("--exclude-metric", action="append", default=[])
     parser.add_argument("--show-metric-details", action="store_true")
+    parser.add_argument("--compare-source-sets", action="store_true")
     args = parser.parse_args()
 
     print(f"[START] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} week={args.week}")
@@ -219,20 +422,29 @@ def main() -> None:
     metrics_by_model = build_metrics_by_model(result.metrics)
     print(f"[NORMALIZE] {len(metrics_by_model)} models")
 
-    calculator = ScoreCalculator(excluded_metrics=set(args.exclude_metric))
-    scores = calculator.calculate(metrics_by_model)
-    print(f"[SCORE] {len(scores)} models scored")
-    if args.exclude_metric:
-        print(f"[SCORE] excluded_metrics={','.join(args.exclude_metric)}")
+    if args.compare_source_sets:
+        score_sets = calculate_scores_for_sets(metrics_by_model, COMPARE_SOURCE_SET_DEFS)
+        comparison_rows = build_comparison_rows(score_sets, category_filter=args.category)
+        print("[COMPARE] source_sets=GT only / GT + GS / GT + GS + YT")
+        print_comparison_summary(comparison_rows, args.week, category_filter=args.category)
+        if args.output_csv:
+            timestamp = args.week.replace("-", "")
+            export_comparison_csv(comparison_rows, Path(f"data/output/ranking_compare_{timestamp}.csv"))
+    else:
+        calculator = ScoreCalculator(excluded_metrics=set(args.exclude_metric))
+        scores = calculator.calculate(metrics_by_model)
+        print(f"[SCORE] {len(scores)} models scored")
+        if args.exclude_metric:
+            print(f"[SCORE] excluded_metrics={','.join(args.exclude_metric)}")
 
-    print_ranking(scores, category_filter=args.category)
+        print_ranking(scores, category_filter=args.category)
 
-    if args.show_metric_details:
-        print_metric_details(scores)
+        if args.show_metric_details:
+            print_metric_details(scores)
 
-    if args.output_csv:
-        timestamp = args.week.replace("-", "")
-        export_csv(scores, Path(f"data/output/ranking_{timestamp}.csv"))
+        if args.output_csv:
+            timestamp = args.week.replace("-", "")
+            export_csv(scores, Path(f"data/output/ranking_{timestamp}.csv"))
 
     print(f"\n[END] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
