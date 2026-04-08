@@ -16,6 +16,7 @@ from scripts.run_batch import (
     COMPARE_SOURCE_SET_DEFS,
     _calculate_impact_score,
     _build_delta_summary,
+    _compact_review_hint,
     _combine_delta_summaries,
     _derive_driver_direction,
     _derive_driver_source,
@@ -24,7 +25,9 @@ from scripts.run_batch import (
     _format_driver_mix,
     _has_rank_change,
     _is_significant_row,
+    _summarize_review_hints,
     annotate_significance,
+    build_review_summary_lines,
     build_comparison_rows,
     calculate_scores_for_sets,
     filter_significant_rows,
@@ -216,3 +219,35 @@ def test_driver_mix_summary_counts_driver_sources():
         {"driver_source": "BOTH"},
     ]
     assert _format_driver_mix(rows) == "GS=2, YT=1, BOTH=1, RANK=0"
+
+
+def test_compact_review_hint_drops_prefix():
+    assert _compact_review_hint("review GS boost") == "GS boost"
+    assert _compact_review_hint(None) == "none"
+
+
+def test_summarize_review_hints_counts_top_labels():
+    rows = [
+        {"review_hint": "review GS downweight"},
+        {"review_hint": "review GS downweight"},
+        {"review_hint": "review GS boost"},
+    ]
+    assert _summarize_review_hints(rows) == "GS downweight x2, GS boost x1"
+
+
+def test_build_review_summary_lines_handles_single_row():
+    rows = [
+        {
+            "brand": "Concept2",
+            "model": "SkiErg",
+            "impact_score": 12.73,
+            "has_rank_change": False,
+            "review_hint": "review GS downweight",
+        }
+    ]
+    lines = build_review_summary_lines(rows, total_rows=4)
+    assert lines == [
+        "[COMPARE] significant rows: 1 / 4 | rank shifts: 0",
+        "[COMPARE] top drivers: GS downweight x1",
+        "[COMPARE] largest impact: Concept2 SkiErg (GS downweight, 12.7)",
+    ]

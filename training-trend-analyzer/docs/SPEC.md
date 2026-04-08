@@ -64,6 +64,7 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 | F-04-10 | `--compare-threshold` と `--compare-only-significant` で、有意差分または rank change の行だけを compare 表 / compare CSV から拾える | 完了 |
 | F-04-11 | significant-only compare に `impact_score` ベースの priority を付け、`rank change` 優先、その後 `impact_score` 順で tuning 対象を前に出す | 完了 |
 | F-04-12 | significant-only compare に `driver_source` / `driver_direction` / `review_hint` を付け、GS / YT / mixed / rank shift の review 補助を追加する | 完了 |
+| F-04-13 | significant-only compare に `review summary` を追加し、`top drivers` / `largest impact` / `rank shifts` を 1〜3 行で把握できるようにする | 完了 |
 
 ## 非機能要件
 

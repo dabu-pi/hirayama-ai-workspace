@@ -280,18 +280,8 @@ def sort_significant_rows(rows: list[dict]) -> list[dict]:
 
 
 def print_significant_summary(display_rows: list[dict], total_rows: int) -> None:
-    print(f"[COMPARE] significant rows: {len(display_rows)} / {total_rows}")
-    if not display_rows:
-        return
-    top_row = display_rows[0]
-    top_label = f"{top_row['brand']} {top_row['model']}".strip()
-    rank_change = "yes" if top_row.get("has_rank_change") else "no"
-    print(
-        f"[COMPARE] top priority: {top_label} "
-        f"impact={_fmt_impact(top_row.get('impact_score'))} "
-        f"rank_change={rank_change}"
-    )
-    print(f"[COMPARE] driver mix: {_format_driver_mix(display_rows)}")
+    for line in build_review_summary_lines(display_rows, total_rows=total_rows):
+        print(line)
 
 
 def print_comparison_summary(
@@ -552,6 +542,45 @@ def _format_driver_mix(rows: list[dict]) -> str:
         if driver_source in counts:
             counts[driver_source] += 1
     return ", ".join(f"{key}={value}" for key, value in counts.items())
+
+
+def _compact_review_hint(review_hint: str | None) -> str:
+    if not review_hint:
+        return "none"
+    return review_hint.replace("review ", "", 1)
+
+
+def _summarize_review_hints(rows: list[dict], max_items: int = 2) -> str:
+    counts = {}
+    order = {}
+    for index, row in enumerate(rows):
+        label = _compact_review_hint(row.get("review_hint"))
+        counts[label] = counts.get(label, 0) + 1
+        order.setdefault(label, index)
+
+    if not counts:
+        return "none"
+
+    ranked = sorted(counts.items(), key=lambda item: (-item[1], order[item[0]]))
+    return ", ".join(f"{label} x{count}" for label, count in ranked[:max_items])
+
+
+def build_review_summary_lines(rows: list[dict], total_rows: int) -> list[str]:
+    rank_shift_count = sum(1 for row in rows if row.get("has_rank_change"))
+    lines = [f"[COMPARE] significant rows: {len(rows)} / {total_rows} | rank shifts: {rank_shift_count}"]
+    if not rows:
+        lines.append("[COMPARE] top drivers: none")
+        return lines
+
+    lines.append(f"[COMPARE] top drivers: {_summarize_review_hints(rows)}")
+    largest_impact_row = max(rows, key=lambda row: row.get("impact_score") or 0.0)
+    largest_label = f"{largest_impact_row['brand']} {largest_impact_row['model']}".strip()
+    lines.append(
+        f"[COMPARE] largest impact: {largest_label} "
+        f"({_compact_review_hint(largest_impact_row.get('review_hint'))}, "
+        f"{_fmt_impact(largest_impact_row.get('impact_score'))})"
+    )
+    return lines
 
 
 def export_csv(scores: list, output_path: Path) -> None:

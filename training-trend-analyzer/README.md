@@ -244,7 +244,8 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 - compare CSV の raw delta 列は downstream 用に数値のまま保持
 - compare CSV には `is_significant`, `has_rank_change`, `impact_score`, `driver_source`, `driver_direction`, `review_hint` の軽い補助列を追加
 - `-` 整形は console compare 表だけに適用
-- significant-only 実行時は summary として `significant rows`, `top priority`, `driver mix` を短く出す
+- significant-only 実行時は review summary として `significant rows`, `top drivers`, `largest impact` を短く出す
+- console summary は人間向けの振り返り要約で、CSV には summary 行を混ぜない
 
 ## 関連ドキュメント
 
