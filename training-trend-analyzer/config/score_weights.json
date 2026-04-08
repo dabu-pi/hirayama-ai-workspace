@@ -1,0 +1,23 @@
+{
+  "_comment": "スコア重み設定。変更したら必ず score_version を上げること",
+  "version": "1.0",
+  "weights": {
+    "search_volume":  0.30,
+    "mention_count":  0.25,
+    "review_count":   0.20,
+    "media_count":    0.15,
+    "inquiry_count":  0.10
+  },
+  "rank_labels": {
+    "rising_fast":  30,
+    "rising":       10,
+    "stable_upper":  0,
+    "falling":     -10,
+    "falling_fast": -30
+  },
+  "_notes": {
+    "weights_sum": "合計は必ず 1.0 になること",
+    "rank_labels": "change_rate(%) の閾値。rising_fast: >30%, rising: >10%, falling: <-10%, falling_fast: <-30%",
+    "missing_metric": "欠損指標の重みは他の指標に按分する（再正規化）"
+  }
+}
