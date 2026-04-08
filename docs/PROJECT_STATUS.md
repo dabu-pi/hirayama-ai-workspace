@@ -1,5 +1,22 @@
 # PROJECT_STATUS.md — 現在地・進捗トラッキング
 
+## 2026-04-08 再開導線更新（training-trend-analyzer 反映）
+
+- `git pull --ff-only` で `feature/auto-dev-phase3-loop` を `f90ce25` まで fast-forward 済み。
+- pull で大きく増えた差分は `training-trend-analyzer/` の新規追加と、`gas-projects/jyu-gas-ver3.1/PROJECT_STATUS.md` など柔整GASの 2026-04-06 更新。
+- ルート `README.md` / `PROJECTS.md` / `ROADMAP.md` に `training-trend-analyzer/` を追記し、上位ドキュメントから新規プロジェクトへ辿れるようにした。
+- `training-trend-analyzer` は 2026-04-08 時点で Google Trends + Google Suggest の collector まで接続済み。README 上は「Phase 4 入口」、実装上の直近作業は「第3ソース追加」と「score detail 改善」。
+- 柔整GAS側は 2026-04-06 更新で、患者画面 C12 日付入力改善、再読み込みボタン、経過/転帰の後修正、申請書出力修正の記録が `PROJECT_STATUS.md` に整理済み。
+
+### 現在地
+
+- 現在地: workspace 全体の再開導線更新と最新 pull 内容の文書反映まで完了。
+- 次アクション: `training-trend-analyzer/PROJECT_STATUS.md` を起点に、第3ソース候補の選定と score detail 改善のどちらを先に進めるか決めて着手する。
+- 保留事項: ルート `PROJECTS.md` / `ROADMAP.md` は handoff 目的の要約反映のみで、各詳細の正本は各プロジェクト配下の `PROJECT_STATUS.md` / `README.md` を優先参照する。
+- テスト状況: 今回は文書整備のみ。コード実行や追加テストは未実施。
+- 重要判断: 上位文書は「入口の地図」、詳細な現在地は各プロジェクト配下の状態ファイルを正本とする。
+
+
 ## 2026-03-30 Google Drive handoff docs 最終整文（進行中）
 - `SETUP.md` の旧 Step 10 と新 Step 10B を統合し、rclone 前提の Step 10 のみへ整理。
 - `docs/GOOGLE_DRIVE_SYNC.md` を最終版へ更新し、`copy` と `sync` の差分、推奨方針、既定 `sync` の理由を明記。

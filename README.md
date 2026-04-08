@@ -27,6 +27,7 @@
 | freee見積自動化 | `freee-automation/` | 開発中 |
 | 患者管理Webアプリ | `patient-management/` | 開発中（プロトタイプ） |
 | 接骨院経営戦略AI | `hirayama-jyusei-strategy/` | ドキュメント整備済み・実装予定 |
+| トレーニング機器トレンド分析 | `training-trend-analyzer/` | 開発中（Phase 4 入口） |
 | 廃棄物日報システム | `waste-report-system/`（未作成） | 企画段階 |
 
 詳細は [PROJECTS.md](./PROJECTS.md) を参照。

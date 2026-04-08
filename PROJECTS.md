@@ -1,7 +1,7 @@
 # PROJECTS.md — プロジェクト設計図
 
 平山克司ワークスペース全プロジェクトの構成・目的・技術方針をまとめた設計図。
-最終更新: 2026-03-24（JASSESS-01 表記ゆれ修正 / 運動器初期評価システムに統一）
+最終更新: 2026-04-08（training-trend-analyzer 追加 / 上位ドキュメント再開導線更新）
 
 ---
 
@@ -11,8 +11,9 @@
 2. [freee見積自動化プロジェクト](#2-freee見積自動化プロジェクト)
 3. [患者管理Webアプリ](#3-患者管理webアプリ)
 4. [hirayama接骨院経営戦略AI](#4-hirayama接骨院戦略ai)
-5. [廃棄物日報システム（企画段階）](#5-廃棄物日報システム企画段階)
-6. [運動器初期評価システム JASSESS-01](#6-運動器初期評価システム-jassess-01)
+5. [トレーニング機器トレンド分析](#5-トレーニング機器トレンド分析)
+6. [廃棄物日報システム（企画段階）](#6-廃棄物日報システム企画段階)
+7. [運動器初期評価システム JASSESS-01](#7-運動器初期評価システム-jassess-01)
 
 ---
 
@@ -204,7 +205,60 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 
 ---
 
-## 5. 廃棄物日報システム（企画段階）
+## 5. トレーニング機器トレンド分析
+
+**ディレクトリ:** `training-trend-analyzer/`
+**ステータス:** 開発中（Phase 4 入口）
+**最終確認日:** 2026-04-08
+
+### 目的
+
+トレーニング機器の brand / model / category ごとのトレンド信号を収集し、
+少数ソースでも安全にランキングへ流せる分析基盤を作る。
+
+### 対象業務
+
+- 手動 CSV と collector から `source_metrics` へ指標を投入
+- brand / model / category の canonical 正規化
+- ranking / score 算出と寄与確認
+- alias review と低信頼候補の保守的な育成
+
+### 技術構成
+
+| 要素 | 内容 |
+|---|---|
+| 言語 | Python |
+| データ基盤 | SQLite |
+| 収集ソース | Google Trends / Google Suggest / 手動CSV |
+| 実行形態 | CLI / バッチ |
+
+### 主要ファイル
+
+| ファイル | 役割 |
+|---|---|
+| `scripts/import_csv.py` | 手動CSVの取り込み |
+| `scripts/run_google_trends.py` | Google Trends 収集 |
+| `scripts/run_google_suggest.py` | Google Suggest 収集 |
+| `scripts/run_batch.py` | DB投入後のランキング生成 |
+| `src/normalizer/engine.py` | canonical 正規化エンジン |
+| `src/scorer/calculator.py` | score / ranking 計算 |
+
+### 現在地
+
+- Phase 0〜2 の基盤整備と CSV 取り込みパイプラインは整備済み
+- Google Trends collector は live / mock / auto で運用可能
+- Google Suggest collector 初版を追加し、`search_suggest_count` を低ウェイト補助指標として接続済み
+- `PROJECT_STATUS.md` では Phase 4 入口として整理されているが、実装内容としては「収集基盤と ranking 接続を拡張中」の段階
+
+### 直近の次アクション
+
+1. Google Suggest と相性の良い第3ソースを 1 本追加する
+2. model seed の見直しと 0 件になりにくい seed 設計を進める
+3. score detail で軽量検索系ソースの寄与を見やすくする
+
+---
+
+## 6. 廃棄物日報システム（企画段階）
 
 **ディレクトリ:** `waste-report-system/`（**未作成**）
 **ステータス:** 企画段階 — 要件定義から着手
@@ -261,7 +315,7 @@ freee見積自動化
 
 ---
 
-## 6. 運動器初期評価システム JASSESS-01
+## 7. 運動器初期評価システム JASSESS-01
 
 **ディレクトリ:** `msk-assessment-platform/`
 **ステータス:** 設計完了・Phase 1 実装待ち
