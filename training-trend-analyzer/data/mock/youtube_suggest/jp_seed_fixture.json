@@ -1,0 +1,95 @@
+{
+  "mode": "mock",
+  "generated_at": "2026-04-08T00:00:00+09:00",
+  "series": [
+    {
+      "seed_id": "technogym_run_model",
+      "queries": [
+        {
+          "query_term": "technogym run",
+          "suggestions": [
+            "technogym run review",
+            "technogym run treadmill",
+            "technogym run demo"
+          ]
+        },
+        {
+          "query_term": "テクノジム run",
+          "suggestions": [
+            "テクノジム run 紹介",
+            "テクノジム run 設定"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "lifefitness_t5_model",
+      "queries": [
+        {
+          "query_term": "life fitness t5",
+          "suggestions": [
+            "life fitness t5 review",
+            "life fitness t5 setup",
+            "life fitness t5 maintenance",
+            "life fitness t5 used"
+          ]
+        },
+        {
+          "query_term": "ライフフィットネス t5",
+          "suggestions": [
+            "ライフフィットネス t5 レビュー",
+            "ライフフィットネス t5 設定"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "precor_trm445_model",
+      "queries": [
+        {
+          "query_term": "precor trm 445",
+          "suggestions": [
+            "precor trm 445 review",
+            "precor trm 445 service"
+          ]
+        },
+        {
+          "query_term": "trm445",
+          "suggestions": [
+            "trm445 review",
+            "trm445 treadmill"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "concept2_skierg_model",
+      "queries": [
+        {
+          "query_term": "concept2 ski erg",
+          "suggestions": [
+            "concept2 skierg review",
+            "concept2 skierg workout",
+            "concept2 skierg setup",
+            "concept2 skierg tips"
+          ]
+        },
+        {
+          "query_term": "c2 ski erg",
+          "suggestions": [
+            "c2 ski erg review",
+            "c2 ski erg workout"
+          ]
+        },
+        {
+          "query_term": "skierg",
+          "suggestions": [
+            "skierg workout",
+            "skierg review",
+            "skierg tutorial"
+          ]
+        }
+      ]
+    }
+  ]
+}

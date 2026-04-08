@@ -1,13 +1,14 @@
 {
   "_comment": "Scoring weights and metric-specific stabilization rules.",
-  "version": "1.2",
+  "version": "1.3",
   "weights": {
     "search_volume": 0.22,
     "google_trends_interest": 0.08,
     "search_suggest_count": 0.03,
-    "mention_count": 0.25,
+    "youtube_suggest_count": 0.02,
+    "mention_count": 0.24,
     "review_count": 0.18,
-    "media_count": 0.15,
+    "media_count": 0.14,
     "inquiry_count": 0.09
   },
   "rank_labels": {
@@ -19,7 +20,13 @@
   },
   "change_rules": {
     "min_prev_metrics": 1,
-    "ignore_if_only_metrics": ["google_trends_interest", "search_suggest_count", "search_suggest_presence"]
+    "ignore_if_only_metrics": [
+      "google_trends_interest",
+      "search_suggest_count",
+      "search_suggest_presence",
+      "youtube_suggest_count",
+      "youtube_suggest_presence"
+    ]
   },
   "metric_rules": {
     "google_trends_interest": {
@@ -36,12 +43,20 @@
       "min_value": 2,
       "contribution_scale": 0.5,
       "norm_cap": 0.5
+    },
+    "youtube_suggest_count": {
+      "min_models": 2,
+      "min_query_terms": 2,
+      "min_value": 2,
+      "contribution_scale": 0.35,
+      "norm_cap": 0.35
     }
   },
   "_notes": {
     "weights_sum": "Configured base weights sum to 1.0 before metric-specific scaling.",
     "google_trends_interest": "Google Trends is a relative index, so it starts lighter than search_volume and is dampened again by metric_rules.",
     "search_suggest_count": "Google Suggest is a lighter support source than Google Trends, so it uses a small base weight and additional dampening.",
+    "youtube_suggest_count": "YouTube Suggest is treated as a third support source with even lower contribution so it does not swing ranking by itself.",
     "metric_rules": "Phase 3b/4 adds minimum support, smoothing, contribution scaling, and normalized-value caps for unstable search-derived metrics.",
     "change_rules": "If previous-week support exists only through lightweight search-derived metrics, change_rate is suppressed.",
     "missing_metric": "When a metric is missing or ruled ineligible, scoring renormalizes across the remaining eligible metrics."

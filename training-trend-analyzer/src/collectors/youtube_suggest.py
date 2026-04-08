@@ -1,10 +1,8 @@
 """
-Google Suggest collector for lightweight autocomplete support signals.
+YouTube Suggest collector for lightweight autocomplete support signals.
 
-This collector reuses the project seed config and stores:
-1. raw per-query suggestion payloads
-2. observation rows per suggestion rank
-3. import-ready aggregated metrics for model seeds only
+This collector mirrors the Google Suggest pipeline while using YouTube-oriented
+autocomplete suggestions as a third, low-weight support source.
 """
 
 from __future__ import annotations
@@ -15,21 +13,28 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from statistics import mean
 from typing import Any
+
 import requests
 
 from .base import BaseCollector, CollectResult, RawMetric
-from .suggest_common import build_source_url, extract_suggestion_texts, is_effective_suggestion, target_fields, to_week_start
+from .suggest_common import (
+    build_source_url,
+    extract_suggestion_texts,
+    is_effective_suggestion,
+    target_fields,
+    to_week_start,
+)
 
 DEFAULT_SEED_CONFIG = Path(__file__).parent.parent.parent / "config" / "trends" / "seed_queries.json"
-DEFAULT_MOCK_FIXTURE = Path(__file__).parent.parent.parent / "data" / "mock" / "google_suggest" / "jp_seed_fixture.json"
-GOOGLE_SUGGEST_COUNT_METRIC = "search_suggest_count"
-GOOGLE_SUGGEST_PRESENCE_METRIC = "search_suggest_presence"
-GOOGLE_SUGGEST_OBSERVATION_METRIC = "search_suggest_rank"
-GOOGLE_SUGGEST_ENDPOINT = "https://suggestqueries.google.com/complete/search"
+DEFAULT_MOCK_FIXTURE = Path(__file__).parent.parent.parent / "data" / "mock" / "youtube_suggest" / "jp_seed_fixture.json"
+YOUTUBE_SUGGEST_COUNT_METRIC = "youtube_suggest_count"
+YOUTUBE_SUGGEST_PRESENCE_METRIC = "youtube_suggest_presence"
+YOUTUBE_SUGGEST_OBSERVATION_METRIC = "youtube_suggest_rank"
+YOUTUBE_SUGGEST_ENDPOINT = "https://suggestqueries.google.com/complete/search"
 
 
 @dataclass
-class GoogleSuggestSeed:
+class YouTubeSuggestSeed:
     seed_id: str
     label: str
     seed_type: str
@@ -40,11 +45,12 @@ class GoogleSuggestSeed:
     hl: str = "ja"
     gl: str = "jp"
     client: str = "firefox"
+    ds: str = "yt"
     collection_mode: str = "auto"
 
 
 @dataclass
-class GoogleSuggestObservation:
+class YouTubeSuggestObservation:
     collected_date: str
     week_start: str
     source_name: str
@@ -73,30 +79,30 @@ class GoogleSuggestObservation:
 
 
 @dataclass
-class GoogleSuggestBatch:
+class YouTubeSuggestBatch:
     source_name: str
     collected_at: str
     mode_requested: str
     mode_used: str
-    observations: list[GoogleSuggestObservation] = field(default_factory=list)
+    observations: list[YouTubeSuggestObservation] = field(default_factory=list)
     import_rows: list[dict[str, Any]] = field(default_factory=list)
     raw_payloads: list[dict[str, Any]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
 
-class GoogleSuggestCollector(BaseCollector):
+class YouTubeSuggestCollector(BaseCollector):
     def __init__(
         self,
         seed_config_path: Path = DEFAULT_SEED_CONFIG,
         mock_fixture_path: Path = DEFAULT_MOCK_FIXTURE,
         timeout_sec: int = 15,
     ):
-        super().__init__("google_suggest")
+        super().__init__("youtube_suggest")
         self.seed_config_path = seed_config_path
         self.mock_fixture_path = mock_fixture_path
         self.timeout_sec = timeout_sec
 
-    def load_seeds(self) -> list[GoogleSuggestSeed]:
+    def load_seeds(self) -> list[YouTubeSuggestSeed]:
         with open(self.seed_config_path, encoding="utf-8") as handle:
             payload = json.load(handle)
 
@@ -104,7 +110,7 @@ class GoogleSuggestCollector(BaseCollector):
         seeds = []
         for row in payload.get("seeds", []):
             seeds.append(
-                GoogleSuggestSeed(
+                YouTubeSuggestSeed(
                     seed_id=row["seed_id"],
                     label=row["label"],
                     seed_type=row["seed_type"],
@@ -114,7 +120,8 @@ class GoogleSuggestCollector(BaseCollector):
                     emit_to_source_metrics=bool(row.get("emit_to_source_metrics", False)),
                     hl=row.get("hl", defaults.get("hl", "ja")),
                     gl=row.get("gl", defaults.get("region", "jp")),
-                    client=row.get("client", "firefox"),
+                    client=row.get("youtube_client", "firefox"),
+                    ds=row.get("youtube_ds", "yt"),
                     collection_mode=row.get("collection_mode", defaults.get("collection_mode", "auto")),
                 )
             )
@@ -125,7 +132,7 @@ class GoogleSuggestCollector(BaseCollector):
         mode: str = "auto",
         seed_ids: list[str] | None = None,
         max_seeds: int | None = None,
-    ) -> GoogleSuggestBatch:
+    ) -> YouTubeSuggestBatch:
         seeds = self.load_seeds()
         if seed_ids:
             wanted = set(seed_ids)
@@ -133,7 +140,7 @@ class GoogleSuggestCollector(BaseCollector):
         if max_seeds is not None:
             seeds = seeds[:max_seeds]
 
-        batch = GoogleSuggestBatch(
+        batch = YouTubeSuggestBatch(
             source_name=self.source_name,
             collected_at=datetime.now(timezone.utc).astimezone().isoformat(),
             mode_requested=mode,
@@ -163,7 +170,7 @@ class GoogleSuggestCollector(BaseCollector):
         batch = self.collect_bundle(mode="mock", seed_ids=keywords or None)
         result = CollectResult(source_name=self.source_name)
         for row in batch.import_rows:
-            if row["week_start"] != week_start or row["metric_type"] != GOOGLE_SUGGEST_COUNT_METRIC:
+            if row["week_start"] != week_start or row["metric_type"] != YOUTUBE_SUGGEST_COUNT_METRIC:
                 continue
             result.metrics.append(
                 RawMetric(
@@ -183,7 +190,7 @@ class GoogleSuggestCollector(BaseCollector):
         result.errors.extend(batch.errors)
         return result
 
-    def _collect_mock(self, seeds: list[GoogleSuggestSeed], batch: GoogleSuggestBatch) -> None:
+    def _collect_mock(self, seeds: list[YouTubeSuggestSeed], batch: YouTubeSuggestBatch) -> None:
         batch.mode_used = "mock"
         if not self.mock_fixture_path.exists():
             batch.errors.append(f"mock fixture not found: {self.mock_fixture_path}")
@@ -202,60 +209,18 @@ class GoogleSuggestCollector(BaseCollector):
                 continue
             batch.raw_payloads.append({"seed_id": seed.seed_id, "mode": "mock", "queries": query_rows})
             for query_row in query_rows:
-                query_term = query_row["query_term"]
-                suggestions = query_row.get("suggestions", [])
-                if not suggestions:
-                    batch.observations.append(
-                        GoogleSuggestObservation(
-                            collected_date=collected_date,
-                            week_start=week_start,
-                            source_name=self.source_name,
-                            raw_name=seed.canonical_target or seed.label,
-                            query_term=query_term,
-                            suggestion_text="",
-                            suggestion_rank=0,
-                            metric_type=GOOGLE_SUGGEST_OBSERVATION_METRIC,
-                            metric_value=0.0,
-                            language=seed.hl,
-                            country=seed.gl.upper(),
-                            collection_mode="mock",
-                            source_url=self._build_source_url(seed, query_term),
-                            note=f"mock fixture seed={seed.seed_id} no suggestions",
-                            seed_id=seed.seed_id,
-                            seed_label=seed.label,
-                            seed_type=seed.seed_type,
-                            query_group=seed.query_group or "",
-                            canonical_target=seed.canonical_target,
-                            metadata={"suggestion_count_for_query": 0},
-                        )
-                    )
-                for index, suggestion_text in enumerate(suggestions, start=1):
-                    batch.observations.append(
-                        GoogleSuggestObservation(
-                            collected_date=collected_date,
-                            week_start=week_start,
-                            source_name=self.source_name,
-                            raw_name=seed.canonical_target or seed.label,
-                            query_term=query_term,
-                            suggestion_text=suggestion_text,
-                            suggestion_rank=index,
-                            metric_type=GOOGLE_SUGGEST_OBSERVATION_METRIC,
-                            metric_value=float(index),
-                            language=seed.hl,
-                            country=seed.gl.upper(),
-                            collection_mode="mock",
-                            source_url=self._build_source_url(seed, query_term),
-                            note=f"mock fixture seed={seed.seed_id}",
-                            seed_id=seed.seed_id,
-                            seed_label=seed.label,
-                            seed_type=seed.seed_type,
-                            query_group=seed.query_group or "",
-                            canonical_target=seed.canonical_target,
-                            metadata={"suggestion_count_for_query": len(suggestions)},
-                        )
-                    )
+                self._append_query_observations(
+                    batch=batch,
+                    seed=seed,
+                    collected_date=collected_date,
+                    week_start=week_start,
+                    query_term=query_row["query_term"],
+                    suggestions=list(query_row.get("suggestions", [])),
+                    mode_used="mock",
+                    note_prefix="mock youtube suggest",
+                )
 
-    def _collect_live(self, seeds: list[GoogleSuggestSeed], batch: GoogleSuggestBatch) -> None:
+    def _collect_live(self, seeds: list[YouTubeSuggestSeed], batch: YouTubeSuggestBatch) -> None:
         batch.mode_used = "live"
         collected_date = datetime.now().date().isoformat()
         week_start = to_week_start(date.fromisoformat(collected_date))
@@ -267,72 +232,102 @@ class GoogleSuggestCollector(BaseCollector):
             for query_term in seed.queries:
                 try:
                     response = session.get(
-                        GOOGLE_SUGGEST_ENDPOINT,
-                        params={"client": seed.client, "hl": seed.hl, "gl": seed.gl, "q": query_term},
+                        YOUTUBE_SUGGEST_ENDPOINT,
+                        params={
+                            "client": seed.client,
+                            "ds": seed.ds,
+                            "hl": seed.hl,
+                            "gl": seed.gl,
+                            "q": query_term,
+                        },
                         timeout=self.timeout_sec,
                     )
                     response.raise_for_status()
                     payload = response.json()
+                    suggestions = extract_suggestion_texts(payload)
                 except Exception as exc:
                     batch.errors.append(f"live query failed: {seed.seed_id}/{query_term}: {exc}")
                     continue
 
-                suggestions = extract_suggestion_texts(payload)
-                query_payloads.append({"query_term": query_term, "suggestions": suggestions})
-                if not suggestions:
-                    batch.observations.append(
-                        GoogleSuggestObservation(
-                            collected_date=collected_date,
-                            week_start=week_start,
-                            source_name=self.source_name,
-                            raw_name=seed.canonical_target or seed.label,
-                            query_term=query_term,
-                            suggestion_text="",
-                            suggestion_rank=0,
-                            metric_type=GOOGLE_SUGGEST_OBSERVATION_METRIC,
-                            metric_value=0.0,
-                            language=seed.hl,
-                            country=seed.gl.upper(),
-                            collection_mode="live",
-                            source_url=self._build_source_url(seed, query_term),
-                            note=f"live google suggest seed={seed.seed_id} no suggestions",
-                            seed_id=seed.seed_id,
-                            seed_label=seed.label,
-                            seed_type=seed.seed_type,
-                            query_group=seed.query_group or "",
-                            canonical_target=seed.canonical_target,
-                            metadata={"suggestion_count_for_query": 0},
-                        )
-                    )
-                for index, suggestion_text in enumerate(suggestions, start=1):
-                    batch.observations.append(
-                        GoogleSuggestObservation(
-                            collected_date=collected_date,
-                            week_start=week_start,
-                            source_name=self.source_name,
-                            raw_name=seed.canonical_target or seed.label,
-                            query_term=query_term,
-                            suggestion_text=suggestion_text,
-                            suggestion_rank=index,
-                            metric_type=GOOGLE_SUGGEST_OBSERVATION_METRIC,
-                            metric_value=float(index),
-                            language=seed.hl,
-                            country=seed.gl.upper(),
-                            collection_mode="live",
-                            source_url=self._build_source_url(seed, query_term),
-                            note=f"live google suggest seed={seed.seed_id}",
-                            seed_id=seed.seed_id,
-                            seed_label=seed.label,
-                            seed_type=seed.seed_type,
-                            query_group=seed.query_group or "",
-                            canonical_target=seed.canonical_target,
-                            metadata={"suggestion_count_for_query": len(suggestions)},
-                        )
-                    )
+                query_payloads.append({"query_term": query_term, "suggestions": suggestions, "payload": payload})
+                self._append_query_observations(
+                    batch=batch,
+                    seed=seed,
+                    collected_date=collected_date,
+                    week_start=week_start,
+                    query_term=query_term,
+                    suggestions=suggestions,
+                    mode_used="live",
+                    note_prefix="live youtube suggest",
+                )
             batch.raw_payloads.append({"seed_id": seed.seed_id, "mode": "live", "queries": query_payloads})
 
-    def _aggregate_import_rows(self, observations: list[GoogleSuggestObservation]) -> list[dict[str, Any]]:
-        grouped: dict[tuple[str, str], list[GoogleSuggestObservation]] = {}
+    def _append_query_observations(
+        self,
+        batch: YouTubeSuggestBatch,
+        seed: YouTubeSuggestSeed,
+        collected_date: str,
+        week_start: str,
+        query_term: str,
+        suggestions: list[str],
+        mode_used: str,
+        note_prefix: str,
+    ) -> None:
+        if not suggestions:
+            batch.observations.append(
+                YouTubeSuggestObservation(
+                    collected_date=collected_date,
+                    week_start=week_start,
+                    source_name=self.source_name,
+                    raw_name=seed.canonical_target or seed.label,
+                    query_term=query_term,
+                    suggestion_text="",
+                    suggestion_rank=0,
+                    metric_type=YOUTUBE_SUGGEST_OBSERVATION_METRIC,
+                    metric_value=0.0,
+                    language=seed.hl,
+                    country=seed.gl.upper(),
+                    collection_mode=mode_used,
+                    source_url=self._build_source_url(seed, query_term),
+                    note=f"{note_prefix} seed={seed.seed_id} no suggestions",
+                    seed_id=seed.seed_id,
+                    seed_label=seed.label,
+                    seed_type=seed.seed_type,
+                    query_group=seed.query_group or "",
+                    canonical_target=seed.canonical_target,
+                    metadata={"suggestion_count_for_query": 0},
+                )
+            )
+            return
+
+        for index, suggestion_text in enumerate(suggestions, start=1):
+            batch.observations.append(
+                YouTubeSuggestObservation(
+                    collected_date=collected_date,
+                    week_start=week_start,
+                    source_name=self.source_name,
+                    raw_name=seed.canonical_target or seed.label,
+                    query_term=query_term,
+                    suggestion_text=suggestion_text,
+                    suggestion_rank=index,
+                    metric_type=YOUTUBE_SUGGEST_OBSERVATION_METRIC,
+                    metric_value=float(index),
+                    language=seed.hl,
+                    country=seed.gl.upper(),
+                    collection_mode=mode_used,
+                    source_url=self._build_source_url(seed, query_term),
+                    note=f"{note_prefix} seed={seed.seed_id}",
+                    seed_id=seed.seed_id,
+                    seed_label=seed.label,
+                    seed_type=seed.seed_type,
+                    query_group=seed.query_group or "",
+                    canonical_target=seed.canonical_target,
+                    metadata={"suggestion_count_for_query": len(suggestions)},
+                )
+            )
+
+    def _aggregate_import_rows(self, observations: list[YouTubeSuggestObservation]) -> list[dict[str, Any]]:
+        grouped: dict[tuple[str, str], list[YouTubeSuggestObservation]] = {}
         for obs in observations:
             if obs.seed_type != "model" or not obs.canonical_target:
                 continue
@@ -363,6 +358,7 @@ class GoogleSuggestCollector(BaseCollector):
                 "suggestion_count_by_query": suggestion_count_by_query,
                 "collection_mode": seed.collection_mode,
                 "query_group": seed.query_group,
+                "endpoint_family": "youtube_autocomplete",
             }
 
             rows.append(
@@ -372,10 +368,10 @@ class GoogleSuggestCollector(BaseCollector):
                     brand=brand,
                     model=model,
                     category=category,
-                    metric_type=GOOGLE_SUGGEST_COUNT_METRIC,
+                    metric_type=YOUTUBE_SUGGEST_COUNT_METRIC,
                     metric_value=avg_count,
                     sample_size=len(query_terms),
-                    note=f"average suggestion count across {len(query_terms)} queries",
+                    note=f"average youtube suggestion count across {len(query_terms)} queries",
                     metadata=base_metadata,
                 )
             )
@@ -386,10 +382,10 @@ class GoogleSuggestCollector(BaseCollector):
                     brand=brand,
                     model=model,
                     category=category,
-                    metric_type=GOOGLE_SUGGEST_PRESENCE_METRIC,
+                    metric_type=YOUTUBE_SUGGEST_PRESENCE_METRIC,
                     metric_value=presence,
                     sample_size=len(query_terms),
-                    note=f"presence flag from {len(query_terms)} queries",
+                    note=f"youtube suggestion presence flag from {len(query_terms)} queries",
                     metadata=base_metadata,
                 )
             )
@@ -397,7 +393,7 @@ class GoogleSuggestCollector(BaseCollector):
 
     def _build_import_row(
         self,
-        seed: GoogleSuggestObservation,
+        seed: YouTubeSuggestObservation,
         week_start: str,
         brand: str,
         model: str,
@@ -434,10 +430,11 @@ class GoogleSuggestCollector(BaseCollector):
         }
 
     @staticmethod
-    def _build_source_url(seed: GoogleSuggestSeed, query_term: str) -> str:
+    def _build_source_url(seed: YouTubeSuggestSeed, query_term: str) -> str:
         return build_source_url(
-            GOOGLE_SUGGEST_ENDPOINT,
+            YOUTUBE_SUGGEST_ENDPOINT,
             client=seed.client,
+            ds=seed.ds,
             hl=seed.hl,
             gl=seed.gl,
             q=query_term,

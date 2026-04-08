@@ -8,7 +8,7 @@
 - normalizer で brand / model / category を保守的に canonical 化する
 - review / unresolved から alias を育てるが、短い別名や曖昧語は無理に採用しない
 - raw / observation / import-ready を残し、再投入と再計算をやりやすくする
-- Google Trends や Google Suggest は補助指標として扱い、単独で順位を決めすぎない
+- Google Trends / Google Suggest / YouTube Suggest は補助指標として扱い、単独で順位を決めすぎない
 
 ## 現在地
 
@@ -18,6 +18,7 @@
 - Google Trends collector は live / mock / auto で運用可能
 - `google_trends_interest` には初期安定化ロジックを追加済み
 - Google Suggest collector 初版を追加し、GT を補完する軽量ソースを 1 本追加済み
+- YouTube Suggest collector 初版を追加し、同じ seed 群で使える第 3 ソースを接続済み
 
 ## 主な構成
 
@@ -34,26 +35,32 @@ training-trend-analyzer/
 │  ├─ review/
 │  ├─ mock/google_trends/
 │  ├─ mock/google_suggest/
+│  ├─ mock/youtube_suggest/
 │  └─ collected/
 │     ├─ google_trends/
-│     └─ google_suggest/
+│     ├─ google_suggest/
+│     └─ youtube_suggest/
 ├─ docs/
 │  ├─ SPEC.md
 │  ├─ NORMALIZER.md
 │  ├─ DB_SCHEMA.md
 │  ├─ COLLECTORS_GOOGLE_TRENDS.md
-│  └─ COLLECTORS_GOOGLE_SUGGEST.md
+│  ├─ COLLECTORS_GOOGLE_SUGGEST.md
+│  └─ COLLECTORS_YOUTUBE_SUGGEST.md
 ├─ scripts/
 │  ├─ import_csv.py
 │  ├─ run_batch.py
 │  ├─ run_google_trends.py
 │  ├─ run_google_suggest.py
+│  ├─ run_youtube_suggest.py
 │  ├─ review_alias_candidates.py
 │  └─ check_source_metrics.py
 ├─ src/
 │  ├─ collectors/
 │  │  ├─ google_trends.py
-│  │  └─ google_suggest.py
+│  │  ├─ google_suggest.py
+│  │  ├─ youtube_suggest.py
+│  │  └─ suggest_common.py
 │  ├─ normalizer/
 │  └─ scorer/
 └─ tests/
@@ -72,7 +79,8 @@ python scripts/load_master_data.py
 
 - Google Trends live には `pytrends==4.9.2` と `urllib3<2` が必要
 - Google Suggest live は `requests` で少数 query を投げる前提
-- どちらも最初は 1 から 2 seed 程度で確認する
+- YouTube Suggest live は `ds=yt` + `client=firefox` で少数 query を投げる前提
+- どれも最初は 1 から 2 seed 程度で確認する
 - live が失敗しても raw artifact を残し、mock で再確認できる構成を維持する
 
 ## CSV 取り込み
@@ -151,11 +159,45 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --exclu
 - `search_suggest_count` は低ウェイトかつ `min_value` 付きで抑制する
 - compare 的な query や一般語を canonical demand と直結しない
 
+## YouTube Suggest collector
+
+```bash
+python scripts/run_youtube_suggest.py --mode mock --max-seeds 4
+python scripts/run_youtube_suggest.py --mode live --seed-id concept2_skierg_model --seed-id technogym_run_model --max-seeds 2
+python scripts/run_youtube_suggest.py --mode mock --max-seeds 4 --import-db --replace-existing
+python scripts/check_source_metrics.py --source-name youtube_suggest --week 2026-04-06
+python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-metric-details
+python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-metric-details --exclude-metric youtube_suggest_count
+python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-metric-details --exclude-metric search_suggest_count --exclude-metric youtube_suggest_count
+```
+
+出力:
+
+- raw JSON: `data/collected/youtube_suggest/raw/`
+- observation CSV: `data/collected/youtube_suggest/observations/`
+- import-ready CSV: `data/collected/youtube_suggest/import/`
+
+初版の metric:
+
+- `youtube_suggest_count`
+  - query ごとの有効 suggestion 件数の平均
+  - ranking に入れる対象
+- `youtube_suggest_presence`
+  - suggestion が存在したかの補助フラグ
+  - raw / import には残すが、初版では ranking に使わない
+
+安全策:
+
+- YouTube 用 dataset `ds=yt` を使うが、JSON 取得安定化のため `client=firefox` を採用
+- `youtube_suggest_count` は Google Suggest よりさらに低ウェイトで抑制する
+- `min_value` / `min_query_terms` / `norm_cap` で補助寄与に留める
+- 非公式 endpoint 依存なので mock fixture を維持する
+
 ## ranking の考え方
 
 - `run_batch.py` は `--exclude-metric` で metric を切り替え可能
 - `--show-metric-details` で source / metric ごとの寄与を確認できる
-- `google_trends_interest` と `search_suggest_count` はどちらも軽量補助指標として扱う
+- `google_trends_interest`、`search_suggest_count`、`youtube_suggest_count` はどれも軽量補助指標として扱う
 - 観測不足や低値のモデルは metric rule で score 対象から外す
 - commercial / discontinued フィルタと両立させる
 
@@ -167,3 +209,4 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --exclu
 - [DB_SCHEMA.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/DB_SCHEMA.md)
 - [COLLECTORS_GOOGLE_TRENDS.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTORS_GOOGLE_TRENDS.md)
 - [COLLECTORS_GOOGLE_SUGGEST.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTORS_GOOGLE_SUGGEST.md)
+- [COLLECTORS_YOUTUBE_SUGGEST.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTORS_YOUTUBE_SUGGEST.md)

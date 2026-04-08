@@ -18,7 +18,7 @@
 
 ## `source_metrics`
 
-collector や CSV import の最終投入先です。Google Trends と Google Suggest の import-ready CSV はここへ流れます。
+collector や CSV import の最終投入先です。Google Trends / Google Suggest / YouTube Suggest の import-ready CSV はここへ流れます。
 
 主なカラム:
 
@@ -42,6 +42,8 @@ collector や CSV import の最終投入先です。Google Trends と Google Sug
 - `google_trends_interest`
 - `search_suggest_count`
 - `search_suggest_presence`
+- `youtube_suggest_count`
+- `youtube_suggest_presence`
 - `mention_count`
 - `review_count`
 - `avg_rating`
@@ -70,6 +72,22 @@ collector や CSV import の最終投入先です。Google Trends と Google Sug
 - `raw_data` / `raw_input` に `suggestion_count_by_query`, `query_terms`, `seed_id`, `collection_mode` を保持する
 
 ### `search_suggest_presence`
+
+- suggestion が 1 件以上あったかの補助フラグ
+- raw / import 保持用
+- 初版では `score_weights.json` に weight を持たせず、ranking には使わない
+
+## YouTube Suggest metric
+
+### `youtube_suggest_count`
+
+- query ごとの有効 suggestion 件数の平均
+- ranking に入れる対象
+- 初版では model seed のみ import-ready へ流す
+- `sample_size` には試行した query term 数を入れる
+- `raw_data` / `raw_input` に `suggestion_count_by_query`, `query_terms`, `seed_id`, `collection_mode`, `endpoint_family` を保持する
+
+### `youtube_suggest_presence`
 
 - suggestion が 1 件以上あったかの補助フラグ
 - raw / import 保持用
@@ -105,7 +123,7 @@ collector から import-ready CSV へ残す代表列:
 ### observation CSV
 
 - query 単位、または suggestion 単位の観測を残す
-- Google Suggest では suggestion text と rank を保持する
+- Google / YouTube Suggest では suggestion text と rank を保持する
 
 ### import-ready CSV
 

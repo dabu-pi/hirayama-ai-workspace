@@ -154,3 +154,42 @@ def test_search_suggest_count_skips_low_value():
     scores = calc.calculate(metrics_by_model)
     assert all("search_suggest_count: skipped by value<2" in " | ".join(score.eligibility_notes) for score in scores)
     assert all("search_suggest_count" not in score.metric_contributions for score in scores)
+
+
+def test_youtube_suggest_count_skips_low_value():
+    calc = ScoreCalculator()
+    metrics_by_model = {
+        "A::One::treadmill": {
+            "brand": "A",
+            "model": "One",
+            "category": "treadmill",
+            "week_start": "2026-04-06",
+            "metrics": {
+                "search_volume": {"value": 80, "value_prev": 70, "metadata": {}, "sample_size": None},
+                "youtube_suggest_count": {"value": 1, "value_prev": None, "metadata": {}, "sample_size": 2},
+            },
+        },
+        "B::Two::treadmill": {
+            "brand": "B",
+            "model": "Two",
+            "category": "treadmill",
+            "week_start": "2026-04-06",
+            "metrics": {
+                "search_volume": {"value": 40, "value_prev": 35, "metadata": {}, "sample_size": None},
+                "youtube_suggest_count": {"value": 1.5, "value_prev": None, "metadata": {}, "sample_size": 2},
+            },
+        },
+        "C::Three::treadmill": {
+            "brand": "C",
+            "model": "Three",
+            "category": "treadmill",
+            "week_start": "2026-04-06",
+            "metrics": {
+                "search_volume": {"value": 20, "value_prev": 25, "metadata": {}, "sample_size": None},
+                "youtube_suggest_count": {"value": 0, "value_prev": None, "metadata": {}, "sample_size": 2},
+            },
+        },
+    }
+    scores = calc.calculate(metrics_by_model)
+    assert all("youtube_suggest_count: skipped by value<2" in " | ".join(score.eligibility_notes) for score in scores)
+    assert all("youtube_suggest_count" not in score.metric_contributions for score in scores)
