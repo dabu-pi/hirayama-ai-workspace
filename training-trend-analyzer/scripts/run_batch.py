@@ -362,12 +362,20 @@ def _fmt_delta(value: float | None) -> str:
 def _build_delta_summary(label: str, value: float | None) -> str:
     if value is None:
         return "N/A"
+    if _is_display_zero_delta(value):
+        return "-"
     return f"{label}:{_fmt_delta(value)}"
 
 
 def _combine_delta_summaries(*parts: str) -> str:
-    visible = [part for part in parts if part and part != "N/A"]
-    return " / ".join(visible) if visible else "N/A"
+    visible = [part for part in parts if part and part not in {"N/A", "-"}]
+    return " / ".join(visible) if visible else "-"
+
+
+def _is_display_zero_delta(value: float | None) -> bool:
+    if value is None:
+        return False
+    return _fmt_delta(value) in {"+0.0", "-0.0"}
 
 
 def _rank_path(*entries: dict | None) -> str:

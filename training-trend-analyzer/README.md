@@ -197,7 +197,7 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-
 
 - `run_batch.py` は `--exclude-metric` で metric を切り替え可能
 - `run_batch.py --compare-source-sets` で `GT only / GT + GS / GT + GS + YT` を 1 回で横並び比較できる
-- 比較表と比較 CSV に `GS:+x.x / YT:+y.y` 形式の差分要約を付け、seed / weight 調整の当たりを見やすくする
+- 比較表と比較 CSV に `GS:+x.x / YT:+y.y` 形式の差分要約を付け、`+0.0 / -0.0` は省略して seed / weight 調整の当たりを見やすくする
 - `--show-metric-details` で source / metric ごとの寄与を確認できる
 - `google_trends_interest`、`search_suggest_count`、`youtube_suggest_count` はどれも軽量補助指標として扱う
 - 観測不足や低値のモデルは metric rule で score 対象から外す
@@ -218,6 +218,7 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 - `GT only -> GT + GS` delta
 - `GT + GS -> GT + GS + YT` delta
 - `GS:+x.x / YT:+y.y` の差分要約
+  - `+0.0 / -0.0` は省略し、差分なしは `-`
 - plain rank の `rank path`
 
 ## 関連ドキュメント

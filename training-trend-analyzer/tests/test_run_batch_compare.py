@@ -11,7 +11,13 @@ if sys.stdout.encoding != "utf-8":
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.run_batch import build_comparison_rows, calculate_scores_for_sets, COMPARE_SOURCE_SET_DEFS
+from scripts.run_batch import (
+    COMPARE_SOURCE_SET_DEFS,
+    _build_delta_summary,
+    _combine_delta_summaries,
+    build_comparison_rows,
+    calculate_scores_for_sets,
+)
 
 
 def _sample_metrics_by_model() -> dict:
@@ -81,3 +87,20 @@ def test_comparison_rows_allow_category_filter():
     score_sets = calculate_scores_for_sets(_sample_metrics_by_model(), COMPARE_SOURCE_SET_DEFS)
     rows = build_comparison_rows(score_sets, category_filter="rower")
     assert rows == []
+
+
+def test_zero_delta_summaries_are_hidden():
+    assert _build_delta_summary("GS", 0.04) == "-"
+    assert _build_delta_summary("YT", 0.0) == "-"
+    assert _combine_delta_summaries("GS:+4.6", "-") == "GS:+4.6"
+    assert _combine_delta_summaries("-", "YT:-0.9") == "YT:-0.9"
+    assert _combine_delta_summaries("-", "-") == "-"
+
+
+def test_zero_delta_row_shows_dash_in_why():
+    score_sets = calculate_scores_for_sets(_sample_metrics_by_model(), COMPARE_SOURCE_SET_DEFS)
+    rows = build_comparison_rows(score_sets)
+    precor_row = next(row for row in rows if row["model"] == "TRM 445")
+    assert precor_row["gt_to_gs_summary"] == "-"
+    assert precor_row["gs_to_all_summary"] == "-"
+    assert precor_row["delta_summary"] == "-"
