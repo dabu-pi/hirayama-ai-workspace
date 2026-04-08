@@ -13,9 +13,16 @@ run_batch.py — バッチ実行エントリポイント（MVP版）
 import argparse
 import csv
 import sys
+import io
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+
+# Windows端末のCP932文字化け対策
+if sys.stdout.encoding != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+if sys.stderr.encoding != "utf-8":
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # プロジェクトルートを sys.path に追加
 sys.path.insert(0, str(Path(__file__).parent.parent))
