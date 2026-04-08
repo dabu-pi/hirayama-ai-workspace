@@ -152,18 +152,23 @@ CREATE TABLE sources (
 
 ```sql
 CREATE TABLE source_metrics (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    source_id      INTEGER NOT NULL REFERENCES sources(id),
-    model_id       INTEGER REFERENCES models(id),
-    brand_id       INTEGER REFERENCES brands(id),  -- ブランド単位のメトリクス用
-    week_start     TEXT    NOT NULL,               -- ISO 8601 週初（月曜日）例: '2026-03-30'
-    metric_type    TEXT    NOT NULL,               -- 'search_volume', 'mention_count', 'review_count', 'rating', etc.
-    value          REAL,                           -- 指標値（NULL = データ欠損）
-    value_prev     REAL,                           -- 前週値（計算用キャッシュ）
-    sample_size    INTEGER,                        -- サンプル数（信頼性の参考）
-    is_estimated   INTEGER NOT NULL DEFAULT 0,     -- 1: 推定値・補完値
-    raw_data       TEXT,                           -- 生データJSON（デバッグ・再計算用）
-    collected_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id        INTEGER NOT NULL REFERENCES sources(id),
+    model_id         INTEGER REFERENCES models(id),
+    brand_id         INTEGER REFERENCES brands(id),  -- ブランド単位のメトリクス用
+    week_start       TEXT    NOT NULL,               -- ISO 8601 週初（月曜日）例: '2026-03-30'
+    metric_type      TEXT    NOT NULL,               -- 'search_volume', 'mention_count', etc.
+    value            REAL,                           -- 指標値（NULL = データ欠損）
+    value_prev       REAL,                           -- 前週値（計算用キャッシュ）
+    sample_size      INTEGER,                        -- サンプル数（信頼性の参考）
+    is_estimated     INTEGER NOT NULL DEFAULT 0,     -- 1: 推定値・補完値
+    raw_data         TEXT,                           -- 生データJSON（デバッグ・再計算用）
+    collected_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    -- Phase 2 追加: CSV インポート追跡
+    import_batch_id  INTEGER REFERENCES import_batches(id), -- インポートバッチ
+    raw_input        TEXT,                           -- インポート元の生 CSV 行（JSON）
+    imported_at      TEXT,                           -- インポート日時
+    review_status    TEXT    NOT NULL DEFAULT 'ok',  -- 'ok' / 'review' / 'skipped'
     UNIQUE (source_id, model_id, brand_id, week_start, metric_type)
 );
 ```
@@ -208,15 +213,48 @@ CREATE TABLE trend_scores (
 
 ```sql
 CREATE TABLE unclassified_queue (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    raw_text     TEXT    NOT NULL,               -- 正規化できなかった生テキスト
-    source_id    INTEGER REFERENCES sources(id),
-    context      TEXT,                           -- どの文脈で見つかったか（URL等）
-    status       TEXT    NOT NULL DEFAULT 'pending', -- 'pending' / 'resolved' / 'ignored'
-    resolved_to  TEXT,                           -- 解決後の紐付け先（brand_id / model_id）
-    notes        TEXT,
-    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-    resolved_at  TEXT
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    raw_text         TEXT    NOT NULL,               -- 正規化できなかった生テキスト
+    source_id        INTEGER REFERENCES sources(id),
+    context          TEXT,                           -- どの文脈で見つかったか（URL等）
+    status           TEXT    NOT NULL DEFAULT 'pending', -- 'pending' / 'resolved' / 'ignored'
+    resolved_to      TEXT,                           -- 解決後の紐付け先（brand_id / model_id）
+    notes            TEXT,
+    created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+    resolved_at      TEXT,
+    -- Phase 2 追加: CSV インポート追跡
+    import_batch_id  INTEGER REFERENCES import_batches(id),
+    raw_brand        TEXT,                           -- CSV の raw_brand 列
+    raw_category     TEXT,                           -- CSV の raw_category 列
+    raw_name         TEXT,                           -- CSV の raw_name 列
+    certainty_label  TEXT,                           -- 信頼度ラベル（high/medium/low/unknown）
+    unresolved_reason TEXT,                          -- 未解決の理由
+    metric_type      TEXT,                           -- 指標種別
+    metric_value     REAL,                           -- 指標値
+    week_start       TEXT,                           -- 週開始日
+    file_row_num     INTEGER                         -- CSV の行番号
+);
+```
+
+---
+
+## import_batches（インポートバッチ管理）
+
+Phase 2 で追加。`migrate_add_import_meta.py` で作成。
+
+```sql
+CREATE TABLE import_batches (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id      TEXT    NOT NULL UNIQUE,        -- 例: "20260408_153615_sample_metrics"
+    file_name     TEXT    NOT NULL,               -- 取り込んだCSVファイル名
+    imported_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    rows_total    INTEGER NOT NULL DEFAULT 0,
+    rows_ok       INTEGER NOT NULL DEFAULT 0,
+    rows_review   INTEGER NOT NULL DEFAULT 0,
+    rows_skipped  INTEGER NOT NULL DEFAULT 0,
+    rows_error    INTEGER NOT NULL DEFAULT 0,
+    is_dry_run    INTEGER NOT NULL DEFAULT 0,     -- 1: dry-run 実行
+    notes         TEXT
 );
 ```
 

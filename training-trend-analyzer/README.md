@@ -64,6 +64,48 @@
 
 ---
 
+## セットアップ（新PC / 初回）
+
+```bash
+# 1. DB 初期化
+python scripts/init_db.py
+
+# 2. インポートメタデータ追加マイグレーション
+python scripts/migrate_add_import_meta.py
+
+# 3. マスタデータ投入
+python scripts/load_master_data.py
+
+# 4. 動作確認（モックデータ）
+python scripts/run_batch.py
+
+# 5. 実データ CSV を投入
+python scripts/import_csv.py --file data/import/your_data.csv --dry-run
+python scripts/import_csv.py --file data/import/your_data.csv
+
+# 6. 実データでランキング確認
+python scripts/run_batch.py --use-db --week 2026-04-06
+```
+
+---
+
+## CSV インポート
+
+手動収集データを CSV で投入できる。詳細は [docs/IMPORT_PIPELINE.md](./docs/IMPORT_PIPELINE.md) を参照。
+
+```bash
+# 投入件数確認（DB書き込みなし）
+python scripts/import_csv.py --file data/import/sample_metrics.csv --dry-run
+
+# 投入（家庭用除外）
+python scripts/import_csv.py --file data/import/sample_metrics.csv --only-commercial
+
+# ランキング表示
+python scripts/run_batch.py --use-db --week 2026-04-06 --category treadmill
+```
+
+---
+
 ## ディレクトリ構成
 
 ```
@@ -73,19 +115,29 @@ training-trend-analyzer/
 ├── docs/
 │   ├── SPEC.md              # 要件定義
 │   ├── ARCHITECTURE.md      # システム構成
-│   ├── DB_SCHEMA.md         # DB テーブル設計
+│   ├── DB_SCHEMA.md         # DB テーブル設計（import_batches 追加済み）
 │   ├── ROADMAP.md           # Phase 別開発計画
-│   └── DATA_SOURCES.md      # 収集ソース一覧
+│   ├── DATA_SOURCES.md      # 収集ソース一覧
+│   ├── NORMALIZER.md        # 正規化エンジン仕様
+│   └── IMPORT_PIPELINE.md   # CSV インポートパイプライン仕様
 ├── src/
-│   ├── collectors/          # データ収集モジュール
-│   ├── normalizer/          # 表記ゆれ正規化
+│   ├── collectors/          # データ収集モジュール（mock, db）
+│   ├── normalizer/          # 表記ゆれ正規化（types, rules, engine）
 │   ├── scorer/              # スコア計算
 │   └── api/                 # API / 出力層
 ├── data/
+│   ├── master/              # マスタデータ JSON（brands, categories, models, aliases）
+│   ├── import/              # 取り込む CSV を置く場所
+│   ├── review/              # 未解決・要レビュー行の CSV 出力先
 │   └── mock/                # モックデータ（テスト・初期開発用）
+├── tests/
+│   └── test_normalizer.py   # 正規化エンジンテスト（16件）
 └── scripts/
-    ├── init_db.py           # DB 初期化
-    └── run_batch.py         # バッチ実行エントリポイント
+    ├── init_db.py                   # DB 初期化
+    ├── migrate_add_import_meta.py   # Phase 2 スキーママイグレーション
+    ├── load_master_data.py          # マスタデータ投入
+    ├── import_csv.py                # CSV インポーター
+    └── run_batch.py                 # バッチ実行（--use-db / --use-mock）
 ```
 
 ---

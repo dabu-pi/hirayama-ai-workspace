@@ -1,11 +1,14 @@
 """
 run_batch.py — バッチ実行エントリポイント（MVP版）
 
-モックデータを使ってスコア計算・ランキングをCLI出力する。
+モックデータまたは実DBデータを使ってスコア計算・ランキングをCLI出力する。
 
 使い方:
-    python scripts/run_batch.py
-    python scripts/run_batch.py --week 2026-03-30
+    python scripts/run_batch.py                          # モックデータ（デフォルト）
+    python scripts/run_batch.py --use-db                 # 実DBデータ
+    python scripts/run_batch.py --use-db --week 2026-04-06
+    python scripts/run_batch.py --use-db --no-discontinued
+    python scripts/run_batch.py --use-db --only-commercial
     python scripts/run_batch.py --week 2026-03-30 --category treadmill
     python scripts/run_batch.py --week 2026-03-30 --output-csv
 """
@@ -28,7 +31,11 @@ if sys.stderr.encoding != "utf-8":
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.collectors.mock import MockCollector
+from src.collectors.db import DbCollector
 from src.scorer.calculator import ScoreCalculator
+
+ROOT       = Path(__file__).parent.parent
+DEFAULT_DB = ROOT / "data" / "db" / "trend.db"
 
 try:
     from tabulate import tabulate
@@ -88,7 +95,11 @@ def print_ranking(scores: list, category_filter: str | None = None) -> None:
 
     headers = ["#", "", "Brand", "Model", "Category", "Score", "Prev", "Change", "Label"]
 
-    print(f"\n=== トレンドランキング {scores[0].week_start if scores else ''} ===")
+    if not filtered:
+        print(f"\n=== トレンドランキング {scores[0].week_start if scores else ''} ===")
+        print("（該当データなし）")
+        return
+    print(f"\n=== トレンドランキング {filtered[0].week_start} ===")
     if category_filter:
         print(f"カテゴリ: {category_filter}")
     print()
@@ -120,16 +131,26 @@ def export_csv(scores: list, output_path: Path) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="トレンドランキング バッチ実行（MVP版）")
-    parser.add_argument("--week", default="2026-03-30", help="集計週（ISO 8601 月曜日）")
-    parser.add_argument("--category", help="カテゴリ絞り込み（例: treadmill）")
-    parser.add_argument("--output-csv", action="store_true", help="CSV出力")
-    parser.add_argument("--use-mock", action="store_true", default=True, help="モックデータ使用（デフォルト）")
+    parser.add_argument("--week",            default="2026-03-30", help="集計週（ISO 8601 月曜日）")
+    parser.add_argument("--category",        help="カテゴリ絞り込み（例: treadmill）")
+    parser.add_argument("--output-csv",      action="store_true",  help="CSV出力")
+    parser.add_argument("--use-db",          action="store_true",  help="実DBデータを使用（デフォルト: モック）")
+    parser.add_argument("--db-path",         default=str(DEFAULT_DB), help="DBパス")
+    parser.add_argument("--no-discontinued", action="store_true",  help="廃番モデルを除外")
+    parser.add_argument("--only-commercial", action="store_true",  help="家庭用（consumer）ブランドを除外")
     args = parser.parse_args()
 
     print(f"[START] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} week={args.week}")
 
     # 1. 収集
-    collector = MockCollector()
+    if args.use_db:
+        collector = DbCollector(
+            db_path=Path(args.db_path),
+            no_discontinued=args.no_discontinued,
+            only_commercial=args.only_commercial,
+        )
+    else:
+        collector = MockCollector()
     result = collector.collect(keywords=[], week_start=args.week)
 
     if result.errors:

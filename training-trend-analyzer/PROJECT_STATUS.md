@@ -53,28 +53,41 @@
 | 正規化エンジン初版 | 完了（Phase 1） |
 | 検証テストケース | 完了（16/16 passed） |
 | モックデータでのランキング出力 | 完了 |
+| **CSV インポートパイプライン** | **完了（Phase 2）** |
+| **DB への実データ投入・ランキング反映** | **完了（Phase 2）** |
+| **重複検知・未解決キュー管理** | **完了（Phase 2）** |
 | Google Trends 自動収集 | 未着手 |
-| 実データCSV取り込み | 未着手 |
 | HTML レポート生成 | 未着手 |
 
 ---
 
 ## 今のフェーズ
 
-**Phase 1 — ローカルMVP（進行中）**
+**Phase 2 — CSV インポートパイプライン 完了**
 
-設計ドキュメント・DBスキーマ・マスタデータ・正規化エンジン基盤が完成した。
-次は「実データを入れてランキングを出す」フローの完成。
+- `scripts/import_csv.py` — CSV→正規化→DB投入パイプライン
+- `scripts/migrate_add_import_meta.py` — import_batches テーブル追加・列追加（冪等マイグレーション）
+- `src/collectors/db.py` — 実DBデータを使う DbCollector
+- `run_batch.py` — `--use-db` / `--no-discontinued` / `--only-commercial` 追加
+- dry-run / 実投入 / 重複検知 / ランキング反映 すべて検証済み
+
+### Phase 2 検証結果（sample_metrics.csv 20行）
+
+```
+dry-run:     合計=20  OK=16  レビュー=4  スキップ=0
+実投入 1回目: 合計=20  OK=15  レビュー=4  スキップ=1（TRM445 は行8と重複）
+実投入 2回目: 合計=20  OK=0   レビュー=4  スキップ=16（全て重複検知）
+ランキング:   14 機種表示（--use-db --week 2026-04-06）
+```
 
 ---
 
 ## 次アクション（優先順）
 
-1. **実データCSVインポーター整備** — `scripts/import_csv.py` を作成し、手動収集データを `source_metrics` テーブルに投入できるようにする
+1. **aliases.json の拡充** — 実務で見かける表記ゆれを追加登録し `load_master_data.py` で再投入
 2. **Google Trends 収集器の動作確認** — `collectors/google_trends.py` の初版を実装し、主要キーワードで取得テストをする
-3. **aliases.json の拡充** — 実務で見かける表記ゆれを追加登録し `load_master_data.py` で再投入
-4. **HTMLレポート生成** — Jinja2で週次ランキングHTMLを自動生成する
-5. **正規化エンジンをバッチフローに組み込む** — `run_batch.py` の [NORMALIZE] ステップで `NormalizerEngine` を使うように更新
+3. **HTMLレポート生成** — Jinja2で週次ランキングHTMLを自動生成する（Phase 3）
+4. **unclassified_queue 確認 UI** — レビューキューをブラウザで確認・承認する仕組み（Phase 3）
 
 ---
 
@@ -125,3 +138,4 @@
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phase 別開発計画 |
 | [docs/DATA_SOURCES.md](./docs/DATA_SOURCES.md) | 収集ソース一覧と方針 |
 | [docs/NORMALIZER.md](./docs/NORMALIZER.md) | 正規化エンジン仕様 |
+| [docs/IMPORT_PIPELINE.md](./docs/IMPORT_PIPELINE.md) | CSV インポートパイプライン仕様 |

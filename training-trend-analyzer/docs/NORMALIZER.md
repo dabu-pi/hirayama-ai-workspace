@@ -100,33 +100,89 @@ class NormalizeResult:
 ## 解決フロー
 
 ```
-raw_text
+normalize(raw_text, hint_brand=None)
     ↓ normalize_text()（前処理）
     ↓
-1. ブランド解決
+1. ブランド解決（_resolve_brand）
    - aliases で完全一致 → exact_alias
    - canonical 名で一致 → exact_canonical
-   - 先頭ブランド名マッチ → partial
+   - 先頭ブランド名マッチ → partial（長い alias を優先して誤マッチを防ぐ）
    - 不一致 → brand = None
+   ↓ brand = None かつ hint_brand がある場合:
+     hint_brand を正規化して _resolve_brand → 解決できれば使用（confidence × 0.9）
 
 2. カテゴリ解決
    - aliases で完全一致
    - テキスト内にカテゴリキーワード含む → partial（confidence 0.85以上のみ）
 
-3. ブランド名を除去した残余テキストでモデル解決
-   - "TECHNOGYM RUN" → ブランド "TECHNOGYM" 除去 → "RUN" でモデル検索
+3. ブランドプレフィックスの除去
+   - マッチした alias テキストを prefix として除去
+     例: "ライフフィットネス 95T" → alias "ライフフィットネス" を除去 → "95T"
+   - alias テキストがない場合は canonical ブランド名で除去（英語フォールバック）
+
+4. 残余テキストでモデル解決（_resolve_model）
+   - full text / 残余テキスト両方で alias 検索
    - brand_hint が一致する場合 +0.1 補正
    - brand_hint が不一致の場合 ×0.5 ペナルティ
 
-4. use_type 解決
+5. use_type 解決
    - モデルの use_type を優先
    - モデル不明の場合はブランドの market_type から推定
 
-5. 総合信頼度 = min(brand_confidence, model_confidence)
+6. 総合信頼度 = min(brand_confidence, model_confidence)
 
-6. 未解決判定
+7. 未解決判定
    - brand・model・category がすべて None → is_unresolved = True
 ```
+
+### _resolve_brand の返り値（Phase 2 変更）
+
+```python
+# 旧: (canonical, confidence, MatchType)  ← 3-tuple
+# 新: (canonical, confidence, MatchType, matched_alias_text)  ← 4-tuple
+
+def _resolve_brand(self, norm: str) -> tuple[str, float, MatchType, str] | None:
+```
+
+`matched_alias_text` はブランドプレフィックス除去に使う。
+日本語 alias でマッチした場合も、英語 canonical 名ではなく実際の alias テキストを除去するために必要。
+
+**例:**
+- raw_text = "ライフフィットネス 95T"
+- `_resolve_brand` → ("Life Fitness", 1.0, EXACT_ALIAS, "ライフフィットネス")
+- "ライフフィットネス" を prefix 除去 → remaining = "95T"
+- `_resolve_model("95T", ...)` → ("95T", ...) ✓
+
+**旧の問題（3-tuple 時代）:**
+- canonical "Life Fitness"（英語）で prefix 除去を試みる
+- "ライフフィットネス 95T" は "LIFE FITNESS" で始まらない → 除去失敗 → remaining = "ライフフィットネス 95T"
+- "ライフフィットネス 95T" でモデル検索 → 解決できず
+
+### hint_brand によるブランド補完（Phase 2 追加）
+
+raw_name にモデル名のみが入っている場合（例: raw_name="TRM445"）、raw_text からはブランドが解決できない。
+`hint_brand` として raw_brand（例: "Precor"）を渡すことでブランドを補完する。
+
+```python
+# import_csv.py 側
+brand_hint_raw = raw_brand if raw_brand and raw_text != raw_brand else None
+norm = engine.normalize(raw_text, hint_brand=brand_hint_raw)
+
+# engine.py 側
+elif hint_brand:
+    hint_norm, _ = normalize_text(hint_brand)
+    hint_match = self._resolve_brand(hint_norm)
+    if hint_match:
+        result.canonical_brand  = hint_match[0]
+        result.brand_confidence = hint_match[1] * 0.9  # hint 経由なので微減
+```
+
+**対象ケース:**
+| raw_name | raw_brand | 旧結果 | 新結果 |
+|---|---|---|---|
+| TRM445 | Precor | (brand?) / TRM 445 | Precor / TRM 445 |
+| SKI ERG | C2 | REVIEW(unknown) | Concept2 / SkiErg |
+| 770T | CYBEX | (brand?) / 770T | CYBEX / 770T |
 
 ---
 

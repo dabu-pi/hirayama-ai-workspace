@@ -4,6 +4,9 @@ data/db/
 # 出力ファイル
 data/output/
 
+# レビューCSV（実データ混入防止）
+data/review/
+
 # Python キャッシュ
 __pycache__/
 *.pyc

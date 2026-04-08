@@ -228,16 +228,36 @@ class NormalizerEngine:
 
         # --- ブランド解決 ---
         brand_match = self._resolve_brand(norm)
+        matched_brand_alias = None
         if brand_match:
             result.canonical_brand  = brand_match[0]
             result.brand_confidence = brand_match[1]
             result.brand_match_type = brand_match[2]
+            matched_brand_alias     = brand_match[3]  # マッチしたaliasテキスト
+        elif hint_brand:
+            # raw_text からブランドが解決できない場合、hint_brand で補完する
+            # 例: raw_name="TRM445" raw_brand="Precor" → Precor をヒントとして解決
+            hint_norm, _ = normalize_text(hint_brand)
+            hint_match = self._resolve_brand(hint_norm)
+            if hint_match:
+                result.canonical_brand  = hint_match[0]
+                result.brand_confidence = hint_match[1] * 0.9  # hint 経由なので信頼度を微減
+                result.brand_match_type = hint_match[2]
+                matched_brand_alias     = hint_match[3]
 
-        # ブランドが分かったらそのブランド名をテキストから除去してモデル解決
-        effective_brand = hint_brand or result.canonical_brand
+        # ブランドが分かったら、マッチしたaliasテキストをプレフィックスとして除去
+        effective_brand = result.canonical_brand or hint_brand
         remaining = norm
-        if effective_brand:
-            # ブランド名プレフィックスを除去
+        if matched_brand_alias:
+            # マッチしたaliasテキスト（例: "ライフフィットネス"）を除去
+            alias_upper = matched_brand_alias.upper()
+            norm_upper  = norm.upper()
+            if norm_upper.startswith(alias_upper + " "):
+                remaining = norm[len(matched_brand_alias):].strip()
+            elif norm_upper == alias_upper:
+                remaining = ""
+        elif effective_brand:
+            # フォールバック: canonical brand 名（英語）で除去
             brand_norm, _ = normalize_text(effective_brand)
             if remaining.upper().startswith(brand_norm.upper() + " "):
                 remaining = remaining[len(brand_norm):].strip()
@@ -293,6 +313,7 @@ class NormalizerEngine:
             result.canonical_brand  = match[0]
             result.brand_confidence = match[1]
             result.brand_match_type = match[2]
+            # match[3] は matched_alias_text (normalize_brand では不要)
             result.confidence       = match[1]
             result.certainty_label  = confidence_to_label(match[1])
             result.match_type       = match[2]
@@ -306,22 +327,29 @@ class NormalizerEngine:
     # 内部: 解決ロジック
     # -------------------------------------------------------------------------
 
-    def _resolve_brand(self, norm: str) -> tuple[str, float, MatchType] | None:
-        """正規化済みテキストからブランドを解決する"""
+    def _resolve_brand(self, norm: str) -> tuple[str, float, MatchType, str] | None:
+        """
+        正規化済みテキストからブランドを解決する。
+        返り値: (canonical, confidence, MatchType, matched_alias_text)
+        matched_alias_text はブランド名プレフィックスの除去に使う。
+        """
         # 完全一致
         entry = self._brand_aliases.get(norm)
         if entry:
-            return entry[0], entry[1], MatchType.EXACT_ALIAS
+            return entry[0], entry[1], MatchType.EXACT_ALIAS, norm
 
         # canonical 名直接マッチ
         upper = norm.upper()
         if upper in self._canonical_brands:
-            return self._canonical_brands[upper], 1.0, MatchType.EXACT_CANONICAL
+            return self._canonical_brands[upper], 1.0, MatchType.EXACT_CANONICAL, norm
 
-        # 先頭ブランド名マッチ（"TECHNOGYM RUN" → TECHNOGYM）
-        for alias_text, (canonical, confidence) in self._brand_aliases.items():
-            if upper.startswith(alias_text.upper() + " "):
-                return canonical, confidence, MatchType.PARTIAL
+        # 先頭ブランド名マッチ — alias テキストそのものを返す
+        # 長いaliasを優先して誤マッチを防ぐため降順ソート
+        for alias_text in sorted(self._brand_aliases, key=len, reverse=True):
+            canonical, confidence = self._brand_aliases[alias_text]
+            alias_upper = alias_text.upper()
+            if upper.startswith(alias_upper + " "):
+                return canonical, confidence, MatchType.PARTIAL, alias_text
 
         return None
 
