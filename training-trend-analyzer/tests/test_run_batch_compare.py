@@ -17,7 +17,11 @@ from scripts.run_batch import (
     _calculate_impact_score,
     _build_delta_summary,
     _combine_delta_summaries,
+    _derive_driver_direction,
+    _derive_driver_source,
+    _derive_review_hint,
     _fmt_compare_delta,
+    _format_driver_mix,
     _has_rank_change,
     _is_significant_row,
     annotate_significance,
@@ -170,3 +174,45 @@ def test_sort_significant_rows_prioritizes_rank_change_then_impact():
         "HighImpactNoRankChange",
         "MidImpactNoRankChange",
     ]
+
+
+def test_driver_hint_prefers_gs_when_gs_delta_is_larger():
+    row = {"delta_gt_to_gs": -11.19, "delta_gs_to_all": -2.72, "has_rank_change": False}
+    assert _derive_driver_source(row) == "GS"
+    assert _derive_driver_direction({**row, "driver_source": "GS"}) == "DOWN"
+    assert _derive_review_hint({"driver_source": "GS", "driver_direction": "DOWN"}) == "review GS downweight"
+
+
+def test_driver_hint_prefers_yt_when_yt_delta_is_larger():
+    row = {"delta_gt_to_gs": 0.2, "delta_gs_to_all": 1.1, "has_rank_change": False}
+    assert _derive_driver_source(row) == "YT"
+    assert _derive_driver_direction({**row, "driver_source": "YT"}) == "UP"
+    assert _derive_review_hint({"driver_source": "YT", "driver_direction": "UP"}) == "review YT boost"
+
+
+def test_driver_hint_uses_both_for_close_deltas():
+    row = {"delta_gt_to_gs": 0.55, "delta_gs_to_all": 0.49, "has_rank_change": False}
+    driver_source = _derive_driver_source(row)
+    driver_direction = _derive_driver_direction({**row, "driver_source": driver_source})
+    assert driver_source == "BOTH"
+    assert driver_direction == "UP"
+    assert _derive_review_hint({"driver_source": driver_source, "driver_direction": driver_direction}) == "review mixed signals"
+
+
+def test_driver_hint_uses_rank_for_rank_change_led_row():
+    row = {"delta_gt_to_gs": 0.04, "delta_gs_to_all": 0.03, "has_rank_change": True}
+    driver_source = _derive_driver_source(row)
+    driver_direction = _derive_driver_direction({**row, "driver_source": driver_source})
+    assert driver_source == "RANK"
+    assert driver_direction == "RANK"
+    assert _derive_review_hint({"driver_source": driver_source, "driver_direction": driver_direction}) == "review rank shift"
+
+
+def test_driver_mix_summary_counts_driver_sources():
+    rows = [
+        {"driver_source": "GS"},
+        {"driver_source": "GS"},
+        {"driver_source": "YT"},
+        {"driver_source": "BOTH"},
+    ]
+    assert _format_driver_mix(rows) == "GS=2, YT=1, BOTH=1, RANK=0"

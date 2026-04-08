@@ -27,6 +27,7 @@ from src.scorer.calculator import ScoreCalculator
 ROOT = Path(__file__).parent.parent
 DEFAULT_DB = ROOT / "data" / "db" / "trend.db"
 DEFAULT_COMPARE_THRESHOLD = 0.5
+DRIVER_TIE_EPSILON = 0.1
 
 try:
     from tabulate import tabulate
@@ -255,6 +256,9 @@ def annotate_significance(rows: list[dict], threshold: float) -> list[dict]:
         annotated_row["impact_score"] = _calculate_impact_score(row)
         annotated_row["has_rank_change"] = _has_rank_change(row)
         annotated_row["is_significant"] = _is_significant_row(row, threshold)
+        annotated_row["driver_source"] = _derive_driver_source(annotated_row)
+        annotated_row["driver_direction"] = _derive_driver_direction(annotated_row)
+        annotated_row["review_hint"] = _derive_review_hint(annotated_row)
         annotated_row["_compare_order"] = index
         annotated.append(annotated_row)
     return annotated
@@ -287,6 +291,7 @@ def print_significant_summary(display_rows: list[dict], total_rows: int) -> None
         f"impact={_fmt_impact(top_row.get('impact_score'))} "
         f"rank_change={rank_change}"
     )
+    print(f"[COMPARE] driver mix: {_format_driver_mix(display_rows)}")
 
 
 def print_comparison_summary(
@@ -294,6 +299,7 @@ def print_comparison_summary(
     week_start: str,
     category_filter: str | None = None,
     show_impact: bool = False,
+    show_hint: bool = False,
 ) -> None:
     print(f"\n=== Source Set Comparison {week_start} ===")
     if category_filter:
@@ -321,6 +327,8 @@ def print_comparison_summary(
         )
         if show_impact:
             table_rows[-1].append(_fmt_impact(row.get("impact_score")))
+        if show_hint:
+            table_rows[-1].append(row.get("review_hint", "-"))
         table_rows[-1].append(row["rank_path"])
 
     headers = [
@@ -337,6 +345,8 @@ def print_comparison_summary(
     ]
     if show_impact:
         headers.append("Impact")
+    if show_hint:
+        headers.append("Hint")
     headers.append("Rank path")
 
     print()
@@ -370,6 +380,9 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                 "impact_score",
                 "is_significant",
                 "has_rank_change",
+                "driver_source",
+                "driver_direction",
+                "review_hint",
                 "gt_only_rank",
                 "gt_plus_gs_rank",
                 "all_three_rank",
@@ -393,6 +406,9 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                     row.get("impact_score"),
                     row.get("is_significant", False),
                     row.get("has_rank_change", False),
+                    row.get("driver_source"),
+                    row.get("driver_direction"),
+                    row.get("review_hint"),
                     row["gt_only_rank"],
                     row["gt_plus_gs_rank"],
                     row["all_three_rank"],
@@ -438,6 +454,56 @@ def _calculate_impact_score(row: dict) -> float:
     return round(max(delta_gt_to_gs, delta_gs_to_all), 2)
 
 
+def _derive_driver_source(row: dict) -> str:
+    delta_gt_to_gs = abs(row.get("delta_gt_to_gs") or 0.0)
+    delta_gs_to_all = abs(row.get("delta_gs_to_all") or 0.0)
+    has_rank_change = row.get("has_rank_change", False)
+
+    if has_rank_change and max(delta_gt_to_gs, delta_gs_to_all) < DRIVER_TIE_EPSILON:
+        return "RANK"
+    if abs(delta_gt_to_gs - delta_gs_to_all) < DRIVER_TIE_EPSILON:
+        return "BOTH"
+    if delta_gt_to_gs > delta_gs_to_all:
+        return "GS"
+    return "YT"
+
+
+def _derive_driver_direction(row: dict) -> str:
+    driver_source = row.get("driver_source")
+    if driver_source == "RANK":
+        return "RANK"
+    if driver_source == "GS":
+        return "UP" if (row.get("delta_gt_to_gs") or 0.0) > 0 else "DOWN"
+    if driver_source == "YT":
+        return "UP" if (row.get("delta_gs_to_all") or 0.0) > 0 else "DOWN"
+
+    delta_gt_to_gs = row.get("delta_gt_to_gs") or 0.0
+    delta_gs_to_all = row.get("delta_gs_to_all") or 0.0
+    if delta_gt_to_gs > 0 and delta_gs_to_all > 0:
+        return "UP"
+    if delta_gt_to_gs < 0 and delta_gs_to_all < 0:
+        return "DOWN"
+    return "MIXED"
+
+
+def _derive_review_hint(row: dict) -> str:
+    driver_source = row.get("driver_source")
+    driver_direction = row.get("driver_direction")
+    if driver_source == "RANK":
+        return "review rank shift"
+    if driver_source == "BOTH":
+        return "review mixed signals"
+    if driver_source == "GS" and driver_direction == "UP":
+        return "review GS boost"
+    if driver_source == "GS" and driver_direction == "DOWN":
+        return "review GS downweight"
+    if driver_source == "YT" and driver_direction == "UP":
+        return "review YT boost"
+    if driver_source == "YT" and driver_direction == "DOWN":
+        return "review YT downweight"
+    return "review mixed signals"
+
+
 def _has_rank_change(row: dict) -> bool:
     return row.get("gt_only_rank") != row.get("gt_plus_gs_rank") or row.get("gt_plus_gs_rank") != row.get("all_three_rank")
 
@@ -477,6 +543,15 @@ def _rank_path(*entries: dict | None) -> str:
             continue
         parts.append(str(entry["rank"]))
     return " -> ".join(parts)
+
+
+def _format_driver_mix(rows: list[dict]) -> str:
+    counts = {"GS": 0, "YT": 0, "BOTH": 0, "RANK": 0}
+    for row in rows:
+        driver_source = row.get("driver_source")
+        if driver_source in counts:
+            counts[driver_source] += 1
+    return ", ".join(f"{key}={value}" for key, value in counts.items())
 
 
 def export_csv(scores: list, output_path: Path) -> None:
@@ -575,6 +650,7 @@ def main() -> None:
             args.week,
             category_filter=args.category,
             show_impact=args.compare_only_significant,
+            show_hint=args.compare_only_significant,
         )
         if args.output_csv:
             timestamp = args.week.replace("-", "")

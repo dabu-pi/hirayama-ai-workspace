@@ -201,6 +201,7 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-
 - console の compare 表では raw delta 列 (`d(GT->GS)` / `d(GS->3)`) も丸め後ゼロなら `-` 表示にする
 - `--compare-threshold` と `--compare-only-significant` で、有意差分だけを compare 表から拾える
 - `--compare-only-significant` では `Impact` を出し、priority 高い順に tuning 対象を見やすくする
+- `--compare-only-significant` では `Hint` も出し、GS / YT / mixed / rank shift の見方をすぐ判断できる
 - `--show-metric-details` で source / metric ごとの寄与を確認できる
 - `google_trends_interest`、`search_suggest_count`、`youtube_suggest_count` はどれも軽量補助指標として扱う
 - 観測不足や低値のモデルは metric rule で score 対象から外す
@@ -234,10 +235,16 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 - `--compare-only-significant` 指定時だけ、この判定を満たす行に絞って表示
 - `Impact` は `max(abs(d(GT->GS)), abs(d(GS->3)))`
 - significant-only の並び順は `rank change あり` → `Impact 大きい順` → 元の compare 順
+- `driver_source` は主に絶対値の大きい delta 側で決める
+  - `GS` / `YT`
+  - 近い値なら `BOTH`
+  - rank change 主体で delta が弱い場合は `RANK`
+- `driver_direction` は主因側 delta の符号で `UP` / `DOWN`、rank 主体なら `RANK`
+- console の significant-only では `review_hint` を `Hint` 列で短く表示
 - compare CSV の raw delta 列は downstream 用に数値のまま保持
-- compare CSV には `is_significant`, `has_rank_change`, `impact_score` の軽い補助列を追加
+- compare CSV には `is_significant`, `has_rank_change`, `impact_score`, `driver_source`, `driver_direction`, `review_hint` の軽い補助列を追加
 - `-` 整形は console compare 表だけに適用
-- significant-only 実行時は summary として `significant rows` と `top priority` を短く出す
+- significant-only 実行時は summary として `significant rows`, `top priority`, `driver mix` を短く出す
 
 ## 関連ドキュメント
 
