@@ -61,6 +61,7 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 | F-04-7 | source / metric ごとの寄与を後から追える | 完了 |
 | F-04-8 | `GT only / GT + GS / GT + GS + YT` の 3 パターン比較を 1 コマンドで見られる | 完了 |
 | F-04-9 | 3 パターン比較で `GS:+x.x / YT:+y.y` の短い差分要約を表示し、`0.0` 差分は省略、console の raw delta 列も丸め後ゼロは `-` 表示にする | 完了 |
+| F-04-10 | `--compare-threshold` と `--compare-only-significant` で、有意差分または rank change の行だけを compare 表 / compare CSV から拾える | 完了 |
 
 ## 非機能要件
 

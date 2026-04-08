@@ -12,12 +12,17 @@ if sys.stdout.encoding != "utf-8":
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.run_batch import (
+    DEFAULT_COMPARE_THRESHOLD,
     COMPARE_SOURCE_SET_DEFS,
     _build_delta_summary,
     _combine_delta_summaries,
     _fmt_compare_delta,
+    _has_rank_change,
+    _is_significant_row,
+    annotate_significance,
     build_comparison_rows,
     calculate_scores_for_sets,
+    filter_significant_rows,
 )
 
 
@@ -113,3 +118,34 @@ def test_zero_delta_row_shows_dash_in_why():
     assert precor_row["gt_to_gs_summary"] == "-"
     assert precor_row["gs_to_all_summary"] == "-"
     assert precor_row["delta_summary"] == "-"
+
+
+def test_annotate_significance_marks_non_zero_rows():
+    score_sets = calculate_scores_for_sets(_sample_metrics_by_model(), COMPARE_SOURCE_SET_DEFS)
+    rows = annotate_significance(build_comparison_rows(score_sets), threshold=DEFAULT_COMPARE_THRESHOLD)
+    run_row = next(row for row in rows if row["model"] == "Run")
+    precor_row = next(row for row in rows if row["model"] == "TRM 445")
+    assert run_row["is_significant"] is True
+    assert run_row["has_rank_change"] is False
+    assert precor_row["is_significant"] is False
+    assert precor_row["has_rank_change"] is False
+
+
+def test_filter_significant_rows_drops_zero_delta_row():
+    score_sets = calculate_scores_for_sets(_sample_metrics_by_model(), COMPARE_SOURCE_SET_DEFS)
+    rows = annotate_significance(build_comparison_rows(score_sets), threshold=DEFAULT_COMPARE_THRESHOLD)
+    filtered = filter_significant_rows(rows)
+    assert len(filtered) == 2
+    assert {row["model"] for row in filtered} == {"Run", "T5"}
+
+
+def test_rank_change_is_significant_even_below_threshold():
+    row = {
+        "delta_gt_to_gs": 0.1,
+        "delta_gs_to_all": 0.1,
+        "gt_only_rank": 1,
+        "gt_plus_gs_rank": 2,
+        "all_three_rank": 2,
+    }
+    assert _has_rank_change(row) is True
+    assert _is_significant_row(row, threshold=0.5) is True

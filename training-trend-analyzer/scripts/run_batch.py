@@ -26,6 +26,7 @@ from src.scorer.calculator import ScoreCalculator
 
 ROOT = Path(__file__).parent.parent
 DEFAULT_DB = ROOT / "data" / "db" / "trend.db"
+DEFAULT_COMPARE_THRESHOLD = 0.5
 
 try:
     from tabulate import tabulate
@@ -247,6 +248,20 @@ def build_comparison_rows(
     return rows
 
 
+def annotate_significance(rows: list[dict], threshold: float) -> list[dict]:
+    annotated = []
+    for row in rows:
+        annotated_row = dict(row)
+        annotated_row["has_rank_change"] = _has_rank_change(row)
+        annotated_row["is_significant"] = _is_significant_row(row, threshold)
+        annotated.append(annotated_row)
+    return annotated
+
+
+def filter_significant_rows(rows: list[dict]) -> list[dict]:
+    return [row for row in rows if row.get("is_significant")]
+
+
 def print_comparison_summary(rows: list[dict], week_start: str, category_filter: str | None = None) -> None:
     print(f"\n=== Source Set Comparison {week_start} ===")
     if category_filter:
@@ -316,6 +331,8 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                 "gt_to_gs_summary",
                 "gs_to_all_summary",
                 "delta_summary",
+                "is_significant",
+                "has_rank_change",
                 "gt_only_rank",
                 "gt_plus_gs_rank",
                 "all_three_rank",
@@ -336,6 +353,8 @@ def export_comparison_csv(rows: list[dict], output_path: Path) -> None:
                     row["gt_to_gs_summary"],
                     row["gs_to_all_summary"],
                     row["delta_summary"],
+                    row.get("is_significant", False),
+                    row.get("has_rank_change", False),
                     row["gt_only_rank"],
                     row["gt_plus_gs_rank"],
                     row["all_three_rank"],
@@ -365,6 +384,22 @@ def _fmt_compare_delta(value: float | None) -> str:
     if _is_display_zero_delta(value):
         return "-"
     return _fmt_delta(value)
+
+
+def _is_delta_significant(value: float | None, threshold: float) -> bool:
+    return value is not None and abs(value) >= threshold
+
+
+def _has_rank_change(row: dict) -> bool:
+    return row.get("gt_only_rank") != row.get("gt_plus_gs_rank") or row.get("gt_plus_gs_rank") != row.get("all_three_rank")
+
+
+def _is_significant_row(row: dict, threshold: float) -> bool:
+    return (
+        _is_delta_significant(row.get("delta_gt_to_gs"), threshold)
+        or _is_delta_significant(row.get("delta_gs_to_all"), threshold)
+        or _has_rank_change(row)
+    )
 
 
 def _build_delta_summary(label: str, value: float | None) -> str:
@@ -444,6 +479,8 @@ def main() -> None:
     parser.add_argument("--exclude-metric", action="append", default=[])
     parser.add_argument("--show-metric-details", action="store_true")
     parser.add_argument("--compare-source-sets", action="store_true")
+    parser.add_argument("--compare-threshold", type=float, default=DEFAULT_COMPARE_THRESHOLD)
+    parser.add_argument("--compare-only-significant", action="store_true")
     args = parser.parse_args()
 
     print(f"[START] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} week={args.week}")
@@ -472,11 +509,18 @@ def main() -> None:
     if args.compare_source_sets:
         score_sets = calculate_scores_for_sets(metrics_by_model, COMPARE_SOURCE_SET_DEFS)
         comparison_rows = build_comparison_rows(score_sets, category_filter=args.category)
+        comparison_rows = annotate_significance(comparison_rows, threshold=args.compare_threshold)
+        display_rows = filter_significant_rows(comparison_rows) if args.compare_only_significant else comparison_rows
         print("[COMPARE] source_sets=GT only / GT + GS / GT + GS + YT")
-        print_comparison_summary(comparison_rows, args.week, category_filter=args.category)
+        print(
+            f"[COMPARE] threshold={args.compare_threshold:.1f} "
+            f"only_significant={'yes' if args.compare_only_significant else 'no'} "
+            f"rank_change_included=yes"
+        )
+        print_comparison_summary(display_rows, args.week, category_filter=args.category)
         if args.output_csv:
             timestamp = args.week.replace("-", "")
-            export_comparison_csv(comparison_rows, Path(f"data/output/ranking_compare_{timestamp}.csv"))
+            export_comparison_csv(display_rows, Path(f"data/output/ranking_compare_{timestamp}.csv"))
     else:
         calculator = ScoreCalculator(excluded_metrics=set(args.exclude_metric))
         scores = calculator.calculate(metrics_by_model)
