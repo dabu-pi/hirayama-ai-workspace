@@ -267,8 +267,8 @@ def print_comparison_summary(rows: list[dict], week_start: str, category_filter:
                 _fmt_score(row["gt_only_score"]),
                 _fmt_score(row["gt_plus_gs_score"]),
                 _fmt_score(row["all_three_score"]),
-                _fmt_delta(row["delta_gt_to_gs"]),
-                _fmt_delta(row["delta_gs_to_all"]),
+                _fmt_compare_delta(row["delta_gt_to_gs"]),
+                _fmt_compare_delta(row["delta_gs_to_all"]),
                 row["delta_summary"],
                 row["rank_path"],
             ]
@@ -357,6 +357,14 @@ def _fmt_score(value: float | None) -> str:
 
 def _fmt_delta(value: float | None) -> str:
     return f"{value:+.1f}" if value is not None else "N/A"
+
+
+def _fmt_compare_delta(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    if _is_display_zero_delta(value):
+        return "-"
+    return _fmt_delta(value)
 
 
 def _build_delta_summary(label: str, value: float | None) -> str:

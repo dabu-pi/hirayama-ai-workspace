@@ -15,6 +15,7 @@ from scripts.run_batch import (
     COMPARE_SOURCE_SET_DEFS,
     _build_delta_summary,
     _combine_delta_summaries,
+    _fmt_compare_delta,
     build_comparison_rows,
     calculate_scores_for_sets,
 )
@@ -95,6 +96,14 @@ def test_zero_delta_summaries_are_hidden():
     assert _combine_delta_summaries("GS:+4.6", "-") == "GS:+4.6"
     assert _combine_delta_summaries("-", "YT:-0.9") == "YT:-0.9"
     assert _combine_delta_summaries("-", "-") == "-"
+
+
+def test_compare_delta_formatter_hides_display_zero():
+    assert _fmt_compare_delta(0.0) == "-"
+    assert _fmt_compare_delta(0.04) == "-"
+    assert _fmt_compare_delta(4.59) == "+4.6"
+    assert _fmt_compare_delta(-0.87) == "-0.9"
+    assert _fmt_compare_delta(-11.19) == "-11.2"
 
 
 def test_zero_delta_row_shows_dash_in_why():
