@@ -1,0 +1,114 @@
+[
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "search_volume",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 82, "value_prev": 80},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 81, "value_prev": 79},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 79, "value_prev": 77},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 74, "value_prev": 72},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 70, "value_prev": 68},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 71, "value_prev": 69},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 71, "value_prev": 69}
+    ]
+  },
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "mention_count",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 220, "value_prev": 217},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 215, "value_prev": 212},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 205, "value_prev": 202},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 198, "value_prev": 195},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 190, "value_prev": 187},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 192, "value_prev": 189},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 192, "value_prev": 189}
+    ]
+  },
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "review_count",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 42, "value_prev": 41},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 41, "value_prev": 40},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 40, "value_prev": 39},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 39, "value_prev": 38},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 38, "value_prev": 37},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 37, "value_prev": 36},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 37, "value_prev": 36}
+    ]
+  },
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "media_count",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 31, "value_prev": 30},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 31, "value_prev": 30},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 30.5, "value_prev": 29.5},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 29, "value_prev": 28},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 28, "value_prev": 27},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 27.5, "value_prev": 26.5},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 27.5, "value_prev": 26.5}
+    ]
+  },
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "inquiry_count",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 16, "value_prev": 15},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 15.5, "value_prev": 14.5},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 15.2, "value_prev": 14.2},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 14.5, "value_prev": 13.5},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 14, "value_prev": 13},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 13.8, "value_prev": 12.8},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 13.8, "value_prev": 12.8}
+    ]
+  },
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "google_trends_interest",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 57, "value_prev": 56, "sample_size": 2, "metadata": {"observation_weeks": 4}},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 56, "value_prev": 55, "sample_size": 2, "metadata": {"observation_weeks": 4}},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 55.5, "value_prev": 54.5, "sample_size": 2, "metadata": {"observation_weeks": 4}},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 55, "value_prev": 54, "sample_size": 2, "metadata": {"observation_weeks": 4}},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 54, "value_prev": 53, "sample_size": 2, "metadata": {"observation_weeks": 4}},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 54, "value_prev": 53, "sample_size": 2, "metadata": {"observation_weeks": 4}},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 54, "value_prev": 53, "sample_size": 2, "metadata": {"observation_weeks": 4}}
+    ]
+  },
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "search_suggest_count",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 2.0, "sample_size": 2},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 2.1, "sample_size": 2},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 2.2, "sample_size": 2},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 4.0, "sample_size": 2},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 7.0, "sample_size": 2},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 4.0, "sample_size": 2},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 4.0, "sample_size": 2}
+    ]
+  },
+  {
+    "_week": "2026-04-13",
+    "source": "mock",
+    "metric_type": "youtube_suggest_count",
+    "entries": [
+      {"brand": "Concept2", "model": "SkiErg", "category": "ski_erg", "value": 2.0, "sample_size": 2},
+      {"brand": "TECHNOGYM", "model": "Run", "category": "treadmill", "value": 2.0, "sample_size": 2},
+      {"brand": "Matrix", "model": "T75", "category": "treadmill", "value": 2.0, "sample_size": 2},
+      {"brand": "Body-Solid", "model": "G4I", "category": "home_gym", "value": 4.0, "sample_size": 2},
+      {"brand": "Precor", "model": "TRM 445", "category": "treadmill", "value": 50.0, "sample_size": 2},
+      {"brand": "Alpha", "model": "A-One", "category": "treadmill", "value": 4.0, "sample_size": 2},
+      {"brand": "Bravo", "model": "B-Two", "category": "treadmill", "value": 7.0, "sample_size": 2}
+    ]
+  }
+]

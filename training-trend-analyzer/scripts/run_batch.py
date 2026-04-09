@@ -91,7 +91,7 @@ def build_metrics_by_model(raw_metrics: list) -> dict:
             "value": metric.value,
             "value_prev": metric.value_prev,
             "source_name": metric.source_name,
-            "sample_size": raw_input.get("sample_size"),
+            "sample_size": raw_input.get("sample_size", metric.sample_size),
             "metadata": metadata,
         }
         entry["metrics"][metric.metric_type] = metric_entry

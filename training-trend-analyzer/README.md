@@ -261,8 +261,10 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 ## compare の自動テスト観点
 
 - `pytest tests/test_run_batch_compare.py` で compare 専用ケースを回す
+- `pytest tests/test_run_batch_compare_cli.py` で CLI 寄りの compare 回帰確認を、fixture `tests/fixtures/compare_source_sets_cli_fixture.json` で回す
 - 3 ソース比較の score / delta / rank path が崩れていないこと
 - `--compare-only-significant` の significance 判定が、threshold 超えだけでなく rank shift も拾うこと
 - review summary が 0件 / 1件 / 複数件でも 3 行固定で崩れないこと
 - `top drivers` の tie-break が件数降順、同数時は表示順で安定すること
 - compare CSV に summary 行を混ぜず、行データだけを出すこと
+- 実 DB に rank shift が出ていない週でも、fixture で compare の人間向け出力全体を回帰確認できること

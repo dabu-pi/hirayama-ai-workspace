@@ -25,6 +25,23 @@ class MockCollector(BaseCollector):
         super().__init__("mock")
         self.mock_path = mock_path
 
+    @staticmethod
+    def _build_raw_data(entry: dict) -> str | None:
+        if entry.get("raw_data") is not None:
+            return entry.get("raw_data")
+
+        metadata = entry.get("metadata")
+        sample_size = entry.get("sample_size")
+        if metadata is None and sample_size is None:
+            return None
+
+        payload = {}
+        if metadata is not None:
+            payload["metadata_json"] = json.dumps(metadata, ensure_ascii=False)
+        if sample_size is not None:
+            payload["sample_size"] = sample_size
+        return json.dumps(payload, ensure_ascii=False)
+
     def collect(self, keywords: list[str], week_start: str) -> CollectResult:
         result = CollectResult(source_name=self.source_name)
 
@@ -58,6 +75,8 @@ class MockCollector(BaseCollector):
                         metric_type=metric_type,
                         value=entry.get("value"),
                         value_prev=entry.get("value_prev"),
+                        sample_size=entry.get("sample_size"),
+                        raw_data=self._build_raw_data(entry),
                     ))
 
         except (json.JSONDecodeError, KeyError) as e:

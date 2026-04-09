@@ -163,6 +163,7 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - rank shift は delta が閾値未満でも significant として扱う
 - `top drivers` は件数降順、同数時は significant-only の表示順を優先する
 - `largest impact` は `impact_score` 最大行を 1 件だけ示す
+- 実 DB で rank shift が出ない週でも、fixture ベースの compare CLI 回帰テストで人間向け出力を確認できるようにする
 
 ## 次アクション
 
