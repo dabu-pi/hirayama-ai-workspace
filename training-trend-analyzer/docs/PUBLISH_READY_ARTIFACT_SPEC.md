@@ -1,6 +1,6 @@
 # PUBLISH_READY_ARTIFACT_SPEC.md
 
-Last Updated: 2026-04-10
+Last Updated: 2026-04-11
 
 ## 1. Role
 
@@ -212,3 +212,30 @@ Rendering rules:
   no artifact means no Markdown render input
 
 This keeps the public layer artifact-only and prevents any raw collector or DB re-read.
+
+## 2026-04-11 Front Matter Update
+
+The artifact schema itself stays at `publish-ready/v1`.
+Front matter is added only at renderer output time.
+
+- input contract:
+  unchanged publish-ready artifact JSON
+- output contract:
+  Markdown with YAML front matter + existing body
+- front matter is derived from artifact fields only
+- no DB or collector re-read is allowed
+
+Minimum renderer-side front matter fields:
+
+- `schema_version`
+- `content_kind`
+- `week`
+- `generated_at`
+- `publish_ready`
+- `title`
+- `slug`
+- `summary`
+- `internal_reference`
+- `publication_notice` when available
+- `compare_mode` for compare artifacts
+- `hold_reason` for hold documents

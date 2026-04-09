@@ -198,6 +198,8 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - `blocked` run は artifact を生成しない
 - `review_only` run は artifact を生成するが `publish_ready=false` を維持する
 - downstream consumer は artifact only を守り、raw DB / collector を再参照しない
+- renderer output は artifact v1 から導出した YAML front matter を Markdown 冒頭に付ける
+- front matter は汎用 handoff 用 metadata であり、artifact JSON schema 自体は変更しない
 
 互換性ポリシー:
 

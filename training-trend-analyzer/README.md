@@ -347,3 +347,25 @@ Behavior:
   render a public draft Markdown
 - `publish_ready=false`
   render a hold-only Markdown for internal review
+
+Renderer output now includes YAML front matter before the Markdown body so the file can move more easily into CMS, static site, or manual publication flows.
+
+Example front matter:
+
+```yaml
+---
+schema_version: 'publish-ready/v1'
+content_kind: 'ranking'
+week: '2026-04-06'
+generated_at: '2026-04-10T00:10:00'
+publish_ready: true
+title: 'Weekly Training Trend Update: 2026-04-06'
+slug: 'training-trends-20260406'
+summary: 'TECHNOGYM Run leads this week''s treadmill trend candidates.'
+internal_reference:
+  collector_source: 'db'
+  normalized_models: 4
+  compare_enabled: false
+publication_notice: 'Ready for publication after editorial review.'
+---
+```

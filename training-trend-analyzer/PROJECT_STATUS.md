@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md
 
-最終更新: 2026-04-10
+最終更新: 2026-04-11
 
 ## 現在地
 
@@ -247,3 +247,20 @@ Tests added in this step:
   - review-only artifact (v1) -> hold Markdown success
   - missing `schema_version` legacy artifact -> explicit failure
   - unsupported `schema_version` -> explicit failure
+
+## 2026-04-11 Markdown Front Matter Update
+
+- kept publish-ready artifact schema at `publish-ready/v1`
+- added renderer-side YAML front matter for ranking / compare / hold outputs
+- front matter is derived from artifact only and includes `schema_version`, `content_kind`, `week`, `generated_at`, `publish_ready`, `title`, `slug`, `summary`, `internal_reference`
+- compare output also includes `compare_mode: true`
+- hold output uses `content_kind: publish_hold` and includes `hold_reason`
+- existing public / hold body generation stays intact under the front matter
+
+Tests added in this step:
+
+- `tests/test_render_publish_markdown.py`
+  - ranking artifact -> front matter keys present
+  - compare artifact -> front matter keys present with `compare_mode: true`
+  - review-only artifact -> hold front matter keys present with `content_kind: publish_hold`
+  - unsupported schema fail behavior remains unchanged

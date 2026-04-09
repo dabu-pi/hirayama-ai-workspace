@@ -38,6 +38,14 @@ def _run_renderer(monkeypatch, capsys, tmp_path: Path, artifact_name: str) -> tu
     return captured.out, output_path
 
 
+def _front_matter_block(content: str) -> str:
+    assert content.startswith("---\n")
+    _, _, remainder = content.partition("---\n")
+    front_matter, separator, _body = remainder.partition("\n---\n")
+    assert separator == "\n---\n"
+    return front_matter
+
+
 def test_render_publish_markdown_for_ranking_artifact(monkeypatch, capsys, tmp_path):
     output, output_path = _run_renderer(
         monkeypatch,
@@ -49,6 +57,16 @@ def test_render_publish_markdown_for_ranking_artifact(monkeypatch, capsys, tmp_p
     assert output_path.exists()
     assert f"[MARKDOWN] {output_path.resolve()}" in output
     content = output_path.read_text(encoding="utf-8")
+    front_matter = _front_matter_block(content)
+    assert "schema_version: 'publish-ready/v1'" in front_matter
+    assert "content_kind: 'ranking'" in front_matter
+    assert "week: '2026-04-06'" in front_matter
+    assert "publish_ready: true" in front_matter
+    assert "title: 'Weekly Training Trend Update: 2026-04-06'" in front_matter
+    assert "slug: 'training-trends-20260406'" in front_matter
+    assert "summary: 'TECHNOGYM Run leads this week''s treadmill trend candidates.'" in front_matter
+    assert "internal_reference:" in front_matter
+    assert "publication_notice: 'Ready for publication after editorial review.'" in front_matter
     assert "# Weekly Training Trend Update: 2026-04-06" in content
     assert "TECHNOGYM Run leads this week's treadmill trend candidates." in content
     assert "## Featured Categories" in content
@@ -56,6 +74,7 @@ def test_render_publish_markdown_for_ranking_artifact(monkeypatch, capsys, tmp_p
     assert "## Featured Models" in content
     assert "**TECHNOGYM Run**" in content
     assert "## Compare Highlights" not in content
+    assert "compare_mode: true" not in front_matter
 
 
 def test_render_publish_markdown_for_compare_artifact(monkeypatch, capsys, tmp_path):
@@ -69,7 +88,13 @@ def test_render_publish_markdown_for_compare_artifact(monkeypatch, capsys, tmp_p
     assert output_path.exists()
     assert f"[MARKDOWN] {output_path.resolve()}" in output
     content = output_path.read_text(encoding="utf-8")
-    assert "# Weekly Training Trend Update: 2026-04-06" in content
+    front_matter = _front_matter_block(content)
+    assert "content_kind: 'compare'" in front_matter
+    assert "publish_ready: true" in front_matter
+    assert "title: 'Weekly Training Trend Source Set Comparison: 2026-04-06'" in front_matter
+    assert "slug: 'training-trends-compare-20260406'" in front_matter
+    assert "compare_mode: true" in front_matter
+    assert "# Weekly Training Trend Source Set Comparison: 2026-04-06" in content
     assert "## Compare Highlights" in content
     assert "Significant shifts: 3 | Rank shifts: 0" in content
     assert "Top drivers: GS downweight x2, GS boost x1" in content
@@ -88,6 +113,13 @@ def test_render_publish_markdown_creates_hold_document_for_review_only(monkeypat
     assert output_path.exists()
     assert f"[MARKDOWN] {output_path.resolve()}" in output
     content = output_path.read_text(encoding="utf-8")
+    front_matter = _front_matter_block(content)
+    assert "content_kind: 'publish_hold'" in front_matter
+    assert "publish_ready: false" in front_matter
+    assert "title: 'Publish Hold: 2026-04-20'" in front_matter
+    assert "slug: 'training-trends-hold-20260420'" in front_matter
+    assert "hold_reason: 'source coverage is incomplete; ranking and compare are advisory only'" in front_matter
+    assert "publication_notice: 'Internal review only: source coverage is incomplete, so this summary should not be published as a normal weekly update.'" in front_matter
     assert "# Publish Hold: 2026-04-20" in content
     assert "This weekly summary is not publish-ready and should stay in internal review." in content
     assert "## Hold Reasons" in content

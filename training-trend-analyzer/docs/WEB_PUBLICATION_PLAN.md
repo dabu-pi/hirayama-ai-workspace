@@ -158,3 +158,28 @@ The first public-layer consumer is now the Markdown renderer.
   hold Markdown for internal review only
 
 This keeps the publication layer artifact-first and avoids raw CLI table reuse.
+
+## 2026-04-11 Front Matter Update
+
+Renderer output now adds minimal YAML front matter so the Markdown can hand off cleanly to:
+
+- CMS draft import
+- static site content folders
+- manual editorial publication flows
+
+Current minimum metadata:
+
+- `schema_version`
+- `content_kind`
+- `week`
+- `generated_at`
+- `publish_ready`
+- `title`
+- `slug`
+- `summary`
+- `internal_reference`
+- `publication_notice` when present
+- `compare_mode` for compare artifacts
+- `hold_reason` for hold documents
+
+This metadata is renderer-derived from the artifact and does not expand the artifact schema itself.

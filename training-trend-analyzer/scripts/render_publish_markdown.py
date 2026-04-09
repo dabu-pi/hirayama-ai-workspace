@@ -59,6 +59,115 @@ def _artifact_kind(payload: dict, artifact_path: Path) -> str:
     return "ranking"
 
 
+def _content_kind(payload: dict, artifact_path: Path) -> str:
+    if not payload["publish_ready"]:
+        return "publish_hold"
+    return _artifact_kind(payload, artifact_path)
+
+
+def _week_compact(week: str) -> str:
+    return week.replace("-", "")
+
+
+def _document_title(payload: dict, artifact_path: Path) -> str:
+    week = payload["week"]
+    artifact_kind = _artifact_kind(payload, artifact_path)
+    if not payload["publish_ready"]:
+        return f"Publish Hold: {week}"
+    if artifact_kind == "compare":
+        return f"Weekly Training Trend Source Set Comparison: {week}"
+    return f"Weekly Training Trend Update: {week}"
+
+
+def _document_slug(payload: dict, artifact_path: Path) -> str:
+    week_token = _week_compact(payload["week"])
+    artifact_kind = _artifact_kind(payload, artifact_path)
+    if not payload["publish_ready"]:
+        return f"training-trends-hold-{week_token}"
+    if artifact_kind == "compare":
+        return f"training-trends-compare-{week_token}"
+    return f"training-trends-{week_token}"
+
+
+def _document_summary(payload: dict) -> str:
+    if payload["publish_ready"]:
+        return payload["public_summary"]["headline"]
+
+    reasons = payload["health"].get("reasons") or []
+    if reasons:
+        return reasons[0]
+    return payload.get("public_notice") or "Publication is on hold."
+
+
+def _hold_reason(payload: dict) -> str:
+    reasons = payload["health"].get("reasons") or []
+    if reasons:
+        return " | ".join(reasons)
+    return payload.get("public_notice") or "Publication is on hold."
+
+
+def _build_front_matter_data(payload: dict, artifact_path: Path) -> dict:
+    artifact_kind = _artifact_kind(payload, artifact_path)
+    metadata = {
+        "schema_version": payload["schema_version"],
+        "content_kind": _content_kind(payload, artifact_path),
+        "week": payload["week"],
+        "generated_at": payload["generated_at"],
+        "publish_ready": payload["publish_ready"],
+        "title": _document_title(payload, artifact_path),
+        "slug": _document_slug(payload, artifact_path),
+        "summary": _document_summary(payload),
+        "internal_reference": payload["internal_reference"],
+    }
+    if payload.get("public_notice"):
+        metadata["publication_notice"] = payload["public_notice"]
+    if artifact_kind == "compare":
+        metadata["compare_mode"] = True
+    if not payload["publish_ready"]:
+        metadata["hold_reason"] = _hold_reason(payload)
+    return metadata
+
+
+def _yaml_scalar(value) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    text = str(value).replace("'", "''")
+    return f"'{text}'"
+
+
+def _yaml_lines(value, *, indent: int = 0) -> list[str]:
+    prefix = " " * indent
+    if isinstance(value, dict):
+        lines = []
+        for key, child in value.items():
+            if isinstance(child, (dict, list)):
+                lines.append(f"{prefix}{key}:")
+                lines.extend(_yaml_lines(child, indent=indent + 2))
+            else:
+                lines.append(f"{prefix}{key}: {_yaml_scalar(child)}")
+        return lines
+    if isinstance(value, list):
+        lines = []
+        for child in value:
+            if isinstance(child, (dict, list)):
+                lines.append(f"{prefix}-")
+                lines.extend(_yaml_lines(child, indent=indent + 2))
+            else:
+                lines.append(f"{prefix}- {_yaml_scalar(child)}")
+        return lines
+    return [f"{prefix}{_yaml_scalar(value)}"]
+
+
+def _render_front_matter(payload: dict, artifact_path: Path) -> str:
+    metadata = _build_front_matter_data(payload, artifact_path)
+    lines = ["---", *_yaml_lines(metadata), "---", ""]
+    return "\n".join(lines)
+
+
 def _format_category_line(category: dict) -> str:
     examples = ", ".join(category.get("example_models", []))
     if examples:
@@ -109,9 +218,10 @@ def build_publish_markdown(payload: dict, artifact_path: Path) -> str:
     artifact_kind = _artifact_kind(payload, artifact_path)
     public_summary = payload["public_summary"]
     internal_reference = payload["internal_reference"]
+    title = _document_title(payload, artifact_path)
 
     lines = [
-        f"# Weekly Training Trend Update: {payload['week']}",
+        f"# {title}",
         "",
         f"_Generated from artifact on {payload['generated_at']}_",
         "",
@@ -153,9 +263,10 @@ def build_hold_markdown(payload: dict, artifact_path: Path) -> str:
     health = payload["health"]
     internal_reference = payload["internal_reference"]
     reasons = health.get("reasons") or [payload.get("public_notice", "Publication is on hold.")]
+    title = _document_title(payload, artifact_path)
 
     lines = [
-        f"# Publish Hold: {payload['week']}",
+        f"# {title}",
         "",
         f"_Artifact generated on {payload['generated_at']}_",
         "",
@@ -190,8 +301,10 @@ def build_hold_markdown(payload: dict, artifact_path: Path) -> str:
 
 def render_publish_markdown(payload: dict, artifact_path: Path) -> str:
     if payload["publish_ready"]:
-        return build_publish_markdown(payload, artifact_path)
-    return build_hold_markdown(payload, artifact_path)
+        body = build_publish_markdown(payload, artifact_path)
+    else:
+        body = build_hold_markdown(payload, artifact_path)
+    return _render_front_matter(payload, artifact_path) + body
 
 
 def markdown_output_path(artifact_path: Path) -> Path:
