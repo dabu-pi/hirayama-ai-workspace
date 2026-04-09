@@ -1,5 +1,16 @@
 # training-trend-analyzer
 
+## 目的の二層構造
+
+このプロジェクトは、次の 2 層目的を持ちます。
+
+- 内部向け:
+  仕入れ判断支援のために、AI が複数ソースから週次トレンド候補を安定収集・比較できること
+- 外部向け:
+  ジムオーナー、トレーニー、業界関係者へ継続発信できる Web 向けトレンド情報基盤を作ること
+
+現在はまだ内部基盤整備が中心です。外部向けの公開レイヤは、内部の ranking / compare / review / source health を安定化した上で段階的に接続します。全体方針は [ROADMAP.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/ROADMAP.md)、公開側の補助方針は [WEB_PUBLICATION_PLAN.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/WEB_PUBLICATION_PLAN.md) を参照してください。
+
 トレーニング機器の brand / model / category ごとのトレンド信号を収集し、少数ソースでも安全にランキングへ流せるようにするプロジェクトです。
 
 ## このプロジェクトの方針
@@ -252,6 +263,7 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 
 - [ROADMAP.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/ROADMAP.md)
 - [COLLECTOR_FALLBACK_PLAN.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTOR_FALLBACK_PLAN.md)
+- [WEB_PUBLICATION_PLAN.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/WEB_PUBLICATION_PLAN.md)
 - [PROJECT_STATUS.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/PROJECT_STATUS.md)
 - [SPEC.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/SPEC.md)
 - [NORMALIZER.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/NORMALIZER.md)

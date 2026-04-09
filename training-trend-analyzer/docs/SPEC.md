@@ -4,13 +4,14 @@
 
 ## 概要
 
-このプロジェクトは、トレーニング機器の trend signal を複数ソースから収集し、過敏に振れにくいランキングへ接続することを目的とします。
+このプロジェクトは、トレーニング機器の trend signal を複数ソースから収集し、過敏に振れにくいランキングへ接続することを目的とします。内部向けには仕入れ判断支援の基盤、外部向けには将来の Web トレンド発信基盤として位置づけます。
 
 文書の役割分担:
 
 - `docs/SPEC.md`: 要件と仕様の正本
 - `docs/ROADMAP.md`: 開発順序、優先順位、Definition of Done の正本
 - `docs/COLLECTOR_FALLBACK_PLAN.md`: collector 障害時の degrade / fallback / review-only 判断の正本
+- `docs/WEB_PUBLICATION_PLAN.md`: 公開対象、公開内容、公開品質ゲートの正本
 - `PROJECT_STATUS.md`: 直近の現在地、テスト結果、次アクションの正本
 
 Phase 4 入口時点では、手動 CSV に加えて次を扱います。
@@ -179,6 +180,13 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - compare は source 欠落を neutral な `変化なし` と誤読させない
 - CSV は行データ中心を維持し、障害の長文説明や summary 行は混ぜない
 - 失敗時の console health 表示、review-only 判定、sidecar status artifact の詳細方針は `docs/COLLECTOR_FALLBACK_PLAN.md` を正本にする
+
+## 内部向け出力と公開向け出力の役割差
+
+- 内部向け出力は CLI 中心で、ranking / compare / review 補助 / source health を人が読み解くためのものとする
+- 公開向け出力は、review 済みで health 判定を通った結果だけを使った要約情報とする
+- raw collector 出力、DB 行データ、degraded な暫定結果はそのまま一般公開しない
+- 公開対象、公開内容、公開品質ゲートの詳細は `docs/WEB_PUBLICATION_PLAN.md` を正本にする
 
 ## 次アクション
 
