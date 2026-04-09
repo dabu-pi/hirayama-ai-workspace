@@ -1,5 +1,5 @@
 {
-  "artifact_version": 1,
+  "schema_version": "publish-ready/v1",
   "week": "2026-04-20",
   "generated_at": "2026-04-10T00:15:00",
   "publish_ready": false,

@@ -292,6 +292,19 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 
 `publish_ready_YYYYMMDD.json` is the minimum bridge from the internal CLI layer to the future public layer.
 
+Contract:
+
+- required version field:
+  `schema_version`
+- current supported value:
+  `publish-ready/v1`
+- writer:
+  always emits `schema_version="publish-ready/v1"`
+- renderer:
+  accepts `publish-ready/v1` only
+- legacy artifact without `schema_version`:
+  explicit failure
+
 - console health summary:
   human-facing run context
 - CSV:
@@ -324,6 +337,9 @@ Note:
 
 The Markdown renderer is the minimum public-layer consumer.
 It reads artifact JSON only and writes publication-oriented Markdown under `data/output/`.
+
+The renderer validates `schema_version` before any ranking / compare rendering path.
+Current support is limited to `publish-ready/v1`.
 
 Behavior:
 

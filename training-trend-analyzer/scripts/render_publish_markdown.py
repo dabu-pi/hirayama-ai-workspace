@@ -9,11 +9,17 @@ import json
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+
+from src.publication.artifact_schema import validate_publish_ready_schema_version
+
 
 def load_publish_artifact(artifact_path: Path) -> dict:
     with open(artifact_path, encoding="utf-8") as handle:
         payload = json.load(handle)
 
+    validate_publish_ready_schema_version(payload)
     _validate_publish_artifact(payload)
     return payload
 

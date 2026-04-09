@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.collectors.db import DbCollector
 from src.collectors.mock import MockCollector
+from src.publication.artifact_schema import build_publish_ready_schema_fields
 from src.scorer.calculator import ScoreCalculator
 
 ROOT = Path(__file__).parent.parent
@@ -443,7 +444,7 @@ def build_publish_ready_artifact(
         public_scores = [score for score in scores if score.category_name == args.category]
 
     artifact = {
-        "artifact_version": 1,
+        **build_publish_ready_schema_fields(),
         "week": week_start,
         "generated_at": generated_at,
         "publish_ready": run_health.publish_ready,

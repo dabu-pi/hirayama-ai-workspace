@@ -68,6 +68,8 @@ def test_publish_artifact_is_generated_for_ok_compare_fixture(monkeypatch, capsy
     assert f"[ARTIFACT] {output_path.resolve()}" in output
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "publish-ready/v1"
+    assert "artifact_version" not in payload
     assert payload["week"] == "2026-04-13"
     assert payload["publish_ready"] is True
     assert payload["health"]["overall_status"] == "ok"
@@ -101,6 +103,8 @@ def test_publish_artifact_is_generated_but_not_publish_ready_for_review_only_hea
     assert f"[ARTIFACT] {output_path.resolve()}" in output
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "publish-ready/v1"
+    assert "artifact_version" not in payload
     assert payload["publish_ready"] is False
     assert payload["health"]["overall_status"] == "review_only"
     assert payload["health"]["reasons"] == [

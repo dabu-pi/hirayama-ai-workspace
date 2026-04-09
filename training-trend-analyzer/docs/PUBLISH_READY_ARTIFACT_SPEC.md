@@ -1,6 +1,6 @@
 # PUBLISH_READY_ARTIFACT_SPEC.md
 
-Last Updated: 2026-04-09
+Last Updated: 2026-04-10
 
 ## 1. Role
 
@@ -28,7 +28,7 @@ The artifact therefore acts as:
 
 The minimum JSON artifact includes:
 
-- `artifact_version`
+- `schema_version`
 - `week`
 - `generated_at`
 - `publish_ready`
@@ -46,6 +46,16 @@ The minimum JSON artifact includes:
 - `internal_reference`
 
 `internal_reference` is intentionally minimal and is meant only for traceability back to the internal run configuration.
+
+## 3A. Schema Version Contract
+
+- `schema_version` is required
+- current canonical value:
+  `publish-ready/v1`
+- the writer must always emit this field
+- the renderer must validate this field before any ranking / compare specific rendering logic
+
+This field is the producer / consumer compatibility contract.
 
 ## 4. What It Does Not Include
 
@@ -122,6 +132,25 @@ This is intentionally separate from:
 - ranking / compare console tables
 - CSV row-data exports
 
+## 8A. Compatibility Policy
+
+Current policy is intentionally strict.
+
+- supported writer output:
+  `schema_version="publish-ready/v1"`
+- supported renderer input:
+  `publish-ready/v1` only
+- missing `schema_version`:
+  fail explicitly
+- unsupported `schema_version`:
+  fail explicitly and report the received version plus the supported version list
+
+Legacy policy:
+
+- artifacts without `schema_version` are treated as legacy
+- legacy artifacts are not auto-upgraded or inferred
+- the current renderer does not accept legacy artifacts
+
 ## 9. How Future Web Use Is Expected
 
 The future public layer should read this artifact as reviewed input, not as raw evidence.
@@ -145,20 +174,22 @@ This artifact does not mean:
 
 ## 11. Current Minimal Implementation Scope
 
-The 2026-04-09 implementation is intentionally small.
+The 2026-04-10 implementation is intentionally small.
 
 - explicit CLI flag
 - JSON output only
 - source health aware
 - compare-aware when compare mode is used
 - blocked runs skip artifact generation
+- schema contract fixed at `publish-ready/v1`
+- renderer validates supported schema versions before rendering
 
 Future work can add:
 
 - Markdown rendering
 - CMS-oriented export
 - richer editorial fields
-- stable schema versioning rules
+- future schema versions with explicit compatibility handling
 
 ## 2026-04-10 Markdown Renderer Update
 

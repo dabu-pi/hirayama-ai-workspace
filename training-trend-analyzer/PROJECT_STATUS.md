@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md
 
-最終更新: 2026-04-09
+最終更新: 2026-04-10
 
 ## 現在地
 
@@ -227,3 +227,23 @@ Tests added in this step:
   - compare artifact -> Markdown success
   - review-only artifact -> hold Markdown success
   - required key missing -> explicit failure
+
+## 2026-04-10 Publish-ready Schema Contract Update
+
+- fixed the publish-ready artifact contract at `schema_version="publish-ready/v1"`
+- `run_batch.py` now always emits `schema_version`
+- `render_publish_markdown.py` now validates supported schema versions before rendering
+- missing `schema_version` is treated as legacy and fails explicitly
+- unsupported schema versions fail explicitly with the received version and supported version list
+- docs / fixtures / renderer tests were updated so producer and consumer share the same contract
+
+Tests added in this step:
+
+- `tests/test_run_batch_publish_artifact.py`
+  - writer emits `schema_version="publish-ready/v1"`
+- `tests/test_render_publish_markdown.py`
+  - ranking artifact (v1) -> success
+  - compare artifact (v1) -> success
+  - review-only artifact (v1) -> hold Markdown success
+  - missing `schema_version` legacy artifact -> explicit failure
+  - unsupported `schema_version` -> explicit failure

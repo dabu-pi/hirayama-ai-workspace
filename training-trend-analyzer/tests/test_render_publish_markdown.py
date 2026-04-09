@@ -101,3 +101,23 @@ def test_render_publish_markdown_fails_when_required_keys_are_missing():
 
     with pytest.raises(ValueError, match="Missing required artifact key: public_summary.headline"):
         render_publish_markdown.load_publish_artifact(artifact_path)
+
+
+def test_render_publish_markdown_fails_for_legacy_artifact_without_schema_version():
+    artifact_path = FIXTURES_DIR / "publish_ready_legacy_artifact.json"
+
+    with pytest.raises(
+        ValueError,
+        match="Artifact schema_version is required. Legacy artifacts without schema_version are not supported.",
+    ):
+        render_publish_markdown.load_publish_artifact(artifact_path)
+
+
+def test_render_publish_markdown_fails_for_unsupported_schema_version():
+    artifact_path = FIXTURES_DIR / "publish_ready_unsupported_schema_artifact.json"
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported artifact schema_version: 'publish-ready/v2'. Supported schema_version\\(s\\): publish-ready/v1",
+    ):
+        render_publish_markdown.load_publish_artifact(artifact_path)
