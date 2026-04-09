@@ -13,9 +13,9 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.publication.artifact_schema import validate_publish_ready_schema_version
+from src.publication.output_paths import publish_markdown_output_path
 from src.publication.markdown_output import (
     artifact_kind,
-    build_front_matter_data,
     document_title,
     render_front_matter,
 )
@@ -195,8 +195,8 @@ def render_publish_markdown(payload: dict, artifact_path: Path) -> str:
     return render_front_matter(payload, artifact_path) + body
 
 
-def markdown_output_path(artifact_path: Path) -> Path:
-    return Path("data/output") / f"{artifact_path.stem}.md"
+def markdown_output_path(artifact_path: Path, *, output_dir: str | Path | None = None) -> Path:
+    return publish_markdown_output_path(artifact_path, output_dir=output_dir)
 
 
 def export_markdown(markdown_text: str, output_path: Path) -> None:
@@ -206,6 +206,22 @@ def export_markdown(markdown_text: str, output_path: Path) -> None:
     print(f"[MARKDOWN] {output_path.resolve()}")
 
 
+def render_artifact_to_markdown(
+    artifact_path: Path,
+    *,
+    output_path: Path | None = None,
+    output_dir: str | Path | None = None,
+) -> tuple[dict, str, Path]:
+    payload = load_publish_artifact(artifact_path)
+    markdown_text = render_publish_markdown(payload, artifact_path)
+    resolved_output_path = output_path if output_path is not None else markdown_output_path(
+        artifact_path,
+        output_dir=output_dir,
+    )
+    export_markdown(markdown_text, resolved_output_path)
+    return payload, markdown_text, resolved_output_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Render publication Markdown from artifact JSON")
     parser.add_argument("--artifact", required=True)
@@ -213,11 +229,8 @@ def main() -> None:
     args = parser.parse_args()
 
     artifact_path = Path(args.artifact)
-    payload = load_publish_artifact(artifact_path)
-    markdown_text = render_publish_markdown(payload, artifact_path)
-
-    output_path = Path(args.output) if args.output else markdown_output_path(artifact_path)
-    export_markdown(markdown_text, output_path)
+    output_path = Path(args.output) if args.output else None
+    render_artifact_to_markdown(artifact_path, output_path=output_path)
 
 
 if __name__ == "__main__":

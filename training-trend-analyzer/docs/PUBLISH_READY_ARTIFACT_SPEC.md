@@ -246,3 +246,5 @@ The next handoff layer can consume:
 - the dated Markdown with front matter
 
 without changing the artifact schema itself.
+
+The higher-level publication pipeline may orchestrate these steps, but the artifact schema remains unchanged.

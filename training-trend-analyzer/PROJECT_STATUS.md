@@ -285,3 +285,22 @@ Tests added in this step:
   - hold includes `hold_reason`
   - content kind mismatch fails
   - unsupported artifact schema fail remains
+
+## 2026-04-10 Publication Pipeline Update
+
+- added `scripts/run_publication_pipeline.py` as the single operator entrypoint for publication prep
+- pipeline remains thin and orchestrates existing artifact / markdown / handoff steps instead of reimplementing them
+- supports ranking, compare, and hold flows
+- keeps hold output isolated from ranking latest / compare latest
+- supports `--from-artifact`, `--artifact-only`, `--skip-handoff`, and `--output-dir`
+
+Tests added in this step:
+
+- `tests/test_run_publication_pipeline.py`
+  - ranking pipeline success
+  - compare pipeline success
+  - hold pipeline success
+  - ranking latest is not replaced by hold latest
+  - compare latest is not replaced by hold latest
+  - markdown-stage failure stops before handoff
+  - unsupported schema artifact stops the pipeline before downstream output

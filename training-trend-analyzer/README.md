@@ -396,3 +396,30 @@ Output examples:
   `data/output/publication_handoff_compare_latest.json`
 - hold latest pointer:
   `data/output/publication_handoff_hold_latest.json`
+
+## 2026-04-10 Publication Pipeline
+
+The shortest operator entrypoint is now:
+
+```bash
+python scripts/run_publication_pipeline.py --week 2026-04-06 --use-db --only-commercial
+python scripts/run_publication_pipeline.py --week 2026-04-06 --use-db --only-commercial --compare-source-sets
+```
+
+This thin pipeline orchestrates:
+
+1. artifact generation
+2. markdown rendering
+3. publication handoff manifest generation
+4. latest pointer update
+
+Optional modes:
+
+- `--from-artifact <path>`
+  rerun downstream publication prep from an existing dated artifact
+- `--artifact-only`
+  stop after artifact generation / artifact pickup
+- `--skip-handoff`
+  stop after Markdown generation
+- `--output-dir <path>`
+  write copied pipeline outputs under a custom directory

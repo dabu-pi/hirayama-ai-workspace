@@ -201,3 +201,14 @@ Policy:
   `publication_handoff_hold_latest.json`
 
 This keeps normal publication pickup separate from hold-only review output.
+
+## 2026-04-10 Publication Pipeline Update
+
+For operators, the main entrypoint is now the publication pipeline CLI.
+
+- ranking:
+  `python scripts/run_publication_pipeline.py --week <week> --use-db --only-commercial`
+- compare:
+  `python scripts/run_publication_pipeline.py --week <week> --use-db --only-commercial --compare-source-sets`
+
+This keeps the internal layering intact while making the public-prep workflow reproducible in one command.

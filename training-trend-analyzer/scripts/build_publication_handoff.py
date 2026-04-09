@@ -74,15 +74,12 @@ def export_json(payload: dict, output_path: Path, label: str) -> None:
     print(f"[{label}] {output_path.resolve()}")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Build publication handoff manifest from artifact and Markdown")
-    parser.add_argument("--artifact", required=True)
-    parser.add_argument("--markdown", required=True)
-    args = parser.parse_args()
-
-    artifact_path = Path(args.artifact)
-    markdown_path = Path(args.markdown)
-
+def build_publication_handoff_files(
+    artifact_path: Path,
+    markdown_path: Path,
+    *,
+    output_dir: str | Path | None = None,
+) -> tuple[Path, Path, dict, dict]:
     artifact_payload = load_publish_artifact(artifact_path)
     markdown_text = _load_markdown(markdown_path)
     markdown_metadata = parse_front_matter(markdown_text)
@@ -95,6 +92,7 @@ def main() -> None:
     dated_manifest_path, latest_pointer_path = handoff_output_paths(
         markdown_metadata["content_kind"],
         artifact_payload["week"],
+        output_dir=output_dir,
     )
     manifest = build_handoff_manifest(
         artifact_payload=artifact_payload,
@@ -109,6 +107,18 @@ def main() -> None:
 
     export_json(manifest, dated_manifest_path, "HANDOFF")
     export_json(latest_pointer, latest_pointer_path, "LATEST")
+    return dated_manifest_path, latest_pointer_path, manifest, latest_pointer
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Build publication handoff manifest from artifact and Markdown")
+    parser.add_argument("--artifact", required=True)
+    parser.add_argument("--markdown", required=True)
+    args = parser.parse_args()
+
+    artifact_path = Path(args.artifact)
+    markdown_path = Path(args.markdown)
+    build_publication_handoff_files(artifact_path, markdown_path)
 
 
 if __name__ == "__main__":

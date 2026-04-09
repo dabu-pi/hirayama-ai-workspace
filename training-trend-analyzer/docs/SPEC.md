@@ -202,6 +202,7 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - front matter は汎用 handoff 用 metadata であり、artifact JSON schema 自体は変更しない
 - handoff manifest は artifact と rendered Markdown を結ぶ薄い index とし、dated manifest と latest pointer を `data/output/` に出力する
 - latest pointer は通常系 ranking / compare と hold を分離し、通常 publish latest に `publish_ready=false` を混ぜない
+- publication pipeline CLI は artifact -> markdown -> handoff を順に実行する operator entrypoint であり、各 step のロジックは再実装しない
 
 互換性ポリシー:
 

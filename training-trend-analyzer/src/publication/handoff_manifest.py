@@ -5,29 +5,41 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from src.publication.output_paths import normalize_output_dir
+
 HANDOFF_MANIFEST_SCHEMA_VERSION = "publication-handoff/v1"
 HANDOFF_POINTER_SCHEMA_VERSION = "publication-handoff-pointer/v1"
 
 
-def _path_for_manifest(content_kind: str, week: str) -> Path:
+def _path_for_manifest(content_kind: str, week: str, *, output_dir: str | Path | None = None) -> Path:
+    base_dir = normalize_output_dir(output_dir)
     week_token = week.replace("-", "")
     if content_kind == "compare":
-        return Path(f"data/output/publication_handoff_compare_{week_token}.json")
+        return base_dir / f"publication_handoff_compare_{week_token}.json"
     if content_kind == "publish_hold":
-        return Path(f"data/output/publication_handoff_hold_{week_token}.json")
-    return Path(f"data/output/publication_handoff_{week_token}.json")
+        return base_dir / f"publication_handoff_hold_{week_token}.json"
+    return base_dir / f"publication_handoff_{week_token}.json"
 
 
-def _path_for_latest_pointer(content_kind: str) -> Path:
+def _path_for_latest_pointer(content_kind: str, *, output_dir: str | Path | None = None) -> Path:
+    base_dir = normalize_output_dir(output_dir)
     if content_kind == "compare":
-        return Path("data/output/publication_handoff_compare_latest.json")
+        return base_dir / "publication_handoff_compare_latest.json"
     if content_kind == "publish_hold":
-        return Path("data/output/publication_handoff_hold_latest.json")
-    return Path("data/output/publication_handoff_latest.json")
+        return base_dir / "publication_handoff_hold_latest.json"
+    return base_dir / "publication_handoff_latest.json"
 
 
-def handoff_output_paths(content_kind: str, week: str) -> tuple[Path, Path]:
-    return _path_for_manifest(content_kind, week), _path_for_latest_pointer(content_kind)
+def handoff_output_paths(
+    content_kind: str,
+    week: str,
+    *,
+    output_dir: str | Path | None = None,
+) -> tuple[Path, Path]:
+    return (
+        _path_for_manifest(content_kind, week, output_dir=output_dir),
+        _path_for_latest_pointer(content_kind, output_dir=output_dir),
+    )
 
 
 def build_handoff_manifest(
