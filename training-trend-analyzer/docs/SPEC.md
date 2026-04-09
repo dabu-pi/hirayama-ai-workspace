@@ -10,6 +10,7 @@
 
 - `docs/SPEC.md`: 要件と仕様の正本
 - `docs/ROADMAP.md`: 開発順序、優先順位、Definition of Done の正本
+- `docs/COLLECTOR_FALLBACK_PLAN.md`: collector 障害時の degrade / fallback / review-only 判断の正本
 - `PROJECT_STATUS.md`: 直近の現在地、テスト結果、次アクションの正本
 
 Phase 4 入口時点では、手動 CSV に加えて次を扱います。
@@ -171,8 +172,16 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - `largest impact` は `impact_score` 最大行を 1 件だけ示す
 - 実 DB で rank shift が出ない週でも、fixture ベースの compare CLI 回帰テストで人間向け出力を確認できるようにする
 
+## collector failure 時の扱い
+
+- GT 欠落、全 source 欠落、DB 読み出し不能は hard fail とする
+- GS / YT 欠落や partial failure は soft fail とし、ranking は継続可能でも `review only` 扱いに落とせるようにする
+- compare は source 欠落を neutral な `変化なし` と誤読させない
+- CSV は行データ中心を維持し、障害の長文説明や summary 行は混ぜない
+- 失敗時の console health 表示、review-only 判定、sidecar status artifact の詳細方針は `docs/COLLECTOR_FALLBACK_PLAN.md` を正本にする
+
 ## 次アクション
 
-1. 検索系 3 ソースの寄与差分を見やすくする
+1. `docs/COLLECTOR_FALLBACK_PLAN.md` に沿って source health の最小データ構造を設計する
 2. seed 設計を source ごとに見直し、0 件が続きやすい query を減らす
 3. compare seed の raw 解釈レイヤを別途設計する

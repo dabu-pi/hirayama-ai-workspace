@@ -169,6 +169,9 @@ Definition of Done:
 目的:
 非公式 endpoint 依存の collector を、失敗しても壊れにくい運用へ寄せる。
 
+Phase 2 の入口文書:
+`docs/COLLECTOR_FALLBACK_PLAN.md` を collector 障害時の degrade / fallback / review-only 判断の正本とする。
+
 やること:
 
 - Google Suggest fallback 方針の整理
@@ -283,7 +286,7 @@ compare の見え方はすでにかなり固まっているため、次は「壊
 ## 12. 次の具体アクション
 
 1. Google Suggest / YouTube Suggest の fallback 方針を文書化し、collector 側の失敗時挙動を整理する
-2. compare 表から seed / weight 調整に使う観測項目を明文化する
+2. `source health` の最小データ構造を決め、ranking / compare の `review only` 判定に接続する
 3. `search_suggest_count` / `youtube_suggest_count` の tuning 候補を、fixture と実 DB の両方で比較できるようにする
 4. 定期実行を見据えた最小 runbook を docs 化する
 
@@ -291,6 +294,8 @@ compare の見え方はすでにかなり固まっているため、次は「壊
 
 - `docs/ROADMAP.md`
   開発順序、フェーズ、優先順位、DoD の正本
+- `docs/COLLECTOR_FALLBACK_PLAN.md`
+  collector 障害時の hard fail / soft fail / review-only 判断の正本
 - `docs/SPEC.md`
   実装済み / 実装予定の仕様要件の正本
 - `PROJECT_STATUS.md`
