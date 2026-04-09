@@ -200,6 +200,8 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - downstream consumer は artifact only を守り、raw DB / collector を再参照しない
 - renderer output は artifact v1 から導出した YAML front matter を Markdown 冒頭に付ける
 - front matter は汎用 handoff 用 metadata であり、artifact JSON schema 自体は変更しない
+- handoff manifest は artifact と rendered Markdown を結ぶ薄い index とし、dated manifest と latest pointer を `data/output/` に出力する
+- latest pointer は通常系 ranking / compare と hold を分離し、通常 publish latest に `publish_ready=false` を混ぜない
 
 互換性ポリシー:
 

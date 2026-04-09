@@ -369,3 +369,30 @@ internal_reference:
 publication_notice: 'Ready for publication after editorial review.'
 ---
 ```
+
+## 2026-04-10 Publication Handoff
+
+- `python scripts/build_publication_handoff.py --artifact data/output/publish_ready_20260406.json --markdown data/output/publish_ready_20260406.md`
+- `python scripts/build_publication_handoff.py --artifact data/output/publish_ready_compare_20260406.json --markdown data/output/publish_ready_compare_20260406.md`
+
+This step keeps the contract layered:
+
+1. artifact JSON
+2. rendered Markdown with front matter
+3. dated handoff manifest
+4. latest pointer
+
+Output examples:
+
+- ranking manifest:
+  `data/output/publication_handoff_YYYYMMDD.json`
+- compare manifest:
+  `data/output/publication_handoff_compare_YYYYMMDD.json`
+- hold manifest:
+  `data/output/publication_handoff_hold_YYYYMMDD.json`
+- ranking latest pointer:
+  `data/output/publication_handoff_latest.json`
+- compare latest pointer:
+  `data/output/publication_handoff_compare_latest.json`
+- hold latest pointer:
+  `data/output/publication_handoff_hold_latest.json`

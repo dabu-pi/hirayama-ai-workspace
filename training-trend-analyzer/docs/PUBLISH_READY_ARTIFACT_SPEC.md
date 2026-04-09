@@ -239,3 +239,10 @@ Minimum renderer-side front matter fields:
 - `publication_notice` when available
 - `compare_mode` for compare artifacts
 - `hold_reason` for hold documents
+
+The next handoff layer can consume:
+
+- the dated artifact JSON
+- the dated Markdown with front matter
+
+without changing the artifact schema itself.

@@ -264,3 +264,24 @@ Tests added in this step:
   - compare artifact -> front matter keys present with `compare_mode: true`
   - review-only artifact -> hold front matter keys present with `content_kind: publish_hold`
   - unsupported schema fail behavior remains unchanged
+
+## 2026-04-11 Publication Handoff Index Update
+
+- added `scripts/build_publication_handoff.py` as a thin post-render handoff step
+- input is dated artifact JSON plus dated Markdown only
+- output is a dated manifest plus a same-kind latest pointer under `data/output/`
+- ranking / compare / publish_hold are tracked separately
+- normal latest pointers do not mix in hold output
+- handoff validation checks Markdown front matter against artifact-derived expectations and fails clearly on mismatch
+
+Tests added in this step:
+
+- `tests/test_build_publication_handoff.py`
+  - ranking manifest success
+  - compare manifest success
+  - hold manifest success
+  - latest pointer points to expected dated manifest
+  - compare includes `compare_mode`
+  - hold includes `hold_reason`
+  - content kind mismatch fails
+  - unsupported artifact schema fail remains

@@ -183,3 +183,21 @@ Current minimum metadata:
 - `hold_reason` for hold documents
 
 This metadata is renderer-derived from the artifact and does not expand the artifact schema itself.
+
+## 2026-04-10 Handoff Index Update
+
+Public consumers now have a thin machine entrypoint after Markdown rendering:
+
+- dated handoff manifest
+- latest pointer
+
+Policy:
+
+- publish-ready ranking:
+  `publication_handoff_latest.json`
+- publish-ready compare:
+  `publication_handoff_compare_latest.json`
+- hold-only output:
+  `publication_handoff_hold_latest.json`
+
+This keeps normal publication pickup separate from hold-only review output.
