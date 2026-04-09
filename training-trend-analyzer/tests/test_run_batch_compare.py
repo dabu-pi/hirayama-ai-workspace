@@ -2,9 +2,12 @@
 Comparison summary helpers for run_batch.py.
 """
 
+import csv
 import io
 import sys
 from pathlib import Path
+
+import pytest
 
 if sys.stdout.encoding != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -27,10 +30,14 @@ from scripts.run_batch import (
     _is_significant_row,
     _summarize_review_hints,
     annotate_significance,
+    build_annotated_comparison_rows,
+    build_review_summary,
     build_review_summary_lines,
     build_comparison_rows,
     calculate_scores_for_sets,
+    export_comparison_csv,
     filter_significant_rows,
+    select_comparison_rows,
     sort_significant_rows,
 )
 
@@ -69,6 +76,65 @@ def _sample_metrics_by_model() -> dict:
                 "search_suggest_count": {"value": 1.5, "value_prev": None, "metadata": {}, "sample_size": 2},
                 "youtube_suggest_count": {"value": 2.0, "value_prev": None, "metadata": {}, "sample_size": 2},
             },
+        },
+    }
+
+
+def _sample_rank_shift_score_sets() -> dict:
+    return {
+        "gt_only": {
+            "indexed": {
+                "Alpha::A-One::treadmill": {
+                    "brand": "Alpha",
+                    "model": "A-One",
+                    "category": "treadmill",
+                    "score": 20.0,
+                    "rank": 1,
+                },
+                "Bravo::B-Two::treadmill": {
+                    "brand": "Bravo",
+                    "model": "B-Two",
+                    "category": "treadmill",
+                    "score": 19.95,
+                    "rank": 2,
+                },
+            }
+        },
+        "gt_plus_gs": {
+            "indexed": {
+                "Alpha::A-One::treadmill": {
+                    "brand": "Alpha",
+                    "model": "A-One",
+                    "category": "treadmill",
+                    "score": 19.96,
+                    "rank": 2,
+                },
+                "Bravo::B-Two::treadmill": {
+                    "brand": "Bravo",
+                    "model": "B-Two",
+                    "category": "treadmill",
+                    "score": 19.98,
+                    "rank": 1,
+                },
+            }
+        },
+        "all_three": {
+            "indexed": {
+                "Alpha::A-One::treadmill": {
+                    "brand": "Alpha",
+                    "model": "A-One",
+                    "category": "treadmill",
+                    "score": 19.94,
+                    "rank": 2,
+                },
+                "Bravo::B-Two::treadmill": {
+                    "brand": "Bravo",
+                    "model": "B-Two",
+                    "category": "treadmill",
+                    "score": 20.01,
+                    "rank": 1,
+                },
+            }
         },
     }
 
@@ -146,6 +212,24 @@ def test_filter_significant_rows_drops_zero_delta_row():
     filtered = filter_significant_rows(rows)
     assert len(filtered) == 2
     assert {row["model"] for row in filtered} == {"Run", "T5"}
+
+
+def test_build_annotated_comparison_rows_applies_category_filter_and_threshold():
+    score_sets = calculate_scores_for_sets(_sample_metrics_by_model(), COMPARE_SOURCE_SET_DEFS)
+    rows = build_annotated_comparison_rows(
+        score_sets,
+        category_filter="treadmill",
+        threshold=DEFAULT_COMPARE_THRESHOLD,
+    )
+    assert len(rows) == 3
+    assert all("is_significant" in row for row in rows)
+
+
+def test_select_comparison_rows_returns_rank_sorted_significant_rows():
+    score_sets = calculate_scores_for_sets(_sample_metrics_by_model(), COMPARE_SOURCE_SET_DEFS)
+    comparison_rows = build_annotated_comparison_rows(score_sets, threshold=DEFAULT_COMPARE_THRESHOLD)
+    display_rows = select_comparison_rows(comparison_rows, significant_only=True)
+    assert [row["model"] for row in display_rows] == ["Run", "T5"]
 
 
 def test_rank_change_is_significant_even_below_threshold():
@@ -235,7 +319,83 @@ def test_summarize_review_hints_counts_top_labels():
     assert _summarize_review_hints(rows) == "GS downweight x2, GS boost x1"
 
 
-def test_build_review_summary_lines_handles_single_row():
+def test_summarize_review_hints_breaks_ties_by_display_order():
+    rows = [
+        {"review_hint": "review rank shift"},
+        {"review_hint": "review GS boost"},
+        {"review_hint": "review GS boost"},
+        {"review_hint": "review rank shift"},
+    ]
+    assert _summarize_review_hints(rows) == "rank shift x2, GS boost x2"
+
+
+@pytest.mark.parametrize(
+    ("rows", "total_rows", "expected_lines"),
+    [
+        (
+            [],
+            4,
+            [
+                "[COMPARE] significant rows: 0 / 4 | rank shifts: 0",
+                "[COMPARE] top drivers: none",
+                "[COMPARE] largest impact: none",
+            ],
+        ),
+        (
+            [
+                {
+                    "brand": "Concept2",
+                    "model": "SkiErg",
+                    "impact_score": 12.73,
+                    "has_rank_change": False,
+                    "review_hint": "review GS downweight",
+                }
+            ],
+            4,
+            [
+                "[COMPARE] significant rows: 1 / 4 | rank shifts: 0",
+                "[COMPARE] top drivers: GS downweight x1",
+                "[COMPARE] largest impact: Concept2 SkiErg (GS downweight, 12.7)",
+            ],
+        ),
+        (
+            [
+                {
+                    "brand": "Alpha",
+                    "model": "A-One",
+                    "impact_score": 0.04,
+                    "has_rank_change": True,
+                    "review_hint": "review rank shift",
+                },
+                {
+                    "brand": "Bravo",
+                    "model": "B-Two",
+                    "impact_score": 0.03,
+                    "has_rank_change": True,
+                    "review_hint": "review rank shift",
+                },
+                {
+                    "brand": "Concept2",
+                    "model": "SkiErg",
+                    "impact_score": 12.73,
+                    "has_rank_change": False,
+                    "review_hint": "review GS downweight",
+                },
+            ],
+            5,
+            [
+                "[COMPARE] significant rows: 3 / 5 | rank shifts: 2",
+                "[COMPARE] top drivers: rank shift x2, GS downweight x1",
+                "[COMPARE] largest impact: Concept2 SkiErg (GS downweight, 12.7)",
+            ],
+        ),
+    ],
+)
+def test_build_review_summary_lines_handles_zero_one_and_many_rows(rows, total_rows, expected_lines):
+    assert build_review_summary_lines(rows, total_rows=total_rows) == expected_lines
+
+
+def test_build_review_summary_returns_structured_fields():
     rows = [
         {
             "brand": "Concept2",
@@ -245,9 +405,43 @@ def test_build_review_summary_lines_handles_single_row():
             "review_hint": "review GS downweight",
         }
     ]
-    lines = build_review_summary_lines(rows, total_rows=4)
-    assert lines == [
-        "[COMPARE] significant rows: 1 / 4 | rank shifts: 0",
-        "[COMPARE] top drivers: GS downweight x1",
-        "[COMPARE] largest impact: Concept2 SkiErg (GS downweight, 12.7)",
+    summary = build_review_summary(rows, total_rows=4)
+    assert summary == {
+        "significant_count": 1,
+        "total_rows": 4,
+        "rank_shift_count": 0,
+        "top_drivers": "GS downweight x1",
+        "largest_impact_label": "Concept2 SkiErg",
+        "largest_impact_hint": "GS downweight",
+        "largest_impact_score": 12.73,
+    }
+
+
+def test_rank_shift_rows_are_selected_and_summarized_even_below_threshold():
+    rows = build_annotated_comparison_rows(_sample_rank_shift_score_sets(), threshold=DEFAULT_COMPARE_THRESHOLD)
+    display_rows = select_comparison_rows(rows, significant_only=True)
+    assert [row["model"] for row in display_rows] == ["A-One", "B-Two"]
+    assert all(row["driver_source"] == "RANK" for row in display_rows)
+    assert build_review_summary_lines(display_rows, total_rows=len(rows)) == [
+        "[COMPARE] significant rows: 2 / 2 | rank shifts: 2",
+        "[COMPARE] top drivers: rank shift x2",
+        "[COMPARE] largest impact: Alpha A-One (rank shift, 0.0)",
     ]
+
+
+def test_export_comparison_csv_keeps_row_data_only(tmp_path):
+    score_sets = calculate_scores_for_sets(_sample_metrics_by_model(), COMPARE_SOURCE_SET_DEFS)
+    rows = build_annotated_comparison_rows(score_sets, threshold=DEFAULT_COMPARE_THRESHOLD)
+    display_rows = select_comparison_rows(rows, significant_only=True)
+    output_path = tmp_path / "ranking_compare.csv"
+
+    export_comparison_csv(display_rows, output_path)
+
+    content = output_path.read_text(encoding="utf-8-sig")
+    assert "[COMPARE]" not in content
+
+    with output_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        exported_rows = list(csv.DictReader(handle))
+
+    assert len(exported_rows) == 2
+    assert [row["model"] for row in exported_rows] == ["Run", "T5"]

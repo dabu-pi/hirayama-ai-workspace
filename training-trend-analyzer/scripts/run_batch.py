@@ -264,6 +264,17 @@ def annotate_significance(rows: list[dict], threshold: float) -> list[dict]:
     return annotated
 
 
+def build_annotated_comparison_rows(
+    score_sets: dict[str, dict],
+    category_filter: str | None = None,
+    threshold: float = DEFAULT_COMPARE_THRESHOLD,
+) -> list[dict]:
+    return annotate_significance(
+        build_comparison_rows(score_sets, category_filter=category_filter),
+        threshold=threshold,
+    )
+
+
 def filter_significant_rows(rows: list[dict]) -> list[dict]:
     return [row for row in rows if row.get("is_significant")]
 
@@ -277,6 +288,12 @@ def sort_significant_rows(rows: list[dict]) -> list[dict]:
             row.get("_compare_order", 0),
         ),
     )
+
+
+def select_comparison_rows(rows: list[dict], significant_only: bool = False) -> list[dict]:
+    if not significant_only:
+        return rows
+    return sort_significant_rows(filter_significant_rows(rows))
 
 
 def print_significant_summary(display_rows: list[dict], total_rows: int) -> None:
@@ -565,20 +582,42 @@ def _summarize_review_hints(rows: list[dict], max_items: int = 2) -> str:
     return ", ".join(f"{label} x{count}" for label, count in ranked[:max_items])
 
 
-def build_review_summary_lines(rows: list[dict], total_rows: int) -> list[str]:
+def build_review_summary(rows: list[dict], total_rows: int) -> dict:
     rank_shift_count = sum(1 for row in rows if row.get("has_rank_change"))
-    lines = [f"[COMPARE] significant rows: {len(rows)} / {total_rows} | rank shifts: {rank_shift_count}"]
+    summary = {
+        "significant_count": len(rows),
+        "total_rows": total_rows,
+        "rank_shift_count": rank_shift_count,
+        "top_drivers": "none",
+        "largest_impact_label": "none",
+        "largest_impact_hint": "none",
+        "largest_impact_score": None,
+    }
     if not rows:
-        lines.append("[COMPARE] top drivers: none")
+        return summary
+
+    summary["top_drivers"] = _summarize_review_hints(rows)
+    largest_impact_row = max(rows, key=lambda row: row.get("impact_score") or 0.0)
+    summary["largest_impact_label"] = f"{largest_impact_row['brand']} {largest_impact_row['model']}".strip()
+    summary["largest_impact_hint"] = _compact_review_hint(largest_impact_row.get("review_hint"))
+    summary["largest_impact_score"] = largest_impact_row.get("impact_score")
+    return summary
+
+
+def build_review_summary_lines(rows: list[dict], total_rows: int) -> list[str]:
+    summary = build_review_summary(rows, total_rows=total_rows)
+    lines = [
+        "[COMPARE] significant rows: "
+        f"{summary['significant_count']} / {summary['total_rows']} | rank shifts: {summary['rank_shift_count']}",
+        f"[COMPARE] top drivers: {summary['top_drivers']}",
+    ]
+    if summary["largest_impact_score"] is None:
+        lines.append("[COMPARE] largest impact: none")
         return lines
 
-    lines.append(f"[COMPARE] top drivers: {_summarize_review_hints(rows)}")
-    largest_impact_row = max(rows, key=lambda row: row.get("impact_score") or 0.0)
-    largest_label = f"{largest_impact_row['brand']} {largest_impact_row['model']}".strip()
     lines.append(
-        f"[COMPARE] largest impact: {largest_label} "
-        f"({_compact_review_hint(largest_impact_row.get('review_hint'))}, "
-        f"{_fmt_impact(largest_impact_row.get('impact_score'))})"
+        f"[COMPARE] largest impact: {summary['largest_impact_label']} "
+        f"({summary['largest_impact_hint']}, {_fmt_impact(summary['largest_impact_score'])})"
     )
     return lines
 
@@ -660,12 +699,15 @@ def main() -> None:
 
     if args.compare_source_sets:
         score_sets = calculate_scores_for_sets(metrics_by_model, COMPARE_SOURCE_SET_DEFS)
-        comparison_rows = build_comparison_rows(score_sets, category_filter=args.category)
-        comparison_rows = annotate_significance(comparison_rows, threshold=args.compare_threshold)
-        if args.compare_only_significant:
-            display_rows = sort_significant_rows(filter_significant_rows(comparison_rows))
-        else:
-            display_rows = comparison_rows
+        comparison_rows = build_annotated_comparison_rows(
+            score_sets,
+            category_filter=args.category,
+            threshold=args.compare_threshold,
+        )
+        display_rows = select_comparison_rows(
+            comparison_rows,
+            significant_only=args.compare_only_significant,
+        )
         print("[COMPARE] source_sets=GT only / GT + GS / GT + GS + YT")
         print(
             f"[COMPARE] threshold={args.compare_threshold:.1f} "

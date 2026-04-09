@@ -1,6 +1,6 @@
 # SPEC.md
 
-最終更新: 2026-04-08
+最終更新: 2026-04-09
 
 ## 概要
 
@@ -65,6 +65,9 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 | F-04-11 | significant-only compare に `impact_score` ベースの priority を付け、`rank change` 優先、その後 `impact_score` 順で tuning 対象を前に出す | 完了 |
 | F-04-12 | significant-only compare に `driver_source` / `driver_direction` / `review_hint` を付け、GS / YT / mixed / rank shift の review 補助を追加する | 完了 |
 | F-04-13 | significant-only compare に `review summary` を追加し、`top drivers` / `largest impact` / `rank shifts` を 1〜3 行で把握できるようにする | 完了 |
+| F-04-14 | significant-only compare の review summary は、significant 0件でも `significant rows` / `top drivers` / `largest impact` の 3 行固定で出す | 完了 |
+| F-04-15 | `top drivers` は件数降順、同数時は compare 表示順を優先して安定表示する | 完了 |
+| F-04-16 | compare CSV は summary 行を含めず、行データと補助列だけを保持する | 完了 |
 
 ## 非機能要件
 
@@ -152,6 +155,14 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - compare seed の本格利用は後回し
 - 非公式 endpoint に強く依存しすぎない
 - Google / YouTube Suggest を単体の人気スコアとして扱わない
+
+## compare review summary の扱い
+
+- console summary は人間向けの review 補助で、比較の見始めを早くするための薄い要約層
+- CSV は downstream 確認と再集計を優先し、summary 行は混ぜない
+- rank shift は delta が閾値未満でも significant として扱う
+- `top drivers` は件数降順、同数時は significant-only の表示順を優先する
+- `largest impact` は `impact_score` 最大行を 1 件だけ示す
 
 ## 次アクション
 

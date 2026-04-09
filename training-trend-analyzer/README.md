@@ -244,7 +244,8 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 - compare CSV の raw delta 列は downstream 用に数値のまま保持
 - compare CSV には `is_significant`, `has_rank_change`, `impact_score`, `driver_source`, `driver_direction`, `review_hint` の軽い補助列を追加
 - `-` 整形は console compare 表だけに適用
-- significant-only 実行時は review summary として `significant rows`, `top drivers`, `largest impact` を短く出す
+- significant-only 実行時は review summary として `significant rows`, `top drivers`, `largest impact` を 3 行固定で短く出す
+- `top drivers` は件数降順、同数なら表示順優先で並べる
 - console summary は人間向けの振り返り要約で、CSV には summary 行を混ぜない
 
 ## 関連ドキュメント
@@ -256,3 +257,12 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 - [COLLECTORS_GOOGLE_TRENDS.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTORS_GOOGLE_TRENDS.md)
 - [COLLECTORS_GOOGLE_SUGGEST.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTORS_GOOGLE_SUGGEST.md)
 - [COLLECTORS_YOUTUBE_SUGGEST.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTORS_YOUTUBE_SUGGEST.md)
+
+## compare の自動テスト観点
+
+- `pytest tests/test_run_batch_compare.py` で compare 専用ケースを回す
+- 3 ソース比較の score / delta / rank path が崩れていないこと
+- `--compare-only-significant` の significance 判定が、threshold 超えだけでなく rank shift も拾うこと
+- review summary が 0件 / 1件 / 複数件でも 3 行固定で崩れないこと
+- `top drivers` の tie-break が件数降順、同数時は表示順で安定すること
+- compare CSV に summary 行を混ぜず、行データだけを出すこと
