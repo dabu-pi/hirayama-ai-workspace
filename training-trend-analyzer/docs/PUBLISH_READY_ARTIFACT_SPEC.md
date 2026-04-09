@@ -159,3 +159,25 @@ Future work can add:
 - CMS-oriented export
 - richer editorial fields
 - stable schema versioning rules
+
+## 2026-04-10 Markdown Renderer Update
+
+The next minimum consumer after the JSON artifact is a Markdown renderer.
+
+- CLI:
+  `python scripts/render_publish_markdown.py --artifact <path>`
+- input:
+  publish-ready artifact JSON only
+- output:
+  `data/output/<artifact_stem>.md`
+
+Rendering rules:
+
+- `publish_ready=true`
+  render publication-oriented Markdown
+- `publish_ready=false`
+  render hold-only Markdown for internal review
+- blocked run
+  no artifact means no Markdown render input
+
+This keeps the public layer artifact-only and prevents any raw collector or DB re-read.

@@ -142,3 +142,18 @@ Publication handling:
 Reference:
 
 - [PUBLISH_READY_ARTIFACT_SPEC.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/PUBLISH_READY_ARTIFACT_SPEC.md)
+
+## 2026-04-10 Markdown Renderer Update
+
+The first public-layer consumer is now the Markdown renderer.
+
+- input:
+  publish-ready artifact JSON
+- output:
+  `data/output/*.md`
+- `publish_ready=true`:
+  draft Markdown for publication workflow
+- `publish_ready=false`:
+  hold Markdown for internal review only
+
+This keeps the publication layer artifact-first and avoids raw CLI table reuse.

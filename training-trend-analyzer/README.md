@@ -314,3 +314,20 @@ Note:
   `data/output/publish_ready_YYYYMMDD.json`
 - compare artifact path:
   `data/output/publish_ready_compare_YYYYMMDD.json`
+
+## 2026-04-10 Markdown Renderer
+
+- `python scripts/run_batch.py --week 2026-04-06 --output-publish-artifact`
+- `python scripts/render_publish_markdown.py --artifact data/output/publish_ready_20260406.json`
+- `python scripts/run_batch.py --week 2026-04-06 --compare-source-sets --output-publish-artifact`
+- `python scripts/render_publish_markdown.py --artifact data/output/publish_ready_compare_20260406.json`
+
+The Markdown renderer is the minimum public-layer consumer.
+It reads artifact JSON only and writes publication-oriented Markdown under `data/output/`.
+
+Behavior:
+
+- `publish_ready=true`
+  render a public draft Markdown
+- `publish_ready=false`
+  render a hold-only Markdown for internal review

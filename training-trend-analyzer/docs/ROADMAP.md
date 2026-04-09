@@ -395,3 +395,16 @@ Current rule:
 Reference:
 
 - [PUBLISH_READY_ARTIFACT_SPEC.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/PUBLISH_READY_ARTIFACT_SPEC.md)
+
+## 2026-04-10 Markdown Renderer Update
+
+The public bridge now has two explicit steps.
+
+1. JSON artifact generation
+2. Markdown rendering from artifact only
+
+This renderer is the first concrete public-layer consumer and keeps the separation clear:
+
+- internal CLI produces ranking / compare / health
+- artifact bridges internal and public layers
+- Markdown renderer turns the artifact into CMS-ready draft text

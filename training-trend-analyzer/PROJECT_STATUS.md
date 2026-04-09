@@ -211,3 +211,19 @@ Next actions:
 3. Add fixture coverage for source-wide GS / YT failure patterns feeding publication hold decisions
 - compare artifact path:
   `data/output/publish_ready_compare_YYYYMMDD.json`
+
+## 2026-04-10 Markdown Renderer Update
+
+- added `scripts/render_publish_markdown.py` as the minimum artifact consumer
+- renderer reads JSON artifact only and outputs Markdown under `data/output/`
+- `publish_ready=true` renders publication-oriented Markdown
+- `publish_ready=false` renders review-hold Markdown instead of public body
+- this moves the project one step closer to a real public layer without coupling back to DB or collectors
+
+Tests added in this step:
+
+- `tests/test_render_publish_markdown.py`
+  - ranking artifact -> Markdown success
+  - compare artifact -> Markdown success
+  - review-only artifact -> hold Markdown success
+  - required key missing -> explicit failure
