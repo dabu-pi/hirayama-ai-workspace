@@ -312,6 +312,183 @@ def print_health_summary(run_health: RunHealth) -> None:
         print(line)
 
 
+def _build_health_payload(run_health: RunHealth) -> dict:
+    return {
+        "overall_status": run_health.overall_status,
+        "publish_ready": run_health.publish_ready,
+        "reasons": list(run_health.reasons),
+        "source_summary": [
+            {
+                "key": source.key,
+                "label": source.label,
+                "metric_type": source.metric_type,
+                "status": source.status,
+                "present_models": source.present_models,
+                "expected_models": source.expected_models,
+                "reasons": list(source.reasons),
+            }
+            for source in run_health.source_statuses.values()
+        ],
+    }
+
+
+def _build_public_model_note(rank_label: str, category_name: str) -> str:
+    if rank_label == "rising_fast":
+        return f"Strong weekly attention in {category_name}."
+    if rank_label == "rising":
+        return f"Weekly attention is building in {category_name}."
+    if rank_label == "stable":
+        return f"Attention remains steady in {category_name}."
+    if rank_label == "falling":
+        return f"Attention cooled relative to the previous week in {category_name}."
+    if rank_label == "falling_fast":
+        return f"Attention fell sharply relative to the previous week in {category_name}."
+    return f"Trend direction needs review for {category_name}."
+
+
+def _summarize_categories_for_public(scores: list, limit: int = 3) -> list[dict]:
+    category_buckets = defaultdict(lambda: {"count": 0, "top_models": []})
+    for score in scores[:5]:
+        bucket = category_buckets[score.category_name]
+        bucket["count"] += 1
+        if len(bucket["top_models"]) < 2:
+            bucket["top_models"].append(f"{score.brand_name} {score.model_name}".strip())
+
+    ranked = sorted(
+        category_buckets.items(),
+        key=lambda item: (-item[1]["count"], item[0]),
+    )
+    return [
+        {
+            "category": category_name,
+            "featured_model_count": bucket["count"],
+            "example_models": bucket["top_models"],
+        }
+        for category_name, bucket in ranked[:limit]
+    ]
+
+
+def _build_featured_models_for_public(scores: list, limit: int = 3) -> list[dict]:
+    featured = []
+    for rank, score in enumerate(scores[:limit], 1):
+        featured.append(
+            {
+                "rank": rank,
+                "brand": score.brand_name,
+                "model": score.model_name,
+                "category": score.category_name,
+                "trend_label": score.rank_label,
+                "summary": _build_public_model_note(score.rank_label, score.category_name),
+            }
+        )
+    return featured
+
+
+def _build_public_headline(scores: list) -> str:
+    if not scores:
+        return "No weekly trend candidates are available."
+    top_score = scores[0]
+    return (
+        f"{top_score.brand_name} {top_score.model_name} leads this week's "
+        f"{top_score.category_name} trend candidates."
+    ).strip()
+
+
+def _build_public_notice(run_health: RunHealth) -> str:
+    if run_health.overall_status == "ok":
+        return "Ready for publication after editorial review."
+    if run_health.overall_status == "review_only":
+        return "Internal review only: source coverage is incomplete, so this summary should not be published as a normal weekly update."
+    return "Blocked: core source coverage is unavailable for this week."
+
+
+def _build_public_compare_summary(rows: list[dict], total_rows: int) -> dict:
+    significant_rows = select_comparison_rows(rows, significant_only=True)
+    summary = build_review_summary(significant_rows, total_rows=total_rows)
+    highlights = []
+    for row in significant_rows[:3]:
+        highlights.append(
+            {
+                "brand": row["brand"],
+                "model": row["model"],
+                "category": row["category"],
+                "reason": _compact_review_hint(row.get("review_hint")),
+                "rank_change": row.get("has_rank_change", False),
+            }
+        )
+
+    return {
+        "included": True,
+        "significant_count": summary["significant_count"],
+        "rank_shift_count": summary["rank_shift_count"],
+        "top_drivers": summary["top_drivers"],
+        "largest_impact_model": summary["largest_impact_label"] if summary["largest_impact_score"] is not None else None,
+        "highlights": highlights,
+    }
+
+
+def build_publish_ready_artifact(
+    *,
+    week_start: str,
+    generated_at: str,
+    result_source_name: str,
+    run_health: RunHealth,
+    scores: list,
+    metrics_by_model: dict,
+    args,
+    comparison_rows: list[dict] | None = None,
+) -> dict:
+    public_scores = scores
+    if args.category:
+        public_scores = [score for score in scores if score.category_name == args.category]
+
+    artifact = {
+        "artifact_version": 1,
+        "week": week_start,
+        "generated_at": generated_at,
+        "publish_ready": run_health.publish_ready,
+        "health": _build_health_payload(run_health),
+        "public_summary": {
+            "headline": _build_public_headline(public_scores),
+            "top_categories": _summarize_categories_for_public(public_scores),
+            "featured_models": _build_featured_models_for_public(public_scores),
+            "compare_summary": None,
+        },
+        "public_notice": _build_public_notice(run_health),
+        "internal_reference": {
+            "collector_source": result_source_name,
+            "normalized_models": len(metrics_by_model),
+            "compare_enabled": args.compare_source_sets,
+            "compare_threshold": args.compare_threshold if args.compare_source_sets else None,
+            "category_filter": args.category,
+            "only_commercial": args.only_commercial,
+            "no_discontinued": args.no_discontinued,
+        },
+    }
+
+    if comparison_rows is not None:
+        artifact["public_summary"]["compare_summary"] = _build_public_compare_summary(
+            comparison_rows,
+            total_rows=len(comparison_rows),
+        )
+
+    return artifact
+
+
+def export_publish_ready_artifact(payload: dict, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+    print(f"\n[ARTIFACT] {output_path.resolve()}")
+
+
+def _artifact_output_path(week_start: str, *, compare_enabled: bool = False) -> Path:
+    timestamp = week_start.replace("-", "")
+    suffix = "_compare" if compare_enabled else ""
+    return Path(f"data/output/publish_ready{suffix}_{timestamp}.json")
+
+
 def print_ranking(scores: list, category_filter: str | None = None) -> None:
     filtered = scores
     if category_filter:
@@ -876,6 +1053,7 @@ def main() -> None:
     parser.add_argument("--week", default="2026-03-30")
     parser.add_argument("--category")
     parser.add_argument("--output-csv", action="store_true")
+    parser.add_argument("--output-publish-artifact", action="store_true")
     parser.add_argument("--use-db", action="store_true")
     parser.add_argument("--db-path", default=str(DEFAULT_DB))
     parser.add_argument("--no-discontinued", action="store_true")
@@ -906,15 +1084,19 @@ def main() -> None:
     print(f"[COLLECT] {len(result.metrics)} metrics loaded from '{result.source_name}'")
 
     metrics_by_model = build_metrics_by_model(result.metrics)
+    generated_at = datetime.now().isoformat(timespec="seconds")
     print(f"[NORMALIZE] {len(metrics_by_model)} models")
     run_health = build_run_health(metrics_by_model, result.errors)
     print_health_summary(run_health)
 
     if run_health.overall_status == "blocked":
+        if args.output_publish_artifact:
+            print("[ARTIFACT] skipped: blocked by source health")
         raise SystemExit(1)
 
     if args.compare_source_sets:
         score_sets = calculate_scores_for_sets(metrics_by_model, COMPARE_SOURCE_SET_DEFS)
+        final_scores = score_sets["all_three"]["scores"]
         comparison_rows = build_annotated_comparison_rows(
             score_sets,
             category_filter=args.category,
@@ -942,6 +1124,21 @@ def main() -> None:
         if args.output_csv:
             timestamp = args.week.replace("-", "")
             export_comparison_csv(display_rows, Path(f"data/output/ranking_compare_{timestamp}.csv"))
+        if args.output_publish_artifact:
+            artifact_payload = build_publish_ready_artifact(
+                week_start=args.week,
+                generated_at=generated_at,
+                result_source_name=result.source_name,
+                run_health=run_health,
+                scores=final_scores,
+                metrics_by_model=metrics_by_model,
+                args=args,
+                comparison_rows=comparison_rows,
+            )
+            export_publish_ready_artifact(
+                artifact_payload,
+                _artifact_output_path(args.week, compare_enabled=True),
+            )
     else:
         calculator = ScoreCalculator(excluded_metrics=set(args.exclude_metric))
         scores = calculator.calculate(metrics_by_model)
@@ -957,6 +1154,20 @@ def main() -> None:
         if args.output_csv:
             timestamp = args.week.replace("-", "")
             export_csv(scores, Path(f"data/output/ranking_{timestamp}.csv"))
+        if args.output_publish_artifact:
+            artifact_payload = build_publish_ready_artifact(
+                week_start=args.week,
+                generated_at=generated_at,
+                result_source_name=result.source_name,
+                run_health=run_health,
+                scores=scores,
+                metrics_by_model=metrics_by_model,
+                args=args,
+            )
+            export_publish_ready_artifact(
+                artifact_payload,
+                _artifact_output_path(args.week, compare_enabled=False),
+            )
 
     print(f"\n[END] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

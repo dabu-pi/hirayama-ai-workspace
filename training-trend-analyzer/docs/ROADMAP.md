@@ -374,3 +374,24 @@ Definition of Done:
   直近作業、テスト結果、残課題、次アクションの正本
 - `README.md`
   再開導線と使い方の入口
+
+## 2026-04-09 Publish-ready Artifact Update
+
+The project now has the minimum bridge between internal review output and future public publication.
+
+- internal layer:
+  CLI ranking / compare / review support / source health
+- bridge layer:
+  `publish_ready_YYYYMMDD.json`
+- future public layer:
+  editorial workflow, web summaries, publication hold / go decision
+
+Current rule:
+
+- `ok` -> artifact generated, publish-ready
+- `review_only` -> artifact generated, not publish-ready
+- `blocked` -> artifact not generated
+
+Reference:
+
+- [PUBLISH_READY_ARTIFACT_SPEC.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/PUBLISH_READY_ARTIFACT_SPEC.md)

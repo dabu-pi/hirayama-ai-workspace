@@ -284,3 +284,33 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 - `top drivers` の tie-break が件数降順、同数時は表示順で安定すること
 - compare CSV に summary 行を混ぜず、行データだけを出すこと
 - 実 DB に rank shift が出ていない週でも、fixture で compare の人間向け出力全体を回帰確認できること
+
+## 2026-04-09 Publish-ready Artifact
+
+- `python scripts/run_batch.py --week 2026-04-13 --output-publish-artifact`
+- `python scripts/run_batch.py --week 2026-04-13 --compare-source-sets --output-publish-artifact`
+
+`publish_ready_YYYYMMDD.json` is the minimum bridge from the internal CLI layer to the future public layer.
+
+- console health summary:
+  human-facing run context
+- CSV:
+  row-data export for downstream analysis
+- publish-ready artifact:
+  compact JSON handoff for editorial / web reuse
+
+Blocked runs do not emit the artifact.
+`review_only` runs emit it with `publish_ready=false` and preserved reasons.
+
+References:
+
+- [PUBLISH_READY_ARTIFACT_SPEC.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/PUBLISH_READY_ARTIFACT_SPEC.md)
+- [ROADMAP.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/ROADMAP.md)
+- [WEB_PUBLICATION_PLAN.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/WEB_PUBLICATION_PLAN.md)
+
+Note:
+
+- ranking artifact path:
+  `data/output/publish_ready_YYYYMMDD.json`
+- compare artifact path:
+  `data/output/publish_ready_compare_YYYYMMDD.json`
