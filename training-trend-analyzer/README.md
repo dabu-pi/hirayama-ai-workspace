@@ -23,13 +23,15 @@
 
 ## 現在地
 
-2026-04-09 時点で compare / fixture / regression の土台が一段固まり、以後は [docs/ROADMAP.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/ROADMAP.md) を起点に進める段階に入っています。Phase 2 の入口として、collector 障害時の degrade 方針は [COLLECTOR_FALLBACK_PLAN.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTOR_FALLBACK_PLAN.md) を正本にします。
+2026-04-09 時点で compare / fixture / regression の土台が一段固まり、以後は [docs/ROADMAP.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/ROADMAP.md) を起点に進める段階に入っています。Phase 2 の入口として、collector 障害時の degrade 方針は [COLLECTOR_FALLBACK_PLAN.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/COLLECTOR_FALLBACK_PLAN.md) を正本にします。あわせて `run_batch.py` に run 単位の source health (`ok / review_only / blocked`) と console health summary の最小実装を入れました。
 
 - alias 拡充の初期フローを整備済み
 - Google Trends collector は live / mock / auto で運用可能
 - `google_trends_interest` には初期安定化ロジックを追加済み
 - Google Suggest collector 初版を追加し、GT を補完する軽量ソースを 1 本追加済み
 - YouTube Suggest collector 初版を追加し、同じ seed 群で使える第 3 ソースを接続済み
+- `run_batch.py` に source health summary を追加し、ranking / compare の前提として overall status / source 別 status / reasons を console で読めるようにした
+- source health は console 側の前提情報として扱い、CSV は引き続き行データ中心のまま維持した
 
 ## 主な構成
 

@@ -77,7 +77,7 @@
 
 ## 5. 現在地（2026-04-09）
 
-現在は「Phase 1 完了、Phase 2 入口」とみなします。
+現在は「Phase 1 完了、Phase 2 初期実装入り」とみなします。
 
 完了済みの中核:
 
@@ -94,6 +94,8 @@
 - compare CLI fixture
 - helper pytest と integration 寄り pytest
 - `docs/COLLECTOR_FALLBACK_PLAN.md` による Phase 2 の方針固定
+- `run_batch.py` による source health の最小実装
+- source health pytest と CLI health summary 回帰
 
 まだ未完了の中核:
 

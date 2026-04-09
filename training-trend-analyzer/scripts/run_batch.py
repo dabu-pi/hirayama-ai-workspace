@@ -10,6 +10,7 @@ import io
 import json
 import sys
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -56,6 +57,48 @@ COMPARE_DELTA_LABELS = {
     "delta_gs_to_all": "YT",
 }
 
+HEALTH_SOURCE_DEFS = [
+    {
+        "key": "gt",
+        "label": "GT",
+        "metric_type": "google_trends_interest",
+        "required": True,
+    },
+    {
+        "key": "gs",
+        "label": "GS",
+        "metric_type": "search_suggest_count",
+        "required": False,
+    },
+    {
+        "key": "yt",
+        "label": "YT",
+        "metric_type": "youtube_suggest_count",
+        "required": False,
+    },
+]
+
+
+@dataclass
+class SourceHealth:
+    key: str
+    label: str
+    metric_type: str
+    status: str
+    present_models: int
+    expected_models: int
+    reasons: list[str] = field(default_factory=list)
+    affects_review: bool = False
+    blocking: bool = False
+
+
+@dataclass
+class RunHealth:
+    overall_status: str
+    publish_ready: bool
+    source_statuses: dict[str, SourceHealth]
+    reasons: list[str] = field(default_factory=list)
+
 
 def _parse_raw_data(raw_data: str | None) -> tuple[dict, dict]:
     if not raw_data:
@@ -97,6 +140,176 @@ def build_metrics_by_model(raw_metrics: list) -> dict:
         entry["metrics"][metric.metric_type] = metric_entry
 
     return dict(by_model)
+
+
+def _classify_health_error(error: str) -> str | None:
+    normalized = error.lower()
+    if "youtube_suggest" in normalized or "youtube suggest" in normalized:
+        return "yt"
+    if (
+        "google_suggest" in normalized
+        or "google suggest" in normalized
+        or "search_suggest" in normalized
+    ):
+        return "gs"
+    if "google_trends" in normalized or "google trends" in normalized or "pytrends" in normalized:
+        return "gt"
+    return None
+
+
+def _group_health_errors(errors: list[str]) -> tuple[dict[str, list[str]], list[str]]:
+    grouped = defaultdict(list)
+    global_errors = []
+    for error in errors:
+        source_key = _classify_health_error(error)
+        if source_key is None:
+            global_errors.append(error)
+            continue
+        grouped[source_key].append(error)
+    return dict(grouped), global_errors
+
+
+def _evaluate_source_health(
+    source_def: dict,
+    metrics_by_model: dict,
+    source_errors: list[str],
+) -> SourceHealth:
+    metric_type = source_def["metric_type"]
+    expected_models = len(metrics_by_model)
+    present_metrics = []
+
+    for entry in metrics_by_model.values():
+        metric = entry["metrics"].get(metric_type)
+        if metric is not None:
+            present_metrics.append(metric)
+
+    present_models = len(present_metrics)
+    reasons = []
+    status = "ok"
+    affects_review = False
+    blocking = False
+
+    if present_models == 0:
+        status = "failed" if source_errors else "missing"
+        if expected_models:
+            reasons.append(f"{source_def['label']} metrics unavailable ({present_models}/{expected_models} models)")
+        else:
+            reasons.append(f"{source_def['label']} metrics unavailable")
+    elif present_models < expected_models:
+        status = "warning"
+        affects_review = True
+        reasons.append(f"{source_def['label']} partial coverage {present_models}/{expected_models} models")
+
+    missing_sample_size = sum(1 for metric in present_metrics if metric.get("sample_size") is None)
+    if missing_sample_size:
+        if status == "ok":
+            status = "warning"
+        reasons.append(
+            f"{source_def['label']} sample_size missing {missing_sample_size}/{present_models}"
+        )
+
+    if metric_type == "google_trends_interest":
+        missing_metadata = sum(1 for metric in present_metrics if not metric.get("metadata"))
+        if missing_metadata:
+            if status == "ok":
+                status = "warning"
+            reasons.append(
+                f"{source_def['label']} metadata missing {missing_metadata}/{present_models}"
+            )
+
+    if source_errors:
+        if status == "missing":
+            status = "failed"
+        elif status == "ok":
+            status = "warning"
+        affects_review = True
+        reasons.extend(f"{source_def['label']} error: {error}" for error in source_errors)
+
+    if source_def["required"] and status in {"missing", "failed"}:
+        blocking = True
+
+    return SourceHealth(
+        key=source_def["key"],
+        label=source_def["label"],
+        metric_type=metric_type,
+        status=status,
+        present_models=present_models,
+        expected_models=expected_models,
+        reasons=reasons,
+        affects_review=affects_review,
+        blocking=blocking,
+    )
+
+
+def build_run_health(metrics_by_model: dict, collector_errors: list[str]) -> RunHealth:
+    grouped_errors, global_errors = _group_health_errors(collector_errors)
+    source_statuses = {
+        source_def["key"]: _evaluate_source_health(
+            source_def,
+            metrics_by_model,
+            grouped_errors.get(source_def["key"], []),
+        )
+        for source_def in HEALTH_SOURCE_DEFS
+    }
+
+    reasons = []
+    if not metrics_by_model:
+        reasons.append("no models available for ranking")
+
+    gt_health = source_statuses["gt"]
+    if gt_health.status in {"missing", "failed"}:
+        reasons.append("GT metrics are unavailable; ranking and compare are blocked")
+
+    core_present = sum(source.present_models for source in source_statuses.values())
+    if core_present == 0:
+        reasons.append("all core source metrics are unavailable")
+
+    for error in global_errors:
+        reasons.append(f"collector error: {error}")
+
+    blocked = (
+        not metrics_by_model
+        or gt_health.blocking
+        or core_present == 0
+    )
+
+    review_only = (
+        not blocked
+        and (
+            any(source.affects_review for source in source_statuses.values())
+            or bool(global_errors)
+        )
+    )
+
+    if review_only:
+        reasons.insert(0, "source coverage is incomplete; ranking and compare are advisory only")
+
+    overall_status = "blocked" if blocked else "review_only" if review_only else "ok"
+    return RunHealth(
+        overall_status=overall_status,
+        publish_ready=overall_status == "ok",
+        source_statuses=source_statuses,
+        reasons=reasons,
+    )
+
+
+def build_health_summary_lines(run_health: RunHealth) -> list[str]:
+    source_summary = " ".join(
+        f"{source.label}={source.status}({source.present_models}/{source.expected_models})"
+        for source in run_health.source_statuses.values()
+    )
+    lines = [
+        f"[HEALTH] overall={run_health.overall_status} publish_ready={'yes' if run_health.publish_ready else 'no'}",
+        f"[HEALTH] {source_summary}",
+    ]
+    for reason in run_health.reasons:
+        lines.append(f"[HEALTH] reason={reason}")
+    return lines
+
+
+def print_health_summary(run_health: RunHealth) -> None:
+    for line in build_health_summary_lines(run_health):
+        print(line)
 
 
 def print_ranking(scores: list, category_filter: str | None = None) -> None:
@@ -689,13 +902,16 @@ def main() -> None:
     if result.errors:
         for error in result.errors:
             print(f"[ERROR] {error}", file=sys.stderr)
-        if not result.metrics:
-            raise SystemExit(1)
 
     print(f"[COLLECT] {len(result.metrics)} metrics loaded from '{result.source_name}'")
 
     metrics_by_model = build_metrics_by_model(result.metrics)
     print(f"[NORMALIZE] {len(metrics_by_model)} models")
+    run_health = build_run_health(metrics_by_model, result.errors)
+    print_health_summary(run_health)
+
+    if run_health.overall_status == "blocked":
+        raise SystemExit(1)
 
     if args.compare_source_sets:
         score_sets = calculate_scores_for_sets(metrics_by_model, COMPARE_SOURCE_SET_DEFS)

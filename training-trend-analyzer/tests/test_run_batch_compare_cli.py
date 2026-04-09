@@ -45,6 +45,8 @@ def _run_compare_cli(monkeypatch, capsys, tmp_path: Path, *extra_args: str) -> s
 def test_compare_cli_normal_output_uses_fixture(monkeypatch, capsys, tmp_path):
     output = _run_compare_cli(monkeypatch, capsys, tmp_path)
 
+    assert "[HEALTH] overall=ok publish_ready=yes" in output
+    assert "[HEALTH] GT=ok(7/7) GS=ok(7/7) YT=ok(7/7)" in output
     assert "[COMPARE] source_sets=GT only / GT + GS / GT + GS + YT" in output
     assert "[COMPARE] significant rows:" not in output
     assert "=== Source Set Comparison 2026-04-13 ===" in output
