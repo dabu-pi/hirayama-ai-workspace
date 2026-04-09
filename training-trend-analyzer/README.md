@@ -423,3 +423,30 @@ Optional modes:
   stop after Markdown generation
 - `--output-dir <path>`
   write copied pipeline outputs under a custom directory
+
+## 2026-04-10 Deterministic Latest Rebuild
+
+Latest publication pointers are no longer defined by execution order alone.
+They can be rebuilt deterministically from existing dated handoff manifests:
+
+```bash
+python scripts/rebuild_publication_latest.py --output-dir data/output
+python scripts/rebuild_publication_latest.py --output-dir data/output --kind ranking
+python scripts/rebuild_publication_latest.py --output-dir data/output --kind compare
+python scripts/rebuild_publication_latest.py --output-dir data/output --kind publish_hold
+```
+
+Selection rules:
+
+- ranking latest:
+  latest manifest where `content_kind="ranking"` and `publish_ready=true`
+- compare latest:
+  latest manifest where `content_kind="compare"` and `publish_ready=true`
+- hold latest:
+  latest manifest where `content_kind="publish_hold"` and `publish_ready=false`
+- ordering:
+  `week` descending, then `generated_at` descending, then manifest filename as a deterministic tie-break
+
+The publication pipeline still runs artifact -> markdown -> handoff in one command,
+but the latest pointer update now rebuilds from the dated manifest group for the same kind
+instead of trusting "the last CLI run".

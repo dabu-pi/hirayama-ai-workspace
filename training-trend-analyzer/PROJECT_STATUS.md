@@ -304,3 +304,25 @@ Tests added in this step:
   - compare latest is not replaced by hold latest
   - markdown-stage failure stops before handoff
   - unsupported schema artifact stops the pipeline before downstream output
+
+## 2026-04-10 Deterministic Latest Rebuild Update
+
+- added `scripts/rebuild_publication_latest.py` to rebuild latest pointers from
+  dated handoff manifests under `data/output/`
+- latest selection is now deterministic by `week`, then `generated_at`, then
+  manifest filename as a tie-break
+- ranking / compare / hold latest remain isolated by kind and publishability
+- `scripts/build_publication_handoff.py` and
+  `scripts/run_publication_pipeline.py` now update latest through the same
+  manifest-group rebuild path instead of relying on execution order
+
+Tests added in this step:
+
+- `tests/test_rebuild_publication_latest.py`
+  - ranking / compare / hold latest rebuild success
+  - same-week `generated_at` tie-break success
+  - hold manifests do not leak into ranking / compare latest
+  - unsupported handoff schema fails explicitly
+- `tests/test_run_publication_pipeline.py`
+  - rerunning an older artifact does not overwrite a newer ranking latest when
+    the dated manifest set already contains the newer week

@@ -15,6 +15,7 @@ from src.publication.handoff_manifest import (
     build_handoff_manifest,
     build_latest_pointer,
     handoff_output_paths,
+    rebuild_latest_pointer_for_kind,
 )
 from src.publication.markdown_output import build_front_matter_data, parse_front_matter
 
@@ -100,12 +101,16 @@ def build_publication_handoff_files(
         artifact_path=_display_path(artifact_path),
         markdown_path=_display_path(markdown_path),
     )
-    latest_pointer = build_latest_pointer(
-        manifest=manifest,
-        manifest_path=_display_path(dated_manifest_path),
-    )
 
     export_json(manifest, dated_manifest_path, "HANDOFF")
+    latest_pointer_path, selected_manifest_path, selected_manifest = rebuild_latest_pointer_for_kind(
+        kind=manifest["content_kind"],
+        output_dir=output_dir,
+    )
+    latest_pointer = build_latest_pointer(
+        manifest=selected_manifest,
+        manifest_path=_display_path(selected_manifest_path),
+    )
     export_json(latest_pointer, latest_pointer_path, "LATEST")
     return dated_manifest_path, latest_pointer_path, manifest, latest_pointer
 
@@ -114,11 +119,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build publication handoff manifest from artifact and Markdown")
     parser.add_argument("--artifact", required=True)
     parser.add_argument("--markdown", required=True)
+    parser.add_argument("--output-dir")
     args = parser.parse_args()
 
     artifact_path = Path(args.artifact)
     markdown_path = Path(args.markdown)
-    build_publication_handoff_files(artifact_path, markdown_path)
+    build_publication_handoff_files(artifact_path, markdown_path, output_dir=args.output_dir)
 
 
 if __name__ == "__main__":

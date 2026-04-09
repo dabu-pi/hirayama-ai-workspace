@@ -117,6 +117,23 @@ def test_publication_pipeline_keeps_compare_latest_separate_from_hold(monkeypatc
     assert hold_latest["manifest_path"] == "data/output/publication_handoff_hold_20260420.json"
 
 
+def test_publication_pipeline_rebuilds_latest_from_manifest_group_not_execution_order(monkeypatch, capsys, tmp_path):
+    older_artifact = FIXTURES_DIR / "publish_ready_ranking_artifact.json"
+    newer_artifact = tmp_path / "publish_ready_ranking_artifact_newer.json"
+    payload = json.loads(older_artifact.read_text(encoding="utf-8"))
+    payload["week"] = "2026-04-13"
+    payload["generated_at"] = "2026-04-10T08:00:00"
+    newer_artifact.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    _run_pipeline_cli(monkeypatch, capsys, tmp_path, "--from-artifact", str(newer_artifact))
+    _run_pipeline_cli(monkeypatch, capsys, tmp_path, "--from-artifact", str(older_artifact))
+
+    ranking_latest = json.loads(
+        (tmp_path / "data" / "output" / "publication_handoff_latest.json").read_text(encoding="utf-8")
+    )
+    assert ranking_latest["manifest_path"] == "data/output/publication_handoff_20260413.json"
+
+
 def test_publication_pipeline_stops_before_handoff_when_markdown_stage_fails(monkeypatch, tmp_path):
     artifact_path = FIXTURES_DIR / "publish_ready_ranking_artifact.json"
     monkeypatch.chdir(tmp_path)

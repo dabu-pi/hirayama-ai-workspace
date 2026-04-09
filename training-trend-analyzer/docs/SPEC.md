@@ -245,3 +245,30 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - `publish_ready=true` �͌��J���� Markdown
 - `publish_ready=false` �� hold �p Markdown
 - compare artifact �ł� `compare_summary` ����J�����v��Ƃ��Đ��`����
+## 2026-04-10 Deterministic Latest Pointer Rule
+
+Publication latest pointers are rebuilt from dated handoff manifests instead of
+being defined by the most recent CLI execution.
+
+Kind filters:
+
+- ranking latest:
+  `content_kind="ranking"` and `publish_ready=true`
+- compare latest:
+  `content_kind="compare"` and `publish_ready=true`
+- hold latest:
+  `content_kind="publish_hold"` and `publish_ready=false`
+
+Selection order:
+
+1. newer `week`
+2. newer `generated_at` within the same `week`
+3. manifest filename as a deterministic tie-break when both values are equal
+
+Operational rules:
+
+- input for latest rebuild is dated handoff manifest JSON only
+- raw DB / collector / artifact / Markdown re-read is not required
+- unsupported handoff manifest schema is treated as an explicit failure
+- `scripts/run_publication_pipeline.py` updates latest through the same
+  manifest-group rebuild logic used by `scripts/rebuild_publication_latest.py`

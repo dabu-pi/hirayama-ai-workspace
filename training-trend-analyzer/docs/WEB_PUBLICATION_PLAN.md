@@ -212,3 +212,30 @@ For operators, the main entrypoint is now the publication pipeline CLI.
   `python scripts/run_publication_pipeline.py --week <week> --use-db --only-commercial --compare-source-sets`
 
 This keeps the internal layering intact while making the public-prep workflow reproducible in one command.
+
+## 2026-04-10 Deterministic Latest Rebuild Update
+
+Latest pointers are now rebuildable from the dated manifest group for each kind.
+
+- ranking latest:
+  selected from publish-ready ranking manifests only
+- compare latest:
+  selected from publish-ready compare manifests only
+- hold latest:
+  selected from hold-only manifests only
+
+Selection order is deterministic:
+
+1. newer `week`
+2. newer `generated_at`
+3. manifest filename tie-break
+
+Operationally this means a public consumer can treat the dated manifests as the
+source of truth and regenerate the thin latest pointers with:
+
+```bash
+python scripts/rebuild_publication_latest.py --output-dir data/output
+```
+
+The publication pipeline still updates latest automatically, but it now does so
+through this same manifest-scan rule instead of trusting execution order.
