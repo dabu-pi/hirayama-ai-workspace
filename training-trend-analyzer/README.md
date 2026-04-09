@@ -12,7 +12,7 @@
 
 ## 現在地
 
-2026-04-08 時点で Phase 4 入口まで到達しています。
+2026-04-09 時点で compare / fixture / regression の土台が一段固まり、以後は [docs/ROADMAP.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/ROADMAP.md) を起点に進める段階に入っています。
 
 - alias 拡充の初期フローを整備済み
 - Google Trends collector は live / mock / auto で運用可能
@@ -250,6 +250,7 @@ python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --compa
 
 ## 関連ドキュメント
 
+- [ROADMAP.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/ROADMAP.md)
 - [PROJECT_STATUS.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/PROJECT_STATUS.md)
 - [SPEC.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/SPEC.md)
 - [NORMALIZER.md](/C:/hirayama-ai-workspace/workspace/training-trend-analyzer/docs/NORMALIZER.md)

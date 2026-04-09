@@ -6,6 +6,12 @@
 
 このプロジェクトは、トレーニング機器の trend signal を複数ソースから収集し、過敏に振れにくいランキングへ接続することを目的とします。
 
+文書の役割分担:
+
+- `docs/SPEC.md`: 要件と仕様の正本
+- `docs/ROADMAP.md`: 開発順序、優先順位、Definition of Done の正本
+- `PROJECT_STATUS.md`: 直近の現在地、テスト結果、次アクションの正本
+
 Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 
 - Google Trends
