@@ -255,4 +255,5 @@ Manual release promotion sits above that handoff layer:
 - handoff manifest schema remains `publication-handoff/v1`
 - release approval is expressed only by a separate release pointer layer
 - release history is expressed only by a separate append-only release ledger layer
+- operator visibility is expressed only by a separate read-only release status CLI
 - promoting or rolling back a release does not mutate the artifact schema

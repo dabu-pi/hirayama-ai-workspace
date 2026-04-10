@@ -463,6 +463,7 @@ Manual release is a separate thin layer on top of dated handoff manifests:
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260406.json
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_compare_20260406.json --copy-markdown
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260330.json --allow-rollback
+python scripts/show_publication_release_status.py --kind all --limit 10
 ```
 
 Release outputs:
@@ -496,6 +497,7 @@ Operationally this makes publication a 2-step flow:
 2. inspect dated handoff manifest / dated Markdown
 3. promote the approved dated manifest to the release pointer
 4. keep the promotion / rollback audit trail in the release ledger
+5. inspect current release + recent history with `show_publication_release_status.py`
 
 Public consumers should read the release pointer or the optional stable release Markdown,
 not the candidate latest pointer.

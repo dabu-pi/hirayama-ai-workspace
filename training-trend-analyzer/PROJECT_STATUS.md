@@ -368,3 +368,24 @@ Tests added in this step:
   - compare promotion appends one ledger row
   - rollback promotion appends `rollback_promote`
   - dry-run / rejection paths do not append ledger rows
+
+## 2026-04-11 Release Status / History CLI Update
+
+- added `scripts/show_publication_release_status.py` as a read-only operator / audit CLI
+- CLI reads release pointer + release ledger only and does not re-read DB / collectors
+- supports `--kind ranking|compare|all`, `--limit`, `--json`, and `--verbose`
+- shows current release and recent history in one command
+- recent history makes rollback entries visible via `action=rollback_promote`
+- can warn when current release pointer and latest ledger row for a kind do not match
+
+Tests added in this step:
+
+- `tests/test_show_publication_release_status.py`
+  - ranking current release display
+  - compare current release display
+  - history limit
+  - rollback visibility
+  - missing pointer / empty ledger display
+  - JSON output
+  - invalid pointer / ledger schema failure
+  - read-only behavior

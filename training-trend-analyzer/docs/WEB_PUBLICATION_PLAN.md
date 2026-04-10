@@ -274,3 +274,15 @@ Operator flow:
 3. promote the approved dated manifest with `scripts/promote_publication_release.py`
 4. release pointer is updated and the release ledger appends an audit record
 5. public consumer reads the release pointer or the stable release Markdown copy
+
+Operator / audit check path:
+
+- `scripts/show_publication_release_status.py --kind ranking`
+- `scripts/show_publication_release_status.py --kind compare`
+- `scripts/show_publication_release_status.py --kind all --limit 10`
+
+This read-only CLI is for human confirmation of:
+
+- what is currently released
+- what was recently promoted
+- whether a rollback was recorded

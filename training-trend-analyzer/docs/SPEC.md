@@ -205,6 +205,7 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - publication pipeline CLI は artifact -> markdown -> handoff を順に実行する operator entrypoint であり、各 step のロジックは再実装しない
 - manual release pointer は handoff のさらに上位に置く別 layer とし、operator が選んだ dated handoff manifest だけを public release pointer に載せる
 - release ledger は manual release pointer のさらに横に置く append-only audit layer とし、昇格成功時だけ promotion history を追記する
+- read-only status CLI は release pointer + release ledger の参照導線とし、current release と recent history を再計算なしで表示する
 - public consumer の正式入口は handoff candidate latest ではなく release latest とする
 - release promotion は `ranking` / `compare` の `publish_ready=true` handoff manifest のみ対象とし、`publish_hold` は対象外にする
 - release rollback は deterministic rebuild ではなく manual promotion でのみ行い、古い dated manifest を選ぶ場合は明示確認を要求する
@@ -313,3 +314,4 @@ Promotion rules:
 - rollback to an older dated manifest is allowed only as explicit manual promotion
 - successful promotion appends exactly one ledger record with `action=promote` or `action=rollback_promote`
 - dry-run does not mutate either the release pointer or the release ledger
+- `scripts/show_publication_release_status.py` is read-only and must not mutate any file
