@@ -941,9 +941,64 @@ Next action:
 
 ---
 
+## 2026-04-10 Publication Dashboard View
+
+Purpose:
+
+- 週次 publication 運用を、ユーザーが Google Sheets / Excel で見てすぐ分かる運用ビューにする。
+- 正本は引き続き repo / Markdown / `data/output/` の生成物 / release ledger。今回のシートは正本ではなく見える化ビュー。
+
+Added files:
+
+- `ops/publication_dashboard/publication_weekly_view.xlsx`
+- `ops/publication_dashboard/Weekly_Overview.csv`
+- `ops/publication_dashboard/Coverage_Check.csv`
+- `ops/publication_dashboard/Release_Log.csv`
+- `ops/publication_dashboard/README.md`
+- `ops/publication_dashboard/sample_weekly_update.md`
+- `ops/publication_dashboard/generate_xlsx.py`
+
+Sheet structure:
+
+- `Weekly_Overview`
+  - 週ごとの状態を1行で確認するシート
+  - 2026-04-06 は `Closed`, `publish_ready=yes`, `ranking / compare closed`, GT/GS/YT `11/11`, `verify all=OK`
+- `Coverage_Check`
+  - GT / GS / YT coverage を週単位で見るシート
+  - 2026-04-06 は対象モデル数 11、各 source present 11 / missing 0、gate `OK`
+  - brand-only `model_id=NULL` 2件は denominator 外として備考に記録
+- `Release_Log`
+  - review / promote / verify / status の操作履歴を残すシート
+  - 2026-04-06 の ranking / compare release 完了行を初期データとして投入
+
+README / operation notes:
+
+- `README.md` に「正本ではなく運用ビュー」であること、各シート/列の意味、毎週金曜の更新手順、xlsx 再生成コマンドを記載。
+- `sample_weekly_update.md` に operator 向けの短い手順メモを追加。
+
+Verification:
+
+- CSV row/column check:
+  - `Weekly_Overview.csv`: 2 rows / 16 cols
+  - `Coverage_Check.csv`: 2 rows / 15 cols
+  - `Release_Log.csv`: 3 rows / 13 cols
+- xlsx package check:
+  - `xl/worksheets/sheet1.xml`
+  - `xl/worksheets/sheet2.xml`
+  - `xl/worksheets/sheet3.xml`
+  - `xl/workbook.xml`
+- `python -m py_compile ops/publication_dashboard/generate_xlsx.py` -> PASS
+
+Next action:
+
+1. 必要に応じて `publication_weekly_view.xlsx` を Google Drive にアップロードし、Google Sheets として開く。
+2. 次週以降は operator flow 完了後に CSV / xlsx view を更新し、重要結果は必ず `PROJECT_STATUS.md` に戻す。
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。164 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。週次運用を見える化する `ops/publication_dashboard/` も追加済み。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
@@ -953,9 +1008,10 @@ Next action:
 - `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
-2. 次週データで同じ operator flow を再実行する
-3. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
+1. 必要に応じて `ops/publication_dashboard/publication_weekly_view.xlsx` を Google Sheets へアップロードする
+2. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
+3. 次週データで同じ operator flow を再実行し、dashboard view を更新する
+4. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
 
 **注意点:**
 - 実 DB の 2026-04-06 commercial gate は GT/GS/YT 各11/11 に到達したが、GT は一部0値が多い。`publish_ready=true` は coverage gate 通過であり、信号の強さは別途レビューする

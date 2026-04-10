@@ -1,0 +1,2 @@
+対象週,対象モデル数,GT present,GT missing,GT coverage率,GS present,GS missing,GS coverage率,YT present,YT missing,YT coverage率,gate結果,不足モデルメモ,brand-only除外メモ,備考
+2026-04-06,11,11,0,100.0%,11,0,100.0%,11,0,100.0%,OK,なし,model_id=NULL の brand-only 2件は denominator 外,GTは一部0値あり。coverage gateは通過済み

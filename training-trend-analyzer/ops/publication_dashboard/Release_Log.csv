@@ -1,0 +1,3 @@
+実行日,対象週,kind,candidate status,promotable,promotion実施,release week,slug,verify結果,status確認,stable markdown updated,issues,実行メモ
+2026-04-10,2026-04-06,ranking,no_release,true,yes,2026-04-06,training-trends-20260406,OK,confirmed,yes,none,ranking release completed
+2026-04-10,2026-04-06,compare,no_release,true,yes,2026-04-06,training-trends-compare-20260406,OK,confirmed,yes,none,compare release completed
