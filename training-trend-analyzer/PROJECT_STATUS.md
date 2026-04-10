@@ -665,6 +665,55 @@ Remaining unchecked:
 
 ---
 
+## 2026-04-10 Commercial Coverage Audit
+
+Added `docs/COMMERCIAL_SOURCE_COVERAGE_20260406.md` to make the real DB coverage gap explicit before trying to force `publish_ready=true`.
+
+Target week: `2026-04-06`
+
+Current publication-health denominator:
+
+- 13 entities in `run_batch.py --use-db --week 2026-04-06 --only-commercial`
+- 11 resolved model rows
+- 2 brand-only rows with `model_id=NULL`
+
+Coverage:
+
+- GT `google_trends_interest`: 4/13
+- GS `search_suggest_count`: 4/13
+- YT `youtube_suggest_count`: 4/13
+
+Present in all three gate sources:
+
+- `Concept2 SkiErg`
+- `Life Fitness T5`
+- `Precor TRM 445`
+- `TECHNOGYM Run`
+
+Resolved model gaps shared by GT / GS / YT:
+
+- `CYBEX 770T`
+- `Concept2 Model D`
+- `Life Fitness 95T`
+- `Life Fitness IC5`
+- `Life Fitness IC7`
+- `Matrix A50`
+- `TECHNOGYM Run Now`
+
+Data hygiene blocker:
+
+- `JOHNSON (model_id NULL)`
+- `TECHNOGYM (model_id NULL)`
+
+Next shortest route:
+
+1. Resolve or exclude the two brand-only rows from the publication-health denominator.
+2. Add model seeds for the seven resolved missing models.
+3. Run GT / GS / YT collectors with the new seed IDs and `--import-db --replace-existing --skip-unresolved --only-commercial`.
+4. Rerun `run_batch.py --use-db --week 2026-04-06 --only-commercial --output-publish-artifact` and confirm `overall=ok publish_ready=yes`.
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
 **現在地:** publication pipeline → candidate promotion CLI まで実装完了。source-wide failure 回帰テスト追加済み。162 tests PASS。
