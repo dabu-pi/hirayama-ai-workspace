@@ -1,8 +1,8 @@
-# KNOWLEDGE_MAP — 物療学習の地図
+# KNOWLEDGE_MAP — 物療学習の全体地図
 
 **プロジェクトID:** PMOD-08  
 **最終更新:** 2026-04-10  
-**位置づけ:** Phase 1 の中核。「何をどの順番でどう理解するか」を整理した学習の地図
+**位置づけ:** 「何をどの順番でどう理解するか」の全体地図。機器・人体・病態・症状・臨床判断を一本につなぐ
 
 ---
 
@@ -13,6 +13,34 @@
 
 機器の名称・ブランドは変わるが、生体物理の原理は変わらない。
 原理から理解すれば、未知の機器に出会ったときも本質的な判断ができる。
+
+---
+
+## 0. 学習の全体構造（最初に把握する）
+
+```
+[Step 1] 人体を知る
+  └─ HUMAN_BIOLOGY_MAP.md  ← 物療に必要な人体知識の全体地図
+  └─ ANATOMY_AND_TARGET_TISSUES.md  ← 狙う組織の特性
+  └─ PHYSIOLOGY_FOR_MODALITIES.md  ← 生体反応の仕組み
+  └─ PATHOLOGY_AND_HEALING.md  ← 病態と修復フェーズ
+  └─ PAIN_SCIENCE_BASICS.md  ← 疼痛の現代的理解
+
+[Step 2] 機器を理解する（このファイル）
+  └─ 大分類・周波数・設定パラメータ・目的別整理
+
+[Step 3] 疾患・症状を理解する
+  └─ COMMON_CONDITIONS_MAP.md  ← 整骨院でよくみる症状・疾患
+  └─ DISEASE_AND_MODALITY_MATRIX.md  ← 疾患×機器マトリクス
+
+[Step 4] 臨床判断に使う
+  └─ CLINICAL_DECISION_FRAMEWORK.md  ← 7ステップ思考手順
+  └─ SYMPTOM_BASED_DECISION_GUIDE.md  ← 症状タイプ別ガイド
+  └─ RED_FLAGS_AND_REFERRAL.md  ← 止まるべきケース
+```
+
+**このドキュメント（KNOWLEDGE_MAP）は Step 2 の中核。**  
+Step 1 の人体知識を前提として読むことを推奨する。
 
 ---
 
@@ -232,8 +260,25 @@
 
 ## 7. 今後このドキュメントに追加すること
 
-- [ ] 自院保有機器の一覧記入
+- [ ] 自院保有機器の一覧記入（`data/device_database/` と連動）
 - [ ] 各モダリティの詳細ページへのリンク（`docs/DEVICE_CLASSIFICATION.md` 等）
-- [ ] 「選択の実例」のケーススタディを追加
-- [ ] 禁忌一覧の整備
+- [ ] 「選択の実例」のケーススタディ追加（症状タイプ別に1例ずつ）
+- [ ] 禁忌一覧の整備（`docs/RED_FLAGS_AND_REFERRAL.md` との連携）
 - [ ] AI検証後の修正記録
+
+---
+
+## 8. 関連ドキュメントへのリンク
+
+| ドキュメント | 役割 |
+|---|---|
+| [HUMAN_BIOLOGY_MAP.md](./HUMAN_BIOLOGY_MAP.md) | 人体知識の全体地図（Step 1）|
+| [ANATOMY_AND_TARGET_TISSUES.md](./ANATOMY_AND_TARGET_TISSUES.md) | ターゲット組織の特性 |
+| [PHYSIOLOGY_FOR_MODALITIES.md](./PHYSIOLOGY_FOR_MODALITIES.md) | 生体反応の仕組み |
+| [PATHOLOGY_AND_HEALING.md](./PATHOLOGY_AND_HEALING.md) | 病態と治癒フェーズ |
+| [PAIN_SCIENCE_BASICS.md](./PAIN_SCIENCE_BASICS.md) | 疼痛科学の基礎 |
+| [DEVICE_CLASSIFICATION.md](./DEVICE_CLASSIFICATION.md) | 機器の詳細分類 |
+| [CLINICAL_DECISION_FRAMEWORK.md](./CLINICAL_DECISION_FRAMEWORK.md) | 臨床判断の7ステップ |
+| [SYMPTOM_BASED_DECISION_GUIDE.md](./SYMPTOM_BASED_DECISION_GUIDE.md) | 症状タイプ別ガイド |
+| [DISEASE_AND_MODALITY_MATRIX.md](./DISEASE_AND_MODALITY_MATRIX.md) | 疾患×機器マトリクス |
+| [RED_FLAGS_AND_REFERRAL.md](./RED_FLAGS_AND_REFERRAL.md) | レッドフラッグと医療連携 |
