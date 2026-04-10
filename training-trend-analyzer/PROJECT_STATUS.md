@@ -996,9 +996,30 @@ Next action:
 
 ---
 
+## 2026-04-10 Publication Dashboard Drive Placement
+
+Purpose:
+
+- 週次 publication 運用ビューを Google Drive の project 配下に配置し、ユーザーが Google Sheets として確認できる状態にした。
+- Drive 版は正本ではなく運用ビュー。正本は引き続き repo / Markdown / `data/output/` / release ledger / `PROJECT_STATUS.md`。
+
+Drive placement:
+
+- Saved to: `hirayama-ai-workspace/workspace-export/training-trend-analyzer/ops/publication_dashboard`
+- File name: `training-trend-analyzer_週次publication運用ビュー`
+- File URL: `https://docs.google.com/spreadsheets/d/1eFN_VjvOQ98ZreyqKO9aSrmbi5WBXFIjwzIv-uy1PJY/edit?usp=drivesdk`
+
+Operation note:
+
+- `ops` and `publication_dashboard` folders did not exist in Drive and were created under the training-trend-analyzer project folder.
+- Duplicate check before upload found no same-name file in the target dashboard folder.
+- Next weekly updates should regenerate the local workbook with `python ops/publication_dashboard/generate_xlsx.py`, then replace or update the Drive view as needed.
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。週次運用を見える化する `ops/publication_dashboard/` も追加済み。164 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。週次運用を見える化する `ops/publication_dashboard/` を追加し、Google Drive の project 配下にも Google Sheets 運用ビューとして配置済み。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
@@ -1008,9 +1029,9 @@ Next action:
 - `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. 必要に応じて `ops/publication_dashboard/publication_weekly_view.xlsx` を Google Sheets へアップロードする
-2. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
-3. 次週データで同じ operator flow を再実行し、dashboard view を更新する
+1. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
+2. 次週データで同じ operator flow を再実行し、dashboard view を更新する
+3. Drive 上の運用ビューは正本ではなく見える化ビューとして扱い、正式な状態更新は `PROJECT_STATUS.md` に戻す
 4. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
 
 **注意点:**
