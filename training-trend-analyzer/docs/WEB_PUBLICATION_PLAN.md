@@ -294,3 +294,37 @@ Maintenance path:
 - verify checks pointer / ledger / manifest / stable markdown consistency
 - repair is explicit opt-in and only rebuilds release pointer plus stable markdown
 - ledger remains append-only and is never rewritten by repair
+
+## 2026-04-10 Candidate vs Release Review Update
+
+Before promoting a candidate, operators can compare the candidate latest with the
+current release in one command:
+
+```bash
+python scripts/review_publication_candidate.py --kind ranking
+python scripts/review_publication_candidate.py --kind compare
+python scripts/review_publication_candidate.py --kind all
+python scripts/review_publication_candidate.py --kind all --json
+```
+
+Review summary statuses:
+
+- `no_candidate`: no candidate latest pointer found for the kind
+- `no_release`: candidate exists but no release has been promoted yet (initial promotion eligible)
+- `same_manifest`: candidate and release point to the same manifest (no action needed)
+- `candidate_newer_than_release`: candidate is from a newer week (promote review recommended)
+- `candidate_differs_same_week`: same week but candidate was regenerated later (re-promote candidate)
+- `candidate_older_than_release`: candidate is older than the release (not a promotion candidate)
+- `candidate_not_publish_ready`: candidate is not publish_ready and cannot be promoted
+
+The review CLI is read-only and does not write any files.
+It is intended as the pre-promotion decision step between pipeline output and
+`promote_publication_release.py`.
+
+Operator pre-promotion flow:
+
+1. run pipeline → candidate output
+2. **review** candidate vs release with `review_publication_candidate.py`
+3. if `promotable=True`, promote with `promote_publication_release.py`
+4. verify with `verify_publication_release_state.py`
+5. inspect status with `show_publication_release_status.py`

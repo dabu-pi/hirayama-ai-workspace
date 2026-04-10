@@ -460,9 +460,16 @@ not "approved for public pickup".
 Manual release is a separate thin layer on top of dated handoff manifests:
 
 ```bash
+# 1. review candidate vs current release before promoting
+python scripts/review_publication_candidate.py --kind all
+python scripts/review_publication_candidate.py --kind ranking --json
+
+# 2. promote the approved candidate
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260406.json
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_compare_20260406.json --copy-markdown
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260330.json --allow-rollback
+
+# 3. inspect and verify
 python scripts/show_publication_release_status.py --kind all --limit 10
 python scripts/verify_publication_release_state.py --kind all
 python scripts/verify_publication_release_state.py --kind ranking --repair
@@ -493,11 +500,11 @@ Rules:
 - rollback promotion is recorded as `rollback_promote`
 - `--dry-run` writes neither release pointer nor ledger
 
-Operationally this makes publication a 2-step flow:
+Operationally this makes publication a multi-step flow:
 
 1. run pipeline to produce candidate outputs
-2. inspect dated handoff manifest / dated Markdown
-3. promote the approved dated manifest to the release pointer
+2. **review** candidate vs release with `review_publication_candidate.py` (new)
+3. if `promotable=True`, promote the approved dated manifest to the release pointer
 4. keep the promotion / rollback audit trail in the release ledger
 5. inspect current release + recent history with `show_publication_release_status.py`
 6. verify pointer / ledger / stable markdown consistency with `verify_publication_release_state.py`

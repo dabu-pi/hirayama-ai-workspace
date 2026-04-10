@@ -412,3 +412,36 @@ Tests added in this step:
   - repair dry-run
   - repair refusal for not-ready manifest
   - schema failure
+
+## 2026-04-10 Candidate vs Release Review CLI Update
+
+- added `scripts/review_publication_candidate.py` as a read-only pre-promotion review CLI
+- CLI compares candidate latest pointer + manifest with the current release pointer
+- supports `--kind ranking|compare|all`, `--output-dir`, `--json`, and `--verbose`
+- outputs three sections per kind: Current Release / Latest Candidate / Review Summary
+- review summary statuses: `no_candidate`, `no_release`, `same_manifest`,
+  `candidate_newer_than_release`, `candidate_differs_same_week`,
+  `candidate_older_than_release`, `candidate_not_publish_ready`
+- `promotable=True` indicates the candidate is eligible for promotion
+- field diff notes are shown when title / slug / markdown_path differ between candidate and release
+- `--json` emits machine-readable structure suitable for scripted promotion decisions
+- no writes at any point; the CLI is read-only by design
+- added `src/publication/candidate_review.py` as the core review helper module
+
+Tests added in this step:
+
+- `tests/test_review_publication_candidate.py`
+  - ranking candidate newer than release
+  - compare candidate newer than release
+  - no release / with candidate (initial promotion eligible)
+  - no candidate / with release
+  - same manifest (no action)
+  - candidate older than release (rollback path)
+  - candidate not publish_ready (hold)
+  - `--json` expected structure
+  - `--json` no candidate / no release
+  - `--json` all kinds
+  - invalid release pointer schema fails
+  - field diff notes when slug changes
+  - read-only behavior
+  - candidate_differs_same_week

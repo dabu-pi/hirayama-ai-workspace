@@ -319,3 +319,8 @@ Promotion rules:
 - `scripts/verify_publication_release_state.py` is read-only by default and may mutate only release pointer / stable markdown when `--repair` is explicitly set
 - repair source of truth is the latest validated ledger entry for the selected kind
 - repair must not append, rewrite, or delete release ledger history
+- `scripts/review_publication_candidate.py` is read-only and must not mutate any file
+- review CLI compares candidate latest with release latest for the given kind(s)
+- review CLI loads candidate from `publication_handoff_latest*.json` and its referenced dated manifest
+- review CLI loads release from `publication_release_latest*.json`
+- raw DB / collector re-read is prohibited in the review CLI
