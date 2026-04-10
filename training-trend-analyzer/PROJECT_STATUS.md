@@ -1017,9 +1017,25 @@ Operation note:
 
 ---
 
+## 2026-04-10 Publication Dashboard Japanese Labels
+
+Purpose:
+
+- 週次 publication 運用ビューの見出し・状態値を、日本語中心の運用ルールに合わせて更新した。
+- `slug` / handoff filename などの内部識別子は残し、ユーザーが見る状態値は `完了` / `はい` / `確認済み` / `なし` / `正常` に寄せた。
+
+Result:
+
+- Local CSV / xlsx updated under `ops/publication_dashboard/`.
+- xlsx sheet names changed to `週次概要`, `充足確認`, `公開履歴`.
+- Drive 上の `training-trend-analyzer_週次publication運用ビュー` も同じ URL のまま更新済み。
+- File URL: `https://docs.google.com/spreadsheets/d/1eFN_VjvOQ98ZreyqKO9aSrmbi5WBXFIjwzIv-uy1PJY/edit?usp=drivesdk`
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。週次運用を見える化する `ops/publication_dashboard/` を追加し、Google Drive の project 配下にも Google Sheets 運用ビューとして配置済み。164 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。週次運用を見える化する `ops/publication_dashboard/` を追加し、Google Drive の project 配下にも Google Sheets 運用ビューとして配置済み。運用ビューの見出し・状態値は日本語中心へ更新済み。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成

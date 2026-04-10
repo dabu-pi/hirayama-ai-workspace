@@ -58,6 +58,8 @@ python scripts/show_publication_release_status.py --kind all --limit 5 --verbose
 ## 6. Dashboard View 更新
 
 - `Weekly_Overview.csv`: 週全体の状態を1行追加または更新
-- `Coverage_Check.csv`: coverage と不足モデルを更新
-- `Release_Log.csv`: ranking / compare の操作履歴を追加
+- `Coverage_Check.csv`: 充足状況と不足モデルを更新
+- `Release_Log.csv`: ランキング / 比較の操作履歴を追加
 - `PROJECT_STATUS.md`: 最後に重要結果を記録
+
+見出しと状態値は日本語中心にし、内部識別子や handoff filename は必要に応じて英字のまま残します。

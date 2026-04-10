@@ -15,9 +15,9 @@ from xml.sax.saxutils import escape
 BASE = Path(__file__).resolve().parent
 OUTPUT = BASE / "publication_weekly_view.xlsx"
 SHEETS = [
-    ("Weekly_Overview", BASE / "Weekly_Overview.csv"),
-    ("Coverage_Check", BASE / "Coverage_Check.csv"),
-    ("Release_Log", BASE / "Release_Log.csv"),
+    ("週次概要", BASE / "Weekly_Overview.csv"),
+    ("充足確認", BASE / "Coverage_Check.csv"),
+    ("公開履歴", BASE / "Release_Log.csv"),
 ]
 
 
