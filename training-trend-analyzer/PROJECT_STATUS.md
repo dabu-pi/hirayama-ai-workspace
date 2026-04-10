@@ -812,9 +812,74 @@ Next action:
 
 ---
 
+## 2026-04-10 Ranking Candidate Release Promotion
+
+Target candidate:
+
+- kind: `ranking`
+- week: `2026-04-06`
+- handoff: `data/output/publication_handoff_20260406_20260410T190547.json`
+- markdown: `data/output/publish_ready_20260406.md`
+
+Review result:
+
+- `review_publication_candidate.py --kind all --verbose`
+  - ranking: `status=no_release`, `promotable=True`
+  - compare: `status=no_release`, `promotable=True`
+- `review_publication_candidate.py --kind all --json`
+  - ranking candidate points to `publication_handoff_20260406_20260410T190547.json`
+  - compare was reviewed but intentionally not promoted in this operation
+
+Editorial / signal check:
+
+- Ranking Markdown only features the top 3 models and uses candidate/review language:
+  - `Concept2 SkiErg`
+  - `TECHNOGYM Run`
+  - `Life Fitness T5`
+- Low/zero GT rows are not directly promoted as strong public claims in the generated Markdown.
+- Continue treating `publish_ready=true` as a coverage gate pass, not a content-quality guarantee.
+
+Promotion result:
+
+```text
+[CANDIDATE-PROMOTE] kind=ranking review_status=no_release
+[CANDIDATE-PROMOTE] manifest=data/output/publication_handoff_20260406_20260410T190547.json
+[RELEASE] data/output/publication_release_latest.json
+[RELEASE-MARKDOWN] data/output/publication_release_latest.md
+[RELEASE-LEDGER] data/output/publication_release_ledger.jsonl
+```
+
+Verification:
+
+- `verify_publication_release_state.py --kind all`
+  - `overall_status=WARNING`
+  - ranking: `status=OK`, issues none
+  - compare: warning only because compare has no release pointer / stable markdown; this is expected because this operation promoted ranking only
+- `verify_publication_release_state.py --kind ranking`
+  - `overall_status=OK`
+  - ranking release points to `publication_handoff_20260406_20260410T190547.json`
+  - latest ledger action: `promote`
+- `show_publication_release_status.py --kind ranking --limit 5 --verbose`
+  - current release week: `2026-04-06`
+  - slug: `training-trends-20260406`
+  - promoted_at: `2026-04-10T19:16:44`
+  - stable markdown updated: yes
+
+Storage note:
+
+- Release pointer / stable Markdown / ledger are under `data/output/`, which is ignored by Git for generated operational output.
+- This `PROJECT_STATUS.md` entry is the committed handoff record for the promotion event.
+
+Next action:
+
+1. If compare publication is desired, separately review and promote the compare candidate.
+2. Run `verify_publication_release_state.py --kind all` after compare promotion to clear the expected compare warnings.
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。164 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking candidate は release 昇格済みで ranking verify OK。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
@@ -824,10 +889,11 @@ Next action:
 - `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. 週次運用フローのリハーサル（review → promote → verify → show_status）
+1. compare candidate を公開対象にする場合は、別途 review / promote / verify を行う
 2. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
 3. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
 
 **注意点:**
 - 実 DB の 2026-04-06 commercial gate は GT/GS/YT 各11/11 に到達したが、GT は一部0値が多い。`publish_ready=true` は coverage gate 通過であり、信号の強さは別途レビューする
+- `verify --kind all` は compare 未昇格のため WARNING になる。ranking 単独 verify は OK
 - 同週 re-run は新形式 manifest filename (generated_at token 付き) で別ファイルに書き出されるため上書きしない。`review` が `candidate_differs_same_week` を検出し `--allow-same-week` で昇格できる
