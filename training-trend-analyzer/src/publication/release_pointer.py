@@ -125,18 +125,19 @@ def release_output_paths(
 
 
 def resolve_release_reference(path_value: str | Path) -> Path:
+    """Resolve a release reference path to an absolute Path.
+
+    Relative paths are resolved from CWD only.  The previous fallback to the
+    project root (``Path(__file__).parents[2]``) was removed because it broke
+    test isolation: when tests delete a file in ``tmp_path`` and then re-run
+    the CLI, the fallback silently picked up the real file from
+    ``data/output/`` and caused spurious mismatches.  CLIs should always be
+    run from the project root, so CWD resolution is sufficient.
+    """
     path = Path(path_value)
     if path.is_absolute():
         return path
-
-    candidates = [
-        Path.cwd() / path,
-        Path(__file__).resolve().parents[2] / path,
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return candidates[0]
+    return Path.cwd() / path
 
 
 def load_existing_release_pointer(

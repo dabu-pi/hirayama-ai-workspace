@@ -506,22 +506,99 @@ Tests added in this step:
 
 ---
 
+## 2026-04-10 実運用確認フェーズ — End-to-End 検証結果
+
+対象週: `2026-04-06` / Python 3.13.1 / 154 tests PASS
+
+### 実行コマンドと結果
+
+| ステップ | コマンド | 結果 |
+|---|---|---|
+| 1a | `run_publication_pipeline.py --week 2026-04-06 --use-db --only-commercial` | `publish_hold` (health=review_only, YT missing) |
+| 1b | YT mock import → pipeline 再実行 | `publish_hold` 継続 (GT 4/13, GS 4/13, YT 4/13 で coverage 不足) |
+| 1c | `run_publication_pipeline.py --from-artifact tests/fixtures/publish_ready_ranking_artifact.json` | ranking `publish_ready=yes`, handoff/latest 生成 OK |
+| 1d | `run_publication_pipeline.py --from-artifact tests/fixtures/publish_ready_compare_artifact.json` | compare `publish_ready=yes` OK |
+| 2 | `review_publication_candidate.py --kind all --verbose` | `no_release` / `promotable=True` |
+| 3a | `promote_publication_candidate.py --kind ranking --dry-run --json` | JSON 出力 OK, ファイル書き込みなし確認 |
+| 3b | `promote_publication_candidate.py --kind ranking --copy-markdown` | release pointer + ledger + stable markdown 生成 OK |
+| 3c | `promote_publication_candidate.py --kind compare --copy-markdown` | compare release OK |
+| 4 | `show_publication_release_status.py --kind all --limit 5 --verbose` | 昇格記録2件・履歴表示 OK |
+| 5 | `verify_publication_release_state.py --kind all` | `overall_status: OK` |
+
+### 発見した運用課題
+
+**課題1 (重要): 同週 re-run でmanifest が上書きされ verify が ERROR になる**
+
+- 問題: `run_publication_pipeline.py` が同週を再実行すると `publication_handoff_{week}.json` を上書きする
+- 症状: release pointer が古い内容を参照しているのに manifest が更新され、`verify` が `pointer_manifest_*_mismatch` を5件検出
+- `review` は `same_manifest` (no action) と報告して見逃す
+- `repair` は ledger との整合が取れないため失敗
+- **回復パス**: `promote_publication_release.py --manifest data/output/publication_handoff_{week}.json --copy-markdown` で直接再昇格 → `verify` が OK になる
+- 根本原因: manifest filename が週単位 (`publication_handoff_20260406.json`) のため、同週re-runが常に上書きする
+
+**課題2 (バグ修正済み): `resolve_release_reference` の project root フォールバックでテスト汚染**
+
+- 問題: `src/publication/release_pointer.py` の `resolve_release_reference()` が、CWD に存在しない場合に project root へフォールバックしていた
+- 症状: e2e テスト後に `data/output/` にファイルが存在すると、test の `tmp_path` で削除したファイルが project root から解決され、`manifest_missing` / `markdown_missing` が検出されなくなる → 2 tests FAIL
+- **修正済み**: フォールバックを削除し CWD 解決のみに統一 (コミット済み)
+- **修正後: 154 tests PASS**
+
+**課題3: 実 DB の coverage が低く publish_ready=true が得られない**
+
+- 現状: 21 active models のうち GT/GS/YT データがある商用モデルは 4〜4〜4 のみ
+- 影響: `run_batch.py` のヘルス判定が常に `review_only` → pipeline は `publish_hold` のみ生成
+- YT mock import 後でも同様: coverage warning が GS/GT/YT 全ソースに出る
+- **暫定対応**: `--from-artifact` で `publish_ready=true` fixture を使って promotion フローを確認
+- **実対応**: 実週次で商用モデル全体を対象にした collector 実行と import が必要
+
+**課題4: `review` が same_manifest の場合に manifest 内容変化を検知しない**
+
+- `review_publication_candidate.py` は manifest path の一致のみで `same_manifest` を判定する
+- 同週 re-run で manifest 内容が変わっても `same_manifest` と報告し、operator がスルーしやすい
+- `verify` が後から ERROR を出す仕組みは機能しているが、review 段階での早期検知がない
+
+### 実運用で手動介入が必要なケース
+
+| ケース | 状態 | 対応 |
+|---|---|---|
+| 同週 re-run 後に release が古い | `verify` → ERROR | `promote_publication_release.py --manifest` で再昇格 |
+| `review_only` health でも内部確認用に昇格したい | `publish_hold` が生成されるが promote は拒否 | 現状 promote 不可。fixture 経由の `--from-artifact` で代用 |
+| 誤昇格のロールバック | `--allow-rollback` で古い manifest を昇格 | ledger に `rollback_promote` として記録される |
+| release pointer と ledger の不整合 | `verify` → ERROR / `repair` 失敗 | 上記の再昇格パスで回復。`repair` は ledger 整合が前提 |
+
+### 追加すべき fixture / test 候補
+
+1. **GS source-wide failure fixture**: `overall=review_only` を再現し、pipeline が `publish_hold` を生成することを pytest で固定する
+2. **YT source-wide failure fixture**: 同上
+3. **同週 re-run → manifest 上書き → verify ERROR → 再昇格回復** のシナリオを integration test で固定する
+4. **review が `same_manifest` を返すが manifest 内容が変わっているケース**を検知する test（現在は未カバー）
+
+### 次に直すべき優先1件
+
+**「同週 re-run で manifest が上書きされ verify が ERROR になる」問題への設計改善**
+- 案A: manifest filename に `generated_at` のタイムスタンプを含める (`publication_handoff_20260406_20260410T090000.json`)。同週複数 manifest が残り、latest pointer が最新を指す。既存の `rebuild_publication_latest.py` の決定論的選択がそのまま使える
+- 案B: すでに promote 済みの週の manifest re-run は警告のみで上書き拒否する (--force が必要)
+- **推奨: 案A**（manifest の不変性を高め、既存の latest 再構築ロジックが活きる。`--force` 実装も不要になる）
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで一式実装完了。テスト 154 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。e2e 検証実施済み。154 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
 - `review_publication_candidate.py --kind all` で candidate vs release の差分を確認
 - `promote_publication_candidate.py --kind ranking` で最新 candidate を release layer へ昇格
 - `show_publication_release_status.py` / `verify_publication_release_state.py` で audit / 整合確認
+- `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. 実週次データで pipeline → review → promote → verify のフルフローを一度通す
-2. 実 DB の rank shift サンプルを収集し compare review を実運用確認
-3. GS / YT の source-wide failure fixture / pytest を追加する
+1. 同週 re-run 問題への設計改善（推奨: manifest filename に generated_at タイムスタンプを含める）
+2. GS / YT source-wide failure fixture / pytest を追加する
+3. 実 DB の商用モデル full coverage 収集（GT/GS/YT 全モデル）で `publish_ready=true` を実データで確認する
 
 **注意点:**
-- `review` 後の自動 re-run は未実装（operator 手動対応）
-- `--force` は未実装（`--allow-same-week` で代替）
-- 実運用でのリハーサルは artifact / Markdown / ledger がすべて `data/output/` に残るため、誤昇格は `--repair` または古い dated manifest への `--allow-rollback` 再昇格で復元可能
+- 実 DB は coverage 不足 (GT/GS/YT 各4/13) のため `run_batch.py` が常に `review_only` → `publish_hold` を生成する。promotion は `--from-artifact` で fixture を使って代用
+- 同週 re-run で manifest が上書きされると `review` は `same_manifest` (no action) と報告するが `verify` が ERROR を検出。回復は `promote_publication_release.py --manifest` で直接再昇格
+- `repair` は manifest 上書き起因の ledger 不整合は直せない（append-only 制約）
