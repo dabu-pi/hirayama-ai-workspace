@@ -51,7 +51,7 @@
       "canonical_target": "CYBEX::770T",
       "query_group": "single_model",
       "emit_to_source_metrics": true,
-      "queries": ["cybex 770t", "cybex 770t treadmill"]
+      "queries": ["cybex 770t", "cybex 770t treadmill", "cybex 770 t", "cybex 770", "サイベックス 770t"]
     },
     {
       "seed_id": "concept2_model_d_model",
@@ -60,7 +60,7 @@
       "canonical_target": "Concept2::Model D",
       "query_group": "single_model",
       "emit_to_source_metrics": true,
-      "queries": ["concept2 model d", "concept2 rowerg model d"]
+      "queries": ["concept2 model d", "concept2 rowerg model d", "concept2 rowerg", "concept 2 rower", "コンセプト2 ローイング"]
     },
     {
       "seed_id": "lifefitness_95t_model",

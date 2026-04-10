@@ -48,48 +48,77 @@ After the denominator cleanup, the same real DB week reports 11 resolved model t
 [HEALTH] reason=source coverage is incomplete; ranking and compare are advisory only
 ```
 
-`publish_ready=true` is blocked by the same missing coverage set across all three publication-gate sources:
+At that point, `publish_ready=true` was blocked by the same missing coverage set across all three publication-gate sources:
 
 - GT metric: `google_trends_interest`
 - GS metric: `search_suggest_count`
 - YT metric: `youtube_suggest_count`
 
+After the 2026-04-10 live collector/import pass, the same real DB week reached the target gate:
+
+```text
+[NORMALIZE] 11 models
+[HEALTH] overall=ok publish_ready=yes
+[HEALTH] GT=ok(11/11) GS=ok(11/11) YT=ok(11/11)
+```
+
+The follow-up publication pipeline also completed as a ranking candidate:
+
+```text
+[PIPELINE] content_kind=ranking
+[PIPELINE] publish_ready=yes
+[PIPELINE] artifact=data/output/publish_ready_20260406.json
+[PIPELINE] markdown=data/output/publish_ready_20260406.md
+[PIPELINE] handoff=data/output/publication_handoff_20260406_20260410T190547.json
+[PIPELINE] latest=data/output/publication_handoff_latest.json
+```
+
 ## Coverage Summary
 
 | Source | Metric | Present | Missing | Coverage | Blocking state |
 |---|---|---:|---:|---:|---|
-| GT | `google_trends_interest` | 4 | 7 | 36.4% | warning -> `review_only` |
-| GS | `search_suggest_count` | 4 | 7 | 36.4% | warning -> `review_only` |
-| YT | `youtube_suggest_count` | 4 | 7 | 36.4% | warning -> `review_only` |
+| GT | `google_trends_interest` | 11 | 0 | 100.0% | ok |
+| GS | `search_suggest_count` | 11 | 0 | 100.0% | ok |
+| YT | `youtube_suggest_count` | 11 | 0 | 100.0% | ok |
 
-All three sources have data for the same four model seeds:
+All three sources now have gate coverage for all eleven resolved model rows. The original four already-covered model seeds were:
 
 - `Concept2 SkiErg`
 - `Life Fitness T5`
 - `Precor TRM 445`
 - `TECHNOGYM Run`
 
+The seven newly collected/imported model seeds were:
+
+- `CYBEX 770T`
+- `Concept2 Model D`
+- `Life Fitness 95T`
+- `Life Fitness IC5`
+- `Life Fitness IC7`
+- `Matrix A50`
+- `TECHNOGYM Run Now`
+
 ## Coverage Matrix
 
 | Entity | Category | model_id | GT | GS | YT | Notes |
 |---|---|---:|---|---|---|---|
-| Matrix A50 | elliptical | 15 | missing | missing | missing | needs model seed |
+| Matrix A50 | elliptical | 15 | present | present | present | live import completed |
 | Life Fitness T5 | treadmill | 7 | present | present | present | current seed exists |
-| TECHNOGYM Run Now | treadmill | 2 | missing | missing | missing | needs model seed |
-| Concept2 Model D | rowing | 20 | missing | missing | missing | needs model seed |
-| Life Fitness IC5 | spin_bike | 10 | missing | missing | missing | needs model seed |
+| TECHNOGYM Run Now | treadmill | 2 | present | present | present | live import completed |
+| Concept2 Model D | rowing | 20 | present | present | present | live import completed after GT query expansion |
+| Life Fitness IC5 | spin_bike | 10 | present | present | present | live import completed |
 | TECHNOGYM Run | treadmill | 1 | present | present | present | current seed exists |
-| Life Fitness 95T | treadmill | 8 | missing | missing | missing | needs model seed |
+| Life Fitness 95T | treadmill | 8 | present | present | present | live import completed after GT retry |
 | Concept2 SkiErg | ski_erg | 22 | present | present | present | current seed exists |
-| Life Fitness IC7 | spin_bike | 11 | missing | missing | missing | needs model seed |
-| CYBEX 770T | treadmill | 19 | missing | missing | missing | needs model seed |
+| Life Fitness IC7 | spin_bike | 11 | present | present | present | live import completed |
+| CYBEX 770T | treadmill | 19 | present | present | present | live import completed after GT query expansion |
 | Precor TRM 445 | treadmill | 16 | present | present | present | current seed exists |
 | JOHNSON `(model_id NULL)` | unknown | n/a | excluded | excluded | excluded | brand-only row; excluded from publication-health denominator |
 | TECHNOGYM `(model_id NULL)` | unknown | n/a | excluded | excluded | excluded | brand-only row; excluded from publication-health denominator |
 
-## Missing Models
+## Previously Missing Models
 
-Resolved model rows that can be covered by adding model seeds:
+Resolved model rows that were covered by the 2026-04-10 live collector/import pass:
 
 - `CYBEX::770T`
 - `Concept2::Model D`
@@ -103,6 +132,8 @@ Brand-only rows that should not be treated as collector-fillable model targets u
 
 - `JOHNSON::(model_id NULL)::unknown`
 - `TECHNOGYM::(model_id NULL)::unknown`
+
+No resolved commercial model row remains missing from the 2026-04-06 publication-health denominator.
 
 ## Seed Config Gap
 
@@ -125,10 +156,18 @@ The 2026-04-10 seed expansion added model seeds for the seven resolved missing m
 - `technogym_run_now_model` -> `TECHNOGYM::Run Now`
 
 GT / GS / YT mock fixtures were also expanded for these seed IDs so local collector tests and
-mock fallback can exercise the new seed configuration. Real DB `source_metrics` still needs a
-live or accepted mock import before the publication gate can reach 11/11.
+mock fallback can exercise the new seed configuration.
+
+During live import, GT needed additional query variants for two low-volume model seeds:
+
+- `cybex_770t_model`: added `cybex 770 t`, `cybex 770`, `サイベックス 770t`
+- `concept2_model_d_model`: added `concept2 rowerg`, `concept 2 rower`, `コンセプト2 ローイング`
+
+Canonical targets were unchanged.
 
 ## Shortest Route To Fill Coverage
+
+Status: completed for the 2026-04-06 resolved commercial model denominator.
 
 1. Keep the 2 brand-only rows out of the publication-health denominator.
 
@@ -136,7 +175,7 @@ live or accepted mock import before the publication gate can reach 11/11.
 
    They are now excluded by `DbCollector(..., only_commercial=True)`. Longer term, either map them to a canonical model if they are legitimate model observations, or clean up the source rows if they are brand-level inputs.
 
-2. Collect and import the 7 resolved missing model seeds.
+2. Collect and import the 7 resolved missing model seeds. Completed on 2026-04-10.
 
    Suggested seed IDs:
 
@@ -148,11 +187,11 @@ live or accepted mock import before the publication gate can reach 11/11.
    - `matrix_a50_model`
    - `technogym_run_now_model`
 
-3. Collect and import those seeds for all three gate sources.
+3. Collect and import those seeds for all three gate sources. Completed on 2026-04-10.
 
-   Prefer `--mode auto` for GT so live can fall back to mock if needed. For GS / YT, `auto` is also available, but missing seed fixture coverage may require live or a fixture update.
+   GT was kept on `--mode live` during retry to avoid treating mock fallback as real coverage for low-volume seeds.
 
-4. Rerun the publication gate.
+4. Rerun the publication gate. Completed on 2026-04-10.
 
    The target state is:
 
@@ -200,6 +239,7 @@ For the current health gate, `publish_ready=true` requires:
 
 ## Notes
 
-- The shortest true blocker is not a single source. GT, GS, and YT are all at `4/11`.
-- The seven resolved model gaps are identical across GT / GS / YT, so seed expansion should be done once and reused across all three collectors.
+- The previous blocker was not a single source. GT, GS, and YT were all at `4/11` before the live import pass.
+- The seven resolved model gaps were identical across GT / GS / YT, so seed expansion was done once and reused across all three collectors.
 - The two `model_id=NULL` rows are now excluded from publication-health coverage, but still remain a source-data hygiene follow-up.
+- `publish_ready=true` is a coverage gate pass, not a content-quality guarantee. Several newly covered GT rows are zero-valued observations and should be checked during editorial review.

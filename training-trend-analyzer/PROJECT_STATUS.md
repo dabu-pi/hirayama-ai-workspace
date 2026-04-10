@@ -749,9 +749,72 @@ Next action:
 
 ---
 
+## 2026-04-10 Commercial Full Coverage Live Import
+
+Target week: `2026-04-06`
+
+The seven added commercial model seeds were collected and imported for GT / GS / YT, then the publication gate was rerun against the real DB.
+
+Collector results:
+
+- GT first 7-seed auto run: `mode_used=live`, `observations=84`, `import_rows=42`, `errors=4`, import OK 42 / skipped 0 / unresolved 0
+  - succeeded initially: `lifefitness_ic5_model`, `lifefitness_ic7_model`, `matrix_a50_model`
+  - initial gaps: `cybex_770t_model`, `concept2_model_d_model`, `lifefitness_95t_model`, `technogym_run_now_model`
+- GS 7-seed auto run: `mode_used=live`, `observations=125`, `import_rows=14`, `errors=0`, import OK 14 / skipped 0 / unresolved 0
+- YT 7-seed auto run: `mode_used=live`, `observations=76`, `import_rows=14`, `errors=0`, import OK 14 / skipped 0 / unresolved 0
+- GT live retries:
+  - `technogym_run_now_model`: `observations=28`, `import_rows=14`, import OK
+  - `lifefitness_95t_model`: `observations=28`, `import_rows=14`, import OK after retry
+  - `cybex_770t_model`: initially live no data; after GT query expansion, `observations=70`, `import_rows=14`, import OK
+  - `concept2_model_d_model`: initially live no data; after GT query expansion, `observations=70`, `import_rows=14`, import OK
+
+Seed query adjustment:
+
+- `cybex_770t_model` GT query variants were expanded to include `cybex 770 t`, `cybex 770`, and `サイベックス 770t`.
+- `concept2_model_d_model` GT query variants were expanded to include `concept2 rowerg`, `concept 2 rower`, and `コンセプト2 ローイング`.
+- Canonical targets were not changed.
+
+Final gate result:
+
+```text
+[NORMALIZE] 11 models
+[HEALTH] overall=ok publish_ready=yes
+[HEALTH] GT=ok(11/11) GS=ok(11/11) YT=ok(11/11)
+```
+
+Publication pipeline result:
+
+```text
+[PIPELINE] content_kind=ranking
+[PIPELINE] publish_ready=yes
+[PIPELINE] artifact=data/output/publish_ready_20260406.json
+[PIPELINE] markdown=data/output/publish_ready_20260406.md
+[PIPELINE] handoff=data/output/publication_handoff_20260406_20260410T190547.json
+[PIPELINE] latest=data/output/publication_handoff_latest.json
+```
+
+Remaining gaps:
+
+- No 2026-04-06 publication gate coverage gap remains for the 11 resolved commercial model rows.
+- The two brand-only `model_id=NULL` rows remain excluded from the publication-health denominator and are still source-data hygiene follow-up items.
+- Some newly covered GT values are zero-valued observations, especially `Concept2 Model D`, `Life Fitness 95T`, `Life Fitness IC5`, `Life Fitness IC7`, `Matrix A50`, and `TECHNOGYM Run Now`; this is acceptable for coverage but still worth reviewing for signal quality before editorial publication.
+
+Verification:
+
+- `uv run --with-requirements requirements.txt python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-metric-details --output-publish-artifact` -> PASS, `publish_ready=yes`
+- `uv run --with-requirements requirements.txt python scripts/run_publication_pipeline.py --week 2026-04-06 --use-db --only-commercial` -> PASS, ranking handoff/latest generated
+- `uv run --with-requirements requirements.txt python scripts/check_source_metrics.py --source-name google_trends --week 2026-04-06` -> 11 rows
+
+Next action:
+
+1. Run the weekly operator flow on the new candidate: `review_publication_candidate.py --kind all`, then promote the ranking candidate if the review is acceptable.
+2. Inspect the low/zero GT rows in the editorial review so `publish_ready=true` is treated as a gate pass, not as a content-quality guarantee.
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep 追加済み。164 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
@@ -761,10 +824,10 @@ Next action:
 - `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. 実 DB の商用モデル full coverage 収集（GT/GS/YT 全モデル）で `publish_ready=true` を実データで確認する
-2. 週次運用フローのリハーサル（pipeline → review → promote → verify → show_status）
+1. 週次運用フローのリハーサル（review → promote → verify → show_status）
+2. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
 3. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
 
 **注意点:**
-- 実 DB は coverage 不足 (GT/GS/YT 各4/13) のため `run_batch.py` が常に `review_only` → `publish_hold` を生成する。promotion は `--from-artifact` で fixture を使って代用
+- 実 DB の 2026-04-06 commercial gate は GT/GS/YT 各11/11 に到達したが、GT は一部0値が多い。`publish_ready=true` は coverage gate 通過であり、信号の強さは別途レビューする
 - 同週 re-run は新形式 manifest filename (generated_at token 付き) で別ファイルに書き出されるため上書きしない。`review` が `candidate_differs_same_week` を検出し `--allow-same-week` で昇格できる
