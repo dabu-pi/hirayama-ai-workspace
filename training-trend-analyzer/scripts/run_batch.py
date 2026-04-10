@@ -196,6 +196,8 @@ def _evaluate_source_health(
             reasons.append(f"{source_def['label']} metrics unavailable ({present_models}/{expected_models} models)")
         else:
             reasons.append(f"{source_def['label']} metrics unavailable")
+        if expected_models and not source_def["required"]:
+            affects_review = True
     elif present_models < expected_models:
         status = "warning"
         affects_review = True

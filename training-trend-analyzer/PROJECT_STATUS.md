@@ -629,9 +629,45 @@ Tests added in this step:
 
 ---
 
+## 2026-04-10 GS / YT Source-wide Failure Regression
+
+Added fixture-backed regression coverage for secondary source-wide failures:
+
+- `tests/fixtures/publish_artifact_gs_source_wide_failure_fixture.json`
+- `tests/fixtures/publish_artifact_youtube_source_wide_failure_fixture.json`
+- `tests/test_publication_source_wide_failure.py`
+- `tests/test_run_batch_health.py` source-wide GS / YT health cases
+
+What this protects:
+
+- GS source-wide failure now degrades run health to `review_only`, not `ok`
+- YT source-wide failure now degrades run health to `review_only`, not `ok`
+- `run_batch.py --output-publish-artifact` still emits a `publish-ready/v1` artifact with `publish_ready=false`
+- artifact health keeps the source-level missing reason (`GS/YT metrics unavailable (0/2 models)`)
+- Markdown and handoff generated from the artifact become `content_kind=publish_hold`
+- hold reason keeps the review-only publication gate reason:
+  `source coverage is incomplete; ranking and compare are advisory only`
+
+Implementation note:
+
+- Collector behavior was not changed. The health gate now treats a missing optional secondary source across all expected models as review-affecting.
+
+Verification:
+
+- `uv run --with-requirements requirements.txt ...` could not be executed on this PC because `uv` is not installed / not on PATH.
+- Equivalent local verification was run with Python 3.13.1 and pytest 9.0.3:
+  - `python -m pytest tests/test_run_batch_health.py tests/test_publication_source_wide_failure.py tests/test_run_batch_publish_artifact.py tests/test_run_publication_pipeline.py -q` -> 20 passed
+  - `python -m pytest -q` -> 162 passed
+
+Remaining unchecked:
+
+- Real DB full coverage still needs a weekly dataset where GT / GS / YT all cover the commercial model set enough to produce `publish_ready=true` without fixture substitution.
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。e2e 検証実施済み。154 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。source-wide failure 回帰テスト追加済み。162 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
@@ -641,9 +677,9 @@ Tests added in this step:
 - `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. GS / YT source-wide failure fixture / pytest を追加する
-2. 実 DB の商用モデル full coverage 収集（GT/GS/YT 全モデル）で `publish_ready=true` を実データで確認する
-3. 週次運用フローのリハーサル（pipeline → review → promote → verify → show_status）
+1. 実 DB の商用モデル full coverage 収集（GT/GS/YT 全モデル）で `publish_ready=true` を実データで確認する
+2. 週次運用フローのリハーサル（pipeline → review → promote → verify → show_status）
+3. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
 
 **注意点:**
 - 実 DB は coverage 不足 (GT/GS/YT 各4/13) のため `run_batch.py` が常に `review_only` → `publish_hold` を生成する。promotion は `--from-artifact` で fixture を使って代用

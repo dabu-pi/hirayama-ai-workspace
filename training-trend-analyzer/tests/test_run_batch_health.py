@@ -109,6 +109,46 @@ def test_build_run_health_marks_review_only_for_partial_secondary_source_failure
     ]
 
 
+def test_build_run_health_marks_review_only_for_gs_source_wide_failure():
+    run_health = build_run_health(
+        _metrics_by_model(gs_models=()),
+        collector_errors=[],
+    )
+
+    assert run_health.overall_status == "review_only"
+    assert run_health.publish_ready is False
+    assert run_health.source_statuses["gs"].status == "missing"
+    assert run_health.source_statuses["gs"].affects_review is True
+    assert run_health.source_statuses["gs"].reasons == [
+        "GS metrics unavailable (0/2 models)",
+    ]
+    assert build_health_summary_lines(run_health)[:3] == [
+        "[HEALTH] overall=review_only publish_ready=no",
+        "[HEALTH] GT=ok(2/2) GS=missing(0/2) YT=ok(2/2)",
+        "[HEALTH] reason=source coverage is incomplete; ranking and compare are advisory only",
+    ]
+
+
+def test_build_run_health_marks_review_only_for_yt_source_wide_failure():
+    run_health = build_run_health(
+        _metrics_by_model(yt_models=()),
+        collector_errors=[],
+    )
+
+    assert run_health.overall_status == "review_only"
+    assert run_health.publish_ready is False
+    assert run_health.source_statuses["yt"].status == "missing"
+    assert run_health.source_statuses["yt"].affects_review is True
+    assert run_health.source_statuses["yt"].reasons == [
+        "YT metrics unavailable (0/2 models)",
+    ]
+    assert build_health_summary_lines(run_health)[:3] == [
+        "[HEALTH] overall=review_only publish_ready=no",
+        "[HEALTH] GT=ok(2/2) GS=ok(2/2) YT=missing(0/2)",
+        "[HEALTH] reason=source coverage is incomplete; ranking and compare are advisory only",
+    ]
+
+
 def test_build_run_health_blocks_when_gt_is_missing():
     run_health = build_run_health(
         _metrics_by_model(gt_models=(), gs_models=("Run", "T75"), yt_models=("Run", "T75")),
