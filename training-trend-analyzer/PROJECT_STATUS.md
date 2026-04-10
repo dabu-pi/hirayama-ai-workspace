@@ -1033,9 +1033,35 @@ Result:
 
 ---
 
+## 2026-04-10 Publication Dashboard Ranking View
+
+Purpose:
+
+- 週次 publication 運用ビューに、ユーザーや将来の閲覧者がランキング結果・元ソース・順位の見方・注意点を理解できる構成を追加した。
+- Drive 版は引き続き正本ではなく運用ビュー。正本は repo / Markdown / `data/output/` / release ledger / `PROJECT_STATUS.md`。
+
+Added view:
+
+- `ランキング結果`: 2026-04-06 週の 11機種を順位順に投入。列は `対象週`, `順位`, `機種名`, `カテゴリ`, `総合スコア`, `GT値`, `GS値`, `YT値`, `傾向コメント`, `公開向けひとこと`, `注意メモ`。
+- `ランキングの見方`: 使用ソース、順位の考え方、coverage gate の限界、低値 / 0値の注意、Web公開時の注記を整理。
+- `ソース一覧`: 各機種の GT / GS / YT 元データ有無と解釈注意を確認する補助シート。
+- `WEEKLY_PUBLICATION_RANKING_VIEW_GUIDE.md`: 正本と運用ビューの違い、ランキングの読み方、Web公開時の見せ方、再開時に見る場所を整理。
+
+Verification:
+
+- Local workbook regenerated with 6 sheets: `週次概要`, `充足確認`, `公開履歴`, `ランキング結果`, `ランキングの見方`, `ソース一覧`.
+- Drive 上の `training-trend-analyzer_週次publication運用ビュー` も同じ URL のまま更新済み。
+- Drive export check confirmed the 6 sheet names plus `総合スコア` and `公開向けひとこと` headers.
+
+File URL:
+
+- `https://docs.google.com/spreadsheets/d/1eFN_VjvOQ98ZreyqKO9aSrmbi5WBXFIjwzIv-uy1PJY/edit?usp=drivesdk`
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。週次運用を見える化する `ops/publication_dashboard/` を追加し、Google Drive の project 配下にも Google Sheets 運用ビューとして配置済み。運用ビューの見出し・状態値は日本語中心へ更新済み。164 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。週次運用を見える化する `ops/publication_dashboard/` を追加し、Google Drive の project 配下にも Google Sheets 運用ビューとして配置済み。運用ビューの見出し・状態値は日本語中心へ更新済みで、ランキング結果・ランキングの見方・ソース一覧も追加済み。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
@@ -1048,7 +1074,8 @@ Result:
 1. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
 2. 次週データで同じ operator flow を再実行し、dashboard view を更新する
 3. Drive 上の運用ビューは正本ではなく見える化ビューとして扱い、正式な状態更新は `PROJECT_STATUS.md` に戻す
-4. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
+4. ranking view をWeb公開へ転用する場合は、`ランキング結果` の上位候補と `ランキングの見方` の注意書きをセットで使う
+5. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
 
 **注意点:**
 - 実 DB の 2026-04-06 commercial gate は GT/GS/YT 各11/11 に到達したが、GT は一部0値が多い。`publish_ready=true` は coverage gate 通過であり、信号の強さは別途レビューする

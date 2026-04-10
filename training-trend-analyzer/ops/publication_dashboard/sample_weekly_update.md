@@ -60,6 +60,9 @@ python scripts/show_publication_release_status.py --kind all --limit 5 --verbose
 - `Weekly_Overview.csv`: 週全体の状態を1行追加または更新
 - `Coverage_Check.csv`: 充足状況と不足モデルを更新
 - `Release_Log.csv`: ランキング / 比較の操作履歴を追加
+- `Ranking_Result.csv`: その週のランキング結果、公開向けひとこと、注意メモを更新
+- `Source_List.csv`: GT / GS / YT の元データ有無と解釈注意を更新
 - `PROJECT_STATUS.md`: 最後に重要結果を記録
 
 見出しと状態値は日本語中心にし、内部識別子や handoff filename は必要に応じて英字のまま残します。
+ランキング結果をWeb公開へ転用する場合は、販売実績順位ではなく参考指標であることを必ず添えます。

@@ -18,6 +18,9 @@ SHEETS = [
     ("週次概要", BASE / "Weekly_Overview.csv"),
     ("充足確認", BASE / "Coverage_Check.csv"),
     ("公開履歴", BASE / "Release_Log.csv"),
+    ("ランキング結果", BASE / "Ranking_Result.csv"),
+    ("ランキングの見方", BASE / "Ranking_Guide.csv"),
+    ("ソース一覧", BASE / "Source_List.csv"),
 ]
 
 
