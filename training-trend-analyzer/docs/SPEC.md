@@ -1,6 +1,6 @@
 # SPEC.md
 
-最終更新: 2026-04-10
+最終更新: 2026-04-10 (F-05 追加: publication pipeline / release gate / candidate promotion)
 
 ## 概要
 
@@ -76,6 +76,43 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 | F-04-14 | significant-only compare の review summary は、significant 0件でも `significant rows` / `top drivers` / `largest impact` の 3 行固定で出す | 完了 |
 | F-04-15 | `top drivers` は件数降順、同数時は compare 表示順を優先して安定表示する | 完了 |
 | F-04-16 | compare CSV は summary 行を含めず、行データと補助列だけを保持する | 完了 |
+
+### F-05 publication pipeline / release gate
+
+| ID | 要件 | 状態 |
+|---|---|---|
+| F-05-1 | `run_batch.py --output-publish-artifact` が `schema_version=publish-ready/v1` の artifact を生成できる | 完了 |
+| F-05-2 | `render_publish_markdown.py` が artifact から YAML front matter 付き公開向け Markdown を生成できる | 完了 |
+| F-05-3 | `build_publication_handoff.py` が dated manifest / latest pointer を `data/output/` に出力できる | 完了 |
+| F-05-4 | `rebuild_publication_latest.py` が dated manifest 群から latest pointer を決定論的に再構築できる | 完了 |
+| F-05-5 | `run_publication_pipeline.py` が artifact → markdown → handoff を一括実行できる operator entrypoint になっている | 完了 |
+| F-05-6 | `promote_publication_release.py --manifest <path>` で manifest 指定の release promotion ができる | 完了 |
+| F-05-7 | `promote_publication_candidate.py --kind <kind>` で latest candidate を kind 指定で安全に昇格できる | 完了 |
+| F-05-8 | release ledger (`publication_release_ledger.jsonl`) が昇格成功を append-only で記録する | 完了 |
+| F-05-9 | `show_publication_release_status.py` が release pointer + ledger を read-only で表示できる | 完了 |
+| F-05-10 | `verify_publication_release_state.py` が pointer / ledger / manifest / stable markdown の整合を診断し、`--repair` で再構築できる | 完了 |
+| F-05-11 | `review_publication_candidate.py` が candidate vs release の差分を read-only で確認できる | 完了 |
+| F-05-12 | `src/publication/release_promotion.py` が 2 つの promotion CLI でコア昇格ロジックを共有する thin wrapper になっている | 完了 |
+
+promotion 昇格ルール:
+
+| review_status | default | --allow-same-week | --allow-rollback |
+|---|---|---|---|
+| `no_release` | promote | — | — |
+| `candidate_newer_than_release` | promote | — | — |
+| `candidate_differs_same_week` | reject | promote | — |
+| `candidate_older_than_release` | reject | — | rollback_promote |
+| `no_candidate` | always reject | — | — |
+| `same_manifest` | always reject | — | — |
+| `candidate_not_publish_ready` | always reject | — | — |
+
+promotion CLI オプション:
+
+- `--dry-run`: ファイルを書かずに昇格計画を表示する
+- `--json`: 機械可読な JSON を標準出力に出す
+- `--copy-markdown`: stable release Markdown パスをコピーする
+- `--allow-same-week`: 同週の candidate 再生成を再昇格可能にする
+- `--allow-rollback`: 古い週の manifest を明示的に rollback 昇格できる
 
 ## 非機能要件
 
