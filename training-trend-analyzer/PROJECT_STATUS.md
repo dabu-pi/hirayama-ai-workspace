@@ -389,3 +389,26 @@ Tests added in this step:
   - JSON output
   - invalid pointer / ledger schema failure
   - read-only behavior
+
+## 2026-04-11 Release Verify / Repair CLI Update
+
+- added `scripts/verify_publication_release_state.py` for operator / maintenance verification
+- verify checks release pointer, latest ledger entry, handoff manifest, source markdown, and stable markdown consistency
+- default mode is read-only and reports `OK / WARNING / ERROR`
+- `--repair` rebuilds release pointer and stable markdown from the latest validated ledger entry for the selected kind
+- repair does not mutate or append the release ledger
+- `--dry-run` shows the repair plan without writing files
+
+Tests added in this step:
+
+- `tests/test_verify_publication_release_state.py`
+  - ranking verify success
+  - compare verify success
+  - pointer / ledger mismatch detection
+  - missing manifest / markdown detection
+  - stable markdown mismatch detection
+  - JSON output
+  - repair success
+  - repair dry-run
+  - repair refusal for not-ready manifest
+  - schema failure

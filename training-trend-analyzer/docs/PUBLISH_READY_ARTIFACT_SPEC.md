@@ -256,4 +256,5 @@ Manual release promotion sits above that handoff layer:
 - release approval is expressed only by a separate release pointer layer
 - release history is expressed only by a separate append-only release ledger layer
 - operator visibility is expressed only by a separate read-only release status CLI
+- operator maintenance is expressed only by a separate verify / repair CLI over release-layer files
 - promoting or rolling back a release does not mutate the artifact schema

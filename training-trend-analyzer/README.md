@@ -464,6 +464,8 @@ python scripts/promote_publication_release.py --manifest data/output/publication
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_compare_20260406.json --copy-markdown
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260330.json --allow-rollback
 python scripts/show_publication_release_status.py --kind all --limit 10
+python scripts/verify_publication_release_state.py --kind all
+python scripts/verify_publication_release_state.py --kind ranking --repair
 ```
 
 Release outputs:
@@ -498,7 +500,10 @@ Operationally this makes publication a 2-step flow:
 3. promote the approved dated manifest to the release pointer
 4. keep the promotion / rollback audit trail in the release ledger
 5. inspect current release + recent history with `show_publication_release_status.py`
+6. verify pointer / ledger / stable markdown consistency with `verify_publication_release_state.py`
+7. if needed, explicitly repair pointer and stable markdown from the latest ledger-backed release record
 
 Public consumers should read the release pointer or the optional stable release Markdown,
 not the candidate latest pointer.
 Operators and audit tooling should read the release ledger when they need promotion history.
+Maintenance operators should use verify/repair instead of editing pointer files by hand.

@@ -280,9 +280,17 @@ Operator / audit check path:
 - `scripts/show_publication_release_status.py --kind ranking`
 - `scripts/show_publication_release_status.py --kind compare`
 - `scripts/show_publication_release_status.py --kind all --limit 10`
+- `scripts/verify_publication_release_state.py --kind all`
+- `scripts/verify_publication_release_state.py --kind ranking --repair`
 
 This read-only CLI is for human confirmation of:
 
 - what is currently released
 - what was recently promoted
 - whether a rollback was recorded
+
+Maintenance path:
+
+- verify checks pointer / ledger / manifest / stable markdown consistency
+- repair is explicit opt-in and only rebuilds release pointer plus stable markdown
+- ledger remains append-only and is never rewritten by repair
