@@ -324,3 +324,12 @@ Promotion rules:
 - review CLI loads candidate from `publication_handoff_latest*.json` and its referenced dated manifest
 - review CLI loads release from `publication_release_latest*.json`
 - raw DB / collector re-read is prohibited in the review CLI
+- `scripts/promote_publication_candidate.py` promotes the latest candidate after eligibility check
+- candidate promotion uses `candidate_review` + `release_promotion` helpers; promotion logic is not duplicated
+- eligibility rules:
+  - `no_release` / `candidate_newer_than_release`: promotable by default
+  - `candidate_differs_same_week`: requires `--allow-same-week`
+  - `candidate_older_than_release`: requires `--allow-rollback`
+  - `no_candidate` / `same_manifest` / `candidate_not_publish_ready`: always rejected
+- `scripts/promote_publication_release.py --manifest <path>` remains available for manifest-level promotion
+- both promotion CLIs share the same core helper in `src/publication/release_promotion.py`

@@ -464,9 +464,15 @@ Manual release is a separate thin layer on top of dated handoff manifests:
 python scripts/review_publication_candidate.py --kind all
 python scripts/review_publication_candidate.py --kind ranking --json
 
-# 2. promote the approved candidate
+# 2a. promote latest candidate (kind-based, recommended)
+python scripts/promote_publication_candidate.py --kind ranking
+python scripts/promote_publication_candidate.py --kind compare --copy-markdown
+python scripts/promote_publication_candidate.py --kind ranking --dry-run
+python scripts/promote_publication_candidate.py --kind ranking --allow-same-week
+python scripts/promote_publication_candidate.py --kind ranking --allow-rollback
+
+# 2b. promote specific manifest (path-based, for precise control)
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260406.json
-python scripts/promote_publication_release.py --manifest data/output/publication_handoff_compare_20260406.json --copy-markdown
 python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260330.json --allow-rollback
 
 # 3. inspect and verify

@@ -328,3 +328,47 @@ Operator pre-promotion flow:
 3. if `promotable=True`, promote with `promote_publication_release.py`
 4. verify with `verify_publication_release_state.py`
 5. inspect status with `show_publication_release_status.py`
+
+## 2026-04-10 Safe Candidate Promotion Update
+
+Operators can now promote the latest candidate in one command without manually
+specifying the manifest path:
+
+```bash
+# Review first (read-only)
+python scripts/review_publication_candidate.py --kind ranking
+
+# Promote (writes release pointer + ledger)
+python scripts/promote_publication_candidate.py --kind ranking
+python scripts/promote_publication_candidate.py --kind compare --copy-markdown
+python scripts/promote_publication_candidate.py --kind ranking --dry-run
+python scripts/promote_publication_candidate.py --kind ranking --allow-same-week
+python scripts/promote_publication_candidate.py --kind ranking --allow-rollback
+python scripts/promote_publication_candidate.py --kind ranking --json
+```
+
+Promotion eligibility rules:
+
+| review_status | default | --allow-same-week | --allow-rollback |
+|---|---|---|---|
+| `no_release` | promote | — | — |
+| `candidate_newer_than_release` | promote | — | — |
+| `candidate_differs_same_week` | reject | promote | — |
+| `candidate_older_than_release` | reject | — | rollback_promote |
+| `no_candidate` | always reject | — | — |
+| `same_manifest` | always reject | — | — |
+| `candidate_not_publish_ready` | always reject | — | — |
+
+The existing `promote_publication_release.py --manifest <path>` is retained for
+manifest-level promotion. Both CLIs share the same core logic in
+`src/publication/release_promotion.py`.
+
+Minimal operator flow (pipeline → review → promote → verify):
+
+```bash
+python scripts/run_publication_pipeline.py --week 2026-04-13 --use-db
+python scripts/review_publication_candidate.py --kind all
+python scripts/promote_publication_candidate.py --kind ranking
+python scripts/show_publication_release_status.py --kind ranking
+python scripts/verify_publication_release_state.py --kind ranking
+```

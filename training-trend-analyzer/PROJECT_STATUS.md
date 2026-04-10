@@ -445,3 +445,37 @@ Tests added in this step:
   - field diff notes when slug changes
   - read-only behavior
   - candidate_differs_same_week
+
+## 2026-04-10 Safe Candidate Promotion CLI Update
+
+- added `scripts/promote_publication_candidate.py` as a safe operator entrypoint for kind-based promotion
+- added `src/publication/candidate_promotion.py` with eligibility check logic
+- added `src/publication/release_promotion.py` to share core promotion logic between CLIs
+- refactored `scripts/promote_publication_release.py` to use `release_promotion.py` (no behavior change)
+- promotion eligibility rules:
+  - `no_release` / `candidate_newer_than_release`: default promote
+  - `candidate_differs_same_week`: requires `--allow-same-week`
+  - `candidate_older_than_release`: requires `--allow-rollback` (records as `rollback_promote`)
+  - `no_candidate` / `same_manifest` / `candidate_not_publish_ready`: always rejected
+- `--dry-run` shows promotion plan without writing files
+- `--json` emits machine-readable output for scripted workflows
+- `--copy-markdown` copies stable release Markdown as before
+- existing `promote_publication_release.py --manifest <path>` is retained unchanged
+- both promotion CLIs share `src/publication/release_promotion.py`
+
+Tests added in this step:
+
+- `tests/test_promote_publication_candidate.py` (20 tests, all PASS)
+  - ranking no_release promote
+  - ranking candidate_newer promote
+  - compare candidate_newer promote
+  - same_manifest reject
+  - candidate_not_publish_ready reject
+  - no_candidate reject
+  - candidate_differs_same_week reject without flag / allow with flag
+  - candidate_older_than_release reject without flag / rollback_promote with flag
+  - dry-run writes nothing
+  - --json success / dry-run / rejection output
+  - --copy-markdown creates stable file
+  - schema validation failure
+  - unit tests: check_promotion_eligibility for each status
