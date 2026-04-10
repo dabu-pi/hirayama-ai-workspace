@@ -47,10 +47,11 @@ def _run_handoff(monkeypatch, capsys, tmp_path: Path, artifact_path: Path, markd
 
 
 def test_build_publication_handoff_for_ranking(monkeypatch, capsys, tmp_path):
+    # fixture: week=2026-04-06, generated_at=2026-04-10T00:10:00 -> token=20260410T001000
     artifact_path, markdown_path = _render_fixture_markdown(tmp_path, "publish_ready_ranking_artifact.json")
     output = _run_handoff(monkeypatch, capsys, tmp_path, artifact_path, markdown_path)
 
-    manifest_path = tmp_path / "data" / "output" / "publication_handoff_20260406.json"
+    manifest_path = tmp_path / "data" / "output" / "publication_handoff_20260406_20260410T001000.json"
     latest_path = tmp_path / "data" / "output" / "publication_handoff_latest.json"
 
     assert manifest_path.exists()
@@ -70,14 +71,15 @@ def test_build_publication_handoff_for_ranking(monkeypatch, capsys, tmp_path):
     assert manifest["slug"] == "training-trends-20260406"
     assert latest["schema_version"] == "publication-handoff-pointer/v1"
     assert latest["content_kind"] == "ranking"
-    assert latest["manifest_path"] == "data/output/publication_handoff_20260406.json"
+    assert latest["manifest_path"] == "data/output/publication_handoff_20260406_20260410T001000.json"
 
 
 def test_build_publication_handoff_for_compare(monkeypatch, capsys, tmp_path):
+    # fixture: week=2026-04-06, generated_at=2026-04-10T00:12:00 -> token=20260410T001200
     artifact_path, markdown_path = _render_fixture_markdown(tmp_path, "publish_ready_compare_artifact.json")
     _run_handoff(monkeypatch, capsys, tmp_path, artifact_path, markdown_path)
 
-    manifest_path = tmp_path / "data" / "output" / "publication_handoff_compare_20260406.json"
+    manifest_path = tmp_path / "data" / "output" / "publication_handoff_compare_20260406_20260410T001200.json"
     latest_path = tmp_path / "data" / "output" / "publication_handoff_compare_latest.json"
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -88,14 +90,15 @@ def test_build_publication_handoff_for_compare(monkeypatch, capsys, tmp_path):
     assert manifest["slug"] == "training-trends-compare-20260406"
     assert "hold_reason" not in manifest
     assert latest["content_kind"] == "compare"
-    assert latest["manifest_path"] == "data/output/publication_handoff_compare_20260406.json"
+    assert latest["manifest_path"] == "data/output/publication_handoff_compare_20260406_20260410T001200.json"
 
 
 def test_build_publication_handoff_for_hold(monkeypatch, capsys, tmp_path):
+    # fixture: week=2026-04-20, generated_at=2026-04-10T00:15:00 -> token=20260410T001500
     artifact_path, markdown_path = _render_fixture_markdown(tmp_path, "publish_ready_hold_artifact.json")
     _run_handoff(monkeypatch, capsys, tmp_path, artifact_path, markdown_path)
 
-    manifest_path = tmp_path / "data" / "output" / "publication_handoff_hold_20260420.json"
+    manifest_path = tmp_path / "data" / "output" / "publication_handoff_hold_20260420_20260410T001500.json"
     latest_path = tmp_path / "data" / "output" / "publication_handoff_hold_latest.json"
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -106,7 +109,7 @@ def test_build_publication_handoff_for_hold(monkeypatch, capsys, tmp_path):
     assert manifest["hold_reason"] == "source coverage is incomplete; ranking and compare are advisory only"
     assert "compare_mode" not in manifest
     assert latest["content_kind"] == "publish_hold"
-    assert latest["manifest_path"] == "data/output/publication_handoff_hold_20260420.json"
+    assert latest["manifest_path"] == "data/output/publication_handoff_hold_20260420_20260410T001500.json"
 
 
 def test_build_publication_handoff_fails_on_content_kind_mismatch(monkeypatch, capsys, tmp_path):

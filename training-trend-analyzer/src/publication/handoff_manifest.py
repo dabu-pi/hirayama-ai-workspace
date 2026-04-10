@@ -23,14 +23,35 @@ def _kind_file_prefix(content_kind: str) -> str:
     raise ValueError(f"Unsupported handoff content kind: {content_kind!r}")
 
 
-def _path_for_manifest(content_kind: str, week: str, *, output_dir: str | Path | None = None) -> Path:
+def _generated_at_token(generated_at: str) -> str:
+    """Convert a generated_at ISO string to a safe filename token.
+
+    Examples::
+
+        "2026-04-10T09:00:00"        -> "20260410T090000"
+        "2026-04-10T09:00:00Z"       -> "20260410T090000"
+        "2026-04-10T09:00:00+00:00"  -> "20260410T090000"
+    """
+    normalized = generated_at.replace("Z", "+00:00")
+    parsed = datetime.fromisoformat(normalized)
+    return parsed.strftime("%Y%m%dT%H%M%S")
+
+
+def _path_for_manifest(
+    content_kind: str,
+    week: str,
+    generated_at: str,
+    *,
+    output_dir: str | Path | None = None,
+) -> Path:
     base_dir = normalize_output_dir(output_dir)
     week_token = week.replace("-", "")
+    gen_token = _generated_at_token(generated_at)
     if content_kind == "compare":
-        return base_dir / f"publication_handoff_compare_{week_token}.json"
+        return base_dir / f"publication_handoff_compare_{week_token}_{gen_token}.json"
     if content_kind == "publish_hold":
-        return base_dir / f"publication_handoff_hold_{week_token}.json"
-    return base_dir / f"publication_handoff_{week_token}.json"
+        return base_dir / f"publication_handoff_hold_{week_token}_{gen_token}.json"
+    return base_dir / f"publication_handoff_{week_token}_{gen_token}.json"
 
 
 def _path_for_latest_pointer(content_kind: str, *, output_dir: str | Path | None = None) -> Path:
@@ -46,10 +67,11 @@ def handoff_output_paths(
     content_kind: str,
     week: str,
     *,
+    generated_at: str,
     output_dir: str | Path | None = None,
 ) -> tuple[Path, Path]:
     return (
-        _path_for_manifest(content_kind, week, output_dir=output_dir),
+        _path_for_manifest(content_kind, week, generated_at, output_dir=output_dir),
         _path_for_latest_pointer(content_kind, output_dir=output_dir),
     )
 

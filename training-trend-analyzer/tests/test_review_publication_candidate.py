@@ -529,3 +529,56 @@ def test_candidate_differs_same_week(monkeypatch, capsys, tmp_path):
 
     assert "candidate_differs_same_week" in output
     assert "PROMOTE READY" in output
+
+
+def test_candidate_differs_same_week_with_new_filename_format(monkeypatch, capsys, tmp_path):
+    """Same-week re-run with new generated_at-stamped filenames produces candidate_differs_same_week.
+
+    When the pipeline creates a second manifest for the same week with a newer
+    generated_at (e.g. publication_handoff_20260406_20260410T090000.json) and
+    the latest candidate pointer is updated to it, the review CLI must detect
+    candidate_differs_same_week and mark it PROMOTE READY.
+    """
+    output_dir = tmp_path / "data" / "output"
+
+    # New candidate manifest (re-run): same week, newer generated_at, new filename
+    new_manifest_path = output_dir / "publication_handoff_20260406_20260410T090000.json"
+    new_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    new_manifest_payload = {
+        "schema_version": "publication-handoff/v1",
+        "artifact_schema_version": "publish-ready/v1",
+        "content_kind": "ranking",
+        "week": "2026-04-06",
+        "generated_at": "2026-04-10T09:00:00",
+        "publish_ready": True,
+        "artifact_path": "data/output/publish_ready_20260406.json",
+        "markdown_path": "data/output/ranking_rerun.md",
+        "slug": "training-trends-20260406",
+        "title": "Trend Update: 2026-04-06",
+        "summary": "re-run summary",
+        "internal_reference": {"collector_source": "db"},
+    }
+    new_manifest_path.write_text(
+        __import__("json").dumps(new_manifest_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    _write_candidate_pointer(
+        output_dir,
+        content_kind="ranking",
+        week="2026-04-06",
+        manifest_path="data/output/publication_handoff_20260406_20260410T090000.json",
+    )
+    # Release was promoted from the older manifest with a different path
+    _write_release_pointer(
+        output_dir,
+        content_kind="ranking",
+        week="2026-04-06",
+        manifest_path="data/output/publication_handoff_20260406_20260410T001000.json",
+        source_generated_at="2026-04-10T00:10:00",
+    )
+
+    output = _run_cli(monkeypatch, capsys, tmp_path, "--kind", "ranking")
+
+    assert "candidate_differs_same_week" in output
+    assert "PROMOTE READY" in output

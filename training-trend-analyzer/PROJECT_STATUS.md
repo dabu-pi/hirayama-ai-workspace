@@ -506,6 +506,53 @@ Tests added in this step:
 
 ---
 
+## 2026-04-10 Manifest Immutability — generated_at 付き dated manifest 実装
+
+### 何が直ったか
+
+同週 re-run で manifest が上書きされ `verify` が ERROR になる問題を解消した。
+
+**変更前**: `publication_handoff_{week_token}.json`（例: `publication_handoff_20260406.json`）
+- 同じ週を再実行すると同一ファイルを上書き
+- release pointer が古い manifest 内容を参照したままになり `verify` が ERROR
+
+**変更後**: `publication_handoff_{week_token}_{gen_token}.json`（例: `publication_handoff_20260406_20260410T001000.json`）
+- 同じ週を再実行しても異なる `generated_at` → 異なるファイル名 → 上書きなし
+- 両 manifest が `data/output/` に共存
+- `rebuild_publication_latest.py` の `week → generated_at → filename` 選択ロジックが latest を正しく更新
+- `review_publication_candidate.py` が manifest path の差異から `candidate_differs_same_week` を正しく検出
+- 旧形式（週だけのファイル名）は glob パターン `{prefix}*.json` で引き続き拾われる（後方互換あり）
+
+### 実装詳細
+
+- `src/publication/handoff_manifest.py`
+  - `_generated_at_token(generated_at)` 追加: ISO 文字列 → `YYYYMMDDTHHMMSS` 変換（Z / +00:00 安全処理）
+  - `_path_for_manifest()` に `generated_at` 引数を追加し新形式 filename を生成
+  - `handoff_output_paths()` に `generated_at` 必須キーワード引数を追加
+  - `iter_dated_manifest_paths()` はそのまま（glob `{prefix}*.json` が旧形式・新形式の両方を拾う）
+- `scripts/build_publication_handoff.py`
+  - `handoff_output_paths()` 呼び出しに `generated_at=artifact_payload["generated_at"]` を追加
+
+### テスト状況
+
+- `tests/test_build_publication_handoff.py`: 期待 manifest path を新形式に更新（3件）
+- `tests/test_run_publication_pipeline.py`: 期待 manifest path を新形式に更新（5件）+ same-week re-run テスト追加（1件）
+- `tests/test_rebuild_publication_latest.py`: 新形式 filename テスト（1件）+ 旧形式/新形式混在テスト（1件）追加
+- `tests/test_review_publication_candidate.py`: 新形式 filename で `candidate_differs_same_week` 確認テスト（1件）追加
+- **158 tests PASS（154 → +4）**
+
+### 後方互換の扱い
+
+- `iter_dated_manifest_paths()` は `{prefix}*.json` glob で旧形式・新形式どちらも取得
+- `data/output/` に旧形式ファイルが残っていても `rebuild_publication_latest` は正しく動作する
+- 旧形式ファイルは migration 不要。共存で OK
+
+### 未対応事項
+
+- `review` の `same_manifest` 判定は manifest path の一致で行う。新形式化により `same_manifest` が出る状況は「同一 generated_at で二重実行した場合」のみとなり、実運用で起きる可能性は大幅に低下した
+
+---
+
 ## 2026-04-10 実運用確認フェーズ — End-to-End 検証結果
 
 対象週: `2026-04-06` / Python 3.13.1 / 154 tests PASS
@@ -594,11 +641,10 @@ Tests added in this step:
 - `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. 同週 re-run 問題への設計改善（推奨: manifest filename に generated_at タイムスタンプを含める）
-2. GS / YT source-wide failure fixture / pytest を追加する
-3. 実 DB の商用モデル full coverage 収集（GT/GS/YT 全モデル）で `publish_ready=true` を実データで確認する
+1. GS / YT source-wide failure fixture / pytest を追加する
+2. 実 DB の商用モデル full coverage 収集（GT/GS/YT 全モデル）で `publish_ready=true` を実データで確認する
+3. 週次運用フローのリハーサル（pipeline → review → promote → verify → show_status）
 
 **注意点:**
 - 実 DB は coverage 不足 (GT/GS/YT 各4/13) のため `run_batch.py` が常に `review_only` → `publish_hold` を生成する。promotion は `--from-artifact` で fixture を使って代用
-- 同週 re-run で manifest が上書きされると `review` は `same_manifest` (no action) と報告するが `verify` が ERROR を検出。回復は `promote_publication_release.py --manifest` で直接再昇格
-- `repair` は manifest 上書き起因の ledger 不整合は直せない（append-only 制約）
+- 同週 re-run は新形式 manifest filename (generated_at token 付き) で別ファイルに書き出されるため上書きしない。`review` が `candidate_differs_same_week` を検出し `--allow-same-week` で昇格できる

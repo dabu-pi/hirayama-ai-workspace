@@ -93,6 +93,7 @@ def build_publication_handoff_files(
     dated_manifest_path, latest_pointer_path = handoff_output_paths(
         markdown_metadata["content_kind"],
         artifact_payload["week"],
+        generated_at=artifact_payload["generated_at"],
         output_dir=output_dir,
     )
     manifest = build_handoff_manifest(

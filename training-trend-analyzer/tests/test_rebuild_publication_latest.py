@@ -211,6 +211,62 @@ def test_rebuild_latest_does_not_mix_hold_into_ranking_or_compare(monkeypatch, c
     assert hold_latest["manifest_path"] == "data/output/publication_handoff_hold_20260420.json"
 
 
+def test_rebuild_latest_picks_up_new_format_filename(monkeypatch, capsys, tmp_path):
+    """New-format filenames (week_gentoken) are collected and ranked correctly."""
+    output_dir = tmp_path / "data" / "output"
+    _write_manifest(
+        output_dir,
+        "publication_handoff_20260406_20260410T001000.json",
+        content_kind="ranking",
+        week="2026-04-06",
+        generated_at="2026-04-10T00:10:00",
+        publish_ready=True,
+    )
+    _write_manifest(
+        output_dir,
+        "publication_handoff_20260406_20260410T090000.json",
+        content_kind="ranking",
+        week="2026-04-06",
+        generated_at="2026-04-10T09:00:00",
+        publish_ready=True,
+    )
+
+    _run_rebuild(monkeypatch, capsys, output_dir, kind="ranking")
+    latest = json.loads((output_dir / "publication_handoff_latest.json").read_text(encoding="utf-8"))
+
+    assert latest["manifest_path"] == "data/output/publication_handoff_20260406_20260410T090000.json"
+
+
+def test_rebuild_latest_with_mixed_old_and_new_format_filenames(monkeypatch, capsys, tmp_path):
+    """Old-format (week-only) and new-format (week_gentoken) manifests may coexist.
+    Latest selection must use week -> generated_at -> filename order regardless of format."""
+    output_dir = tmp_path / "data" / "output"
+    # Old-format: week=2026-04-06, generated_at=2026-04-09T08:00:00
+    _write_manifest(
+        output_dir,
+        "publication_handoff_20260406.json",
+        content_kind="ranking",
+        week="2026-04-06",
+        generated_at="2026-04-09T08:00:00",
+        publish_ready=True,
+    )
+    # New-format: same week, later generated_at
+    _write_manifest(
+        output_dir,
+        "publication_handoff_20260406_20260410T090000.json",
+        content_kind="ranking",
+        week="2026-04-06",
+        generated_at="2026-04-10T09:00:00",
+        publish_ready=True,
+    )
+
+    _run_rebuild(monkeypatch, capsys, output_dir, kind="ranking")
+    latest = json.loads((output_dir / "publication_handoff_latest.json").read_text(encoding="utf-8"))
+
+    # New-format wins because it has a later generated_at.
+    assert latest["manifest_path"] == "data/output/publication_handoff_20260406_20260410T090000.json"
+
+
 def test_rebuild_latest_fails_for_unsupported_manifest_schema_in_selected_kind(monkeypatch, capsys, tmp_path):
     output_dir = tmp_path / "data" / "output"
     _write_manifest(
