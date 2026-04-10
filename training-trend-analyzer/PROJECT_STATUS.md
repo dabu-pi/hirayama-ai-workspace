@@ -877,9 +877,73 @@ Next action:
 
 ---
 
+## 2026-04-10 Compare Candidate Release Promotion
+
+Target candidate:
+
+- kind: `compare`
+- week: `2026-04-06`
+- handoff: `data/output/publication_handoff_compare_20260406.json`
+- markdown: `data/output/publish_ready_compare_20260406.md`
+
+Review result:
+
+- `review_publication_candidate.py --kind compare --verbose`
+  - compare: `status=no_release`, `promotable=True`
+  - same_manifest / same_week / rollback 判定ではなく、初回 promotion として eligible
+- `review_publication_candidate.py --kind compare --json`
+  - candidate `content_kind=compare`
+  - `compare_mode=True`
+  - slug: `training-trends-compare-20260406`
+
+Promotion result:
+
+```text
+[CANDIDATE-PROMOTE] kind=compare review_status=no_release
+[CANDIDATE-PROMOTE] manifest=data/output/publication_handoff_compare_20260406.json
+[RELEASE] data/output/publication_release_compare_latest.json
+[RELEASE-MARKDOWN] data/output/publication_release_compare_latest.md
+[RELEASE-LEDGER] data/output/publication_release_ledger.jsonl
+```
+
+Verification:
+
+- `verify_publication_release_state.py --kind all`
+  - `overall_status=OK`
+  - ranking: `status=OK`, issues none
+  - compare: `status=OK`, issues none
+- `show_publication_release_status.py --kind all --limit 5 --verbose`
+  - ranking release:
+    - week: `2026-04-06`
+    - slug: `training-trends-20260406`
+    - promoted_at: `2026-04-10T19:16:44`
+  - compare release:
+    - week: `2026-04-06`
+    - slug: `training-trends-compare-20260406`
+    - promoted_at: `2026-04-10T19:25:10`
+    - `compare_mode=True`
+
+Current publication state:
+
+- 2026-04-06 ranking: release 済み
+- 2026-04-06 compare: release 済み
+- `verify --kind all`: OK
+
+Storage note:
+
+- Release pointer / stable Markdown / ledger are generated under `data/output/`, which is ignored by Git.
+- This `PROJECT_STATUS.md` entry is the committed handoff record for the compare promotion and all-kind verification closure.
+
+Next action:
+
+1. Treat 2026-04-06 publication operations as closed unless editorial copy changes are needed.
+2. For the next weekly run, repeat the operator flow: pipeline -> review -> promote ranking/compare -> verify all -> status.
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking candidate は release 昇格済みで ranking verify OK。164 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep と 2026-04-06 の GT / GS / YT live import が完了し、実DBで `publish_ready=true` を確認済み。2026-04-06 ranking / compare candidates はどちらも release 昇格済みで `verify --kind all` OK。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成
@@ -889,11 +953,11 @@ Next action:
 - `verify` は同週 re-run によるマニフェスト上書きを ERROR 検知、`promote_publication_release.py --manifest` で回復可能
 
 **次にやること:**
-1. compare candidate を公開対象にする場合は、別途 review / promote / verify を行う
-2. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
+1. 低/ゼロ値の GT 行を editorial review で確認し、公開本文に出す表現を調整する
+2. 次週データで同じ operator flow を再実行する
 3. review が `same_manifest` を返すが manifest 内容が変わっているケースを検知する test を追加する
 
 **注意点:**
 - 実 DB の 2026-04-06 commercial gate は GT/GS/YT 各11/11 に到達したが、GT は一部0値が多い。`publish_ready=true` は coverage gate 通過であり、信号の強さは別途レビューする
-- `verify --kind all` は compare 未昇格のため WARNING になる。ranking 単独 verify は OK
+- `verify --kind all` は ranking / compare release 後に OK
 - 同週 re-run は新形式 manifest filename (generated_at token 付き) で別ファイルに書き出されるため上書きしない。`review` が `candidate_differs_same_week` を検出し `--allow-same-week` で昇格できる
