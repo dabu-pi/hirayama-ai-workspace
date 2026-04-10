@@ -32,3 +32,29 @@ def publish_markdown_output_path(
 ) -> Path:
     artifact_path = Path(artifact_path)
     return normalize_output_dir(output_dir) / f"{artifact_path.stem}.md"
+
+
+def publication_release_pointer_output_path(
+    content_kind: str,
+    *,
+    output_dir: str | Path | None = None,
+) -> Path:
+    base_dir = normalize_output_dir(output_dir)
+    if content_kind == "ranking":
+        return base_dir / "publication_release_latest.json"
+    if content_kind == "compare":
+        return base_dir / "publication_release_compare_latest.json"
+    raise ValueError(f"Unsupported release content kind: {content_kind!r}")
+
+
+def publication_release_markdown_output_path(
+    content_kind: str,
+    *,
+    output_dir: str | Path | None = None,
+) -> Path:
+    base_dir = normalize_output_dir(output_dir)
+    if content_kind == "ranking":
+        return base_dir / "publication_release_latest.md"
+    if content_kind == "compare":
+        return base_dir / "publication_release_compare_latest.md"
+    raise ValueError(f"Unsupported release content kind: {content_kind!r}")

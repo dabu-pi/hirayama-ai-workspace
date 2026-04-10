@@ -201,8 +201,13 @@ Phase 4 入口時点では、手動 CSV に加えて次を扱います。
 - renderer output は artifact v1 から導出した YAML front matter を Markdown 冒頭に付ける
 - front matter は汎用 handoff 用 metadata であり、artifact JSON schema 自体は変更しない
 - handoff manifest は artifact と rendered Markdown を結ぶ薄い index とし、dated manifest と latest pointer を `data/output/` に出力する
-- latest pointer は通常系 ranking / compare と hold を分離し、通常 publish latest に `publish_ready=false` を混ぜない
+- handoff latest pointer は candidate layer であり、通常系 ranking / compare と hold を分離し、通常 publish latest に `publish_ready=false` を混ぜない
 - publication pipeline CLI は artifact -> markdown -> handoff を順に実行する operator entrypoint であり、各 step のロジックは再実装しない
+- manual release pointer は handoff のさらに上位に置く別 layer とし、operator が選んだ dated handoff manifest だけを public release pointer に載せる
+- release ledger は manual release pointer のさらに横に置く append-only audit layer とし、昇格成功時だけ promotion history を追記する
+- public consumer の正式入口は handoff candidate latest ではなく release latest とする
+- release promotion は `ranking` / `compare` の `publish_ready=true` handoff manifest のみ対象とし、`publish_hold` は対象外にする
+- release rollback は deterministic rebuild ではなく manual promotion でのみ行い、古い dated manifest を選ぶ場合は明示確認を要求する
 
 互換性ポリシー:
 
@@ -272,3 +277,39 @@ Operational rules:
 - unsupported handoff manifest schema is treated as an explicit failure
 - `scripts/run_publication_pipeline.py` updates latest through the same
   manifest-group rebuild logic used by `scripts/rebuild_publication_latest.py`
+
+## 2026-04-11 Manual Release Pointer Rule
+
+Candidate latest and release latest serve different roles:
+
+- candidate latest:
+  deterministic "latest candidate" pointer derived from dated handoff manifests
+- release latest:
+  manual "last approved release" pointer selected by an operator
+
+Release layer rules:
+
+- release pointer schema:
+  `publication-release-pointer/v1`
+- release ledger schema:
+  `publication-release-ledger/v1`
+- ranking release pointer:
+  `data/output/publication_release_latest.json`
+- compare release pointer:
+  `data/output/publication_release_compare_latest.json`
+- shared append-only ledger:
+  `data/output/publication_release_ledger.jsonl`
+- optional stable Markdown copies:
+  `data/output/publication_release_latest.md`,
+  `data/output/publication_release_compare_latest.md`
+
+Promotion rules:
+
+- input is a dated handoff manifest only
+- raw DB / collector / artifact regeneration is not part of promotion
+- `content_kind="ranking"` or `content_kind="compare"` only
+- `publish_ready=true` only
+- `publish_hold` is rejected by default
+- rollback to an older dated manifest is allowed only as explicit manual promotion
+- successful promotion appends exactly one ledger record with `action=promote` or `action=rollback_promote`
+- dry-run does not mutate either the release pointer or the release ledger

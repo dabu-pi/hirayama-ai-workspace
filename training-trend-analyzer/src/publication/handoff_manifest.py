@@ -169,6 +169,22 @@ def validate_handoff_manifest(payload: dict[str, Any], *, expected_kind: str | N
     return payload
 
 
+def load_validated_handoff_manifest(
+    path: str | Path,
+    *,
+    expected_kind: str | None = None,
+) -> dict[str, Any]:
+    with open(path, encoding="utf-8") as handle:
+        return validate_handoff_manifest(json_load(handle), expected_kind=expected_kind)
+
+
+def handoff_manifest_recency_key(manifest: dict[str, Any]) -> tuple[Any, Any]:
+    return (
+        _parse_week_key(manifest["week"]),
+        _parse_generated_at_key(manifest["generated_at"]),
+    )
+
+
 def iter_dated_manifest_paths(
     *,
     output_dir: str | Path | None = None,
@@ -207,8 +223,7 @@ def load_validated_handoff_manifests(
         return manifests
 
     for path in iter_dated_manifest_paths(output_dir=output_dir, kind=kind):
-        with open(path, encoding="utf-8") as handle:
-            payload = validate_handoff_manifest(json_load(handle), expected_kind=kind)
+        payload = load_validated_handoff_manifest(path, expected_kind=kind)
         manifests.append((path, payload))
     return manifests
 
@@ -226,8 +241,7 @@ def select_latest_manifest(manifests: list[tuple[Path, dict[str, Any]]]) -> tupl
     def sort_key(item: tuple[Path, dict[str, Any]]):
         path, manifest = item
         return (
-            _parse_week_key(manifest["week"]),
-            _parse_generated_at_key(manifest["generated_at"]),
+            *handoff_manifest_recency_key(manifest),
             path.name,
         )
 

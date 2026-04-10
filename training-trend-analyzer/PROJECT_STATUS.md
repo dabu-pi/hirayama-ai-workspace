@@ -326,3 +326,45 @@ Tests added in this step:
 - `tests/test_run_publication_pipeline.py`
   - rerunning an older artifact does not overwrite a newer ranking latest when
     the dated manifest set already contains the newer week
+
+## 2026-04-11 Manual Release Gate Update
+
+- added `scripts/promote_publication_release.py` as a thin manual promotion CLI
+- input is a dated handoff manifest only; promotion does not re-read raw DB / collector output
+- candidate latest (`publication_handoff_latest*.json`) remains deterministic review input
+- release latest (`publication_release_latest*.json`) is now a separate operator-approved layer
+- only `ranking` / `compare` with `publish_ready=true` can be promoted
+- `publish_hold` manifests are rejected by default and stay outside the release layer
+- optional `--copy-markdown` creates stable release Markdown paths for simple file-based public pickup
+- rollback to an older week is allowed only as explicit promotion with `--allow-rollback`
+- successful promotion now also appends an audit record to `data/output/publication_release_ledger.jsonl`
+- dry-run leaves both the release pointer and the release ledger unchanged
+
+Tests added in this step:
+
+- `tests/test_promote_publication_release.py`
+  - ranking promotion success
+  - compare promotion success
+  - hold rejection
+  - not-ready rejection
+  - unsupported schema rejection
+  - explicit rollback success
+  - candidate latest remains independent from release latest
+  - stable release Markdown copy and dry-run behavior
+
+## 2026-04-11 Release Ledger / Audit Trail Update
+
+- added `src/publication/release_ledger.py` as an append-only JSONL ledger helper
+- promotion CLI now records successful release actions to `publication_release_ledger.jsonl`
+- normal promotion uses `action=promote`
+- rollback promotion uses `action=rollback_promote`
+- ledger records can include previous release manifest / week so rollback intent stays visible after the pointer moves
+- hold / not-ready / unsupported schema failures do not append ledger entries
+
+Tests added in this step:
+
+- `tests/test_promote_publication_release.py`
+  - ranking promotion appends one ledger row
+  - compare promotion appends one ledger row
+  - rollback promotion appends `rollback_promote`
+  - dry-run / rejection paths do not append ledger rows

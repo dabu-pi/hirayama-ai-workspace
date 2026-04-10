@@ -193,14 +193,15 @@ Public consumers now have a thin machine entrypoint after Markdown rendering:
 
 Policy:
 
-- publish-ready ranking:
+- publish-ready ranking candidate:
   `publication_handoff_latest.json`
-- publish-ready compare:
+- publish-ready compare candidate:
   `publication_handoff_compare_latest.json`
 - hold-only output:
   `publication_handoff_hold_latest.json`
 
-This keeps normal publication pickup separate from hold-only review output.
+This keeps normal publication pickup separate from hold-only review output,
+but these are still candidate pointers, not release approval.
 
 ## 2026-04-10 Publication Pipeline Update
 
@@ -230,7 +231,7 @@ Selection order is deterministic:
 2. newer `generated_at`
 3. manifest filename tie-break
 
-Operationally this means a public consumer can treat the dated manifests as the
+Operationally this means the candidate layer can treat the dated manifests as the
 source of truth and regenerate the thin latest pointers with:
 
 ```bash
@@ -239,3 +240,37 @@ python scripts/rebuild_publication_latest.py --output-dir data/output
 
 The publication pipeline still updates latest automatically, but it now does so
 through this same manifest-scan rule instead of trusting execution order.
+
+## 2026-04-11 Manual Release Promotion Update
+
+The public consumer entrypoint is now the release layer, not the candidate latest layer.
+
+Candidate layer:
+
+- dated handoff manifests
+- deterministic candidate latest pointers
+- operator review input
+
+Release layer:
+
+- `publication_release_latest.json`
+- `publication_release_compare_latest.json`
+- `publication_release_ledger.jsonl`
+- optional stable Markdown copies for simple file-based pickup
+
+Rules:
+
+- only manually promoted dated handoff manifests enter the release layer
+- only `ranking` / `compare` with `publish_ready=true` are promotable
+- `publish_hold` stays in candidate / internal review space and is not promoted by default
+- rollback is allowed only as an explicit operator action that promotes an older dated manifest
+- public consumer reads the release pointer
+- operator / audit review reads the append-only release ledger
+
+Operator flow:
+
+1. run the publication pipeline to produce dated candidate outputs
+2. inspect dated manifest and dated Markdown
+3. promote the approved dated manifest with `scripts/promote_publication_release.py`
+4. release pointer is updated and the release ledger appends an audit record
+5. public consumer reads the release pointer or the stable release Markdown copy

@@ -380,7 +380,7 @@ This step keeps the contract layered:
 1. artifact JSON
 2. rendered Markdown with front matter
 3. dated handoff manifest
-4. latest pointer
+4. candidate latest pointer
 
 Output examples:
 
@@ -390,11 +390,11 @@ Output examples:
   `data/output/publication_handoff_compare_YYYYMMDD.json`
 - hold manifest:
   `data/output/publication_handoff_hold_YYYYMMDD.json`
-- ranking latest pointer:
+- ranking candidate latest pointer:
   `data/output/publication_handoff_latest.json`
-- compare latest pointer:
+- compare candidate latest pointer:
   `data/output/publication_handoff_compare_latest.json`
-- hold latest pointer:
+- hold candidate latest pointer:
   `data/output/publication_handoff_hold_latest.json`
 
 ## 2026-04-10 Publication Pipeline
@@ -411,7 +411,7 @@ This thin pipeline orchestrates:
 1. artifact generation
 2. markdown rendering
 3. publication handoff manifest generation
-4. latest pointer update
+4. candidate latest pointer update
 
 Optional modes:
 
@@ -426,7 +426,7 @@ Optional modes:
 
 ## 2026-04-10 Deterministic Latest Rebuild
 
-Latest publication pointers are no longer defined by execution order alone.
+Latest candidate publication pointers are no longer defined by execution order alone.
 They can be rebuilt deterministically from existing dated handoff manifests:
 
 ```bash
@@ -448,5 +448,55 @@ Selection rules:
   `week` descending, then `generated_at` descending, then manifest filename as a deterministic tie-break
 
 The publication pipeline still runs artifact -> markdown -> handoff in one command,
-but the latest pointer update now rebuilds from the dated manifest group for the same kind
+but the candidate latest pointer update now rebuilds from the dated manifest group for the same kind
 instead of trusting "the last CLI run".
+
+## 2026-04-11 Manual Release Promotion
+
+Candidate latest is intentionally not the same as released latest.
+`publication_handoff_latest*.json` means "most recent eligible candidate for operator review",
+not "approved for public pickup".
+
+Manual release is a separate thin layer on top of dated handoff manifests:
+
+```bash
+python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260406.json
+python scripts/promote_publication_release.py --manifest data/output/publication_handoff_compare_20260406.json --copy-markdown
+python scripts/promote_publication_release.py --manifest data/output/publication_handoff_20260330.json --allow-rollback
+```
+
+Release outputs:
+
+- ranking release pointer:
+  `data/output/publication_release_latest.json`
+- compare release pointer:
+  `data/output/publication_release_compare_latest.json`
+- append-only release ledger:
+  `data/output/publication_release_ledger.jsonl`
+- optional stable ranking release Markdown:
+  `data/output/publication_release_latest.md`
+- optional stable compare release Markdown:
+  `data/output/publication_release_compare_latest.md`
+
+Rules:
+
+- release promotion reads a dated handoff manifest only
+- release promotion does not re-read raw DB / collector output
+- only `content_kind="ranking"` or `content_kind="compare"` can be promoted
+- only `publish_ready=true` manifests can be promoted
+- `publish_hold` manifests are rejected by default
+- older manifests can be promoted as an explicit rollback with `--allow-rollback`
+- successful promotion appends an audit record to the release ledger
+- rollback promotion is recorded as `rollback_promote`
+- `--dry-run` writes neither release pointer nor ledger
+
+Operationally this makes publication a 2-step flow:
+
+1. run pipeline to produce candidate outputs
+2. inspect dated handoff manifest / dated Markdown
+3. promote the approved dated manifest to the release pointer
+4. keep the promotion / rollback audit trail in the release ledger
+
+Public consumers should read the release pointer or the optional stable release Markdown,
+not the candidate latest pointer.
+Operators and audit tooling should read the release ledger when they need promotion history.
