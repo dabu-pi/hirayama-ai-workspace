@@ -45,6 +45,69 @@
       "queries": ["concept2 ski erg", "c2 ski erg", "skierg"]
     },
     {
+      "seed_id": "cybex_770t_model",
+      "label": "CYBEX 770T",
+      "seed_type": "model",
+      "canonical_target": "CYBEX::770T",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["cybex 770t", "cybex 770t treadmill"]
+    },
+    {
+      "seed_id": "concept2_model_d_model",
+      "label": "Concept2 Model D",
+      "seed_type": "model",
+      "canonical_target": "Concept2::Model D",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["concept2 model d", "concept2 rowerg model d"]
+    },
+    {
+      "seed_id": "lifefitness_95t_model",
+      "label": "Life Fitness 95T",
+      "seed_type": "model",
+      "canonical_target": "Life Fitness::95T",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["life fitness 95t", "life fitness 95t treadmill"]
+    },
+    {
+      "seed_id": "lifefitness_ic5_model",
+      "label": "Life Fitness IC5",
+      "seed_type": "model",
+      "canonical_target": "Life Fitness::IC5",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["life fitness ic5", "life fitness ic5 indoor cycle"]
+    },
+    {
+      "seed_id": "lifefitness_ic7_model",
+      "label": "Life Fitness IC7",
+      "seed_type": "model",
+      "canonical_target": "Life Fitness::IC7",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["life fitness ic7", "life fitness ic7 indoor cycle"]
+    },
+    {
+      "seed_id": "matrix_a50_model",
+      "label": "Matrix A50",
+      "seed_type": "model",
+      "canonical_target": "Matrix::A50",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["matrix a50", "matrix a50 elliptical"]
+    },
+    {
+      "seed_id": "technogym_run_now_model",
+      "label": "TECHNOGYM Run Now",
+      "seed_type": "model",
+      "canonical_target": "TECHNOGYM::Run Now",
+      "query_group": "single_model",
+      "emit_to_source_metrics": true,
+      "queries": ["technogym run now", "technogym run now treadmill"]
+    },
+    {
       "seed_id": "leg_press_category",
       "label": "Leg Press Category",
       "seed_type": "category",

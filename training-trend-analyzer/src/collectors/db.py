@@ -89,6 +89,9 @@ class DbCollector(BaseCollector):
             filters.append("(mo.discontinued IS NULL OR mo.discontinued = 0)")
         if self.only_commercial:
             filters.append("(b.market_type IS NULL OR b.market_type != 'consumer')")
+            # Publication health should count collector-fillable model targets only.
+            # Brand-only source rows have no model_id and cannot be filled by model seeds.
+            filters.append("sm.model_id IS NOT NULL")
 
         where = " AND ".join(filters)
         sql = f"""

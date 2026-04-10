@@ -714,9 +714,44 @@ Next shortest route:
 
 ---
 
+## 2026-04-10 Commercial Denominator + Seed Prep
+
+Decision:
+
+- `JOHNSON (model_id NULL)` and `TECHNOGYM (model_id NULL)` are brand-only source rows, not collector-fillable model targets.
+- `DbCollector(..., only_commercial=True)` now excludes `sm.model_id IS NULL` so publication-health coverage is based on resolved model rows only.
+- This changes the 2026-04-06 DB-backed commercial denominator from 13 entities to 11 resolved model targets.
+
+Seeds added to `config/trends/seed_queries.json`:
+
+- `cybex_770t_model` -> `CYBEX::770T`
+- `concept2_model_d_model` -> `Concept2::Model D`
+- `lifefitness_95t_model` -> `Life Fitness::95T`
+- `lifefitness_ic5_model` -> `Life Fitness::IC5`
+- `lifefitness_ic7_model` -> `Life Fitness::IC7`
+- `matrix_a50_model` -> `Matrix::A50`
+- `technogym_run_now_model` -> `TECHNOGYM::Run Now`
+
+Mock fixture coverage was also added for the seven seed IDs in GT / GS / YT so local collector tests and mock fallback do not break before live import.
+
+Expected current gate after denominator cleanup, before live collection/import:
+
+- GT `google_trends_interest`: 4/11
+- GS `search_suggest_count`: 4/11
+- YT `youtube_suggest_count`: 4/11
+- `publish_ready=false` / `review_only` remains expected until the seven added seeds are collected and imported for all three gate sources.
+
+Next action:
+
+1. Run GT / GS / YT collectors for the seven new seed IDs with `--import-db --replace-existing --skip-unresolved --only-commercial`.
+2. Rerun `python scripts/run_batch.py --use-db --week 2026-04-06 --only-commercial --show-metric-details --output-publish-artifact`.
+3. Confirm whether GT / GS / YT all reach 11/11 and `publish_ready=true`.
+
+---
+
 ## 再開用要約（2026-04-10 時点）
 
-**現在地:** publication pipeline → candidate promotion CLI まで実装完了。source-wide failure 回帰テスト追加済み。162 tests PASS。
+**現在地:** publication pipeline → candidate promotion CLI まで実装完了。commercial denominator / seed prep 追加済み。164 tests PASS。
 
 **できること:**
 - `run_publication_pipeline.py` で weekly artifact / Markdown / handoff manifest を一括生成

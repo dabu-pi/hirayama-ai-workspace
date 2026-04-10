@@ -36,6 +36,62 @@
       ]
     },
     {
+      "seed_id": "cybex_770t_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"cybex 770t": 21, "cybex 770t treadmill": 18}},
+        {"week_start": "2026-03-30", "values": {"cybex 770t": 23, "cybex 770t treadmill": 19}},
+        {"week_start": "2026-04-06", "values": {"cybex 770t": 25, "cybex 770t treadmill": 21}}
+      ]
+    },
+    {
+      "seed_id": "concept2_model_d_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"concept2 model d": 35, "concept2 rowerg model d": 22}},
+        {"week_start": "2026-03-30", "values": {"concept2 model d": 37, "concept2 rowerg model d": 24}},
+        {"week_start": "2026-04-06", "values": {"concept2 model d": 39, "concept2 rowerg model d": 26}}
+      ]
+    },
+    {
+      "seed_id": "lifefitness_95t_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"life fitness 95t": 20, "life fitness 95t treadmill": 17}},
+        {"week_start": "2026-03-30", "values": {"life fitness 95t": 22, "life fitness 95t treadmill": 18}},
+        {"week_start": "2026-04-06", "values": {"life fitness 95t": 24, "life fitness 95t treadmill": 20}}
+      ]
+    },
+    {
+      "seed_id": "lifefitness_ic5_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"life fitness ic5": 18, "life fitness ic5 indoor cycle": 15}},
+        {"week_start": "2026-03-30", "values": {"life fitness ic5": 20, "life fitness ic5 indoor cycle": 16}},
+        {"week_start": "2026-04-06", "values": {"life fitness ic5": 22, "life fitness ic5 indoor cycle": 18}}
+      ]
+    },
+    {
+      "seed_id": "lifefitness_ic7_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"life fitness ic7": 19, "life fitness ic7 indoor cycle": 16}},
+        {"week_start": "2026-03-30", "values": {"life fitness ic7": 21, "life fitness ic7 indoor cycle": 17}},
+        {"week_start": "2026-04-06", "values": {"life fitness ic7": 23, "life fitness ic7 indoor cycle": 19}}
+      ]
+    },
+    {
+      "seed_id": "matrix_a50_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"matrix a50": 17, "matrix a50 elliptical": 14}},
+        {"week_start": "2026-03-30", "values": {"matrix a50": 18, "matrix a50 elliptical": 15}},
+        {"week_start": "2026-04-06", "values": {"matrix a50": 20, "matrix a50 elliptical": 17}}
+      ]
+    },
+    {
+      "seed_id": "technogym_run_now_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"technogym run now": 26, "technogym run now treadmill": 22}},
+        {"week_start": "2026-03-30", "values": {"technogym run now": 28, "technogym run now treadmill": 23}},
+        {"week_start": "2026-04-06", "values": {"technogym run now": 31, "technogym run now treadmill": 25}}
+      ]
+    },
+    {
       "seed_id": "leg_press_category",
       "points": [
         {"week_start": "2026-03-23", "values": {"leg press": 38, "レッグプレス": 35}},
