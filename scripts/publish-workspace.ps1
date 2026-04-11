@@ -196,9 +196,9 @@ $summary.stages.commit_push.commit_hash = $commitHash
 Write-Host ''
 Write-Info 'Stage 2/3: workspace-export refresh'
 
-$syncArgs = @()
+$syncArgs = @{}
 if ($ExportRoot) {
-    $syncArgs += @('-ExportRoot', $ExportRoot)
+    $syncArgs.ExportRoot = $ExportRoot
 }
 
 & $driveSyncPath @syncArgs
@@ -217,18 +217,20 @@ $summary.stages.export_sync.result = 'SUCCESS'
 Write-Host ''
 Write-Info 'Stage 3/3: Drive upload'
 
-$uploadArgs = @('-Mode', $UploadMode)
+$uploadArgs = @{
+    Mode = $UploadMode
+}
 if ($ExportRoot) {
-    $uploadArgs += @('-ExportRoot', $ExportRoot)
+    $uploadArgs.ExportRoot = $ExportRoot
 }
 if ($Remote) {
-    $uploadArgs += @('-Remote', $Remote)
+    $uploadArgs.Remote = $Remote
 }
 if ($PSBoundParameters.ContainsKey('RemotePath')) {
-    $uploadArgs += @('-RemotePath', $RemotePath)
+    $uploadArgs.RemotePath = $RemotePath
 }
 if ($PSBoundParameters.ContainsKey('RcloneExe') -and $RcloneExe) {
-    $uploadArgs += @('-RcloneExe', $RcloneExe)
+    $uploadArgs.RcloneExe = $RcloneExe
 }
 
 & $gdriveUploadPath @uploadArgs
