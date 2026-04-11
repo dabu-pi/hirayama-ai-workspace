@@ -1,5 +1,13 @@
 # workout-screen-wireframe
 
+## UI設計方針（2026-04-11 更新）
+
+**Boostcamp の実画面を主要リファレンスとする。**
+この画面の構成・配置・情報優先順位は Boostcamp の「今日のワークアウト」に準拠する。
+Add Set / Swap / Add Exercise / Rest / Calc は Boostcamp 画面に存在するため UI 上に置く。
+
+---
+
 ## 目的
 
 この文書は、「今日のワークアウト」画面の wireframe（画面設計図）を固定するための文書である。
@@ -338,9 +346,16 @@ Set | Previous      | Target   | Kg     | Reps | Done
 
 ## 未確定事項
 
-- `Add Set / Swap / Add Exercise` の MVP（最初に出す最低限使える版）実装範囲
 - ロック解除 UI（解除の見せ方）
-- 後続セット自動反映後の個別上書きルール
-- 履歴画面の詳細レイアウト
-- `Previous` の参照単位
+- 後続セット自動反映後の個別上書きルール（1セット目変更時の再反映を含む）
+- `Previous` の参照単位（セット番号一致優先 / 種目内最新完了優先）
 - `is_locked` の persist（保存して残す）方針
+- `Swap` の操作対象（種目単位 / セット単位）
+- `Calc` の計算内容（1RM・プレート計算など）
+- タイマーの自動開始や通知の有無
+
+## 確定済み（Boostcamp準拠）
+
+- `Add Set / Swap / Add Exercise` は UI 上に置く（2026-04-11）
+- `Rest / Calc` は上部固定エリアに置く（2026-04-11）
+- 詳細は `docs/workout-execution-ui.md` の「Boostcamp準拠として確定した項目」を参照
