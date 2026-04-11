@@ -59,6 +59,12 @@
 - 画面下部
   - `Add Exercise`
 
+#### 操作仕様
+
+操作挙動の詳細（タップ・入力・ロック・自動反映・履歴遷移）は以下を参照。
+
+- [workout-screen-interaction-spec.md](./workout-screen-interaction-spec.md)
+
 #### 画面要件
 
 - `Previous` は各セット行で即見える
