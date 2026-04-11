@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "workout-prototype",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "training-program-platform-jp/web/prototypes/workout-session", "-p", "3333", "--no-clipboard"],
+      "port": 3333
+    },
+    {
       "name": "patient-management",
       "runtimeExecutable": "python",
       "runtimeArgs": ["patient-management/app.py"],
