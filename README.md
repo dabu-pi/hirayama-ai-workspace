@@ -48,7 +48,9 @@
 ## Google Drive 同期運用
 
 - GitHub / `C:\hirayama-ai-workspace\workspace` を正本とし、Google Drive は共有・検索・参照・バックアップ先として使います。
-- `de` 成功後に `scripts/sync-workspace-to-drive.ps1` が `workspace-export` を更新し、その後 `scripts/upload-workspace-export-to-gdrive.ps1` が rclone で Google Drive へ一方向アップロードします。
+- push だけでは共有完了ではありません。`workspace-export` 更新と Google Drive sync まで完了条件に含みます。
+- workspace の共有完了フローの正規入口は `scripts/publish-workspace.ps1` です。
+- `publish-workspace.ps1` は commit / push の後に `workspace-export` を更新し、その後 `scripts/upload-workspace-export-to-gdrive.ps1` で Google Drive へ一方向アップロードします。
 - Google Drive for desktop の常駐同期は前提にしません。
 - Drive 側コピーや `workspace-export` 側では Git 作業をしません。
 - 詳細は [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md) を参照してください。

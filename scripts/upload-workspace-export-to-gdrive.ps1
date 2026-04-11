@@ -7,7 +7,7 @@
     Keeps GitHub/local workspace as the source of truth. This script assumes
     `sync-workspace-to-drive.ps1` has already prepared a safe local export
     folder such as `workspace-export`, then performs a one-way upload to a
-    dedicated Google Drive path using rclone.
+    Google Drive remote using rclone.
 
     The default mode is `sync` because the normal handoff goal is to keep the
     dedicated Drive folder aligned with the latest export. For the very first
@@ -97,6 +97,18 @@ function Get-RcloneCandidatePaths {
 
     if ($env:LOCALAPPDATA) {
         $candidates.Add((Join-Path $env:LOCALAPPDATA 'Programs\rclone\rclone.exe'))
+
+        $wingetRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+        if (Test-Path -LiteralPath $wingetRoot) {
+            foreach ($match in (Get-ChildItem -LiteralPath $wingetRoot -Directory -Filter 'Rclone.Rclone*' -ErrorAction SilentlyContinue)) {
+                $candidates.Add((Join-Path $match.FullName 'rclone-v1.73.4-windows-amd64\rclone.exe'))
+                $nested = Get-ChildItem -LiteralPath $match.FullName -Filter 'rclone.exe' -Recurse -ErrorAction SilentlyContinue |
+                    Select-Object -First 1
+                if ($nested) {
+                    $candidates.Add($nested.FullName)
+                }
+            }
+        }
     }
 
     if ($env:ProgramFiles) {
@@ -203,29 +215,43 @@ if (-not (Test-Path -LiteralPath $indexPath)) {
 $remote = if ($null -ne $Remote) { $Remote.Trim() } else { '' }
 $remotePathInput = if ($null -ne $RemotePath) { $RemotePath } else { '' }
 $remotePath = Normalize-RemotePath -Path $remotePathInput
+$remoteSpec = if ($remote) {
+    if ($remotePath) {
+        "{0}:{1}" -f $remote, $remotePath
+    } else {
+        "{0}:" -f $remote
+    }
+} else {
+    ''
+}
 
-if (-not $remote -or -not $remotePath) {
+Write-Info "Remote     : $(if ($remote) { $remote } else { '(not set)' })"
+Write-Info "RemotePath : $(if ($remotePath) { $remotePath } else { '(root)' })"
+Write-Info "RemoteSpec : $(if ($remoteSpec) { $remoteSpec } else { '(unresolved)' })"
+
+if (-not $remote) {
     $summary = [ordered]@{
         uploaded_at  = $uploadedAt.ToString('s')
         export_root  = $ExportRoot
         remote       = $remote
         remote_path  = $remotePath
+        remote_spec  = $remoteSpec
         dry_run      = [bool]$DryRun
         mode         = $Mode
         stage        = 'upload'
         result       = 'SKIPPED'
-        reason       = 'Missing HIRAYAMA_GDRIVE_REMOTE or HIRAYAMA_GDRIVE_REMOTE_PATH.'
+        reason       = 'Missing HIRAYAMA_GDRIVE_REMOTE.'
         log_path     = $logPath
         summary_path = $summaryPath
     }
 
     Write-SummaryFile -SummaryPath $summaryPath -Payload $summary
-    Write-Warn 'Google Drive upload is not configured. Set HIRAYAMA_GDRIVE_REMOTE and HIRAYAMA_GDRIVE_REMOTE_PATH.'
+    Write-Warn 'Google Drive upload is not configured. Set HIRAYAMA_GDRIVE_REMOTE.'
     Write-Warn "Summary: $summaryPath"
     exit 2
 }
 
-if ($remotePath -match '^\.+$') {
+if ($remotePath -and $remotePath -match '^\.+$') {
     throw 'RemotePath must point to a dedicated folder, not ".".'
 }
 
@@ -236,6 +262,7 @@ if (-not $rclonePath) {
         export_root  = $ExportRoot
         remote       = $remote
         remote_path  = $remotePath
+        remote_spec  = $remoteSpec
         dry_run      = [bool]$DryRun
         mode         = $Mode
         stage        = 'upload'
@@ -259,6 +286,7 @@ if ($LASTEXITCODE -ne 0) {
         export_root  = $ExportRoot
         remote       = $remote
         remote_path  = $remotePath
+        remote_spec  = $remoteSpec
         dry_run      = [bool]$DryRun
         mode         = $Mode
         stage        = 'upload'
@@ -281,6 +309,7 @@ if (-not (@($listRemotes) -contains $remoteName)) {
         export_root  = $ExportRoot
         remote       = $remote
         remote_path  = $remotePath
+        remote_spec  = $remoteSpec
         dry_run      = [bool]$DryRun
         mode         = $Mode
         stage        = 'upload'
@@ -295,8 +324,6 @@ if (-not (@($listRemotes) -contains $remoteName)) {
     Write-Warn "Summary: $summaryPath"
     exit 2
 }
-
-$remoteSpec = "{0}:{1}" -f $remote, $remotePath
 $rcloneArgs = [System.Collections.Generic.List[string]]::new()
 $rcloneArgs.Add($Mode)
 $rcloneArgs.Add($ExportRoot)

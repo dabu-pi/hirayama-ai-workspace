@@ -7,7 +7,7 @@ hirayama-ai-workspace 全体で、GitHub 正本を維持したまま Google Driv
 ## 目的
 
 - ローカル環境・GitHub・Google Drive の 3 系統で同じ作業資産を参照できるようにする
-- `de` の最後に毎回安全な export を作り、その export を Google Drive へ一方向アップロードする
+- publish 完了時に毎回安全な export を作り、その export を Google Drive へ一方向アップロードする
 - ChatGPT / 人間が Google Drive 上の Markdown・README・PROJECT_STATUS を参照しやすくする
 - Drive 側コピーで Git 作業しない安全設計を維持する
 
@@ -45,6 +45,16 @@ Google Drive
 
 ---
 
+## publish 完了条件
+
+- push だけでは完了ではない
+- publish 完了は次をすべて満たすこと
+  - GitHub へ push 済み
+  - `workspace-export` 更新済み
+  - Google Drive sync 済み
+  - 必要な記録更新済み
+- workspace の共有完了フローの正規入口は [`publish-workspace.ps1`](C:\hirayama-ai-workspace\workspace\scripts\publish-workspace.ps1)
+
 ## 2段階フロー
 
 ### 1. export sync
@@ -60,7 +70,8 @@ Google Drive
 
 `[upload-workspace-export-to-gdrive.ps1](C:\hirayama-ai-workspace\workspace\scripts\upload-workspace-export-to-gdrive.ps1)` が `workspace-export` を `rclone` で Google Drive へ一方向アップロードします。
 
-- upload 先は専用 remote path に限定する
+- upload 先は `remote:` または `remote:path` として組み立てる
+- root_folder_id 固定 remote の場合は path なしで運用できる
 - rclone 未設定でも GitHub handoff は失敗扱いにしない
 - upload 結果は `logs/gdrive-upload/` に残す
 
@@ -172,19 +183,36 @@ Drive へ持っていく主対象は、再開や参照に必要な Markdown / do
   - `rclone config` で作った remote 名
 
 - `HIRAYAMA_GDRIVE_REMOTE_PATH`
+  - 任意
   - 例: `hirayama-ai-workspace/workspace-export`
   - Google Drive 上の専用保存先
+  - root_folder_id 固定 remote の場合は未設定でもよい
 
 - `HIRAYAMA_RCLONE_EXE`
   - 例: `C:\Users\<user>\AppData\Local\Programs\rclone\rclone.exe`
   - `PATH` に反映される前でも upload script が `rclone` を見つけやすくするための任意設定
 
-remote path は、この workspace export 専用フォルダにしてください。共用フォルダ直下や root は避けます。
-指定した folder ID の直下に既存ファイルが見えても、upload 先は必ずその配下の dedicated child path に分けます。
+remote path を使う場合は、この workspace export 専用フォルダにしてください。共用フォルダ直下や root は避けます。
+root_folder_id 固定 remote の場合は `remote:` をそのまま送信先として使えます。
 
 ---
 
 ## 実行方法
+
+### 標準 publish フロー
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+.\scripts\publish-workspace.ps1 -Message "docs: update handoff flow"
+```
+
+この入口が次を順に実行します。
+
+1. 事前チェック
+2. commit / push
+3. `workspace-export` 再生成
+4. Drive upload
+5. 実行 summary 出力
 
 ### export のみ
 
@@ -230,6 +258,8 @@ cd C:\hirayama-ai-workspace\workspace
 ---
 
 ## de 統合
+
+`de` は既存 handoff 用として維持しますが、workspace の共有完了フローの正規入口は `publish-workspace.ps1` とします。
 
 `de` は次の順で動きます。
 
