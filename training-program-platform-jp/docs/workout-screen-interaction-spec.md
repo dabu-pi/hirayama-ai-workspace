@@ -379,7 +379,7 @@ Add Set / Swap / Add Exercise / Rest / Calc は Boostcamp 準拠として UI 上
 | Swap の詳細 UIフロー | 種目選択画面の構成・保存挙動・操作対象（種目単位 / セット単位）|
 | Add Exercise の詳細 UIフロー | 種目選択画面の構成・保存挙動 |
 | Previous の参照単位 | セット番号一致優先か、種目内最新完了優先か |
-| is_locked の persist | セッションを離れて戻ったときにロック状態を復元するか |
+| ~~is_locked の persist~~ | **解決済み（2026-04-11）**: `is_locked` を DB に保存するため、ページを離れて戻ったときに自動復元できる。`GET /workout-sessions/{id}` のレスポンスで `is_locked=true` を受け取り、画面側でロック表示を再現する |
 | 履歴画面の詳細レイアウト | 種目単体履歴画面の構成（exercise-history-wireframe.md 参照）|
 | Rest / Calc の詳細挙動 | タイマー自動開始・Calc の計算内容 |
 | 1セット目変更時の再反映 | 自動反映後に1セット目の Kg を変更した場合、後続セットへ再反映するか |

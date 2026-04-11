@@ -1,6 +1,6 @@
 # data-model
 
-最終更新: 2026-04-11（UIプロトタイプ確認後、実装前提で補強）
+最終更新: 2026-04-11（is_locked を is_completed と分離して保存する方針に補正）
 
 ## 基本方針
 
@@ -190,13 +190,12 @@ workout_sessions           ← 1回のワークアウト全体（日付・プロ
 | `target_reps_text` | TEXT | 当日の目標回数テキスト（例: `5` / `3+ reps`）| Target 列 | ✓ |
 | `weight_kg` | DECIMAL | 入力された重量（Kg） | Kg 列 | ✓ |
 | `reps_done` | INT | 実施した回数（Reps）| Reps 列 | ✓ |
-| `is_completed` | BOOLEAN | 完了チェックが入っているか | 完了チェック列 | ✓ |
-| `is_locked` | BOOLEAN | ロック状態か | 行のロック表示 | **UI優先・推奨は後述** |
+| `is_completed` | BOOLEAN | ユーザーが「完了した」と宣言した状態（セマンティクス）| 完了チェック列・履歴クエリのフィルタ | ✓ |
+| `is_locked` | BOOLEAN | Kg/Reps 欄を編集不可にするUI制御状態（is_completedとは独立）| 行のロック表示・入力可否制御 | ✓ |
 | `is_auto_filled` | BOOLEAN | 1セット目から自動反映された値か | デバッグ・将来参照 | ✓（軽量フラグ） |
 | `completed_at` | TIMESTAMP | 完了チェックを入れた日時 | 将来の分析用 | ✓ |
 | `rpe` | INT | RPE（自覚的運動強度、0〜10）| 将来の入力欄 | MVP後 |
 | `note` | TEXT | セット単位のメモ | メモ欄 | ✓ |
-| `previous_display_text` | TEXT | Previous 表示用のキャッシュ | Previous 列 | **推奨は後述** |
 
 ---
 
@@ -257,24 +256,39 @@ LIMIT :set_count
 
 ---
 
-## ロック状態（is_locked）の扱い
+## ロック状態（is_locked）と完了状態（is_completed）の扱い
 
-### 問題
-完了チェックした行のロック状態を DB に持つかどうかを整理する。
+### 2つのカラムを分けて保存する（推奨）
 
-### 推奨: `is_completed` と同義として扱い、is_locked はUI状態のみ
+`is_completed`（完了状態）と `is_locked`（編集ロック状態）は**意味が異なる**ため、独立したカラムとして保存する。
 
-| 状態 | DB上の表現 | UI上の表現 |
+| カラム | 意味 | 主な用途 |
 |---|---|---|
-| 未チェック | `is_completed = false` | 編集可能 |
-| チェック済み | `is_completed = true` | ロック表示（Kg/Reps 編集不可）|
-| ロック解除 | `is_completed = false`（再保存）| 編集可能に戻る |
+| `is_completed` | ユーザーがこのセットを「完了した」と宣言した状態（セマンティクス）| 履歴クエリのフィルタ・Previous の取得条件 |
+| `is_locked` | Kg/Reps 欄を編集不可にするUI制御状態（編集可否）| 画面再読み込み時のロック復元・入力欄の有効/無効制御 |
 
-`is_locked` を別カラムで持つ必要は現時点でない。
-- **`is_completed = true` がロック状態の根拠**とする
-- ページを再読み込みしても `is_completed = true` であれば画面側でロック表示を復元する
+### 状態遷移
 
-ただし、将来的に「ロックしたまま編集履歴を保持したい」ニーズが出た場合は `is_locked` を追加する。
+| 操作 | is_completed | is_locked | UI上の状態 |
+|---|---|---|---|
+| セット入力中（未チェック）| false | false | Kg/Reps 編集可能 |
+| 完了チェックを入れた | **true** | **true** | 行ロック・入力不可 |
+| ロック解除操作を行った | **false** | **false** | 編集可能に戻る |
+| 再チェックを入れた | **true** | **true** | 行ロック・入力不可 |
+
+### 推奨: 完了チェック時と解除時は常に2カラムを同時更新する
+
+- 完了チェック時: `is_completed=true, is_locked=true`（同時に更新）
+- ロック解除時: `is_completed=false, is_locked=false`（同時に更新）
+
+「ロック中だが完了状態は保持する」「ロックなしだが完了扱いにする」という中間状態は **MVP では持たない。**
+
+### 分けて持つ理由
+
+- **履歴クエリ**: Previous の取得は `is_completed=true` のセットだけを対象にする。`is_locked` はクエリに使わない
+- **UI復元**: `is_locked` を DB に保存することで、ページを離れて戻ったときにロック状態を自動的に再現できる
+- **API の対称性**: `POST /workout-sets/{id}/complete` と `POST /workout-sets/{id}/unlock` が明確に対になる
+- **将来拡張**: 「ロック中でも一時的に編集許可する（is_locked=false のまま is_completed=true）」ような UX 変更にも対応できる土台になる
 
 ---
 
@@ -342,8 +356,6 @@ users
 
 | 項目 | 内容 |
 |---|---|
-| `is_locked` 保存方針の確定 | `is_completed` で代替するか、別カラムで持つか |
-| `previous_display_text` の保存方針の確定 | キャッシュを持つか、都度計算するか |
 | `program_days` の進行ロジック | 固定日付ベースか順送り（前の日が完了したら次へ）か |
 | セッション中断時の扱い | `in_progress` のセッションを次回起動時にどう扱うか |
 | Swap/Add Set 時の `workout_set` テンプレート生成方法 | `program_day_exercises` を参照するか、空行を追加するか |
@@ -353,7 +365,6 @@ users
 | 項目 | 内容 |
 |---|---|
 | `rpe` の入力UI | MVP以降で追加してよい |
-| `previous_display_text` のキャッシュ実装 | 都度計算で始めて、必要なら追加 |
 | `creators` テーブルの詳細 | 初期はシンプルで十分 |
 | グラフ用の集計テーブル | MVP以降で考える |
 | Previous の参照単位の最終決定 | セット番号一致優先 / 種目内最新完了優先 |
