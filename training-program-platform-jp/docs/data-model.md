@@ -1,129 +1,380 @@
 # data-model
 
+最終更新: 2026-04-11（UIプロトタイプ確認後、実装前提で補強）
+
 ## 基本方針
 
 - 初期は単一管理者運用でも、将来の複数ユーザー化で破綻しない構造を先に置く
-- ライブラリ、実行、記録を分けて考える
+- ライブラリ（プログラム定義）・実行（セッション）・記録（セット）を分けて考える
 - 1 テーブルに役割を詰め込みすぎない
+- UIプロトタイプで確定した操作（Previous表示・ロック・自動反映・履歴遷移）を保存設計に反映する
 
-## モデル案
+---
 
-| テーブル | 役割 | 初期利用 | 将来拡張 |
-|---|---|---|---|
-| `users` | 利用者・管理者の主体 | 初期は管理者 1 名を主に想定 | 一般ユーザー、プロフィール、設定、継続履歴所有者を持てる |
-| `creators` | プログラム作成者情報 | 初期収録プログラムの出典整理 | 外部リンク、紹介文、監修者情報、複数言語対応へ拡張 |
-| `programs` | プログラム基本情報 | 一覧、詳細、公開状態の核 | 難易度、タグ、画像、言語、公開設定の拡張 |
-| `program_weeks` | 週単位の構成 | 何週目かを表現する | 可変長週構成、フェーズ分岐、条件分岐へ拡張 |
-| `program_days` | 日単位の構成 | 当日ワークアウト生成の単位 | 曜日ベース、繰り返し、休養日テンプレートへ拡張 |
-| `exercises` | 種目マスタ | 種目名統一と表示制御 | 別名、カテゴリ、動画、器具情報、部位情報へ拡張 |
-| `workout_sessions` | 1 回の実行記録 | 当日セッションと履歴の親 | 完了状態、所要時間、体調、日付変更対応へ拡張 |
-| `workout_sets` | セット単位記録 | 重量、回数、RPE、メモ、前回比較表示の基礎を保持 | テンポ、休憩時間、失敗セット、補助種目メモ、可変目標表現、ロック状態へ拡張 |
-| `program_enrollments` | ユーザーとプログラムの関係 | 初期は進行中プログラムの保持に使う想定 | 複数参加、再開、停止、完了履歴、複数ユーザー運用へ拡張 |
+## テーブル一覧
 
-## 各テーブル補足
+| テーブル | 役割 | 実装優先度 |
+|---|---|---|
+| `users` | 利用者・管理者の主体 | MVP |
+| `exercises` | 種目マスタ（正規化・名前管理） | MVP |
+| `programs` | プログラム基本情報 | MVP |
+| `program_weeks` | 週構成 | MVP |
+| `program_days` | 日単位構成（当日ワークアウト生成の単位） | MVP |
+| `program_day_exercises` | 日×種目の定義（何をやるか・目標） | MVP |
+| `workout_sessions` | 1回のトレーニング全体の記録 | MVP |
+| `workout_session_exercises` | セッション内の種目ブロック単位（中間層）| MVP |
+| `workout_sets` | セット行の記録（重量・回数・完了状態） | MVP |
+| `program_enrollments` | ユーザーとプログラムの参加関係 | MVP |
+| `creators` | プログラム作成者情報 | MVP後 |
+
+---
+
+## 3層構造の考え方
+
+画面構造とDB設計を直接対応させるため、実行記録を 3 層で整理する。
+
+```
+workout_sessions           ← 1回のワークアウト全体（日付・プログラム文脈）
+  └── workout_session_exercises  ← 種目ブロック（Bench Press / Squat など）
+          └── workout_sets       ← 各セット行（Kg・Reps・完了チェック）
+```
+
+この構造が「今日のワークアウト」画面と「種目単体履歴」画面の両方を自然に表現できる。
+
+---
+
+## 各テーブル詳細
+
+---
 
 ### `users`
 
-- 初期利用:
-  管理者 1 名の識別に使えるようにしておく
-- 将来拡張:
-  一般ユーザー、ロール、通知設定、言語設定などを持てるようにする
+**役割:** 利用者・管理者の主体。記録データの所有者。
 
-### `creators`
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | 全テーブルの user_id 参照元 |
+| `role` | ENUM('admin','user') | 権限区分 | 管理画面アクセス制御 |
+| `display_name` | TEXT | 表示名 | 将来のマイページ |
+| `created_at` | TIMESTAMP | 登録日時 | — |
 
-- 初期利用:
-  プログラム出典の整理と表示
-- 将来拡張:
-  複数作成者、監修者、翻案メモ、権利メモを持てるようにする
+**関係:** `workout_sessions`, `program_enrollments` から参照される。
 
-### `programs`
-
-- 初期利用:
-  ライブラリの中心
-- 将来拡張:
-  非公開下書き、公開予約、翻訳、タグ拡張などを持てるようにする
-
-### `program_weeks`
-
-- 初期利用:
-  週構成を素直に表現する
-- 将来拡張:
-  デロード週や条件分岐週を持てるようにする
-
-### `program_days`
-
-- 初期利用:
-  今日のワークアウト表示に必要
-- 将来拡張:
-  曜日紐付けや順番入れ替えにも対応しやすくする
+---
 
 ### `exercises`
 
-- 初期利用:
-  種目名の正規化
-- 将来拡張:
-  表記ゆれ辞書、動画、器具、部位情報を追加しやすくする
+**役割:** 種目マスタ。名前の正規化・表記ゆれ管理。
+
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `name_ja` | TEXT | 日本語名（例: スクワット）| 種目名表示 |
+| `name_en` | TEXT | 英語名（例: Squat）| 種目名表示 |
+| `category` | TEXT | 種目カテゴリ（例: 下半身 / Compound）| フィルタ・整理 |
+| `created_at` | TIMESTAMP | 登録日時 | — |
+
+**関係:** `program_day_exercises`, `workout_session_exercises` から参照される。
+
+---
+
+### `programs`
+
+**役割:** プログラムライブラリの核。名前・概要・公開状態の管理。
+
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `creator_id` | UUID | 作成者 → `creators.id` | プログラム詳細 |
+| `title` | TEXT | プログラム名（例: 5/3/1 Beginner）| 一覧・実行画面ヘッダー |
+| `description` | TEXT | 概要説明 | プログラム詳細 |
+| `duration_weeks` | INT | 総週数 | プログラム詳細 |
+| `days_per_week` | INT | 週あたり日数 | 詳細・フィルタ |
+| `level` | TEXT | 難易度（例: beginner / intermediate）| フィルタ |
+| `is_public` | BOOLEAN | 公開状態 | 管理画面 |
+| `created_at` | TIMESTAMP | 登録日時 | — |
+
+---
+
+### `program_weeks`
+
+**役割:** プログラム内の週構成。何週目かを表現する。
+
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `program_id` | UUID | → `programs.id` | — |
+| `week_number` | INT | 週番号（1始まり）| 実行画面の「Week N」表示 |
+| `label` | TEXT | 補足ラベル（例: Deload）| 実行画面補足 |
+
+---
+
+### `program_days`
+
+**役割:** 週の中の日単位構成。当日ワークアウト生成の単位。
+
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `program_week_id` | UUID | → `program_weeks.id` | — |
+| `day_number` | INT | 日番号（1始まり）| 実行画面の「Day N」表示 |
+| `progression_guide` | TEXT | 進め方の指示（例: main setは前回超えを狙う）| 実行画面プログラム情報エリア |
+| `notes` | TEXT | 補足（例: last setは無理のない範囲で）| 実行画面プログラム情報エリア |
+
+---
+
+### `program_day_exercises`
+
+**役割:** その日にやる種目の定義。何をやるか・目標セット数・Target表記を持つ。
+
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `program_day_id` | UUID | → `program_days.id` | — |
+| `exercise_id` | UUID | → `exercises.id` | 種目名表示 |
+| `exercise_type` | TEXT | 種目タイプ（例: T1 / T2 / T3）| 種目ブロックのバッジ表示 |
+| `set_count` | INT | 予定セット数 | セット行の初期生成数 |
+| `target_reps_text` | TEXT | 目標回数テキスト（例: `5` / `3+ reps`）| セット行の Target 列 |
+| `order_index` | INT | 種目の表示順 | 種目ブロックの並び順 |
+
+**補足:** `target_reps_text` は固定回数だけでなく AMRAP（最大回数挑戦）表記（`3+ reps`）も保持する。
+
+---
 
 ### `workout_sessions`
 
-- 初期利用:
-  履歴一覧と当日記録の親レコード
-- 前回比較の取得では、同一ユーザーかつ同一プログラム文脈の直近セッションをたどれる前提を置く
-- 種目名タップ時の遷移では、セッション全体履歴と種目単体履歴を区別して扱える粒度が必要
-- 将来拡張:
-  ステータス管理、再開、キャンセル、メタデータ保持へ広げる
+**役割:** 1回のトレーニング全体の記録単位。履歴一覧と当日記録の親。
+
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `user_id` | UUID | → `users.id` | 記録の所有者 |
+| `program_enrollment_id` | UUID | → `program_enrollments.id` | プログラム文脈の特定 |
+| `program_day_id` | UUID | → `program_days.id` | どの日のワークアウトか |
+| `started_at` | TIMESTAMP | 開始日時 | 履歴一覧の日付表示 |
+| `finished_at` | TIMESTAMP | 終了日時（Finish押下時）| 所要時間の計算 |
+| `status` | ENUM('in_progress','completed','cancelled') | セッション状態 | Finish後の状態管理 |
+
+**3層の頂点。** `started_at::date` が履歴カードの日付表示（例: 2026-04-01）になる。
+
+---
+
+### `workout_session_exercises`
+
+**役割:** セッション内の種目ブロック単位。「今日のワークアウト」の1種目ブロックに対応する。
+
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `workout_session_id` | UUID | → `workout_sessions.id` | セッションとの紐付け |
+| `exercise_id` | UUID | → `exercises.id` | 種目名・履歴取得のキー |
+| `exercise_type` | TEXT | 当日の種目タイプ（T1/T2/T3）| バッジ表示 |
+| `order_index` | INT | この日の種目順 | 種目ブロックの並び順 |
+| `was_swapped` | BOOLEAN | Swap（置き換え）が使われたか | 履歴での注記 |
+| `was_added` | BOOLEAN | Add Exercise で追加された種目か | 履歴での注記 |
+
+**このテーブルが「種目単体履歴」取得の結合キー。**
+`exercise_id` を条件に `workout_session_exercises` → `workout_sessions` を辿ることで、特定種目の全セッション履歴が取得できる。
+
+---
 
 ### `workout_sets`
 
-- 初期利用:
-  セット単位の入力と前回比較
-- 前回比較の表示では、同一ユーザー・同一プログラム文脈・同一種目の過去最新セットを参照できる考え方を置く
-- `Previous` がない場合の表示は UI 側ルールで `-` とする
-- Kg の自動反映は UI / interaction ルールであり、保存時は各セットごとに明示値を持つ前提とする
-- セット行には少なくとも次の状態概念が必要
-  - `is_completed`
-  - `is_locked`
-- `Target` 表示のため、固定回数だけでなく `target_reps_text` のような可変表現を持てる前提を置く
-  - 例: `3 reps`
-  - 例: `3+ reps`
-- 将来拡張:
-  追加指標や細かなログ項目に耐える
+**役割:** セット行1行の記録単位。重量・回数・完了状態・ロック・自動反映フラグを保持する。
+
+| カラム | 型 | 説明 | 画面用途 | 保存推奨 |
+|---|---|---|---|---|
+| `id` | UUID | 主キー | — | ✓ |
+| `workout_session_exercise_id` | UUID | → `workout_session_exercises.id` | 種目ブロックとの紐付け | ✓ |
+| `set_number` | INT | セット番号（1始まり）| セット行の「#」列 | ✓ |
+| `target_reps_text` | TEXT | 当日の目標回数テキスト（例: `5` / `3+ reps`）| Target 列 | ✓ |
+| `weight_kg` | DECIMAL | 入力された重量（Kg） | Kg 列 | ✓ |
+| `reps_done` | INT | 実施した回数（Reps）| Reps 列 | ✓ |
+| `is_completed` | BOOLEAN | 完了チェックが入っているか | 完了チェック列 | ✓ |
+| `is_locked` | BOOLEAN | ロック状態か | 行のロック表示 | **UI優先・推奨は後述** |
+| `is_auto_filled` | BOOLEAN | 1セット目から自動反映された値か | デバッグ・将来参照 | ✓（軽量フラグ） |
+| `completed_at` | TIMESTAMP | 完了チェックを入れた日時 | 将来の分析用 | ✓ |
+| `rpe` | INT | RPE（自覚的運動強度、0〜10）| 将来の入力欄 | MVP後 |
+| `note` | TEXT | セット単位のメモ | メモ欄 | ✓ |
+| `previous_display_text` | TEXT | Previous 表示用のキャッシュ | Previous 列 | **推奨は後述** |
+
+---
 
 ### `program_enrollments`
 
-- 初期利用:
-  「どのプログラムを開始したか」を持つ
-- 将来拡張:
-  複数プログラム併用、履歴保持、ユーザー別進捗に対応
+**役割:** ユーザーとプログラムの参加関係。どのプログラムを開始したか。
 
-## auth / role の簡易方針
+| カラム | 型 | 説明 | 画面用途 |
+|---|---|---|---|
+| `id` | UUID | 主キー | — |
+| `user_id` | UUID | → `users.id` | — |
+| `program_id` | UUID | → `programs.id` | — |
+| `current_week` | INT | 現在の週番号 | 実行画面の「Week N」 |
+| `current_day` | INT | 現在の日番号 | 実行画面の「Day N」 |
+| `started_at` | TIMESTAMP | 開始日 | — |
+| `status` | ENUM('active','paused','completed')| 参加状態 | — |
 
-- 初期は `users` に最小限の識別子とロールを持たせる
-- ロールは少なくとも `admin` と将来の `user` を想定する
-- 初期 MVP では管理者ログインを優先し、一般ユーザー認証は要件先行とする
-- 記録データには将来を見越して `user_id` を持たせられる前提で考える
+---
 
-## 前回記録表示の取得方針
+## Previous（前回記録）の扱い
 
-- 実行画面の `Previous` は、原則として次の条件で過去最新セットを取得する考え方を置く
-  - 同一ユーザー
-  - 同一プログラム文脈
-  - 同一種目
-- 初期は管理者 1 名運用でも、将来の複数ユーザー化を見越して取得条件は `user` 境界を前提にする
-- 参照対象は「直近の実行済みセット」を基本とし、表示のための整形は UI 層または view model で行う想定とする
-- 種目名タップ時の履歴導線では、同一種目に絞った履歴を取得できることを前提とする
-- セットごとの `Previous` をどこまで厳密に一致させるか
-  - 同一セット番号を優先するか
-  - 同一種目内の最新完了セットを優先するか
-  は今後詳細化する
+### 問題
+「今日のワークアウト」のセット行には Previous（前回記録）を表示する必要がある。
+この値をどう取得・保存するかを整理する。
 
-## 未確定
+### 選択肢
 
-- 認証基盤の具体的な採用方式
-- `program_days` の生成ロジックを固定日付ベースにするか順送りベースにするか
-- `workout_sets` にテンプレート値をどこまで持たせるか
-- `Previous` 表示用に `previous_snapshot` を保存するか、都度計算するか
-- `target_reps_text` を `workout_sets` に持たせるか、別のテンプレート層で持たせるか
-- `Swap` や `Add Set` 発生時の履歴比較ルール
-- ロック解除 UI に合わせて、`is_locked` を永続化するか画面状態として扱うか
-- `Add Exercise` の追加時に履歴比較文脈をどう決めるか
+| 方式 | 内容 | メリット | デメリット |
+|---|---|---|---|
+| **A: 都度計算（推奨）** | 表示時に過去データから取得する | 正確・データ整合性が高い | クエリが必要 |
+| B: スナップショット保存 | `previous_display_text` に保存しておく | 高速・シンプル | データ変更時に不整合が起きる |
+
+### 推奨: A（都度計算）
+
+```sql
+-- 例: exercise_id=X のユーザーY の直近セット記録を取得
+SELECT
+  ws.set_number,
+  ws.weight_kg,
+  ws.reps_done
+FROM workout_sets ws
+JOIN workout_session_exercises wse ON ws.workout_session_exercise_id = wse.id
+JOIN workout_sessions s ON wse.workout_session_id = s.id
+WHERE wse.exercise_id = :exercise_id
+  AND s.user_id = :user_id
+  AND ws.is_completed = true
+  AND s.id != :current_session_id   -- 今回のセッションを除く
+ORDER BY s.started_at DESC, ws.set_number ASC
+LIMIT :set_count
+```
+
+表示文字列への整形（例: `80kg×5`）はアプリケーション層で行う。
+
+### `previous_display_text` の扱い
+
+保存**しない**ことを推奨する。
+ただし、パフォーマンス上の理由でキャッシュが必要になった場合は `previous_display_text` カラムを追加して対応する。
+
+---
+
+## ロック状態（is_locked）の扱い
+
+### 問題
+完了チェックした行のロック状態を DB に持つかどうかを整理する。
+
+### 推奨: `is_completed` と同義として扱い、is_locked はUI状態のみ
+
+| 状態 | DB上の表現 | UI上の表現 |
+|---|---|---|
+| 未チェック | `is_completed = false` | 編集可能 |
+| チェック済み | `is_completed = true` | ロック表示（Kg/Reps 編集不可）|
+| ロック解除 | `is_completed = false`（再保存）| 編集可能に戻る |
+
+`is_locked` を別カラムで持つ必要は現時点でない。
+- **`is_completed = true` がロック状態の根拠**とする
+- ページを再読み込みしても `is_completed = true` であれば画面側でロック表示を復元する
+
+ただし、将来的に「ロックしたまま編集履歴を保持したい」ニーズが出た場合は `is_locked` を追加する。
+
+---
+
+## 1セット目入力 → 後続セット自動反映の扱い
+
+### 問題
+1セット目の Kg を入力したとき、後続セットの空欄に同値を反映する（UI挙動）。
+この「自動反映された値」を DB にどう保存するかを整理する。
+
+### 推奨: 各セットに明示値を保存 + `is_auto_filled` フラグを持つ
+
+| セット | weight_kg | is_auto_filled | 説明 |
+|---|---|---|---|
+| Set 1 | 80 | false | ユーザーが入力 |
+| Set 2 | 80 | true | 自動反映 |
+| Set 3 | 80 | true | 自動反映 |
+| Set 3（上書き後）| 77.5 | false | ユーザーが上書き |
+
+- 保存時は「自動反映か否か」に関わらず、各セットの実際の値をそのまま保存する
+- `is_auto_filled` は参照・デバッグ用の軽量フラグとして保持する
+- UI での「手入力済み判定」は `is_auto_filled` を参照することで実現できる
+
+---
+
+## 種目単体履歴画面の取得クエリ設計
+
+「今日のワークアウト」で種目名をタップしたとき、以下の条件で履歴を取得する。
+
+```
+条件:
+  - 同一ユーザー（user_id）
+  - 同一種目（exercise_id）
+  - 完了セッションのみ（status = 'completed'）または全セッション（暫定）
+  - 新しい順（started_at DESC）
+
+取得粒度:
+  - セッション単位でカードを作る
+  - 各カード内にセット明細（set_number / weight_kg / reps_done / note）を展開
+
+結合パス:
+  workout_sets
+    → workout_session_exercises  (exercise_id で絞り込み)
+    → workout_sessions           (user_id, started_at でソート)
+```
+
+これにより、「Bench Press の 2026-04-01 のセッションで Set1: 80kg×3, Set2: 80kg×3, Set3: 80kg×7」を表示できる。
+
+---
+
+## テーブル関係図（テキスト）
+
+```
+users
+  ├── program_enrollments ──→ programs ──→ program_weeks ──→ program_days
+  │                                                              └── program_day_exercises ──→ exercises
+  └── workout_sessions ──→ program_enrollments
+                       ──→ program_days
+          └── workout_session_exercises ──→ exercises
+                    └── workout_sets
+```
+
+---
+
+## 実装前に決めるべきこと
+
+| 項目 | 内容 |
+|---|---|
+| `is_locked` 保存方針の確定 | `is_completed` で代替するか、別カラムで持つか |
+| `previous_display_text` の保存方針の確定 | キャッシュを持つか、都度計算するか |
+| `program_days` の進行ロジック | 固定日付ベースか順送り（前の日が完了したら次へ）か |
+| セッション中断時の扱い | `in_progress` のセッションを次回起動時にどう扱うか |
+| Swap/Add Set 時の `workout_set` テンプレート生成方法 | `program_day_exercises` を参照するか、空行を追加するか |
+
+## 今の段階では未確定でよいこと
+
+| 項目 | 内容 |
+|---|---|
+| `rpe` の入力UI | MVP以降で追加してよい |
+| `previous_display_text` のキャッシュ実装 | 都度計算で始めて、必要なら追加 |
+| `creators` テーブルの詳細 | 初期はシンプルで十分 |
+| グラフ用の集計テーブル | MVP以降で考える |
+| Previous の参照単位の最終決定 | セット番号一致優先 / 種目内最新完了優先 |
+
+## 推奨テーブル構成の要約
+
+```
+[ ライブラリ層 ]
+programs → program_weeks → program_days → program_day_exercises → exercises
+
+[ 実行・記録層（3層） ]
+workout_sessions
+  → workout_session_exercises  （種目ブロック単位）
+      → workout_sets           （セット行単位）
+
+[ ユーザー関係 ]
+users → program_enrollments → programs
+users → workout_sessions
+```
+
+MVP で必要な 10 テーブル:
+`users` / `exercises` / `programs` / `program_weeks` / `program_days` /
+`program_day_exercises` / `workout_sessions` / `workout_session_exercises` /
+`workout_sets` / `program_enrollments`
