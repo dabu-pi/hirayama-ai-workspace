@@ -4,7 +4,7 @@
     {
       "name": "workout-prototype",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "training-program-platform-jp/web/prototypes/workout-session", "-p", "3333", "--no-clipboard"],
+      "runtimeArgs": ["serve", "training-program-platform-jp/web/prototypes", "-p", "3333", "--no-clipboard"],
       "port": 3333
     },
     {

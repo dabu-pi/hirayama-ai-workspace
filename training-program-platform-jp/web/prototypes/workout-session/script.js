@@ -153,16 +153,19 @@ document.addEventListener('click', e => {
 });
 
 // =====================================================
-// 種目名タップ → 種目単体履歴へ遷移（モック）
+// 種目名タップ → 種目単体履歴画面へ遷移
 // =====================================================
 document.addEventListener('click', e => {
   const btn = e.target.closest('.exercise-name-btn');
   if (!btn) return;
-  // ロック解除ボタンを誤検知しないようにガード
   if (e.target.classList.contains('unlock-btn')) return;
 
-  const name = btn.dataset.name;
-  showToast(`${name} の履歴へ遷移（exercise-history 画面 — 実装準備中）`, 2800);
+  const name = btn.dataset.name || '';
+  const type = btn.dataset.type || 'T3';
+  // serve が index.html→ディレクトリへリダイレクトするためクエリが消える問題を避け、
+  // ディレクトリ URL（末尾スラッシュ付き）で遷移する
+  const url = `../exercise-history/?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`;
+  window.location.href = url;
 });
 
 // =====================================================
