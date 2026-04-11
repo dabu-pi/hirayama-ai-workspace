@@ -1,13 +1,14 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-11
+最終更新: 2026-04-12
 
 ## 現在地
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth + Vercel** 方針で初期実装中
 - `/train` は Supabase PostgreSQL（DB）から `workout_sessions` / `workout_session_exercises` / `workout_sets` を読み出して表示する構成
 - セット行の基本操作は Delete / Complete / Unlock / Kg・Reps 保存 / Previous / Add Set まで実データ経路に接続済み
-- 今回、**Finish（セッション終了）** を `workout_sessions` update（更新）へ接続し、現在セッションを正式に完了できる状態にした
+- Finish（セッション終了）も `workout_sessions` update（更新）へ接続済み
+- 今回、**Add Exercise** を `workout_session_exercises` insert（追加保存）へ接続し、`/train` 画面から新しい種目ブロックを実データとして追加できる状態にした
 
 ## 完了済み
 
@@ -48,29 +49,43 @@
   - 表示番号は `displaySetNumber` で画面だけ再採番
 - Finish を実装
   - `POST /api/workout-sessions/{id}/finish`
-  - `status = completed`
-  - `finished_at = now()`
+  - `status = completed` / `finished_at = now()`
   - 未完了セットがある場合は確認要求レスポンスを返す
   - `forceFinish=true` で完了確定できる
   - 完了後の `/train` は read-only（編集不可）表示に切り替える
+- **Add Exercise を実装**（今回）
+  - `GET /api/exercises?q=` — 種目一覧取得（簡易検索付き）
+  - `POST /api/workout-sessions/{id}/exercises` — セッションに種目を末尾追加
+    - `order_index = 削除済みを含む既存最大値 + 1`
+    - `was_added = true` で手動追加を記録
+    - `exercise_type` は `T3` をデフォルト適用
+    - 追加直後に初期 `workout_set`（set_number=1）を 1 行自動作成
+    - session が存在しない → 404 / completed → 409 / exercise が存在しない → 404
+  - `/train` UI に種目選択 modal を追加（ダークテーマ、下からスライド）
+    - タイトル / 検索欄（クライアント側フィルタ）/ 種目一覧 / 閉じる
+    - 追加成功後、新規ブロックを末尾にローカル追加してスクロール + Kg 入力フォーカス
+    - 追加中はボタン無効化（連打防止）
+    - 失敗時は modal を閉じず、エラーメッセージ表示
 
-## 今回の実装要点
+## 今回の実装要点（Add Exercise 本実装化）
 
-- Finish API で未完了セット数を server（サーバー側処理）で集計するようにした
-  - 集計対象は `deleted_at IS NULL` かつ `is_completed = false`
-- `workout_sessions.status` と `workout_sessions.finished_at` を `/train` の UI 型へ渡すようにした
-- Finish 後は以下を編集不可にした
-  - Kg / Reps 入力
-  - Complete / Unlock
-  - Delete
-  - Add Set
-  - Add Exercise
-- 完了済みセッションでは完了バナーを表示し、完了時刻と未完了残数を見られるようにした
-- すでに completed の session に再度 Finish しても成功扱いにしている
+- `GET /api/exercises` を新規作成
+  - `?q=` クエリで `name_ja` / `name_en` の ilike 検索を提供
+  - `export const dynamic = "force-dynamic"` で静的生成ログを回避
+- `POST /api/workout-sessions/[id]/exercises` を新規作成
+  - order_index は削除済み行を含む既存最大値 + 1（固定方針）
+  - was_added = true で手動追加を schema レベルで記録できる（was_added は既存 schema に存在）
+  - 種目の exercise_type は T3 をデフォルト適用（exercises テーブルに type 列がないため）
+  - 初期セットは set_number=1 の 1 行のみ
+- WorkoutScreen に Add Exercise modal を追加
+  - modal open → `/api/exercises` fetch → ローカルフィルタ方式
+  - 追加成功後: ブロックをローカル append → スクロール → 最初の Kg 入力にフォーカス
+  - `previousDisplay` は `-` 固定（新規追加種目に前回履歴はないため）
+  - `displaySetNumber` は `withDisplaySetNumbers` で 1 から正しく採番される
+- schema 追加なし: `was_added` は初期 schema 既存列
 
 ## まだダミーの部分
 
-- Add Exercise の実DB化
 - Swap の実DB化
 - Exercise History の本実データ化
 - Finish 後のサマリー画面
@@ -81,8 +96,8 @@
 
 ## 次アクション
 
-1. Add Exercise を `workout_session_exercises` insert（追加保存）へ接続する
-2. Swap の仕様を決めて DB 更新へつなぐ
+1. Swap を Add Exercise の modal／API を再利用して実DB化する
+2. Exercise History を Supabase 読み出しへ寄せる
 3. Exercise History を Supabase 読み出しへ寄せる
 4. Finish 後の遷移先を決める
 5. Supabase 実環境へ schema を適用して動作確認する

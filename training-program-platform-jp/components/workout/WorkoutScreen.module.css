@@ -377,3 +377,141 @@
   width: 100%;
   min-height: 44px;
 }
+
+/* ── Add Exercise modal ── */
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.modal {
+  width: min(100%, 480px);
+  max-height: 72dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.modalCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modalSearchWrapper {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modalSearch {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.modalSearch::placeholder {
+  color: var(--text-muted);
+}
+
+.modalErrorMessage {
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3);
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.modalList {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+  list-style: none;
+  margin: 0;
+}
+
+.modalEmpty {
+  padding: var(--space-4);
+  color: var(--text-muted);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.modalListItem {
+  display: block;
+}
+
+.modalListItemButton {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.modalListItemButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.modalListItemButton:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.modalListItemName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.modalListItemSub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}

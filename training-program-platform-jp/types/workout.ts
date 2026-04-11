@@ -54,6 +54,40 @@ export type WorkoutSessionView = {
   exercises: WorkoutExerciseBlock[];
 };
 
+export type ExerciseListItem = {
+  id: string;
+  nameJa: string;
+  nameEn: string;
+  category: string | null;
+};
+
+export type AddExerciseResponse = {
+  sessionExercise: {
+    id: string;
+    exerciseId: string;
+    exerciseSlug: string;
+    exerciseNameJa: string;
+    exerciseNameEn: string;
+    exerciseType: ExerciseType;
+    orderIndex: number;
+    wasAdded: boolean;
+  };
+  initialSet: {
+    id: string;
+    workoutSessionExerciseId: string;
+    setNumber: number;
+    targetRepsText: string | null;
+    weightKg: number | null;
+    repsDone: number | null;
+    isCompleted: boolean;
+    isLocked: boolean;
+    completedAt: string | null;
+    isAutoFilled: boolean;
+    previousDisplay: string;
+    deletedAt: string | null;
+  };
+};
+
 export type ExerciseHistorySet = {
   setNumber: number;
   weightKg: number | null;

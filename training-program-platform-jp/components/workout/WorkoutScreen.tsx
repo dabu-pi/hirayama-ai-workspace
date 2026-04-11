@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type {
+  AddExerciseResponse,
+  ExerciseListItem,
   WorkoutExerciseBlock,
   WorkoutSet,
   WorkoutSessionStatus,
@@ -242,6 +244,28 @@ async function postFinishSession(sessionId: string, forceFinish: boolean) {
   return payload as FinishResponse;
 }
 
+async function postAddExercise(sessionId: string, exerciseId: string) {
+  const response = await fetch(`/api/workout-sessions/${sessionId}/exercises`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ exercise_id: exerciseId })
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | AddExerciseResponse
+    | { error?: { message?: string } }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(
+      payload && "error" in payload && payload.error?.message
+        ? payload.error.message
+        : "Add Exercise に失敗しました。"
+    );
+  }
+
+  return payload as AddExerciseResponse;
+}
+
 function getSetDraft(draftInputs: SetDraftMap, set: WorkoutSet): SetDraft {
   return (
     draftInputs[set.id] ?? {
@@ -283,6 +307,16 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
 
+  // Add Exercise modal
+  const [isAddExerciseModalOpen, setIsAddExerciseModalOpen] = useState(false);
+  const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
+  const [exerciseList, setExerciseList] = useState<ExerciseListItem[]>([]);
+  const [isLoadingExercises, setIsLoadingExercises] = useState(false);
+  const [isAddingExerciseId, setIsAddingExerciseId] = useState<string | null>(null);
+  const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
+  const [scrollToExerciseId, setScrollToExerciseId] = useState<string | null>(null);
+  const exerciseBlockRefs = useRef<Record<string, HTMLElement | null>>({});
+
   useEffect(() => {
     const nextExercises = buildInitialExercises(session);
     setExercises(nextExercises);
@@ -304,6 +338,19 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
       setFocusSetId(null);
     }
   }, [focusSetId, exercises]);
+
+  // 新規追加ブロックへスクロールし、最初の Kg 入力にフォーカス
+  useEffect(() => {
+    if (!scrollToExerciseId) return;
+    const element = exerciseBlockRefs.current[scrollToExerciseId];
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+    const firstKgInput = element.querySelector(
+      "input[inputmode='decimal']"
+    ) as HTMLInputElement | null;
+    if (firstKgInput) firstKgInput.focus();
+    setScrollToExerciseId(null);
+  }, [scrollToExerciseId, exercises]);
 
   const isSessionCompleted = sessionMeta.status === "completed";
 
@@ -675,6 +722,111 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
     }
   };
 
+  const openAddExerciseModal = async () => {
+    if (isSessionCompleted) return;
+    setIsAddExerciseModalOpen(true);
+    setExerciseSearchQuery("");
+    setAddExerciseError(null);
+    setIsLoadingExercises(true);
+    try {
+      const response = await fetch("/api/exercises");
+      const payload = (await response.json().catch(() => null)) as
+        | { exercises: ExerciseListItem[] }
+        | { error?: { message?: string } }
+        | null;
+      if (!response.ok) {
+        throw new Error(
+          payload && "error" in payload && payload.error?.message
+            ? payload.error.message
+            : "種目一覧の取得に失敗しました。"
+        );
+      }
+      setExerciseList(
+        (payload as { exercises: ExerciseListItem[] }).exercises ?? []
+      );
+    } catch (error) {
+      setAddExerciseError(
+        error instanceof Error ? error.message : "種目一覧の取得に失敗しました。"
+      );
+    } finally {
+      setIsLoadingExercises(false);
+    }
+  };
+
+  const closeAddExerciseModal = () => {
+    setIsAddExerciseModalOpen(false);
+    setExerciseSearchQuery("");
+    setAddExerciseError(null);
+  };
+
+  const handleAddExercise = async (exerciseId: string) => {
+    if (isAddingExerciseId) return;
+    setIsAddingExerciseId(exerciseId);
+    setAddExerciseError(null);
+
+    try {
+      const result = await postAddExercise(sessionMeta.id, exerciseId);
+      const { sessionExercise, initialSet } = result;
+
+      const newBlock: WorkoutExerciseBlock = {
+        id: sessionExercise.id,
+        exerciseId: sessionExercise.exerciseId,
+        exerciseSlug: sessionExercise.exerciseSlug,
+        exerciseNameJa: sessionExercise.exerciseNameJa,
+        exerciseNameEn: sessionExercise.exerciseNameEn,
+        exerciseType: sessionExercise.exerciseType,
+        orderIndex: sessionExercise.orderIndex,
+        previousSets: [],
+        wasAdded: sessionExercise.wasAdded,
+        wasSwapped: false,
+        sets: [
+          {
+            id: initialSet.id,
+            setNumber: initialSet.setNumber,
+            displaySetNumber: 1,
+            targetRepsText: initialSet.targetRepsText,
+            weightKg: initialSet.weightKg,
+            repsDone: initialSet.repsDone,
+            isCompleted: initialSet.isCompleted,
+            isLocked: initialSet.isLocked,
+            completedAt: initialSet.completedAt,
+            isAutoFilled: initialSet.isAutoFilled,
+            note: "",
+            previousDisplay: initialSet.previousDisplay,
+            deletedAt: initialSet.deletedAt
+          }
+        ]
+      };
+
+      setExercises((current) =>
+        withDisplaySetNumbers([...current, newBlock])
+      );
+      setDraftInputs((current) => ({
+        ...current,
+        [initialSet.id]: { weightKg: "", repsDone: "" }
+      }));
+      updateIncompleteSetCount(1);
+      setScrollToExerciseId(sessionExercise.id);
+      closeAddExerciseModal();
+    } catch (error) {
+      console.error("Failed to add exercise.", error);
+      setAddExerciseError(
+        error instanceof Error ? error.message : "Add Exercise に失敗しました。"
+      );
+    } finally {
+      setIsAddingExerciseId(null);
+    }
+  };
+
+  const filteredExercises = exerciseList.filter((item) => {
+    const q = exerciseSearchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.nameJa.toLowerCase().includes(q) ||
+      item.nameEn.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <main className={styles.page}>
       <div className={styles.topBar}>
@@ -720,7 +872,11 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
 
       <section className={styles.exerciseList}>
         {exercises.map((exercise) => (
-          <article className={styles.exerciseCard} key={exercise.id}>
+          <article
+            className={styles.exerciseCard}
+            key={exercise.id}
+            ref={(el) => { exerciseBlockRefs.current[exercise.id] = el; }}
+          >
             <div className={styles.exerciseHeader}>
               <span className={typeClassName(exercise.exerciseType)}>{exercise.exerciseType}</span>
               <Link className={styles.exerciseLink} href={`/exercise-history/${exercise.exerciseSlug}`}>
@@ -868,13 +1024,88 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
       </section>
 
       <div className={styles.footerAction}>
-        <button className={styles.primaryGhostButton} disabled={isSessionCompleted} type="button">
+        <button
+          className={styles.primaryGhostButton}
+          disabled={isSessionCompleted}
+          onClick={openAddExerciseModal}
+          type="button"
+        >
           + Add Exercise
         </button>
       </div>
 
       {isRefreshing ? (
         <div className={styles.refreshState}>Refreshing train data...</div>
+      ) : null}
+
+      {isAddExerciseModalOpen ? (
+        <div
+          className={styles.modalBackdrop}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeAddExerciseModal();
+          }}
+        >
+          <div className={styles.modal} role="dialog" aria-modal="true" aria-label="Add Exercise">
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Add Exercise</h2>
+              <button
+                className={styles.modalCloseButton}
+                onClick={closeAddExerciseModal}
+                type="button"
+                aria-label="閉じる"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.modalSearchWrapper}>
+              <input
+                autoFocus
+                className={styles.modalSearch}
+                onChange={(e) => setExerciseSearchQuery(e.target.value)}
+                placeholder="種目名で絞り込む..."
+                type="search"
+                value={exerciseSearchQuery}
+              />
+            </div>
+
+            {addExerciseError ? (
+              <div className={styles.modalErrorMessage} role="alert">
+                {addExerciseError}
+              </div>
+            ) : null}
+
+            <ul className={styles.modalList} role="list">
+              {isLoadingExercises ? (
+                <li className={styles.modalEmpty}>読み込み中...</li>
+              ) : filteredExercises.length === 0 ? (
+                <li className={styles.modalEmpty}>
+                  {exerciseSearchQuery.trim()
+                    ? "該当する種目が見つかりません。"
+                    : "種目データがありません。"}
+                </li>
+              ) : (
+                filteredExercises.map((item) => (
+                  <li className={styles.modalListItem} key={item.id} role="listitem">
+                    <button
+                      className={styles.modalListItemButton}
+                      disabled={isAddingExerciseId !== null}
+                      onClick={() => handleAddExercise(item.id)}
+                      type="button"
+                    >
+                      <span className={styles.modalListItemName}>{item.nameJa}</span>
+                      <span className={styles.modalListItemSub}>
+                        {item.nameEn}
+                        {item.category ? ` · ${item.category}` : ""}
+                        {isAddingExerciseId === item.id ? " — 追加中..." : ""}
+                      </span>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </div>
       ) : null}
     </main>
   );
