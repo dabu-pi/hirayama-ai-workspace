@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type {
   AddExerciseResponse,
   ExerciseListItem,
+  SwapExerciseResponse,
   WorkoutExerciseBlock,
   WorkoutSet,
   WorkoutSessionStatus,
@@ -266,6 +267,35 @@ async function postAddExercise(sessionId: string, exerciseId: string) {
   return payload as AddExerciseResponse;
 }
 
+async function postSwapExercise(
+  sessionId: string,
+  sessionExerciseId: string,
+  newExerciseId: string
+) {
+  const response = await fetch(
+    `/api/workout-sessions/${sessionId}/exercises/${sessionExerciseId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exercise_id: newExerciseId })
+    }
+  );
+  const payload = (await response.json().catch(() => null)) as
+    | SwapExerciseResponse
+    | { error?: { message?: string } }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(
+      payload && "error" in payload && payload.error?.message
+        ? payload.error.message
+        : "Swap に失敗しました。"
+    );
+  }
+
+  return payload as SwapExerciseResponse;
+}
+
 function getSetDraft(draftInputs: SetDraftMap, set: WorkoutSet): SetDraft {
   return (
     draftInputs[set.id] ?? {
@@ -307,8 +337,10 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
 
-  // Add Exercise modal
+  // Add Exercise / Swap modal
   const [isAddExerciseModalOpen, setIsAddExerciseModalOpen] = useState(false);
+  const [exerciseModalMode, setExerciseModalMode] = useState<"add" | "swap">("add");
+  const [swapTargetBlockId, setSwapTargetBlockId] = useState<string | null>(null);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
   const [exerciseList, setExerciseList] = useState<ExerciseListItem[]>([]);
   const [isLoadingExercises, setIsLoadingExercises] = useState(false);
@@ -722,12 +754,9 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
     }
   };
 
-  const openAddExerciseModal = async () => {
-    if (isSessionCompleted) return;
-    setIsAddExerciseModalOpen(true);
-    setExerciseSearchQuery("");
-    setAddExerciseError(null);
+  const loadExercises = async () => {
     setIsLoadingExercises(true);
+    setAddExerciseError(null);
     try {
       const response = await fetch("/api/exercises");
       const payload = (await response.json().catch(() => null)) as
@@ -753,10 +782,29 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
     }
   };
 
+  const openAddExerciseModal = async () => {
+    if (isSessionCompleted) return;
+    setExerciseModalMode("add");
+    setSwapTargetBlockId(null);
+    setIsAddExerciseModalOpen(true);
+    setExerciseSearchQuery("");
+    await loadExercises();
+  };
+
+  const openSwapModal = async (blockId: string) => {
+    if (isSessionCompleted) return;
+    setExerciseModalMode("swap");
+    setSwapTargetBlockId(blockId);
+    setIsAddExerciseModalOpen(true);
+    setExerciseSearchQuery("");
+    await loadExercises();
+  };
+
   const closeAddExerciseModal = () => {
     setIsAddExerciseModalOpen(false);
     setExerciseSearchQuery("");
     setAddExerciseError(null);
+    setSwapTargetBlockId(null);
   };
 
   const handleAddExercise = async (exerciseId: string) => {
@@ -812,6 +860,50 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
       console.error("Failed to add exercise.", error);
       setAddExerciseError(
         error instanceof Error ? error.message : "Add Exercise に失敗しました。"
+      );
+    } finally {
+      setIsAddingExerciseId(null);
+    }
+  };
+
+  const handleSwapExercise = async (newExerciseId: string) => {
+    if (!swapTargetBlockId || isAddingExerciseId) return;
+    setIsAddingExerciseId(newExerciseId);
+    setAddExerciseError(null);
+
+    try {
+      const result = await postSwapExercise(
+        sessionMeta.id,
+        swapTargetBlockId,
+        newExerciseId
+      );
+
+      if (!result.noOp) {
+        const { sessionExercise } = result;
+        setExercises((current) =>
+          withDisplaySetNumbers(
+            current.map((block) =>
+              block.id === swapTargetBlockId
+                ? {
+                    ...block,
+                    exerciseId: sessionExercise.exerciseId,
+                    exerciseSlug: sessionExercise.exerciseSlug,
+                    exerciseNameJa: sessionExercise.exerciseNameJa,
+                    exerciseNameEn: sessionExercise.exerciseNameEn,
+                    exerciseType: sessionExercise.exerciseType,
+                    wasSwapped: sessionExercise.wasSwapped
+                  }
+                : block
+            )
+          )
+        );
+      }
+
+      closeAddExerciseModal();
+    } catch (error) {
+      console.error("Failed to swap exercise.", error);
+      setAddExerciseError(
+        error instanceof Error ? error.message : "Swap に失敗しました。"
       );
     } finally {
       setIsAddingExerciseId(null);
@@ -1012,7 +1104,12 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
               >
                 {pendingAddExerciseId === exercise.id ? "Adding..." : "+ Add Set"}
               </button>
-              <button className={styles.subtleButton} disabled={isSessionCompleted} type="button">
+              <button
+                className={styles.subtleButton}
+                disabled={isSessionCompleted}
+                onClick={() => openSwapModal(exercise.id)}
+                type="button"
+              >
                 Swap
               </button>
               <button className={styles.subtleButton} disabled={isSessionCompleted} type="button">
@@ -1047,7 +1144,9 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
         >
           <div className={styles.modal} role="dialog" aria-modal="true" aria-label="Add Exercise">
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>Add Exercise</h2>
+              <h2 className={styles.modalTitle}>
+                {exerciseModalMode === "add" ? "Add Exercise" : "Swap Exercise"}
+              </h2>
               <button
                 className={styles.modalCloseButton}
                 onClick={closeAddExerciseModal}
@@ -1057,6 +1156,15 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
                 ✕
               </button>
             </div>
+            {exerciseModalMode === "swap" && swapTargetBlockId ? (
+              <div className={styles.modalSubtitle}>
+                置換対象:{" "}
+                <strong>
+                  {exercises.find((b) => b.id === swapTargetBlockId)
+                    ?.exerciseNameEn ?? ""}
+                </strong>
+              </div>
+            ) : null}
 
             <div className={styles.modalSearchWrapper}>
               <input
@@ -1090,14 +1198,22 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
                     <button
                       className={styles.modalListItemButton}
                       disabled={isAddingExerciseId !== null}
-                      onClick={() => handleAddExercise(item.id)}
+                      onClick={() =>
+                        exerciseModalMode === "add"
+                          ? handleAddExercise(item.id)
+                          : handleSwapExercise(item.id)
+                      }
                       type="button"
                     >
                       <span className={styles.modalListItemName}>{item.nameJa}</span>
                       <span className={styles.modalListItemSub}>
                         {item.nameEn}
                         {item.category ? ` · ${item.category}` : ""}
-                        {isAddingExerciseId === item.id ? " — 追加中..." : ""}
+                        {isAddingExerciseId === item.id
+                          ? exerciseModalMode === "add"
+                            ? " — 追加中..."
+                            : " — 置換中..."
+                          : ""}
                       </span>
                     </button>
                   </li>

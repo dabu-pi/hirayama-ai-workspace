@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "training-platform-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "training-program-platform-jp"],
+      "port": 3000
+    },
+    {
       "name": "workout-prototype",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "training-program-platform-jp/web/prototypes", "-p", "3333", "--no-clipboard"],

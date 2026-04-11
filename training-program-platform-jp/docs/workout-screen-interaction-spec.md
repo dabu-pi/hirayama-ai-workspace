@@ -117,9 +117,35 @@ Add Set / Delete Set / Swap / Add Exercise / Rest / Calc は Boostcamp 準拠と
 
 ### 3-7. Swap
 
+**2026-04-12 本実装済み。**
+
 | 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
 |---|---|---|---|---|
-| Swap | タップ | 種目置き換え用の種目選択 UI を表示する（暫定） | 置き換えた種目情報（暫定） | 操作対象は種目単位を前提とする |
+| Swap | タップ | 種目置き換え用 modal を開く | — | 操作対象は種目（ブロック）単位 |
+| modal / 種目選択 | 種目をタップ | PATCH API を呼び、当該 block の種目名・slug・exerciseType を置き換える | `exercise_id` / `was_swapped=true` / `exercise_type` | 既存 set 行は再作成しない |
+| modal | 閉じる / backdrop タップ | modal を閉じる | なし | — |
+
+#### Swap 不可条件（MVP 安全側）
+
+以下のいずれか 1 つでも visible set（`deleted_at IS NULL`）に存在する場合、API が 409 を返し、modal でエラー表示する。
+
+| 条件 | 理由 |
+|---|---|
+| `is_completed = true` のセットが 1 件以上 | 完了済みセットが含まれる |
+| `is_locked = true` のセットが 1 件以上 | ロック済みセットが含まれる |
+| `weight_kg IS NOT NULL` のセットが 1 件以上 | Kg 入力済みセットが含まれる |
+| `reps_done IS NOT NULL` のセットが 1 件以上 | Reps 入力済みセットが含まれる |
+
+Swap 前にすべての入力を削除し、set を Unlock してから行うこと。
+
+#### 同一種目を選んだ場合
+
+no-op success（HTTP 200 / `noOp: true`）を返す。DB 書き込みは行わない。modal を閉じる。
+
+#### exercise_type の扱い
+
+`exercises` テーブルに `exercise_type` 列がないため、Swap 後の `exercise_type` は `T3` 固定。
+将来 `exercises.default_exercise_type` 列を追加した場合は、そこから取得する方針とする。
 
 ### 3-8. Add Exercise
 

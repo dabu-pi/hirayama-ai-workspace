@@ -88,6 +88,19 @@ export type AddExerciseResponse = {
   };
 };
 
+export type SwapExerciseResponse = {
+  noOp: boolean;
+  sessionExercise: {
+    id: string;
+    exerciseId: string;
+    exerciseSlug: string;
+    exerciseNameJa: string;
+    exerciseNameEn: string;
+    exerciseType: ExerciseType;
+    wasSwapped: boolean;
+  };
+};
+
 export type ExerciseHistorySet = {
   setNumber: number;
   weightKg: number | null;

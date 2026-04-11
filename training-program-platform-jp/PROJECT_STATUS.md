@@ -8,7 +8,7 @@
 - `/train` は Supabase PostgreSQL（DB）から `workout_sessions` / `workout_session_exercises` / `workout_sets` を読み出して表示する構成
 - セット行の基本操作は Delete / Complete / Unlock / Kg・Reps 保存 / Previous / Add Set まで実データ経路に接続済み
 - Finish（セッション終了）も `workout_sessions` update（更新）へ接続済み
-- 今回、**Add Exercise** を `workout_session_exercises` insert（追加保存）へ接続し、`/train` 画面から新しい種目ブロックを実データとして追加できる状態にした
+- 今回、**Swap Exercise** を Add Exercise の modal・API を再利用して実DB化し、`/train` 画面から種目を差し替えられる状態にした
 
 ## 完了済み
 
@@ -66,8 +66,31 @@
     - 追加成功後、新規ブロックを末尾にローカル追加してスクロール + Kg 入力フォーカス
     - 追加中はボタン無効化（連打防止）
     - 失敗時は modal を閉じず、エラーメッセージ表示
+- **Swap Exercise を実装**（今回）
+  - `PATCH /api/workout-sessions/{id}/exercises/{exerciseId}` — 種目差し替え
+    - 同一 `exercise_id` → no-op success（HTTP 200, `noOp: true`, DB 書込なし）
+    - blocking set 存在チェック: `is_completed=true` / `is_locked=true` / `weight_kg IS NOT NULL` / `reps_done IS NOT NULL` のいずれかに該当する visible set が 1 件以上 → 409
+    - `exercise_id` を置換・`was_swapped = true`・`exercise_type = T3` 固定
+    - `order_index` は変えない、既存 `workout_sets` は再作成しない
+    - session が completed → 409 / session_exercise が session に属さない → 404
+  - Add Exercise modal を `exerciseModalMode: "add" | "swap"` で共有
+    - swap モードではサブタイトルに差し替え元の種目名を表示（オレンジ強調）
+    - 成功後: ローカルブロックの exerciseId / slug / names / type / wasSwapped を更新してモーダルを閉じる
 
-## 今回の実装要点（Add Exercise 本実装化）
+## 今回の実装要点（Swap Exercise 本実装化）
+
+- `PATCH /api/workout-sessions/[id]/exercises/[exerciseId]` を新規作成
+  - 同一 exercise_id → no-op success（DB 書込なし）
+  - blocking set チェック: `.or("is_completed.eq.true,is_locked.eq.true,weight_kg.not.is.null,reps_done.not.is.null").limit(1)`
+  - 更新内容: `exercise_id` / `exercise_type = "T3"` / `was_swapped = true`（set 行は一切触らない）
+- WorkoutScreen の Add Exercise modal を `exerciseModalMode: "add" | "swap"` で共有
+  - `openSwapModal(blockId)` で swap モードを設定、`swapTargetBlockId` に対象ブロック ID を保持
+  - modal subtitle に差し替え元の `exerciseNameEn` をオレンジで表示
+  - list item クリック時: add → `handleAddExercise` / swap → `handleSwapExercise`
+  - `SwapExerciseResponse` 型を `types/workout.ts` に追加
+- schema 追加なし: `was_swapped` は初期 schema 既存列
+
+## 過去の実装要点（Add Exercise 本実装化）
 
 - `GET /api/exercises` を新規作成
   - `?q=` クエリで `name_ja` / `name_en` の ilike 検索を提供
@@ -86,7 +109,6 @@
 
 ## まだダミーの部分
 
-- Swap の実DB化
 - Exercise History の本実データ化
 - Finish 後のサマリー画面
 - Train 一覧画面への本格遷移
@@ -96,11 +118,9 @@
 
 ## 次アクション
 
-1. Swap を Add Exercise の modal／API を再利用して実DB化する
-2. Exercise History を Supabase 読み出しへ寄せる
-3. Exercise History を Supabase 読み出しへ寄せる
-4. Finish 後の遷移先を決める
-5. Supabase 実環境へ schema を適用して動作確認する
+1. Exercise History を Supabase 読み出しへ寄せる
+2. Finish 後の遷移先を決める
+3. Supabase 実環境へ schema を適用して動作確認する
 
 ## 保留事項
 
