@@ -84,7 +84,7 @@ $startedAt = Get-Date
 $stamp = $startedAt.ToString('yyyyMMdd_HHmmss')
 $summaryPath = Join-Path $logDir ("publish-workspace_{0}.json" -f $stamp)
 $branch = ((Invoke-GitLines -Arguments @('-C', $repoRoot, 'rev-parse', '--abbrev-ref', 'HEAD')) -join "`n").Trim()
-$statusBefore = Get-GitStatusLines -RepoRoot $repoRoot
+$statusBefore = @(Get-GitStatusLines -RepoRoot $repoRoot)
 $hasWorkingTreeChanges = ($statusBefore.Count -gt 0)
 
 Write-Host ''
@@ -227,7 +227,7 @@ if ($Remote) {
 if ($PSBoundParameters.ContainsKey('RemotePath')) {
     $uploadArgs += @('-RemotePath', $RemotePath)
 }
-if ($RcloneExe) {
+if ($PSBoundParameters.ContainsKey('RcloneExe') -and $RcloneExe) {
     $uploadArgs += @('-RcloneExe', $RcloneExe)
 }
 
