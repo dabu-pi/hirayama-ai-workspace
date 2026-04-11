@@ -1,0 +1,379 @@
+.page {
+  width: min(100%, var(--page-max));
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-4) var(--space-8);
+}
+
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin: 0 calc(var(--space-4) * -1) var(--space-4);
+  background: rgba(17, 17, 17, 0.88);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(63, 63, 70, 0.75);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.timer {
+  justify-self: center;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.finishButton {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fb923c, var(--accent));
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.24);
+}
+
+.finishButton:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.finishButtonCompleted {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(21, 128, 61, 0.92));
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.22);
+}
+
+.programCard {
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.programTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.programMeta {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.programNote {
+  margin-top: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--accent);
+  color: var(--text-secondary);
+}
+
+.hint {
+  margin-top: var(--space-3);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: #fdba74;
+  font-size: var(--text-xs);
+}
+
+.completedBanner {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  background: rgba(20, 83, 45, 0.28);
+  color: #dcfce7;
+}
+
+.exerciseList {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.statusMessage,
+.refreshState {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+}
+
+.refreshState {
+  margin-top: var(--space-4);
+  margin-bottom: 0;
+  border-color: rgba(251, 191, 36, 0.24);
+  background: rgba(120, 53, 15, 0.28);
+  color: #fde68a;
+}
+
+.exerciseCard {
+  padding: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.exerciseHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.typeT1 {
+  background: var(--t1-bg);
+  color: var(--t1-text);
+}
+
+.typeT2 {
+  background: var(--t2-bg);
+  color: var(--t2-text);
+}
+
+.typeT3 {
+  background: var(--t3-bg);
+  color: var(--t3-text);
+}
+
+.exerciseLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.headerHint {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.setTable {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.swipeHint {
+  margin-bottom: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.setHeader,
+.setRow {
+  display: grid;
+  grid-template-columns: 28px 72px 52px minmax(0, 1fr) minmax(0, 1fr) 68px;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.setHeader {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.swipeRow {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.deleteLane {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  width: 112px;
+}
+
+.swipeTrack {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.18s ease;
+  touch-action: pan-y;
+}
+
+.swipeTrackRevealed {
+  transform: translateX(-104px);
+}
+
+.setRow {
+  padding: var(--space-2);
+  background: rgba(44, 44, 46, 0.72);
+  border: 1px solid rgba(63, 63, 70, 0.85);
+  border-radius: 14px;
+}
+
+.lockedRow {
+  background: rgba(24, 24, 26, 0.96);
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.previousEmpty {
+  color: var(--text-muted);
+}
+
+.target {
+  color: #fdba74;
+  font-weight: 700;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.input:disabled {
+  opacity: 0.68;
+  background: var(--locked-bg);
+}
+
+.inputSaving {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(120, 53, 15, 0.22);
+}
+
+.inputAutoFilled {
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.28);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.actionButton {
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.checkDone {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--success);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.unlockButton {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: rgba(120, 53, 15, 0.34);
+  color: #fde68a;
+}
+
+.deleteButton {
+  width: 104px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(239, 68, 68, 0.92);
+  color: #fff;
+  font-weight: 700;
+}
+
+.deleteDisabled {
+  background: rgba(82, 82, 91, 0.92);
+  color: rgba(245, 245, 247, 0.72);
+  cursor: not-allowed;
+}
+
+.exerciseActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.subtleButton,
+.primaryGhostButton {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.subtleButton {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.primaryGhostButton {
+  background: var(--accent-dim);
+  color: #fdba74;
+  border-color: rgba(249, 115, 22, 0.18);
+}
+
+.primaryGhostButton:disabled,
+.subtleButton:disabled {
+  opacity: 0.64;
+  cursor: not-allowed;
+}
+
+.footerAction {
+  margin-top: var(--space-4);
+}
+
+.footerAction button {
+  width: 100%;
+  min-height: 44px;
+}

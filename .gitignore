@@ -14,6 +14,8 @@ venv/
 
 # Node.js
 node_modules/
+.next/
+*.tsbuildinfo
 
 # IDE・エディタ
 .vscode/

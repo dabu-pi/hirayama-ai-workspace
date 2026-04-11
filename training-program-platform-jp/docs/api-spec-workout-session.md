@@ -5,7 +5,7 @@
 ## このAPI群の目的
 
 「今日のワークアウト」画面と「種目単体履歴」画面が必要とする操作を提供するAPI群。
-セッション開始から終了まで、セット単位の Kg/Reps 入力・完了チェック・ロック解除・履歴取得を担う。
+セッション開始から終了まで、セット単位の Kg/Reps 入力・完了チェック・ロック解除・削除・履歴取得を担う。
 
 ---
 
@@ -30,6 +30,7 @@
 | PATCH | `/workout-sets/{id}` | Kg / Reps 更新 | 今日のワークアウト（入力欄）|
 | POST | `/workout-sets/{id}/complete` | 完了チェック | 今日のワークアウト（完了チェック）|
 | POST | `/workout-sets/{id}/unlock` | ロック解除 | 今日のワークアウト（ロック解除ボタン）|
+| POST | `/workout-sets/{id}/delete` | セット論理削除 | 今日のワークアウト（左スワイプ Delete）|
 | GET | `/exercises/{id}/history` | 種目単体履歴取得 | 種目単体履歴 |
 | POST | `/workout-sessions/{id}/finish` | セッション終了 | 今日のワークアウト（Finish ボタン）|
 
@@ -267,6 +268,36 @@
 
 ---
 
+### POST /workout-sets/{id}/delete
+
+**目的:** セット行を論理削除（非表示扱いの削除）する。MVP では `deleted_at` を埋める方式を推奨する。
+
+**リクエスト:** なし（空ボディ）
+
+**レスポンス (200 OK):**
+```json
+{
+  "id": "uuid-set-001",
+  "deleted_at": "2026-04-11T09:18:40Z",
+  "renumbered_sets": [
+    { "id": "uuid-set-002", "set_number": 1 },
+    { "id": "uuid-set-003", "set_number": 2 }
+  ]
+}
+```
+
+**エラー:**
+- `is_locked=true` のセットに対しては `409 Conflict` を返す（推奨）
+- 既に `deleted_at IS NOT NULL` のセットに呼ぶと `409 Conflict` を返す（推奨）
+
+**補足:**
+- 削除対象は追加セットだけでなく通常セットも含む
+- API 側でも locked（ロック済み）のままなら削除不可にする
+- 削除後は active（有効）セットの `set_number` を詰め直すレスポンスを返す方針を推奨する
+- MVP では確認ダイアログは UI 側で出し、API は削除実行のみを担う
+
+---
+
 ### GET /exercises/{id}/history
 
 **目的:** 種目単体の過去セット記録を新しい順で取得する。
@@ -311,6 +342,7 @@
 
 **補足:**
 - `is_completed=true` のセットのみ返す（暫定）
+- `deleted_at IS NULL` のセットのみ返す
 - `program_label` はサーバー側で `programs.title + " Week N Day N"` を結合して生成する
 - Previous の算出は `GET /workout-sessions/{id}` のレスポンス側で行う。このAPIからは算出しない（→ 論点4参照）
 - セッション件数が 0 件の場合: `"sessions": []`
@@ -409,6 +441,18 @@
 
 ---
 
+### 論点6: Delete API は `DELETE /workout-sets/{id}` か `POST /workout-sets/{id}/delete` か
+
+**推奨: `POST /workout-sets/{id}/delete`**
+
+- 今回は物理削除（本当に消す）ではなく、論理削除（非表示扱いの削除）が前提
+- `deleted_at` を更新し、さらに active セットの再採番も伴うため、単純な `DELETE` より動作を明示しやすい
+- 理由: 「レコード削除」ではなく「削除アクションを実行する」ことを API 名で表現しやすいから
+
+`DELETE /workout-sets/{id}` も候補ではあるが、MVP の論理削除方針とは少し意味がずれるため、初期方針としては採用しない。
+
+---
+
 ## 未確定事項
 
 | 項目 | 内容 | 推奨 |
@@ -416,6 +460,7 @@
 | フリーセッション（プログラムなし）| `program_day_id` 省略時の動作 | 空セッション生成のみで対応（後回し）|
 | 空欄チェック時の警告 | Kg/Reps が null のまま complete を呼んだとき | 200 + `"warnings": ["weight_kg is empty"]` を返す |
 | Add Set の `target_reps_text` デフォルト | 省略時に直前セット引き継ぎか空欄か | 直前セット引き継ぎを推奨 |
+| Delete 後の Undo | 直後の取り消しを入れるか | MVP では後回し |
 | 履歴の `limit` デフォルト値 | 初回はいくつ返すか | 10件を推奨 |
 | 中断セッションの扱い | `in_progress` のセッションを次回起動時にどう扱うか | `GET /workout-sessions?status=in_progress&user_id=xxx` で検索可能にしておく |
 | 認証方式 | JWT・セッションベースなど | MVP では `user_id` をリクエストに含める方式で仮置き |

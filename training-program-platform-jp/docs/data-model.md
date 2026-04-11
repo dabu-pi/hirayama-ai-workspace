@@ -1,13 +1,13 @@
 # data-model
 
-最終更新: 2026-04-11（is_locked を is_completed と分離して保存する方針に補正）
+最終更新: 2026-04-11（is_locked を is_completed と分離し、Delete Set は deleted_at による論理削除を第一候補に補正）
 
 ## 基本方針
 
 - 初期は単一管理者運用でも、将来の複数ユーザー化で破綻しない構造を先に置く
 - ライブラリ（プログラム定義）・実行（セッション）・記録（セット）を分けて考える
 - 1 テーブルに役割を詰め込みすぎない
-- UIプロトタイプで確定した操作（Previous表示・ロック・自動反映・履歴遷移）を保存設計に反映する
+- UIプロトタイプで確定した操作（Previous表示・ロック・自動反映・履歴遷移・Delete Set）を保存設計に反映する
 
 ---
 
@@ -180,7 +180,7 @@ workout_sessions           ← 1回のワークアウト全体（日付・プロ
 
 ### `workout_sets`
 
-**役割:** セット行1行の記録単位。重量・回数・完了状態・ロック・自動反映フラグを保持する。
+**役割:** セット行1行の記録単位。重量・回数・完了状態・ロック・自動反映フラグ・削除状態を保持する。
 
 | カラム | 型 | 説明 | 画面用途 | 保存推奨 |
 |---|---|---|---|---|
@@ -194,8 +194,15 @@ workout_sessions           ← 1回のワークアウト全体（日付・プロ
 | `is_locked` | BOOLEAN | Kg/Reps 欄を編集不可にするUI制御状態（is_completedとは独立）| 行のロック表示・入力可否制御 | ✓ |
 | `is_auto_filled` | BOOLEAN | 1セット目から自動反映された値か | デバッグ・将来参照 | ✓（軽量フラグ） |
 | `completed_at` | TIMESTAMP | 完了チェックを入れた日時 | 将来の分析用 | ✓ |
+| `deleted_at` | TIMESTAMP NULL | Delete Set 実行時の論理削除時刻 | 削除済み行の非表示・将来復元余地 | ✓ |
 | `rpe` | INT | RPE（自覚的運動強度、0〜10）| 将来の入力欄 | MVP後 |
 | `note` | TEXT | セット単位のメモ | メモ欄 | ✓ |
+
+**補足:**
+
+- Delete Set の対象は追加セットだけでなく通常セットも含む
+- UI 表示では `deleted_at IS NULL` の行だけを見せる
+- 削除後はアプリケーション側または API 側で、残りの表示用 Set 番号を詰め直す
 
 ---
 
@@ -242,6 +249,7 @@ JOIN workout_sessions s ON wse.workout_session_id = s.id
 WHERE wse.exercise_id = :exercise_id
   AND s.user_id = :user_id
   AND ws.is_completed = true
+  AND ws.deleted_at IS NULL
   AND s.id != :current_session_id   -- 今回のセッションを除く
 ORDER BY s.started_at DESC, ws.set_number ASC
 LIMIT :set_count
@@ -292,6 +300,49 @@ LIMIT :set_count
 
 ---
 
+## Delete Set の保存方式
+
+### 問題
+
+Delete Set を入れる場合、削除済みセットをどう扱うかを先に決める必要がある。
+
+### 候補比較
+
+| 方式 | 内容 | メリット | デメリット |
+|---|---|---|---|
+| 物理削除（本当に消す） | レコード自体を削除する | 実装が単純 | 誤削除時の復元が難しい |
+| **論理削除（推奨）** | `deleted_at` を入れて非表示扱いにする | 誤削除時の復元余地を残せる | クエリで除外条件が必要 |
+
+### 推奨: `deleted_at TIMESTAMP NULL` による論理削除
+
+- MVP でも論理削除を第一候補とする
+- 理由は、Delete が基本操作になるほど誤操作の影響が大きくなるため
+- UI では削除後すぐに見えなくするが、データ上は `deleted_at` を埋める
+- 将来 Undo（取り消し）や管理者復元へ広げやすい
+
+### `is_completed` / `is_locked` / `deleted_at` の関係
+
+| 状態 | is_completed | is_locked | deleted_at | UI上の扱い |
+|---|---|---|---|---|
+| 通常入力中 | false | false | null | 表示・編集可能 |
+| 完了済みロック中 | true | true | null | 表示・削除不可 |
+| Unlock 後 | false | false | null | 表示・削除可能 |
+| Delete 実行後 | false または true | false または true | **timestamp** | 非表示 |
+
+推奨ルール:
+
+- ロック済みのままでは削除しない
+- UI と API で先に Unlock を要求する
+- 削除時は `deleted_at` をセットし、通常一覧から除外する
+
+### Set 番号の扱い
+
+- 削除後は、**表示上の Set 番号を詰め直す**方向を推奨する
+- そのため active（有効）セット一覧は `deleted_at IS NULL` を前提に再採番する
+- MVP では、削除後の active 行について `set_number` 自体も詰め直す方針でよい
+
+---
+
 ## 1セット目入力 → 後続セット自動反映の扱い
 
 ### 問題
@@ -327,6 +378,7 @@ LIMIT :set_count
 取得粒度:
   - セッション単位でカードを作る
   - 各カード内にセット明細（set_number / weight_kg / reps_done / note）を展開
+  - `deleted_at IS NULL` のセットだけを対象にする
 
 結合パス:
   workout_sets
