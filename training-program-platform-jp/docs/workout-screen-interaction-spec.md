@@ -1,360 +1,117 @@
 # workout-screen-interaction-spec
 
-## UI設計方針（2026-04-11 更新）
-
-**Boostcamp の実画面を主要リファレンスとする。**
-Boostcamp 画面に出ている UI 要素は原則として画面上に置く。
-Add Set / Delete Set / Swap / Add Exercise / Rest / Calc は Boostcamp 準拠として UI 上に存在させることが確定済み。
-
----
-
-## 位置づけ
-
-この文書は「今日のワークアウト」画面の interaction spec（操作仕様書）である。
-見た目ではなく、**タップ・入力・自動反映・ロック・削除・履歴遷移など操作時の挙動**を固定することが目的。
-
-前提文書:
-
-- `docs/workout-screen-wireframe.md`
-- `docs/workout-execution-ui.md`
-- `docs/screens.md`
-- `docs/requirements.md`
-
----
-
-## 1. 画面の目的
-
-「今日のワークアウト」は、プログラムの当日内容を確認し、前回記録と今回目標を見比べながら、その場で入力を完了させる画面である。
-
-ユーザーはこの画面で次の 4 つを同時に行う。
-
-- 今日やる内容を確認する
-- 前回記録（Previous）と今回目標（Target）を見比べる
-- Kg / Reps を入力し、完了チェックで記録を確定する
-- 必要に応じてセットを追加・削除する
-
----
-
-## 2. ユーザーの基本操作フロー
-
-```text
-画面を開く
-  → プログラム情報・種目一覧を確認する
-  → 種目ごとに以下を繰り返す
-       1. Previous / Target を確認する
-       2. Kg を入力する（1セット目入力で後続セットへ自動反映）
-       3. Reps を入力する
-       4. 完了チェックを入れる（その行がロックされる）
-       5. 必要なら Add Set / Delete Set を使う
-       6. 次のセットへ進む
-  → 全種目が終わったら Finish を押す
-  → 記録完了画面へ遷移する
-```
-
-種目名タップで種目単体履歴へ移動することは、上記フローの任意の時点で可能。
-
----
-
-## 3. UI要素別 操作仕様
-
-### 3-1. 種目名
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| 種目名 | タップ | 種目単体履歴画面へ遷移する | なし | プログラム全体履歴ではなく、当該種目の単体履歴へ移動する |
-
-補足:
-
-- 種目名は入力欄ではなく遷移トリガー
-- 遷移先で実行中セッションの入力は失われない
-
-### 3-2. Kg 入力欄
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Kg欄 | タップ | テンキー（数字入力キーボード）が開く | なし（入力中は保存しない） | 画面表示は即時更新する |
-| Kg欄（1セット目） | 入力確定 | 同一種目の後続セットの Kg 空欄へ同値を自動反映する | なし | 手入力済みの後続セットは上書きしない |
-| Kg欄（ロック中） | タップ | 反応しない | なし | Unlock 後のみ編集可能 |
-
-### 3-3. Reps 入力欄
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Reps欄 | タップ | テンキーが開く | なし | Target の値を自動入力しない |
-| Reps欄 | 入力確定 | 入力値をその行に表示する | なし | AMRAP（最大回数挑戦）のような自由入力を許容 |
-| Reps欄（ロック中） | タップ | 反応しない | なし | Unlock 後のみ編集可能 |
-
-### 3-4. 完了チェック
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| 完了チェック | タップ（未チェック → チェック） | その行の Kg / Reps 欄をロックする。行全体を完了状態にする | Set番号・Kg・Reps・完了状態 | Kg または Reps が空欄でもチェック可能とする（暫定） |
-| 完了チェック（チェック済み） | タップ | 直接解除せず、Unlock 操作へ誘導する | なし | 誤タップ防止のため直接解除しない |
-
-### 3-5. Delete Set
-
-**Boostcamp準拠：セット行の左スワイプで Delete を出す。**
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| セット行 | 左スワイプ | 右端に `Delete` ボタンを表示する | なし | 追加セットだけでなく通常セットも対象 |
-| Delete ボタン | タップ | 確認ダイアログを表示する | なし | MVP では確認ダイアログを推奨 |
-| 確認ダイアログ | 削除を確定 | 行を削除し、残りの Set 番号を詰め直す | 削除状態 | Undo は MVP 後でよい |
-| ロック済み行 | 左スワイプ | `Delete` を disabled（無効）表示にする | なし | まず Unlock が必要 |
-
-推奨挙動:
-
-- Delete 対象は **通常セット行も追加セット行も両方**
-- ロック済み行はそのままでは削除不可
-- UI 上は `Unlock first` などの disabled 表示で理由を見せる
-- 削除確定後は表示上の Set 番号を `1, 2, 3 ...` と詰め直す
-
-### 3-6. Add Set
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Add Set | タップ | その種目のセット一覧末尾に新しいセット行を追加する | なし | 追加行の Target は直前セット引き継ぎを推奨 |
-
-### 3-7. Swap
-
-**2026-04-12 本実装済み。**
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Swap | タップ | 種目置き換え用 modal を開く | — | 操作対象は種目（ブロック）単位 |
-| modal / 種目選択 | 種目をタップ | PATCH API を呼び、当該 block の種目名・slug・exerciseType を置き換える | `exercise_id` / `was_swapped=true` / `exercise_type` | 既存 set 行は再作成しない |
-| modal | 閉じる / backdrop タップ | modal を閉じる | なし | — |
-
-#### Swap 不可条件（MVP 安全側）
-
-以下のいずれか 1 つでも visible set（`deleted_at IS NULL`）に存在する場合、API が 409 を返し、modal でエラー表示する。
-
-| 条件 | 理由 |
-|---|---|
-| `is_completed = true` のセットが 1 件以上 | 完了済みセットが含まれる |
-| `is_locked = true` のセットが 1 件以上 | ロック済みセットが含まれる |
-| `weight_kg IS NOT NULL` のセットが 1 件以上 | Kg 入力済みセットが含まれる |
-| `reps_done IS NOT NULL` のセットが 1 件以上 | Reps 入力済みセットが含まれる |
-
-Swap 前にすべての入力を削除し、set を Unlock してから行うこと。
-
-#### 同一種目を選んだ場合
-
-no-op success（HTTP 200 / `noOp: true`）を返す。DB 書き込みは行わない。modal を閉じる。
-
-#### exercise_type の扱い
-
-`exercises` テーブルに `exercise_type` 列がないため、Swap 後の `exercise_type` は `T3` 固定。
-将来 `exercises.default_exercise_type` 列を追加した場合は、そこから取得する方針とする。
-
-### 3-8. Add Exercise
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Add Exercise | タップ | 種目追加 UI を表示する（暫定） | 追加した種目（暫定） | セッション全体への追加操作 |
-
-### 3-9. Rest
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Rest | タップ | 休憩タイマー（インターバルタイマー）を開始する | なし | 自動開始は未確定 |
-
-### 3-10. Calc
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Calc | タップ | 重量計算補助 UI を表示する（詳細未確定） | なし | 1RM 計算やプレート計算が候補 |
-
-### 3-11. Finish
-
-| 要素 | ユーザー操作 | 画面の反応 | 保存される内容 | 補足 |
-|---|---|---|---|---|
-| Finish | タップ（全セット完了済み） | 記録完了画面へ遷移する | セッション全体の記録 | 正常フロー |
-| Finish | タップ（未完了セットあり） | 確認ダイアログを出す | ユーザーが続行した場合のみ完了処理 | 未完了セットはスキップ扱い可 |
-
----
-
-## 4. 入力ルール
-
-### Kg 入力ルール
-
-| ルール | 内容 |
-|---|---|
-| 初期値 | 空欄（Previous の値を自動入力しない） |
-| 入力形式 | 数値のみ。単位は kg 固定 |
-| 小数点 | 許容する（例: 82.5） |
-| マイナス値 | 許容しない |
-| 空欄のままチェック | 可能とする（暫定） |
-
-### Reps 入力ルール
-
-| ルール | 内容 |
-|---|---|
-| 初期値 | 空欄（Target の値を自動入力しない） |
-| 入力形式 | 整数のみ |
-| マイナス値 | 許容しない |
-| AMRAP セット | ユーザーが実際に行った回数を直接入力する |
-| 空欄のままチェック | 可能とする（暫定） |
-
----
-
-## 5. 自動反映ルール
-
-### 1セット目 Kg 入力による後続セットへの自動反映
-
-| ルール | 内容 |
-|---|---|
-| トリガー | 1セット目の Kg 入力が確定したとき |
-| 対象 | 同一種目の2セット目以降の Kg 欄が空欄のもの |
-| 反映内容 | 1セット目の Kg 値と同じ値 |
-| 上書き除外 | すでに手入力がある後続セットは上書きしない |
-| 自動反映後の編集 | 反映された値は個別に上書き可能 |
-
----
-
-## 6. ロック / ロック解除 / 削除ルール
-
-### ロック状態になる条件
-
-| 条件 | 内容 |
-|---|---|
-| 完了チェックを入れたとき | その行の Kg / Reps 欄がロックされる |
-
-### ロック中の挙動
-
-| 項目 | 内容 |
-|---|---|
-| Kg 欄 | タップ不可 |
-| Reps 欄 | タップ不可 |
-| Delete | **削除不可** |
-| Delete 表示 | 左スワイプ時に disabled 表示を推奨 |
-| 視覚表示 | 行全体をロック状態として区別して表示する |
-
-### Delete の条件
-
-| 条件 | 内容 |
-|---|---|
-| 未ロック行 | 左スワイプ → Delete → 確認ダイアログ → 削除 |
-| ロック済み行 | Unlock 後に削除可能 |
-| 削除対象 | 追加セット / 通常セットの両方 |
-| 削除後の番号 | 表示上の Set 番号を詰め直す |
-
-### 推奨: ロック済み行は削除できないことを UI と API の両方で保証する
-
-- UI では Delete 無効表示
-- API でも `is_locked=true` のままなら削除不可
-
----
-
-## 7. Delete Set の推奨フロー
-
-```text
-1. ユーザーがセット行を左スワイプする
-2. Delete ボタンが表示される
-3. Delete をタップする
-4. 確認ダイアログを表示する
-5. OK なら削除を実行する
-6. 残りセットの表示番号を詰め直す
-```
-
-ロック済み行の場合:
-
-```text
-1. ユーザーがロック済みセット行を左スワイプする
-2. Delete は disabled 表示になる
-3. ユーザーは先に Unlock を行う
-4. Unlock 後に再度左スワイプ → Delete
-```
-
----
-
-## 8. エラー時・例外時の扱い
-
-| 状況 | 暫定ルール |
-|---|---|
-| Kg / Reps が空欄のまま完了チェック | チェックを許容する。警告表示の要否は未確定 |
-| ロック済み行の削除 | UI で disabled 表示。API でも拒否 |
-| 削除確認ダイアログで Cancel | 何も変更しない |
-| Previous が存在しない（初回種目） | `-` を表示する |
-| セッション中に画面を閉じた場合 | 入力中データの保全方針は未確定 |
-
----
-
-## 9. ユーザー操作フロー例（ケース別）
-
-### ケース1: 通常のセット入力フロー
-
-```text
-1. Set 1 の Kg 欄をタップ
-2. 重量（例: 100）を入力して確定する
-   → Set 2, Set 3 の Kg 空欄へ 100 が自動反映される
-3. Set 1 の Reps 欄をタップ
-4. 回数（例: 5）を入力して確定する
-5. Set 1 の完了チェックをタップ
-   → Set 1 の Kg / Reps がロックされる
-6. Set 2 以降も同様に繰り返す
-```
-
-### ケース2: Delete Set
-
-```text
-1. 削除したいセット行を左スワイプする
-2. Delete ボタンが表示される
-3. Delete をタップする
-4. 確認ダイアログで OK を押す
-5. そのセット行が削除される
-6. 残りセットの表示番号が詰め直される
-```
-
-### ケース3: ロック済みセットの削除
-
-```text
-1. ロック済みセット行を左スワイプする
-2. Delete は disabled（無効）表示で出る
-3. ユーザーは先に Unlock を行う
-4. Unlock 後、再度左スワイプして Delete を押す
-5. 確認ダイアログ後に削除する
-```
-
-### ケース4: 種目名タップによる履歴確認
-
-```text
-1. 種目名をタップする
-2. 種目単体履歴画面へ遷移する
-3. 戻り操作で「今日のワークアウト」画面へ戻る
-4. 入力中のデータはそのまま残っている
-```
-
----
-
-## 10. 未確定事項
-
-### 実装前に決定が必要（MVP対象）
-
-| 項目 | 内容 |
-|---|---|
-| ロック解除 UI | ロック済みセットをどの UI で解除するか |
-| Finish 押下時の未完了セット扱い | 確認ダイアログの文言と保存挙動 |
-| 手入力済み判定 | 自動反映後にユーザーが手入力したかの判定方法 |
-| Delete 確認ダイアログ文言 | 誤削除防止の表示内容 |
-
-### MVP 後でもよいもの
-
-| 項目 | 内容 |
-|---|---|
-| Delete の Undo | 一時取り消しを入れるか |
-| Swap の詳細 UIフロー | 種目単位かセット単位か |
-| Add Exercise の詳細 UIフロー | 種目選択画面の構成 |
-| Previous の参照単位 | セット番号一致優先か、種目内最新完了優先か |
-| Rest / Calc の詳細挙動 | タイマー自動開始や計算内容 |
-
----
-
-## 関連文書
-
-- [workout-screen-wireframe.md](./workout-screen-wireframe.md)
-- [workout-execution-ui.md](./workout-execution-ui.md)
-- [screens.md](./screens.md)
-- [requirements.md](./requirements.md)
-- [data-model.md](./data-model.md)
-- [api-spec-workout-session.md](./api-spec-workout-session.md)
+最終更新: 2026-04-12
+
+## 対象
+
+`/train` の MVP interaction spec。
+Boostcamp 風の操作感をベースにしつつ、現行実装で有効な挙動だけを記載する。
+
+## 現在の操作
+
+### Set 操作
+
+- Kg / Reps
+  - `onBlur` で `PATCH /api/workout-sets/{id}`
+- Complete
+  - `POST /api/workout-sets/{id}/complete`
+  - `is_completed=true` と `is_locked=true`
+- Unlock
+  - `POST /api/workout-sets/{id}/unlock`
+  - `is_completed=false` と `is_locked=false`
+- Delete
+  - スワイプで `Delete` を表示
+  - `POST /api/workout-sets/{id}/delete`
+  - `deleted_at` を使う logical delete
+- Add Set
+  - `POST /api/workout-session-exercises/{id}/sets`
+
+### Exercise 操作
+
+- Add Exercise
+  - modal から選択
+  - `POST /api/workout-sessions/{id}/exercises`
+- Swap Exercise
+  - modal から選択
+  - `PATCH /api/workout-sessions/{id}/exercises/{exerciseId}`
+  - blocking set がある場合は 409
+
+### History 遷移
+
+- 種目名タップで `/exercise-history/[exerciseSlug]`
+- completed set の履歴を新しい順で表示
+
+## Finish の仕様
+
+### 通常 finish
+
+- Finish ボタン押下
+- `POST /api/workout-sessions/{id}/finish`
+- 成功時は `summaryPath` を受け取り、`/workout-summary/[sessionId]` へ遷移
+
+### 未完了 set がある場合
+
+- API は `409` と `requiresConfirmation: true` を返す
+- client は confirm を表示
+- OK の場合は `forceFinish=true` で再送
+- 成功後の遷移先は通常 finish と同じ
+
+### 既に completed の session
+
+- `/train` 上では Finish ボタンは disabled
+- ただし API へ再度 finish を送っても `summaryPath` を返す設計
+- completed 済み session の要約確認は `/workout-summary/[sessionId]` で行う
+
+## Workout Summary の仕様
+
+### route
+
+- `/workout-summary/[sessionId]`
+
+### 表示項目
+
+- 完了メッセージ
+- `program title`
+- `week / day label`
+- 完了時刻
+- 実施した種目一覧
+- 各種目の `completed set 数 / total visible set 数`
+- 戻り導線
+  - `Back to Train`
+  - `Back to Home`
+
+### データ取得
+
+- server-side helper: `lib/workout/workout-summary.ts`
+- 読み取り対象:
+  - `workout_sessions`
+  - `workout_session_exercises`
+  - `workout_sets`
+  - `program_days`
+  - `program_weeks`
+  - `programs`
+  - `exercises`
+- visible set は `deleted_at IS NULL`
+- counts は server 側で算出
+
+### state
+
+- `ready`
+  - completed session を表示
+- `not_completed`
+  - session は存在するが未完了
+- `not_found`
+  - session 不存在、または認証ユーザー所有ではない
+- `unauthenticated`
+  - サインイン必須
+- `error`
+  - 読込失敗
+- `loading`
+  - route loading 中
+
+## 未対応
+
+- Programs 専用 route
+- Finish 後の分析グラフ
+- Delete Undo
+- Rest / Calc の本実装

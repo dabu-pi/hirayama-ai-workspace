@@ -9,6 +9,7 @@ import type {
   ExerciseListItem,
   SwapExerciseResponse,
   WorkoutExerciseBlock,
+  WorkoutSessionFinishResponse,
   WorkoutSet,
   WorkoutSessionStatus,
   WorkoutSessionView
@@ -68,15 +69,6 @@ type AddSetResponse = {
   isAutoFilled: boolean;
   previousDisplay: string;
   deletedAt: string | null;
-};
-
-type FinishResponse = {
-  id: string;
-  status: WorkoutSessionStatus;
-  finishedAt: string | null;
-  incompleteSetCount: number;
-  requiresConfirmation?: boolean;
-  message?: string;
 };
 
 function typeClassName(exerciseType: "T1" | "T2" | "T3") {
@@ -226,12 +218,12 @@ async function postFinishSession(sessionId: string, forceFinish: boolean) {
     body: JSON.stringify({ forceFinish })
   });
   const payload = (await response.json().catch(() => null)) as
-    | FinishResponse
+    | WorkoutSessionFinishResponse
     | { error?: { message?: string } }
     | null;
 
   if (response.status === 409 && payload && "requiresConfirmation" in payload) {
-    return payload as FinishResponse;
+    return payload as WorkoutSessionFinishResponse;
   }
 
   if (!response.ok) {
@@ -242,7 +234,7 @@ async function postFinishSession(sessionId: string, forceFinish: boolean) {
     );
   }
 
-  return payload as FinishResponse;
+  return payload as WorkoutSessionFinishResponse;
 }
 
 async function postAddExercise(sessionId: string, exerciseId: string) {
@@ -397,7 +389,7 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
     }));
   };
 
-  const applyFinishedState = (payload: FinishResponse) => {
+  const applyFinishedState = (payload: WorkoutSessionFinishResponse) => {
     setSessionMeta((current) => ({
       ...current,
       status: payload.status,
@@ -745,7 +737,7 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
 
       applyFinishedState(payload);
       setRevealedSetId(null);
-      refreshTrainScreen();
+      router.push(payload.summaryPath);
     } catch (error) {
       console.error("Failed to finish workout session.", error);
       setErrorMessage(error instanceof Error ? error.message : "セッション終了に失敗しました。");

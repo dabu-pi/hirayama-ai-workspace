@@ -19,6 +19,7 @@ type FinishRequestBody = {
 
 type WorkoutSessionRow = {
   id: string;
+  user_id: string;
   status: "in_progress" | "completed" | "cancelled";
   finished_at: string | null;
 };
@@ -71,16 +72,26 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const body = (await request.json().catch(() => ({}))) as FinishRequestBody;
     const forceFinish = body.forceFinish === true;
+    const summaryPath = `/workout-summary/${params.id}`;
+    const serverClient = createSupabaseServerClient();
+    const scopedUser = await serverClient.auth.getUser();
+    const userId = scopedUser.data.user?.id ?? null;
     const createClient = hasSupabaseServiceRoleEnv()
       ? createSupabaseAdminClient
       : createSupabaseServerClient;
     const supabase = createClient();
 
-    const { data: session, error: sessionError } = await supabase
+    let sessionQuery = supabase
       .from("workout_sessions")
-      .select("id, status, finished_at")
-      .eq("id", params.id)
-      .maybeSingle<WorkoutSessionRow>();
+      .select("id, user_id, status, finished_at")
+      .eq("id", params.id);
+
+    if (userId) {
+      sessionQuery = sessionQuery.eq("user_id", userId);
+    }
+
+    const { data: session, error: sessionError } =
+      await sessionQuery.maybeSingle<WorkoutSessionRow>();
 
     if (sessionError) {
       return NextResponse.json(
@@ -113,7 +124,8 @@ export async function POST(request: Request, { params }: RouteContext) {
         id: session.id,
         status: "completed",
         finishedAt: session.finished_at,
-        incompleteSetCount
+        incompleteSetCount,
+        summaryPath
       });
     }
 
@@ -124,6 +136,7 @@ export async function POST(request: Request, { params }: RouteContext) {
           status: session.status,
           finishedAt: session.finished_at,
           incompleteSetCount,
+          summaryPath,
           requiresConfirmation: true,
           message: `${incompleteSetCount} sets are still incomplete.`
         },
@@ -158,7 +171,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       id: params.id,
       status: "completed",
       finishedAt,
-      incompleteSetCount
+      incompleteSetCount,
+      summaryPath
     });
   } catch (error) {
     console.error("Failed to finish workout session.", error);

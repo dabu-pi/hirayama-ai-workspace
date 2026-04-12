@@ -122,3 +122,48 @@ export type ExerciseHistoryView = {
   exerciseType: ExerciseType;
   sessions: ExerciseHistorySession[];
 };
+
+export type WorkoutSummaryExercise = {
+  id: string;
+  exerciseId: string;
+  exerciseSlug: string;
+  exerciseNameJa: string;
+  exerciseNameEn: string;
+  exerciseType: ExerciseType;
+  orderIndex: number;
+  completedSetCount: number;
+  totalVisibleSetCount: number;
+  wasAdded: boolean;
+  wasSwapped: boolean;
+};
+
+export type WorkoutSummaryView = {
+  sessionId: string;
+  userId: string;
+  status: WorkoutSessionStatus;
+  programTitle: string;
+  programWeekLabel: string;
+  startedAt: string;
+  finishedAt: string | null;
+  totalCompletedSets: number;
+  totalVisibleSets: number;
+  exercises: WorkoutSummaryExercise[];
+};
+
+export type WorkoutSummaryState =
+  | "ready"
+  | "loading"
+  | "unauthenticated"
+  | "not_found"
+  | "not_completed"
+  | "error";
+
+export type WorkoutSessionFinishResponse = {
+  id: string;
+  status: WorkoutSessionStatus;
+  finishedAt: string | null;
+  incompleteSetCount: number;
+  summaryPath: string;
+  requiresConfirmation?: boolean;
+  message?: string;
+};
