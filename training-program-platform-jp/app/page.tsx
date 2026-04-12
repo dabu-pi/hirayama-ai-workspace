@@ -9,30 +9,30 @@ export default function HomePage() {
         <span className={styles.eyebrow}>Implementation Skeleton</span>
         <h1 className={styles.title}>Training Program Platform JP</h1>
         <p className={styles.lead}>
-          Next.js App Router（Next.js の画面構成）と Supabase
-          を前提に、本実装へ入るための骨組みを配置した。
-          まずは「今日のワークアウト」と「種目単体履歴」をダミーデータで確認できる。
+          Next.js App Router and Supabase are wired together as the foundation for a
+          mobile-first training workflow. Start from Programs to choose a base, move
+          into Train to log the session, and land on Summary after finishing.
         </p>
 
         <div className={styles.actions}>
-          <Link className={styles.primaryButton} href="/train">
-            /train を開く
+          <Link className={styles.primaryButton} href="/programs">
+            Open Programs
           </Link>
-          <a className={styles.secondaryButton} href="/api/workout-sessions">
-            API 雛形を見る
-          </a>
+          <Link className={styles.secondaryButton} href="/train">
+            Open Train
+          </Link>
         </div>
       </section>
 
       <section className={styles.section}>
         <article className={styles.card}>
-          <h2 className={styles.cardTitle}>今回できたこと</h2>
+          <h2 className={styles.cardTitle}>Current MVP</h2>
           <ul className={styles.list}>
-            <li>App Router ベースのページ構成</li>
-            <li>Train 画面と Exercise History 画面の土台</li>
-            <li>Route Handlers（同一アプリ内API）の最小雛形</li>
-            <li>Supabase client / server ヘルパー</li>
-            <li>schema（DB表定義）migration 雛形</li>
+            <li>Programs library route for the current catalog foundation</li>
+            <li>Train screen for session logging and exercise operations</li>
+            <li>Workout summary route after Finish completes</li>
+            <li>Exercise history route backed by Supabase reads</li>
+            <li>Server-side helpers aligned with future route expansion</li>
           </ul>
         </article>
       </section>

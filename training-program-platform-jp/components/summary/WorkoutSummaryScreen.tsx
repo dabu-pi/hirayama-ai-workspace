@@ -150,8 +150,8 @@ export function WorkoutSummaryScreen({
         <Link className={styles.primaryAction} href="/train">
           Back to Train
         </Link>
-        <Link className={styles.secondaryAction} href="/">
-          Back to Home
+        <Link className={styles.secondaryAction} href="/programs">
+          Back to Programs
         </Link>
       </div>
     </main>
