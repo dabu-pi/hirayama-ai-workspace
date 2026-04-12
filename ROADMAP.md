@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-12（training-program-platform-jp 追加 / live E2E 完了）
+作成: 2026-03-05 / 最終更新: 2026-04-13（Phase B Step 1・2 完了反映 / 公開判断・プラットフォーム将来タスク追加）
 
 ---
 
@@ -40,7 +40,7 @@
 │                             数値入力 → Claude API実装 → 月次レポート
 │
 └─ 【トレーニングプログラムプラットフォーム】──────────────────────→
-       MVP基盤 ✅ → live E2E ✅ → 認証整備 → RLS → 本番公開
+       MVP基盤 ✅ → Auth/owner guard ✅ → NOT NULL・RLS → 限定公開 → プログラム追加
 ```
 
 ---
@@ -292,7 +292,9 @@
 | **3月上旬** | freee自動化: フェーズ3（Gmail下書き）完成 | ✅ 完了 |
 | **4月中旬** | 患者管理Webアプリ: 本番化準備完了・柔整GASと患者ID連携 | ⏸ 待機 |
 | **4月中旬** | トレーニング機器トレンド分析: 第3ソース小規模接続・寄与明細の見える化 | 🔄 進行中 |
-| **4月中旬** | トレーニングプログラムプラットフォーム: live Supabase E2E 完了・enrollment Day 進行確認済み | ✅ 完了 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: Phase A 完了（live E2E・enrollment Day 進行確認済み） | ✅ 完了 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: Phase B Step 1・2 完了（Auth 基盤・アプリ側 owner guard live 確認済み） | ✅ 完了 |
+| **4月下旬〜5月** | トレーニングプログラムプラットフォーム: NOT NULL + RLS 適用・限定公開判断 | ⏸ 待機 |
 | **4月下旬** | 廃棄物日報システム: 要件定義完了・設計開始 | ⏸ 待機 |
 | **5月** | 接骨院経営戦略AI: 数値入力完了・Claude APIで月次レポート初回生成 | ⏸ 待機 |
 | **6月以降** | 全システム安定稼働・KPIダッシュボード構築 | ⏸ 待機 |
@@ -316,7 +318,7 @@
    7. 運動器初期評価システム JASSESS-01: Phase 1 シート生成 → Phase 2 ロジック実装 → Phase 5 Claude API連携
    8. 接骨院経営戦略AI: 数値入力 → Claude API実装
    9. 廃棄物日報システム: 要件定義 → 設計 → 実装
-  10. トレーニングプログラムプラットフォーム フェーズB: Auth 整備 → RLS → Day 2 再開確認
+  10. トレーニングプログラムプラットフォーム Phase B Step 3: user_id NOT NULL + RLS 適用 → 限定公開判断 → プログラム追加
 ```
 
 ---
@@ -366,7 +368,9 @@
 
 ### トレーニングプログラムプラットフォーム `training-program-platform-jp/`
 
-**現状:** live Supabase E2E 通し確認完了（2026-04-12）。MVP として Programs → 詳細 → セッション開始 → トレーニング → 終了 → 結果画面まで動作確認済み。認証は未実装（user_id nullable の MVP 状態）。
+**位置づけ:** トレーニングプログラムを継続的に追加していくプラットフォームとして育てる想定。単発アプリではなく、複数プログラムを提供・管理する基盤として設計する。
+
+**現状:** フェーズ A（MVP 基盤）・フェーズ B Step 1（Auth 基盤）・Step 2（アプリ側 owner guard）完了（2026-04-12）。アプリ側では本人しか触れない制限まで実装・live 確認済み。DB 側の NOT NULL 化と RLS 適用が次ステップ。
 
 #### フェーズ A — MVP 基盤（完了）
 
@@ -381,23 +385,63 @@
 | A-7 | live Supabase E2E 検証（GZCLP Base 通し確認） | ✅ 完了 |
 | A-8 | Next.js fetch cache 問題修正（`cache: no-store`） | ✅ 完了 |
 
-#### フェーズ B — 認証・本番整備（次フェーズ）
+#### フェーズ B — 認証・本番整備（進行中）
+
+**3ステップで段階的に実施。Step 1・2 完了済み。**
 
 | # | タスク | ステータス |
 |---|---|---|
-| B-1 | Supabase Auth 整備（サインイン / セッション管理） | ⏸ 待機 |
-| B-2 | `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻す | ⏸ 待機（B-1 完了後）|
-| B-3 | RLS（Row Level Security）設計・適用 | ⏸ 待機（B-1 完了後）|
-| B-4 | Day 2 から再開されることの live 確認（enrollment 引き継ぎ） | ⏸ 待機 |
-| B-5 | Exercise History の auth 対応 | ⏸ 待機（B-1 完了後）|
+| B-1 | **[Step 1]** Supabase Auth 整備（login 画面・middleware・`auth→public.users` trigger） | ✅ 完了 |
+| B-2 | **[Step 2]** アプリ側 owner guard（finish / summary / set mutation を本人限定・他人は 404） | ✅ 完了 |
+| B-3 | **[Step 3]** `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に復元 | ⏸ 待機 |
+| B-4 | **[Step 3]** RLS（Row Level Security）設計・適用 | ⏸ 待機（B-3 と同時） |
+| B-5 | Add Exercise / Swap Exercise の live clickthrough 補完確認 | ⏸ 待機 |
+| B-6 | sign up 429 エラー（`over_email_send_rate_limit`）の再確認 | ⏸ 待機（外部レート制限が解消次第） |
+| B-7 | Exercise History の auth 対応（user_id 絞り込み強化） | ⏸ 待機（B-3 以降） |
+
+#### 公開判断の段階
+
+> 感覚ではなく条件で判断する。
+
+**限定公開してよい条件（招待制・知人のみ）:**
+
+| 条件 | 説明 |
+|---|---|
+| B-3 / B-4 完了 | `user_id NOT NULL` + RLS 適用済み |
+| sign up 動作確認 | 新規ユーザーが実際に登録できることを確認（B-6 解消） |
+| B-5 完了 | Add Exercise / Swap Exercise が auth 状態で正常動作することを確認 |
+| 基本エラー表示 | 認証エラー・not found・server error がユーザーに適切に表示される |
+
+**一般公開してよい条件（URL 公開・不特定多数）:**
+
+| 条件 | 説明 |
+|---|---|
+| 限定公開を一定期間運用して問題なし | 最低 1 プログラムで複数ユーザーが実際に使えていること |
+| パスワードリセット機能 | Supabase Auth の magic link / reset を実装済み |
+| 複数プログラム掲載 | GZCLP 以外に最低 1 プログラムを追加済み |
+| プライバシー・利用規約 | 最小限の掲載（Supabase ホスト前提の基本文） |
+
+#### フェーズ C — プラットフォーム拡張（将来）
+
+**方針:** 管理画面を先に作らず、まず SQL / seed ベースでプログラムを追加していく。管理画面は運用負荷が増えた段階で後続フェーズとして判断する。
+
+| # | タスク | 内容 | ステータス |
+|---|---|---|---|
+| C-1 | プログラム追加フロー整備 | SQL seed ファイルの書き方・slug 採番ルール・`is_public` フラグの運用を文書化 | ⏸ 待機 |
+| C-2 | 2本目以降のプログラム登録 | Starting Strength / GZCLP LP 等の seed 作成（データ登録中心） | ⏸ 待機 |
+| C-3 | プログラム難易度・タグ管理 | `programs.level` / タグ検索・フィルタ UI | ⏸ 待機 |
+| C-4 | ユーザー進捗ダッシュボード | セッション履歴・完了プログラム・次 day 表示 | ⏸ 待機 |
+| C-5 | 管理画面（後続フェーズ候補） | プログラム CRUD・ユーザー管理（運用負荷が増えた段階で判断） | ⏸ 将来検討 |
 
 #### 技術スタック
 
 - Next.js 14 App Router + TypeScript
 - Supabase PostgreSQL（programs / program_enrollments / workout_sessions 他）
+- Supabase Auth（sign in / sign up / session cookie）
 - `lib/supabase/server.ts` — `cache: no-store` 設定済み（Next.js 14 fetch cache 対策）
 - seed: `seed/programs/gzclp-base.sql`（GZCLP Base 3週 × 3日）
+- 設計ドキュメント: `docs/auth-rls-design.md`（Phase B 実装順・RLS 設計）
 
 ---
 
-最終更新: 2026-04-12（training-program-platform-jp 追加 / live E2E 完了）
+最終更新: 2026-04-13（Phase B Step 1・2 完了反映 / 公開判断・プラットフォーム将来タスク追加）

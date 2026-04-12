@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-12（Phase B Step 2 owner 制約実装）
+最終更新: 2026-04-13（ROADMAP 整合・フェーズ A 完了 / Phase B Step 1・2 完了確定）
 
 ## 現在地
 
