@@ -10,6 +10,10 @@ type ProgramDetailScreenProps = {
   errorMessage?: string | null;
 };
 
+function formatSourceLabel(source: ProgramDetailView["source"]) {
+  return source === "supabase" ? "Supabase" : "mock catalog";
+}
+
 function resolveTitle(state: ProgramDetailState, programTitle: string | null) {
   if (state === "loading") return "Loading program";
   if (state === "not_found") return "Program not found";
@@ -56,7 +60,7 @@ export function ProgramDetailScreen({
         <h1 className={styles.title}>{resolveTitle(state, program?.title ?? null)}</h1>
         <p className={styles.lead}>{bodyText}</p>
         <div className={styles.heroMeta}>
-          <span>Source: mock catalog</span>
+          <span>Source: {formatSourceLabel(view.source)}</span>
           <Link className={styles.trainLink} href={trainHref}>
             Go to Train
           </Link>

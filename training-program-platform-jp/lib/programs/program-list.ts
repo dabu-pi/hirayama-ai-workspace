@@ -1,9 +1,7 @@
 import "server-only";
 
-import {
-  listProgramCatalogItems,
-  toProgramListItem
-} from "@/lib/programs/program-catalog";
+import { toProgramListItem } from "@/lib/programs/program-catalog";
+import { getProgramLibrary } from "@/lib/programs/program-library";
 import type { ProgramListState, ProgramListView } from "@/types/programs";
 
 type ProgramListResult = {
@@ -14,13 +12,14 @@ type ProgramListResult = {
 
 export async function getProgramListView(): Promise<ProgramListResult> {
   try {
-    const items = listProgramCatalogItems().map(toProgramListItem);
+    const library = await getProgramLibrary();
+    const items = library.items.map(toProgramListItem);
 
     return {
       state: items.length === 0 ? "empty" : "ready",
       view: {
         items,
-        source: "mock_catalog"
+        source: library.source
       },
       errorMessage: null
     };

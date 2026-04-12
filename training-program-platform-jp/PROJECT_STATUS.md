@@ -10,7 +10,7 @@
 - Finish 後は `/workout-summary/[sessionId]` へ遷移する
 - Programs 一覧は `/programs`
 - Program Detail MVP は `/programs/[programSlug]`
-- Program Detail から Train へは暫定的に `programSlug` query を渡せる
+- Programs list / detail / train selection は Supabase `programs` 読込を優先する状態になった
 
 ## 完了済み
 
@@ -41,14 +41,15 @@
 - Programs 一覧 MVP
   - route: `/programs`
   - loader: `lib/programs/program-list.ts`
-  - source: `lib/programs/program-catalog.ts` の `mock_catalog`
+  - 正本は Supabase `programs`
+  - 使用列は `id` / `title` / `description` / `duration_weeks` / `days_per_week` / `level` / `is_public`
   - card は title / level / goal / frequency / duration を表示
   - `loading` / `empty` / `error` 実装済み
   - summary の戻り先を `/programs` に変更済み
 - Program Detail MVP
   - route: `/programs/[programSlug]`
   - loader: `lib/programs/program-detail.ts`
-  - source: `lib/programs/program-catalog.ts` の `mock_catalog`
+  - 一覧と同じ Supabase `programs` 読込を使用
   - title / level / goal / frequency / duration / overview を表示
   - `loading` / `ready` / `not_found` / `error` を実装
   - `/programs` の card から detail route へ遷移可能
@@ -56,23 +57,30 @@
 - Program Detail -> Train の暫定連携
   - detail の `Go to Train` は `/train?program=[programSlug]`
   - train 側 helper は `lib/workout/train-selection.ts`
+  - Programs と同じ Supabase `programs` 読込を使用
   - `program` query 一致時は selected program title / source を表示
   - `program` query 不一致時は warning を表示しつつ current session を継続
   - query なしは従来動作
+- Programs 系 read path の Supabase 寄せ
+  - 共通 helper: `lib/programs/program-library.ts`
+  - Supabase 優先、読込失敗時のみ `mock_catalog` fallback
+  - 読込成功で 0 件のときは empty / not_found / invalid をそのまま表示
+  - schema に slug 列がないため、route 用 slug は helper で `title + id` から導出
 - Home 導線
   - `/` は Programs を第一導線、Train を第二導線に整理済み
 
 ## 次アクション
 
-1. `programSlug` query の暫定連携を、将来 `program_day_id` / `enrollment_id` ベースへ置き換える設計を決める
-2. Program Detail から Train へ渡した選択状態を、session 作成や day 選択と結びつける
-3. Programs list / detail / train selection を Supabase 読込へ差し替えるための schema / loader 方針を固める
+1. `programs.slug` もしくは同等の安定識別子を schema 側に持つか決める
+2. `programSlug` 暫定仕様を、将来 `program_day_id` / `enrollment_id` ベースへ置き換える設計を決める
+3. Program Detail / Train selection の program 選択状態を、session 作成や day 選択と結びつける
 4. live Supabase 環境で Programs / Detail / Train / Summary の導線を確認する
 5. Auth / RLS の本番向け整理を進める
 
 ## 保留事項
 
-- Programs のデータソースはまだ mock catalog
+- Programs の正式 schema に `slug` 列はまだない
+- Supabase 読込失敗時のみ `mock_catalog` fallback が残る
 - `program` query は暫定仕様で、session / enrollment / day の実選択にはまだ結び付いていない
 - service role / production auth 設定は未整理
 - RLS 方針は未確定
@@ -87,8 +95,8 @@
 
 ## 直近の重要判断
 
-- Programs list / detail / train selection はどれも mock catalog を正本とし、将来 Supabase 差し替えやすいよう helper を挟む
-- Program Detail から Train への受け渡しは、最小 MVP として `programSlug` query を使う
-- `program` query 不一致は 404 ではなく Train 内 warning で扱い、既存 session 表示を壊さない
+- Programs list / detail / train selection の正本は Supabase `programs` とする
+- schema に `slug` 列が未整備のため、route 用 slug は helper で導出する
+- fallback は Supabase 読込失敗時のみ `mock_catalog` を使い、空データはそのまま empty / not_found / invalid として扱う
 - Workout Summary の戻り先は `/` ではなく `/programs`
 - `screens.md` と `PROJECT_STATUS.md` は日本語ベースで維持する

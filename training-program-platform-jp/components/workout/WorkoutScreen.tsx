@@ -306,6 +306,12 @@ function formatFinishedAt(value: string | null) {
   return `完了日時: ${parsed.toLocaleString("ja-JP")}`;
 }
 
+function formatProgramSourceLabel(source: TrainProgramSelection["source"]) {
+  if (source === "supabase") return "Supabase";
+  if (source === "mock_catalog") return "mock catalog";
+  return "unknown";
+}
+
 export function WorkoutScreen({
   session,
   selectedProgram
@@ -950,7 +956,7 @@ export function WorkoutScreen({
               {selectedProgram.programTitle}
             </strong>
             <span className={styles.selectionMeta}>
-              slug: {selectedProgram.programSlug} / source: {selectedProgram.source}
+              slug: {selectedProgram.programSlug} / source: {formatProgramSourceLabel(selectedProgram.source)}
             </span>
           </div>
         ) : null}

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { findProgramCatalogItemBySlug } from "@/lib/programs/program-catalog";
+import { findProgramBySlug } from "@/lib/programs/program-library";
 import type { ProgramDetailState, ProgramDetailView } from "@/types/programs";
 
 type ProgramDetailResult = {
@@ -13,14 +13,14 @@ export async function getProgramDetailView(
   programSlug: string
 ): Promise<ProgramDetailResult> {
   try {
-    const program = findProgramCatalogItemBySlug(programSlug);
+    const { program, source } = await findProgramBySlug(programSlug);
 
     if (!program) {
       return {
         state: "not_found",
         view: {
           program: null,
-          source: "mock_catalog"
+          source
         },
         errorMessage: null
       };
@@ -30,7 +30,7 @@ export async function getProgramDetailView(
       state: "ready",
       view: {
         program,
-        source: "mock_catalog"
+        source
       },
       errorMessage: null
     };

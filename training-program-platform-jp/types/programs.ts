@@ -2,7 +2,7 @@ export type ProgramListState = "ready" | "loading" | "empty" | "error";
 
 export type ProgramDetailState = "ready" | "loading" | "not_found" | "error";
 
-export type ProgramDataSource = "mock_catalog";
+export type ProgramDataSource = "mock_catalog" | "supabase";
 
 export type ProgramSummary = {
   id: string;

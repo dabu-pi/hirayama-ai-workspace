@@ -1,6 +1,6 @@
 import "server-only";
 
-import { findProgramCatalogItemBySlug } from "@/lib/programs/program-catalog";
+import { findProgramBySlug } from "@/lib/programs/program-library";
 import type { TrainProgramSelection } from "@/types/workout";
 
 function normalizeProgramParam(
@@ -29,7 +29,7 @@ export async function getTrainProgramSelection(
     };
   }
 
-  const program = findProgramCatalogItemBySlug(requestedSlug);
+  const { program, source } = await findProgramBySlug(requestedSlug);
 
   if (!program) {
     return {
@@ -37,18 +37,18 @@ export async function getTrainProgramSelection(
       requestedSlug,
       programSlug: null,
       programTitle: null,
-      source: "mock_catalog",
+      source,
       message:
-        "Selected program could not be matched in the current catalog. Train stayed on the current session."
+        "Selected program could not be matched in the current program source. Train stayed on the current session."
     };
   }
 
   return {
     state: "selected",
-    requestedSlug,
-    programSlug: program.slug,
-    programTitle: program.title,
-    source: "mock_catalog",
-    message: null
-  };
+      requestedSlug,
+      programSlug: program.slug,
+      programTitle: program.title,
+      source,
+      message: null
+    };
 }

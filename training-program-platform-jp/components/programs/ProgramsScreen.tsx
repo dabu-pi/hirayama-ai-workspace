@@ -10,6 +10,10 @@ type ProgramsScreenProps = {
   errorMessage?: string | null;
 };
 
+function formatSourceLabel(source: ProgramListView["source"]) {
+  return source === "supabase" ? "Supabase" : "mock catalog";
+}
+
 function resolveTitle(state: ProgramListState) {
   if (state === "loading") return "Loading programs";
   if (state === "error") return "Programs unavailable";
@@ -39,7 +43,7 @@ export function ProgramsScreen({
         <h1 className={styles.title}>{resolveTitle(state)}</h1>
         <p className={styles.lead}>{bodyText}</p>
         <div className={styles.heroMeta}>
-          <span>Source: mock catalog</span>
+          <span>Source: {formatSourceLabel(view.source)}</span>
           <Link className={styles.trainLink} href="/train">
             Go to Train
           </Link>
