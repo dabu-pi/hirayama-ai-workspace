@@ -57,7 +57,11 @@ export function ProgramsScreen({
       ) : (
         <section className={styles.grid}>
           {view.items.map((program) => (
-            <article className={styles.card} key={program.id}>
+            <Link
+              className={styles.card}
+              href={`/programs/${program.slug}`}
+              key={program.id}
+            >
               <div className={styles.cardTop}>
                 <div>
                   <h2 className={styles.cardTitle}>{program.title}</h2>
@@ -65,7 +69,7 @@ export function ProgramsScreen({
                     {program.level ?? "Level TBD"}
                   </p>
                 </div>
-                <span className={styles.detailHint}>Detail soon</span>
+                <span className={styles.detailHint}>Open detail</span>
               </div>
 
               <p className={styles.goalText}>{program.goal ?? "Goal TBD"}</p>
@@ -80,9 +84,9 @@ export function ProgramsScreen({
               </div>
 
               <div className={styles.cardFooter}>
-                <span className={styles.futureLink}>Program detail route coming soon</span>
+                <span className={styles.futureLink}>Open program detail</span>
               </div>
-            </article>
+            </Link>
           ))}
         </section>
       )}

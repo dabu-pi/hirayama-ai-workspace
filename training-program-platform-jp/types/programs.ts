@@ -1,8 +1,10 @@
 export type ProgramListState = "ready" | "loading" | "empty" | "error";
 
-export type ProgramListDataSource = "mock_catalog";
+export type ProgramDetailState = "ready" | "loading" | "not_found" | "error";
 
-export type ProgramListItem = {
+export type ProgramDataSource = "mock_catalog";
+
+export type ProgramSummary = {
   id: string;
   slug: string;
   title: string;
@@ -12,7 +14,18 @@ export type ProgramListItem = {
   durationLabel: string | null;
 };
 
+export type ProgramCatalogItem = ProgramSummary & {
+  overview: string;
+};
+
+export type ProgramListItem = ProgramSummary;
+
 export type ProgramListView = {
   items: ProgramListItem[];
-  source: ProgramListDataSource;
+  source: ProgramDataSource;
+};
+
+export type ProgramDetailView = {
+  program: ProgramCatalogItem | null;
+  source: ProgramDataSource;
 };
