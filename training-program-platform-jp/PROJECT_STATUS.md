@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（ROADMAP 整合・フェーズ A 完了 / Phase B Step 1・2 完了確定）
+最終更新: 2026-04-13（Phase B Step 3 実装 + ローカル確認完了 / live 適用後の全体フロー確認は手動チェック待ち）
 
 ## 現在地
 
@@ -32,6 +32,21 @@
   - 未ログイン時は user-scoped API が 401 を返す
   - 他人の session / set / summary は 404 で触れない
   - `train-session.ts` / `workout-summary.ts` / `enrollment.ts` の `user_id null` 依存を縮小
+- **Phase B Step 3 実装完了（2026-04-13）**
+  - migration 000006: `workout_sessions` / `program_enrollments` の null user_id 行を削除（live Supabase 適用済み）
+  - migration 000007: 両テーブルの `user_id` を NOT NULL に復元。`idx_program_enrollments_active_user_program` の WHERE 句から `user_id IS NOT NULL` を除去（live Supabase 適用済み）
+  - migration 000008: 全テーブルに RLS を有効化 + ポリシー適用（live Supabase 適用済み）
+    - public テーブル（programs/exercises/program_weeks/program_days/program_day_exercises）: anon + authenticated が SELECT 可
+    - user テーブル（users/enrollments/sessions/session_exercises/sets）: `auth.uid() = user_id` に一致する行のみ操作可
+  - コード変更: `session-access.ts` / `enrollment.ts` / `start-session.ts` の client 生成を常に server client へ統一（admin client は RLS を無視するため除去）
+  - typecheck: pass / build: pass 確認済み（commit 07cf8c1）
+- **Phase B Step 3 ローカル動作確認（2026-04-13）**
+  - `/programs` — 未ログインで表示される（server error なし、console error なし）✅
+  - `/programs/gzclp-base` — 未ログインで表示される ✅
+  - `/workout-summary/*` — ローカル dev 環境（Supabase 未設定）では "Supabase is not configured" を表示（live では `/login` へリダイレクト期待）
+  - サーバーログ: error なし ✅
+  - コンソールログ: error なし ✅
+  - 注: ローカル dev 環境では Supabase 接続なしのため mock catalog fallback が動作。live Supabase への full flow 確認は手動チェック待ち
 
 ## 完了済み
 
@@ -156,27 +171,29 @@
 
 ## 次アクション
 
-1. Step 3: `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻し、RLS を適用する
-2. sign up の live 再確認
-   - 現時点では live Supabase Auth の `over_email_send_rate_limit` により browser sign up は未通過
-   - 実装不備ではなく外部レート制限かを切り分け済みなので、時間経過後に再試行する
-3. add exercise / swap exercise の live clickthrough を補完確認する
-   - Step 2 では同じ owner helper を通す実装まで完了
-   - 最小 manual check は finish / summary / foreign set まで実施
+1. **B-3/B-4 live 全体フロー確認（手動 — `docs/phase-b-step3-checklist.md` 参照）**
+   - Supabase dashboard で null 件数 = 0 / NOT NULL 確認 / RLS ポリシー表示を確認する
+   - ログイン済みユーザーで StartSession → Train → Finish → Summary の通しを確認する
+   - 他ユーザーの session_id で Summary アクセス → not found を確認する
+   - 確認完了後 B-3/B-4 を完了クローズする
+2. **B-5: Add Exercise / Swap Exercise の live clickthrough 補完確認**
+   - Step 2 では owner helper を通す実装まで完了
+   - auth 状態での live clickthrough をまだ実施していない
+3. **B-6: sign up 429 の再確認**
+   - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
+   - 時間経過後に再試行する
 4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
 - Supabase 読込失敗時のみ `mock_catalog` fallback が残る
-- `workout_sessions.user_id` / `program_enrollments.user_id` は nullable（MVP、auth 整備後に戻す）
-- program_enrollments の user_id が null のとき unique 制約が効かないため、同一 day の enrollment が複数作られる可能性あり（auth 整備後に解消）
-- Step 1 では `POST /api/workout-sessions` だけ auth 必須化した。finish / set 更新など他の user-scoped API は Step 2 で揃える
-- user-scoped API が `admin client` を使う前提のままだと owner 制約を見落としやすい。Phase B で `server client + RLS` へ寄せる
+- `workout_sessions.user_id` / `program_enrollments.user_id` は NOT NULL に復元済み（migration 000007 live 適用済み）
+- RLS は live Supabase に適用済み（migration 000008）。アプリ側 owner guard との二重防衛で動作
+- `lib/programs/program-library.ts` / `lib/programs/program-detail.ts` は admin client のまま（programs は public RLS ポリシーがあるため実害なし。Phase C で server client 統一を検討）
+- `lib/workout/train-session.ts` / `lib/workout/workout-summary.ts` / `lib/workout/exercise-history.ts` は admin client の可能性あり。RLS 適用後の live 動作確認が必要
 - service role は通常ユーザーフローでは原則不要にする方針。管理処理専用に限定する
 - Delete undo は MVP スコープ外
-- live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち
-- DB 制約としては `workout_sessions.user_id` / `program_enrollments.user_id` がまだ nullable のまま
-- RLS（DB 側の行単位制限）は未適用。現在はアプリ側 owner guard が主防御
+- live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち（外部レート制限、実装不備ではない）
 
 ## テスト状況
 
@@ -184,6 +201,16 @@
   - pass
 - `npm run build`
   - pass
+- **Phase B Step 3 ローカル dev 確認（2026-04-13）**
+  - `/programs` — 未ログイン・Supabase 未設定環境で表示確認 ✅（mock fallback 動作）
+  - `/programs/gzclp-base` — 未ログインで表示確認 ✅
+  - `/workout-summary/test-session-id` — "Supabase is not configured" 表示（Supabase 未設定のため。live 環境では `/login` リダイレクト期待）
+  - server error: なし ✅ / console error: なし ✅
+  - **以下は live Supabase 接続環境でのみ確認可能（`docs/phase-b-step3-checklist.md` 参照）**
+    - null user_id = 0 件（Supabase dashboard で SQL 確認）
+    - NOT NULL / RLS ポリシー適用（dashboard Policies タブで確認）
+    - ログイン後の StartSession → Train → Finish → Summary 全フロー
+    - 他ユーザーの session_id で Summary → not found
 - **Phase B Step 2 local browser + live Supabase 確認（2026-04-12）**
   - sign in 相当
     - auth cookie を使った browser context で `/programs` 表示を確認
