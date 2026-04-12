@@ -154,7 +154,7 @@ export type WorkoutSummaryExercise = {
 
 export type WorkoutSummaryView = {
   sessionId: string;
-  userId: string;
+  userId: string | null;
   status: WorkoutSessionStatus;
   programTitle: string;
   programWeekLabel: string;

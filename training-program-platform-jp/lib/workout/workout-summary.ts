@@ -25,7 +25,7 @@ type WorkoutSummaryResult = {
 
 type WorkoutSessionRow = {
   id: string;
-  user_id: string;
+  user_id: string | null;
   program_day_id: string | null;
   started_at: string;
   finished_at: string | null;
@@ -86,14 +86,20 @@ function buildProgramWeekLabel(
 async function selectWorkoutSession(
   client: DatabaseClient,
   sessionId: string,
-  userId: string
+  userId: string | null
 ) {
-  const { data, error } = await client
+  let query = client
     .from("workout_sessions")
     .select("id, user_id, program_day_id, started_at, finished_at, status")
-    .eq("id", sessionId)
-    .eq("user_id", userId)
-    .maybeSingle<WorkoutSessionRow>();
+    .eq("id", sessionId);
+
+  // auth 整備後は user_id による絞り込みを必須にする
+  // MVP: user_id が null の場合は sessionId のみで取得（admin client 使用前提）
+  if (userId !== null) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query.maybeSingle<WorkoutSessionRow>();
 
   if (error) {
     throw new Error(`Failed to load workout session: ${error.message}`);
@@ -299,14 +305,8 @@ export async function getWorkoutSummaryView(
     const scopedUser = await serverClient.auth.getUser();
     const userId = scopedUser.data.user?.id ?? null;
 
-    if (!userId) {
-      return {
-        summary: null,
-        state: "unauthenticated",
-        errorMessage: "Sign in is required to view this workout summary."
-      };
-    }
-
+    // MVP: user_id が null でも admin client で sessionId のみで取得できる
+    // auth 整備後: userId が null なら unauthenticated を返すよう戻す
     const queryClient = hasSupabaseServiceRoleEnv()
       ? createSupabaseAdminClient()
       : serverClient;
