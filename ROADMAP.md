@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-08（training-trend-analyzer 追加 / 再開導線更新）
+作成: 2026-03-05 / 最終更新: 2026-04-12（training-program-platform-jp 追加 / live E2E 完了）
 
 ---
 
@@ -36,8 +36,11 @@
 ├─ 【廃棄物日報システム】────────────────────────────────────────────→
 │                              要件定義 → 設計 → 実装
 │
-└─ 【接骨院経営戦略AI】─────────────────────────────────────────────→
-                              数値入力 → Claude API実装 → 月次レポート
+├─ 【接骨院経営戦略AI】─────────────────────────────────────────────→
+│                             数値入力 → Claude API実装 → 月次レポート
+│
+└─ 【トレーニングプログラムプラットフォーム】──────────────────────→
+       MVP基盤 ✅ → live E2E ✅ → 認証整備 → RLS → 本番公開
 ```
 
 ---
@@ -289,6 +292,7 @@
 | **3月上旬** | freee自動化: フェーズ3（Gmail下書き）完成 | ✅ 完了 |
 | **4月中旬** | 患者管理Webアプリ: 本番化準備完了・柔整GASと患者ID連携 | ⏸ 待機 |
 | **4月中旬** | トレーニング機器トレンド分析: 第3ソース小規模接続・寄与明細の見える化 | 🔄 進行中 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: live Supabase E2E 完了・enrollment Day 進行確認済み | ✅ 完了 |
 | **4月下旬** | 廃棄物日報システム: 要件定義完了・設計開始 | ⏸ 待機 |
 | **5月** | 接骨院経営戦略AI: 数値入力完了・Claude APIで月次レポート初回生成 | ⏸ 待機 |
 | **6月以降** | 全システム安定稼働・KPIダッシュボード構築 | ⏸ 待機 |
@@ -312,6 +316,7 @@
    7. 運動器初期評価システム JASSESS-01: Phase 1 シート生成 → Phase 2 ロジック実装 → Phase 5 Claude API連携
    8. 接骨院経営戦略AI: 数値入力 → Claude API実装
    9. 廃棄物日報システム: 要件定義 → 設計 → 実装
+  10. トレーニングプログラムプラットフォーム フェーズB: Auth 整備 → RLS → Day 2 再開確認
 ```
 
 ---
@@ -359,4 +364,40 @@
 
 ---
 
-最終更新: 2026-03-23（JASSESS-01 / msk-assessment-platform に再整理 / Phase 0 全完了）
+### トレーニングプログラムプラットフォーム `training-program-platform-jp/`
+
+**現状:** live Supabase E2E 通し確認完了（2026-04-12）。MVP として Programs → 詳細 → セッション開始 → トレーニング → 終了 → 結果画面まで動作確認済み。認証は未実装（user_id nullable の MVP 状態）。
+
+#### フェーズ A — MVP 基盤（完了）
+
+| # | タスク | ステータス |
+|---|---|---|
+| A-1 | Next.js App Router + Supabase 基盤構築 | ✅ 完了 |
+| A-2 | Programs 一覧 / 詳細（Supabase DB 読込） | ✅ 完了 |
+| A-3 | Train 画面（セット記録・完了・削除・追加・交換） | ✅ 完了 |
+| A-4 | Workout Summary（セッション完了後の結果画面） | ✅ 完了 |
+| A-5 | Program Day → Session 開始 MVP（StartSessionScreen） | ✅ 完了 |
+| A-6 | program_enrollments 実装（find-or-create / Day 進行） | ✅ 完了 |
+| A-7 | live Supabase E2E 検証（GZCLP Base 通し確認） | ✅ 完了 |
+| A-8 | Next.js fetch cache 問題修正（`cache: no-store`） | ✅ 完了 |
+
+#### フェーズ B — 認証・本番整備（次フェーズ）
+
+| # | タスク | ステータス |
+|---|---|---|
+| B-1 | Supabase Auth 整備（サインイン / セッション管理） | ⏸ 待機 |
+| B-2 | `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻す | ⏸ 待機（B-1 完了後）|
+| B-3 | RLS（Row Level Security）設計・適用 | ⏸ 待機（B-1 完了後）|
+| B-4 | Day 2 から再開されることの live 確認（enrollment 引き継ぎ） | ⏸ 待機 |
+| B-5 | Exercise History の auth 対応 | ⏸ 待機（B-1 完了後）|
+
+#### 技術スタック
+
+- Next.js 14 App Router + TypeScript
+- Supabase PostgreSQL（programs / program_enrollments / workout_sessions 他）
+- `lib/supabase/server.ts` — `cache: no-store` 設定済み（Next.js 14 fetch cache 対策）
+- seed: `seed/programs/gzclp-base.sql`（GZCLP Base 3週 × 3日）
+
+---
+
+最終更新: 2026-04-12（training-program-platform-jp 追加 / live E2E 完了）
