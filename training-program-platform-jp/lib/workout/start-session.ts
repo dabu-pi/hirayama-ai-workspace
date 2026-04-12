@@ -6,6 +6,7 @@ import {
   hasSupabasePublicEnv,
   hasSupabaseServiceRoleEnv
 } from "@/lib/supabase/server";
+import { findOrCreateEnrollment } from "@/lib/workout/enrollment";
 
 export type StartSessionResult =
   | { ok: true; sessionId: string; reused: boolean }
@@ -30,6 +31,15 @@ type InsertedSessionRow = {
 
 type InsertedSessionExerciseRow = {
   id: string;
+};
+
+type ProgramDayRow = {
+  id: string;
+  program_week_id: string;
+};
+
+type ProgramWeekRow = {
+  program_id: string;
 };
 
 type ProgramDayLabelRow = {
@@ -68,7 +78,37 @@ export async function getProgramDayLabel(programDayId: string): Promise<string> 
 }
 
 /**
+ * Resolves program_id from program_day_id via program_days → program_weeks.
+ */
+async function resolveProgramIdFromDayId(
+  programDayId: string,
+  client: ReturnType<typeof createSupabaseAdminClient>
+): Promise<string | null> {
+  const { data: day, error: dayError } = await client
+    .from("program_days")
+    .select("id, program_week_id")
+    .eq("id", programDayId)
+    .maybeSingle<ProgramDayRow>();
+
+  if (dayError || !day) return null;
+
+  const { data: week, error: weekError } = await client
+    .from("program_weeks")
+    .select("program_id")
+    .eq("id", day.program_week_id)
+    .maybeSingle<ProgramWeekRow>();
+
+  if (weekError || !week) return null;
+
+  return week.program_id;
+}
+
+/**
  * Creates (or reuses) an in_progress workout_session for the given program_day_id.
+ *
+ * Enrollment:
+ *   - find-or-create active enrollment for (userId, programId)
+ *   - link session.program_enrollment_id to enrollment.id
  *
  * Duplicate prevention:
  *   - Checks for an existing in_progress session with the same program_day_id.
@@ -79,7 +119,6 @@ export async function getProgramDayLabel(programDayId: string): Promise<string> 
  *   - Creates one workout_session_exercise per exercise.
  *   - Creates set_count empty workout_sets per exercise (target_reps_text copied).
  *   - user_id is set to the authenticated user if available; null otherwise (nullable column).
- *   - program_enrollment_id is not set (enrollment flow is out of scope for this MVP).
  */
 export async function startSessionForDay(
   programDayId: string
@@ -97,7 +136,6 @@ export async function startSessionForDay(
     : serverClient;
 
   // 0. Guard: check for an existing in_progress session for this day
-  //    Prevents duplicate sessions on button double-tap or page reload.
   {
     let existingQuery = queryClient
       .from("workout_sessions")
@@ -135,13 +173,25 @@ export async function startSessionForDay(
     return { ok: false, reason: "day_not_found" };
   }
 
-  // 2. Insert workout_session
+  // 2. Find-or-create enrollment
+  const programId = await resolveProgramIdFromDayId(programDayId, queryClient);
+  let enrollmentId: string | null = null;
+
+  if (programId) {
+    const enrollment = await findOrCreateEnrollment(programId, programDayId, userId);
+    enrollmentId = enrollment?.id ?? null;
+  }
+
+  // 3. Insert workout_session (linked to enrollment if available)
   const insertSessionPayload: Record<string, unknown> = {
     program_day_id: programDayId,
     status: "in_progress"
   };
   if (userId) {
     insertSessionPayload.user_id = userId;
+  }
+  if (enrollmentId) {
+    insertSessionPayload.program_enrollment_id = enrollmentId;
   }
 
   const { data: sessionRow, error: sessionInsertError } = await queryClient
@@ -157,7 +207,7 @@ export async function startSessionForDay(
 
   const sessionId = sessionRow.id;
 
-  // 3. Seed exercises + sets
+  // 4. Seed exercises + sets
   const exercises = (dayExercises ?? []) as ProgramDayExerciseRow[];
 
   for (const exercise of exercises) {

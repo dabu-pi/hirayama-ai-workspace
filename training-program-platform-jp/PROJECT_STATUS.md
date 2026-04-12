@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-12（二重セッション防止・programDayLabel 動的化）
+最終更新: 2026-04-12（enrollment 最小実装）
 
 ## 現在地
 
@@ -75,6 +75,23 @@
   - 読込成功で 0 件のときは empty / not_found / invalid をそのまま表示
 - Home 導線
   - `/` は Programs を第一導線、Train を第二導線に整理済み
+- **enrollment 最小実装**
+  - helper: `lib/workout/enrollment.ts`
+    - `findActiveEnrollment(programId, userId)` — active enrollment を検索
+    - `findOrCreateEnrollment(programId, firstProgramDayId, userId)` — なければ作成
+    - `resolveStartProgramDayId(programId, firstProgramDayId, userId)` — enrollment current day > first day の優先解決
+    - `findNextProgramDayId(currentDayId)` — 同 week 次 day → 次 week day 1 → null（完了）の順で解決
+    - `advanceEnrollmentAfterSessionComplete(sessionId)` — Finish 後に enrollment を進める
+  - migration: `20260412_000004_enrollment_current_day_id.sql`
+    - `program_enrollments.current_week/current_day` を削除
+    - `program_enrollments.current_program_day_id uuid` を追加（day UUID 直接保持）
+    - `program_enrollments.updated_at` を追加
+    - `program_enrollments.user_id` を nullable 化（MVP、auth 整備後に戻す）
+    - partial unique index: `(user_id, program_id) WHERE status='active' AND user_id IS NOT NULL`
+  - Program Detail → `startProgramDayId` を enrollment ベースで解決（enrollment > firstProgramDayId > null）
+  - `ProgramDetailView` に `startProgramDayId` / `hasActiveEnrollment` を追加
+  - Finish 後に `advanceEnrollmentAfterSessionComplete` を呼び enrollment を次 day へ進める
+  - 最終 day 完了時: `enrollment.status = 'completed'`、`current_program_day_id` は最後の day のまま維持（ゼロ化しない）
 - **session 開始 MVP（program_day_id ベース）**
   - 開始単位: `program_day_id`（Week 1 / Day 1 の UUID）
   - `enrollment_id` は今回スコープ外（未使用）
@@ -98,16 +115,16 @@
 
 ## 次アクション
 
-1. live Supabase 環境でフルフロー（Programs → Detail → StartSession → Train → Summary）の通し確認（要 DB 接続）
-2. enrollment_id / enrollment 進行の設計・実装
-3. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+1. live Supabase 環境でフルフロー（Programs → Detail → StartSession → Train → Finish → enrollment 進行）を通し確認（要 DB 接続）
+2. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+3. Auth 整備後に `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻す
 4. Auth / RLS の本番向け整備を進める
 
 ## 保留事項
 
 - Supabase 読込失敗時のみ `mock_catalog` fallback が残る
-- `workout_sessions.user_id` は nullable（MVP のため `NOT NULL` を drop）
-- enrollment_id / enrollment 進行は未実装
+- `workout_sessions.user_id` / `program_enrollments.user_id` は nullable（MVP、auth 整備後に戻す）
+- program_enrollments の user_id が null のとき unique 制約が効かないため、同一 day の enrollment が複数作られる可能性あり（auth 整備後に解消）
 - service role / production auth 設計は未整理
 - RLS 方針は未着手
 - Delete undo は MVP スコープ外

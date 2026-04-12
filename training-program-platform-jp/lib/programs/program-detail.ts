@@ -4,6 +4,11 @@ import {
   findFirstProgramDayId,
   findProgramBySlug
 } from "@/lib/programs/program-library";
+import {
+  createSupabaseServerClient,
+  hasSupabasePublicEnv
+} from "@/lib/supabase/server";
+import { resolveStartProgramDayId } from "@/lib/workout/enrollment";
 import type { ProgramDetailState, ProgramDetailView } from "@/types/programs";
 
 type ProgramDetailResult = {
@@ -11,6 +16,17 @@ type ProgramDetailResult = {
   view: ProgramDetailView;
   errorMessage: string | null;
 };
+
+async function getCurrentUserId(): Promise<string | null> {
+  if (!hasSupabasePublicEnv()) return null;
+  try {
+    const client = createSupabaseServerClient();
+    const { data } = await client.auth.getUser();
+    return data.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function getProgramDetailView(
   programSlug: string
@@ -24,20 +40,33 @@ export async function getProgramDetailView(
         view: {
           program: null,
           source,
-          firstProgramDayId: null
+          firstProgramDayId: null,
+          startProgramDayId: null,
+          hasActiveEnrollment: false
         },
         errorMessage: null
       };
     }
 
-    const firstProgramDayId = await findFirstProgramDayId(program.id);
+    const [firstProgramDayId, userId] = await Promise.all([
+      findFirstProgramDayId(program.id),
+      getCurrentUserId()
+    ]);
+
+    const { startProgramDayId, hasActiveEnrollment } = await resolveStartProgramDayId(
+      program.id,
+      firstProgramDayId,
+      userId
+    );
 
     return {
       state: "ready",
       view: {
         program,
         source,
-        firstProgramDayId
+        firstProgramDayId,
+        startProgramDayId,
+        hasActiveEnrollment
       },
       errorMessage: null
     };
@@ -49,7 +78,9 @@ export async function getProgramDetailView(
       view: {
         program: null,
         source: "mock_catalog",
-        firstProgramDayId: null
+        firstProgramDayId: null,
+        startProgramDayId: null,
+        hasActiveEnrollment: false
       },
       errorMessage: "Program detail could not be loaded right now. Please try again."
     };

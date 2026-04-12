@@ -6,6 +6,7 @@ import {
   createSupabaseServerClient,
   hasSupabaseServiceRoleEnv
 } from "@/lib/supabase/server";
+import { advanceEnrollmentAfterSessionComplete } from "@/lib/workout/enrollment";
 
 type RouteContext = {
   params: {
@@ -164,6 +165,9 @@ export async function POST(request: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+
+    // Advance enrollment to next day (silent — does not fail the request on error)
+    await advanceEnrollmentAfterSessionComplete(params.id);
 
     revalidatePath("/train");
 

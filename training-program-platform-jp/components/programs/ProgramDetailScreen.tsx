@@ -48,8 +48,9 @@ export function ProgramDetailScreen({
   function buildTrainHref() {
     if (!isReady) return "/train";
     const params = new URLSearchParams({ program: program.slug });
-    if (view.firstProgramDayId) {
-      params.set("programDayId", view.firstProgramDayId);
+    // startProgramDayId: enrollment current day (if active) or first day
+    if (view.startProgramDayId) {
+      params.set("programDayId", view.startProgramDayId);
     }
     return `/train?${params.toString()}`;
   }

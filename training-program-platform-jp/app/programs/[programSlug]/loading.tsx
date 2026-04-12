@@ -7,7 +7,9 @@ export default function ProgramDetailLoading() {
       view={{
         program: null,
         source: "mock_catalog",
-        firstProgramDayId: null
+        firstProgramDayId: null,
+        startProgramDayId: null,
+        hasActiveEnrollment: false
       }}
     />
   );

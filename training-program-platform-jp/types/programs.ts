@@ -30,4 +30,11 @@ export type ProgramDetailView = {
   source: ProgramDataSource;
   /** UUID of week 1 / day 1 for this program. null if not found or Supabase unavailable. */
   firstProgramDayId: string | null;
+  /**
+   * The day to start from when the user taps "Go to Train".
+   * Priority: active enrollment's current_program_day_id > firstProgramDayId > null.
+   */
+  startProgramDayId: string | null;
+  /** True when there is an active enrollment for this program. */
+  hasActiveEnrollment: boolean;
 };
