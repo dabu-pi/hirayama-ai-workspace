@@ -2,11 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { WorkoutSessionStatus } from "@/types/workout";
 
 type DatabaseClient = SupabaseClient;
@@ -49,10 +45,11 @@ export type OwnedWorkoutSet = {
 type SessionExerciseRow = Omit<OwnedWorkoutSessionExercise, "session">;
 type WorkoutSetRow = Omit<OwnedWorkoutSet, "sessionExercise">;
 
+// Always use server client so that RLS policies apply correctly.
+// Admin client (service role) bypasses RLS and must not be used for
+// user-scoped queries.
 export function createWorkoutQueryClient(): DatabaseClient {
-  return hasSupabaseServiceRoleEnv()
-    ? createSupabaseAdminClient()
-    : createSupabaseServerClient();
+  return createSupabaseServerClient();
 }
 
 export async function getAuthenticatedWorkoutUserId() {

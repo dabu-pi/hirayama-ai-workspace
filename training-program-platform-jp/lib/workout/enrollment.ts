@@ -3,10 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
-  createSupabaseAdminClient,
   createSupabaseServerClient,
-  hasSupabasePublicEnv,
-  hasSupabaseServiceRoleEnv
+  hasSupabasePublicEnv
 } from "@/lib/supabase/server";
 
 // ---------------------------------------------------------------------------
@@ -39,10 +37,11 @@ type ProgramWeekRow = {
 // Client helper
 // ---------------------------------------------------------------------------
 
+// Always use server client so that RLS policies apply correctly.
+// Admin client (service role) bypasses RLS and must not be used for
+// user-scoped queries.
 function createQueryClient(): SupabaseClient {
-  return hasSupabaseServiceRoleEnv()
-    ? createSupabaseAdminClient()
-    : createSupabaseServerClient();
+  return createSupabaseServerClient();
 }
 
 // ---------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
-  createSupabaseAdminClient,
   createSupabaseServerClient,
-  hasSupabasePublicEnv,
-  hasSupabaseServiceRoleEnv
+  hasSupabasePublicEnv
 } from "@/lib/supabase/server";
 import { findOrCreateEnrollment } from "@/lib/workout/enrollment";
 
@@ -64,9 +64,7 @@ export async function getProgramDayLabel(programDayId: string): Promise<string> 
   if (!hasSupabasePublicEnv()) return "Week 1 / Day 1";
 
   try {
-    const client = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : createSupabaseServerClient();
+    const client = createSupabaseServerClient();
 
     const { data, error } = await client
       .from("program_days")
@@ -89,7 +87,7 @@ export async function getProgramDayLabel(programDayId: string): Promise<string> 
  */
 async function resolveProgramIdFromDayId(
   programDayId: string,
-  client: ReturnType<typeof createSupabaseAdminClient>
+  client: SupabaseClient
 ): Promise<string | null> {
   const { data: day, error: dayError } = await client
     .from("program_days")
@@ -134,21 +132,20 @@ export async function startSessionForDay(
     return { ok: false, reason: "supabase_unavailable" };
   }
 
-  const serverClient = createSupabaseServerClient();
-  const scopedUser = await serverClient.auth.getUser();
+  // Always use server client so that RLS policies apply correctly.
+  // Admin client (service role) bypasses RLS and must not be used for
+  // user-scoped queries.
+  const client = createSupabaseServerClient();
+  const scopedUser = await client.auth.getUser();
   const userId = scopedUser.data.user?.id ?? null;
 
   if (!userId) {
     return { ok: false, reason: "unauthenticated" };
   }
 
-  const queryClient = hasSupabaseServiceRoleEnv()
-    ? createSupabaseAdminClient()
-    : serverClient;
-
   // 0. Guard: check for an existing in_progress session for this day
   {
-    let existingQuery = queryClient
+    let existingQuery = client
       .from("workout_sessions")
       .select("id")
       .eq("program_day_id", programDayId)
@@ -171,7 +168,7 @@ export async function startSessionForDay(
   }
 
   // 1. Load program_day_exercises
-  const { data: dayExercises, error: dayExercisesError } = await queryClient
+  const { data: dayExercises, error: dayExercisesError } = await client
     .from("program_day_exercises")
     .select("id, exercise_id, exercise_type, set_count, target_reps_text, order_index")
     .eq("program_day_id", programDayId)
@@ -183,7 +180,7 @@ export async function startSessionForDay(
   }
 
   // 2. Find-or-create enrollment
-  const programId = await resolveProgramIdFromDayId(programDayId, queryClient);
+  const programId = await resolveProgramIdFromDayId(programDayId, client);
   let enrollmentId: string | null = null;
 
   if (programId) {
@@ -201,7 +198,7 @@ export async function startSessionForDay(
     insertSessionPayload.program_enrollment_id = enrollmentId;
   }
 
-  const { data: sessionRow, error: sessionInsertError } = await queryClient
+  const { data: sessionRow, error: sessionInsertError } = await client
     .from("workout_sessions")
     .insert(insertSessionPayload)
     .select("id")
@@ -218,7 +215,7 @@ export async function startSessionForDay(
   const exercises = (dayExercises ?? []) as ProgramDayExerciseRow[];
 
   for (const exercise of exercises) {
-    const { data: sessionExercise, error: exerciseInsertError } = await queryClient
+    const { data: sessionExercise, error: exerciseInsertError } = await client
       .from("workout_session_exercises")
       .insert({
         workout_session_id: sessionId,
@@ -252,7 +249,7 @@ export async function startSessionForDay(
       deleted_at: null
     }));
 
-    const { error: setsInsertError } = await queryClient
+    const { error: setsInsertError } = await client
       .from("workout_sets")
       .insert(setsPayload);
 
