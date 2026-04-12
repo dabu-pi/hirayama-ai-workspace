@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-12（live Supabase E2E 検証完了）
+最終更新: 2026-04-12（Phase B Step 1 ログイン基盤実装）
 
 ## 現在地
 
@@ -13,6 +13,15 @@
 - Programs list / detail / train selection は Supabase `programs` 読込を土台にしている
 - route 用 slug の正本は `programs.slug` に移行済み
 - **Program Detail → StartSessionScreen → session 開始** の最小 MVP が完成した
+- **Phase B の設計固定（Auth / user_id 必須化 / RLS / 移行順）が完了**
+  - 設計メモ: `docs/auth-rls-design.md`
+  - 方針: `programs` は public のまま、session / enrollment / summary / history は auth 必須へ戻す
+  - 安全方針: user-scoped API は service role 前提にせず、`server client + RLS` を優先する
+- **Phase B Step 1 ログイン基盤を実装**
+  - `/programs` と `/programs/[programSlug]` は public 維持
+  - `/login` を追加
+  - middleware は `/workout-summary/*` のみ保護
+  - session 開始 API は未ログイン時 401 を返す
 
 ## 完了済み
 
@@ -111,22 +120,49 @@
     - `programDayId` あり + `in_progress` セッション存在 → `WorkoutScreen`
     - `programDayId` あり + セッションなし → `StartSessionScreen`
     - `programDayId` なし → 従来どおり `getCurrentWorkoutSessionView()`
-  - migration: `20260412_000003_nullable_session_user.sql`
+- migration: `20260412_000003_nullable_session_user.sql`
+- **Phase B 設計メモ更新（2026-04-12）**
+  - auth 依存箇所の洗い出しを完了
+  - `user_id` 必須化の DB / API / server / client 変更点を整理
+  - RLS 最小設計案を整理
+  - Workout Summary の auth なし暫定対応を戻す条件を明文化
+  - 実装順を `1. login基盤 -> 2. user_id必須化 -> 3. NOT NULL + RLS` で固定
+- **Phase B Step 1 実装（2026-04-12）**
+  - migration: `20260412_000005_auth_user_profile_trigger.sql`
+    - `auth.users -> public.users` 自動 insert trigger を追加
+    - 既存 `auth.users` の backfill insert を追加
+  - browser client: `lib/supabase/client.ts`
+  - login page: `app/login/page.tsx`
+    - Email / Password の sign in / sign up トグルを追加
+    - 成功時は `/programs` に遷移
+    - env 未設定 / auth エラーの表示あり
+  - middleware: `middleware.ts`
+    - `/workout-summary/*` だけを保護
+    - `/programs` と `/programs/[programSlug]` は保護しない
+  - session 開始の入口だけ先行保護
+    - `lib/workout/start-session.ts`: 未ログイン時 `unauthenticated`
+    - `POST /api/workout-sessions`: 401 を返す
+    - `StartSessionScreen`: 401 時に `/login` 導線を表示
 
 ## 次アクション
 
-1. live Supabase 環境でフルフロー（Programs → Detail → StartSession → Train → Finish → enrollment 進行）を通し確認（要 DB 接続）
-2. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
-3. Auth 整備後に `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻す
-4. Auth / RLS の本番向け整備を進める
+1. live Supabase に `20260412_000005_auth_user_profile_trigger.sql` を適用する
+   - 現ターンでは CLI access token / DB 接続情報がなく、直接 apply は未完了
+   - 適用後に `auth.users -> public.users` 自動作成を再確認する
+2. sign up の live 再確認
+   - `over_email_send_rate_limit` 解消後に browser で再試行する
+3. Step 2: session / set / enrollment 系を auth 必須へ戻し、user-scoped API を `server client + owner 制約` に寄せる
+4. Step 3: `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻し、RLS を適用する
+5. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
 - Supabase 読込失敗時のみ `mock_catalog` fallback が残る
 - `workout_sessions.user_id` / `program_enrollments.user_id` は nullable（MVP、auth 整備後に戻す）
 - program_enrollments の user_id が null のとき unique 制約が効かないため、同一 day の enrollment が複数作られる可能性あり（auth 整備後に解消）
-- service role / production auth 設計は未整理
-- RLS 方針は未着手
+- Step 1 では `POST /api/workout-sessions` だけ auth 必須化した。finish / set 更新など他の user-scoped API は Step 2 で揃える
+- user-scoped API が `admin client` を使う前提のままだと owner 制約を見落としやすい。Phase B で `server client + RLS` へ寄せる
+- service role は通常ユーザーフローでは原則不要にする方針。管理処理専用に限定する
 - Delete undo は MVP スコープ外
 
 ## テスト状況
@@ -135,6 +171,30 @@
   - pass
 - `npm run build`
   - pass
+- **Phase B Step 1 live 手動確認（2026-04-12）**
+  - `/programs`
+    - 未ログインでも表示可
+  - `/programs/gzclp-base`
+    - 未ログインでも表示可
+  - `/workout-summary/[sessionId]`
+    - 未ログイン時は `/login?next=...` へ redirect されることを確認
+  - Program Detail -> StartSession（未ログイン）
+    - `Start Workout` 実行で 401 相当の画面メッセージ「ログインするとワークアウトを開始できます。」を確認
+    - `/login` 導線表示を確認
+  - sign in
+    - **pass**
+    - 確認用の verified test user で `/login` -> `/programs` redirect を確認
+  - StartSession（ログイン済み）
+    - **pass**
+    - `/programs/gzclp-base` -> `Go to Train` -> `Start Workout` で `/train?program=gzclp-base` の WorkoutScreen 表示を確認
+  - sign up
+    - **fail / blocker**
+    - live Supabase Auth が `429 over_email_send_rate_limit` を返し、browser 上で `email rate limit exceeded` 表示
+  - `public.users` 自動作成
+    - **fail / blocker**
+    - admin 作成の verified test user で `public.users` 行の自動作成は確認できず
+    - live には `20260412_000005_auth_user_profile_trigger.sql` が未適用、または同等 trigger が未反映の可能性が高い
+    - 残りの flow 確認のため、検証中のみ `public.users` 行を手動 insert して sign in / StartSession を継続確認
 - **live Supabase E2E（2026-04-12 完了）**
   - Programs → GZCLP Base → StartSession → Train → Finish → Summary まで通し確認済み
   - DB: `workout_sessions.status = completed`, `program_enrollment_id` 紐付き確認済み
@@ -153,6 +213,15 @@
   - 理由: enrollment フローを先に作ると scope が大きくなりすぎる。まず「選んだ day を開始できる」を優先した
 - **`workout_sessions.user_id` を nullable にした（migration 3）**
   - 理由: 未認証 MVP では `public.users` FK を満たせないため。auth 整備後に戻す方針
+- **Phase B の通常ユーザーフローでは service role を使わない方針に修正（2026-04-12）**
+  - 理由: admin client は RLS を無視するため、`ログイン済み` チェックだけだと他人の session / set を触れる危険がある
+  - user-scoped API / loader は `server client + cookie + RLS` を第一選択にする
+- **Step 1 では public 導線を維持する判断（2026-04-12）**
+  - `/programs` と `/programs/[programSlug]` は保護しない
+  - まず `/workout-summary/*` と session 開始だけに auth を入れ、Phase A の閲覧導線を壊さない
+- **Step 1 live 確認は部分完了（2026-04-12）**
+  - sign in / protected route / StartSession auth gate / StartSession logged-in success は確認できた
+  - ただし live 側の sign up は `over_email_send_rate_limit`、`public.users` 自動作成 trigger は未反映の疑いがあり、Step 1 全体の完了判定は保留
 - **Next.js 14 の fetch cache 問題を修正（2026-04-12）**
   - `createSupabaseAdminClient` / `createSupabaseServerClient` に `global.fetch` で `cache: 'no-store'` を設定
   - Server Component から Supabase を呼ぶとき Next.js が fetch 結果をキャッシュしていた

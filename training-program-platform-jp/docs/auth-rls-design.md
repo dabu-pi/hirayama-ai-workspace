@@ -37,6 +37,7 @@ app/api/.../finish/route.ts     POST handler        API Route         null → u
 
 | 箇所 | 理由 |
 |---|---|
+| `lib/programs/program-library.ts` | public programs 読込。RLS 未適用のため暫定で admin client 可 |
 | `lib/workout/enrollment.ts` | enrollment の find-or-create は auth なしでも動く必要があった（MVP） |
 | `lib/workout/start-session.ts` | session insert + 重複チェック |
 | `lib/workout/train-session.ts` | session view ロード |
@@ -47,11 +48,28 @@ app/api/.../finish/route.ts     POST handler        API Route         null → u
 | `app/api/workout-session-exercises/*/` | add set |
 | `app/api/exercises/route.ts` | exercise 一覧 |
 
-**方針:** RLS 有効化後、API Route はサーバーから呼ぶので admin client を使い続ける。Server Component 内では可能な限り server client（anon key + cookie）に切り替え、RLS でデータを絞り込む。
+**重要:** `admin client` は RLS を無視するので、`ログイン済みか` だけのチェックでは不十分。  
+例: `PATCH /api/workout-sets/[id]` が admin client + `if (!user) return 401` だけだと、他人の `set id` を知っているログイン済みユーザーが更新できてしまう。
+
+**方針（修正版）:**
+- public 読込（`programs` / `exercises`）は `server client` へ寄せる
+- user-scoped な API / library（session, set, enrollment, summary, history）は **Phase B で原則 `server client` に統一** する
+- どうしても admin client を使う箇所は、`owner user_id = current user` を JOIN で明示チェックする
+- 「API Route はサーバー側だから admin client でよい」は採用しない
 
 ### 2-C. middleware.ts
 
 **現状: なし。** Phase B で新規作成する。
+
+### 2-D. 今回の対象導線ごとの整理
+
+| 導線 | 現状 | Phase B で固定する方針 |
+|---|---|---|
+| Program Detail | public に見える。`auth.getUser()` は enrollment 開始位置の個人化だけに使っている | `programs` 自体は public のまま。ログイン時のみ自分の enrollment を反映 |
+| Start Session | 未ログインでも session / enrollment を作れてしまう | ログイン必須にし、`user_id` を必ず保存 |
+| Finish | `userId` が null なら sessionId のみで finish できる暫定 | ログイン必須 + 自分の session のみ完了可能 |
+| Workout Summary | `userId` が null でも sessionId だけで閲覧できる暫定 | ログイン必須 + 自分の session のみ閲覧可能 |
+| Enrollment Progress | `program_enrollments.user_id` nullable のため匿名 enrollment が作れる | ログイン必須 + `(user_id, program_id)` の active 1件を維持 |
 
 ---
 
@@ -158,7 +176,25 @@ if (!user) {
 
 **GET /api/exercises は auth 不要**（公開データ）
 
-### 4-D. Client Component
+### 4-D. API の ownership（本人所有）チェック
+
+auth 必須化と同時に、次も必須:
+
+- `workout_sessions/[id]/finish`
+  - `workout_sessions.user_id = currentUser.id` で対象を限定
+- `workout-sessions/[id]/exercises`
+  - 追加先 session の owner を確認
+- `workout-sessions/[id]/exercises/[exerciseId]`
+  - session owner を確認し、`exerciseId` がその session に属することを確認
+- `workout-session-exercises/[id]/sets`
+  - `workout_session_exercises -> workout_sessions.user_id` まで辿って owner を確認
+- `workout-sets/[id]`, `complete`, `delete`, `unlock`
+  - `workout_sets -> workout_session_exercises -> workout_sessions.user_id` まで辿って owner を確認
+
+**実装方針:** user-scoped API は `server client` を優先し、RLS に owner 制約を任せる。  
+admin client を残す場合は、lookup / update の両方で owner 条件を必ず付ける。
+
+### 4-E. Client Component
 
 `StartSessionScreen` の `fetch('/api/workout-sessions', ...)` が 401 を返したとき:
 - エラーメッセージ「ログインしてください」を表示
@@ -260,10 +296,12 @@ create policy "Users can manage own sets"
 
 | 処理 | 理由 |
 |---|---|
-| enrollment 進行（`advanceEnrollmentAfterSessionComplete`） | Finish API 内で enrollment を update するが、Finish 時の user は session owner なので RLS は通る。ただし安全のため admin client を維持する |
-| seed データ投入 | SQL Editor / CLI 経由のため影響なし |
+| migration / seed / SQL Editor / CLI | アプリ実行外の管理作業 |
+| 将来の管理画面からの catalog 更新 | admin が全 program / exercise を更新する場合は別権限が必要 |
 
-**結論:** Phase B 後も API Route では admin client（service role）を使い続ける。admin client は RLS を無視するため、アプリ側の auth チェック（`if (!user) return 401`）が最終防御線になる。Server Component では server client + RLS が第一防御線。
+**結論（修正版）:** Phase B の通常ユーザーフローでは、runtime の service role は原則不要。  
+`programs` / `train` / `summary` / `history` / `set update` / `finish` は `server client + cookie + RLS` で成立させる。  
+service role を使うのは「管理者だけが触る処理」または「アプリ外の migration / seed」に限定する。
 
 ---
 
@@ -312,6 +350,7 @@ query = query.eq("user_id", userId);
 | 既存の user_id=null の workout_sessions / enrollments が NOT NULL 制約で弾かれる | ALTER TABLE が失敗する | 既存 null 行を先に DELETE するか、テスト用ユーザーに紐付ける |
 | middleware.ts 導入時に `/api/*` も保護してしまうと API が動かなくなる | API Route は server 側の auth チェックで守るべき | middleware の matcher で `/api/*` を除外する |
 | RLS ON にしたあと admin client を使わない API Route があると 0 行返る | MVP で使っていた query が突然空になる | RLS ON は **ステップ 3 の最後**、コードの auth チェック追加完了後に行う |
+| user-scoped API が admin client のままだと owner を見落としやすい | ログイン済みユーザーが他人の set/session を触れる危険がある | user-scoped API は server client へ寄せる。残す場合は JOIN で owner 条件を入れる |
 
 ---
 
@@ -336,7 +375,7 @@ query = query.eq("user_id", userId);
 1. `StartSessionResult` に `"unauthenticated"` reason を追加
 2. `startSessionForDay`: userId null → `{ ok: false, reason: "unauthenticated" }` を返す
 3. `getWorkoutSummaryView`: userId null → `unauthenticated` state を返す（元に戻す）
-4. 全 API Route に `if (!user) return 401` ガードを追加
+4. user-scoped API Route を `server client` に寄せ、`if (!user) return 401` + owner 制約を入れる
 5. enrollment.ts の `userId: string | null` を `userId: string` に変更
 6. `types/workout.ts` の `WorkoutSummaryView.userId` を `string` に戻す
 
@@ -360,7 +399,7 @@ query = query.eq("user_id", userId);
 | ステップ | 新規ファイル | 変更ファイル | migration | 所要時間（目安） |
 |---|---|---|---|---|
 | 1. ログイン基盤 | 3（login page, client.ts, middleware.ts） | 0 | 1 | 1セッション |
-| 2. userId 必須化 | 0 | ~12 | 0 | 1セッション |
+| 2. userId 必須化 | 0 | ~12 | 0 | 1-2セッション |
 | 3. DB 整備 | 0 | 0 | 2 | 0.5セッション |
 
 ---

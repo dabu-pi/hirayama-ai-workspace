@@ -51,6 +51,18 @@ export async function POST(request: Request) {
         );
       }
 
+      if (result.reason === "unauthenticated") {
+        return NextResponse.json(
+          {
+            error: {
+              code: "unauthenticated",
+              message: "ログインするとワークアウトを開始できます。"
+            }
+          },
+          { status: 401 }
+        );
+      }
+
       if (result.reason === "day_not_found") {
         return NextResponse.json(
           {

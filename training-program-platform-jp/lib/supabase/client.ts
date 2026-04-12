@@ -6,15 +6,21 @@ function getSupabaseBrowserEnv() {
 
   if (!url || !anonKey) {
     throw new Error(
-      "Supabase environment variables are missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+      "Supabase browser environment variables are missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
     );
   }
 
   return { url, anonKey };
 }
 
+export function hasSupabaseBrowserEnv() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
 export function createSupabaseBrowserClient() {
   const { url, anonKey } = getSupabaseBrowserEnv();
-
   return createBrowserClient(url, anonKey);
 }

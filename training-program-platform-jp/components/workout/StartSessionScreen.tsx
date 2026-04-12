@@ -22,9 +22,11 @@ export function StartSessionScreen({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [requiresLogin, setRequiresLogin] = useState(false);
 
   async function handleStart() {
     setError(null);
+    setRequiresLogin(false);
 
     try {
       const response = await fetch("/api/workout-sessions", {
@@ -37,6 +39,9 @@ export function StartSessionScreen({
         const body = await response.json().catch(() => ({})) as {
           error?: { message?: string };
         };
+        if (response.status === 401) {
+          setRequiresLogin(true);
+        }
         setError(body.error?.message ?? "Failed to start session. Please try again.");
         return;
       }
@@ -71,6 +76,12 @@ export function StartSessionScreen({
       {error && (
         <section className={styles.errorCard}>
           <p>{error}</p>
+          {requiresLogin && (
+            <p>
+              <Link href="/login">Log in</Link>
+              {" "}to create your workout session and keep your progress linked to your account.
+            </p>
+          )}
         </section>
       )}
 

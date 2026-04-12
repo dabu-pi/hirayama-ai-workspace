@@ -18,6 +18,9 @@ type SupabaseCookie = {
   };
 };
 
+type FetchInput = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
+
 function getSupabaseServerEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -64,7 +67,8 @@ export function createSupabaseServerClient() {
     // Next.js 14 patches global fetch and caches responses by default.
     // Force no-store so Server Components always read fresh data from Supabase.
     global: {
-      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" })
+      fetch: (input: FetchInput, init?: FetchInit) =>
+        fetch(input, { ...init, cache: "no-store" })
     }
   });
 }
@@ -87,7 +91,8 @@ export function createSupabaseAdminClient() {
     // Next.js 14 patches global fetch and caches responses by default.
     // Force no-store so Server Components always read fresh data from Supabase.
     global: {
-      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" })
+      fetch: (input: FetchInput, init?: FetchInit) =>
+        fetch(input, { ...init, cache: "no-store" })
     }
   });
 }

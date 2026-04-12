@@ -10,7 +10,14 @@ import { findOrCreateEnrollment } from "@/lib/workout/enrollment";
 
 export type StartSessionResult =
   | { ok: true; sessionId: string; reused: boolean }
-  | { ok: false; reason: "supabase_unavailable" | "day_not_found" | "insert_failed" };
+  | {
+      ok: false;
+      reason:
+        | "supabase_unavailable"
+        | "unauthenticated"
+        | "day_not_found"
+        | "insert_failed";
+    };
 
 type ExistingSessionRow = {
   id: string;
@@ -131,6 +138,10 @@ export async function startSessionForDay(
   const scopedUser = await serverClient.auth.getUser();
   const userId = scopedUser.data.user?.id ?? null;
 
+  if (!userId) {
+    return { ok: false, reason: "unauthenticated" };
+  }
+
   const queryClient = hasSupabaseServiceRoleEnv()
     ? createSupabaseAdminClient()
     : serverClient;
@@ -144,9 +155,7 @@ export async function startSessionForDay(
       .eq("status", "in_progress")
       .limit(1);
 
-    if (userId) {
-      existingQuery = existingQuery.eq("user_id", userId);
-    }
+    existingQuery = existingQuery.eq("user_id", userId);
 
     const { data: existing, error: existingError } =
       await existingQuery.maybeSingle<ExistingSessionRow>();
@@ -185,11 +194,9 @@ export async function startSessionForDay(
   // 3. Insert workout_session (linked to enrollment if available)
   const insertSessionPayload: Record<string, unknown> = {
     program_day_id: programDayId,
+    user_id: userId,
     status: "in_progress"
   };
-  if (userId) {
-    insertSessionPayload.user_id = userId;
-  }
   if (enrollmentId) {
     insertSessionPayload.program_enrollment_id = enrollmentId;
   }
