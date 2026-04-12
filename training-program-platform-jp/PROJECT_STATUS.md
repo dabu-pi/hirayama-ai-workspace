@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-12（enrollment 最小実装）
+最終更新: 2026-04-12（live Supabase E2E 検証完了）
 
 ## 現在地
 
@@ -135,6 +135,10 @@
   - pass
 - `npm run build`
   - pass
+- **live Supabase E2E（2026-04-12 完了）**
+  - Programs → GZCLP Base → StartSession → Train → Finish → Summary まで通し確認済み
+  - DB: `workout_sessions.status = completed`, `program_enrollment_id` 紐付き確認済み
+  - enrollment `current_program_day_id` は Day 2 に進行（SQL Editor で確認）
 
 ## 直近の重要判断
 
@@ -149,3 +153,8 @@
   - 理由: enrollment フローを先に作ると scope が大きくなりすぎる。まず「選んだ day を開始できる」を優先した
 - **`workout_sessions.user_id` を nullable にした（migration 3）**
   - 理由: 未認証 MVP では `public.users` FK を満たせないため。auth 整備後に戻す方針
+- **Next.js 14 の fetch cache 問題を修正（2026-04-12）**
+  - `createSupabaseAdminClient` / `createSupabaseServerClient` に `global.fetch` で `cache: 'no-store'` を設定
+  - Server Component から Supabase を呼ぶとき Next.js が fetch 結果をキャッシュしていた
+  - API Route は影響を受けないが Server Component（page.tsx）は同じ fetch URL をキャッシュする
+  - `force-dynamic` はページのキャッシュを無効化するが fetch キャッシュは別途対処が必要

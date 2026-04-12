@@ -60,6 +60,11 @@ export function createSupabaseServerClient() {
           // Server Components can read auth cookies but may not be able to persist them.
         }
       }
+    },
+    // Next.js 14 patches global fetch and caches responses by default.
+    // Force no-store so Server Components always read fresh data from Supabase.
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" })
     }
   });
 }
@@ -78,6 +83,11 @@ export function createSupabaseAdminClient() {
     auth: {
       autoRefreshToken: false,
       persistSession: false
+    },
+    // Next.js 14 patches global fetch and caches responses by default.
+    // Force no-store so Server Components always read fresh data from Supabase.
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" })
     }
   });
 }
