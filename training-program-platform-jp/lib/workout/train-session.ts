@@ -3,12 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getMockWorkoutSession } from "@/lib/mock/workout";
+import { hasSupabasePublicEnv } from "@/lib/supabase/server";
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabasePublicEnv,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 import type {
   ExerciseType,
   WorkoutExerciseBlock,
@@ -130,23 +129,18 @@ function formatPreviousDisplay(
 
 async function selectCurrentSession(
   client: DatabaseClient,
-  userId: string | null
+  userId: string
 ) {
-  let inProgressQuery = client
+  const { data: inProgressSession, error: inProgressError } = await client
     .from("workout_sessions")
     .select(
       "id, user_id, program_enrollment_id, program_day_id, started_at, finished_at, status"
     )
     .eq("status", "in_progress")
+    .eq("user_id", userId)
     .order("started_at", { ascending: false })
-    .limit(1);
-
-  if (userId) {
-    inProgressQuery = inProgressQuery.eq("user_id", userId);
-  }
-
-  const { data: inProgressSession, error: inProgressError } =
-    await inProgressQuery.maybeSingle<WorkoutSessionRow>();
+    .limit(1)
+    .maybeSingle<WorkoutSessionRow>();
 
   if (inProgressError) {
     throw new Error(
@@ -158,20 +152,15 @@ async function selectCurrentSession(
     return inProgressSession;
   }
 
-  let latestQuery = client
+  const { data: latestSession, error: latestError } = await client
     .from("workout_sessions")
     .select(
       "id, user_id, program_enrollment_id, program_day_id, started_at, finished_at, status"
     )
+    .eq("user_id", userId)
     .order("started_at", { ascending: false })
-    .limit(1);
-
-  if (userId) {
-    latestQuery = latestQuery.eq("user_id", userId);
-  }
-
-  const { data: latestSession, error: latestError } =
-    await latestQuery.maybeSingle<WorkoutSessionRow>();
+    .limit(1)
+    .maybeSingle<WorkoutSessionRow>();
 
   if (latestError) {
     throw new Error(`Failed to load latest workout session: ${latestError.message}`);
@@ -183,23 +172,19 @@ async function selectCurrentSession(
 async function selectSessionByDayId(
   client: DatabaseClient,
   programDayId: string,
-  userId: string | null
+  userId: string
 ) {
-  let query = client
+  const { data, error } = await client
     .from("workout_sessions")
     .select(
       "id, user_id, program_enrollment_id, program_day_id, started_at, finished_at, status"
     )
     .eq("status", "in_progress")
     .eq("program_day_id", programDayId)
+    .eq("user_id", userId)
     .order("started_at", { ascending: false })
-    .limit(1);
-
-  if (userId) {
-    query = query.eq("user_id", userId);
-  }
-
-  const { data, error } = await query.maybeSingle<WorkoutSessionRow>();
+    .limit(1)
+    .maybeSingle<WorkoutSessionRow>();
 
   if (error) {
     throw new Error(`Failed to find session by day id: ${error.message}`);
@@ -618,12 +603,13 @@ export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView
   }
 
   try {
-    const serverClient = createSupabaseServerClient();
-    const scopedUser = await serverClient.auth.getUser();
-    const userId = scopedUser.data.user?.id ?? null;
-    const queryClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : serverClient;
+    const userId = await getAuthenticatedWorkoutUserId();
+
+    if (!userId) {
+      return getMockWorkoutSession();
+    }
+
+    const queryClient = createWorkoutQueryClient();
 
     const session = await selectCurrentSession(queryClient, userId);
 
@@ -648,12 +634,11 @@ export async function findWorkoutSessionByDayId(
   if (!hasSupabasePublicEnv()) return null;
 
   try {
-    const serverClient = createSupabaseServerClient();
-    const scopedUser = await serverClient.auth.getUser();
-    const userId = scopedUser.data.user?.id ?? null;
-    const queryClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : serverClient;
+    const userId = await getAuthenticatedWorkoutUserId();
+
+    if (!userId) return null;
+
+    const queryClient = createWorkoutQueryClient();
 
     const session = await selectSessionByDayId(queryClient, programDayId, userId);
 

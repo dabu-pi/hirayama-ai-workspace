@@ -2,12 +2,11 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { hasSupabasePublicEnv } from "@/lib/supabase/server";
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabasePublicEnv,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 import type {
   ExerciseType,
   WorkoutSessionStatus,
@@ -25,7 +24,7 @@ type WorkoutSummaryResult = {
 
 type WorkoutSessionRow = {
   id: string;
-  user_id: string | null;
+  user_id: string;
   program_day_id: string | null;
   started_at: string;
   finished_at: string | null;
@@ -86,20 +85,14 @@ function buildProgramWeekLabel(
 async function selectWorkoutSession(
   client: DatabaseClient,
   sessionId: string,
-  userId: string | null
+  userId: string
 ) {
-  let query = client
+  const { data, error } = await client
     .from("workout_sessions")
     .select("id, user_id, program_day_id, started_at, finished_at, status")
-    .eq("id", sessionId);
-
-  // auth 整備後は user_id による絞り込みを必須にする
-  // MVP: user_id が null の場合は sessionId のみで取得（admin client 使用前提）
-  if (userId !== null) {
-    query = query.eq("user_id", userId);
-  }
-
-  const { data, error } = await query.maybeSingle<WorkoutSessionRow>();
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .maybeSingle<WorkoutSessionRow>();
 
   if (error) {
     throw new Error(`Failed to load workout session: ${error.message}`);
@@ -301,15 +294,17 @@ export async function getWorkoutSummaryView(
   }
 
   try {
-    const serverClient = createSupabaseServerClient();
-    const scopedUser = await serverClient.auth.getUser();
-    const userId = scopedUser.data.user?.id ?? null;
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    // MVP: user_id が null でも admin client で sessionId のみで取得できる
-    // auth 整備後: userId が null なら unauthenticated を返すよう戻す
-    const queryClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : serverClient;
+    if (!userId) {
+      return {
+        summary: null,
+        state: "unauthenticated",
+        errorMessage: "ログイン中の本人データだけ Summary を表示します。"
+      };
+    }
+
+    const queryClient = createWorkoutQueryClient();
 
     const session = await selectWorkoutSession(queryClient, sessionId, userId);
 

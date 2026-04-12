@@ -1,12 +1,11 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
 import { advanceEnrollmentAfterSessionComplete } from "@/lib/workout/enrollment";
+import {
+  createWorkoutQueryClient,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 
 type RouteContext = {
   params: {
@@ -18,22 +17,14 @@ type FinishRequestBody = {
   forceFinish?: boolean;
 };
 
-type WorkoutSessionRow = {
-  id: string;
-  user_id: string;
-  status: "in_progress" | "completed" | "cancelled";
-  finished_at: string | null;
-};
-
 type WorkoutSessionExerciseRow = {
   id: string;
 };
 
 async function countIncompleteSets(
   workoutSessionId: string,
-  createClient: typeof createSupabaseAdminClient | typeof createSupabaseServerClient
+  supabase: ReturnType<typeof createWorkoutQueryClient>
 ) {
-  const supabase = createClient();
   const { data: sessionExercises, error: sessionExercisesError } = await supabase
     .from("workout_session_exercises")
     .select("id")
@@ -74,25 +65,33 @@ export async function POST(request: Request, { params }: RouteContext) {
     const body = (await request.json().catch(() => ({}))) as FinishRequestBody;
     const forceFinish = body.forceFinish === true;
     const summaryPath = `/workout-summary/${params.id}`;
-    const serverClient = createSupabaseServerClient();
-    const scopedUser = await serverClient.auth.getUser();
-    const userId = scopedUser.data.user?.id ?? null;
-    const createClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient
-      : createSupabaseServerClient;
-    const supabase = createClient();
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    let sessionQuery = supabase
-      .from("workout_sessions")
-      .select("id, user_id, status, finished_at")
-      .eq("id", params.id);
-
-    if (userId) {
-      sessionQuery = sessionQuery.eq("user_id", userId);
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthenticated",
+            message: "ログインすると Finish を実行できます。"
+          }
+        },
+        { status: 401 }
+      );
     }
 
-    const { data: session, error: sessionError } =
-      await sessionQuery.maybeSingle<WorkoutSessionRow>();
+    const supabase = createWorkoutQueryClient();
+
+    const { data: session, error: sessionError } = await supabase
+      .from("workout_sessions")
+      .select("id, user_id, status, finished_at")
+      .eq("id", params.id)
+      .eq("user_id", userId)
+      .maybeSingle<{
+        id: string;
+        user_id: string;
+        status: "in_progress" | "completed" | "cancelled";
+        finished_at: string | null;
+      }>();
 
     if (sessionError) {
       return NextResponse.json(
@@ -118,7 +117,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const incompleteSetCount = await countIncompleteSets(params.id, createClient);
+    const incompleteSetCount = await countIncompleteSets(params.id, supabase);
 
     if (session.status === "completed") {
       return NextResponse.json({
@@ -167,7 +166,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     // Advance enrollment to next day (silent — does not fail the request on error)
-    await advanceEnrollmentAfterSessionComplete(params.id);
+    await advanceEnrollmentAfterSessionComplete(params.id, userId);
 
     revalidatePath("/train");
 

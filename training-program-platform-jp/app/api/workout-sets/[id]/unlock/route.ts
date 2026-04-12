@@ -2,10 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  findOwnedWorkoutSet,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 
 type RouteContext = {
   params: {
@@ -13,26 +13,28 @@ type RouteContext = {
   };
 };
 
-type WorkoutSetMutationRow = {
-  id: string;
-  is_completed: boolean;
-  is_locked: boolean;
-  deleted_at: string | null;
-};
-
 export async function POST(_: Request, { params }: RouteContext) {
   try {
-    const supabase = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : createSupabaseServerClient();
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    const { data: targetSet, error: selectError } = await supabase
-      .from("workout_sets")
-      .select("id, is_completed, is_locked, deleted_at")
-      .eq("id", params.id)
-      .maybeSingle<WorkoutSetMutationRow>();
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthenticated",
+            message: "ログインするとセットを解除できます。"
+          }
+        },
+        { status: 401 }
+      );
+    }
 
-    if (selectError) {
+    const supabase = createWorkoutQueryClient();
+
+    let targetSet;
+    try {
+      targetSet = await findOwnedWorkoutSet(supabase, params.id, userId);
+    } catch {
       return NextResponse.json(
         {
           error: {
@@ -53,6 +55,18 @@ export async function POST(_: Request, { params }: RouteContext) {
           }
         },
         { status: 404 }
+      );
+    }
+
+    if (targetSet.sessionExercise.session.status === "completed") {
+      return NextResponse.json(
+        {
+          error: {
+            code: "session_completed",
+            message: "Completed sessions cannot be edited."
+          }
+        },
+        { status: 409 }
       );
     }
 
@@ -82,10 +96,9 @@ export async function POST(_: Request, { params }: RouteContext) {
       .update({
         is_completed: false,
         is_locked: false,
-        // When unlock cancels the completion state, MVP should also clear the completion timestamp.
         completed_at: null
       })
-      .eq("id", params.id)
+      .eq("id", targetSet.id)
       .is("deleted_at", null);
 
     if (updateError) {
@@ -103,7 +116,7 @@ export async function POST(_: Request, { params }: RouteContext) {
     revalidatePath("/train");
 
     return NextResponse.json({
-      id: params.id,
+      id: targetSet.id,
       isCompleted: false,
       isLocked: false,
       completedAt: null

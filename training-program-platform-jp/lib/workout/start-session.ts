@@ -125,7 +125,7 @@ async function resolveProgramIdFromDayId(
  *   - Reads program_day_exercises for the day, ordered by order_index.
  *   - Creates one workout_session_exercise per exercise.
  *   - Creates set_count empty workout_sets per exercise (target_reps_text copied).
- *   - user_id is set to the authenticated user if available; null otherwise (nullable column).
+ *   - user_id is always the authenticated user.
  */
 export async function startSessionForDay(
   programDayId: string

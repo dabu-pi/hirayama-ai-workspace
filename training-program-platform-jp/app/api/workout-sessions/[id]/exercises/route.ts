@@ -2,10 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  findOwnedWorkoutSession,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 
 type RouteContext = {
   params: {
@@ -15,11 +15,6 @@ type RouteContext = {
 
 type AddExerciseRequestBody = {
   exercise_id?: string;
-};
-
-type WorkoutSessionRow = {
-  id: string;
-  status: "in_progress" | "completed" | "cancelled";
 };
 
 type ExerciseRow = {
@@ -73,19 +68,26 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const createClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient
-      : createSupabaseServerClient;
-    const supabase = createClient();
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    // 1. セッション存在確認（404）
-    const { data: session, error: sessionError } = await supabase
-      .from("workout_sessions")
-      .select("id, status")
-      .eq("id", params.id)
-      .maybeSingle<WorkoutSessionRow>();
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthenticated",
+            message: "ログインすると種目を追加できます。"
+          }
+        },
+        { status: 401 }
+      );
+    }
 
-    if (sessionError) {
+    const supabase = createWorkoutQueryClient();
+
+    let session;
+    try {
+      session = await findOwnedWorkoutSession(supabase, params.id, userId);
+    } catch {
       return NextResponse.json(
         {
           error: {
@@ -109,7 +111,6 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 2. completed セッションへの追加を拒否（409）
     if (session.status === "completed") {
       return NextResponse.json(
         {
@@ -122,7 +123,6 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 3. 種目存在確認（404）
     const { data: exercise, error: exerciseError } = await supabase
       .from("exercises")
       .select("id, slug, name_ja, name_en")
@@ -153,11 +153,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 4. order_index = 削除済みを含む既存最大値 + 1
     const { data: existingExercises, error: existingError } = await supabase
       .from("workout_session_exercises")
       .select("order_index")
-      .eq("workout_session_id", params.id)
+      .eq("workout_session_id", session.id)
       .order("order_index", { ascending: false })
       .limit(1);
 
@@ -177,11 +176,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       ((existingExercises ?? []) as OrderIndexRow[])[0]?.order_index ?? 0;
     const newOrderIndex = maxOrderIndex + 1;
 
-    // 5. workout_session_exercises に insert（was_added = true）
     const { data: insertedExercise, error: insertExerciseError } = await supabase
       .from("workout_session_exercises")
       .insert({
-        workout_session_id: params.id,
+        workout_session_id: session.id,
         exercise_id: exerciseId,
         exercise_type: "T3",
         order_index: newOrderIndex,
@@ -205,7 +203,6 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 6. 初期セットを 1 行 insert
     const { data: insertedSet, error: insertSetError } = await supabase
       .from("workout_sets")
       .insert({

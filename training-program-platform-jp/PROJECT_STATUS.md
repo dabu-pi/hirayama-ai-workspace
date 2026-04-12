@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-12（Phase B Step 1 ログイン基盤実装）
+最終更新: 2026-04-12（Phase B Step 2 owner 制約実装）
 
 ## 現在地
 
@@ -22,6 +22,16 @@
   - `/login` を追加
   - middleware は `/workout-summary/*` のみ保護
   - session 開始 API は未ログイン時 401 を返す
+- **Phase B Step 1 の live 再確認を実施**
+  - `auth.users -> public.users` 自動作成 trigger の live 反映を確認
+  - `/login` -> `/programs` の sign in 導線を再確認
+  - `/workout-summary/*` の未ログイン保護を再確認
+  - Program Detail -> StartSession の未ログイン 401 / ログイン後 201 を再確認
+- **Phase B Step 2 を実装**
+  - finish / workout summary / workout_sets / workout_session_exercises / session exercise mutation を本人限定へ変更
+  - 未ログイン時は user-scoped API が 401 を返す
+  - 他人の session / set / summary は 404 で触れない
+  - `train-session.ts` / `workout-summary.ts` / `enrollment.ts` の `user_id null` 依存を縮小
 
 ## 完了済み
 
@@ -146,14 +156,14 @@
 
 ## 次アクション
 
-1. live Supabase に `20260412_000005_auth_user_profile_trigger.sql` を適用する
-   - 現ターンでは CLI access token / DB 接続情報がなく、直接 apply は未完了
-   - 適用後に `auth.users -> public.users` 自動作成を再確認する
+1. Step 3: `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻し、RLS を適用する
 2. sign up の live 再確認
-   - `over_email_send_rate_limit` 解消後に browser で再試行する
-3. Step 2: session / set / enrollment 系を auth 必須へ戻し、user-scoped API を `server client + owner 制約` に寄せる
-4. Step 3: `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に戻し、RLS を適用する
-5. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+   - 現時点では live Supabase Auth の `over_email_send_rate_limit` により browser sign up は未通過
+   - 実装不備ではなく外部レート制限かを切り分け済みなので、時間経過後に再試行する
+3. add exercise / swap exercise の live clickthrough を補完確認する
+   - Step 2 では同じ owner helper を通す実装まで完了
+   - 最小 manual check は finish / summary / foreign set まで実施
+4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
@@ -164,6 +174,9 @@
 - user-scoped API が `admin client` を使う前提のままだと owner 制約を見落としやすい。Phase B で `server client + RLS` へ寄せる
 - service role は通常ユーザーフローでは原則不要にする方針。管理処理専用に限定する
 - Delete undo は MVP スコープ外
+- live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち
+- DB 制約としては `workout_sessions.user_id` / `program_enrollments.user_id` がまだ nullable のまま
+- RLS（DB 側の行単位制限）は未適用。現在はアプリ側 owner guard が主防御
 
 ## テスト状況
 
@@ -171,30 +184,49 @@
   - pass
 - `npm run build`
   - pass
-- **Phase B Step 1 live 手動確認（2026-04-12）**
+- **Phase B Step 2 local browser + live Supabase 確認（2026-04-12）**
+  - sign in 相当
+    - auth cookie を使った browser context で `/programs` 表示を確認
+  - StartSession（本人）
+    - user A / user B とも `POST /api/workout-sessions` が `201`
+  - workout summary（未ログイン）
+    - `/workout-summary/[sessionId]` は `/login?next=...` へ redirect
+  - Finish（未ログイン）
+    - `POST /api/workout-sessions/[id]/finish` が `401`
+  - Finish（他人 session）
+    - user A から user B の session finish は `404`
+  - workout set complete（他人 set）
+    - user A から user B の set complete は `404`
+  - Finish（本人 session）
+    - user A の session finish は `200`
+    - `summaryPath` を返し、本人 summary を表示
+  - workout summary（他人 session）
+    - user A で user B の summary を開くと `Workout summary not found`
+- **Phase B Step 1 live 手動確認（2026-04-12 再確認済み）**
   - `/programs`
     - 未ログインでも表示可
   - `/programs/gzclp-base`
     - 未ログインでも表示可
   - `/workout-summary/[sessionId]`
-    - 未ログイン時は `/login?next=...` へ redirect されることを確認
+    - 未ログイン時は `/login?next=...` へ redirect されることを再確認
   - Program Detail -> StartSession（未ログイン）
-    - `Start Workout` 実行で 401 相当の画面メッセージ「ログインするとワークアウトを開始できます。」を確認
-    - `/login` 導線表示を確認
+    - `POST /api/workout-sessions` が `401` を返すことを確認
+    - メッセージ「ログインするとワークアウトを開始できます。」と `/login` 導線表示を再確認
   - sign in
     - **pass**
-    - 確認用の verified test user で `/login` -> `/programs` redirect を確認
+    - fresh verified test user で `/login` -> `/programs` redirect を再確認
   - StartSession（ログイン済み）
     - **pass**
-    - `/programs/gzclp-base` -> `Go to Train` -> `Start Workout` で `/train?program=gzclp-base` の WorkoutScreen 表示を確認
-  - sign up
-    - **fail / blocker**
-    - live Supabase Auth が `429 over_email_send_rate_limit` を返し、browser 上で `email rate limit exceeded` 表示
+    - `POST /api/workout-sessions` が `201` を返し、`sessionId` を受け取れることを確認
+    - `/programs/gzclp-base` -> `Go to Train` -> `Start Workout` 後に `/train?program=gzclp-base` へ遷移し、WorkoutScreen 表示を再確認
   - `public.users` 自動作成
-    - **fail / blocker**
-    - admin 作成の verified test user で `public.users` 行の自動作成は確認できず
-    - live には `20260412_000005_auth_user_profile_trigger.sql` が未適用、または同等 trigger が未反映の可能性が高い
-    - 残りの flow 確認のため、検証中のみ `public.users` 行を手動 insert して sign in / StartSession を継続確認
+    - **pass**
+    - live Supabase で fresh verified test user 作成直後に `public.users(id)` 行が自動作成されることを確認
+    - `20260412_000005_auth_user_profile_trigger.sql` の live 反映前提で再確認完了
+  - sign up
+    - **pending / external**
+    - live Supabase Auth が引き続き `429 over_email_send_rate_limit` を返し、browser 上で `email rate limit exceeded` 表示
+    - auth user は作成されず、外部レート制限継続中と判断
 - **live Supabase E2E（2026-04-12 完了）**
   - Programs → GZCLP Base → StartSession → Train → Finish → Summary まで通し確認済み
   - DB: `workout_sessions.status = completed`, `program_enrollment_id` 紐付き確認済み
@@ -219,9 +251,13 @@
 - **Step 1 では public 導線を維持する判断（2026-04-12）**
   - `/programs` と `/programs/[programSlug]` は保護しない
   - まず `/workout-summary/*` と session 開始だけに auth を入れ、Phase A の閲覧導線を壊さない
-- **Step 1 live 確認は部分完了（2026-04-12）**
-  - sign in / protected route / StartSession auth gate / StartSession logged-in success は確認できた
-  - ただし live 側の sign up は `over_email_send_rate_limit`、`public.users` 自動作成 trigger は未反映の疑いがあり、Step 1 全体の完了判定は保留
+- **Step 1 は完了扱いに更新（2026-04-12）**
+  - `auth.users -> public.users` 自動作成 trigger の live 反映を確認
+  - sign in / protected route / StartSession auth gate / StartSession logged-in success を再確認
+  - browser sign up は `over_email_send_rate_limit` 継続中だが、外部レート制限による pending と判断し Step 1 の blocker から外す
+- **Step 2 はアプリ側 owner guard を優先して実装（2026-04-12）**
+  - RLS 前でも、finish / summary / set mutation / session exercise mutation は `user_id` と関連 session を必ず照合する
+  - 未ログインは `401`、他人データは `404`、完了済み session への mutation は `409` で止める
 - **Next.js 14 の fetch cache 問題を修正（2026-04-12）**
   - `createSupabaseAdminClient` / `createSupabaseServerClient` に `global.fetch` で `cache: 'no-store'` を設定
   - Server Component から Supabase を呼ぶとき Next.js が fetch 結果をキャッシュしていた

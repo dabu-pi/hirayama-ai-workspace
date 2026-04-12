@@ -2,19 +2,15 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  findOwnedWorkoutSessionExercise,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 
 type RouteContext = {
   params: {
     id: string;
   };
-};
-
-type WorkoutSessionExerciseRow = {
-  id: string;
 };
 
 type ExistingWorkoutSetRow = {
@@ -39,18 +35,30 @@ type InsertedWorkoutSetRow = {
 
 export async function POST(_: Request, { params }: RouteContext) {
   try {
-    const supabase = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : createSupabaseServerClient();
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    const { data: workoutSessionExercise, error: sessionExerciseError } =
-      await supabase
-        .from("workout_session_exercises")
-        .select("id")
-        .eq("id", params.id)
-        .maybeSingle<WorkoutSessionExerciseRow>();
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthenticated",
+            message: "ログインするとセットを追加できます。"
+          }
+        },
+        { status: 401 }
+      );
+    }
 
-    if (sessionExerciseError) {
+    const supabase = createWorkoutQueryClient();
+
+    let workoutSessionExercise;
+    try {
+      workoutSessionExercise = await findOwnedWorkoutSessionExercise(
+        supabase,
+        params.id,
+        userId
+      );
+    } catch {
       return NextResponse.json(
         {
           error: {
@@ -74,10 +82,22 @@ export async function POST(_: Request, { params }: RouteContext) {
       );
     }
 
+    if (workoutSessionExercise.session.status === "completed") {
+      return NextResponse.json(
+        {
+          error: {
+            code: "session_completed",
+            message: "Cannot add a set to a completed session."
+          }
+        },
+        { status: 409 }
+      );
+    }
+
     const { data: existingSets, error: existingSetsError } = await supabase
       .from("workout_sets")
       .select("set_number, target_reps_text, deleted_at")
-      .eq("workout_session_exercise_id", params.id)
+      .eq("workout_session_exercise_id", workoutSessionExercise.id)
       .order("set_number", { ascending: false });
 
     if (existingSetsError) {
@@ -93,8 +113,7 @@ export async function POST(_: Request, { params }: RouteContext) {
     }
 
     const normalizedExistingSets = (existingSets ?? []) as ExistingWorkoutSetRow[];
-    const nextSetNumber =
-      (normalizedExistingSets[0]?.set_number ?? 0) + 1;
+    const nextSetNumber = (normalizedExistingSets[0]?.set_number ?? 0) + 1;
     const previousVisibleSet = normalizedExistingSets.find(
       (set) => set.deleted_at === null
     );
@@ -103,7 +122,7 @@ export async function POST(_: Request, { params }: RouteContext) {
     const { data: insertedSet, error: insertError } = await supabase
       .from("workout_sets")
       .insert({
-        workout_session_exercise_id: params.id,
+        workout_session_exercise_id: workoutSessionExercise.id,
         set_number: nextSetNumber,
         target_reps_text: targetRepsText,
         weight_kg: null,

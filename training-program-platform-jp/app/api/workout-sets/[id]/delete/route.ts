@@ -2,10 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  findOwnedWorkoutSet,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 
 type RouteContext = {
   params: {
@@ -15,21 +15,26 @@ type RouteContext = {
 
 export async function POST(_: Request, { params }: RouteContext) {
   try {
-    const supabase = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : createSupabaseServerClient();
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    const { data: targetSet, error: selectError } = await supabase
-      .from("workout_sets")
-      .select("id, is_locked, deleted_at")
-      .eq("id", params.id)
-      .maybeSingle<{
-        id: string;
-        is_locked: boolean;
-        deleted_at: string | null;
-      }>();
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthenticated",
+            message: "ログインするとセットを削除できます。"
+          }
+        },
+        { status: 401 }
+      );
+    }
 
-    if (selectError) {
+    const supabase = createWorkoutQueryClient();
+
+    let targetSet;
+    try {
+      targetSet = await findOwnedWorkoutSet(supabase, params.id, userId);
+    } catch {
       return NextResponse.json(
         {
           error: {
@@ -50,6 +55,18 @@ export async function POST(_: Request, { params }: RouteContext) {
           }
         },
         { status: 404 }
+      );
+    }
+
+    if (targetSet.sessionExercise.session.status === "completed") {
+      return NextResponse.json(
+        {
+          error: {
+            code: "session_completed",
+            message: "Completed sessions cannot be edited."
+          }
+        },
+        { status: 409 }
       );
     }
 
@@ -81,7 +98,7 @@ export async function POST(_: Request, { params }: RouteContext) {
     const { error: updateError } = await supabase
       .from("workout_sets")
       .update({ deleted_at: deletedAt })
-      .eq("id", params.id)
+      .eq("id", targetSet.id)
       .is("deleted_at", null);
 
     if (updateError) {
@@ -99,7 +116,7 @@ export async function POST(_: Request, { params }: RouteContext) {
     revalidatePath("/train");
 
     return NextResponse.json({
-      id: params.id,
+      id: targetSet.id,
       deletedAt
     });
   } catch (error) {

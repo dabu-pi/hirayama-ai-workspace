@@ -2,10 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  findOwnedWorkoutSet,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 
 type RouteContext = {
   params: {
@@ -75,19 +75,26 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     const repsDone = parseNullableReps(body.repsDone);
     const isAutoFilled = parseIsAutoFilled(body.isAutoFilled);
 
-    const supabase = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : createSupabaseServerClient();
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    const { data: targetSet, error: selectError } = await supabase
-      .from("workout_sets")
-      .select(
-        "id, weight_kg, reps_done, is_auto_filled, is_locked, is_completed, completed_at, deleted_at"
-      )
-      .eq("id", params.id)
-      .maybeSingle<WorkoutSetPatchRow>();
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthenticated",
+            message: "ログインするとセットを編集できます。"
+          }
+        },
+        { status: 401 }
+      );
+    }
 
-    if (selectError) {
+    const supabase = createWorkoutQueryClient();
+
+    let targetSet;
+    try {
+      targetSet = await findOwnedWorkoutSet(supabase, params.id, userId);
+    } catch {
       return NextResponse.json(
         {
           error: {
@@ -108,6 +115,18 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           }
         },
         { status: 404 }
+      );
+    }
+
+    if (targetSet.sessionExercise.session.status === "completed") {
+      return NextResponse.json(
+        {
+          error: {
+            code: "session_completed",
+            message: "Completed sessions cannot be edited."
+          }
+        },
+        { status: 409 }
       );
     }
 
@@ -142,7 +161,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         reps_done: repsDone,
         is_auto_filled: isAutoFilled
       })
-      .eq("id", params.id)
+      .eq("id", targetSet.id)
       .is("deleted_at", null)
       .eq("is_locked", false)
       .select(

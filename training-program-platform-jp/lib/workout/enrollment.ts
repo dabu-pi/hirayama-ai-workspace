@@ -15,7 +15,7 @@ import {
 
 type EnrollmentRow = {
   id: string;
-  user_id: string | null;
+  user_id: string;
   program_id: string;
   current_program_day_id: string | null;
   status: "active" | "paused" | "completed";
@@ -51,33 +51,27 @@ function createQueryClient(): SupabaseClient {
 
 /**
  * Returns the active enrollment for the given (userId, programId) pair.
- * userId null is allowed for MVP (unauthenticated sessions).
  */
 export async function findActiveEnrollment(
   programId: string,
   userId: string | null
 ): Promise<EnrollmentRow | null> {
   if (!hasSupabasePublicEnv()) return null;
+  if (!userId) return null;
 
   try {
     const client = createQueryClient();
 
-    let query = client
+    const { data, error } = await client
       .from("program_enrollments")
       .select(
         "id, user_id, program_id, current_program_day_id, status, started_at, updated_at"
       )
       .eq("program_id", programId)
       .eq("status", "active")
-      .limit(1);
-
-    if (userId) {
-      query = query.eq("user_id", userId);
-    } else {
-      query = query.is("user_id", null);
-    }
-
-    const { data, error } = await query.maybeSingle<EnrollmentRow>();
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle<EnrollmentRow>();
 
     if (error) {
       console.error("enrollment: failed to find active enrollment.", error);
@@ -103,7 +97,7 @@ export async function findActiveEnrollment(
 export async function findOrCreateEnrollment(
   programId: string,
   firstProgramDayId: string,
-  userId: string | null
+  userId: string
 ): Promise<EnrollmentRow | null> {
   if (!hasSupabasePublicEnv()) return null;
 
@@ -113,18 +107,14 @@ export async function findOrCreateEnrollment(
     const existing = await findActiveEnrollment(programId, userId);
     if (existing) return existing;
 
-    const insertPayload: Record<string, unknown> = {
-      program_id: programId,
-      current_program_day_id: firstProgramDayId,
-      status: "active"
-    };
-    if (userId) {
-      insertPayload.user_id = userId;
-    }
-
     const { data, error } = await client
       .from("program_enrollments")
-      .insert(insertPayload)
+      .insert({
+        program_id: programId,
+        current_program_day_id: firstProgramDayId,
+        status: "active",
+        user_id: userId
+      })
       .select(
         "id, user_id, program_id, current_program_day_id, status, started_at, updated_at"
       )
@@ -157,6 +147,9 @@ export async function resolveStartProgramDayId(
   userId: string | null
 ): Promise<{ startProgramDayId: string | null; hasActiveEnrollment: boolean }> {
   if (!hasSupabasePublicEnv()) {
+    return { startProgramDayId: firstProgramDayId, hasActiveEnrollment: false };
+  }
+  if (!userId) {
     return { startProgramDayId: firstProgramDayId, hasActiveEnrollment: false };
   }
 
@@ -264,7 +257,8 @@ export async function findNextProgramDayId(
  * Silently returns on any error — session finish should not fail because of enrollment.
  */
 export async function advanceEnrollmentAfterSessionComplete(
-  workoutSessionId: string
+  workoutSessionId: string,
+  userId?: string
 ): Promise<void> {
   if (!hasSupabasePublicEnv()) return;
 
@@ -274,25 +268,39 @@ export async function advanceEnrollmentAfterSessionComplete(
     // 1. Load session to get program_day_id and program_enrollment_id
     type SessionRow = {
       id: string;
+      user_id: string;
       program_day_id: string | null;
       program_enrollment_id: string | null;
     };
 
-    const { data: session, error: sessionError } = await client
+    let sessionQuery = client
       .from("workout_sessions")
-      .select("id, program_day_id, program_enrollment_id")
-      .eq("id", workoutSessionId)
-      .maybeSingle<SessionRow>();
+      .select("id, user_id, program_day_id, program_enrollment_id")
+      .eq("id", workoutSessionId);
 
-    if (sessionError || !session?.program_enrollment_id || !session.program_day_id) return;
+    if (userId) {
+      sessionQuery = sessionQuery.eq("user_id", userId);
+    }
+
+    const { data: session, error: sessionError } = await sessionQuery.maybeSingle<SessionRow>();
+
+    if (
+      sessionError ||
+      !session?.program_enrollment_id ||
+      !session.program_day_id ||
+      !session.user_id
+    ) {
+      return;
+    }
 
     // 2. Verify enrollment exists and is still active
     const { data: enrollment, error: enrollmentError } = await client
       .from("program_enrollments")
-      .select("id, status, current_program_day_id")
+      .select("id, user_id, status, current_program_day_id")
       .eq("id", session.program_enrollment_id)
       .eq("status", "active")
-      .maybeSingle<Pick<EnrollmentRow, "id" | "status" | "current_program_day_id">>();
+      .eq("user_id", session.user_id)
+      .maybeSingle<Pick<EnrollmentRow, "id" | "user_id" | "status" | "current_program_day_id">>();
 
     if (enrollmentError || !enrollment) return;
 

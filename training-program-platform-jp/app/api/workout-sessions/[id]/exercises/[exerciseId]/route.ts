@@ -2,25 +2,20 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseServiceRoleEnv
-} from "@/lib/supabase/server";
+  createWorkoutQueryClient,
+  findOwnedWorkoutSession,
+  getAuthenticatedWorkoutUserId
+} from "@/lib/workout/session-access";
 
 type RouteContext = {
   params: {
-    id: string;          // workout_session.id
-    exerciseId: string;  // workout_session_exercise.id
+    id: string;
+    exerciseId: string;
   };
 };
 
 type SwapRequestBody = {
   exercise_id?: string;
-};
-
-type WorkoutSessionRow = {
-  id: string;
-  status: "in_progress" | "completed" | "cancelled";
 };
 
 type SessionExerciseRow = {
@@ -60,19 +55,26 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    const createClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient
-      : createSupabaseServerClient;
-    const supabase = createClient();
+    const userId = await getAuthenticatedWorkoutUserId();
 
-    // 1. セッション存在確認
-    const { data: session, error: sessionError } = await supabase
-      .from("workout_sessions")
-      .select("id, status")
-      .eq("id", params.id)
-      .maybeSingle<WorkoutSessionRow>();
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthenticated",
+            message: "ログインすると種目の入れ替えができます。"
+          }
+        },
+        { status: 401 }
+      );
+    }
 
-    if (sessionError) {
+    const supabase = createWorkoutQueryClient();
+
+    let session;
+    try {
+      session = await findOwnedWorkoutSession(supabase, params.id, userId);
+    } catch {
       return NextResponse.json(
         {
           error: {
@@ -96,7 +98,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 2. completed セッションへの変更を拒否
     if (session.status === "completed") {
       return NextResponse.json(
         {
@@ -109,12 +110,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 3. 対象 session_exercise がこの session に属するか確認
     const { data: sessionExercise, error: sessionExerciseError } = await supabase
       .from("workout_session_exercises")
       .select("id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped")
       .eq("id", params.exerciseId)
-      .eq("workout_session_id", params.id)
+      .eq("workout_session_id", session.id)
       .maybeSingle<SessionExerciseRow>();
 
     if (sessionExerciseError) {
@@ -141,7 +141,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 4. 同一種目を選んだ場合は no-op success を返す（DB 書込なし）
     if (sessionExercise.exercise_id === newExerciseId) {
       const { data: currentExercise } = await supabase
         .from("exercises")
@@ -163,7 +162,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       });
     }
 
-    // 5. 置換先 exercise の存在確認
     const { data: newExercise, error: newExerciseError } = await supabase
       .from("exercises")
       .select("id, slug, name_ja, name_en")
@@ -194,12 +192,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 6. 入力・完了が進んだ visible set が 1 件でもあれば 409 で拒否
-    //    拒否条件: is_completed=true OR is_locked=true OR weight_kg IS NOT NULL OR reps_done IS NOT NULL
     const { data: blockingSets, error: blockingSetsError } = await supabase
       .from("workout_sets")
       .select("id")
-      .eq("workout_session_exercise_id", params.exerciseId)
+      .eq("workout_session_exercise_id", sessionExercise.id)
       .is("deleted_at", null)
       .or(
         "is_completed.eq.true,is_locked.eq.true,weight_kg.not.is.null,reps_done.not.is.null"
@@ -231,12 +227,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 7. workout_session_exercise を更新
-    //    - exercise_id を置き換える
-    //    - was_swapped = true
-    //    - exercise_type は T3 固定（exercises テーブルに type 列がないため）
-    //    - order_index は変えない
-    //    - set 行は再作成しない
     const { error: updateError } = await supabase
       .from("workout_session_exercises")
       .update({
@@ -244,7 +234,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         exercise_type: "T3",
         was_swapped: true
       })
-      .eq("id", params.exerciseId);
+      .eq("id", sessionExercise.id);
 
     if (updateError) {
       return NextResponse.json(
