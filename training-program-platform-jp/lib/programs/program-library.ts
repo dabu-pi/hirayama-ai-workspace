@@ -18,6 +18,7 @@ type DatabaseClient = SupabaseClient;
 
 type ProgramRow = {
   id: string;
+  slug: string;
   title: string;
   description: string | null;
   duration_weeks: number;
@@ -35,19 +36,6 @@ function createProgramsReadClient(): DatabaseClient {
   return hasSupabaseServiceRoleEnv()
     ? createSupabaseAdminClient()
     : createSupabaseServerClient();
-}
-
-function slugifySegment(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function buildProgramSlug(row: ProgramRow) {
-  const titleSlug = slugifySegment(row.title);
-  const fallbackSlug = titleSlug || "program";
-  return `${fallbackSlug}--${row.id.slice(0, 8)}`;
 }
 
 function toDisplayLevel(level: string | null) {
@@ -83,7 +71,7 @@ function buildOverview(description: string | null, title: string) {
 function mapProgramRow(row: ProgramRow): ProgramCatalogItem {
   return {
     id: row.id,
-    slug: buildProgramSlug(row),
+    slug: row.slug,
     title: row.title,
     level: toDisplayLevel(row.level),
     goal: extractGoal(row.description),
@@ -98,7 +86,7 @@ async function listProgramsFromSupabase(): Promise<ProgramCatalogItem[]> {
   const { data, error } = await client
     .from("programs")
     .select(
-      "id, title, description, duration_weeks, days_per_week, level, is_public"
+      "id, slug, title, description, duration_weeks, days_per_week, level, is_public"
     )
     .eq("is_public", true)
     .order("created_at", { ascending: false });
