@@ -124,6 +124,43 @@ export async function getProgramLibrary(): Promise<ProgramLibraryResult> {
   }
 }
 
+type FirstDayWeekRow = { id: string };
+type FirstDayRow = { id: string };
+
+/**
+ * Returns the UUID of week 1 / day 1 for the given program, or null if not found.
+ * Only queries Supabase; returns null when env is unavailable.
+ */
+export async function findFirstProgramDayId(programId: string): Promise<string | null> {
+  if (!hasSupabasePublicEnv()) return null;
+
+  try {
+    const client = createProgramsReadClient();
+
+    const { data: weekData, error: weekError } = await client
+      .from("program_weeks")
+      .select("id")
+      .eq("program_id", programId)
+      .eq("week_number", 1)
+      .maybeSingle<FirstDayWeekRow>();
+
+    if (weekError || !weekData) return null;
+
+    const { data: dayData, error: dayError } = await client
+      .from("program_days")
+      .select("id")
+      .eq("program_week_id", weekData.id)
+      .eq("day_number", 1)
+      .maybeSingle<FirstDayRow>();
+
+    if (dayError || !dayData) return null;
+
+    return dayData.id;
+  } catch {
+    return null;
+  }
+}
+
 export async function findProgramBySlug(
   programSlug: string
 ): Promise<{ program: ProgramCatalogItem | null; source: ProgramDataSource }> {

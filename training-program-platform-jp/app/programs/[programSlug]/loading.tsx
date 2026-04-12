@@ -6,7 +6,8 @@ export default function ProgramDetailLoading() {
       state="loading"
       view={{
         program: null,
-        source: "mock_catalog"
+        source: "mock_catalog",
+        firstProgramDayId: null
       }}
     />
   );

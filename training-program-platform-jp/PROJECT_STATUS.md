@@ -11,7 +11,8 @@
 - Programs 一覧は `/programs`
 - Program Detail MVP は `/programs/[programSlug]`
 - Programs list / detail / train selection は Supabase `programs` 読込を土台にしている
-- route 用 slug の正本は `programs.slug` に移行した
+- route 用 slug の正本は `programs.slug` に移行済み
+- **Program Detail → StartSessionScreen → session 開始** の最小 MVP が完成した
 
 ## 完了済み
 
@@ -55,37 +56,56 @@
   - title / level / goal / frequency / duration / overview を表示
   - `loading` / `ready` / `not_found` / `error` を分岐
   - `/programs` の card から detail route へ遷移可能
-  - detail から `/train` と `/programs` へ戻れる
+  - detail から `/programs` へ戻れる
 - Program Detail -> Train の選択連携
-  - detail の `Go to Train` は `/train?program=[programSlug]`
+  - detail の `Go to Train` は `/train?program=[programSlug]&programDayId=[firstProgramDayId]`
+  - `firstProgramDayId`: week 1 / day 1 の UUID を Supabase から解決
+  - `firstProgramDayId` が null の場合は `programDayId` なしで遷移し、従来導線を維持
   - train 側 helper は `lib/workout/train-selection.ts`
-  - Programs と同じ Supabase `programs.slug` 読込を使用
   - `program` query 一致時のみ selected program title / source を表示
   - `program` query 不一致時のみ warning を表示しつつ current session を継続
   - query なしは従来どおり
 - Programs 系 read path の DB slug 化
   - 共通 helper: `lib/programs/program-library.ts`
   - migration で `programs.slug` を追加し、backfill 後に `NOT NULL + UNIQUE` を付与
-  - slug ルールは title を slugify し、重複時は `-2`, `-3` suffix で回避
+  - slug ルールは title を slugify し、重複時は `-2`, `-3` suffix で安定採番
   - insert / update で slug が未指定または空なら DB trigger で採番
   - Supabase 読込時は DB の `programs.slug` を使い、読込失敗時のみ `mock_catalog` fallback
   - `mock_catalog` fallback は mock 側の `slug` を維持
   - 読込成功で 0 件のときは empty / not_found / invalid をそのまま表示
 - Home 導線
   - `/` は Programs を第一導線、Train を第二導線に整理済み
+- **session 開始 MVP（program_day_id ベース）**
+  - 開始単位: `program_day_id`（Week 1 / Day 1 の UUID）
+  - `enrollment_id` は今回スコープ外（未使用）
+  - helper: `lib/workout/start-session.ts::startSessionForDay()`
+    - `program_day_exercises` を読み込み `workout_session_exercises` + `workout_sets` を seed
+    - `user_id` は auth があれば設定、なければ null（migration 3 で nullable 化）
+  - API: `POST /api/workout-sessions { program_day_id }` → `{ sessionId }` を返す
+  - 画面: `StartSessionScreen`（`components/workout/StartSessionScreen.tsx`）
+    - Program タイトル / day ラベルを表示
+    - Start Workout ボタン → API 呼び出し → `/train?program=[slug]` へ遷移
+    - Cancel → `/programs/[slug]` へ戻る
+  - `/train` ルーティング:
+    - `programDayId` あり + `in_progress` セッション存在 → `WorkoutScreen`
+    - `programDayId` あり + セッションなし → `StartSessionScreen`
+    - `programDayId` なし → 従来どおり `getCurrentWorkoutSessionView()`
+  - migration: `20260412_000003_nullable_session_user.sql`
 
 ## 次アクション
 
-1. `programs.slug` 正本化を前提に、`program_day_id` / `enrollment_id` へ接続する route 設計を決める
-2. Program Detail / Train selection の program 選択導線を、session 開始や day 選択と結びつける
-3. live Supabase 環境で Programs / Detail / Train / Summary の導線を通し確認する
+1. live Supabase 環境でフルフロー（Programs → Detail → StartSession → Train → Summary）を通し確認する
+2. `programDayId` ラベルを動的取得（Week N / Day N）にする（現在は "Week 1 / Day 1" 固定）
+3. enrollment_id / enrollment 進行の設計・実装
 4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 5. Auth / RLS の本番向け整備を進める
 
 ## 保留事項
 
 - Supabase 読込失敗時のみ `mock_catalog` fallback が残る
-- `program` query は選択表示専用で、session / enrollment / day の開始にはまだ結びついていない
+- `workout_sessions.user_id` は nullable（MVP のため `NOT NULL` を drop）
+- enrollment_id / enrollment 進行は未実装
+- `programDayLabel`（StartSessionScreen）は "Week 1 / Day 1" 固定文字列（DB から取得していない）
 - service role / production auth 設計は未整理
 - RLS 方針は未着手
 - Delete undo は MVP スコープ外
@@ -106,3 +126,7 @@
 - fallback は Supabase 読込失敗時のみ `mock_catalog` を使う。空データはそのまま empty / not_found / invalid として扱う
 - Workout Summary の戻り先は `/` ではなく `/programs`
 - `screens.md` と `PROJECT_STATUS.md` は日本語ベースで継続する
+- **開始単位は `program_day_id`、enrollment_id は今回スコープ外とした**
+  - 理由: enrollment フローを先に作ると scope が大きくなりすぎる。まず「選んだ day を開始できる」を優先した
+- **`workout_sessions.user_id` を nullable にした（migration 3）**
+  - 理由: 未認証 MVP では `public.users` FK を満たせないため。auth 整備後に戻す方針

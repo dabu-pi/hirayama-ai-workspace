@@ -44,7 +44,17 @@ export function ProgramDetailScreen({
   const program = view.program;
   const isReady = state === "ready" && program !== null;
   const bodyText = resolveBody(state, errorMessage);
-  const trainHref = isReady ? `/train?program=${program.slug}` : "/train";
+
+  function buildTrainHref() {
+    if (!isReady) return "/train";
+    const params = new URLSearchParams({ program: program.slug });
+    if (view.firstProgramDayId) {
+      params.set("programDayId", view.firstProgramDayId);
+    }
+    return `/train?${params.toString()}`;
+  }
+
+  const trainHref = buildTrainHref();
 
   return (
     <main className={styles.page}>

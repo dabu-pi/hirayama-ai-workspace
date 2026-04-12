@@ -59,7 +59,10 @@
 - 操作:
   - `Back to Programs`
   - `Go to Train`
-- `Go to Train` は `/train?program=[programSlug]` へ遷移する
+- `Go to Train` のリンク生成ルール:
+  - `programs.slug` が取れた場合: `/train?program=[slug]&programDayId=[firstProgramDayId]`
+  - `firstProgramDayId` が null の場合（Supabase 未設定 / week 1 day 1 未登録）: `/train?program=[slug]`
+  - state が ready でない場合: `/train`
 - state:
   - `loading`
   - `ready`
@@ -68,17 +71,35 @@
 
 ### `/train`
 
-- 現在の workout session を表示
+- workout session の実行画面
 - logging / set editing / add exercise / swap exercise を実装
 - Finish 後は `/workout-summary/[sessionId]` へ遷移
 - Supabase 未設定時は mock fallback が残る
-- `program` query がある場合:
-  - helper: `lib/workout/train-selection.ts`
-  - Programs 一覧と同じ Supabase `programs.slug` 読込を使う
-  - 一致時のみ selected program title / source を表示
-  - 不一致時のみ warning を表示しつつ current session を継続する
-- `program` query がない場合は従来どおり
-- 将来は `program_day_id` / `enrollment_id` へ接続する
+
+#### `programDayId` あり（Program Detail から遷移）
+
+- `programDayId` + `program` クエリが両方ある場合:
+  - helper: `lib/workout/train-session.ts::findWorkoutSessionByDayId`
+  - 対象 day の `in_progress` セッションが存在する → `WorkoutScreen` を表示
+  - 存在しない → `StartSessionScreen`（開始確認画面）を表示
+
+#### `StartSessionScreen` (`/train?program=...&programDayId=...` でセッションなし)
+
+- component: `components/workout/StartSessionScreen.tsx`
+- Program タイトルと対象 day（Week 1 / Day 1）を表示する
+- 「Start Workout」ボタン:
+  - `POST /api/workout-sessions { program_day_id }` を呼ぶ
+  - 成功時: `/train?program=[slug]`（programDayId なし）へ router.push
+  - 失敗時: エラーメッセージを表示し、ボタンを再有効化する
+- 「Cancel」リンク: `/programs/[programSlug]` へ戻る
+
+#### `programDayId` なし（クエリなし / invalid）
+
+- helper: `lib/workout/train-selection.ts`
+- Programs 一覧と同じ Supabase `programs.slug` 読込を使う
+- 一致時のみ selected program title / source を表示
+- 不一致時のみ warning を表示しつつ current session を継続する
+- query なしは従来どおり
 
 ### `/exercise-history/[exerciseSlug]`
 
@@ -102,7 +123,7 @@
 - frequency
 - duration
 - overview
-- Train への導線
+- Train への導線（`programDayId` 付き）
 - Programs 一覧への戻り導線
 
 ## Train の program 選択表示
@@ -110,6 +131,34 @@
 - selected program title
 - selected source
 - invalid selection warning
+
+## session 開始フロー（program_day_id ベース）
+
+```
+/programs/[slug]
+  ↓ Go to Train（?program=slug&programDayId=uuid）
+/train
+  ├── in_progress session が存在する → WorkoutScreen（直接）
+  └── セッションなし → StartSessionScreen
+        ↓ Start Workout ボタン
+        POST /api/workout-sessions { program_day_id }
+          └── startSessionForDay():
+                1. program_day_exercises を取得
+                2. workout_sessions を insert
+                3. workout_session_exercises を insert
+                4. workout_sets を insert（set_count 分）
+        ↓ 成功
+        /train?program=slug（WorkoutScreen が新セッションを表示）
+```
+
+## 開始ルール（採用した MVP 方針）
+
+- 開始単位: `program_day_id`（program 内の 1 日分を識別する UUID）
+- enrollment_id: 今回は不使用（enrollment フローはスコープ外）
+- デフォルト開始 day: Program Detail の `firstProgramDayId`（week 1 / day 1）
+- 開始 day の決定: Supabase `program_weeks.week_number=1` → `program_days.day_number=1` で解決
+- `firstProgramDayId` が null のとき（Supabase 未接続 / week 1 day 1 未登録）:
+  - `Go to Train` は `programDayId` なしで遷移し、従来の `WorkoutScreen` 表示を維持する
 
 ## データソースメモ
 
@@ -122,3 +171,4 @@
 - Exercise History は Supabase 読込
 - Workout Summary は Supabase 読込
 - Train 本体は Supabase 未設定時の mock fallback をまだ維持している
+- `workout_sessions.user_id` は MVP のため nullable（migration 3 で `NOT NULL` を drop）

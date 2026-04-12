@@ -28,4 +28,6 @@ export type ProgramListView = {
 export type ProgramDetailView = {
   program: ProgramCatalogItem | null;
   source: ProgramDataSource;
+  /** UUID of week 1 / day 1 for this program. null if not found or Supabase unavailable. */
+  firstProgramDayId: string | null;
 };

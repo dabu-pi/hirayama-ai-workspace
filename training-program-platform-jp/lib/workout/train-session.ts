@@ -180,6 +180,34 @@ async function selectCurrentSession(
   return latestSession;
 }
 
+async function selectSessionByDayId(
+  client: DatabaseClient,
+  programDayId: string,
+  userId: string | null
+) {
+  let query = client
+    .from("workout_sessions")
+    .select(
+      "id, user_id, program_enrollment_id, program_day_id, started_at, finished_at, status"
+    )
+    .eq("status", "in_progress")
+    .eq("program_day_id", programDayId)
+    .order("started_at", { ascending: false })
+    .limit(1);
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query.maybeSingle<WorkoutSessionRow>();
+
+  if (error) {
+    throw new Error(`Failed to find session by day id: ${error.message}`);
+  }
+
+  return data;
+}
+
 async function selectProgramDay(
   client: DatabaseClient,
   programDayId: string | null
@@ -383,6 +411,10 @@ async function buildPreviousDisplayMap(
     return new Map<string, string>();
   }
 
+  if (!currentSession.user_id) {
+    return new Map<string, string>();
+  }
+
   const historicalSessions = await selectHistoricalSessions(
     client,
     currentSession.user_id,
@@ -518,6 +550,68 @@ function countIncompleteVisibleSets(workoutSets: WorkoutSetRow[]) {
   return workoutSets.filter((set) => set.is_completed === false).length;
 }
 
+/**
+ * Shared: loads the full WorkoutSessionView for a given session row.
+ * Called by both getCurrentWorkoutSessionView and findWorkoutSessionByDayId.
+ */
+async function loadSessionView(
+  queryClient: DatabaseClient,
+  session: WorkoutSessionRow
+): Promise<WorkoutSessionView> {
+  const programDay = await selectProgramDay(queryClient, session.program_day_id);
+  const programWeek = await selectProgramWeek(
+    queryClient,
+    programDay?.program_week_id ?? null
+  );
+  const program = await selectProgram(queryClient, programWeek?.program_id ?? null);
+
+  const workoutSessionExercises = await selectWorkoutSessionExercises(
+    queryClient,
+    session.id
+  );
+  const exercises = await selectExercises(
+    queryClient,
+    workoutSessionExercises.map((item) => item.exercise_id)
+  );
+  const workoutSets = await selectVisibleWorkoutSets(
+    queryClient,
+    workoutSessionExercises.map((item) => item.id)
+  );
+  const previousDisplayMap = await buildPreviousDisplayMap(
+    queryClient,
+    session,
+    workoutSessionExercises,
+    workoutSets
+  );
+
+  return {
+    id: session.id,
+    userId: session.user_id,
+    programEnrollmentId: session.program_enrollment_id,
+    programDayId: session.program_day_id,
+    programTitle: program?.title ?? "Current Program",
+    programWeekLabel: buildProgramWeekLabel(
+      programWeek?.week_number ?? null,
+      programWeek?.label ?? null,
+      programDay?.day_number ?? null
+    ),
+    progressionGuide:
+      programDay?.progression_guide ?? "Progression guide is not set yet.",
+    notes:
+      programDay?.notes ?? "Train screen is reading active sets from Supabase.",
+    startedAt: session.started_at,
+    finishedAt: session.finished_at,
+    status: session.status,
+    incompleteSetCount: countIncompleteVisibleSets(workoutSets),
+    exercises: buildExerciseBlocks(
+      workoutSessionExercises,
+      exercises,
+      workoutSets,
+      previousDisplayMap
+    )
+  };
+}
+
 export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView> {
   if (!hasSupabasePublicEnv()) {
     return getMockWorkoutSession();
@@ -537,60 +631,37 @@ export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView
       return getMockWorkoutSession();
     }
 
-    const programDay = await selectProgramDay(queryClient, session.program_day_id);
-    const programWeek = await selectProgramWeek(
-      queryClient,
-      programDay?.program_week_id ?? null
-    );
-    const program = await selectProgram(queryClient, programWeek?.program_id ?? null);
-
-    const workoutSessionExercises = await selectWorkoutSessionExercises(
-      queryClient,
-      session.id
-    );
-    const exercises = await selectExercises(
-      queryClient,
-      workoutSessionExercises.map((item) => item.exercise_id)
-    );
-    const workoutSets = await selectVisibleWorkoutSets(
-      queryClient,
-      workoutSessionExercises.map((item) => item.id)
-    );
-    const previousDisplayMap = await buildPreviousDisplayMap(
-      queryClient,
-      session,
-      workoutSessionExercises,
-      workoutSets
-    );
-
-    return {
-      id: session.id,
-      userId: session.user_id,
-      programEnrollmentId: session.program_enrollment_id,
-      programDayId: session.program_day_id,
-      programTitle: program?.title ?? "Current Program",
-      programWeekLabel: buildProgramWeekLabel(
-        programWeek?.week_number ?? null,
-        programWeek?.label ?? null,
-        programDay?.day_number ?? null
-      ),
-      progressionGuide:
-        programDay?.progression_guide ?? "Progression guide is not set yet.",
-      notes:
-        programDay?.notes ?? "Train screen is reading active sets from Supabase.",
-      startedAt: session.started_at,
-      finishedAt: session.finished_at,
-      status: session.status,
-      incompleteSetCount: countIncompleteVisibleSets(workoutSets),
-      exercises: buildExerciseBlocks(
-        workoutSessionExercises,
-        exercises,
-        workoutSets,
-        previousDisplayMap
-      )
-    };
+    return await loadSessionView(queryClient, session);
   } catch (error) {
     console.error("Failed to load train session from Supabase.", error);
     return getMockWorkoutSession();
+  }
+}
+
+/**
+ * Finds an in_progress workout session for the given program_day_id.
+ * Returns null when none exists — callers show a "Start Workout" screen instead.
+ */
+export async function findWorkoutSessionByDayId(
+  programDayId: string
+): Promise<WorkoutSessionView | null> {
+  if (!hasSupabasePublicEnv()) return null;
+
+  try {
+    const serverClient = createSupabaseServerClient();
+    const scopedUser = await serverClient.auth.getUser();
+    const userId = scopedUser.data.user?.id ?? null;
+    const queryClient = hasSupabaseServiceRoleEnv()
+      ? createSupabaseAdminClient()
+      : serverClient;
+
+    const session = await selectSessionByDayId(queryClient, programDayId, userId);
+
+    if (!session) return null;
+
+    return await loadSessionView(queryClient, session);
+  } catch (error) {
+    console.error("Failed to find workout session by day id.", error);
+    return null;
   }
 }

@@ -63,6 +63,8 @@ export type TrainProgramSelection = {
   requestedSlug: string | null;
   programSlug: string | null;
   programTitle: string | null;
+  /** UUID of the target program_day passed via ?programDayId= query param. */
+  programDayId: string | null;
   source: ProgramDataSource | null;
   message: string | null;
 };

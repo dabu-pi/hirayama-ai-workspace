@@ -1,6 +1,9 @@
 import "server-only";
 
-import { findProgramBySlug } from "@/lib/programs/program-library";
+import {
+  findFirstProgramDayId,
+  findProgramBySlug
+} from "@/lib/programs/program-library";
 import type { ProgramDetailState, ProgramDetailView } from "@/types/programs";
 
 type ProgramDetailResult = {
@@ -20,17 +23,21 @@ export async function getProgramDetailView(
         state: "not_found",
         view: {
           program: null,
-          source
+          source,
+          firstProgramDayId: null
         },
         errorMessage: null
       };
     }
 
+    const firstProgramDayId = await findFirstProgramDayId(program.id);
+
     return {
       state: "ready",
       view: {
         program,
-        source
+        source,
+        firstProgramDayId
       },
       errorMessage: null
     };
@@ -41,7 +48,8 @@ export async function getProgramDetailView(
       state: "error",
       view: {
         program: null,
-        source: "mock_catalog"
+        source: "mock_catalog",
+        firstProgramDayId: null
       },
       errorMessage: "Program detail could not be loaded right now. Please try again."
     };
