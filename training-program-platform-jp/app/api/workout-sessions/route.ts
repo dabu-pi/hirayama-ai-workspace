@@ -74,7 +74,11 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ sessionId: result.sessionId }, { status: 201 });
+    // reused=true のとき既存セッションを返した（二重作成なし）
+    return NextResponse.json(
+      { sessionId: result.sessionId, reused: result.reused },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("POST /api/workout-sessions unexpected error.", error);
     return NextResponse.json(

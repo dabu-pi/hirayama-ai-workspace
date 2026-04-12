@@ -8,8 +8,12 @@ import {
 } from "@/lib/supabase/server";
 
 export type StartSessionResult =
-  | { ok: true; sessionId: string }
+  | { ok: true; sessionId: string; reused: boolean }
   | { ok: false; reason: "supabase_unavailable" | "day_not_found" | "insert_failed" };
+
+type ExistingSessionRow = {
+  id: string;
+};
 
 type ProgramDayExerciseRow = {
   id: string;
@@ -28,8 +32,47 @@ type InsertedSessionExerciseRow = {
   id: string;
 };
 
+type ProgramDayLabelRow = {
+  day_number: number;
+  program_weeks: {
+    week_number: number;
+  } | null;
+};
+
 /**
- * Creates a new in_progress workout_session for the given program_day_id.
+ * Returns the day label string (e.g. "Week 1 / Day 1") for a given program_day_id.
+ * Falls back to "Week 1 / Day 1" if unavailable.
+ */
+export async function getProgramDayLabel(programDayId: string): Promise<string> {
+  if (!hasSupabasePublicEnv()) return "Week 1 / Day 1";
+
+  try {
+    const client = hasSupabaseServiceRoleEnv()
+      ? createSupabaseAdminClient()
+      : createSupabaseServerClient();
+
+    const { data, error } = await client
+      .from("program_days")
+      .select("day_number, program_weeks(week_number)")
+      .eq("id", programDayId)
+      .maybeSingle<ProgramDayLabelRow>();
+
+    if (error || !data) return "Week 1 / Day 1";
+
+    const weekNumber = data.program_weeks?.week_number ?? 1;
+    const dayNumber = data.day_number;
+    return `Week ${weekNumber} / Day ${dayNumber}`;
+  } catch {
+    return "Week 1 / Day 1";
+  }
+}
+
+/**
+ * Creates (or reuses) an in_progress workout_session for the given program_day_id.
+ *
+ * Duplicate prevention:
+ *   - Checks for an existing in_progress session with the same program_day_id.
+ *   - If found, returns it immediately with reused=true (no new insert).
  *
  * Seed strategy (MVP):
  *   - Reads program_day_exercises for the day, ordered by order_index.
@@ -37,8 +80,6 @@ type InsertedSessionExerciseRow = {
  *   - Creates set_count empty workout_sets per exercise (target_reps_text copied).
  *   - user_id is set to the authenticated user if available; null otherwise (nullable column).
  *   - program_enrollment_id is not set (enrollment flow is out of scope for this MVP).
- *
- * Returns the new session id on success.
  */
 export async function startSessionForDay(
   programDayId: string
@@ -55,7 +96,34 @@ export async function startSessionForDay(
     ? createSupabaseAdminClient()
     : serverClient;
 
-  // 1. Verify program_day exists and load its exercises
+  // 0. Guard: check for an existing in_progress session for this day
+  //    Prevents duplicate sessions on button double-tap or page reload.
+  {
+    let existingQuery = queryClient
+      .from("workout_sessions")
+      .select("id")
+      .eq("program_day_id", programDayId)
+      .eq("status", "in_progress")
+      .limit(1);
+
+    if (userId) {
+      existingQuery = existingQuery.eq("user_id", userId);
+    }
+
+    const { data: existing, error: existingError } =
+      await existingQuery.maybeSingle<ExistingSessionRow>();
+
+    if (existingError) {
+      console.error("start-session: failed to check for existing session.", existingError);
+      return { ok: false, reason: "insert_failed" };
+    }
+
+    if (existing) {
+      return { ok: true, sessionId: existing.id, reused: true };
+    }
+  }
+
+  // 1. Load program_day_exercises
   const { data: dayExercises, error: dayExercisesError } = await queryClient
     .from("program_day_exercises")
     .select("id, exercise_id, exercise_type, set_count, target_reps_text, order_index")
@@ -67,7 +135,7 @@ export async function startSessionForDay(
     return { ok: false, reason: "day_not_found" };
   }
 
-  // 2. Create workout_session
+  // 2. Insert workout_session
   const insertSessionPayload: Record<string, unknown> = {
     program_day_id: programDayId,
     status: "in_progress"
@@ -89,7 +157,7 @@ export async function startSessionForDay(
 
   const sessionId = sessionRow.id;
 
-  // 3. Seed exercises + sets if program_day_exercises exist
+  // 3. Seed exercises + sets
   const exercises = (dayExercises ?? []) as ProgramDayExerciseRow[];
 
   for (const exercise of exercises) {
@@ -111,7 +179,6 @@ export async function startSessionForDay(
         `start-session: failed to insert session exercise for exercise_id=${exercise.exercise_id}.`,
         exerciseInsertError
       );
-      // Continue seeding remaining exercises rather than aborting
       continue;
     }
 
@@ -140,5 +207,5 @@ export async function startSessionForDay(
     }
   }
 
-  return { ok: true, sessionId };
+  return { ok: true, sessionId, reused: false };
 }

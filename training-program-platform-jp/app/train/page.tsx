@@ -1,5 +1,6 @@
 import { StartSessionScreen } from "@/components/workout/StartSessionScreen";
 import { WorkoutScreen } from "@/components/workout/WorkoutScreen";
+import { getProgramDayLabel } from "@/lib/workout/start-session";
 import { getTrainProgramSelection } from "@/lib/workout/train-selection";
 import {
   findWorkoutSessionByDayId,
@@ -29,16 +30,16 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     selectedProgram.programSlug &&
     selectedProgram.programTitle
   ) {
-    const existingSession = await findWorkoutSessionByDayId(
-      selectedProgram.programDayId
-    );
+    const [existingSession, programDayLabel] = await Promise.all([
+      findWorkoutSessionByDayId(selectedProgram.programDayId),
+      getProgramDayLabel(selectedProgram.programDayId)
+    ]);
 
     if (!existingSession) {
-      // Week 1 / Day 1 開始確認画面
       return (
         <StartSessionScreen
           programDayId={selectedProgram.programDayId}
-          programDayLabel="Week 1 / Day 1"
+          programDayLabel={programDayLabel}
           programSlug={selectedProgram.programSlug}
           programTitle={selectedProgram.programTitle}
         />

@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-12
+最終更新: 2026-04-12（二重セッション防止・programDayLabel 動的化）
 
 ## 現在地
 
@@ -79,11 +79,15 @@
   - 開始単位: `program_day_id`（Week 1 / Day 1 の UUID）
   - `enrollment_id` は今回スコープ外（未使用）
   - helper: `lib/workout/start-session.ts::startSessionForDay()`
+    - 重複防止: 同一 `program_day_id` の `in_progress` セッションが存在すれば即 `reused=true` を返す
     - `program_day_exercises` を読み込み `workout_session_exercises` + `workout_sets` を seed
     - `user_id` は auth があれば設定、なければ null（migration 3 で nullable 化）
-  - API: `POST /api/workout-sessions { program_day_id }` → `{ sessionId }` を返す
+  - helper: `lib/workout/start-session.ts::getProgramDayLabel(programDayId)`
+    - `program_days.day_number` + `program_weeks.week_number` を JOIN して `"Week N / Day N"` を返す
+    - Supabase 未接続時は `"Week 1 / Day 1"` にフォールバック
+  - API: `POST /api/workout-sessions { program_day_id }` → `{ sessionId, reused }` を返す
   - 画面: `StartSessionScreen`（`components/workout/StartSessionScreen.tsx`）
-    - Program タイトル / day ラベルを表示
+    - Program タイトル / 動的 day ラベル（DB から取得）を表示
     - Start Workout ボタン → API 呼び出し → `/train?program=[slug]` へ遷移
     - Cancel → `/programs/[slug]` へ戻る
   - `/train` ルーティング:
@@ -94,18 +98,16 @@
 
 ## 次アクション
 
-1. live Supabase 環境でフルフロー（Programs → Detail → StartSession → Train → Summary）を通し確認する
-2. `programDayId` ラベルを動的取得（Week N / Day N）にする（現在は "Week 1 / Day 1" 固定）
-3. enrollment_id / enrollment 進行の設計・実装
-4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
-5. Auth / RLS の本番向け整備を進める
+1. live Supabase 環境でフルフロー（Programs → Detail → StartSession → Train → Summary）の通し確認（要 DB 接続）
+2. enrollment_id / enrollment 進行の設計・実装
+3. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+4. Auth / RLS の本番向け整備を進める
 
 ## 保留事項
 
 - Supabase 読込失敗時のみ `mock_catalog` fallback が残る
 - `workout_sessions.user_id` は nullable（MVP のため `NOT NULL` を drop）
 - enrollment_id / enrollment 進行は未実装
-- `programDayLabel`（StartSessionScreen）は "Week 1 / Day 1" 固定文字列（DB から取得していない）
 - service role / production auth 設計は未整理
 - RLS 方針は未着手
 - Delete undo は MVP スコープ外
