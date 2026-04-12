@@ -10,6 +10,7 @@
 - Finish 後は `/workout-summary/[sessionId]` へ遷移する
 - Programs 一覧は `/programs`
 - Program Detail MVP は `/programs/[programSlug]`
+- Program Detail から Train へは暫定的に `programSlug` query を渡せる
 
 ## 完了済み
 
@@ -52,20 +53,27 @@
   - `loading` / `ready` / `not_found` / `error` を実装
   - `/programs` の card から detail route へ遷移可能
   - detail から `/train` と `/programs` へ戻れる
+- Program Detail -> Train の暫定連携
+  - detail の `Go to Train` は `/train?program=[programSlug]`
+  - train 側 helper は `lib/workout/train-selection.ts`
+  - `program` query 一致時は selected program title / source を表示
+  - `program` query 不一致時は warning を表示しつつ current session を継続
+  - query なしは従来動作
 - Home 導線
   - `/` は Programs を第一導線、Train を第二導線に整理済み
 
 ## 次アクション
 
-1. Program Detail から実際の program 選択状態を Train に渡す設計を決める
-2. Programs list / detail を Supabase 読込へ差し替えるための schema / loader 方針を固める
-3. live Supabase 環境で Programs / Detail / Summary の導線を確認する
-4. Auth / RLS の本番向け整理を進める
+1. `programSlug` query の暫定連携を、将来 `program_day_id` / `enrollment_id` ベースへ置き換える設計を決める
+2. Program Detail から Train へ渡した選択状態を、session 作成や day 選択と結びつける
+3. Programs list / detail / train selection を Supabase 読込へ差し替えるための schema / loader 方針を固める
+4. live Supabase 環境で Programs / Detail / Train / Summary の導線を確認する
+5. Auth / RLS の本番向け整理を進める
 
 ## 保留事項
 
 - Programs のデータソースはまだ mock catalog
-- program detail は表示専用で、Train 側に program 指定はまだ渡していない
+- `program` query は暫定仕様で、session / enrollment / day の実選択にはまだ結び付いていない
 - service role / production auth 設定は未整理
 - RLS 方針は未確定
 - Delete undo は MVP スコープ外
@@ -79,7 +87,8 @@
 
 ## 直近の重要判断
 
-- Programs list と Program Detail はどちらも mock catalog を正本とし、将来 Supabase 差し替えやすいよう server-side helper を挟む
-- 存在しない `programSlug` は Next.js の 404 へ飛ばさず、detail 画面内の `not_found` state で扱う
+- Programs list / detail / train selection はどれも mock catalog を正本とし、将来 Supabase 差し替えやすいよう helper を挟む
+- Program Detail から Train への受け渡しは、最小 MVP として `programSlug` query を使う
+- `program` query 不一致は 404 ではなく Train 内 warning で扱い、既存 session 表示を壊さない
 - Workout Summary の戻り先は `/` ではなく `/programs`
-- `screens.md` と `PROJECT_STATUS.md` は、このプロジェクトの既存 docs に合わせて日本語ベースへ戻す
+- `screens.md` と `PROJECT_STATUS.md` は日本語ベースで維持する

@@ -40,6 +40,7 @@ export function ProgramDetailScreen({
   const program = view.program;
   const isReady = state === "ready" && program !== null;
   const bodyText = resolveBody(state, errorMessage);
+  const trainHref = isReady ? `/train?program=${program.slug}` : "/train";
 
   return (
     <main className={styles.page}>
@@ -56,7 +57,7 @@ export function ProgramDetailScreen({
         <p className={styles.lead}>{bodyText}</p>
         <div className={styles.heroMeta}>
           <span>Source: mock catalog</span>
-          <Link className={styles.trainLink} href="/train">
+          <Link className={styles.trainLink} href={trainHref}>
             Go to Train
           </Link>
         </div>
@@ -102,7 +103,7 @@ export function ProgramDetailScreen({
       )}
 
       <div className={styles.actions}>
-        <Link className={styles.primaryAction} href="/train">
+        <Link className={styles.primaryAction} href={trainHref}>
           Go to Train
         </Link>
         <Link className={styles.secondaryAction} href="/programs">

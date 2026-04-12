@@ -1,3 +1,5 @@
+import type { ProgramDataSource } from "@/types/programs";
+
 export type ExerciseType = "T1" | "T2" | "T3";
 
 export type WorkoutSessionStatus = "in_progress" | "completed" | "cancelled";
@@ -52,6 +54,17 @@ export type WorkoutSessionView = {
   status: WorkoutSessionStatus;
   incompleteSetCount: number;
   exercises: WorkoutExerciseBlock[];
+};
+
+export type TrainProgramSelectionState = "none" | "selected" | "invalid";
+
+export type TrainProgramSelection = {
+  state: TrainProgramSelectionState;
+  requestedSlug: string | null;
+  programSlug: string | null;
+  programTitle: string | null;
+  source: ProgramDataSource | null;
+  message: string | null;
 };
 
 export type ExerciseListItem = {

@@ -86,6 +86,42 @@
   color: var(--text-secondary);
 }
 
+.selectionBanner,
+.selectionWarning {
+  display: grid;
+  gap: 4px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 14px;
+}
+
+.selectionBanner {
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  background: rgba(120, 53, 15, 0.24);
+}
+
+.selectionWarning {
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  background: rgba(120, 53, 15, 0.18);
+  color: #fde68a;
+}
+
+.selectionLabel {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.selectionValue {
+  font-size: var(--text-md);
+}
+
+.selectionMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
 .hint {
   margin-top: var(--space-3);
   display: inline-flex;

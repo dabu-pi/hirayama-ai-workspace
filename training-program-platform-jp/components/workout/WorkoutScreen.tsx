@@ -8,6 +8,7 @@ import type {
   AddExerciseResponse,
   ExerciseListItem,
   SwapExerciseResponse,
+  TrainProgramSelection,
   WorkoutExerciseBlock,
   WorkoutSessionFinishResponse,
   WorkoutSet,
@@ -19,6 +20,7 @@ import styles from "./WorkoutScreen.module.css";
 
 type WorkoutScreenProps = {
   session: WorkoutSessionView;
+  selectedProgram: TrainProgramSelection;
 };
 
 type SwipeState = {
@@ -304,7 +306,10 @@ function formatFinishedAt(value: string | null) {
   return `完了日時: ${parsed.toLocaleString("ja-JP")}`;
 }
 
-export function WorkoutScreen({ session }: WorkoutScreenProps) {
+export function WorkoutScreen({
+  session,
+  selectedProgram
+}: WorkoutScreenProps) {
   const router = useRouter();
   const swipeRef = useRef<SwipeState | null>(null);
   const kgInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -938,6 +943,26 @@ export function WorkoutScreen({ session }: WorkoutScreenProps) {
         <p className={styles.programMeta}>{session.programTitle} / {session.programWeekLabel}</p>
         <p className={styles.programNote}>{session.progressionGuide}</p>
         <p className={styles.programNote}>{session.notes}</p>
+        {selectedProgram.state === "selected" ? (
+          <div className={styles.selectionBanner}>
+            <span className={styles.selectionLabel}>Selected Program</span>
+            <strong className={styles.selectionValue}>
+              {selectedProgram.programTitle}
+            </strong>
+            <span className={styles.selectionMeta}>
+              slug: {selectedProgram.programSlug} / source: {selectedProgram.source}
+            </span>
+          </div>
+        ) : null}
+        {selectedProgram.state === "invalid" ? (
+          <div className={styles.selectionWarning} role="status">
+            <strong>Invalid selection</strong>
+            <span>{selectedProgram.message}</span>
+            <span>
+              requested: {selectedProgram.requestedSlug} / fallback: current session
+            </span>
+          </div>
+        ) : null}
         <div className={styles.hint}>
           <span>Kg / Reps は onBlur で保存</span>
           <span>Add Set は DB 保存済み</span>
