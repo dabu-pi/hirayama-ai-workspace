@@ -6,6 +6,8 @@ import styles from "./ExerciseHistoryScreen.module.css";
 
 type ExerciseHistoryScreenProps = {
   history: ExerciseHistoryView;
+  errorMessage?: string | null;
+  isLoading?: boolean;
 };
 
 function typeClassName(exerciseType: "T1" | "T2" | "T3") {
@@ -15,16 +17,18 @@ function typeClassName(exerciseType: "T1" | "T2" | "T3") {
 }
 
 export function ExerciseHistoryScreen({
-  history
+  history,
+  errorMessage = null,
+  isLoading = false
 }: ExerciseHistoryScreenProps) {
-  const latestSession = history.sessions[0];
+  const latestSession = !isLoading && !errorMessage ? history.sessions[0] : null;
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.backLink} href="/train">
-          <span aria-hidden="true">‹</span>
-          <span>戻る</span>
+          <span aria-hidden="true">←</span>
+          <span>Back</span>
         </Link>
         <div className={styles.titleWrap}>
           <div className={styles.titleLine}>
@@ -34,11 +38,7 @@ export function ExerciseHistoryScreen({
             <h1 className={styles.title}>{history.exerciseNameEn}</h1>
           </div>
           <p className={styles.subtitle}>
-            種目単体履歴のダミー表示。今後は
-            {" "}
-            <code>GET /exercises/{`{id}`}/history</code>
-            {" "}
-            相当の実データへ接続する。
+            Completed sets for this exercise are shown newest first.
           </p>
         </div>
       </header>
@@ -52,10 +52,28 @@ export function ExerciseHistoryScreen({
         </section>
       ) : null}
 
-      {history.sessions.length === 0 ? (
+      {isLoading ? (
+        <section
+          aria-busy="true"
+          aria-live="polite"
+          className={`${styles.emptyCard} ${styles.statusCard}`}
+        >
+          <p>Loading exercise history...</p>
+        </section>
+      ) : errorMessage ? (
+        <section
+          aria-live="polite"
+          className={`${styles.emptyCard} ${styles.statusCard} ${styles.errorCard}`}
+        >
+          <p>{errorMessage}</p>
+        </section>
+      ) : history.sessions.length === 0 ? (
         <section className={styles.emptyCard}>
-          <p>この種目はまだ履歴がありません。</p>
-          <p>初回入力後に Previous（前回記録）の材料として表示されます。</p>
+          <p>No completed sessions for this exercise yet.</p>
+          <p>
+            Once completed sets are recorded, they will appear here in reverse
+            chronological order.
+          </p>
         </section>
       ) : (
         <section className={styles.historyList}>
@@ -76,7 +94,10 @@ export function ExerciseHistoryScreen({
                   <span>Note</span>
                 </div>
                 {session.sets.map((set) => (
-                  <div className={styles.historyRow} key={set.setNumber}>
+                  <div
+                    className={styles.historyRow}
+                    key={`${session.sessionId}-${set.setNumber}-${set.weightKg ?? "null"}-${set.repsDone ?? "null"}-${set.note}`}
+                  >
                     <span>{set.setNumber}</span>
                     <span>{set.weightKg ?? "-"}kg</span>
                     <span>{set.repsDone ?? "-"}</span>

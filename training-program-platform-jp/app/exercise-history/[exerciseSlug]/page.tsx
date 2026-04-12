@@ -1,5 +1,7 @@
 import { ExerciseHistoryScreen } from "@/components/history/ExerciseHistoryScreen";
-import { getMockExerciseHistory } from "@/lib/mock/workout";
+import { getExerciseHistoryView } from "@/lib/workout/exercise-history";
+
+export const dynamic = "force-dynamic";
 
 type ExerciseHistoryPageProps = {
   params: {
@@ -7,16 +9,12 @@ type ExerciseHistoryPageProps = {
   };
 };
 
-export default function ExerciseHistoryPage({
+export default async function ExerciseHistoryPage({
   params
 }: ExerciseHistoryPageProps) {
-  const history = getMockExerciseHistory(params.exerciseSlug) ?? {
-    exerciseSlug: params.exerciseSlug,
-    exerciseNameJa: "未登録種目",
-    exerciseNameEn: params.exerciseSlug,
-    exerciseType: "T3" as const,
-    sessions: []
-  };
+  const { history, errorMessage } = await getExerciseHistoryView(
+    params.exerciseSlug
+  );
 
-  return <ExerciseHistoryScreen history={history} />;
+  return <ExerciseHistoryScreen errorMessage={errorMessage} history={history} />;
 }

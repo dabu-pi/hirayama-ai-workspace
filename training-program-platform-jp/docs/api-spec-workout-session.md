@@ -302,6 +302,11 @@
 
 **目的:** 種目単体の過去セット記録を新しい順で取得する。
 
+**2026-04-12 implementation note:**
+- 現在の Exercise History 画面は Route Handler ではなく `lib/workout/exercise-history.ts` の server-side helper で同等の取得を実装している
+- 画面側の対象ユーザーは `auth.getUser()` の `user_id` で絞り込み、他ユーザーの履歴へはフォールバックしない
+- 初期表示上限は 10 セッション、探索上限は直近 100 セッション
+
 **クエリパラメータ:**
 
 | パラメータ | 型 | 必須 | 説明 |
@@ -346,6 +351,7 @@
 - `program_label` はサーバー側で `programs.title + " Week N Day N"` を結合して生成する
 - Previous の算出は `GET /workout-sessions/{id}` のレスポンス側で行う。このAPIからは算出しない（→ 論点4参照）
 - セッション件数が 0 件の場合: `"sessions": []`
+- 現在の画面実装も同じ条件で `workout_sessions` / `workout_session_exercises` / `workout_sets` を server-side に読んでいる
 
 ---
 
