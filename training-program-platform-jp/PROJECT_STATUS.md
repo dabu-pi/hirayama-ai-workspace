@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-2b 完了 / seed 原本と live の整合回復）
+最終更新: 2026-04-13（C-3 仕様固定 / level 方針と tag 軸を docs 化）
 
 ## 現在地
 
@@ -208,10 +208,10 @@
 
 ## 次アクション
 
-1. **C-3: プログラム難易度・タグ管理**
-   - 2本目プログラム追加まで完了したため、複数プログラムを前提に比較しやすいメタ情報整理へ進む
-   - `programs.level` の表示方針と将来の tag 設計をまとめる
-   - `/programs` 一覧で初心者向け 2 本が並んだ前提の見せ方を検討する
+1. **C-3 実装: プログラム metadata 追加**
+   - `docs/program-metadata-design.md` で fixed した `level` / tag 方針を実装へ落とす
+   - `programs.level` を `beginner / intermediate / advanced` の canonical value 前提で扱う
+   - tag の正本は DB で持つ前提で schema と seed 投入方針を決める
 2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
@@ -307,6 +307,22 @@
 - 正本方針を回復
   - repo の seed 原本 = live DB へ反映したい状態
   - live DB の手修正内容は seed 原本へ戻し込み済み
+
+### C-3: プログラム metadata 設計（完了 2026-04-13）
+
+- `docs/program-metadata-design.md` を追加し、`/programs` 比較用 metadata の仕様を固定
+- level 方針
+  - DB canonical value は `beginner / intermediate / advanced`
+  - UI は `Beginner / Intermediate / Advanced` 表示
+  - `novice` は現時点では採用しない
+- tag 方針
+  - required: `goal`, `equipment`, `split`
+  - optional: `focus`
+  - `level / days_per_week / duration_weeks` は tag に重複させない
+- 既存 2 本への仮割り当て
+  - `gzclp-base`: `strength`, `barbell`, `full-body`
+  - `starting-strength-base`: `strength`, `barbell`, `full-body`, `squat-focus`, `explosive`
+- 次は C-3 実装として schema / seed / `/programs` 表示反映へ進む
 
 ---
 

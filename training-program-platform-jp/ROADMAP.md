@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-2b 完了 / seed 原本整合回復）
+最終更新: 2026-04-13（C-3 仕様固定 / program metadata 設計完了）
 
 ---
 
@@ -27,7 +27,8 @@
 | C-1: seed 運用ルール docs 化 | ✅ 完了（2026-04-13） |
 | **C-2: 2本目プログラム seed 追加** | **✅ 完了（2026-04-13, Starting Strength Base live 反映）** |
 | **C-2b: seed 原本整合回復** | **✅ 完了（2026-04-13）** |
-| **C-3: プログラム難易度・タグ管理** | **🔄 次の作業** |
+| **C-3: プログラム難易度・タグ管理（仕様固定）** | **✅ 設計完了（2026-04-13）** |
+| **C-3 実装: metadata 追加** | **🔄 次の作業** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -40,11 +41,11 @@
 | 未ログインで保護ルートがリダイレクトされる | ✅ 確認済み |
 | sign up 429 | ⚠️ 外部レート制限（blockerとしない） |
 
-### 次フェーズの優先タスク（C-2）
+### 次フェーズの優先タスク（C-3）
 
-1. C-3 として `programs.level` と将来 tag の見せ方を整理する
-2. `/programs` 一覧で複数プログラム比較しやすい導線を検討する
-3. 3本目候補に進む前にライブラリの分類軸を固める
+1. `docs/program-metadata-design.md` の方針どおり、program metadata の schema を決める
+2. `gzclp-base` と `starting-strength-base` に level / tag metadata を投入できる状態にする
+3. `/programs` 一覧で比較に効く最小表示を実装する
 
 ### C-2 完了メモ
 
@@ -62,6 +63,22 @@
 - 日本語の実データ文字列は Unicode escape 形式へ変更し、別環境再投入時の文字化け耐性を上げた
 - `docs/seed-program-guide.md` に UTF-8 保存と貼り付け時の注意を追記
 - 「正本は repo、live はその反映結果」という前提を回復済み
+
+### C-3 設計完了メモ
+
+- `docs/program-metadata-design.md` を追加し、比較用 metadata の仕様を固定
+- level 方針
+  - `programs.level` は `beginner / intermediate / advanced` の 3 段階を正本とする
+  - UI 表示は `Beginner / Intermediate / Advanced`
+  - `novice` は現時点では不採用
+- tag 方針
+  - required: `goal`, `equipment`, `split`
+  - optional: `focus`
+  - `days_per_week` / `duration_weeks` / `level` は既存 structured field を使い、tag に重複させない
+- 仮比較表
+  - `gzclp-base` = `strength`, `barbell`, `full-body`
+  - `starting-strength-base` = `strength`, `barbell`, `full-body`, `squat-focus`, `explosive`
+- metadata の正本は code ではなく DB で持つ方針を採用
 
 ---
 
