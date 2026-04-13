@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-3 仕様固定 / level 方針と tag 軸を docs 化）
+最終更新: 2026-04-13（C-3a 実装完了 / metadata 基盤を追加）
 
 ## 現在地
 
@@ -208,10 +208,10 @@
 
 ## 次アクション
 
-1. **C-3 実装: プログラム metadata 追加**
-   - `docs/program-metadata-design.md` で fixed した `level` / tag 方針を実装へ落とす
-   - `programs.level` を `beginner / intermediate / advanced` の canonical value 前提で扱う
-   - tag の正本は DB で持つ前提で schema と seed 投入方針を決める
+1. **C-3b: `/programs` metadata 表示**
+   - C-3a で追加した `levelKey` / `tags` を list / detail UI にどう見せるかを実装する
+   - list card では comparison に効く最小限の tag 表示へ寄せる
+   - detail では full tag 表示と軸ごとの見せ方を整える
 2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
@@ -323,6 +323,25 @@
   - `gzclp-base`: `strength`, `barbell`, `full-body`
   - `starting-strength-base`: `strength`, `barbell`, `full-body`, `squat-focus`, `explosive`
 - 次は C-3 実装として schema / seed / `/programs` 表示反映へ進む
+
+### C-3a: metadata 基盤実装（完了 2026-04-13）
+
+- migration を追加
+  - `supabase/migrations/20260413_000009_program_metadata_foundation.sql`
+  - `programs.level` を `beginner / intermediate / advanced` の canonical value に正規化
+  - `program_tags` / `program_tag_assignments` を追加
+  - axis は `goal / equipment / split / focus` のみに制限
+  - `goal / equipment / split` は `program_id + axis` の unique index で single-select 制御
+  - public reference data として RLS の read policy を追加
+- seed を追加
+  - `seed/programs/program-metadata.sql`
+  - `gzclp-base` と `starting-strength-base` に metadata を付与する idempotent seed
+- read path を追加
+  - `types/programs.ts`: `ProgramLevel`, `ProgramTag`, `levelKey`, `tags`
+  - `lib/programs/program-library.ts`: program ごとに metadata tags を取得する土台を追加
+  - metadata table 未適用時は warning を出しつつ tags を空配列にして既存 `/programs` を壊さない
+  - `lib/programs/program-catalog.ts`: mock catalog は fallback 維持、metadata tags は空配列で非正本扱い
+- 次は C-3b として `/programs` list / detail の metadata 表示を実装する
 
 ---
 

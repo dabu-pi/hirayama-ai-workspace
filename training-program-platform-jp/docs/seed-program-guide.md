@@ -19,12 +19,14 @@
 seed/
 └── programs/
     ├── gzclp-base.sql          ← 既存（参考実装）
+    ├── program-metadata.sql    ← 共通 metadata seed
     ├── _template.sql           ← 新規作成時のテンプレート
     └── [program-slug].sql      ← 2本目以降はここに追加
 ```
 
 **ルール:**
-- ファイル名は `programs.slug` と一致させる（例: `starting-strength-base.sql`）
+- プログラム本体 seed はファイル名を `programs.slug` と一致させる（例: `starting-strength-base.sql`）
+- 複数 program を横断して付与する metadata は `program-metadata.sql` のような共通 seed にまとめてよい
 - `seed/programs/` 配下のみ。`supabase/migrations/` には入れない
 - migration はスキーマ変更用。プログラムデータ追加はすべて `seed/programs/` に置く
 

@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-3 仕様固定 / program metadata 設計完了）
+最終更新: 2026-04-13（C-3a 完了 / program metadata 基盤実装）
 
 ---
 
@@ -28,7 +28,8 @@
 | **C-2: 2本目プログラム seed 追加** | **✅ 完了（2026-04-13, Starting Strength Base live 反映）** |
 | **C-2b: seed 原本整合回復** | **✅ 完了（2026-04-13）** |
 | **C-3: プログラム難易度・タグ管理（仕様固定）** | **✅ 設計完了（2026-04-13）** |
-| **C-3 実装: metadata 追加** | **🔄 次の作業** |
+| **C-3a: metadata 基盤実装** | **✅ 完了（2026-04-13）** |
+| **C-3b: `/programs` metadata 表示** | **🔄 次の作業** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -43,9 +44,9 @@
 
 ### 次フェーズの優先タスク（C-3）
 
-1. `docs/program-metadata-design.md` の方針どおり、program metadata の schema を決める
-2. `gzclp-base` と `starting-strength-base` に level / tag metadata を投入できる状態にする
-3. `/programs` 一覧で比較に効く最小表示を実装する
+1. `levelKey` と `tags` を `/programs` list / detail へ表示する
+2. list card に出す tag 数を絞り、比較に効く最小 UI にする
+3. detail で required / optional tag の見せ分けを整える
 
 ### C-2 完了メモ
 
@@ -79,6 +80,21 @@
   - `gzclp-base` = `strength`, `barbell`, `full-body`
   - `starting-strength-base` = `strength`, `barbell`, `full-body`, `squat-focus`, `explosive`
 - metadata の正本は code ではなく DB で持つ方針を採用
+
+### C-3a 完了メモ
+
+- `supabase/migrations/20260413_000009_program_metadata_foundation.sql`
+  - `programs.level` canonical constraint を追加
+  - `program_tags` / `program_tag_assignments` を追加
+  - axis 制限と single-select axis 制約を追加
+  - public 読み取り用 RLS policy を追加
+- `seed/programs/program-metadata.sql`
+  - `gzclp-base` と `starting-strength-base` へ metadata を付与する seed を追加
+- read path
+  - `types/programs.ts` に `ProgramLevel` / `ProgramTag` / `levelKey` / `tags`
+  - `program-library.ts` で program ごとの metadata 読込を追加
+  - metadata table 未適用環境では tags を空にして既存導線を維持
+- 次は C-3b として `/programs` UI 表示へ進む
 
 ---
 

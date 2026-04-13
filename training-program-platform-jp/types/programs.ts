@@ -4,14 +4,28 @@ export type ProgramDetailState = "ready" | "loading" | "not_found" | "error";
 
 export type ProgramDataSource = "mock_catalog" | "supabase";
 
+export type ProgramLevel = "beginner" | "intermediate" | "advanced";
+
+export type ProgramTagAxis = "goal" | "equipment" | "split" | "focus";
+
+export type ProgramTag = {
+  slug: string;
+  label: string;
+  axis: ProgramTagAxis;
+  description: string | null;
+  sortOrder: number;
+};
+
 export type ProgramSummary = {
   id: string;
   slug: string;
   title: string;
   level: string | null;
+  levelKey: ProgramLevel | null;
   goal: string | null;
   frequencyLabel: string | null;
   durationLabel: string | null;
+  tags: ProgramTag[];
 };
 
 export type ProgramCatalogItem = ProgramSummary & {

@@ -12,7 +12,13 @@ import {
   findProgramCatalogItemBySlug,
   listProgramCatalogItems
 } from "@/lib/programs/program-catalog";
-import type { ProgramCatalogItem, ProgramDataSource } from "@/types/programs";
+import type {
+  ProgramCatalogItem,
+  ProgramDataSource,
+  ProgramLevel,
+  ProgramTag,
+  ProgramTagAxis
+} from "@/types/programs";
 
 type DatabaseClient = SupabaseClient;
 
@@ -27,10 +33,33 @@ type ProgramRow = {
   is_public: boolean;
 };
 
+type ProgramTagRow = {
+  id: string;
+  slug: string;
+  label: string;
+  axis: string;
+  description: string | null;
+  sort_order: number | null;
+};
+
+type ProgramTagAssignmentRow = {
+  program_id: string;
+  axis: string;
+  program_tags: ProgramTagRow | ProgramTagRow[] | null;
+};
+
 type ProgramLibraryResult = {
   items: ProgramCatalogItem[];
   source: ProgramDataSource;
 };
+
+const PROGRAM_LEVEL_DISPLAY: Record<ProgramLevel, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced"
+};
+
+const PROGRAM_TAG_AXES: ProgramTagAxis[] = ["goal", "equipment", "split", "focus"];
 
 function createProgramsReadClient(): DatabaseClient {
   return hasSupabaseServiceRoleEnv()
@@ -38,10 +67,31 @@ function createProgramsReadClient(): DatabaseClient {
     : createSupabaseServerClient();
 }
 
-function toDisplayLevel(level: string | null) {
+function isProgramTagAxis(value: string): value is ProgramTagAxis {
+  return PROGRAM_TAG_AXES.includes(value as ProgramTagAxis);
+}
+
+function normalizeProgramLevel(level: string | null): ProgramLevel | null {
+  const normalized = level?.trim().toLowerCase() ?? null;
+  if (!normalized) return null;
+
+  switch (normalized) {
+    case "beginner":
+      return "beginner";
+    case "novice":
+      return "beginner";
+    case "intermediate":
+      return "intermediate";
+    case "advanced":
+      return "advanced";
+    default:
+      return null;
+  }
+}
+
+function toDisplayLevel(level: ProgramLevel | null) {
   if (!level) return null;
-  if (level.length <= 1) return level.toUpperCase();
-  return `${level[0].toUpperCase()}${level.slice(1)}`;
+  return PROGRAM_LEVEL_DISPLAY[level];
 }
 
 function buildFrequencyLabel(daysPerWeek: number | null) {
@@ -68,15 +118,92 @@ function buildOverview(description: string | null, title: string) {
   return `${title} overview is not available in Supabase yet.`;
 }
 
-function mapProgramRow(row: ProgramRow): ProgramCatalogItem {
+function mapProgramTagRow(row: ProgramTagRow): ProgramTag | null {
+  if (!isProgramTagAxis(row.axis)) return null;
+  return {
+    slug: row.slug,
+    label: row.label,
+    axis: row.axis,
+    description: row.description,
+    sortOrder: row.sort_order ?? 0
+  };
+}
+
+function extractAssignedTag(row: ProgramTagAssignmentRow): ProgramTag | null {
+  if (!isProgramTagAxis(row.axis)) return null;
+
+  const tagRow = Array.isArray(row.program_tags)
+    ? row.program_tags[0] ?? null
+    : row.program_tags;
+
+  if (!tagRow) return null;
+
+  const mapped = mapProgramTagRow(tagRow);
+  if (!mapped || mapped.axis !== row.axis) return null;
+
+  return mapped;
+}
+
+function createEmptyProgramTagMap(programIds: string[]) {
+  return new Map<string, ProgramTag[]>(programIds.map((programId) => [programId, []]));
+}
+
+async function listProgramTagsByProgramId(
+  client: DatabaseClient,
+  programIds: string[]
+): Promise<Map<string, ProgramTag[]>> {
+  const tagsByProgramId = createEmptyProgramTagMap(programIds);
+  if (programIds.length === 0) return tagsByProgramId;
+
+  try {
+    const { data, error } = await client
+      .from("program_tag_assignments")
+      .select(
+        "program_id, axis, program_tags!inner(id, slug, label, axis, description, sort_order)"
+      )
+      .in("program_id", programIds);
+
+    if (error) {
+      console.warn("Program metadata tags could not be loaded from Supabase.", error.message);
+      return tagsByProgramId;
+    }
+
+    for (const row of (data ?? []) as ProgramTagAssignmentRow[]) {
+      const tag = extractAssignedTag(row);
+      if (!tag) continue;
+      tagsByProgramId.get(row.program_id)?.push(tag);
+    }
+
+    for (const [programId, tags] of tagsByProgramId.entries()) {
+      const sortedTags = [...tags].sort((left, right) => {
+        if (left.sortOrder !== right.sortOrder) {
+          return left.sortOrder - right.sortOrder;
+        }
+        return left.label.localeCompare(right.label);
+      });
+      tagsByProgramId.set(programId, sortedTags);
+    }
+
+    return tagsByProgramId;
+  } catch (error) {
+    console.warn("Program metadata tags query failed. Continuing without tags.", error);
+    return tagsByProgramId;
+  }
+}
+
+function mapProgramRow(row: ProgramRow, tags: ProgramTag[]): ProgramCatalogItem {
+  const levelKey = normalizeProgramLevel(row.level);
+
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
-    level: toDisplayLevel(row.level),
+    level: toDisplayLevel(levelKey),
+    levelKey,
     goal: extractGoal(row.description),
     frequencyLabel: buildFrequencyLabel(row.days_per_week),
     durationLabel: buildDurationLabel(row.duration_weeks),
+    tags,
     overview: buildOverview(row.description, row.title)
   };
 }
@@ -95,7 +222,13 @@ async function listProgramsFromSupabase(): Promise<ProgramCatalogItem[]> {
     throw new Error(`Failed to load programs from Supabase: ${error.message}`);
   }
 
-  return ((data ?? []) as ProgramRow[]).map(mapProgramRow);
+  const rows = (data ?? []) as ProgramRow[];
+  const tagsByProgramId = await listProgramTagsByProgramId(
+    client,
+    rows.map((row) => row.id)
+  );
+
+  return rows.map((row) => mapProgramRow(row, tagsByProgramId.get(row.id) ?? []));
 }
 
 function listProgramsFromMock(): ProgramCatalogItem[] {
