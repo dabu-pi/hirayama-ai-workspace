@@ -76,6 +76,7 @@
 | **C-5: gzclp-base live correction SQL + runbook** | **✅ fully closed（2026-04-14）** |
 | **upper-lower-base tags live fix** | **✅ 完了（2026-04-14、live-only 補修）** |
 | **C-6: Program Detail week preview** | **✅ 完了（2026-04-14）** |
+| **C-7: 4本目 seed — Dumbbell Full Body Base（実装完了）** | **✅ commit 3551def / live SQL 実行待ち ⏳** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -92,8 +93,20 @@
 
 1. C-6 live push: Vercel へのデプロイ（push で自動）
 2. 次候補: week preview の拡張（T1/T2/T3 表示 / セット数・レップ数折りたたみ）
-3. 次候補: 4本目プログラム seed
+3. 次候補: 4本目プログラム seed ← **C-7 として実装済み（live SQL 実行待ち）**
 4. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
+
+### C-7 live 完了後の方針（2026-04-14 確定）
+
+- program creation フェーズをいったん終了する
+- 次フェーズは **利用完遂モード** に切り替える
+- 対象: enrollment / day progression / daily logging / history / swap / completion の整備
+- 最初の着手点: **day progression（セッション完了後の次 day 自動移行）**
+  - 理由: 他のすべての流れ（logging → history → swap → completion）の前提になる
+  - 現状は StartSession → Train → Finish → Summary の 1 回限りフローは動いているが、
+    「翌日に戻ってきたとき正しい day が表示されるか」が未確認・未整備
+  - enrollment.current_program_day_id の更新タイミングと Finish 後の advancement を整備することで、
+    継続利用の根幹が確立する
 
 ### C-2 完了メモ
 

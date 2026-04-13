@@ -1,6 +1,58 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（upper-lower-base tags live fix 完了 — C-4/C-5 fully closed）
+最終更新: 2026-04-14（C-7 実装完了 — live SQL 実行待ち）
+
+## 2026-04-14 C-7 — Dumbbell Full Body Base（4本目 seed）
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| seed SQL（dumbbell-full-body-base.sql） | **実装完了・commit 3551def ✅** |
+| program-metadata.sql（general-fitness / dumbbell タグ追加） | **更新完了・commit 3551def ✅** |
+| mock catalog エントリ（program-catalog.ts） | **追加済み ✅** |
+| live Supabase 反映 | **手動 SQL 実行待ち ⏳** |
+| program creation フェーズ | **C-7 live 完了後に一時終了** |
+
+### seed 構成
+
+| 項目 | 内容 |
+|---|---|
+| slug | `dumbbell-full-body-base` |
+| title | `Dumbbell Full Body Base` |
+| level | `beginner` |
+| frequency | `3 days / week` |
+| duration | `4 weeks` |
+| source_fidelity | `custom` |
+| split | A/B 交互（W1: A/B/A → W2: B/A/B → W3: A/B/A → W4: B/A/B） |
+| Day A | Goblet Squat T1 3×12 / DB Bench Press T1 3×10 / DB Row T2 3×10 |
+| Day B | Romanian Deadlift T1 3×12 / DB Shoulder Press T1 3×10 / DB Curl T2 3×12 |
+
+### 追加 tags
+
+| slug | label | axis |
+|---|---|---|
+| `general-fitness` | General Fitness | goal |
+| `dumbbell` | Dumbbell | equipment |
+
+### live 反映手順（手動実行 2 本）
+
+```
+1. seed/programs/dumbbell-full-body-base.sql
+2. seed/programs/program-metadata.sql
+```
+
+### live 確認項目（SQL 実行後）
+
+| 確認項目 | 期待値 |
+|---|---|
+| `/programs` に 4本目が追加される | Dumbbell Full Body Base が表示される |
+| filter chip に Dumbbell が追加される | equipment 軸 |
+| filter chip に General Fitness が追加される | goal 軸 |
+| `/programs/dumbbell-full-body-base` detail が表示される | 4 weeks × 3 days の week preview |
+| 既存 3本（GZCLP / Starting Strength / Upper Lower）の表示が壊れない | 変化なし |
+
+---
 
 ## 2026-04-14 C-4 / C-5 fully closed
 
