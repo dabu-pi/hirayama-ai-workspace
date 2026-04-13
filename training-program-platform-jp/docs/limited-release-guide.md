@@ -40,9 +40,21 @@
 
 ### 残課題
 
-- C-2 として 2 本目のプログラム seed 追加が未着手
 - `sign up 429` は外部レート制限のため低優先で再確認待ち
 - 招待制運用のため、アカウント配布と不要アカウント整理を継続する
+
+### Vercel Production Branch の問題と対応（2026-04-13）
+
+初期デプロイ時に Vercel の Production Branch が `master` のままになっており、開発ブランチ `feature/auto-dev-phase3-loop` への push が production に反映されない問題が発生した。
+
+**今後の正しい運用:**
+
+```
+Vercel Dashboard → [プロジェクト] → Settings → Git → Production Branch
+→ master から feature/auto-dev-phase3-loop に変更する
+```
+
+変更後は `feature/auto-dev-phase3-loop` への push が自動的に production デプロイをトリガーする。
 
 ---
 

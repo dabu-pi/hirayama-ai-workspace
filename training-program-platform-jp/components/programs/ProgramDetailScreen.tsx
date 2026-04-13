@@ -1,8 +1,30 @@
 import Link from "next/link";
 
-import type { ProgramDetailState, ProgramDetailView } from "@/types/programs";
+import type {
+  ProgramDetailState,
+  ProgramDetailView,
+  ProgramTag,
+  ProgramTagAxis
+} from "@/types/programs";
 
 import styles from "./ProgramDetailScreen.module.css";
+
+const REQUIRED_TAG_AXES: ProgramTagAxis[] = ["goal", "equipment", "split"];
+
+function findFirstTagByAxis(tags: ProgramTag[], axis: ProgramTagAxis) {
+  return tags.find((tag) => tag.axis === axis) ?? null;
+}
+
+function getRequiredTags(tags: ProgramTag[]) {
+  return REQUIRED_TAG_AXES.flatMap((axis) => {
+    const tag = findFirstTagByAxis(tags, axis);
+    return tag ? [tag] : [];
+  });
+}
+
+function getOptionalFocusTag(tags: ProgramTag[]) {
+  return findFirstTagByAxis(tags, "focus");
+}
 
 type ProgramDetailScreenProps = {
   state: ProgramDetailState;
@@ -104,6 +126,24 @@ export function ProgramDetailScreen({
               </strong>
             </article>
           </section>
+
+          {(() => {
+            const requiredTags = getRequiredTags(program.tags);
+            const focusTag = getOptionalFocusTag(program.tags);
+            if (requiredTags.length === 0 && !focusTag) return null;
+            return (
+              <div className={styles.tagRow}>
+                {requiredTags.map((tag) => (
+                  <span className={styles.tagBadge} key={tag.slug}>
+                    {tag.label}
+                  </span>
+                ))}
+                {focusTag ? (
+                  <span className={styles.focusBadge}>{focusTag.label}</span>
+                ) : null}
+              </div>
+            );
+          })()}
 
           <section className={styles.contentCard}>
             <span className={styles.sectionLabel}>Goal</span>

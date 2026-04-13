@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-3b live 修正完了 / metadata badge 本番表示を確認）
+最終更新: 2026-04-13（C-3c 完了 / Program Detail metadata 表示 + Vercel production branch 統一メモ）
 
 ---
 
@@ -31,7 +31,9 @@
 | **C-3a: metadata 基盤実装** | **✅ 完了（2026-04-13）** |
 | **C-3a-live: metadata live 反映** | **✅ 完了（2026-04-13）** |
 | **C-3b: `/programs` metadata 表示** | **✅ 完了 + live 修正済み（2026-04-13）** |
-| **C-3c: Program Detail metadata 表示** | **🔄 次の作業** |
+| **C-3c: Program Detail metadata 表示** | **✅ 完了（2026-04-13）** |
+| **Vercel Production Branch 統一** | **⚠️ 要手動作業（`feature/auto-dev-phase3-loop` に変更）** |
+| C-3d: filter UI / タグ絞り込み | 📋 候補（C-3c 後に検討） |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -126,7 +128,27 @@
   1. `program_tag_assignments` から `(program_id, tag_id, axis)` を取得
   2. `program_tags` から tag 詳細を取得
   3. メモリ上で結合
-- **次は C-3c:** detail page 側の metadata 表示に進む
+### C-3c 完了メモ（2026-04-13）
+
+- `components/programs/ProgramDetailScreen.tsx` に required tags + optional focus タグ行を追加
+  - metaGrid（Level / Frequency / Duration）の直下に `tagRow` を追加
+  - required: `goal / equipment / split`（tagBadge: ニュートラル）
+  - optional: `focus`（focusBadge: 黄色）
+  - tags が空の場合は tagRow を非表示
+- `ProgramDetailScreen.module.css` に `.tagRow` / `.tagBadge` / `.focusBadge` を追加
+  - ProgramsScreen と同じ badge スタイルを踏襲
+- 一覧と詳細で badge の見た目・意味を統一済み
+
+### Vercel Production Branch 運用メモ（2026-04-13）
+
+- **発生した問題:** Vercel Production Branch = `master` に対し、開発は `feature/auto-dev-phase3-loop` で継続していたため `74b2718` 以降が production に反映されなかった
+- **今回の対応:** `feature/auto-dev-phase3-loop` を `master` にマージ（`7883c1b`）して production 反映
+- **今後の方針:**
+  - Vercel Dashboard → Settings → Git → Production Branch を `feature/auto-dev-phase3-loop` に変更する
+  - 変更後は push するたびに自動デプロイされる
+  - `master` へのマージは不要になる
+  - **この設定変更はダッシュボードで手動操作が必要（未実施）**
+- **参照:** CLAUDE.md 「常用ブランチ: `feature/auto-dev-phase3-loop`」
 
 ---
 

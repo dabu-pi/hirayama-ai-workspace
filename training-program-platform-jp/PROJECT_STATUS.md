@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-3b live 修正完了 / metadata badge 本番未表示の原因修正 → C-3c へ）
+最終更新: 2026-04-13（C-3c 完了 / Program Detail metadata 表示 + Vercel production branch 統一メモ）
 
 ## 現在地
 
@@ -20,6 +20,7 @@
 | **限定公開準備（デプロイガイド）** | **完了 ✅（2026-04-13）** |
 | **限定公開実施** | **開始済み ✅（2026-04-13）** |
 | **本番 URL** | **`https://training-program-platform-jp.vercel.app`** |
+| **Vercel Production Branch** | **⚠️ 現在 `master` → `feature/auto-dev-phase3-loop` に変更要（手動作業）** |
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -125,6 +126,10 @@
     - 症状: badge が本番で表示されなかった（`program.tags` が `[]`）
     - 原因: `program_tag_assignments` → `program_tags` の PostgREST 複合 FK join がサイレントエラー
     - 修正: 2クエリ + メモリ結合に変更（`lib/programs/program-library.ts`）
+- Program Detail metadata 表示（C-3c）
+  - `/programs/[slug]` detail 画面に required tags + optional focus タグ行を追加
+  - `ProgramDetailScreen.tsx` / `ProgramDetailScreen.module.css` を変更
+  - 一覧と詳細で badge 見た目・意味を統一済み
   - `loading` / `empty` / `error` 実装済み
   - summary の戻り先を `/programs` に統一済み
 - Program Detail MVP
