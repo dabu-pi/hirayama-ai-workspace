@@ -6,6 +6,7 @@
 --   - gzclp-base
 --   - starting-strength-base
 --   - upper-lower-base
+--   - dumbbell-full-body-base
 --
 -- This seed is authoritative for the current metadata assignment of the
 -- public program library. It may be re-run safely (upsert + delete/re-insert).
@@ -15,6 +16,7 @@ declare
   prog_gzclp uuid;
   prog_starting_strength uuid;
   prog_upper_lower uuid;
+  prog_dumbbell_full_body uuid;
 
   tag_strength uuid;
   tag_barbell uuid;
@@ -22,11 +24,15 @@ declare
   tag_upper_lower uuid;
   tag_squat_focus uuid;
   tag_explosive uuid;
+  tag_general_fitness uuid;
+  tag_dumbbell uuid;
 begin
   insert into public.program_tags (slug, label, axis, description, sort_order)
   values
     ('strength', 'Strength', 'goal', 'Primary goal is improving absolute strength on the main lifts.', 10),
+    ('general-fitness', 'General Fitness', 'goal', 'Primary goal is building overall fitness and movement quality rather than sport-specific strength.', 20),
     ('barbell', 'Barbell', 'equipment', 'Program assumes a barbell-centered setup.', 10),
+    ('dumbbell', 'Dumbbell', 'equipment', 'Program uses dumbbells as the primary equipment.', 20),
     ('full-body', 'Full Body', 'split', 'Each session trains the full body rather than a body-part split.', 10),
     ('upper-lower', 'Upper / Lower', 'split', 'Sessions alternate between upper-body and lower-body focused days.', 20),
     ('squat-focus', 'Squat Focus', 'focus', 'Program places unusually frequent emphasis on the squat.', 20),
@@ -38,25 +44,30 @@ begin
       description = excluded.description,
       sort_order = excluded.sort_order;
 
-  select id into tag_strength from public.program_tags where slug = 'strength';
-  select id into tag_barbell from public.program_tags where slug = 'barbell';
-  select id into tag_full_body from public.program_tags where slug = 'full-body';
-  select id into tag_upper_lower from public.program_tags where slug = 'upper-lower';
-  select id into tag_squat_focus from public.program_tags where slug = 'squat-focus';
-  select id into tag_explosive from public.program_tags where slug = 'explosive';
+  select id into tag_strength       from public.program_tags where slug = 'strength';
+  select id into tag_general_fitness from public.program_tags where slug = 'general-fitness';
+  select id into tag_barbell         from public.program_tags where slug = 'barbell';
+  select id into tag_dumbbell        from public.program_tags where slug = 'dumbbell';
+  select id into tag_full_body       from public.program_tags where slug = 'full-body';
+  select id into tag_upper_lower     from public.program_tags where slug = 'upper-lower';
+  select id into tag_squat_focus     from public.program_tags where slug = 'squat-focus';
+  select id into tag_explosive       from public.program_tags where slug = 'explosive';
 
-  if tag_strength is null
-    or tag_barbell is null
-    or tag_full_body is null
-    or tag_upper_lower is null
-    or tag_squat_focus is null
-    or tag_explosive is null then
+  if tag_strength        is null
+    or tag_general_fitness is null
+    or tag_barbell         is null
+    or tag_dumbbell        is null
+    or tag_full_body       is null
+    or tag_upper_lower     is null
+    or tag_squat_focus     is null
+    or tag_explosive       is null then
     raise exception 'Tag lookup failed for program metadata seed.';
   end if;
 
-  select id into prog_gzclp from public.programs where slug = 'gzclp-base';
+  select id into prog_gzclp             from public.programs where slug = 'gzclp-base';
   select id into prog_starting_strength from public.programs where slug = 'starting-strength-base';
-  select id into prog_upper_lower from public.programs where slug = 'upper-lower-base';
+  select id into prog_upper_lower       from public.programs where slug = 'upper-lower-base';
+  select id into prog_dumbbell_full_body from public.programs where slug = 'dumbbell-full-body-base';
 
   if prog_gzclp is null then
     raise exception 'Program slug not found: gzclp-base';
@@ -66,6 +77,9 @@ begin
   end if;
   if prog_upper_lower is null then
     raise exception 'Program slug not found: upper-lower-base';
+  end if;
+  if prog_dumbbell_full_body is null then
+    raise exception 'Program slug not found: dumbbell-full-body-base';
   end if;
 
   update public.programs
@@ -92,8 +106,16 @@ begin
     source_notes = 'Internal MVP upper/lower template. No single canonical source program is being represented.'
   where id = prog_upper_lower;
 
+  update public.programs
+  set
+    title = 'Dumbbell Full Body Base',
+    source_program_name = null,
+    source_fidelity = 'custom',
+    source_notes = 'Internal beginner dumbbell full-body template. No single canonical source program is being represented.'
+  where id = prog_dumbbell_full_body;
+
   delete from public.program_tag_assignments
-  where program_id in (prog_gzclp, prog_starting_strength, prog_upper_lower);
+  where program_id in (prog_gzclp, prog_starting_strength, prog_upper_lower, prog_dumbbell_full_body);
 
   insert into public.program_tag_assignments (program_id, tag_id, axis)
   values
@@ -107,9 +129,12 @@ begin
     (prog_starting_strength, tag_explosive, 'focus'),
     (prog_upper_lower, tag_strength, 'goal'),
     (prog_upper_lower, tag_barbell, 'equipment'),
-    (prog_upper_lower, tag_upper_lower, 'split');
+    (prog_upper_lower, tag_upper_lower, 'split'),
+    (prog_dumbbell_full_body, tag_general_fitness, 'goal'),
+    (prog_dumbbell_full_body, tag_dumbbell, 'equipment'),
+    (prog_dumbbell_full_body, tag_full_body, 'split');
 
-  raise notice 'Seed complete: program metadata assigned for gzclp-base, starting-strength-base, upper-lower-base.';
+  raise notice 'Seed complete: program metadata assigned for gzclp-base, starting-strength-base, upper-lower-base, dumbbell-full-body-base.';
 end;
 $$;
 

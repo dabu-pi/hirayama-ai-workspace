@@ -53,6 +53,23 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
       "Custom four-day upper/lower barbell split for MVP coverage. Treated as custom rather than as a named published program."
   },
   {
+    id: "program-dumbbell-full-body",
+    slug: "dumbbell-full-body-base",
+    title: "Dumbbell Full Body Base",
+    level: "Beginner",
+    levelKey: "beginner",
+    goal: "Build full-body fitness with dumbbells — no barbell required.",
+    frequencyLabel: "3 days / week",
+    durationLabel: "4 weeks",
+    sourceProgramName: null,
+    sourceFidelity: "custom",
+    sourceNotes:
+      "Internal beginner dumbbell full-body template. No single canonical source program is being represented.",
+    tags: [],
+    overview:
+      "A beginner-friendly full-body routine built entirely around dumbbells. Each session covers lower body, upper push, and upper pull movements. Alternating A/B structure keeps variety across the week."
+  },
+  {
     id: "program-full-body",
     slug: "full-body-foundation",
     title: "Full Body Foundation",
