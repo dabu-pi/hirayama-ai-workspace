@@ -99,3 +99,6 @@ gas-projects/**/*.pdf
 gas-projects/**/output/**/*.xlsx
 gas-projects/**/transfer_batch*.ndjson
 
+
+# Claude Code local settings (per-project)
+training-program-platform-jp/.claude/

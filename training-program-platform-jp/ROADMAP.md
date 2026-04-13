@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-3d 完了 / Programs filter UI 実装）
+最終更新: 2026-04-13（C-4 seed 追加 / Upper Lower Base — live 反映は手動 SQL 実行待ち）
 
 ---
 
@@ -36,6 +36,7 @@
 | **Vercel Production Branch 統一** | **✅ `feature/auto-dev-phase3-loop` に変更済み** |
 | **Programs 一覧 CTA UX 修正** | **✅ 完了（2026-04-13）** |
 | **C-3d: Programs filter UI** | **✅ 完了（2026-04-13）** |
+| **C-4: 3本目プログラム seed（Upper Lower Base）** | **✅ 実装完了（2026-04-13）— live 反映は手動 SQL 実行待ち** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -48,11 +49,11 @@
 | 未ログインで保護ルートがリダイレクトされる | ✅ 確認済み |
 | sign up 429 | ⚠️ 外部レート制限（blockerとしない） |
 
-### 次フェーズの優先タスク（C-3）
+### 次フェーズの優先タスク（C-4 以降）
 
-1. `/programs/[slug]` で required / optional metadata の見せ分けを追加する
-2. 一覧と詳細で tag の意味づけがずれないように揃える
-3. filter UI は metadata 表示が落ち着いてから検討する
+1. C-4 live 反映: Supabase Dashboard SQL Editor で `upper-lower-base.sql` → `program-metadata.sql` の順で実行する
+2. live 確認: `/programs` に "Upper Lower Base (Intermediate / Upper Lower)" が表示されること、filter で Level / Tag が意味ある絞り込みになること
+3. 次候補: プログラム詳細ページの追加情報（week 構成プレビュー、種目リスト）など
 
 ### C-2 完了メモ
 
@@ -165,6 +166,25 @@
 - URL query 同期は今回見送り（programs 数が少ない間は不要）
 - `ProgramsScreen.module.css` に `.filterBar` / `.chipGroup` / `.chip` / `.chipActive` / `.clearBtn` / `.clearLink` を追加
 - local preview で動作確認済み（Squat Focus 選択 → 1件 / Clear → 2件復帰）
+
+### C-4 完了メモ（2026-04-13）
+
+- 3本目プログラム `Upper Lower Base` を追加
+  - `seed/programs/upper-lower-base.sql` を新規作成（4 weeks × 4 days / week = 16 days）
+  - 構成: Upper days（D1/D3）= Bench T1 4×5 + Press T2 3×6 + Row T2 3×8 / Lower days（D2/D4）= Squat T1 4×5 + Deadlift T1 1×5
+  - `level = intermediate`, `days_per_week = 4`, `duration_weeks = 4`
+  - 種目は `bench-press` / `overhead-press` / `barbell-row` / `squat` / `deadlift`（upsert で重複安全）
+- `seed/programs/program-metadata.sql` を更新
+  - `upper-lower` タグ（split 軸、sort_order 20）を追加
+  - `upper-lower-base` の metadata を追加: `strength (goal)` / `barbell (equipment)` / `upper-lower (split)`
+  - 3プログラム（gzclp-base / starting-strength-base / upper-lower-base）の正本として管理
+- `lib/programs/program-catalog.ts` の mock エントリを `upper-lower-base` へ更新（slug / title / level / frequency / duration を整合）
+- filter 効果:
+  - Level フィルター: Beginner（2件）/ Intermediate（1件）で絞り込み可能に
+  - Split タグ: `Full Body`（GZCLP / Starting Strength）vs `Upper / Lower`（Upper Lower）で差分が明確
+- **live 反映は手動 SQL 実行待ち**（下記の順で Supabase Dashboard SQL Editor に貼り付けて実行）
+  1. `seed/programs/upper-lower-base.sql`
+  2. `seed/programs/program-metadata.sql`
 
 ---
 

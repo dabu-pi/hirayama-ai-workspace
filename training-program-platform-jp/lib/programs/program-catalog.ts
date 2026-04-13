@@ -16,16 +16,16 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
   },
   {
     id: "program-upper-lower",
-    slug: "upper-lower-strength",
-    title: "Upper / Lower Strength",
+    slug: "upper-lower-base",
+    title: "Upper Lower Base",
     level: "Intermediate",
     levelKey: "intermediate",
-    goal: "Balance squat, hinge, press, and pull volume through the week.",
+    goal: "上半身・下半身に分割した週4回の中級バーベルプログラム。",
     frequencyLabel: "4 days / week",
-    durationLabel: "8 weeks",
+    durationLabel: "4 weeks",
     tags: [],
     overview:
-      "A balanced split for lifters who want clear upper and lower day structure without losing focus on the main strength lifts."
+      "ベンチ・プレス・ロウを上半身日に、スクワット・デッドリフトを下半身日に集中させる。"
   },
   {
     id: "program-full-body",

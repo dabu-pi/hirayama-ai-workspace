@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-3d 完了 / Programs filter UI 実装）
+最終更新: 2026-04-13（C-4 完了 / Upper Lower Base seed 追加 — live 反映は手動 SQL 実行待ち）
 
 ## 現在地
 
@@ -22,7 +22,7 @@
 | **限定公開準備（デプロイガイド）** | **完了 ✅（2026-04-13）** |
 | **限定公開実施** | **開始済み ✅（2026-04-13）** |
 | **本番 URL** | **`https://training-program-platform-jp.vercel.app`** |
-| **Vercel Production Branch** | **⚠️ 現在 `master` → `feature/auto-dev-phase3-loop` に変更要（手動作業）** |
+| **Vercel Production Branch** | **✅ `feature/auto-dev-phase3-loop` に変更済み（2026-04-13）** |
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -137,6 +137,12 @@
   - client-side AND 結合、Clear ×、0件時 empty state
   - `ProgramsScreen.tsx` に `"use client"` + `useState` / `useMemo`
   - local preview で動作確認済み
+- 3本目プログラム seed（C-4）
+  - `seed/programs/upper-lower-base.sql` 新規作成（4 weeks × 4 days / week、intermediate）
+  - `seed/programs/program-metadata.sql` 更新（upper-lower タグ追加、3プログラム正本化）
+  - `lib/programs/program-catalog.ts` mock エントリを `upper-lower-base` へ整合
+  - filter の Level 絞り込み（Beginner / Intermediate）と Split タグ（Full Body vs Upper / Lower）が意味ある差分を持つ状態に
+  - **live 反映は手動 SQL 実行待ち**: Supabase Dashboard で `upper-lower-base.sql` → `program-metadata.sql` の順で実行
   - `loading` / `empty` / `error` 実装済み
   - summary の戻り先を `/programs` に統一済み
 - Program Detail MVP
