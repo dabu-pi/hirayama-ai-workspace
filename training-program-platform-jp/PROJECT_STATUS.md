@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（限定公開開始済み / 次アクションは C-2）
+最終更新: 2026-04-13（C-2 seed 下書き作成中 / Starting Strength Base を候補決定）
 
 ## 現在地
 
@@ -209,9 +209,9 @@
 ## 次アクション
 
 1. **C-2: 2本目のプログラム追加**
-   - `docs/seed-program-guide.md` と `seed/programs/_template.sql` を参照
-   - Starting Strength Base か Upper/Lower Strength が候補（mock catalog に slug が既定義）
-   - template を埋めて seed を Supabase に適用するだけで `/programs` に表示される
+   - 候補は `Starting Strength Base` に決定
+   - `seed/programs/starting-strength-base.sql` を Supabase SQL Editor に適用する
+   - 適用後は確認クエリで `programs / program_weeks / program_days / program_day_exercises` を確認し、`/programs` 表示を確認する
 2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
@@ -270,9 +270,25 @@
 
 ### C-2 以降（待機中）
 
-- C-2: 2本目のプログラム追加（Starting Strength Base 等の seed を template から作成）
+- C-2: 2本目のプログラム追加（Starting Strength Base の seed 下書き作成済み。次は Supabase 適用）
 - C-3: プログラム難易度・タグ管理
 - C-4: ユーザー進捗ダッシュボード
+
+### C-2: 2本目プログラム seed 下書き（進行中 2026-04-13）
+
+- 候補: `Starting Strength Base`
+- 判断理由
+  - `GZCLP Base` と同じ初心者向けバーベル軸だが、`Starting Strength Base` は「スクワット毎回」「A/B 交互」「Power Clean を含む」構成で役割を分けやすい
+  - 既存 seed の `squat / bench-press / overhead-press / deadlift` を再利用でき、追加種目は `power-clean` の 1 つだけで済む
+- 作成物
+  - `seed/programs/starting-strength-base.sql`
+  - 3 weeks x 3 days の idempotent seed
+  - `is_public = true`
+  - `program_days.progression_guide` / `notes` まで入力済み
+- 次に確認すれば適用できる状態
+  - Supabase SQL Editor で seed を実行
+  - 末尾の確認クエリで day 構造と exercise 配置を確認
+  - `/programs` 一覧と `/programs/starting-strength-base` 表示を確認
 
 ---
 

@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（限定公開開始済み）
+最終更新: 2026-04-13（C-2 seed 下書き作成中）
 
 ---
 
@@ -25,7 +25,7 @@
 | 限定公開準備（デプロイガイド・チェックリスト作成） | ✅ 完了（2026-04-13） |
 | 限定公開実施（Vercel デプロイ + live 確認） | ✅ 完了（2026-04-13） |
 | C-1: seed 運用ルール docs 化 | ✅ 完了（2026-04-13） |
-| **C-2: 2本目プログラム seed 追加** | **🔄 次の作業** |
+| **C-2: 2本目プログラム seed 追加** | **🔄 Starting Strength Base の seed 下書き完了 / 次は Supabase 適用** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -40,9 +40,18 @@
 
 ### 次フェーズの優先タスク（C-2）
 
-1. Starting Strength Base または Upper/Lower Strength を 2本目候補として確定する
-2. `docs/seed-program-guide.md` と `seed/programs/_template.sql` を使って seed を作成する
-3. Supabase へ適用して `/programs` に 2本目が表示されることを確認する
+1. `seed/programs/starting-strength-base.sql` を Supabase へ適用する
+2. 確認クエリで `programs / weeks / days / day_exercises` の整合を確認する
+3. `/programs` と `/programs/starting-strength-base` の表示を確認する
+
+### C-2 進捗メモ
+
+- 2本目候補は `Starting Strength Base` を採用
+- `GZCLP Base` との軽い差分確認:
+  - 共通点: どちらも初心者向けのバーベル中心プログラム
+  - 差分: `Starting Strength Base` はスクワット毎回 + A/B 交互 + Power Clean を含むクラシック novice 構成
+- seed は `seed/programs/starting-strength-base.sql` として下書き完了
+- 次の自然な一手は SQL Editor 適用 → `/programs` 表示確認
 
 ---
 
