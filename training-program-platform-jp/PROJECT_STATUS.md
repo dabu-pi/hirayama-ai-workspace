@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（B-7 live 確認完了 / Phase B 全条件達成 / 限定公開 Go 判断）
+最終更新: 2026-04-13（Phase C-1 seed 運用ルール docs 化完了 / C-2 プログラム追加可能な状態）
 
 ## 現在地
 
@@ -16,6 +16,7 @@
 | Exercise History auth 強化 | admin client → server client 統一 / middleware で `/exercise-history/*` 保護 ✅ |
 | B-7 live 確認 | 未ログイン redirect（2 slug）/ ログイン済み表示（2 slug）/ 公開ルート非影響 ✅ |
 | **Phase B 限定公開判断** | **Go ✅（2026-04-13）** |
+| **Phase C-1 seed 運用 docs 化** | **完了 ✅（2026-04-13）** |
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -200,9 +201,10 @@
 
 ## 次アクション
 
-1. **Phase C 着手判断（限定公開後の次ステップ）**
-   - プログラム追加（SQL seed / admin panel）の優先度を決める
-   - 限定公開時のユーザー招待フロー（sign up 429 解消後に B-6 を再確認）
+1. **C-2: 2本目のプログラム追加（次タスク）**
+   - `docs/seed-program-guide.md` と `seed/programs/_template.sql` を参照
+   - Starting Strength Base か Upper/Lower Strength が候補（mock catalog に slug が既定義）
+   - template を埋めて seed を Supabase に適用するだけで `/programs` に表示される
 2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
@@ -216,6 +218,30 @@
 - service role は通常ユーザーフローでは使用しない方針。管理処理専用に限定する
 - Delete undo は MVP スコープ外
 - live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち（外部レート制限、実装不備ではない）
+
+## Phase C 進捗
+
+### C-1: seed 運用ルール docs 化（完了 2026-04-13）
+
+- `docs/seed-program-guide.md` — プログラム追加の完全ガイド
+  - 追加順序（exercises → programs → weeks → days → day_exercises）
+  - 各テーブルの制約（slug 一意・order_index 一意・exercise_type 制約等）
+  - UUID ハードコード禁止 / `do $$ ... $$` + `SELECT INTO` パターンを規定
+  - idempotent 設計（同一 slug なら全体スキップ）
+  - ローカル反映手順・確認クエリ・失敗しやすい点
+  - 既存プログラムを壊さない更新方針
+- `seed/programs/_template.sql` — 新規追加用テンプレート
+  - 全プレースホルダーにコメント付き
+  - 週 / 日 / 種目の構造を拡張しやすい形で記述
+  - 確認クエリをコメントで同梱
+
+### C-2 以降（待機中）
+
+- C-2: 2本目のプログラム追加（Starting Strength Base 等の seed を template から作成）
+- C-3: プログラム難易度・タグ管理
+- C-4: ユーザー進捗ダッシュボード
+
+---
 
 ## テスト状況
 

@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-13（B-7 live 確認完了 / Phase B 全タスク完了 / 限定公開 Go 判断）
+作成: 2026-03-05 / 最終更新: 2026-04-13（Phase C-1 seed 運用 docs 化完了 / C-2 プログラム追加可能な状態）
 
 ---
 
@@ -40,7 +40,7 @@
 │                             数値入力 → Claude API実装 → 月次レポート
 │
 └─ 【トレーニングプログラムプラットフォーム】──────────────────────→
-       MVP基盤 ✅ → Auth/owner guard ✅ → NOT NULL・RLS ✅ → History auth ✅ → 限定公開判断 → プログラム追加
+       MVP基盤 ✅ → Auth/owner guard ✅ → NOT NULL・RLS ✅ → History auth ✅ → 限定公開 Go ✅ → seed docs ✅ → プログラム追加
 ```
 
 ---
@@ -432,8 +432,8 @@
 
 | # | タスク | 内容 | ステータス |
 |---|---|---|---|
-| C-1 | プログラム追加フロー整備 | SQL seed ファイルの書き方・slug 採番ルール・`is_public` フラグの運用を文書化 | ⏸ 待機 |
-| C-2 | 2本目以降のプログラム登録 | Starting Strength / GZCLP LP 等の seed 作成（データ登録中心） | ⏸ 待機 |
+| C-1 | プログラム追加フロー整備 | `docs/seed-program-guide.md` + `seed/programs/_template.sql` を作成。追加順序・UUID参照方針・idempotent設計・確認クエリ・失敗しやすい点を網羅 | ✅ 完了（2026-04-13） |
+| C-2 | 2本目以降のプログラム登録 | Starting Strength Base / Upper-Lower Strength 等の seed を _template.sql から作成して Supabase に適用 | 🔄 次タスク |
 | C-3 | プログラム難易度・タグ管理 | `programs.level` / タグ検索・フィルタ UI | ⏸ 待機 |
 | C-4 | ユーザー進捗ダッシュボード | セッション履歴・完了プログラム・次 day 表示 | ⏸ 待機 |
 | C-5 | 管理画面（後続フェーズ候補） | プログラム CRUD・ユーザー管理（運用負荷が増えた段階で判断） | ⏸ 将来検討 |
@@ -449,4 +449,4 @@
 
 ---
 
-最終更新: 2026-04-13（B-7 live 確認完了 / Phase B 全タスク完了 / 限定公開 Go 判断）
+最終更新: 2026-04-13（Phase C-1 seed 運用 docs 化完了 / C-2 プログラム追加可能な状態）
