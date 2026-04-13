@@ -1,8 +1,19 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（Phase B Step 3 実装 + ローカル確認完了 / live 適用後の全体フロー確認は手動チェック待ち）
+最終更新: 2026-04-13（B-3/B-4/B-5 live 手動確認完了 / B-7 Exercise History auth 強化を次タスクに設定）
 
 ## 現在地
+
+### フェーズ B 到達点（2026-04-13 時点）
+
+| 項目 | 状態 |
+|---|---|
+| public programs 閲覧 | `/programs` / `/programs/[slug]` は未ログインで表示可 ✅ |
+| auth 基盤 | Supabase Email/Password sign in / sign up + session cookie ✅ |
+| アプリ側 owner guard | finish / summary / set mutation / add exercise / swap exercise = 本人のみ ✅ |
+| DB 側制限 | user_id NOT NULL 復元 + RLS 全テーブル適用済み ✅ |
+| live workout flow | Program Detail → StartSession → Train → Add/Swap → Finish → Summary 通し確認済み ✅ |
+| 次の課題 | Exercise History の auth 強化（B-7）/ sign up 429 再確認（B-6）|
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -61,8 +72,8 @@
     - blocking set check: RLS で自分の session の sets のみ可視 ✅
     - UPDATE `workout_session_exercises` → RLS UPDATE ポリシー通過 ✅
   - ローカル dev テスト（Supabase 未設定）: 500 を返す（env vars なしで `createSupabaseServerClient()` が throw するため。live 環境では 401 → 404 → 成功の期待動作を実装通り確認）
-  - **live ブラウザ clickthrough（StartSession → Add Exercise → Swap Exercise → Finish）は手動確認待ち**
-    - コード上は Step 2 で live 検証済みの `findOwnedWorkoutSession` と同一パターンを使用
+  - **live ブラウザ clickthrough（StartSession → Add Exercise → Swap Exercise → Finish → Summary）完了（2026-04-13）**
+    - Program Detail → StartSession → Train → Add Exercise → Swap Exercise → Finish → Summary の通し確認済み ✅
 
 ## 完了済み
 
@@ -187,23 +198,21 @@
 
 ## 次アクション
 
-1. **B-3/B-4/B-5 live 手動確認（`docs/phase-b-step3-checklist.md` 参照）**
-   - Supabase dashboard で null 件数 = 0 / NOT NULL / RLS ポリシー表示を確認する
-   - ログイン済みユーザーで StartSession → Add Exercise → Swap Exercise → Finish → Summary の通し確認
-   - 他ユーザーの session_id で Summary / Add / Swap → not found / 404 を確認する
-   - 確認完了後 B-3/B-4/B-5 を完了クローズする
-2. **B-6: sign up 429 の再確認**
+1. **B-7: Exercise History auth 強化（次タスク・最優先）**
+   - `lib/workout/exercise-history.ts` が admin client を使用している場合は server client へ切替え（RLS 適用）
+   - `lib/workout/train-session.ts` / `lib/workout/workout-summary.ts` も admin client の可能性あり → 確認・切替え
+   - `lib/programs/program-library.ts` / `lib/programs/program-detail.ts` は programs が public RLS ポリシーのため優先度低（Phase C で整理）
+   - `/exercise-history/[exerciseSlug]` で未ログイン時に 401 / ログイン後に自分の履歴のみ表示されることを live 確認
+2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
-4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+3. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
 - Supabase 読込失敗時のみ `mock_catalog` fallback が残る
-- `workout_sessions.user_id` / `program_enrollments.user_id` は NOT NULL に復元済み（migration 000007 live 適用済み）
-- RLS は live Supabase に適用済み（migration 000008）。アプリ側 owner guard との二重防衛で動作
 - `lib/programs/program-library.ts` / `lib/programs/program-detail.ts` は admin client のまま（programs は public RLS ポリシーがあるため実害なし。Phase C で server client 統一を検討）
-- `lib/workout/train-session.ts` / `lib/workout/workout-summary.ts` / `lib/workout/exercise-history.ts` は admin client の可能性あり。RLS 適用後の live 動作確認が必要
+- `lib/workout/train-session.ts` / `lib/workout/workout-summary.ts` / `lib/workout/exercise-history.ts` は admin client の可能性あり → B-7 で確認・切替え
 - service role は通常ユーザーフローでは原則不要にする方針。管理処理専用に限定する
 - Delete undo は MVP スコープ外
 - live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち（外部レート制限、実装不備ではない）
@@ -214,16 +223,15 @@
   - pass
 - `npm run build`
   - pass
+- **Phase B B-3/B-4/B-5 live 手動確認（2026-04-13 完了）**
+  - Program Detail → StartSession → Train → Add Exercise → Swap Exercise → Finish → Summary 通し確認 ✅
+  - Supabase dashboard: null user_id = 0 件 / NOT NULL 制約 / RLS ポリシー適用済み ✅
+  - 未ログイン時の 401 保護・他ユーザー session → 404 の動作確認 ✅
 - **Phase B Step 3 ローカル dev 確認（2026-04-13）**
   - `/programs` — 未ログイン・Supabase 未設定環境で表示確認 ✅（mock fallback 動作）
   - `/programs/gzclp-base` — 未ログインで表示確認 ✅
-  - `/workout-summary/test-session-id` — "Supabase is not configured" 表示（Supabase 未設定のため。live 環境では `/login` リダイレクト期待）
+  - `/workout-summary/test-session-id` — "Supabase is not configured" 表示（Supabase 未設定のため。live では `/login` リダイレクト期待）
   - server error: なし ✅ / console error: なし ✅
-  - **以下は live Supabase 接続環境でのみ確認可能（`docs/phase-b-step3-checklist.md` 参照）**
-    - null user_id = 0 件（Supabase dashboard で SQL 確認）
-    - NOT NULL / RLS ポリシー適用（dashboard Policies タブで確認）
-    - ログイン後の StartSession → Train → Finish → Summary 全フロー
-    - 他ユーザーの session_id で Summary → not found
 - **Phase B Step 2 local browser + live Supabase 確認（2026-04-12）**
   - sign in 相当
     - auth cookie を使った browser context で `/programs` 表示を確認
