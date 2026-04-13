@@ -44,6 +44,22 @@ export type ProgramListView = {
   source: ProgramDataSource;
 };
 
+export type ExercisePreview = {
+  nameEn: string;
+  exerciseType: string | null;
+};
+
+export type DayPreview = {
+  dayNumber: number;
+  exercises: ExercisePreview[];
+};
+
+export type WeekPreview = {
+  weekNumber: number;
+  label: string | null;
+  days: DayPreview[];
+};
+
 export type ProgramDetailView = {
   program: ProgramCatalogItem | null;
   source: ProgramDataSource;
@@ -56,4 +72,6 @@ export type ProgramDetailView = {
   startProgramDayId: string | null;
   /** True when there is an active enrollment for this program. */
   hasActiveEnrollment: boolean;
+  /** Week-by-week structure preview. Empty array when Supabase unavailable. */
+  weekPreviews: WeekPreview[];
 };

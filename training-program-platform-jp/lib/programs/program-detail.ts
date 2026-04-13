@@ -2,7 +2,8 @@ import "server-only";
 
 import {
   findFirstProgramDayId,
-  findProgramBySlug
+  findProgramBySlug,
+  getProgramWeekPreviews
 } from "@/lib/programs/program-library";
 import {
   createSupabaseServerClient,
@@ -42,15 +43,17 @@ export async function getProgramDetailView(
           source,
           firstProgramDayId: null,
           startProgramDayId: null,
-          hasActiveEnrollment: false
+          hasActiveEnrollment: false,
+          weekPreviews: []
         },
         errorMessage: null
       };
     }
 
-    const [firstProgramDayId, userId] = await Promise.all([
+    const [firstProgramDayId, userId, weekPreviews] = await Promise.all([
       findFirstProgramDayId(program.id),
-      getCurrentUserId()
+      getCurrentUserId(),
+      getProgramWeekPreviews(program.id)
     ]);
 
     const { startProgramDayId, hasActiveEnrollment } = await resolveStartProgramDayId(
@@ -66,7 +69,8 @@ export async function getProgramDetailView(
         source,
         firstProgramDayId,
         startProgramDayId,
-        hasActiveEnrollment
+        hasActiveEnrollment,
+        weekPreviews
       },
       errorMessage: null
     };
@@ -80,7 +84,8 @@ export async function getProgramDetailView(
         source: "mock_catalog",
         firstProgramDayId: null,
         startProgramDayId: null,
-        hasActiveEnrollment: false
+        hasActiveEnrollment: false,
+        weekPreviews: []
       },
       errorMessage: "Program detail could not be loaded right now. Please try again."
     };

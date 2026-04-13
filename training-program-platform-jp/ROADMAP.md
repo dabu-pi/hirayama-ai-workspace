@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（upper-lower-base tags live fix 完了 — C-4/C-5 fully closed）
+最終更新: 2026-04-14（C-6 week preview MVP 実装完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -75,6 +75,7 @@
 | **C-4: 3本目プログラム seed（Upper Lower Base）** | **✅ fully closed（2026-04-14）** |
 | **C-5: gzclp-base live correction SQL + runbook** | **✅ fully closed（2026-04-14）** |
 | **upper-lower-base tags live fix** | **✅ 完了（2026-04-14、live-only 補修）** |
+| **C-6: Program Detail week preview** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -89,9 +90,10 @@
 
 ### 次フェーズの優先タスク（C-4 以降）
 
-1. 次候補: プログラム詳細ページの追加情報（week 構成プレビュー、種目リスト）
-2. 次候補: 4本目プログラム seed（候補選定から）
-3. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
+1. C-6 live push: Vercel へのデプロイ（push で自動）
+2. 次候補: week preview の拡張（T1/T2/T3 表示 / セット数・レップ数折りたたみ）
+3. 次候補: 4本目プログラム seed
+4. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
 
 ### C-2 完了メモ
 

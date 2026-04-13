@@ -4,7 +4,8 @@ import type {
   ProgramDetailState,
   ProgramDetailView,
   ProgramTag,
-  ProgramTagAxis
+  ProgramTagAxis,
+  WeekPreview
 } from "@/types/programs";
 
 import styles from "./ProgramDetailScreen.module.css";
@@ -24,6 +25,35 @@ function getRequiredTags(tags: ProgramTag[]) {
 
 function getOptionalFocusTag(tags: ProgramTag[]) {
   return findFirstTagByAxis(tags, "focus");
+}
+
+function WeekPreviewSection({ weekPreviews }: { weekPreviews: WeekPreview[] }) {
+  if (weekPreviews.length === 0) return null;
+  return (
+    <section className={styles.weekPreview}>
+      <span className={styles.sectionLabel}>Program Structure</span>
+      <div className={styles.weekList}>
+        {weekPreviews.map((week) => (
+          <div key={week.weekNumber} className={styles.weekBlock}>
+            <p className={styles.weekHeading}>
+              Week {week.weekNumber}
+              {week.label ? ` — ${week.label}` : ""}
+            </p>
+            <ol className={styles.dayList}>
+              {week.days.map((day) => (
+                <li key={day.dayNumber} className={styles.dayRow}>
+                  <span className={styles.dayLabel}>Day {day.dayNumber}</span>
+                  <span className={styles.exerciseNames}>
+                    {day.exercises.map((ex) => ex.nameEn).join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 type ProgramDetailScreenProps = {
@@ -154,6 +184,8 @@ export function ProgramDetailScreen({
             <span className={styles.sectionLabel}>Overview</span>
             <p className={styles.bodyCopy}>{program.overview}</p>
           </section>
+
+          <WeekPreviewSection weekPreviews={view.weekPreviews} />
         </>
       )}
 

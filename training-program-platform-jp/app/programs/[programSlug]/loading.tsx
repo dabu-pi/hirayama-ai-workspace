@@ -9,7 +9,8 @@ export default function ProgramDetailLoading() {
         source: "mock_catalog",
         firstProgramDayId: null,
         startProgramDayId: null,
-        hasActiveEnrollment: false
+        hasActiveEnrollment: false,
+        weekPreviews: []
       }}
     />
   );

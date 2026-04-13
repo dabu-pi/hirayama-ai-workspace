@@ -13,12 +13,15 @@ import {
   listProgramCatalogItems
 } from "@/lib/programs/program-catalog";
 import type {
+  DayPreview,
+  ExercisePreview,
   ProgramCatalogItem,
   ProgramDataSource,
   ProgramLevel,
   ProgramSourceFidelity,
   ProgramTag,
-  ProgramTagAxis
+  ProgramTagAxis,
+  WeekPreview
 } from "@/types/programs";
 
 type DatabaseClient = SupabaseClient;
@@ -325,6 +328,96 @@ export async function findFirstProgramDayId(programId: string): Promise<string |
     return dayData.id;
   } catch {
     return null;
+  }
+}
+
+type WeekRow = { id: string; week_number: number; label: string | null };
+type DayRow = { id: string; day_number: number; program_week_id: string };
+type DayExerciseRow = {
+  program_day_id: string;
+  exercise_type: string;
+  order_index: number;
+  // PostgREST many-to-one join returns a single object (not array)
+  exercises: { name_en: string } | { name_en: string }[] | null;
+};
+
+/**
+ * Returns the week-by-week structure for a program: weeks → days → exercises (name + type).
+ * Returns an empty array when Supabase is unavailable or the query fails.
+ */
+export async function getProgramWeekPreviews(
+  programId: string
+): Promise<WeekPreview[]> {
+  if (!hasSupabasePublicEnv()) return [];
+
+  try {
+    const client = createProgramsReadClient();
+
+    const { data: weekData, error: weekError } = await client
+      .from("program_weeks")
+      .select("id, week_number, label")
+      .eq("program_id", programId)
+      .order("week_number", { ascending: true });
+
+    if (weekError || !weekData || weekData.length === 0) return [];
+
+    const weeks = weekData as WeekRow[];
+    const weekIds = weeks.map((w) => w.id);
+
+    const { data: dayData, error: dayError } = await client
+      .from("program_days")
+      .select("id, day_number, program_week_id")
+      .in("program_week_id", weekIds)
+      .order("day_number", { ascending: true });
+
+    if (dayError || !dayData || dayData.length === 0) return [];
+
+    const days = dayData as DayRow[];
+    const dayIds = days.map((d) => d.id);
+
+    const { data: exData, error: exError } = await client
+      .from("program_day_exercises")
+      .select("program_day_id, exercise_type, order_index, exercises(name_en)")
+      .in("program_day_id", dayIds)
+      .order("order_index", { ascending: true });
+
+    if (exError) return [];
+
+    const exercisesByDayId = new Map<string, ExercisePreview[]>();
+    for (const row of (exData ?? []) as DayExerciseRow[]) {
+      if (!exercisesByDayId.has(row.program_day_id)) {
+        exercisesByDayId.set(row.program_day_id, []);
+      }
+      const exField = row.exercises;
+      const nameEn = exField
+        ? Array.isArray(exField)
+          ? (exField[0]?.name_en ?? "Unknown")
+          : exField.name_en
+        : "Unknown";
+      exercisesByDayId.get(row.program_day_id)!.push({
+        nameEn,
+        exerciseType: row.exercise_type ?? null
+      });
+    }
+
+    const daysByWeekId = new Map<string, DayPreview[]>();
+    for (const day of days) {
+      if (!daysByWeekId.has(day.program_week_id)) {
+        daysByWeekId.set(day.program_week_id, []);
+      }
+      daysByWeekId.get(day.program_week_id)!.push({
+        dayNumber: day.day_number,
+        exercises: exercisesByDayId.get(day.id) ?? []
+      });
+    }
+
+    return weeks.map((week) => ({
+      weekNumber: week.week_number,
+      label: week.label ?? null,
+      days: daysByWeekId.get(week.id) ?? []
+    }));
+  } catch {
+    return [];
   }
 }
 
