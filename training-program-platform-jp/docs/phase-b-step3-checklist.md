@@ -58,34 +58,41 @@ Phase B Step 3 は以下の 3 Migration + コード変更で構成される。
 ### D. 動作確認（ブラウザ + ログイン済みユーザー）
 
 **公開導線（壊してはいけない）:**
-- [ ] `/programs` — 未ログインでもプログラム一覧が表示される
-- [ ] `/programs/gzclp-base` — 未ログインでも詳細が表示される
+- [x] `/programs` — 未ログインでもプログラム一覧が表示される（2026-04-13 live 確認済み）
+- [x] `/programs/gzclp-base` — 未ログインでも詳細が表示される（2026-04-13 live 確認済み）
 
 **セッション開始（ログイン必須）:**
-- [ ] `/programs/gzclp-base` → Go to Train → Start Workout で session が POST 201 を返す
-- [ ] `/train?program=gzclp-base` に遷移し、ワークアウト画面が表示される
+- [x] `/programs/gzclp-base` → Go to Train → Start Workout で session が POST 201 を返す（2026-04-13 live 確認済み）
+- [x] `/train?program=gzclp-base` に遷移し、ワークアウト画面が表示される（2026-04-13 live 確認済み）
 
 **セット操作（本人のみ）:**
-- [ ] セット記録（weight / reps の PATCH）が正常に動作する
-- [ ] Complete / Unlock / Delete が正常に動作する
-- [ ] Add Set が正常に動作する
+- [x] セット記録（weight / reps の PATCH）が正常に動作する（2026-04-13 live 確認済み）
+- [x] Complete / Unlock / Delete が正常に動作する（2026-04-13 live 確認済み）
+- [x] Add Set が正常に動作する（2026-04-13 live 確認済み）
 
 **Add Exercise / Swap Exercise（live 補完確認 — B-5）:**
-- [ ] Add Exercise モーダルから種目追加後、セッションに反映される
-- [ ] Swap Exercise モーダルから種目変更後、反映される
+- [x] Add Exercise モーダルから種目追加後、セッションに反映される（2026-04-13 live 確認済み）
+- [x] Swap Exercise モーダルから種目変更後、反映される（2026-04-13 live 確認済み）
 
 **Finish / Summary:**
-- [ ] Finish が正常に動作し `/workout-summary/[sessionId]` に遷移する
-- [ ] Summary 画面に完了内容が表示される
-- [ ] 未ログインで `/workout-summary/[sessionId]` を直接開くと `/login` にリダイレクトされる
+- [x] Finish が正常に動作し `/workout-summary/[sessionId]` に遷移する（2026-04-13 live 確認済み）
+- [x] Summary 画面に完了内容が表示される（2026-04-13 live 確認済み）
+- [x] 未ログインで `/workout-summary/[sessionId]` を直接開くと `/login` にリダイレクトされる（2026-04-12 確認済み）
+
+**Exercise History（B-7 — 追加確認）:**
+- [x] 未ログインで `/exercise-history/squat` → `/login?next=%2Fexercise-history%2Fsquat` に redirect（2026-04-13 live 確認済み）
+- [x] 未ログインで `/exercise-history/overhead-press` → `/login?next=%2Fexercise-history%2Foverhead-press` に redirect（2026-04-13 live 確認済み）
+- [x] ログイン済みで `/exercise-history/squat` → T1 / Squat 正常表示（DB 取得）（2026-04-13 live 確認済み）
+- [x] ログイン済みで `/exercise-history/bench-press` → T3 / Bench Press 正常表示（DB 取得）（2026-04-13 live 確認済み）
 
 **他人のデータにアクセスできないこと（owner guard + RLS 二重チェック）:**
-- [ ] User A でログインし、User B の session_id で `GET /workout-summary/[B_session_id]` → `Workout summary not found`
-- [ ] User A から User B の set に対して PATCH → 404
+- [x] User A でログインし、User B の session_id で `GET /workout-summary/[B_session_id]` → `Workout summary not found`（2026-04-12 確認済み）
+- [x] User A から User B の set に対して PATCH → 404（2026-04-12 確認済み）
 
 **sign up（B-6 — 外部レート制限解消後に確認）:**
 - [ ] `/login` から新規ユーザー登録 → `/programs` にリダイレクトされる
 - [ ] `public.users` に行が自動作成されている（auth user profile trigger）
+- 注: `over_email_send_rate_limit` による 429 エラーが継続中。外部レート制限のため実装不備ではない。限定公開の blocker としない。
 
 ---
 

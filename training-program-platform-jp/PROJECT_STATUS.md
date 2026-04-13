@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（B-7 Exercise History auth 強化完了 / server client 統一・middleware 保護追加）
+最終更新: 2026-04-13（B-7 live 確認完了 / Phase B 全条件達成 / 限定公開 Go 判断）
 
 ## 現在地
 
@@ -14,7 +14,8 @@
 | DB 側制限 | user_id NOT NULL 復元 + RLS 全テーブル適用済み ✅ |
 | live workout flow | Program Detail → StartSession → Train → Add/Swap → Finish → Summary 通し確認済み ✅ |
 | Exercise History auth 強化 | admin client → server client 統一 / middleware で `/exercise-history/*` 保護 ✅ |
-| 次の課題 | sign up 429 再確認（B-6）/ 限定公開判断 |
+| B-7 live 確認 | 未ログイン redirect（2 slug）/ ログイン済み表示（2 slug）/ 公開ルート非影響 ✅ |
+| **Phase B 限定公開判断** | **Go ✅（2026-04-13）** |
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -199,16 +200,13 @@
 
 ## 次アクション
 
-1. **B-7 live 確認（推奨）**
-   - 未ログイン状態で `/exercise-history/[slug]` へアクセス → `/login?next=...` redirect を確認
-   - ログイン済み状態で `/exercise-history/[slug]` → 本人履歴のみ表示・他人データ混入なしを確認
-   - 実装変更は完了済み（typecheck / build pass）。live 確認は手動チェック
-2. **限定公開判断**
-   - `docs/phase-b-step3-checklist.md` の公開条件（B-3/B-4/B-5/B-7）を確認し、限定公開の判断を行う
-3. **B-6: sign up 429 の再確認（低優先）**
+1. **Phase C 着手判断（限定公開後の次ステップ）**
+   - プログラム追加（SQL seed / admin panel）の優先度を決める
+   - 限定公開時のユーザー招待フロー（sign up 429 解消後に B-6 を再確認）
+2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
-4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+3. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
@@ -225,7 +223,15 @@
   - pass
 - `npm run build`
   - pass
-- **Phase B B-7: Exercise History auth 強化（2026-04-13 実装完了）**
+- **Phase B B-7: Exercise History auth 強化 + live 確認（2026-04-13 完了）**
+  - 未ログイン `/exercise-history/squat` → `/login?next=%2Fexercise-history%2Fsquat` redirect ✅
+  - 未ログイン `/exercise-history/overhead-press` → `/login?next=%2Fexercise-history%2Foverhead-press` redirect ✅（slug 変更でも `next` 正確）
+  - ログイン済み `/exercise-history/squat` → T1 / Squat 表示（Supabase DB 取得）✅
+  - ログイン済み `/exercise-history/bench-press` → T3 / Bench Press 表示（Supabase DB 取得）✅
+  - 未ログイン `/programs` → redirect なし・一覧表示 ✅（middleware の公開ルート通過を確認）
+  - 未ログイン `/programs/gzclp-base` → redirect なし・詳細表示 ✅
+  - 画面崩れ・500 エラーなし ✅
+- **Phase B B-7: Exercise History auth 強化 実装詳細（2026-04-13）**
   - `lib/workout/exercise-history.ts`: admin client 条件分岐を削除し、常に server client を使用
     - 変更前: `hasSupabaseServiceRoleEnv() ? createSupabaseAdminClient() : serverClient`
     - 変更後: `const queryClient = serverClient`

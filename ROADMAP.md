@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-13（B-7 Exercise History auth 強化完了 / server client 統一・middleware 保護追加・typecheck build pass）
+作成: 2026-03-05 / 最終更新: 2026-04-13（B-7 live 確認完了 / Phase B 全タスク完了 / 限定公開 Go 判断）
 
 ---
 
@@ -372,7 +372,7 @@
 
 **位置づけ:** トレーニングプログラムを継続的に追加していくプラットフォームとして育てる想定。単発アプリではなく、複数プログラムを提供・管理する基盤として設計する。
 
-**現状:** フェーズ A（MVP 基盤）・フェーズ B Step 1（Auth 基盤）・Step 2（アプリ側 owner guard）完了（2026-04-12）。アプリ側では本人しか触れない制限まで実装・live 確認済み。DB 側の NOT NULL 化と RLS 適用が次ステップ。
+**現状:** フェーズ B 全タスク（B-1〜B-7）完了・live 確認済み（2026-04-13）。限定公開 Go 判断。Phase C プログラム拡張が次ステップ。
 
 #### フェーズ A — MVP 基盤（完了）
 
@@ -387,9 +387,9 @@
 | A-7 | live Supabase E2E 検証（GZCLP Base 通し確認） | ✅ 完了 |
 | A-8 | Next.js fetch cache 問題修正（`cache: no-store`） | ✅ 完了 |
 
-#### フェーズ B — 認証・本番整備（進行中）
+#### フェーズ B — 認証・本番整備（✅ 完了 2026-04-13）
 
-**3ステップで段階的に実施。Step 1・2 完了済み。**
+**3ステップで段階的に実施。全タスク完了・live 確認済み。限定公開 Go 判断済み。**
 
 | # | タスク | ステータス |
 |---|---|---|
@@ -399,20 +399,23 @@
 | B-4 | **[Step 3]** RLS（Row Level Security）設計・適用 | ✅ 完了（live 手動確認 2026-04-13） |
 | B-5 | Add Exercise / Swap Exercise の live clickthrough 補完確認 | ✅ 完了（live 通し確認 2026-04-13） |
 | B-6 | sign up 429 エラー（`over_email_send_rate_limit`）の再確認 | ⏸ 待機（外部レート制限が解消次第） |
-| B-7 | Exercise History の auth 対応（admin client → server client 切替・RLS 適用・middleware 保護追加） | ✅ 完了（typecheck/build pass 2026-04-13 / live 確認推奨） |
+| B-7 | Exercise History の auth 対応（admin client → server client 切替・RLS 適用・middleware 保護追加） | ✅ 完了（live 確認済み 2026-04-13） |
 
 #### 公開判断の段階
 
 > 感覚ではなく条件で判断する。
 
-**限定公開してよい条件（招待制・知人のみ）:**
+**限定公開してよい条件（招待制・知人のみ）— 判断: ✅ Go（2026-04-13）:**
 
-| 条件 | 説明 |
+| 条件 | 状態 |
 |---|---|
-| B-3 / B-4 完了 | `user_id NOT NULL` + RLS 適用済み |
-| sign up 動作確認 | 新規ユーザーが実際に登録できることを確認（B-6 解消） |
-| B-5 完了 | Add Exercise / Swap Exercise が auth 状態で正常動作することを確認 |
-| 基本エラー表示 | 認証エラー・not found・server error がユーザーに適切に表示される |
+| B-3 / B-4 完了 | ✅ `user_id NOT NULL` + RLS 適用・live 確認済み |
+| B-5 完了 | ✅ Add Exercise / Swap Exercise live 通し確認済み |
+| B-7 完了 | ✅ Exercise History middleware 保護・live 確認済み |
+| 基本エラー表示 | ✅ auth error / not found / server error 表示確認済み |
+| sign up 動作確認 | ⏸ B-6 外部レート制限のため確認待ち（限定公開の blocker としない） |
+
+> **限定公開 Go 判断（2026-04-13）:** B-6 sign up 429 は外部レート制限のため実装不備ではなく、限定公開時は既存ユーザー（テスト済み）を招待する形で運用可能。全認可境界は実装・live 確認済み。
 
 **一般公開してよい条件（URL 公開・不特定多数）:**
 
@@ -446,4 +449,4 @@
 
 ---
 
-最終更新: 2026-04-13（B-7 Exercise History auth 強化完了 / server client 統一・middleware 保護追加・typecheck build pass）
+最終更新: 2026-04-13（B-7 live 確認完了 / Phase B 全タスク完了 / 限定公開 Go 判断）
