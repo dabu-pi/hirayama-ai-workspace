@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-3b/C-3c live pass / programs 一覧 CTA UX 修正完了）
+最終更新: 2026-04-13（C-3d 完了 / Programs filter UI 実装）
 
 ---
 
@@ -35,7 +35,7 @@
 | **C-3b/C-3c live 確認** | **✅ pass（2026-04-13）** |
 | **Vercel Production Branch 統一** | **✅ `feature/auto-dev-phase3-loop` に変更済み** |
 | **Programs 一覧 CTA UX 修正** | **✅ 完了（2026-04-13）** |
-| C-3d: filter UI / タグ絞り込み | 📋 候補（優先度検討） |
+| **C-3d: Programs filter UI** | **✅ 完了（2026-04-13）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -151,6 +151,20 @@
   - `master` へのマージは不要になる
   - **この設定変更はダッシュボードで手動操作が必要（未実施）**
 - **参照:** CLAUDE.md 「常用ブランチ: `feature/auto-dev-phase3-loop`」
+
+### C-3d 完了メモ（2026-04-13）
+
+- `/programs` に client-side filter bar を追加
+  - Level チップ（一覧の programs から一意の level を自動導出）
+  - Tag チップ（一覧の全 tags を sort_order 順に自動導出）
+  - 選択チップは accent 色で activated 状態を明示
+  - Level と Tag は AND 結合で絞り込み
+  - filter active 時のみ `Clear ×` ボタンを表示
+  - 0 件時は "No programs match the current filter." + Clear filters リンクを表示
+- `ProgramsScreen` に `"use client"` + `useState` / `useMemo` を追加
+- URL query 同期は今回見送り（programs 数が少ない間は不要）
+- `ProgramsScreen.module.css` に `.filterBar` / `.chipGroup` / `.chip` / `.chipActive` / `.clearBtn` / `.clearLink` を追加
+- local preview で動作確認済み（Squat Focus 選択 → 1件 / Clear → 2件復帰）
 
 ---
 

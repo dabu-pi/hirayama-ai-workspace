@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-3b/C-3c live pass 確認済み / programs 一覧 CTA UX 修正完了）
+最終更新: 2026-04-13（C-3d 完了 / Programs filter UI 実装）
 
 ## 現在地
 
@@ -132,6 +132,11 @@
   - `/programs/[slug]` detail 画面に required tags + optional focus タグ行を追加
   - `ProgramDetailScreen.tsx` / `ProgramDetailScreen.module.css` を変更
   - 一覧と詳細で badge 見た目・意味を統一済み
+- Programs filter UI（C-3d）
+  - Level / Tag チップ型フィルターを `/programs` に追加
+  - client-side AND 結合、Clear ×、0件時 empty state
+  - `ProgramsScreen.tsx` に `"use client"` + `useState` / `useMemo`
+  - local preview で動作確認済み
   - `loading` / `empty` / `error` 実装済み
   - summary の戻り先を `/programs` に統一済み
 - Program Detail MVP

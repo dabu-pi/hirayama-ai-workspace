@@ -1,6 +1,10 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import type {
+  ProgramListItem,
   ProgramListState,
   ProgramListView,
   ProgramTag,
@@ -50,6 +54,32 @@ function getOptionalFocusTag(tags: ProgramTag[]) {
   return findFirstTagByAxis(tags, "focus");
 }
 
+function deriveAvailableLevels(items: ProgramListItem[]): string[] {
+  const seen = new Set<string>();
+  const levels: string[] = [];
+  for (const item of items) {
+    if (item.level && !seen.has(item.level)) {
+      seen.add(item.level);
+      levels.push(item.level);
+    }
+  }
+  return levels;
+}
+
+function deriveAvailableTags(items: ProgramListItem[]): ProgramTag[] {
+  const seen = new Set<string>();
+  const tags: ProgramTag[] = [];
+  for (const item of items) {
+    for (const tag of item.tags) {
+      if (!seen.has(tag.slug)) {
+        seen.add(tag.slug);
+        tags.push(tag);
+      }
+    }
+  }
+  return tags.sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
+}
+
 export function ProgramsScreen({
   state,
   view,
@@ -57,6 +87,29 @@ export function ProgramsScreen({
 }: ProgramsScreenProps) {
   const isReady = state === "ready";
   const bodyText = resolveBody(state, errorMessage);
+
+  const [activeLevel, setActiveLevel] = useState<string | null>(null);
+  const [activeTagSlug, setActiveTagSlug] = useState<string | null>(null);
+
+  const availableLevels = useMemo(() => deriveAvailableLevels(view.items), [view.items]);
+  const availableTags = useMemo(() => deriveAvailableTags(view.items), [view.items]);
+
+  const filteredItems = useMemo(() => {
+    return view.items.filter((item) => {
+      if (activeLevel && item.level !== activeLevel) return false;
+      if (activeTagSlug && !item.tags.some((t) => t.slug === activeTagSlug)) return false;
+      return true;
+    });
+  }, [view.items, activeLevel, activeTagSlug]);
+
+  const hasActiveFilter = activeLevel !== null || activeTagSlug !== null;
+
+  function clearFilters() {
+    setActiveLevel(null);
+    setActiveTagSlug(null);
+  }
+
+  const showFilterBar = isReady && (availableLevels.length > 0 || availableTags.length > 0);
 
   return (
     <main className={styles.page}>
@@ -72,17 +125,64 @@ export function ProgramsScreen({
         </div>
       </header>
 
+      {showFilterBar && (
+        <div className={styles.filterBar}>
+          {availableLevels.length > 0 && (
+            <div className={styles.chipGroup}>
+              {availableLevels.map((level) => (
+                <button
+                  className={activeLevel === level ? styles.chipActive : styles.chip}
+                  key={level}
+                  onClick={() => setActiveLevel(activeLevel === level ? null : level)}
+                  type="button"
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+          )}
+          {availableTags.length > 0 && (
+            <div className={styles.chipGroup}>
+              {availableTags.map((tag) => (
+                <button
+                  className={activeTagSlug === tag.slug ? styles.chipActive : styles.chip}
+                  key={tag.slug}
+                  onClick={() => setActiveTagSlug(activeTagSlug === tag.slug ? null : tag.slug)}
+                  type="button"
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {hasActiveFilter && (
+            <button className={styles.clearBtn} onClick={clearFilters} type="button">
+              Clear ×
+            </button>
+          )}
+        </div>
+      )}
+
       {!isReady ? (
         <section className={styles.statusCard}>
           <p>{bodyText}</p>
         </section>
-      ) : view.items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <section className={styles.statusCard}>
-          <p>No programs are available yet.</p>
+          <p>
+            {hasActiveFilter
+              ? "No programs match the current filter. "
+              : "No programs are available yet."}
+            {hasActiveFilter && (
+              <button className={styles.clearLink} onClick={clearFilters} type="button">
+                Clear filters
+              </button>
+            )}
+          </p>
         </section>
       ) : (
         <section className={styles.grid}>
-          {view.items.map((program) => {
+          {filteredItems.map((program) => {
             const requiredTags = getRequiredTags(program.tags);
             const focusTag = getOptionalFocusTag(program.tags);
 
