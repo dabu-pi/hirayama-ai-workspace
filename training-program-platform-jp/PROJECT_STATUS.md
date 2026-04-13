@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（Phase C-1 seed 運用ルール docs 化完了 / C-2 プログラム追加可能な状態）
+最終更新: 2026-04-13（限定公開準備完了 / Vercel + Supabase デプロイガイド・チェックリスト作成）
 
 ## 現在地
 
@@ -17,6 +17,7 @@
 | B-7 live 確認 | 未ログイン redirect（2 slug）/ ログイン済み表示（2 slug）/ 公開ルート非影響 ✅ |
 | **Phase B 限定公開判断** | **Go ✅（2026-04-13）** |
 | **Phase C-1 seed 運用 docs 化** | **完了 ✅（2026-04-13）** |
+| **限定公開準備（デプロイガイド）** | **完了 ✅（2026-04-13）** |
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -201,14 +202,19 @@
 
 ## 次アクション
 
-1. **C-2: 2本目のプログラム追加（次タスク）**
+1. **限定公開実施（デプロイ作業）**
+   - `docs/limited-release-guide.md` の手順に従い Vercel にデプロイ
+   - `docs/limited-release-checklist.md` のチェックリストを上から実施
+   - Supabase Authentication → URL Configuration を Vercel URL に更新
+   - 招待ユーザーのアカウントを Supabase Dashboard で作成
+2. **C-2: 2本目のプログラム追加**
    - `docs/seed-program-guide.md` と `seed/programs/_template.sql` を参照
    - Starting Strength Base か Upper/Lower Strength が候補（mock catalog に slug が既定義）
    - template を埋めて seed を Supabase に適用するだけで `/programs` に表示される
-2. **B-6: sign up 429 の再確認（低優先）**
+3. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
-3. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
@@ -220,6 +226,19 @@
 - live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち（外部レート制限、実装不備ではない）
 
 ## Phase C 進捗
+
+### 限定公開準備（完了 2026-04-13）
+
+- `docs/limited-release-guide.md` — Vercel + Supabase 限定公開の全手順
+  - 役割分担（Vercel / Supabase / GitHub）
+  - 環境変数 3 つの用途・設定手順
+  - Supabase Site URL / Redirect URL 設定
+  - デプロイ手順（Vercel プロジェクト作成 → env 設定 → デプロイ → URL 設定）
+  - 招待制ユーザー管理手順
+  - スモークテスト（公開ルート / 認証フロー / ワークアウトフロー）
+  - よくある失敗点
+- `docs/limited-release-checklist.md` — 限定公開前チェックリスト（7セクション）
+- `.env.example` — 環境変数テンプレートにコメント追加（用途・注意点を明記）
 
 ### C-1: seed 運用ルール docs 化（完了 2026-04-13）
 
