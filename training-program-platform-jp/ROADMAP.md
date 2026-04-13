@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-3a 完了 / program metadata 基盤実装）
+最終更新: 2026-04-13（C-3b 完了 / `/programs` 一覧の metadata 表示を実装）
 
 ---
 
@@ -29,7 +29,9 @@
 | **C-2b: seed 原本整合回復** | **✅ 完了（2026-04-13）** |
 | **C-3: プログラム難易度・タグ管理（仕様固定）** | **✅ 設計完了（2026-04-13）** |
 | **C-3a: metadata 基盤実装** | **✅ 完了（2026-04-13）** |
-| **C-3b: `/programs` metadata 表示** | **🔄 次の作業** |
+| **C-3a-live: metadata live 反映** | **✅ 完了（2026-04-13）** |
+| **C-3b: `/programs` metadata 表示** | **✅ 完了（2026-04-13）** |
+| **C-3c: Program Detail metadata 表示** | **🔄 次の作業** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -44,9 +46,9 @@
 
 ### 次フェーズの優先タスク（C-3）
 
-1. `levelKey` と `tags` を `/programs` list / detail へ表示する
-2. list card に出す tag 数を絞り、比較に効く最小 UI にする
-3. detail で required / optional tag の見せ分けを整える
+1. `/programs/[slug]` で required / optional metadata の見せ分けを追加する
+2. 一覧と詳細で tag の意味づけがずれないように揃える
+3. filter UI は metadata 表示が落ち着いてから検討する
 
 ### C-2 完了メモ
 
@@ -95,6 +97,26 @@
   - `program-library.ts` で program ごとの metadata 読込を追加
   - metadata table 未適用環境では tags を空にして既存導線を維持
 - 次は C-3b として `/programs` UI 表示へ進む
+
+### C-3a-live 完了メモ
+
+- live Supabase に migration / seed を反映済み
+  - `program_tags_count = 5`
+  - `program_tag_assignments_count = 8`
+- `gzclp-base` は required 3 軸が各 1
+- `starting-strength-base` は required 3 軸が各 1、`focus = 2`
+- live `/programs` / `/programs/gzclp-base` / `/programs/starting-strength-base` で `Source: Supabase` の正常表示を確認
+
+### C-3b 完了メモ
+
+- `/programs` list card に metadata を追加
+  - `level`
+  - required tags: `goal / equipment / split`
+  - optional `focus`: 最大 1 件
+- `gzclp-base` と `starting-strength-base` の差分が一覧で見える状態に更新
+  - 共通: `Strength / Barbell / Full Body`
+  - 差分: `starting-strength-base` に `Squat Focus`
+- 次は C-3c として detail page 側の metadata 表示に進む
 
 ---
 

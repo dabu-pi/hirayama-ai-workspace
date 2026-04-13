@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-3a 実装完了 / metadata 基盤を追加）
+最終更新: 2026-04-13（C-3b 完了 / `/programs` 一覧の metadata 表示を実装）
 
 ## 現在地
 
@@ -117,6 +117,10 @@
   - 正本は Supabase `programs`
   - 利用項目は `id` / `slug` / `title` / `description` / `duration_weeks` / `days_per_week` / `level` / `is_public`
   - card は title / level / goal / frequency / duration を表示
+  - C-3b で metadata 表示を追加
+    - required tags: `goal / equipment / split`
+    - optional tag: `focus` は最大 1 件だけ表示
+    - `starting-strength-base` は `Squat Focus` badge で `gzclp-base` と差が見える状態に更新
   - `loading` / `empty` / `error` 実装済み
   - summary の戻り先を `/programs` に統一済み
 - Program Detail MVP
@@ -208,10 +212,10 @@
 
 ## 次アクション
 
-1. **C-3b: `/programs` metadata 表示**
-   - C-3a で追加した `levelKey` / `tags` を list / detail UI にどう見せるかを実装する
-   - list card では comparison に効く最小限の tag 表示へ寄せる
-   - detail では full tag 表示と軸ごとの見せ方を整える
+1. **C-3c: Program Detail metadata 表示**
+   - 一覧で使い始めた metadata を `/programs/[slug]` にも載せる
+   - required / optional tag の見せ分けを detail で整理する
+   - filter UI を入れる前に detail 側の情報密度を整える
 2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
@@ -342,6 +346,35 @@
   - metadata table 未適用時は warning を出しつつ tags を空配列にして既存 `/programs` を壊さない
   - `lib/programs/program-catalog.ts`: mock catalog は fallback 維持、metadata tags は空配列で非正本扱い
 - 次は C-3b として `/programs` list / detail の metadata 表示を実装する
+
+### C-3a-live: metadata live 反映（完了 2026-04-13）
+
+- live Supabase へ反映済み
+  - migration: `20260413_000009_program_metadata_foundation.sql`
+  - seed: `seed/programs/program-metadata.sql`
+- SQL 確認結果
+  - `program_tags_count = 5`
+  - `program_tag_assignments_count = 8`
+  - `gzclp-base`: required `goal / equipment / split` が各 1
+  - `starting-strength-base`: required `goal / equipment / split` が各 1、optional `focus = 2`
+- live route 確認
+  - `/programs`
+  - `/programs/gzclp-base`
+  - `/programs/starting-strength-base`
+  - いずれも `Source: Supabase` で正常表示を確認
+
+### C-3b: `/programs` metadata 表示（完了 2026-04-13）
+
+- `components/programs/ProgramsScreen.tsx`
+  - list card に `level` badge を維持
+  - required tags を `goal -> equipment -> split` の順で表示
+  - optional `focus` は最大 1 件だけ補助 badge として表示
+- `components/programs/ProgramsScreen.module.css`
+  - 既存 card デザインに合わせた最小 pill / badge を追加
+- 表示差分
+  - `gzclp-base`: `Strength / Barbell / Full Body`
+  - `starting-strength-base`: `Strength / Barbell / Full Body + Squat Focus`
+- local / live とも `/programs` 一覧で表示崩れなく比較性が上がった
 
 ---
 
