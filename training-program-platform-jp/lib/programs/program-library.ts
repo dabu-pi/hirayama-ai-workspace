@@ -16,6 +16,7 @@ import type {
   ProgramCatalogItem,
   ProgramDataSource,
   ProgramLevel,
+  ProgramSourceFidelity,
   ProgramTag,
   ProgramTagAxis
 } from "@/types/programs";
@@ -30,6 +31,9 @@ type ProgramRow = {
   duration_weeks: number;
   days_per_week: number;
   level: string | null;
+  source_program_name: string | null;
+  source_fidelity: string | null;
+  source_notes: string | null;
   is_public: boolean;
 };
 
@@ -92,6 +96,24 @@ function normalizeProgramLevel(level: string | null): ProgramLevel | null {
 function toDisplayLevel(level: ProgramLevel | null) {
   if (!level) return null;
   return PROGRAM_LEVEL_DISPLAY[level];
+}
+
+function normalizeProgramSourceFidelity(
+  fidelity: string | null
+): ProgramSourceFidelity | null {
+  const normalized = fidelity?.trim().toLowerCase() ?? null;
+  if (!normalized) return null;
+
+  switch (normalized) {
+    case "original":
+      return "original";
+    case "adapted":
+      return "adapted";
+    case "custom":
+      return "custom";
+    default:
+      return null;
+  }
 }
 
 function buildFrequencyLabel(daysPerWeek: number | null) {
@@ -201,6 +223,7 @@ async function listProgramTagsByProgramId(
 
 function mapProgramRow(row: ProgramRow, tags: ProgramTag[]): ProgramCatalogItem {
   const levelKey = normalizeProgramLevel(row.level);
+  const sourceFidelity = normalizeProgramSourceFidelity(row.source_fidelity);
 
   return {
     id: row.id,
@@ -211,6 +234,9 @@ function mapProgramRow(row: ProgramRow, tags: ProgramTag[]): ProgramCatalogItem 
     goal: extractGoal(row.description),
     frequencyLabel: buildFrequencyLabel(row.days_per_week),
     durationLabel: buildDurationLabel(row.duration_weeks),
+    sourceProgramName: row.source_program_name,
+    sourceFidelity,
+    sourceNotes: row.source_notes,
     tags,
     overview: buildOverview(row.description, row.title)
   };
@@ -221,7 +247,7 @@ async function listProgramsFromSupabase(): Promise<ProgramCatalogItem[]> {
   const { data, error } = await client
     .from("programs")
     .select(
-      "id, slug, title, description, duration_weeks, days_per_week, level, is_public"
+      "id, slug, title, description, duration_weeks, days_per_week, level, source_program_name, source_fidelity, source_notes, is_public"
     )
     .eq("is_public", true)
     .order("created_at", { ascending: false });

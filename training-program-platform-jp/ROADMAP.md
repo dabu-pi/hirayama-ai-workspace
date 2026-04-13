@@ -1,5 +1,40 @@
 # ROADMAP
 
+最終更新: 2026-04-13（program source audit 完了 / live SQL hold 維持）
+
+## 2026-04-13 Program Source Audit
+
+### 固定した方針
+
+- 有名プログラムは原典準拠版を正本にする
+- 派生版は分離し、`source_fidelity = adapted` で扱う
+- 原典がない internal template は `source_fidelity = custom` にする
+- C-4 live 反映は監査後に判断する
+
+### 今回の反映
+
+- `gzclp-base`
+  - original GZCLP base month へ修正
+- `starting-strength-base`
+  - `Starting Strength Phase 2 Base` として整理
+- `upper-lower-base`
+  - `custom` 扱いへ固定
+- `programs` に source metadata を追加
+
+### 次の live 反映方針
+
+1. `20260413_000010_program_source_metadata.sql` を先に適用する
+2. `gzclp-base` の live row をどう更新するか
+   - 既存 row を保持したまま別 slug へ逃がすか
+   - destructive に入れ替えるか
+   を先に決める
+3. `starting-strength-base` title/source metadata 反映を行う
+4. `upper-lower-base.sql` と `program-metadata.sql` は上記判断後にまとめて適用する
+
+### 参照
+
+- `docs/program-source-audit.md`
+
 最終更新: 2026-04-13（C-4 seed 追加 / Upper Lower Base — live 反映は手動 SQL 実行待ち）
 
 ---

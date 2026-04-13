@@ -7,12 +7,33 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     title: "GZCLP Base",
     level: "Beginner",
     levelKey: "beginner",
-    goal: "Build the main barbell lifts with simple weekly progression.",
-    frequencyLabel: "4 days / week",
-    durationLabel: "12 weeks",
+    goal: "Build strength and size with the original GZCLP three-tier novice template.",
+    frequencyLabel: "3 days / week",
+    durationLabel: "4 weeks",
+    sourceProgramName: "GZCLP",
+    sourceFidelity: "original",
+    sourceNotes:
+      "Original Cody Lefever base month: A1 / B1 / A2 / B2 over 4 weeks with T1 / T2 / T3 progression.",
     tags: [],
     overview:
-      "A simple linear progression template centered on squat, bench, press, and deadlift with steady weekly exposure."
+      "Original GZCLP base month with 5x3+ T1 work, 3x10 T2 practice, and 3x15+ T3 accessories."
+  },
+  {
+    id: "program-starting-strength-phase2",
+    slug: "starting-strength-base",
+    title: "Starting Strength Phase 2 Base",
+    level: "Beginner",
+    levelKey: "beginner",
+    goal: "Build novice barbell strength with squat-every-session A/B training.",
+    frequencyLabel: "3 days / week",
+    durationLabel: "3 weeks",
+    sourceProgramName: "Starting Strength Novice Program - Phase 2",
+    sourceFidelity: "original",
+    sourceNotes:
+      "Phase 2 snapshot: squat every session, bench and press alternate, deadlift on A, power clean on B.",
+    tags: [],
+    overview:
+      "Official Starting Strength Phase 2 structure packaged as a short seedable base while keeping the current route slug."
   },
   {
     id: "program-upper-lower",
@@ -20,12 +41,16 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     title: "Upper Lower Base",
     level: "Intermediate",
     levelKey: "intermediate",
-    goal: "上半身・下半身に分割した週4回の中級バーベルプログラム。",
+    goal: "Build barbell strength with a simple upper/lower split.",
     frequencyLabel: "4 days / week",
     durationLabel: "4 weeks",
+    sourceProgramName: null,
+    sourceFidelity: "custom",
+    sourceNotes:
+      "Internal MVP upper/lower template. No single canonical source program is being represented.",
     tags: [],
     overview:
-      "ベンチ・プレス・ロウを上半身日に、スクワット・デッドリフトを下半身日に集中させる。"
+      "Custom four-day upper/lower barbell split for MVP coverage. Treated as custom rather than as a named published program."
   },
   {
     id: "program-full-body",
@@ -36,6 +61,9 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     goal: "Create a repeatable full-body rhythm with lower session complexity.",
     frequencyLabel: "3 days / week",
     durationLabel: "6 weeks",
+    sourceProgramName: null,
+    sourceFidelity: "custom",
+    sourceNotes: "Internal placeholder program in the mock catalog.",
     tags: [],
     overview:
       "A lower-complexity full-body plan designed to build consistency, movement familiarity, and recoverable weekly volume."

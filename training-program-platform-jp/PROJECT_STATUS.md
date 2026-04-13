@@ -1,5 +1,52 @@
 # PROJECT_STATUS
 
+最終更新: 2026-04-13（program source audit 完了 / live SQL hold 維持）
+
+## 2026-04-13 Program Source Audit
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| audit | 完了 |
+| seed correction | 完了 |
+| live SQL hold | 維持 |
+
+### この更新で固定した原則
+
+- 有名プログラムは、まず原典準拠版を正本にする
+- 派生版は別 slug / 別 title / 別 metadata で管理する
+- 元ネタがある場合、期間・頻度・日割り・種目順・セット回数・進行ロジック・リセット条件を勝手に変えない
+- live Supabase への手動 SQL 実行は、監査後の反映順が固まるまで保留する
+
+### 今回の整理内容
+
+- `seed/programs/gzclp-base.sql`
+  - original GZCLP base month に合わせて 3 days / 4 weeks / A1-B1-A2-B2 / T1-T2-T3 構成へ修正
+- `seed/programs/starting-strength-base.sql`
+  - `Starting Strength Phase 2 Base` として整理
+  - slug は route 互換のため `starting-strength-base` を維持
+- `seed/programs/upper-lower-base.sql`
+  - 単一原典なしの internal custom template と明示
+- `supabase/migrations/20260413_000010_program_source_metadata.sql`
+  - `source_program_name`
+  - `source_fidelity` (`original` / `adapted` / `custom`)
+  - `source_notes`
+- `seed/programs/program-metadata.sql`
+  - 3 program の source metadata を正本化
+
+### 現在の分類
+
+| slug | title | source_program_name | source_fidelity | live 反映 |
+|---|---|---|---|---|
+| `gzclp-base` | `GZCLP Base` | `GZCLP` | `original` | 保留 |
+| `starting-strength-base` | `Starting Strength Phase 2 Base` | `Starting Strength Novice Program - Phase 2` | `original` | 保留 |
+| `upper-lower-base` | `Upper Lower Base` | `null` | `custom` | 保留 |
+
+### 参照
+
+- `docs/program-source-audit.md`
+
 最終更新: 2026-04-13（C-4 完了 / Upper Lower Base seed 追加 — live 反映は手動 SQL 実行待ち）
 
 ## 現在地

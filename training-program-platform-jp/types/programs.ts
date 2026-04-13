@@ -6,6 +6,8 @@ export type ProgramDataSource = "mock_catalog" | "supabase";
 
 export type ProgramLevel = "beginner" | "intermediate" | "advanced";
 
+export type ProgramSourceFidelity = "original" | "adapted" | "custom";
+
 export type ProgramTagAxis = "goal" | "equipment" | "split" | "focus";
 
 export type ProgramTag = {
@@ -25,6 +27,9 @@ export type ProgramSummary = {
   goal: string | null;
   frequencyLabel: string | null;
   durationLabel: string | null;
+  sourceProgramName: string | null;
+  sourceFidelity: ProgramSourceFidelity | null;
+  sourceNotes: string | null;
   tags: ProgramTag[];
 };
 
