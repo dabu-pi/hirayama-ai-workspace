@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（C-4 / C-5 live pass 確認 — live SQL hold 解除）
+最終更新: 2026-04-14（upper-lower-base tags live fix 完了 — C-4/C-5 fully closed）
 
 ## 2026-04-13 Program Source Audit
 
@@ -72,9 +72,9 @@
 | **Vercel Production Branch 統一** | **✅ `feature/auto-dev-phase3-loop` に変更済み** |
 | **Programs 一覧 CTA UX 修正** | **✅ 完了（2026-04-13）** |
 | **C-3d: Programs filter UI** | **✅ 完了（2026-04-13）** |
-| **C-4: 3本目プログラム seed（Upper Lower Base）** | **✅ live pass（2026-04-14）** |
-| **C-5: gzclp-base live correction SQL + runbook** | **✅ live pass（2026-04-14）** |
-| **C-4/C-5 live 最終確認・クローズ** | **✅ 完了（2026-04-14）** |
+| **C-4: 3本目プログラム seed（Upper Lower Base）** | **✅ fully closed（2026-04-14）** |
+| **C-5: gzclp-base live correction SQL + runbook** | **✅ fully closed（2026-04-14）** |
+| **upper-lower-base tags live fix** | **✅ 完了（2026-04-14、live-only 補修）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -89,9 +89,9 @@
 
 ### 次フェーズの優先タスク（C-4 以降）
 
-1. **Upper Lower Base tags 確認**: `upper-lower` split タグが live DB に未適用の可能性あり。`/programs` の Upper Lower Base カードに tags バッジが未表示のため確認推奨
-2. 次候補: プログラム詳細ページの追加情報（week 構成プレビュー、種目リスト）など
-3. 次候補: program-metadata.sql の upper-lower-base 分が live DB に正しく反映されているかの確認
+1. 次候補: プログラム詳細ページの追加情報（week 構成プレビュー、種目リスト）
+2. 次候補: 4本目プログラム seed（候補選定から）
+3. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
 
 ### C-2 完了メモ
 

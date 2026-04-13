@@ -104,6 +104,10 @@
 | `starting-strength-base` | `Starting Strength Phase 2 Base` | Beginner / 3 days/week / 3 weeks | Strength / Barbell / Full Body / Squat Focus | **pass ✅** |
 | `upper-lower-base` | `Upper Lower Base` | Intermediate / 4 days/week / 4 weeks | （tags 未表示 — 要確認） | pass（tags 軽微未反映） |
 
-### 軽微な残課題
+### upper-lower-base metadata live 個別補修（2026-04-14）
 
-- `upper-lower-base` の tags バッジが `/programs` 一覧で非表示。program-metadata.sql の upper-lower-base 分の live 適用を次セッションで確認すること
+- live DB に対して `upper-lower-base` の `program_tag_assignments` 3件（strength/goal, barbell/equipment, upper-lower/split）を個別補修
+- broad reapply（program-metadata.sql 全体の再実行）は不要だったため実施しない
+- ローカル seed 定義（`seed/programs/program-metadata.sql`）に不足はなかった。live への未適用が原因
+- 補修後 UI 確認: `/programs` 一覧に Strength / Barbell / Upper / Lower バッジ表示、filter chips に Upper / Lower 追加 ✅
+- **残課題なし**

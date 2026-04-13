@@ -1,17 +1,18 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（C-4 / C-5 live pass 確認 — live SQL hold 解除）
+最終更新: 2026-04-14（upper-lower-base tags live fix 完了 — C-4/C-5 fully closed）
 
-## 2026-04-14 C-4 / C-5 live 最終確認
+## 2026-04-14 C-4 / C-5 fully closed
 
 ### STATUS
 
 | 項目 | 状態 |
 |---|---|
-| C-4 live（Upper Lower Base） | **pass ✅** |
-| C-5 live（gzclp-base correction） | **pass ✅** |
+| C-4 live（Upper Lower Base） | **fully closed ✅** |
+| C-5 live（gzclp-base correction） | **fully closed ✅** |
 | 原典準拠ルール | **live 反映済み ✅** |
 | live SQL hold | **解除 ✅** |
+| upper-lower-base tags | **live fix 完了 ✅** |
 
 ### live 確認結果（2026-04-14）
 
@@ -19,7 +20,8 @@
 |---|---|---|
 | `/programs` | 3本表示（GZCLP Base / Starting Strength Phase 2 Base / Upper Lower Base） | ✅ |
 | `/programs` | Level filter（Beginner 2件 / Intermediate 1件）が成立 | ✅ |
-| `/programs` | filter chips（Beginner / Intermediate / Barbell / Full Body / Strength / Squat Focus / Explosive） | ✅ |
+| `/programs` | filter chips（Beginner / Intermediate / Barbell / Full Body / Strength / Upper / Lower / Squat Focus / Explosive） | ✅ |
+| `/programs` | Upper Lower Base カード tags（Strength / Barbell / Upper / Lower） | ✅ |
 | `/programs/starting-strength-base` | title = `Starting Strength Phase 2 Base` | ✅ |
 | `/programs/starting-strength-base` | Level=Beginner / 3 days/week / 3 weeks | ✅ |
 | `/programs/starting-strength-base` | tags = Strength / Barbell / Full Body / Squat Focus | ✅ |
@@ -27,11 +29,13 @@
 | `/programs/gzclp-base` | Level=Beginner / 3 days/week / 4 weeks | ✅ |
 | `/programs/gzclp-base` | tags = Strength / Barbell / Full Body | ✅ |
 
-### 軽微な観察事項
+### upper-lower-base tags live fix メモ
 
-- `Upper Lower Base` カードに tags バッジが非表示（`upper-lower` split タグ未反映の可能性）
-- filter chips に `Upper / Lower` が未表示。program-metadata.sql の upper-lower-base 分が live DB に未適用の可能性あり
-- 現時点では一覧表示・detail・filter の主要動線に影響なし。次セッションで確認推奨
+- **symptom:** `/programs` 一覧で Upper Lower Base の tag badge が非表示。filter chips に `Upper / Lower` も未表示
+- **root cause:** `program-metadata.sql` の upper-lower-base 分はローカル定義済みだったが、live DB に未適用だった（C-3a-live 時点では upper-lower-base が未存在のため反映できなかった可能性が高い）
+- **fix scope:** live DB のみ。`upper-lower-base` の `program_tag_assignments` 3件を補修（strength/goal, barbell/equipment, upper-lower/split）。`upper-lower` tag master も必要に応じて補完
+- **repo 変更:** なし（ローカル seed 定義に不足はなかった）
+- **verification:** `/programs` 一覧で Upper Lower Base カードに tags 表示、filter chips に `Upper / Lower` 追加を確認 ✅
 
 ### 確定した原典準拠ルール
 
