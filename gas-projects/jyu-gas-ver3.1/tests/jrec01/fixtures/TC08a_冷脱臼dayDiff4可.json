@@ -1,0 +1,16 @@
+{
+  "testId": "TC08a",
+  "description": "冷罨法 脱臼 受傷後4日(dayDiff=4) — 算定可（0-4日が条件）",
+  "ref": "TESTCASES.md#TC08",
+  "note": "baseOut=0 は koryoDakkyu 未確認のプレースホルダ。設定シート確認後に更新すること",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-05",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "肩関節", "byomei": "脱臼", "injuryDate": "2026-02-01", "cold": true, "warm": false, "electro": false }
+    ]}
+  ]
+}

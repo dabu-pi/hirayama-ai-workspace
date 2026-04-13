@@ -1,0 +1,999 @@
+{
+  "synced_at": "2026-03-14T23:28:55.721Z",
+  "spreadsheet_id": "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc",
+  "sheets": {
+    "保険・来院前提": {
+      "kind": "items",
+      "item_count": 6,
+      "items": {
+        "保険実人数（現在）": {
+          "key": "insurance_patients_current",
+          "cell": "B6",
+          "value": 50,
+          "display_value": "50"
+        },
+        "保険延べ来院数（現在）": {
+          "key": "insurance_visits_current",
+          "cell": "B7",
+          "value": 125,
+          "display_value": "125"
+        },
+        "新患数（現在）": {
+          "key": "new_patients_current",
+          "cell": "B9",
+          "value": null,
+          "display_value": null
+        },
+        "慢性候補率（現在）": {
+          "key": "chronic_candidate_rate_current",
+          "cell": "B10",
+          "value": 0.4,
+          "display_value": "40%"
+        },
+        "窓口単価": {
+          "key": "front_desk_unit_price",
+          "cell": "B15",
+          "value": null,
+          "display_value": null
+        },
+        "総保険売上単価": {
+          "key": "total_insurance_unit_price",
+          "cell": "B16",
+          "value": 1200,
+          "display_value": "1200"
+        }
+      }
+    },
+    "数値前提": {
+      "kind": "items",
+      "item_count": 11,
+      "items": {
+        "家賃": {
+          "key": "rent",
+          "cell": "B6",
+          "value": null,
+          "display_value": null
+        },
+        "水道光熱費": {
+          "key": "utilities",
+          "cell": "B7",
+          "value": null,
+          "display_value": null
+        },
+        "通信費": {
+          "key": "communication",
+          "cell": "B8",
+          "value": null,
+          "display_value": null
+        },
+        "システム費": {
+          "key": "system_cost",
+          "cell": "B9",
+          "value": null,
+          "display_value": null
+        },
+        "広告費": {
+          "key": "advertising",
+          "cell": "B10",
+          "value": null,
+          "display_value": null
+        },
+        "消耗品費": {
+          "key": "supplies",
+          "cell": "B11",
+          "value": null,
+          "display_value": null
+        },
+        "外注費": {
+          "key": "outsourcing",
+          "cell": "B12",
+          "value": null,
+          "display_value": null
+        },
+        "オーナー最低人件費": {
+          "key": "owner_minimum_labor",
+          "cell": "B13",
+          "value": null,
+          "display_value": null
+        },
+        "機器リース/返済": {
+          "key": "equipment_lease",
+          "cell": "B14",
+          "value": null,
+          "display_value": null
+        },
+        "スタッフ人件費（いる場合）": {
+          "key": "staff_labor",
+          "cell": "B15",
+          "value": null,
+          "display_value": null
+        },
+        "月次営業日数": {
+          "key": "business_days_per_month",
+          "cell": "B25",
+          "value": 25,
+          "display_value": "25"
+        }
+      }
+    },
+    "価格設定": {
+      "kind": "rows",
+      "row_count": 12,
+      "rows": [
+        {
+          "row": 4,
+          "row_key": "insurance_treatment",
+          "row_label": "保険施術",
+          "fields": {
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K4",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L4",
+              "value": "×",
+              "display_value": "×"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M4",
+              "value": "確定",
+              "display_value": "確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N4",
+              "value": "急な痛みや日常の不調に対応します。",
+              "display_value": "急な痛みや日常の不調に対応します。"
+            }
+          }
+        },
+        {
+          "row": 5,
+          "row_key": "manual_extension",
+          "row_label": "手技延長",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G5",
+              "value": 1100,
+              "display_value": "1100"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H5",
+              "value": 935,
+              "display_value": "935"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K5",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L5",
+              "value": "○",
+              "display_value": "○"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M5",
+              "value": "確定",
+              "display_value": "確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N5",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 6,
+          "row_key": "massage_gun_release",
+          "row_label": "筋膜リリース（マッサージガン）",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G6",
+              "value": 880,
+              "display_value": "880"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H6",
+              "value": 748,
+              "display_value": "748"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K6",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L6",
+              "value": "○",
+              "display_value": "○"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M6",
+              "value": "確定",
+              "display_value": "確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N6",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 7,
+          "row_key": "heat_option",
+          "row_label": "温熱追加",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G7",
+              "value": 550,
+              "display_value": "550"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H7",
+              "value": 467,
+              "display_value": "467"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K7",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L7",
+              "value": "○",
+              "display_value": "○"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M7",
+              "value": "確定",
+              "display_value": "確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N7",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 8,
+          "row_key": "deep_conditioning_future",
+          "row_label": "深部コンディショニング",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G8",
+              "value": 4400,
+              "display_value": "4400"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H8",
+              "value": 3740,
+              "display_value": "3740"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K8",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L8",
+              "value": "×",
+              "display_value": "×"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M8",
+              "value": "将来検討",
+              "display_value": "将来検討"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N8",
+              "value": "機械中心の自費は当面主力にしない。",
+              "display_value": "機械中心の自費は当面主力にしない。"
+            }
+          }
+        },
+        {
+          "row": 9,
+          "row_key": "electric_therapy_single_future",
+          "row_label": "電気治療1回",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G9",
+              "value": 1200,
+              "display_value": "1200"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H9",
+              "value": 1020,
+              "display_value": "1020"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K9",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L9",
+              "value": "×",
+              "display_value": "×"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M9",
+              "value": "将来検討",
+              "display_value": "将来検討"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N9",
+              "value": "機械は保険治療の補助用を優先。",
+              "display_value": "機械は保険治療の補助用を優先。"
+            }
+          }
+        },
+        {
+          "row": 10,
+          "row_key": "electric_therapy_subscription_future",
+          "row_label": "電気治療午前限定通い放題",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G10",
+              "value": 5500,
+              "display_value": "5500"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H10",
+              "value": 4675,
+              "display_value": "4675"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K10",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L10",
+              "value": "×",
+              "display_value": "×"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M10",
+              "value": "将来検討",
+              "display_value": "将来検討"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N10",
+              "value": "機械中心メニューは将来検討。",
+              "display_value": "機械中心メニューは将来検討。"
+            }
+          }
+        },
+        {
+          "row": 11,
+          "row_key": "chronic_program_future",
+          "row_label": "慢性疼痛改善 8回プログラム",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G11",
+              "value": 58000,
+              "display_value": "58000"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H11",
+              "value": 49300,
+              "display_value": "49300"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K11",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L11",
+              "value": "×",
+              "display_value": "×"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M11",
+              "value": "将来検討",
+              "display_value": "将来検討"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N11",
+              "value": "主力前提は外し、将来の継続商品候補として保持。",
+              "display_value": "主力前提は外し、将来の継続商品候補として保持。"
+            }
+          }
+        },
+        {
+          "row": 12,
+          "row_key": "chronic_manual_50min",
+          "row_label": "慢性ケア手技50分",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G12",
+              "value": 5500,
+              "display_value": "5500"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H12",
+              "value": 4250,
+              "display_value": "4250"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K12",
+              "value": true,
+              "display_value": "TRUE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L12",
+              "value": "○",
+              "display_value": "○"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M12",
+              "value": "仮",
+              "display_value": "仮"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N12",
+              "value": "慢性腰痛・首肩こりの方へ最初に提案する主力メニュー。",
+              "display_value": "慢性腰痛・首肩こりの方へ最初に提案する主力メニュー。"
+            }
+          }
+        },
+        {
+          "row": 13,
+          "row_key": "personal_training",
+          "row_label": "パーソナルトレーニング",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G13",
+              "value": 8800,
+              "display_value": "8800"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H13",
+              "value": 7480,
+              "display_value": "7480"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K13",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L13",
+              "value": "○",
+              "display_value": "○"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M13",
+              "value": "確定",
+              "display_value": "確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N13",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 14,
+          "row_key": "training_course_4",
+          "row_label": "4回集中コース",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G14",
+              "value": 35200,
+              "display_value": "35200"
+            },
+            "会員料金": {
+              "key": "member_price",
+              "cell": "H14",
+              "value": 29920,
+              "display_value": "29920"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K14",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L14",
+              "value": "○",
+              "display_value": "○"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M14",
+              "value": "確定",
+              "display_value": "確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N14",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 15,
+          "row_key": "gym_monthly_member",
+          "row_label": "月会員",
+          "fields": {
+            "一般料金": {
+              "key": "general_price",
+              "cell": "G15",
+              "value": 7480,
+              "display_value": "7480"
+            },
+            "主力手技フラグ": {
+              "key": "main_technique_flag",
+              "cell": "K15",
+              "value": false,
+              "display_value": "FALSE"
+            },
+            "KPI集計対象": {
+              "key": "kpi_target",
+              "cell": "L15",
+              "value": "○",
+              "display_value": "○"
+            },
+            "確定状況": {
+              "key": "status",
+              "cell": "M15",
+              "value": "仮",
+              "display_value": "仮"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "N15",
+              "value": "ジム会員価格は再確認予定。",
+              "display_value": "ジム会員価格は再確認予定。"
+            }
+          }
+        }
+      ]
+    },
+    "KPI目標": {
+      "kind": "items",
+      "item_count": 5,
+      "items": {
+        "月次総保険売上_実績値": {
+          "key": "monthly_total_insurance_revenue_actual",
+          "cell": "D5",
+          "value": null,
+          "display_value": null
+        },
+        "自費売上_実績値": {
+          "key": "self_pay_revenue_actual",
+          "cell": "D6",
+          "value": null,
+          "display_value": null
+        },
+        "新患数_実績値": {
+          "key": "new_patients_actual",
+          "cell": "D8",
+          "value": null,
+          "display_value": null
+        },
+        "延べ来院数_実績値": {
+          "key": "total_visits_actual",
+          "cell": "D9",
+          "value": null,
+          "display_value": null
+        },
+        "自費平均単価_実績値": {
+          "key": "self_pay_avg_unit_price_actual",
+          "cell": "D11",
+          "value": null,
+          "display_value": null
+        }
+      }
+    },
+    "未確定項目": {
+      "kind": "rows",
+      "row_count": 9,
+      "rows": [
+        {
+          "row": 4,
+          "row_key": "self_pay_price",
+          "row_label": "主力手技価格",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D4",
+              "value": "高",
+              "display_value": "高"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F4",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G4",
+              "value": 5500,
+              "display_value": "5500"
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H4",
+              "value": "次回確定",
+              "display_value": "次回確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J4",
+              "value": "基準仮説=案C / 到達目標=案A / 差額7,500円候補: 手技回数+2回/月",
+              "display_value": "基準仮説=案C / 到達目標=案A / 差額7,500円候補: 手技回数+2回/月"
+            }
+          }
+        },
+        {
+          "row": 5,
+          "row_key": "chronic_transition_rate",
+          "row_label": "慢性患者移行率",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D5",
+              "value": "高",
+              "display_value": "高"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F5",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G5",
+              "value": 0.5,
+              "display_value": "50%"
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H5",
+              "value": "次回確定",
+              "display_value": "次回確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J5",
+              "value": "差額7,500円候補: 移行率微増",
+              "display_value": "差額7,500円候補: 移行率微増"
+            }
+          }
+        },
+        {
+          "row": 6,
+          "row_key": "avg_monthly_visits",
+          "row_label": "月平均来院回数",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D6",
+              "value": "高",
+              "display_value": "高"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F6",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G6",
+              "value": 3.5,
+              "display_value": "3.5"
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H6",
+              "value": "次回確定",
+              "display_value": "次回確定"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J6",
+              "value": "差額7,500円候補: 月平均来院回数微増",
+              "display_value": "差額7,500円候補: 月平均来院回数微増"
+            }
+          }
+        },
+        {
+          "row": 7,
+          "row_key": "self_pay_repeat_rate",
+          "row_label": "手技自費再来率",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D7",
+              "value": "中",
+              "display_value": "中"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F7",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G7",
+              "value": null,
+              "display_value": null
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H7",
+              "value": "次回整理",
+              "display_value": "次回整理"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J7",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 8,
+          "row_key": "gym_trial_rate",
+          "row_label": "ジム体験誘導率",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D8",
+              "value": "中",
+              "display_value": "中"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F8",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G8",
+              "value": null,
+              "display_value": null
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H8",
+              "value": "次回整理",
+              "display_value": "次回整理"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J8",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 9,
+          "row_key": "gym_standard_price",
+          "row_label": "ジム会員費（スタンダード月額）",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D9",
+              "value": "中",
+              "display_value": "中"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F9",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G9",
+              "value": null,
+              "display_value": null
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H9",
+              "value": "後回し",
+              "display_value": "後回し"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J9",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 10,
+          "row_key": "gym_premium_price",
+          "row_label": "ジム会員費（プレミアム月額）",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D10",
+              "value": "中",
+              "display_value": "中"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F10",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G10",
+              "value": null,
+              "display_value": null
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H10",
+              "value": "後回し",
+              "display_value": "後回し"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J10",
+              "value": null,
+              "display_value": null
+            }
+          }
+        },
+        {
+          "row": 11,
+          "row_key": "fixed_cost_actuals",
+          "row_label": "固定費の実数値",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D11",
+              "value": "高",
+              "display_value": "高"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F11",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G11",
+              "value": null,
+              "display_value": null
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H11",
+              "value": "別途入力",
+              "display_value": "別途入力"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J11",
+              "value": "数値前提シートに入力",
+              "display_value": "数値前提シートに入力"
+            }
+          }
+        },
+        {
+          "row": 12,
+          "row_key": "insurance_baseline",
+          "row_label": "月次保険売上・患者数ベースライン",
+          "fields": {
+            "優先度": {
+              "key": "priority",
+              "cell": "D12",
+              "value": "高",
+              "display_value": "高"
+            },
+            "決定状況": {
+              "key": "status",
+              "cell": "F12",
+              "value": "未確定",
+              "display_value": "未確定"
+            },
+            "確定値": {
+              "key": "confirmed_value",
+              "cell": "G12",
+              "value": null,
+              "display_value": null
+            },
+            "いつ決めるか": {
+              "key": "decide_when",
+              "cell": "H12",
+              "value": "別途入力",
+              "display_value": "別途入力"
+            },
+            "備考": {
+              "key": "note",
+              "cell": "J12",
+              "value": "数値前提シートに入力",
+              "display_value": "数値前提シートに入力"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "testId": "M01",
+  "description": "mixed: case1=後療 / case2=初検抑制 → 再検料なし・後療料のみ",
+  "ref": "TESTCASES.md#M01",
+
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-10",
+    "monthlyStatus": {
+      "initBilled": true,
+      "reBilled": true,
+      "supportBilled": true
+    }
+  },
+
+  "cases": [
+    {
+      "caseNo": 1,
+      "kubun": "後療",
+      "parts": [
+        {
+          "bui": "腰部",
+          "byomei": "捻挫",
+          "injuryDate": "2026-02-03",
+          "cold": false,
+          "warm": false,
+          "electro": false
+        }
+      ]
+    },
+    {
+      "caseNo": 2,
+      "kubun": "初検",
+      "parts": [
+        {
+          "bui": "肩関節",
+          "byomei": "打撲",
+          "injuryDate": "2026-02-10",
+          "cold": false,
+          "warm": false,
+          "electro": false
+        }
+      ]
+    }
+  ]
+}

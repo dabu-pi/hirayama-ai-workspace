@@ -13,6 +13,9 @@
 | [PROJECTS.md](./PROJECTS.md) | 全プロジェクトの詳細設計・仕様 |
 | [ROADMAP.md](./ROADMAP.md) | 開発計画・タスクとステータス管理 |
 | [SETUP.md](./SETUP.md) | 新PCでの環境セットアップ手順 |
+| [慢性疼痛_管理表_STATUS.md](./慢性疼痛_管理表_STATUS.md) | 慢性疼痛プロジェクト — 管理表の現状・列定義・変更履歴・再開キュー |
+| [hirayama-jyusei-strategy/README_SHEETS.md](./hirayama-jyusei-strategy/README_SHEETS.md) | スプレッドシート使い方ガイド・Claude Code 運用分担ルール |
+| [hirayama-jyusei-strategy/SHEET_DESIGN.md](./hirayama-jyusei-strategy/SHEET_DESIGN.md) | スプレッドシート設計書（列定義・数式・シート間参照） |
 
 ---
 
@@ -20,11 +23,12 @@
 
 | プロジェクト | ディレクトリ | ステータス |
 |---|---|---|
-| 柔整GASシステム | `gas-projects/jyu-gas-ver3.1/` | 稼働中 |
+| 柔整毎日記録システム | `gas-projects/jyu-gas-ver3.1/` | 稼働中 |
 | freee見積自動化 | `freee-automation/` | 開発中 |
 | 患者管理Webアプリ | `patient-management/` | 開発中（プロトタイプ） |
-| 接骨院戦略AI | `hirayama-jyusei-strategy/` | ドキュメント整備済み・実装予定 |
-| 廃棄物日報GAS | `waste-report-system/`（未作成） | 企画段階 |
+| 接骨院経営戦略AI | `hirayama-jyusei-strategy/` | ドキュメント整備済み・実装予定 |
+| トレーニング機器トレンド分析 | `training-trend-analyzer/` | 開発中（Phase 4 入口） |
+| 廃棄物日報システム | `waste-report-system/`（未作成） | 企画段階 |
 
 詳細は [PROJECTS.md](./PROJECTS.md) を参照。
 
@@ -34,9 +38,20 @@
 
 - OS: Windows 11
 - ワークスペースルート: `C:\hirayama-ai-workspace\workspace`
-- バージョン管理: Git / GitHub（`master` ブランチ運用）
+- バージョン管理: Git / GitHub（通常作業ブランチ: `feature/auto-dev-phase3-loop`）
 - 新PC環境構築: [SETUP.md](./SETUP.md) を参照
 
 ---
 
 管理者: 平山克司 (Katsushi Hirayama)
+
+## Google Drive 同期運用
+
+- GitHub / `C:\hirayama-ai-workspace\workspace` を正本とし、Google Drive は共有・検索・参照・バックアップ先として使います。
+- push だけでは共有完了ではありません。`workspace-export` 更新と Google Drive sync まで完了条件に含みます。
+- workspace の共有完了フローの正規入口は `scripts/publish-workspace.ps1` です。
+- `publish-workspace.ps1` は commit / push の後に `workspace-export` を更新し、その後 `scripts/upload-workspace-export-to-gdrive.ps1` で Google Drive へ一方向アップロードします。
+- Google Drive for desktop の常駐同期は前提にしません。
+- Drive 側コピーや `workspace-export` 側では Git 作業をしません。
+- 詳細は [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md) を参照してください。
+

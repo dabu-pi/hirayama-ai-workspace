@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Project status dashboard: git state, log counts, notes, ROADMAP summary.

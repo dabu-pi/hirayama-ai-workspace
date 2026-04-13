@@ -1,0 +1,249 @@
+# dashboard-schema.md
+
+Hirayama AI OS Dashboard を「英語混在の管理画面」から「日本語中心の毎日使う操作盤」へ寄せた 2026-03-13 時点の正本スキーマ。
+
+## 基本方針
+
+- Dashboard は表示専用。人もスクリプトも直接入力しない。
+- `project_id` を案件の唯一キーにする。
+- 案件名とリンクの正本は `Projects` に集約する。
+- `Task_Queue` では案件名を直書きしない。`project_id` を使い、案件名は参照表示にする。
+- `優先度調整` シートで「今日だけ優先したい仕事」を人が上書きできるようにする。
+- `Ideas` は段階管理にする。
+
+## canonical project IDs
+
+- `JREC-01` 柔整毎日記録システム
+- `JBIZ-04` 接骨院経営戦略AI
+- `HAIKI-05` 廃棄物日報システム
+- `JWEB-03` 患者管理Webアプリ
+
+## シート構成
+
+| シート名 | 役割 |
+|---|---|
+| Dashboard | 表示専用の操作盤 |
+| Projects | 案件名・リンク・状態の正本 |
+| Task_Queue | 今日動くタスクの管理 |
+| 優先度調整 | 今日だけの優先度上書き |
+| Ideas | アイデア段階管理 |
+| Run_Log | 最近の更新履歴 |
+| Lists | 日本語語彙と project_id の候補 |
+| Metrics | Dashboard の集計補助 |
+
+## 参照関係
+
+```text
+Lists
+  -> Projects の状態 / 段階 / 優先度
+  -> Task_Queue の種別 / 状態 / 優先度
+  -> Ideas の段階
+
+Projects
+  -> Dashboard の案件表示
+  -> Task_Queue の案件名表示
+
+優先度調整
+  -> Task_Queue の 優先度調整 / 最終優先度
+
+Task_Queue
+  -> Dashboard の 今日の優先タスク
+  -> Projects の 次アクション / 最終更新日（補助同期）
+
+Run_Log
+  -> Dashboard の 最近の更新
+```
+
+## Projects
+
+### 役割
+
+- 案件名の正本
+- Dashboard で使うリンクの正本
+- 進行状態の正本
+
+### ヘッダー
+
+1. `project_id`
+2. `案件名`
+3. `状態`
+4. `段階`
+5. `優先度`
+6. `次アクション`
+7. `最終更新日`
+8. `メインシートURL`
+9. `SPEC URL`
+10. `フォルダURL`
+11. `GitHub URL`
+12. `ローカルパス`
+13. `補足`
+
+### 状態候補
+
+- `本番運用中`
+- `進行中`
+- `保留`
+- `構想`
+- `アーカイブ`
+
+### 段階候補
+
+- `構想`
+- `設計`
+- `SPEC作成`
+- `実装`
+- `試作`
+- `テスト`
+- `運用`
+
+## Task_Queue
+
+### 役割
+
+- 直近に動くタスクだけを並べる
+- `project_id` で Projects とつなぐ
+- `優先度調整` を加味した最終優先度で扱う
+
+### ヘッダー
+
+1. `task_id`
+2. `タスク`
+3. `project_id`
+4. `案件名`
+5. `種別`
+6. `優先度区分`
+7. `基本優先度`
+8. `優先度調整`
+9. `最終優先度`
+10. `状態`
+11. `担当`
+12. `期限`
+13. `完了日`
+14. `依存`
+15. `メモ`
+
+### 運用ルール
+
+- 人が入力するキーは `task_id` と `project_id`
+- `案件名` は Projects 参照表示
+- `優先度調整` は `優先度調整` シート参照
+- `最終優先度` は `基本優先度 + 優先度調整`
+
+## 優先度調整
+
+### 役割
+
+その日だけ優先したいタスクを人が上書きする。
+
+### ヘッダー
+
+1. `task_id`
+2. `タスク`
+3. `project_id`
+4. `今日優先`
+5. `調整値`
+6. `理由`
+7. `メモ`
+
+### ルール
+
+- `今日優先` に `はい` を入れると Task_Queue 側へ加点する
+- `調整値` は数値で上書きする
+
+## Ideas
+
+### 役割
+
+案件化前の構想を段階で持つ。
+
+### ヘッダー
+
+1. `idea_id`
+2. `アイデア`
+3. `project_id`
+4. `案件名`
+5. `段階`
+6. `重要度`
+7. `工数`
+8. `概要`
+9. `次回確認日`
+10. `メモ`
+
+### 段階候補
+
+- `メモ`
+- `概要あり`
+- `検討中`
+- `SPEC作成中`
+- `SPEC完成`
+- `フォルダ作成済み`
+- `試作中`
+- `案件化済み`
+- `保留`
+- `アーカイブ`
+
+## Dashboard
+
+### 表示内容
+
+- 総案件数
+- 本番運用中
+- 進行中
+- 未完了タスク
+- 保留アイデア数
+- 今日の優先タスク
+- 案件の現況
+- 最近の更新
+
+### 案件表示
+
+Dashboard の案件表示は必ず `Projects` の `project_id` 経由で参照し、以下を表示する。
+
+- `project_id`
+- `案件名`
+- `状態`
+- `段階`
+- `次アクション`
+- `開く`
+- `SPEC`
+
+`開く` は `Projects.メインシートURL`、`SPEC` は `Projects.SPEC URL` を使う。
+
+## 2026-03-13 の判断
+
+- Dashboard から `Avg Progress` を外し、行動に直結する指標へ寄せた
+- canonical project IDs は 4 件に限定した
+- `FREEE-02` / `AIOS-06` / `AINV-07` は今回の案件正本から外し、バックアップタブに退避前提で扱う
+- `JREC-01` と `HAIKI-05` のメインシートURLは、ID未確定のため Drive 検索フォールバックを許容する
+
+## 2026-03-14 Live operation sync
+
+- `Projects` is the live source of truth for project names, status, phase,
+  priority, next action, and dashboard link targets.
+- `Dashboard` is read-only. Its project snapshot resolves rows by `project_id`
+  and displays `状態 / 段階 / 次アクション / 開く / SPEC`.
+- Current link policy:
+  - `開く` -> `Projects.メインシートURL`
+  - `SPEC` -> `Projects.SPEC URL`
+  - blank URL fallback -> `未設定`
+- Current live canonical vocabulary:
+  - `Projects.状態` and `Lists.案件状態`:
+    `本番運用中 / 進行中 / 保留 / 構想 / アーカイブ`
+  - `Projects.段階` and `Lists.作業段階`:
+    `構想 / 設計 / SPEC作成 / 実装 / 試作 / テスト / 運用`
+  - `Task_Queue.状態` and `Lists.タスク状態`:
+    `未着手 / 進行中 / 待機 / 保留 / 完了`
+- Live `Task_Queue` is on the 11-column Japanese layout:
+  `task_id / タスク / project_id / 案件名 / 種別 / 優先度区分 /
+  基本優先度 / 優先度調整 / 最終優先度 / 状態 / 担当`.
+- Live KPI counting rules are aligned as:
+  - `総案件数` = `COUNTA(Projects!A4:A20)`
+  - `本番運用中` = `COUNTIF(Projects!C4:C20,"本番運用中")`
+  - `進行中` = `COUNTIF(Projects!C4:C20,"進行中")`
+  - `未完了タスク` = `COUNTIFS(Task_Queue!A4:A200,"<>",Task_Queue!J4:J200,"<>完了")`
+  - `保留アイデア数` = `COUNTIF(Ideas!E4:E200,"保留")`
+- `Run_Log` remains append-oriented with the English header set
+  `log_id / datetime / system / project / summary / result / commit_hash /
+  tasks_done / stop_reason / next_action`.
+
+最終更新: 2026-03-14

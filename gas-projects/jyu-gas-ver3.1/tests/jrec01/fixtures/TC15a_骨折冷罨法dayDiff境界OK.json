@@ -1,0 +1,16 @@
+{
+  "testId": "TC15a",
+  "description": "不全骨折後療 冷罨法 dayDiff=6（境界ギリギリ許可）",
+  "ref": "TESTCASES.md#TC15",
+  "note": "injuryDate=2026-03-01, treatDate=2026-03-07 → dayDiff=6 → coldAllowed=(6<=6)=true。base=720, cold=85, rowTotalOut=805",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-03-07",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "腰部", "byomei": "不全骨折", "injuryDate": "2026-03-01", "cold": true, "warm": false, "electro": false }
+    ]}
+  ]
+}

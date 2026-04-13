@@ -1,0 +1,27 @@
+# DB ファイル（実データが混入するため除外）
+data/db/
+
+# 出力ファイル
+data/output/
+data/collected/
+
+# レビューCSV（実データ混入防止）
+data/review/
+
+# Python キャッシュ
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 環境変数・認証情報
+.env
+*.json.bak
+
+# 仮想環境
+venv/
+.venv/
+
+# エディタ
+.vscode/
+*.swp

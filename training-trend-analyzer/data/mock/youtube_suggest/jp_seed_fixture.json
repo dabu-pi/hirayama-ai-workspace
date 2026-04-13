@@ -1,0 +1,186 @@
+{
+  "mode": "mock",
+  "generated_at": "2026-04-08T00:00:00+09:00",
+  "series": [
+    {
+      "seed_id": "technogym_run_model",
+      "queries": [
+        {
+          "query_term": "technogym run",
+          "suggestions": [
+            "technogym run review",
+            "technogym run treadmill",
+            "technogym run demo"
+          ]
+        },
+        {
+          "query_term": "テクノジム run",
+          "suggestions": [
+            "テクノジム run 紹介",
+            "テクノジム run 設定"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "lifefitness_t5_model",
+      "queries": [
+        {
+          "query_term": "life fitness t5",
+          "suggestions": [
+            "life fitness t5 review",
+            "life fitness t5 setup",
+            "life fitness t5 maintenance",
+            "life fitness t5 used"
+          ]
+        },
+        {
+          "query_term": "ライフフィットネス t5",
+          "suggestions": [
+            "ライフフィットネス t5 レビュー",
+            "ライフフィットネス t5 設定"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "precor_trm445_model",
+      "queries": [
+        {
+          "query_term": "precor trm 445",
+          "suggestions": [
+            "precor trm 445 review",
+            "precor trm 445 service"
+          ]
+        },
+        {
+          "query_term": "trm445",
+          "suggestions": [
+            "trm445 review",
+            "trm445 treadmill"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "concept2_skierg_model",
+      "queries": [
+        {
+          "query_term": "concept2 ski erg",
+          "suggestions": [
+            "concept2 skierg review",
+            "concept2 skierg workout",
+            "concept2 skierg setup",
+            "concept2 skierg tips"
+          ]
+        },
+        {
+          "query_term": "c2 ski erg",
+          "suggestions": [
+            "c2 ski erg review",
+            "c2 ski erg workout"
+          ]
+        },
+        {
+          "query_term": "skierg",
+          "suggestions": [
+            "skierg workout",
+            "skierg review",
+            "skierg tutorial"
+          ]
+        }
+      ]
+    },
+    {
+      "seed_id": "cybex_770t_model",
+      "queries": [
+        {
+          "query_term": "cybex 770t",
+          "suggestions": ["cybex 770t review", "cybex 770t treadmill demo", "cybex 770t service"]
+        },
+        {
+          "query_term": "cybex 770t treadmill",
+          "suggestions": ["cybex 770t treadmill review", "cybex 770t treadmill maintenance"]
+        }
+      ]
+    },
+    {
+      "seed_id": "concept2_model_d_model",
+      "queries": [
+        {
+          "query_term": "concept2 model d",
+          "suggestions": ["concept2 model d review", "concept2 model d rower workout", "concept2 model d setup"]
+        },
+        {
+          "query_term": "concept2 rowerg model d",
+          "suggestions": ["concept2 rowerg model d review", "concept2 rowerg model d workout"]
+        }
+      ]
+    },
+    {
+      "seed_id": "lifefitness_95t_model",
+      "queries": [
+        {
+          "query_term": "life fitness 95t",
+          "suggestions": ["life fitness 95t review", "life fitness 95t treadmill demo", "life fitness 95t service"]
+        },
+        {
+          "query_term": "life fitness 95t treadmill",
+          "suggestions": ["life fitness 95t treadmill review", "life fitness 95t treadmill maintenance"]
+        }
+      ]
+    },
+    {
+      "seed_id": "lifefitness_ic5_model",
+      "queries": [
+        {
+          "query_term": "life fitness ic5",
+          "suggestions": ["life fitness ic5 review", "life fitness ic5 workout", "life fitness ic5 setup"]
+        },
+        {
+          "query_term": "life fitness ic5 indoor cycle",
+          "suggestions": ["life fitness ic5 indoor cycle review", "life fitness ic5 indoor cycle workout"]
+        }
+      ]
+    },
+    {
+      "seed_id": "lifefitness_ic7_model",
+      "queries": [
+        {
+          "query_term": "life fitness ic7",
+          "suggestions": ["life fitness ic7 review", "life fitness ic7 workout", "life fitness ic7 setup"]
+        },
+        {
+          "query_term": "life fitness ic7 indoor cycle",
+          "suggestions": ["life fitness ic7 indoor cycle review", "life fitness ic7 indoor cycle workout"]
+        }
+      ]
+    },
+    {
+      "seed_id": "matrix_a50_model",
+      "queries": [
+        {
+          "query_term": "matrix a50",
+          "suggestions": ["matrix a50 review", "matrix a50 elliptical demo", "matrix a50 service"]
+        },
+        {
+          "query_term": "matrix a50 elliptical",
+          "suggestions": ["matrix a50 elliptical review", "matrix a50 elliptical maintenance"]
+        }
+      ]
+    },
+    {
+      "seed_id": "technogym_run_now_model",
+      "queries": [
+        {
+          "query_term": "technogym run now",
+          "suggestions": ["technogym run now review", "technogym run now treadmill demo", "technogym run now service"]
+        },
+        {
+          "query_term": "technogym run now treadmill",
+          "suggestions": ["technogym run now treadmill review", "technogym run now treadmill maintenance"]
+        }
+      ]
+    }
+  ]
+}

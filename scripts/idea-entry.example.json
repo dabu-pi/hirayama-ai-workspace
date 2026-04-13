@@ -1,0 +1,12 @@
+{
+  "title": "Projects status sync heuristics",
+  "domain": "Infrastructure",
+  "status": "Idea",
+  "impact": "Medium",
+  "effort": "M",
+  "owner": "AI",
+  "related_project": "AIOS-06",
+  "why_it_matters": "Task signals may be strong enough to suggest safe status and phase transitions for Projects.",
+  "next_review": "2026-03-19",
+  "notes": "Only automate if the rules are narrow and cannot regress an already-advanced phase."
+}

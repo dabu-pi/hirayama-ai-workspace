@@ -1,0 +1,64 @@
+{
+  "schema_version": "publish-ready/v1",
+  "week": "2026-04-20",
+  "generated_at": "2026-04-10T00:15:00",
+  "publish_ready": false,
+  "health": {
+    "overall_status": "review_only",
+    "publish_ready": false,
+    "reasons": [
+      "source coverage is incomplete; ranking and compare are advisory only"
+    ],
+    "source_summary": [
+      {
+        "key": "gt",
+        "label": "GT",
+        "metric_type": "google_trends_interest",
+        "status": "ok",
+        "present_models": 2,
+        "expected_models": 2,
+        "reasons": []
+      },
+      {
+        "key": "gs",
+        "label": "GS",
+        "metric_type": "search_suggest_count",
+        "status": "warning",
+        "present_models": 1,
+        "expected_models": 2,
+        "reasons": ["GS partial coverage 1/2 models"]
+      }
+    ]
+  },
+  "public_summary": {
+    "headline": "TECHNOGYM Run leads this week's treadmill trend candidates.",
+    "top_categories": [
+      {
+        "category": "treadmill",
+        "featured_model_count": 2,
+        "example_models": ["TECHNOGYM Run", "Matrix T75"]
+      }
+    ],
+    "featured_models": [
+      {
+        "rank": 1,
+        "brand": "TECHNOGYM",
+        "model": "Run",
+        "category": "treadmill",
+        "trend_label": "unknown",
+        "summary": "Trend direction needs review for treadmill."
+      }
+    ],
+    "compare_summary": null
+  },
+  "public_notice": "Internal review only: source coverage is incomplete, so this summary should not be published as a normal weekly update.",
+  "internal_reference": {
+    "collector_source": "mock",
+    "normalized_models": 2,
+    "compare_enabled": false,
+    "compare_threshold": null,
+    "category_filter": null,
+    "only_commercial": false,
+    "no_discontinued": false
+  }
+}

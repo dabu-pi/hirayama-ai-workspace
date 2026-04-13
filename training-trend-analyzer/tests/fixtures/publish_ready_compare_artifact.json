@@ -1,0 +1,83 @@
+{
+  "schema_version": "publish-ready/v1",
+  "week": "2026-04-06",
+  "generated_at": "2026-04-10T00:12:00",
+  "publish_ready": true,
+  "health": {
+    "overall_status": "ok",
+    "publish_ready": true,
+    "reasons": [],
+    "source_summary": [
+      {
+        "key": "gt",
+        "label": "GT",
+        "metric_type": "google_trends_interest",
+        "status": "ok",
+        "present_models": 4,
+        "expected_models": 4,
+        "reasons": []
+      }
+    ]
+  },
+  "public_summary": {
+    "headline": "TECHNOGYM Run leads this week's treadmill trend candidates.",
+    "top_categories": [
+      {
+        "category": "treadmill",
+        "featured_model_count": 3,
+        "example_models": ["TECHNOGYM Run", "Life Fitness T5"]
+      }
+    ],
+    "featured_models": [
+      {
+        "rank": 1,
+        "brand": "TECHNOGYM",
+        "model": "Run",
+        "category": "treadmill",
+        "trend_label": "unknown",
+        "summary": "Trend direction needs review for treadmill."
+      },
+      {
+        "rank": 2,
+        "brand": "Concept2",
+        "model": "SkiErg",
+        "category": "ski_erg",
+        "trend_label": "unknown",
+        "summary": "Trend direction needs review for ski_erg."
+      }
+    ],
+    "compare_summary": {
+      "included": true,
+      "significant_count": 3,
+      "rank_shift_count": 0,
+      "top_drivers": "GS downweight x2, GS boost x1",
+      "largest_impact_model": "Concept2 SkiErg",
+      "highlights": [
+        {
+          "brand": "Concept2",
+          "model": "SkiErg",
+          "category": "ski_erg",
+          "reason": "GS downweight",
+          "rank_change": false
+        },
+        {
+          "brand": "Life Fitness",
+          "model": "T5",
+          "category": "treadmill",
+          "reason": "GS boost",
+          "rank_change": false
+        }
+      ]
+    }
+  },
+  "public_notice": "Ready for publication after editorial review.",
+  "internal_reference": {
+    "collector_source": "db",
+    "normalized_models": 4,
+    "compare_enabled": true,
+    "compare_threshold": 0.5,
+    "category_filter": null,
+    "only_commercial": true,
+    "no_discontinued": false
+  }
+}

@@ -7,14 +7,14 @@
  *   - hawkメール自動貼り付け.js の CONFIG が利用可能
  *
  * 処理:
- *   - R列（quotation_id）あり かつ T列（下書き作成日）空 の行を対象
+ *   - R列（quotation_id）あり かつ U列（下書き作成日）空 の行を対象
  *   - freee IV APIからPDFを取得して添付（失敗時は見積URLを本文に貼る）
  *   - 元スレッドへの返信下書きをGmailに保存（絶対に送信しない）
- *   - T列に下書き作成日時を記録
+ *   - U列に下書き作成日時を記録
  *******************************************************/
 
 const P3 = {
-  COL_DRAFT_CREATED_AT: 20, // T列：下書き作成日時
+  COL_DRAFT_CREATED_AT: 21, // U列：下書き作成日時（T列はCFG.COL_CHECK_REQUIREDが使用）
 };
 
 // ===================== 公開関数 =====================
@@ -40,7 +40,7 @@ function phase3_createDraftsForQuotedRows() {
     const quotationId = String(row[CFG.COL_FREEE_QUOTATION_ID - 1] || '').trim();
     if (!quotationId) continue;
 
-    // T列が埋まっていれば処理済み
+    // U列が埋まっていれば処理済み
     const draftCreatedAt = row[P3.COL_DRAFT_CREATED_AT - 1];
     if (draftCreatedAt) continue;
 
@@ -54,19 +54,10 @@ function phase3_createDraftsForQuotedRows() {
       continue;
     }
 
-    // PDF取得（失敗してもURL本文貼り付けで続行）
-    let pdfBlob = null;
-    try {
-      pdfBlob = p3_downloadPdf_(quotationId);
-    } catch (err) {
-      console.warn(`行${rowIndex}: PDF取得失敗（URL本文記載に切り替え）: ${err.message || err}`);
-    }
-
-    const freeeUrl = `https://app.freee.co.jp/invoice/quotations/${quotationId}`;
-    const body = p3_buildBody_(customerName, subject, freeeUrl, /* isUrlFallback= */ !pdfBlob);
+    const body = p3_buildBody_(customerName);
 
     try {
-      p3_createDraftReply_(gmailMessageId, body, pdfBlob);
+      p3_createDraftReply_(gmailMessageId, body);
       sheet.getRange(rowIndex, P3.COL_DRAFT_CREATED_AT)
         .setValue(new Date())
         .setNumberFormat('yyyy/MM/dd HH:mm');
@@ -101,7 +92,7 @@ function phase3_testDraft() {
   }
 
   if (!targetRow) {
-    console.log('処理対象行なし（R列あり・T列空 の行がありません）');
+    console.log('処理対象行なし（R列あり・U列空 の行がありません）');
     return;
   }
 
@@ -120,21 +111,12 @@ function phase3_testDraft() {
     return;
   }
 
-  let pdfBlob = null;
-  try {
-    pdfBlob = p3_downloadPdf_(quotationId);
-    console.log(`PDF取得成功: ${pdfBlob.getBytes().length} bytes`);
-  } catch (err) {
-    console.warn('PDF取得失敗（URL本文記載に切り替え）:', err.message || err);
-  }
-
-  const freeeUrl = `https://app.freee.co.jp/invoice/quotations/${quotationId}`;
-  const body = p3_buildBody_(customerName, subject, freeeUrl, !pdfBlob);
+  const body = p3_buildBody_(customerName);
   console.log('--- 下書き本文 ---\n' + body + '\n---');
 
   try {
-    p3_createDraftReply_(gmailMessageId, body, pdfBlob);
-    console.log('✅ 下書き作成成功（テストなのでT列は更新していません）');
+    p3_createDraftReply_(gmailMessageId, body);
+    console.log('✅ 下書き作成成功（テストなのでU列は更新していません）');
     console.log('Gmail の下書きボックスに保存されました。確認後、不要なら削除してください。');
   } catch (err) {
     console.error('❌ 下書き作成失敗:', err.message || err);
@@ -295,35 +277,27 @@ function p3_createDraftReply_(gmailMessageId, body, pdfBlob) {
 }
 
 /**
+ * 顧客名を「〇〇様」形式に正規化する（末尾の様を重複させない）
+ */
+function p3_normalizeName_(name) {
+  const n = String(name || '').trim();
+  return n.endsWith('様') ? n : n + '様';
+}
+
+/**
  * 下書き返信本文を生成する
  * @param {string} customerName  B列のお客様名
- * @param {string} subject       D列の案件内容
- * @param {string} freeeUrl      freee見積書のアプリURL
- * @param {boolean} isUrlFallback PDF添付なし（URL貼り付けモード）のとき true
  */
-function p3_buildBody_(customerName, subject, freeeUrl, isUrlFallback) {
-  const lines = [
+function p3_buildBody_(customerName) {
+  const salutation = p3_normalizeName_(customerName);
+  return [
+    salutation,
+    '',
     'お世話になっております。',
     '',
-  ];
-
-  if (isUrlFallback) {
-    lines.push(`${customerName}様の見積書を作成しました。`);
-    lines.push('');
-    lines.push('■ freee 見積書URL');
-    lines.push(freeeUrl);
-    lines.push('');
-    lines.push('※ PDFの確認・送付はこちらのURLからお願いいたします。');
-  } else {
-    lines.push(`${customerName}様の見積書をPDFにて添付いたします。`);
-    if (subject) {
-      lines.push('');
-      lines.push(`【件名】${subject}`);
-    }
-  }
-
-  lines.push('');
-  lines.push('よろしくお願いいたします。');
-
-  return lines.join('\n');
+    '見積書を作成しましたのでお送りします。',
+    '見積書PDFを添付しておりますのでご確認ください。',
+    '',
+    'よろしくお願いいたします。',
+  ].join('\n');
 }

@@ -1,0 +1,17 @@
+{
+  "testId": "TC25b",
+  "description": "骨折後療 継続理由書アラートなし: monthsElapsed=3 → ltCoef=1.0 + アラートなし（§11/§20 骨折は両方対象外）",
+  "ref": "FRACTURE_RESTRICTION.md#TC25b / SPEC.md §11 §20",
+  "note": "injuryDate=2026-02-01（day<16→2月起算）, treatDate=2026-05-01 → monthsElapsed=3。骨折はcalcLongTermCoef_V3_が早期return1.0、かつ§20継続理由書アラートも骨折除外（コード修正済み）。koryoKossetu=850。",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-05-01",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "前腕", "byomei": "骨折", "injuryDate": "2026-02-01",
+        "cold": false, "warm": false, "electro": false, "metal": false, "exercise": false }
+    ]}
+  ]
+}

@@ -1,278 +1,414 @@
 # SETUP.md — 新PCセットアップ手順
 
-このドキュメントは新しいPC（ジムPCなど）でこのワークスペースを使い始めるための手順書です。
+このドキュメントは、hirayama-ai-workspace を新しい PC で安全に再開するための共通セットアップ手順です。  
+Codex / Claude Code のどちらを使う場合も、この手順を基準にしてください。
 
 ---
 
-## 前提・注意事項
+## 基本方針
 
-- **OneDrive管理下のフォルダにクローンしない**（同期競合やファイルロックが発生する）
-- 作業フォルダは `C:\hirayama-ai-workspace\` 固定で使う
-- 認証情報ファイル（`service_account.json`、`.env` 等）はGitに含まれていないため別途配置が必要
+- 作業ディレクトリは `C:\hirayama-ai-workspace\workspace` を正本として使う
+- GitHub を正本とし、未 push の変更を残したまま別 PC へ移らない
+- `workspace` 本体を OneDrive / Google Drive / Dropbox などの常駐同期フォルダに置かない
+- secrets は Git に入れず、PC ごとに手動配置する
+- Google Drive は後段の export / upload 用に使い、Drive 側コピーでは Git 作業しない
 
 ---
 
 ## Step 1 — ツールのインストール
 
-以下を順番にインストールする。インストール後は新しいターミナルを開いてパスを反映させる。
-
 ### Git
 
-公式サイトからインストール（Windows用インストーラー）:
-```
+Windows 版 Git をインストールします。
+
+```text
 https://git-scm.com/download/win
 ```
 
 確認:
-```bash
+
+```powershell
 git --version
-# git version 2.x.x
 ```
 
-### Node.js（clasp用）
+### Node.js
 
-LTS版をインストール:
-```
+LTS 版をインストールします。
+
+```text
 https://nodejs.org/
 ```
 
-### clasp（GAS用CLIツール）
+### clasp
 
-```bash
+Google Apps Script 用 CLI を入れます。
+
+```powershell
 npm install -g @google/clasp
 ```
 
-### Python（patient-management用）
+### Python
 
-3.11以上をインストール:
-```
+`patient-management` などで使うため、Python 3.11 系を推奨します。
+
+```text
 https://www.python.org/downloads/
 ```
 
-インストール時に「Add Python to PATH」にチェックを入れる。
+インストール時は `Add Python to PATH` を有効にしてください。
 
 ---
 
 ## Step 2 — リポジトリのクローン
 
-Git Bash または PowerShell で実行:
+PowerShell か Git Bash で、作業用ディレクトリへ clone します。
 
-```bash
-mkdir -p /c/hirayama-ai-workspace
-cd /c/hirayama-ai-workspace
+```powershell
+New-Item -ItemType Directory -Force -Path C:\hirayama-ai-workspace | Out-Null
+Set-Location C:\hirayama-ai-workspace
 git clone https://github.com/dabu-pi/hirayama-ai-workspace.git workspace
 ```
 
-クローン後の構造:
+完成形:
 
-```
+```text
 C:\hirayama-ai-workspace\
-└── workspace\   ← ここが本番開発ディレクトリ
+  workspace\
 ```
 
 ---
 
-## Step 3 — Gitの初期設定（新PCで初回のみ）
+## Step 3 — Git の初期設定
 
-```bash
-git config --global user.name "Katsushi Hirayama"
-git config --global user.email "ここに自分のGitHubメールアドレスを入力"
-# 例: git config --global user.email "dabu-pi@users.noreply.github.com"
-```
+各 PC で最低限これを確認します。
 
-設定確認:
-
-```bash
+```powershell
+git config --global user.name  "Your Name"
+git config --global user.email "your-github-email@example.com"
 git config --global --list
-# user.name=Katsushi Hirayama
-# user.email=...
 ```
+
+remote 確認:
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+git remote -v
+```
+
+`origin` が `dabu-pi/hirayama-ai-workspace.git` を向いていれば OK です。
 
 ---
 
-## Step 4 — プロジェクト別の初期設定
+## Step 4 — プロジェクト別のローカル設定
 
-### 4-1. 柔整GAS / freee自動化（GASプロジェクト）
+### 4-1. GAS / freee 系
 
-claspのGoogle認証:
+Google アカウントで `clasp login` を行います。
 
-```bash
+```powershell
 clasp login
-```
-
-ブラウザが開くのでGoogleアカウントでログインして認証を完了させる。
-
-認証確認:
-
-```bash
 clasp whoami
-# Logged in as: xxxx@gmail.com
 ```
 
-各GASプロジェクトの `.clasp.json` は **gitに含まれていない**（PC固有設定）。
-スプレッドシートのエディタで「拡張機能 → Apps Script」を開き、スクリプトIDを確認して作成する。
+`.clasp.json` はローカル専用です。Git へ入れません。  
+必要な PC に手動配置してください。
 
-```bash
-cd /c/hirayama-ai-workspace/workspace/gas-projects/jyu-gas-ver3.1
-```
-
-`.clasp.json`（各自作成・コミット不可）:
+例:
 
 ```json
 {
-  "scriptId": "ここにスクリプトIDを貼る",
-  "rootDir": "."
+  "scriptId": "YOUR_SCRIPT_ID",
+  "rootDir": "./"
 }
 ```
 
-### 4-2. patient-management（Flask Webアプリ）
+### 4-2. patient-management
 
-```bash
-cd /c/hirayama-ai-workspace/workspace/patient-management
-python -m venv venv
-source venv/Scripts/activate
-pip install -r requirements.txt
+`service_account.json` と `.env` をローカル配置します。どちらも Git へ入れません。
+
+例:
+
+```text
+patient-management\service_account.json
+patient-management\.env
 ```
 
-`service_account.json` を配置する（gitに含まれていないため別途入手）:
+`.env` 例:
 
-```
-C:\hirayama-ai-workspace\workspace\patient-management\service_account.json
-```
-
-`.env` ファイルを作成（gitに含まれていないため自分で作成）:
-
-```
-GOOGLE_SERVICE_ACCOUNT_PATH=service_account.json
-FLASK_SECRET_KEY=任意のランダム文字列
+```env
+FLASK_SECRET_KEY=replace-with-random-string
 ```
 
-起動確認:
+必要なら動作確認:
 
-```bash
+```powershell
+cd C:\hirayama-ai-workspace\workspace\patient-management
 python app.py
-# → ブラウザで http://localhost:5000 にアクセスして動作確認
 ```
 
 ---
 
-## Step 5 — PowerShell エイリアスの設定
+## Step 5 — PowerShell エイリアス設定
 
-PowerShell でショートコマンドを使えるようにします。
-Git Bash でなく **PowerShell (5.1 または 7)** で実行してください。
+workspace には日常運用用の PowerShell エイリアスがあります。`setup-aliases.ps1` で `$PROFILE` に登録します。
 
-### 5-1. 実行ポリシーの変更（初回のみ）
+Dry run:
 
 ```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+cd C:\hirayama-ai-workspace\workspace
+.\scripts\setup-aliases.ps1 -DryRun
 ```
 
-### 5-2. エイリアスの自動登録
+適用:
 
 ```powershell
-cd C:\hirayama-ai-workspace\workspace\scripts
-.\setup-aliases.ps1
-```
-
-確認だけしたい場合（DryRun）:
-
-```powershell
-.\setup-aliases.ps1 -DryRun
-```
-
-### 5-3. $PROFILE の即時反映
-
-```powershell
+.\scripts\setup-aliases.ps1
 . $PROFILE
 ```
 
-新しいターミナルを開いても自動で反映されます。
+主なコマンド:
 
-### 登録されるコマンド
+| コマンド | 用途 |
+|---|---|
+| `ds` | `dev-start`。pull + status 確認 |
+| `de` | `dev-end`。commit + push + handoff |
+| `dstat` | 状況確認 |
+| `gsc` | safe commit |
+| `note` | 作業メモ保存 |
 
-| コマンド | 役割 | フェーズ |
-|---|---|---|
-| `cap` | 新規プロジェクト作成 | Phase1 |
-| `rwl` | ログ付き実行（直接） | Phase1 |
-| `note` | 開発メモ保存 | Phase1 |
-| `adr` | 司令塔：rwl 経由実行 + 自動 note | Phase2 |
-| `gsc` | 安全確認付き commit & push | Phase2 |
-| `aerr` | 最新エラーログ整形表示 | Phase2 |
-| `dstat` | プロジェクト状態ダッシュボード | Phase2 |
+---
 
-動作確認:
+## Step 6 — Claude Code / Codex のローカル設定
+
+権限制御やローカル設定は `.claude/settings.json` などで管理します。  
+これらはローカル専用で、Git には入れません。
+
+確認:
 
 ```powershell
-dstat         # プロジェクト状態を表示
-note "セットアップ完了" -Tag done
+Get-Content $env:USERPROFILE\.claude\settings.json
 ```
+
+`git push` や `clasp push` の承認方針は、各 PC のローカル設定に合わせて調整してください。
 
 ---
 
-## Step 6 — 日常の開発フロー
+## Step 7 — AI 共通ルール
 
-### 作業開始時（毎回必ず実行）
+AI に作業を依頼するときは、まず次を読む運用にします。
 
-```bash
-cd /c/hirayama-ai-workspace/workspace
-git pull origin master
+1. `README.md`
+2. `PROJECTS.md`
+3. `ROADMAP.md`
+4. `docs/PROJECT_STATUS.md`
+5. 対象プロジェクトの `README.md`
+6. 対象プロジェクトの `PROJECT_STATUS.md`
+7. 必要に応じて `spec.md` / `SPEC.md`
+
+作業前には必ず:
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+git status
+git pull
 ```
 
-### 作業後
-
-```bash
-git add <変更したファイル名>
-git commit -m "変更内容の説明"
-git push origin master
-```
-
-> `git add .` は使わず、変更したファイルを個別に指定する（認証情報の誤コミット防止）
+作業後は、変更内容・検証結果・次アクションを状態ファイルへ残してから handoff します。
 
 ---
 
-## Step 7 — 動作確認チェックリスト
+## Step 8 — 3台PC運用ルール
 
-| 項目 | 確認コマンド | 期待結果 |
-|---|---|---|
-| Git | `git status` | `On branch master` と表示される |
-| Git設定 | `git config --global --list` | name / email が表示される |
-| clasp認証 | `clasp whoami` | Googleアカウントのメールが表示される |
-| Python仮想環境 | `python --version`（venv内） | 3.11以上 |
-| Flaskアプリ | `python app.py` | localhost:5000 でアクセス可能 |
-| エイリアス（PS） | `dstat` | プロジェクト状態が表示される |
-| エイリアス（PS） | `note "test" -Tag done` | logs/notes/ にメモが保存される |
+### 開始時
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+git status
+git pull
+```
+
+### 終了時
+
+- `PROJECT_STATUS.md` を更新する
+- 不要な差分がないか確認する
+- `git status` を確認する
+- `de` か `git add / commit / push` で handoff する
+
+### PC を切り替える前
+
+- push 前の変更を残したまま別 PC へ移らない
+- secrets は GitHub ではなく各 PC へ手動配置する
+- 同じファイルを複数 PC で同時に編集しない
 
 ---
 
-## トラブルシューティング
+## Step 9 — `de` 用 env vars の設定
 
-### `clasp login` でブラウザが開かない
+`de` は workspace 全体の handoff コマンドです。  
+環境変数が設定されていると、1 回の実行で次まで自動化できます。
 
-```bash
-clasp login --no-localhost
+- commit
+- push
+- Run_Log JSON / TSV 出力
+- Run_Log シート追記
+- Projects 最小同期
+- Google Drive export / upload
+
+### 必須ではない env vars
+
+下の 2 つは Dashboard 連携用です。未設定でも `de` 自体は動きますが、Run_Log シート追記と Projects 同期はスキップされます。
+
+| 変数 | 用途 |
+|---|---|
+| `AIOS_DASHBOARD_SPREADSHEET_ID` | Hirayama AI OS Dashboard の spreadsheet ID |
+| `AIOS_SERVICE_ACCOUNT_PATH` | service account JSON のローカルパス |
+
+推奨パス:
+
+```text
+C:\hirayama-ai-workspace\workspace\secrets\aios-service-account.json
 ```
 
-表示されたURLをブラウザで手動で開いて認証する。
+### 一時設定
 
-### `git pull` でコンフリクトが発生した
-
-```bash
-git status                     # コンフリクト対象ファイルを確認
-# ファイルを手動で編集してコンフリクトを解消
-git add <ファイル名>
-git commit -m "Resolve merge conflict"
+```powershell
+$env:AIOS_DASHBOARD_SPREADSHEET_ID = '1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk'
+$env:AIOS_SERVICE_ACCOUNT_PATH     = 'C:\hirayama-ai-workspace\workspace\secrets\aios-service-account.json'
 ```
 
-### `service_account.json` が見つからないエラー
+### 永続設定
 
-`patient-management/` に `service_account.json` が配置されているか確認する。
-gitには含まれていないため、別のPCから直接コピーするか、Google Cloud Consoleで再発行する。
-
-### Python仮想環境が見つからない / activate できない
-
-```bash
-cd /c/hirayama-ai-workspace/workspace/patient-management
-python -m venv venv          # 再作成
-source venv/Scripts/activate
-pip install -r requirements.txt
+```powershell
+[Environment]::SetEnvironmentVariable('AIOS_DASHBOARD_SPREADSHEET_ID', '1EvZMtMiX5TKsSBYPhF5VrCcK9JEWHhUHuuYkUTRSIfk', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_SERVICE_ACCOUNT_PATH', 'C:\hirayama-ai-workspace\workspace\secrets\aios-service-account.json', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_NAME', 'Run_Log', 'User')
+[Environment]::SetEnvironmentVariable('AIOS_RUNLOG_SHEET_WRITE', '1', 'User')
 ```
+
+確認:
+
+```powershell
+$env:AIOS_DASHBOARD_SPREADSHEET_ID
+$env:AIOS_SERVICE_ACCOUNT_PATH
+Test-Path $env:AIOS_SERVICE_ACCOUNT_PATH
+```
+
+### 未設定時の挙動
+
+未設定でも次は動きます。
+
+- commit / push
+- ローカル Run_Log JSON / TSV 出力
+- workspace export / gdrive upload 試行
+
+未設定だとスキップされるもの:
+
+- Run_Log シート追記
+- Projects 最小同期
+
+必要なら後から手動で次を実行します。
+
+```powershell
+$json = (Get-ChildItem logs/runlog/runlog_*.json |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1).FullName
+
+node scripts/append-runlog-to-sheet.mjs --json $json --write
+node scripts/sync-project-from-runlog.mjs --json $json --project-id AIOS-06 --expected-commit <commit> --write
+```
+
+詳細: [ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md](./ai-os/CODEX_SHEETS_DIRECT_WRITE_SETUP.md)
+
+---
+
+## Step 10 — Google Drive export / upload のセットアップ
+
+### 基本方針
+
+- `workspace` は GitHub 正本の作業ディレクトリとして運用する
+- `workspace-export` は Google Drive upload 用の安全な export として使う
+- `de` 実行後に `workspace -> workspace-export` を更新し、その後 rclone で Google Drive へ upload する
+- Google Drive for desktop の常駐同期は前提にしない
+- Drive 側コピーや `workspace-export` 側では Git 作業をしない
+- Google Drive の指定フォルダ ID に既存ファイルがあっても、upload 先はその直下ではなく専用の child path に分ける
+
+### 推奨: 初回セットアップを一括実行
+
+次の bootstrap script を使うと、`rclone` の検出または導入、remote 作成確認、User 環境変数設定、`copy -DryRun`、初回 `copy` upload までをまとめて進められます。
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+.\scripts\setup-gdrive-handoff.ps1 `
+  -DriveFolderId '<Google Drive folder id>' `
+  -RemoteName 'hirayama_gdrive_handoff' `
+  -RemotePath 'hirayama-ai-workspace/workspace-export'
+```
+
+指定 folder ID 自体に既存ファイルがある場合でも、`RemotePath` は必ず `hirayama-ai-workspace/workspace-export` のような dedicated child path にします。
+
+### export の確認
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+.\scripts\sync-workspace-to-drive.ps1 -DryRun
+.\scripts\sync-workspace-to-drive.ps1
+```
+
+既定の export 先:
+
+```text
+C:\hirayama-ai-workspace\workspace-export
+```
+
+### export 先を変更したい場合
+
+```powershell
+[Environment]::SetEnvironmentVariable('HIRAYAMA_DRIVE_SYNC_EXPORT_ROOT', 'D:\shared\workspace-export', 'User')
+```
+
+### rclone の設定
+
+bootstrap script を使わず手動設定する場合は、次の順で進めます。
+
+```powershell
+rclone config
+rclone listremotes
+[Environment]::SetEnvironmentVariable('HIRAYAMA_GDRIVE_REMOTE', 'gdrive', 'User')
+[Environment]::SetEnvironmentVariable('HIRAYAMA_GDRIVE_REMOTE_PATH', 'hirayama-ai-workspace/workspace-export', 'User')
+[Environment]::SetEnvironmentVariable('HIRAYAMA_RCLONE_EXE', 'C:\Users\<user>\AppData\Local\Programs\rclone\rclone.exe', 'User')
+```
+
+`HIRAYAMA_GDRIVE_REMOTE_PATH` は dedicated child path にします。指定 folder ID 直下に既存ファイルが見えても、root へ直接 upload しません。
+
+### 初回 upload の確認
+
+初回は安全重視で `copy` を使います。
+
+```powershell
+.\scripts\upload-workspace-export-to-gdrive.ps1 -Mode copy -DryRun
+.\scripts\upload-workspace-export-to-gdrive.ps1 -Mode copy
+```
+
+### 通常運用
+
+専用保存先だと確認できた後は `de` で通常運用します。`de` からの既定 upload は `sync` です。
+
+```powershell
+de -ProjectId AIOS-06 "chore: verify gdrive handoff"
+```
+
+### 一時的に回避したい場合
+
+```powershell
+de -ProjectId AIOS-06 -SkipDriveSync "docs: skip drive sync for this handoff"
+de -ProjectId AIOS-06 -SkipGDriveUpload "docs: export only for this handoff"
+```
+
+### 確認ポイント
+
+- `workspace-export\INDEX.md` が生成されているか
+- `logs/drive-sync/drive-sync_*.log` と `drive-sync_*.json` が生成されているか
+- `logs/gdrive-upload/gdrive-upload_*.json` が生成されているか
+- `rclone listremotes` に指定 remote が見えるか
+
+詳細: [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md)

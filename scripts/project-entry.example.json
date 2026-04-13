@@ -1,0 +1,10 @@
+﻿{
+  "project_id": "AIOS-06",
+  "project_name": "Hirayama AI OS",
+  "directory": "ai-os",
+  "status": "In Progress",
+  "phase": "Phase 2",
+  "last_updated": "2026-03-12",
+  "next_action": "Decide whether to automate Ideas or deepen Task_Queue status sync",
+  "note_text": "Phase 2 dashboard automation now has live Run_Log, Projects, Task_Queue, Lists, and Metrics helpers."
+}

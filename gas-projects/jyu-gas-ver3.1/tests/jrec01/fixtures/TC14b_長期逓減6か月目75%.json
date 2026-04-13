@@ -1,0 +1,16 @@
+{
+  "testId": "TC14b",
+  "description": "長期逓減 75%適用（monthsElapsed=5）",
+  "ref": "TESTCASES.md#TC14",
+  "note": "injuryDate=2026-02-01（16日未満→2月起算）、treatDate=2026-07-01 → monthsElapsed=5 → ltCoef=0.75。baseOut=505（生値）、rowTotalOut=Math.round(505*0.75)=379",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-07-01",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "腰部", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": false, "warm": false, "electro": false }
+    ]}
+  ]
+}

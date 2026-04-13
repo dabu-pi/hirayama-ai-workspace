@@ -25,7 +25,7 @@ import sys
 import os
 import glob as glob_mod
 import copy
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 
 try:
@@ -35,13 +35,13 @@ except ImportError:
     sys.exit(1)
 
 # ===== 設定 =====
-TEMPLATE_FILE = "療養費支給申請書.xlsx"
+TEMPLATE_FILE = "application_template.xlsx"
 TEMPLATE_SHEET = "新　様式第5号"
 
 # ===== 保険者番号: 8桁を1桁ずつ（各4列結合セル） =====
 INSURER_NO_CELLS = ["CQ4", "CU4", "CY4", "DC4", "DG4", "DK4", "DO4", "DS4"]
 
-# ===== 保険種別: 該当番号に○付け =====
+# ===== 保険種別: 該当番号に○付け（参照用: 実際の○書込は SELECTION_SPLIT_MAP 経由）=====
 INSURANCE_TYPE_CELLS = {
     1: "CB8",   # 協会けんぽ
     2: "CF8",   # 組合
@@ -50,6 +50,70 @@ INSURANCE_TYPE_CELLS = {
     5: "CF11",  # 退職
     6: "CJ11",  # 後期高齢
 }
+
+# ===== 選択肢セル分割マップ（○専用セル方式）=====
+# テンプレートの結合セルを出力ファイル内で「ラベル行＋マーカー行」に分割する。
+# テンプレートファイルは変更せず、毎回ロードした出力ファイルのみに分割を適用する。
+# 書式: {key: (full_merge, label_merge, marker_merge, label_text)}
+#   full_merge  : テンプレート元の結合範囲（分割前）
+#   label_merge : 上段ラベル行（テキスト保持）
+#   marker_merge: 下段マーカー行（選択時「○」を書込む）
+#   label_text  : テンプレートのラベル文字列（書き戻し用）
+SELECTION_SPLIT_MAP = {
+    # --- 性別 (AL21:AO22/AL23:AO24 各4x2 → 4x1 ラベル + 4x1 マーカー) ---
+    "gender_男": ("AL21:AO22", "AL21:AO21", "AL22:AO22", "1 男"),
+    "gender_女": ("AL23:AO24", "AL23:AO23", "AL24:AO24", "2 女"),
+    # --- 保険種別 (各4x3 → 4x2 ラベル + 4x1 マーカー) ---
+    "ins_1": ("CB8:CE10",  "CB8:CE9",   "CB10:CE10", "1.協"),
+    "ins_2": ("CF8:CI10",  "CF8:CI9",   "CF10:CI10", "2.組"),
+    "ins_3": ("CJ8:CM10",  "CJ8:CM9",   "CJ10:CM10", "3.共"),
+    "ins_4": ("CB11:CE13", "CB11:CE12", "CB13:CE13", "4.国"),
+    "ins_5": ("CF11:CI13", "CF11:CI12", "CF13:CI13", "5.退"),
+    "ins_6": ("CJ11:CM13", "CJ11:CM12", "CJ13:CM13", "6.後期"),
+    # --- 単独区分 (各6x2 → 6x1 ラベル + 6x1 マーカー) ---
+    "tankei_1": ("CT8:CY9",   "CT8:CY8",   "CT9:CY9",   "1.単独"),
+    "tankei_2": ("CT10:CY11", "CT10:CY10", "CT11:CY11", "2.2併"),
+    "tankei_3": ("CT12:CY13", "CT12:CY12", "CT13:CY13", "3.3併"),
+    # --- 本家区分 (各6x2 → 6x1 ラベル + 6x1 マーカー) ---
+    "honke_DB8":  ("DB8:DG9",   "DB8:DG8",   "DB9:DG9",   "2.本人"),
+    "honke_DB10": ("DB10:DG11", "DB10:DG10", "DB11:DG11", "4.六歳"),
+    "honke_DB12": ("DB12:DG13", "DB12:DG12", "DB13:DG13", "6.家族"),
+    "honke_DH8":  ("DH8:DM9",   "DH8:DM8",   "DH9:DM9",   "8.高一"),
+    "honke_DH12": ("DH12:DM13", "DH12:DM12", "DH13:DM13", "0.高7"),
+}
+
+# D4 負傷の原因: BR20:DV24（5行結合）をラベル行(BR20)＋内容行(BR21-24)に分離
+# (full_merge, label_merge, content_merge, label_text)
+D4_INJURY_CELL_SPLIT = ("BR20:DV24", "BR20:DV20", "BR21:DV24", "負傷の原因")
+D4_INJURY_CONTENT_CELL = "BR21"  # 内容書込先（分離後のコンテンツ行左上）
+
+# ===== 英語日付文字列 → 和暦表記 変換（Python側安全網） =====
+# GAS 側 Utilities.formatDate が効かなかった場合（String型セルなど）への対策。
+# "Mon Feb 02 2026 00:00:00 GMT+0900" → "2026/02/02" → さらに put_wareki_ymd 書式へ変換せず
+# _build_injury_text 内でセグメントとして使うため ISO 形式（YYYY/MM/DD）に正規化するだけでよい。
+import re as _re
+
+_EN_MONTH = {
+    "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
+    "May": "05", "Jun": "06", "Jul": "07", "Aug": "08",
+    "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12",
+}
+
+def _normalize_date_str(s: str) -> str:
+    """
+    JavaScript Date.toString() 形式の英語日付を YYYY/MM/DD に変換する。
+    例: "Mon Feb 02 2026 00:00:00 GMT+0900 (JST)" → "2026/02/02"
+    該当しない文字列はそのまま返す。
+    """
+    m = _re.match(
+        r"\w{3}\s+(\w{3})\s+(\d{2})\s+(\d{4})", s.strip()
+    )
+    if m:
+        mon_str, day, year = m.group(1), m.group(2), m.group(3)
+        mon = _EN_MONTH.get(mon_str)
+        if mon:
+            return f"{year}/{mon}/{day}"
+    return s
 
 # ===== セルマッピング =====
 CELL_MAP = {
@@ -62,10 +126,79 @@ CELL_MAP = {
     "生年月日_元号": "AP21",
     "生年月日_年": "AY23",
 
-    "負傷原因": "BR20",
     "請求区分": "DH31",
+    "経過":     "M31",  # D2 継続月数・頻回 補助表示（★正本は摘要欄・頻回欄0.5）
     "摘要": "E44",
+
+    # ===== 施術機関固定情報（全患者共通: NDJSON meta から取得）=====
+    "都道府県番号": "CI2",    # U1: CI2:CL3 マージ。施術機関所在都道府県番号（2桁）
+    "施術機関コード": "CZ2",  # U2: CZ2:DV3 マージ。登録記号番号の数字部分（★暫定運用）
+    # 注: "登録記号番号" は CR49:DV50（ラベル行）のため CELL_MAP から除外。
+    #     分割書込先は TOROKU_KIGO_SPLIT_CELLS で管理。
 }
+
+# ===== U6 給付割合: 一部負担金割合 → 対象数字上に楕円画像（○専用画像方式）=====
+# テンプレート実値: DP8:DV10 = '10・9'（7列×3行）/ DP11:DV13 = '8・7'（7列×3行）
+# テンプレート文字列は変更せず、対象数字の上に透明背景楕円画像を浮かべる。
+#
+# 数字の列方向位置（テンプレートスキャン確認: DP=col120, DV=col126 = 7列）:
+#   '10・9'（4文字, 中央揃え）: 左余白1.5列 → '1'@DQ, '0'@DR, '・'@DS, '9'@DT-DU
+#   '8・7'  (3文字, 中央揃え)  : 左余白2列   → '8'@DR-DS, '・'@DT, '7'@DT-DU
+# ★ズレがある場合はセル範囲を1列ずつ左右にずらして調整すること
+KYUFU_OVAL_MAP = {
+    1: "DS8:DV10",   # 9割給付: '9' の位置（4列幅: DS-DV, rows 8-10）
+    2: "DQ11:DT13",  # 8割給付: '8' の位置（4列幅: DQ-DT, rows 11-13）
+    3: "DS11:DV13",  # 7割給付: '7' の位置（4列幅: DS-DV, rows 11-13）
+}
+
+# ===== 選択肢楕円の配置範囲マップ =====
+# _write_selection_marker が参照する配置範囲（TwoCellAnchor 画像）。
+# 行番号を1つ下げる（＝上へ移動）ことで、楕円の中央位置を1セル分上にずらせる。
+# 給付割合は KYUFU_OVAL_MAP で別管理（横幅優先のため）。
+#
+# 微調整履歴:
+#   v1 (Revision 00012-7mn): marker_merge → full_merge に変更（上N行分移動）
+#   v2 (Revision 00013-xtd): full_merge をそのまま使用
+#   v3 (Revision 00014-*): 全エントリ -1行（目視で全欄「さらに上1セル」要望）
+#   v4 (Revision 00016-*): _apply_selection_splits の選択肢分割を廃止。
+#     テンプレ結合を維持するため SELECTION_OVAL_MAP をテンプレ full_merge 値に戻す。
+#     【根本原因】分割でテキスト位置が上シフト → 楕円とのズレが発生していた。
+SELECTION_OVAL_MAP = {
+    # 性別（テンプレ full_merge そのまま）
+    "gender_男": "AL21:AO22",
+    "gender_女": "AL23:AO24",
+    # 保険種別（テンプレ full_merge そのまま）
+    "ins_1": "CB8:CE10",
+    "ins_2": "CF8:CI10",
+    "ins_3": "CJ8:CM10",
+    "ins_4": "CB11:CE13",
+    "ins_5": "CF11:CI13",
+    "ins_6": "CJ11:CM13",
+    # 単独区分（テンプレ full_merge そのまま）
+    "tankei_1": "CT8:CY9",
+    "tankei_2": "CT10:CY11",
+    "tankei_3": "CT12:CY13",
+    # 本家区分（テンプレ full_merge そのまま）
+    "honke_DB8":  "DB8:DG9",
+    "honke_DB10": "DB10:DG11",
+    "honke_DB12": "DB12:DG13",
+    "honke_DH8":  "DH8:DM9",
+    "honke_DH12": "DH12:DM13",
+}
+
+# ===== 楕円スタイル =====
+# "normal": 通常の選択肢欄（性別/保険種別/単独/本家）
+# "kyufu":  給付割合専用（縦方向マージンを小さくして横長に見せる）
+OVAL_STYLES = {
+    "normal": {"margin_emu": 19050, "line_width": 2},
+    "kyufu":  {"margin_emu": 9525,  "line_width": 2},
+}
+
+# ===== 下段 登録記号番号 分割欄（行51-52）=====
+# CR49:DV50 はラベル行「登録記号番号」→ 書き込み禁止
+# 入力欄: 左=CR51:DH52 / 中=DK51:DO52 / 右=DR51:DV52
+# 区切りセル DI51:DJ52 / DP51:DQ52 は触らない（テンプレートのハイフン表示用）
+TOROKU_KIGO_SPLIT_CELLS = ("CR51", "DK51", "DR51")
 
 # ===== 初検料・再検料・計: ラベル内に金額を埋め込む =====
 # セル構造: E33:X33 = "初検料　　　　　　　　円" のようにラベル内テキスト
@@ -293,16 +426,130 @@ def _add_tenki_oval(ws, tenki_cell: str, tenki_value: str):
     ws.add_image(xl_img)
 
 
+# ===== ○専用画像方式: 汎用楕円アンカー =====
+
+def _draw_oval_on_range(ws, cell_range: str, style: str = "normal"):
+    """
+    指定セル範囲 "A1:C3" に透明背景の楕円 PNG 画像を TwoCellAnchor でアンカー配置する。
+
+    テキスト "○" の代わりに使うことで、列幅・結合セル・フォントサイズに依存しない
+    視覚的中央配置を実現する。配置基準は SELECTION_OVAL_MAP / KYUFU_OVAL_MAP の
+    セル範囲文字列で管理し、微調整時はマップの値を1列ずらすだけでよい。
+
+    転帰 (_add_tenki_oval) と同じ PIL + TwoCellAnchor 方式を汎用化したもの。
+
+    AnchorMarker の col/row は 0-based:
+      from_col = column_index_from_string(start_col) - 1  ← left edge of start col
+      to_col   = column_index_from_string(end_col)        ← right edge of end col
+      from_row = start_row - 1                            ← top of start row
+      to_row   = end_row                                  ← bottom of end row
+
+    style: OVAL_STYLES のキー。"normal"（通常選択欄）/ "kyufu"（給付割合専用）。
+    """
+    from PIL import Image as PILImage, ImageDraw
+    from openpyxl.drawing.image import Image as XlImage
+    from openpyxl.drawing.spreadsheet_drawing import TwoCellAnchor, AnchorMarker
+    from openpyxl.utils import column_index_from_string
+    from io import BytesIO
+    import re
+
+    oval_style = OVAL_STYLES.get(style, OVAL_STYLES["normal"])
+    margin_emu = oval_style["margin_emu"]
+    line_width = oval_style["line_width"]
+
+    m = re.match(r"([A-Z]+)(\d+):([A-Z]+)(\d+)", cell_range.strip())
+    if not m:
+        return
+    sc, sr_str, ec, er_str = m.group(1), m.group(2), m.group(3), m.group(4)
+    sr, er = int(sr_str), int(er_str)
+
+    # AnchorMarker 座標 (0-based)
+    from_col = column_index_from_string(sc) - 1   # left edge of sc
+    from_row = sr - 1                              # top edge of sr
+    to_col   = column_index_from_string(ec)        # right edge of ec (= left of ec+1)
+    to_row   = er                                  # bottom edge of er (= top of er+1)
+
+    # PNG サイズ: TwoCellAnchor で引き伸ばされるためアスペクト比を大まかに合わせる
+    col_span = column_index_from_string(ec) - column_index_from_string(sc) + 1
+    row_span = er - sr + 1
+    img_h = max(20, row_span * 20)
+    img_w = max(30, col_span * 15)
+
+    # 透明背景 + 黒楕円輪郭 PNG を生成
+    pil_img = PILImage.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(pil_img)
+    draw.ellipse([1, 1, img_w - 2, img_h - 2], outline='black', width=line_width)
+
+    buf = BytesIO()
+    pil_img.save(buf, format='PNG')
+    buf.seek(0)
+
+    xl_img = XlImage(buf)
+    xl_img.anchor = TwoCellAnchor(
+        _from=AnchorMarker(col=from_col, colOff=margin_emu, row=from_row, rowOff=margin_emu),
+        to=AnchorMarker(col=to_col,   colOff=0,           row=to_row,   rowOff=0),
+        editAs='oneCell',
+    )
+    ws.add_image(xl_img)
+
+
+# ===== D4 負傷の原因セル分割 =====
+
+def _apply_selection_splits(ws):
+    """
+    D4 負傷の原因（BR20:DV24）を「ラベル行 BR20 + 内容行 BR21-24」に分割し、
+    ラベル「負傷の原因」を BR20:DV20 に書き戻す。
+
+    ★ 選択肢セル（性別/保険種別/単独区分/本家区分）の分割は行わない。
+      - 旧方式: unmerge_cells + re-merge でラベル行＋マーカー行に分割していた
+      - 廃止理由: 分割するとテキスト表示位置が上シフトし、楕円画像とのズレが発生する
+        （テンプレ: 3行結合の中央 ≈ 行9 → 分割後: 2行ラベル中央 ≈ 行8-9 上よりに移動）
+      - 現在の画像オーバーレイ方式では分割不要。テンプレ結合をそのまま維持する。
+
+    テンプレートファイルは変更しない（毎回ロードされる）。
+    """
+    # D4: BR20:DV24 → ラベル行 BR20:DV20 + 内容行 BR21:DV24
+    full, label, content, text = D4_INJURY_CELL_SPLIT
+    ws.unmerge_cells(full)
+    ws.merge_cells(label)
+    ws[label.split(':')[0]] = text
+    ws.merge_cells(content)
+
+
+def _write_selection_marker(ws, marker_key: str):
+    """
+    指定キーの選択肢セル全体（ラベル行＋マーカー行）に楕円画像を配置する（○専用画像方式）。
+    _apply_selection_splits() が事前に呼ばれていることが前提。
+
+    テキスト "○" は書き込まない。PIL TwoCellAnchor で画像がセル中央に浮かぶ。
+    配置範囲は SELECTION_OVAL_MAP（full_merge）を使用するため、マーカー行のみを
+    指定した旧方式に対して「上N行分」移動した位置に楕円が描かれる。
+      ・保険種別: 3行全体 → 実質「上2行」移動
+      ・性別/単独/本家: 2行全体 → 実質「上1行」移動
+    位置微調整は SELECTION_OVAL_MAP の範囲文字列を変更して行う。
+    """
+    if marker_key not in SELECTION_OVAL_MAP:
+        return
+    oval_range = SELECTION_OVAL_MAP[marker_key]
+    _draw_oval_on_range(ws, oval_range, style="normal")
+
+
 # ===== メイン転記 =====
-def write_application(template_path: str, json_data: dict, output_path: str):
+def write_application(template_path: str, json_data: dict, output_path: str, clinic_info: dict = None):
     """
     テンプレートxlsxを開き、転記データを書き込んで別名保存。
     書式・結合は保持される。
 
     json_data: { "case1": {...}, "case2": {...} | null }
+    clinic_info: { "prefectureNo": "14", "torokuKigoNo": "契2804440-0-0" }
+      全患者共通の施術機関固定情報。None の場合は書込をスキップ（後方互換）。
+      NDJSON の _meta 行から取得し、batch_write / batch_write_from_string が渡す。
     """
     wb = load_workbook(template_path)
     ws = wb[TEMPLATE_SHEET]
+
+    # 選択肢セルを「ラベル行＋マーカー行」に分割（○専用セル方式の前処理）
+    _apply_selection_splits(ws)
 
     count = 0
     row1 = json_data.get("case1") or {}
@@ -352,13 +599,14 @@ def write_application(template_path: str, json_data: dict, output_path: str):
     if symbol or number:
         put(CELL_MAP["記号番号"], f"{symbol}・{number}")
 
-    # ===== 保険種別○付け =====
+    # ===== 保険種別○付け（○専用セル方式）=====
     # マスタ値優先、なければ保険者番号から自動判定
+    # テンプレセル（1.協 等）は変更せず、下段マーカー行に「○」を書込む
     ins_type = safe_int(row1.get("保険種別"))
     if ins_type is None:
         ins_type = detect_insurance_type(insurer_no)
-    if ins_type and ins_type in INSURANCE_TYPE_CELLS:
-        put_era_circle(ws, INSURANCE_TYPE_CELLS[ins_type], ins_type)
+    if ins_type and 1 <= ins_type <= 6:
+        _write_selection_marker(ws, f"ins_{ins_type}")
         count += 1
 
     # ===== 被保険者 =====
@@ -367,6 +615,14 @@ def write_application(template_path: str, json_data: dict, output_path: str):
 
     # ===== 受療者 =====
     put(CELL_MAP["患者氏名"], row1.get("患者氏名"))
+
+    # ===== 性別（○専用セル方式）=====
+    # テンプレセル（1 男 / 2 女）は変更せず、下段マーカー行に「○」を書込む
+    # 根拠: テンプレートスキャン確認（2026-03-20）
+    gender_val = str(row1.get("性別") or "").strip()
+    if gender_val in ("男", "女"):
+        _write_selection_marker(ws, f"gender_{gender_val}")
+        count += 1
 
     # 生年月日 → 元号○付け + 年月日テキスト
     bd = parse_date(row1.get("患者生年月日"))
@@ -387,7 +643,14 @@ def write_application(template_path: str, json_data: dict, output_path: str):
         if i >= len(INJURY_ROWS):
             break
         m = INJURY_ROWS[i]
-        put(m["name"], d["name"])
+        # 行26（1行目）→（1）、行27（2行目）→（2）を先頭に付ける
+        # 行28以降はテンプレートに (3)(4)(5) が既存のため番号不要
+        name = d["name"]
+        if i == 0:
+            name = f"（1）{name}"
+        elif i == 1:
+            name = f"（2）{name}"
+        put(m["name"], name)
         put_wareki_ymd(ws, m["injY"], m["injM"], m["injD"], d.get("injuryDate"))
         put_wareki_ymd(ws, m["iniY"], m["iniM"], m["iniD"], d.get("firstDate"))
         put_wareki_ymd(ws, m["stY"], m["stM"], m["stD"], d.get("startDate"))
@@ -412,15 +675,13 @@ def write_application(template_path: str, json_data: dict, output_path: str):
                  if safe_num(row1.get(k)) is not None)
 
     # ===== 施療料: ラベル内金額 =====
-    shoryo_data = build_shoryo_array(row1, row2)
+    # Fix-S: 非ゼロ値のみに詰めてから連番で書き込む（傷病名と同じ詰め寄せ方式）
+    shoryo_data = [v for v in build_shoryo_array(row1, row2) if safe_int(v) is not None]
     for i, val in enumerate(shoryo_data):
         if i >= len(SHORYO_CELLS):
             break
-        n = safe_int(val)
-        if n is None:
-            continue
         sc = SHORYO_CELLS[i]
-        ws[sc["cell"]] = f"({sc['no']}){n:>10,}円"
+        ws[sc["cell"]] = f"({sc['no']}){safe_int(val):>10,}円"
         count += 1
 
     # 施療料計
@@ -431,15 +692,18 @@ def write_application(template_path: str, json_data: dict, output_path: str):
         count += 1
 
     # ===== 部位別明細 =====
+    # Fix-P: has_data=True の行だけ display_idx を進め、PART_ROWS と labels を詰めて参照する
     part_data = build_part_detail_array(row1, row2)
     labels = "⑴⑵⑶⑷⑸"
-    for i, d in enumerate(part_data):
-        if i >= len(PART_ROWS):
+    display_idx = 0
+    for d in part_data:
+        if display_idx >= len(PART_ROWS):
             break
-        m = PART_ROWS[i]
         if not d.get("has_data"):
             continue
-        put(m["label"], labels[i] if i < len(labels) else "")
+        m = PART_ROWS[display_idx]
+        put(m["label"], labels[display_idx] if display_idx < len(labels) else "")
+        display_idx += 1
         put_num(m["teiRate"], d.get("tei_rate"))
         put_num(m["koryoUnit"], d.get("koryo_unit"))
         put_num(m["koryoCnt"], d.get("koryo_cnt"))
@@ -467,6 +731,108 @@ def write_application(template_path: str, json_data: dict, output_path: str):
         n = safe_int(row1.get(k))
         if n is not None:
             count += len(str(abs(n)))
+
+    # ===== U7 請求区分 DH31 =====
+    # GAS側 row["請求区分"] = "新規" | "継続" | ""
+    # 同月内治癒再発（"新規・継続" 両方○）は将来対応。現時点では文字列をそのまま書く。
+    seikyu_kubun = row1.get("請求区分") or ""
+    if seikyu_kubun:
+        put(CELL_MAP["請求区分"], seikyu_kubun)
+
+    # ===== D2 継続月数・頻回: M31 経過欄（当面未使用・出力停止）=====
+    # ★設計確定（2026-03-20）: GAS側が row["経過"]="" を送るためこのブロックは自然にスキップ
+    # ★正本=摘要欄（手動）+長期欄（頻回→0.5/長期のみ→0.75、手動）
+    # ★将来 M31 自動出力を復活させる場合はコメントアウトを解除すること
+    keizoku = str(row1.get("経過") or "").strip()
+    if keizoku:  # GAS側が "" を送るため現状は常にスキップ（出力停止中）
+        put(CELL_MAP["経過"], keizoku)
+
+    # ===== U5 本家区分 行8-13（○専用セル方式）=====
+    # 判定ソース: 保険種別・続柄・生年月日・一部負担金割合・対象月
+    # テンプレセル（2.本人 等）は変更せず、下段マーカー行に「○」を書込む
+    # 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U5 参照
+    honkeku_cell = derive_honkeku_cell(row1)
+    if honkeku_cell:
+        _write_selection_marker(ws, f"honke_{honkeku_cell}")
+        count += 1
+
+    # ===== U6 給付割合 行8-13（○専用画像方式）=====
+    # テンプレート文字列（'10・9' / '8・7'）は変更せず、対象数字の上に楕円画像を配置。
+    # KYUFU_OVAL_MAP でサブセル範囲を指定。ズレがある場合は1列ずらして調整可能。
+    # 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
+    burden_digit = safe_int(row1.get("一部負担金割合")) or 0
+    kyufu_oval_range = KYUFU_OVAL_MAP.get(burden_digit)
+    if kyufu_oval_range:
+        _draw_oval_on_range(ws, kyufu_oval_range, style="kyufu")
+        count += 1
+
+    # ===== D4 負傷の原因（BR21: 分離後のコンテンツ行）=====
+    # 出力条件: row2の部位1に金額あり = 申請書3部位目が存在
+    #           = 「3部位目を100分の60で算定することとなる場合」
+    # 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
+    # セル構造: _apply_selection_splits() により
+    #   BR20:DV20 = ラベル行「負傷の原因」（固定）
+    #   BR21:DV24 = コンテンツ行（ここに書込む）
+    # ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定
+    # ソース: 「負傷の日時」「負傷の場所」「負傷の状況」（初検情報履歴シート由来）
+    part3_has_data = (
+        row2 is not None and (
+            (safe_num(row2.get("部位1_計")) or 0) > 0 or
+            (safe_num(row2.get("部位1_後療料_金額")) or 0) > 0
+        )
+    )
+    if part3_has_data:
+        def _build_injury_text(row):
+            segs = []
+            for k in ("負傷の日時", "負傷の場所", "負傷の状況"):  # 日時→場所→状況
+                v = str(row.get(k) or "").strip()
+                if v:
+                    # 英語日付文字列（GAS String型セル由来）をYYYY/MM/DDに正規化
+                    v = _normalize_date_str(v)
+                    segs.append(v)
+            return "\u3000".join(segs)  # 全角スペース区切り
+        t1 = _build_injury_text(row1)
+        t2 = _build_injury_text(row2) if row2 else ""
+        unique_texts = []
+        seen: set = set()
+        for t in [t1, t2]:
+            if t and t not in seen:
+                seen.add(t)
+                unique_texts.append(t)
+        # 1ケースにつき1行・行頭に（1）（2）番号付き・改行区切り
+        injury_lines = [f"（{idx + 1}）{t}" for idx, t in enumerate(unique_texts)]
+        injury_text = "\n".join(injury_lines)
+        if injury_text:
+            # BR21: コンテンツ行（_apply_selection_splits で分離済み）
+            ws[D4_INJURY_CONTENT_CELL] = injury_text
+            count += 1
+
+    # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
+    # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT9（マーカー行）
+    # 下段登録記号番号 → CR51(左)/DK51(中)/DR51(右) 分割書込
+    # clinic_info が None の場合はスキップ（後方互換: 旧NDJSON/単体テスト対応）
+    if clinic_info:
+        # U1: 都道府県番号 → CI2
+        pref_no = str(clinic_info.get("prefectureNo") or "").strip()
+        if pref_no:
+            put(CELL_MAP["都道府県番号"], pref_no)
+
+        # U2: 施術機関コード → CZ2（登録記号番号から数字部分を導出: 暫定運用）
+        clinic_code = derive_clinic_code(str(clinic_info.get("torokuKigoNo") or ""))
+        if clinic_code:
+            put(CELL_MAP["施術機関コード"], clinic_code)
+
+        # U4: 単併区分（○専用セル方式）固定「単独」→ tankei_1 マーカー行に○
+        _write_selection_marker(ws, "tankei_1")
+
+        # 下段 登録記号番号 → CR51/DK51/DR51（分割書込）
+        # CR49:DV50 はラベル行「登録記号番号」→ 書き込まない
+        # 例: '契2804440-0-0' → 左='契2804440' / 中='0' / 右='0'
+        toroku = str(clinic_info.get("torokuKigoNo") or "").strip()
+        if toroku:
+            parts = toroku.split("-")
+            for i, cell_addr in enumerate(TOROKU_KIGO_SPLIT_CELLS):
+                ws[cell_addr] = parts[i] if i < len(parts) else ""
 
     wb.save(output_path)
     print(f"書込完了: {output_path} ({count}セル)")
@@ -588,6 +954,114 @@ def detect_insurance_type(insurer_no: str) -> int | None:
         return 6   # 後期高齢
 
     return None
+
+
+def derive_clinic_code(toroku_kigo_no: str) -> str:
+    """
+    登録記号番号から施術機関コードを導出（暫定ルール）。
+    例: "契2804440-0-0" → "2804440-0-0"
+
+    ルール: 先頭の「協」または「契」の1文字のみ除去。ハイフンはそのまま保持。
+    ★ 公式一次資料での完全確認未完了。現時点の暫定運用。
+      （詳細: docs/JREC-01_申請書様式運用メモ.md §4 U2 参照）
+    """
+    s = (toroku_kigo_no or "").strip()
+    if s and s[0] in ("協", "契"):
+        s = s[1:]
+    return s  # ハイフン保持
+
+
+def calc_age_at_end_of_month(birthday, ym: str):
+    """
+    対象月末日時点の年齢を計算する。
+
+    Args:
+        birthday: 生年月日（date / "YYYY-MM-DD" 文字列 / スプレッドシートの日付値）
+        ym: 対象月 "YYYY-MM"
+    Returns:
+        int（年齢） or None（計算不能）
+    """
+    if not birthday or not ym:
+        return None
+    bd = parse_date(birthday)
+    if not bd:
+        return None
+    try:
+        parts = ym.split("-")
+        y, m_num = int(parts[0]), int(parts[1])
+        # 対象月末日
+        if m_num == 12:
+            eom = date(y + 1, 1, 1) - timedelta(days=1)
+        else:
+            eom = date(y, m_num + 1, 1) - timedelta(days=1)
+    except (ValueError, IndexError):
+        return None
+    age = eom.year - bd.year
+    if (eom.month, eom.day) < (bd.month, bd.day):
+        age -= 1
+    return age if age >= 0 else None
+
+
+def derive_honkeku_cell(row1: dict) -> str | None:
+    """
+    U5本家区分: 患者情報から書込セル番地を返す。
+
+    判定ロジック（優先順位順）:
+    1. 保険種別=6（後期高齢）→ DH8（8.高一）基本。7割給付（負担3割）のみ DH12（0.高7）
+       ★制度確定（2026-03-20）: 本人/家族区分は使わない。給付割合は U6 側で表現する。
+    2. 6歳未満（就学前）→ DB10（4.六歳）
+    3. 70〜74歳 + 一部負担金割合=2 → DH8（8.高一）
+    4. 70〜74歳 + 一部負担金割合=3 → DH12（0.高7）
+    5. 70〜74歳 + 割合不明 → DH8（高一で安全側）
+    6. 75歳以上 → DH8（8.高一）基本。7割給付（負担3割）のみ DH12（0.高7）
+       ★保険種別が6以外でも75歳超は後期高齢者として高一/高7 で判定する
+    7. 70歳未満 + 続柄=本人 → DB8（2.本人）
+    8. 70歳未満 + 続柄その他 → DB12（6.家族）
+
+    生年月日がない場合: 続柄のみで本人/家族を判定（年齢区分はスキップ）。
+    """
+    # 保険種別: 数値(6)も名称文字列("後期高齢")も数値に正規化
+    # GASマスタは"協会けんぽ"等の文字列で保存されているため、文字列→数値マップが必要
+    _INS_TYPE_NAME_MAP = {
+        "協会けんぽ": 1, "組合": 2, "共済": 3, "国保": 4, "退職": 5, "後期高齢": 6,
+    }
+    ins_type_raw = row1.get("保険種別")
+    ins_type = safe_int(ins_type_raw)
+    if ins_type is None and ins_type_raw:
+        ins_type = _INS_TYPE_NAME_MAP.get(str(ins_type_raw).strip())
+    if ins_type is None:
+        ins_type = detect_insurance_type(str(row1.get("保険者番号") or "")) or 0
+    ins_type = ins_type or 0
+
+    relation = str(row1.get("続柄") or "").strip()
+    burden   = safe_int(row1.get("一部負担金割合")) or 0
+    birthday = row1.get("患者生年月日")
+    ym       = str(row1.get("対象月") or "")
+
+    # 後期高齢者（保険種別=6）→ 高一 基本。7割給付（負担3割）のみ 高7
+    if ins_type == 6:
+        return "DH12" if burden == 3 else "DH8"
+
+    age = calc_age_at_end_of_month(birthday, ym)
+
+    # 6歳未満（就学前）
+    if age is not None and age < 6:
+        return "DB10"
+
+    # 70〜74歳（前期高齢者）
+    if age is not None and 70 <= age <= 74:
+        if burden == 2:
+            return "DH8"
+        if burden == 3:
+            return "DH12"
+        return "DH8"  # 負担割合不明は安全側（高一=8割給付）
+
+    # 75歳以上 → 後期高齢者扱い（保険種別=6と同じルール）
+    if age is not None and age >= 75:
+        return "DH12" if burden == 3 else "DH8"
+
+    # 70歳未満（年齢不明含む）: 続柄で判定
+    return "DB8" if relation == "本人" else "DB12"
 
 
 def put_calendar_circles(ws, cell, visit_days):
@@ -913,6 +1387,12 @@ def batch_write(ndjson_path: str):
     patients = batch["patients"]
     month = meta["month"]
 
+    # 施術機関固定情報を meta から取得（NDJSON に含まれない場合は空でスキップ）
+    clinic_info = {
+        "prefectureNo": str(meta.get("prefectureNo") or ""),
+        "torokuKigoNo": str(meta.get("torokuKigoNo") or ""),
+    }
+
     # 3. 出力ディレクトリ作成
     out_dir = script_dir / "output" / month
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -934,7 +1414,7 @@ def batch_write(ndjson_path: str):
         out_path = out_dir / f"申請書_{pid}_{month}.xlsx"
 
         try:
-            write_application(str(template), json_data, str(out_path))
+            write_application(str(template), json_data, str(out_path), clinic_info=clinic_info)
             success_count += 1
 
             # 機械検証
@@ -991,6 +1471,186 @@ def find_latest_ndjson() -> tuple[str | None, str]:
     # 更新日時が最新のファイルを選ぶ
     latest = max(files, key=os.path.getmtime)
     return latest, search_dir
+
+
+# ===== サーバー向けAPI（Cloud Run 用） =====
+
+def write_application_to_bytes(template_path: str, json_data: dict, clinic_info: dict = None) -> bytes:
+    """
+    write_application() の in-memory 版。
+    一時ファイルを経由して xlsx bytes を返す（保存なし）。
+    clinic_info: 施術機関固定情報（batch_write_from_string から渡す）。None でもよい。
+    """
+    import io as _io
+    import tempfile as _tmp
+    tmp = _tmp.NamedTemporaryFile(suffix=".xlsx", delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+    try:
+        write_application(template_path, json_data, tmp_path, clinic_info=clinic_info)
+        with open(tmp_path, "rb") as f:
+            return f.read()
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+def load_batch_ndjson_string(ndjson_str: str) -> dict:
+    """
+    NDJSON 文字列を解析して {"meta": {...}, "patients": [...]} を返す。
+    エラー時は ValueError / JSONDecodeError を raise（sys.exit しない）。
+    """
+    meta = None
+    patients = []
+    for line_no, line in enumerate(ndjson_str.splitlines(), 1):
+        line = line.strip()
+        if not line:
+            continue
+        obj = json.loads(line)  # JSONDecodeError は呼び出し元に伝播
+        if obj.get("_meta"):
+            meta = obj
+        else:
+            patients.append(obj)
+    if meta is None:
+        raise ValueError("NDJSONにメタデータ行（_meta: true）がありません")
+    return {"meta": meta, "patients": patients}
+
+
+def validate_batch_safe(batch: dict) -> list:
+    """
+    バリデーション。エラーリストを返す（sys.exit しない）。
+    空リストなら OK。
+    """
+    meta = batch["meta"]
+    patients = batch["patients"]
+    errors = []
+
+    sv = str(meta.get("schemaVersion", ""))
+    if sv != SCHEMA_VERSION:
+        errors.append(f"schemaVersion不一致: 期待={SCHEMA_VERSION}, 実際={sv}")
+
+    expected_count = meta.get("patientCount", 0)
+    if expected_count != len(patients):
+        errors.append(f"patientCount不一致: メタ={expected_count}, 実際={len(patients)}")
+
+    seen_ids: dict = {}
+    for i, p in enumerate(patients):
+        pid = p.get("patientId", "")
+        if pid in seen_ids:
+            errors.append(f"patientId重複: {pid}")
+        else:
+            seen_ids[pid] = i
+
+    month = meta.get("month", "")
+    for i, p in enumerate(patients):
+        pid = p.get("patientId", f"[行{i+2}]")
+        case1 = p.get("case1")
+        if case1 is None:
+            errors.append(f"{pid}: case1がnullです")
+            continue
+        for key in REQUIRED_CASE1_KEYS:
+            val = case1.get(key)
+            if val is None or val == "":
+                errors.append(f"{pid}: case1に必須キー「{key}」がありません")
+        c1_month = str(case1.get("対象月", "")).strip()
+        if c1_month and month and c1_month != month:
+            errors.append(f"{pid}: case1[\"対象月\"]={c1_month} がmeta.month={month}と不一致")
+
+    return errors
+
+
+def verify_output_bytes(xlsx_bytes: bytes, expected: dict) -> list:
+    """
+    xlsx bytes から検証する（verify_output の in-memory 版）。
+    """
+    import io as _io
+    warnings_list = []
+    try:
+        wb = load_workbook(_io.BytesIO(xlsx_bytes), read_only=True, data_only=True)
+        ws = wb[TEMPLATE_SHEET]
+
+        name_val = ws["E21"].value
+        if not name_val:
+            warnings_list.append("E21（患者氏名）が空")
+        elif expected.get("患者氏名") and str(name_val) != str(expected["患者氏名"]):
+            warnings_list.append(f"E21（患者氏名）不一致: Excel={name_val}, JSON={expected['患者氏名']}")
+
+        total = safe_int(expected.get("当月合計"))
+        if total and total > 0:
+            if ws["DP44"].value is None:
+                warnings_list.append("DP44（合計1の位）が空（当月合計>0なのに）")
+
+        if expected.get("保険者番号") and ws["CQ4"].value is None:
+            warnings_list.append("CQ4（保険者番号1桁目）が空")
+
+        wb.close()
+    except Exception as e:
+        warnings_list.append(f"検証中にエラー: {e}")
+    return warnings_list
+
+
+def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
+    """
+    NDJSON 文字列を受け取り、患者ごとの xlsx bytes を返す（Cloud Run 向け）。
+
+    返り値: [
+      {"patientId": str, "fileName": str, "content": bytes, "warnings": list},
+      ...  # エラー患者は "error" キーを追加し content=None
+    ]
+    """
+    if template_path is None:
+        template_path = str(Path(__file__).parent / TEMPLATE_FILE)
+
+    batch = load_batch_ndjson_string(ndjson_str)
+    errors = validate_batch_safe(batch)
+    if errors:
+        raise ValueError("バリデーションエラー:\n" + "\n".join(f"  - {e}" for e in errors))
+
+    meta = batch["meta"]
+    month = meta["month"]
+
+    # 施術機関固定情報を meta から取得
+    clinic_info = {
+        "prefectureNo": str(meta.get("prefectureNo") or ""),
+        "torokuKigoNo": str(meta.get("torokuKigoNo") or ""),
+    }
+
+    results = []
+
+    for p in batch["patients"]:
+        pid = p.get("patientId", "unknown")
+        json_data = {
+            "case1": p.get("case1"),
+            "case2": p.get("case2"),
+            "visitDays": p.get("visitDays", []),
+        }
+        file_name = f"申請書_{pid}_{month}.xlsx"
+        try:
+            xlsx_bytes = write_application_to_bytes(template_path, json_data, clinic_info=clinic_info)
+            expected = {
+                "患者氏名": (p.get("case1") or {}).get("患者氏名", ""),
+                "当月合計": (p.get("case1") or {}).get("当月合計", 0),
+                "保険者番号": (p.get("case1") or {}).get("保険者番号", ""),
+            }
+            warns = verify_output_bytes(xlsx_bytes, expected)
+            results.append({
+                "patientId": pid,
+                "fileName": file_name,
+                "content": xlsx_bytes,
+                "warnings": warns,
+            })
+        except Exception as e:
+            results.append({
+                "patientId": pid,
+                "fileName": file_name,
+                "content": None,
+                "warnings": [f"生成エラー: {e}"],
+                "error": str(e),
+            })
+
+    return results
 
 
 # ===== メイン =====

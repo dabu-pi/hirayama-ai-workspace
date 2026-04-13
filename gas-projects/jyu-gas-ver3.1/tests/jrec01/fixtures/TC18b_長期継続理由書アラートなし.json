@@ -1,0 +1,16 @@
+{
+  "testId": "TC18b",
+  "description": "長期継続理由書アラートなし（monthsElapsed=2 → アラート対象外）",
+  "ref": "TESTCASES.md#TC18",
+  "note": "injuryDate=2026-02-01（day<16 → 2月起算）、treatDate=2026-04-15 → monthsElapsed=2（<3 → アラートなし）。ltCoef=1.0。rowTotalOut=505",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-04-15",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "腰部", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": false, "warm": false, "electro": false }
+    ]}
+  ]
+}

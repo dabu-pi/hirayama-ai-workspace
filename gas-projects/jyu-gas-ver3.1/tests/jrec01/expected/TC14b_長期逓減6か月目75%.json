@@ -1,0 +1,21 @@
+{
+  "testId": "TC14b",
+  "note": "505 * 0.75 = 378.75 → Math.round = 379。baseOut は生値=505のまま、rowTotalOut にのみ ltCoef が反映される。50%逓減は未実装（§11）。",
+  "header": {
+    "initFee": 0,
+    "reFee": 0,
+    "supportFee": 0,
+    "detailSum": 379,
+    "visitTotal": 379,
+    "needCheck": true,
+    "needCheckReason": "長期減額75%適用（捻挫）;長期施術3か月超（継続理由書確認）",
+    "billedKubun": "後療",
+    "mixedFlag": "通常",
+    "case1Summary": "case1:後療",
+    "case2Summary": "case2:なし",
+    "chargeReason": "後療のみ"
+  },
+  "details": [
+    { "detailID": "P001_2026-07-01_C1_P1", "kubun": "後療", "baseOut": 505, "coldOut": 0, "rowTotalOut": 379 }
+  ]
+}

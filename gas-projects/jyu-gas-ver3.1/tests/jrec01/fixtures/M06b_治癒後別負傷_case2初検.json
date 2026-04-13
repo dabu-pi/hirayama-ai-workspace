@@ -1,0 +1,33 @@
+{
+  "testId": "M06b",
+  "description": "治癒後別負傷: case2初検（2/15, case1は2/10治癒済）→ initFee=1550算定",
+  "note": "initBilled=false は getMonthlyBilledStatus_+isCaseEndedBefore_ が確定（case1終了日2/10 < treatDate2/15）。fixture は確定後の monthlyStatus を直接設定。reBilled=true（case1再検2/04算定済）のため reFee=0。per-visit reFee=0 だが V3TR 月次集計は kubun=再検行カウントで 410×2=820 になる金額不整合あり（既知・未修正）。",
+  "ref": "TESTCASES.md#M06b",
+
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-02-15",
+    "monthlyStatus": {
+      "initBilled": false,
+      "reBilled": true,
+      "supportBilled": true
+    }
+  },
+
+  "cases": [
+    {
+      "caseNo": 1,
+      "kubun": "初検",
+      "parts": [
+        {
+          "bui": "肩関節",
+          "byomei": "打撲",
+          "injuryDate": "2026-02-15",
+          "cold": false,
+          "warm": false,
+          "electro": false
+        }
+      ]
+    }
+  ]
+}

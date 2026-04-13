@@ -1,0 +1,178 @@
+[
+  {
+    "_comment": "ブランドマスタ。canonical_name が正規名称（DB登録名）",
+    "_version": "1.0",
+    "_updated": "2026-04-08"
+  },
+  {
+    "canonical_name": "TECHNOGYM",
+    "name_ja": "テクノジム",
+    "country": "IT",
+    "market_type": "commercial",
+    "website_url": "https://www.technogym.com/jp/",
+    "status": "active",
+    "notes": "イタリア発。ジムグレード最上位ブランドとして認知度高。ウェルネス路線。"
+  },
+  {
+    "canonical_name": "Life Fitness",
+    "name_ja": "ライフフィットネス",
+    "country": "US",
+    "market_type": "both",
+    "website_url": "https://www.lifefitness.com/ja-jp/",
+    "status": "active",
+    "notes": "米国ブランド。業務用が主力だが家庭用ラインも展開。世界最大級のフィットネス機器メーカー。"
+  },
+  {
+    "canonical_name": "Precor",
+    "name_ja": "プレコー",
+    "country": "US",
+    "market_type": "commercial",
+    "website_url": "https://www.precor.com/",
+    "status": "active",
+    "notes": "エリプティカル発祥ブランド。現在はPeloton傘下。業務用トレッドミル・エリプティカルで定評あり。"
+  },
+  {
+    "canonical_name": "Matrix",
+    "name_ja": "マトリックス",
+    "country": "TW",
+    "market_type": "both",
+    "website_url": "https://www.matrixfitness.com/ja/",
+    "status": "active",
+    "notes": "Johnson Health Tech傘下。コスパが良く中堅ジムに普及。業務用・家庭用両展開。"
+  },
+  {
+    "canonical_name": "CYBEX",
+    "name_ja": "サイベックス",
+    "country": "US",
+    "market_type": "commercial",
+    "website_url": "https://www.cybexintl.com/",
+    "status": "active",
+    "notes": "業務用特化。Ascent Trainer（エリプティカル系）が独自製品。Life Fitness傘下に統合。"
+  },
+  {
+    "canonical_name": "Panatta",
+    "name_ja": "パナッタ",
+    "country": "IT",
+    "market_type": "commercial",
+    "website_url": "https://panatta.it/",
+    "status": "active",
+    "notes": "イタリア製。ピンセレクト・プレートロード筋力マシンが充実。デザイン性重視のジム向け。"
+  },
+  {
+    "canonical_name": "BH Fitness",
+    "name_ja": "BHフィットネス",
+    "country": "ES",
+    "market_type": "both",
+    "website_url": "https://www.bhfitness.com/",
+    "status": "active",
+    "notes": "スペイン発。業務用・家庭用両展開。自転車メーカー出身でバイク系が強い。"
+  },
+  {
+    "canonical_name": "JOHNSON",
+    "name_ja": "ジョンソン",
+    "country": "TW",
+    "market_type": "both",
+    "status": "active",
+    "notes": "Johnson Health Techのブランド名。MatrixやHorizonを傘下に持つ。"
+  },
+  {
+    "canonical_name": "Horizon Fitness",
+    "name_ja": "ホライゾンフィットネス",
+    "country": "TW",
+    "market_type": "consumer",
+    "website_url": "https://www.horizonfitness.com/",
+    "status": "active",
+    "notes": "Johnson Health Tech傘下。家庭用コンシューマー向けブランド。"
+  },
+  {
+    "canonical_name": "Star Trac",
+    "name_ja": "スタートラック",
+    "country": "US",
+    "market_type": "commercial",
+    "status": "active",
+    "notes": "業務用。アジア市場でも普及。トレッドミル・バイクが主力。"
+  },
+  {
+    "canonical_name": "StairMaster",
+    "name_ja": "ステアマスター",
+    "country": "US",
+    "market_type": "commercial",
+    "status": "active",
+    "notes": "ステップマシンの代名詞的ブランド。NAUTILUS傘下。"
+  },
+  {
+    "canonical_name": "Nautilus",
+    "name_ja": "ノーチラス",
+    "country": "US",
+    "market_type": "both",
+    "status": "active",
+    "notes": "筋力マシン開発で革命的なブランド。StairMaster・Bowflexも傘下。現在は家庭用シフト。"
+  },
+  {
+    "canonical_name": "Concept2",
+    "name_ja": "コンセプト2",
+    "country": "US",
+    "market_type": "commercial",
+    "website_url": "https://www.concept2.com/",
+    "status": "active",
+    "notes": "ローイングマシン世界標準。競技用・業務用ともにデファクトスタンダード。"
+  },
+  {
+    "canonical_name": "WaterRower",
+    "name_ja": "ウォーターローワー",
+    "country": "US",
+    "market_type": "both",
+    "status": "active",
+    "notes": "水の抵抗を使うローイングマシン。デザイン性が高く高級ジムや自宅用途。"
+  },
+  {
+    "canonical_name": "Keiser",
+    "name_ja": "カイザー",
+    "country": "US",
+    "market_type": "commercial",
+    "website_url": "https://www.keiser.com/",
+    "status": "active",
+    "notes": "エアレジスタンス・磁気抵抗バイク。スピンバイクの高級業務用として定評あり。"
+  },
+  {
+    "canonical_name": "AssaultBike",
+    "name_ja": "アサルトバイク",
+    "country": "US",
+    "market_type": "commercial",
+    "status": "active",
+    "notes": "エアバイク（ファンバイク）の代名詞的製品名。CrossFit系ジムで普及。"
+  },
+  {
+    "canonical_name": "Rogue Fitness",
+    "name_ja": "ローグフィットネス",
+    "country": "US",
+    "market_type": "commercial",
+    "website_url": "https://www.roguefitness.com/",
+    "status": "active",
+    "notes": "パワーラック・バーベル等のフリーウェイト器具ブランド。CrossFit御用達。"
+  },
+  {
+    "canonical_name": "Eleiko",
+    "name_ja": "エレイコ",
+    "country": "SE",
+    "market_type": "commercial",
+    "status": "active",
+    "notes": "スウェーデン製バーベル・プレートのプレミアムブランド。競技用として世界標準。"
+  },
+  {
+    "canonical_name": "Torque Fitness",
+    "name_ja": "トルクフィットネス",
+    "country": "US",
+    "market_type": "commercial",
+    "status": "active",
+    "notes": "ファンクショナルトレーナー・スレッドで評価が高い。機能的トレーニング特化。"
+  },
+  {
+    "canonical_name": "Octane Fitness",
+    "name_ja": "オクタンフィットネス",
+    "country": "US",
+    "market_type": "commercial",
+    "status": "active",
+    "notes": "ゼロランナー（ゼロインパクトランナー）で独自地位。エリプティカル系。"
+  }
+]

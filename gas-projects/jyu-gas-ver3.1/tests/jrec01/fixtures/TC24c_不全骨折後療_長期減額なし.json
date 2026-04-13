@@ -1,0 +1,17 @@
+{
+  "testId": "TC24c",
+  "description": "不全骨折後療 長期減額なし: monthsElapsed=14 でも ltCoef=1.0（§11 不全骨折も長期減額対象外）",
+  "ref": "FRACTURE_RESTRICTION.md#TC24c / SPEC.md §11",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-03-01",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true },
+    "monthlyVisitCounts": [10, 10, 10, 10, 10]
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "前腕", "byomei": "不全骨折", "injuryDate": "2025-01-05",
+        "cold": false, "warm": false, "electro": false, "metal": false, "exercise": false }
+    ]}
+  ]
+}

@@ -2,7 +2,7 @@
 
 平山克司ワークスペース — Phase2（スクリプト固定ループ）から Phase3（Claude 自律開発）への移行仕様。
 
-最終更新: 2026-03-05
+最終更新: 2026-03-05（Phase3.1 Loop 運用セクション追加）
 
 ---
 
@@ -106,13 +106,65 @@
 
 ---
 
-## 6. 参照ドキュメント
+## 6. Phase3.1 — Loop 運用（自走ループ）
+
+Phase3.1 は Phase3 の「1サイクル」をそのままループに接続したもの。
+スクリプト追加はなく、プロンプト1本（`auto-dev-phase3-loop.md`）の追加のみ。
+
+### 開始プロンプトとループプロンプトの使い分け
+
+| タイミング | 使うプロンプト |
+|---|---|
+| セッション初回 | `docs/PROMPTS/auto-dev-phase3.md` |
+| **前サイクルの結果を受けて続行** | **`docs/PROMPTS/auto-dev-phase3-loop.md`** |
+| 緊急バグ修正 | `docs/PROMPTS/auto-dev-hotfix.md` |
+
+### ループの使い方（1サイクル = 3手順）
+
+```
+1. auto-dev-phase3-loop.md のプロンプトブロックをコピーして Claude に貼る
+2. 直後に以下のどちらかを貼る（Claude が自動判定する）:
+   A) auto-dev.ps1 のコンソール出力全文
+   B) [AI REPORT] ファイルの内容（artifacts/debug_*.txt）
+3. Claude が PLAN/CHANGES/COMMANDS/NOTES/NEXT を出力する → 承認して実行
+```
+
+### ループの状態遷移
+
+```
+FAILED  →  AI REPORT の内容を貼る  →  Claude が1原因に絞って修正・再実行 COMMANDS を提示
+SUCCESS →  Claude が gsc コマンドを提示  →  人間が確認・実行  →  次ループへ
+STOP    →  人間が確認・承認  →  再開手順を明示して続行
+```
+
+### 失敗時のルール（重要）
+
+- **AI REPORT を最優先の根拠とする**（run/error ログの全文追加要求は禁止）
+- 根本原因は1つに絞る（複数仮説の列挙は禁止）
+- COMMANDS は `cd C:\...\workspace` 込みのコピペ可能な PowerShell で書く
+- 同じエラー3回 → STOP して人間に報告
+
+### 成功時のルール
+
+- git-safe-commit コマンドを提示する（自動実行しない）
+- master/main への直接コミットは docs 変更のみ例外。コード変更は feature/* 必須
+- PROJECT_STATUS.md 更新テンプレを NEXT に出力する
+
+### STOP 条件（Phase3 全体と同じ、主要変更点のみ記載）
+
+- 変更ファイル **20 以上** または diff が巨大 → 分割を提案（旧: 6ファイル）
+- その他: S-1〜S-8（認証・課金・削除・本番・履歴破壊）は即 STOP
+
+---
+
+## 7. 参照ドキュメント
 
 | ドキュメント | 内容 |
 |---|---|
 | `docs/AUTO_DEV_MODE.md` | Phase1 全体仕様 |
 | `docs/AUTO_DEV_MODE_PHASE2.md` | Phase2 仕様 |
-| `docs/PROMPTS/auto-dev-phase3.md` | **Phase3 開始プロンプト（Claude に貼るもの）** |
+| `docs/PROMPTS/auto-dev-phase3.md` | **Phase3 開始プロンプト（セッション初回）** |
+| `docs/PROMPTS/auto-dev-phase3-loop.md` | **Phase3.1 ループ継続プロンプト（サイクル間）** |
 | `docs/PROJECT_STATUS.md` | 現在地・引き継ぎテンプレート |
 | `scripts/auto-dev-checklist.md` | サイクル別チェックリスト |
 | `CLAUDE.md` | AI アシスタント向けルール（最重要） |

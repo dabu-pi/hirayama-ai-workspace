@@ -61,10 +61,11 @@
 
 ---
 
-## 5. 自動化トリガー
+## 5. 自動化トリガー（2-5確定 2026-03-06）
 
 - 送信元: `hawk@pop13.odn.ne.jp`
-- 原則として全メールを「見積依頼」として処理する
+- 件名フィルタ: 「見積」「見積依頼」「作成お願いします」のいずれかを含む件名のみ処理
+  - 対象外の件名はラベルのみ付与してスキップ（台帳には記録しない）
 - 時間トリガー: 5〜15 分ごとに GAS が未処理メールを確認
 
 ---
@@ -185,9 +186,107 @@
 
 ---
 
-## 12. 未決事項（要確認）
+## 12. 確定仕様（2026-03-06 確定）
 
-- [ ] hawk メールは全部処理するか、件名フィルタにするか
-- [ ] 発生日（C列）のルール: 受信日固定 or 本文日付優先
-- [ ] freee 取引先: 既存紐付け / 不明なら仮取引先
-- [ ] 明細不足時の例外設計: 見積を作らず下書きだけ、等
+### 旧未決事項 → 確定
+
+| 項目 | 確定内容 |
+|---|---|
+| 対象メール | `hawk@pop13.odn.ne.jp` 送信 かつ 件名に「見積」「見積依頼」「作成お願いします」のいずれかを含むもの |
+| 発生日（C列）ルール | Gmail 受信日時を使用（本文日付は参照しない） |
+| 見積日（G列）ルール | freee POST 成功時の当日日付 |
+| 取引先未解決時 | T列に `要確認（取引先未解決：理由）` を記録してスキップ |
+| 明細不足時 | freee POST しない・Gmail下書きも作成しない・T列に `要確認（明細不足）` を記録 |
+
+### T列（要確認フラグ）仕様
+
+| 値 | 意味 | 対応 |
+|---|---|---|
+| `要確認（明細なし：Q列手入力要）` | Phase1で明細自動抽出失敗 | Q列にlines_jsonを手入力 |
+| `要確認（顧客名不明：B列確認要）` | Phase1で顧客名抽出失敗 | B列・P列を手動確認 |
+| `要確認（取引先未解決：〇〇）` | Phase2で partner_id 解決失敗 | freeeで取引先確認またはP列手入力 |
+| `要確認（明細不足：Q列にlines_jsonを入力）` | Phase2でQ列が空 | Q列にlines_jsonを入力 |
+| `（空）` | 問題なし or 見積作成済み | - |
+
+---
+
+## NAME NORMALIZATION
+
+B列（お客様名）を返信メールの宛名に使用する際は以下のルールで正規化する。
+
+| 入力値 | 出力 |
+|---|---|
+| `長谷川` | `長谷川様` |
+| `長谷川様` | `長谷川様`（重複しない） |
+| `専修大学` | `専修大学様` |
+| `（空）` | `要確認様` |
+
+実装: `p3_normalizeName_(name)` — 末尾が「様」なら追加しない。
+
+---
+
+## PDF POLICY
+
+- freee IV API は `/quotations/{id}` に `Accept: application/pdf` を送っても PDF を返さない（status 200 だが Content-Type が JSON）
+- `/quotations/{id}/download` は 404
+- **方針: PDF の自動取得・添付は行わない**
+- 下書きには PDF 添付なしで「PDFを添付しておりますのでご確認ください」と記載し、人が手動で PDF を添付してから送信する
+
+---
+
+## MAIN FUNCTIONS
+
+| 関数名 | ファイル | 役割 |
+|---|---|---|
+| `freee_phase2_processPendingQuotations` | freee請求書作成.js | Phase2: 見積書作成・R列書き込み |
+| `freee_runAll` | freee請求書作成.js | Phase2+3 を連続実行（時間トリガー用） |
+| `phase3_createDraftsForQuotedRows` | phase3_下書き作成.js | Phase3 本番: R列あり・U列空の行を一括処理 |
+| `phase3_testDraft` | phase3_下書き作成.js | Phase3 テスト: 1件だけ処理・U列は更新しない |
+| `phase3_diagnosePdf` | phase3_下書き作成.js | PDF取得API診断（デバッグ用） |
+| `p3_getGmailMessageId_` | phase3_下書き作成.js | O列HYPERLINK → A列rfc822msgid の順でID取得 |
+| `p3_buildBody_` | phase3_下書き作成.js | 返信本文生成（宛名正規化含む） |
+| `p3_normalizeName_` | phase3_下書き作成.js | 宛名「様」正規化 |
+
+---
+
+## CLAUDE WORK LOG
+
+---
+
+### 2026-03-06
+
+#### PLAN
+
+- Phase3 仕様変更: PDF自動取得廃止・本文テンプレート刷新・宛名正規化
+
+#### CHANGES
+
+| ファイル | 変更内容 |
+|---|---|
+| `phase3_下書き作成.js` | `p3_buildBody_` を新テンプレートに全書き換え |
+| `phase3_下書き作成.js` | `p3_normalizeName_` を新規追加 |
+| `phase3_下書き作成.js` | PDF取得ブロック・freeeURL記載を両関数から削除 |
+| `phase3_下書き作成.js` | コメント・ログの T列 → U列 誤記を修正 |
+| `CLAUDE.md` | 毎日の作業ルールを ds/de 表に刷新 |
+| `SETUP.md` | Step5/6/7 に ds/de を反映 |
+
+#### COMMANDS
+
+```
+git push: 019ed02 (phase3 本文テンプレート刷新)
+clasp push: 4ファイル push 済み
+```
+
+#### NOTES
+
+- freee IV API は PDF ダウンロード非対応（status 200 だが Content-Type が JSON）
+- テスト関数 `phase3_testDraft` は U列を更新しない（安全設計）
+- O列の HYPERLINK 式形式: `=HYPERLINK("https://mail.google.com/mail/u/0/#all/{スレッドID}","長谷川")`
+- `.clasp.json` は gitignore 対象（PC固有）。スクリプトID: freee-automation プロジェクト
+
+#### NEXT
+
+- `phase3_createDraftsForQuotedRows` を本番実行して U列書き込みを確認
+- freee 時間トリガー設定（`freee_runAll` を 5〜15分ごと）
+- Phase4: エラー通知・取引先マスタ整備
+

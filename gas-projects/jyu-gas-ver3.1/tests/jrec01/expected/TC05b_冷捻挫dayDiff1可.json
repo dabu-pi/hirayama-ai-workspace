@@ -1,0 +1,20 @@
+{
+  "testId": "TC05b",
+  "header": {
+    "initFee": 0,
+    "reFee": 410,
+    "supportFee": 0,
+    "detailSum": 590,
+    "visitTotal": 1000,
+    "needCheck": false,
+    "needCheckReason": "",
+    "billedKubun": "再検",
+    "mixedFlag": "通常",
+    "case1Summary": "case1:再検",
+    "case2Summary": "case2:なし",
+    "chargeReason": "再検のみ"
+  },
+  "details": [
+    { "detailID": "P001_2026-02-02_C1_P1", "kubun": "再検", "baseOut": 505, "coldOut": 85, "rowTotalOut": 590 }
+  ]
+}
