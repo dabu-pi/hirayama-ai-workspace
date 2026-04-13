@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-3b 完了 / `/programs` 一覧の metadata 表示を実装）
+最終更新: 2026-04-13（C-3b live 修正完了 / metadata badge 本番未表示の原因修正 → C-3c へ）
 
 ## 現在地
 
@@ -121,6 +121,10 @@
     - required tags: `goal / equipment / split`
     - optional tag: `focus` は最大 1 件だけ表示
     - `starting-strength-base` は `Squat Focus` badge で `gzclp-base` と差が見える状態に更新
+  - C-3b live 修正（2026-04-13）
+    - 症状: badge が本番で表示されなかった（`program.tags` が `[]`）
+    - 原因: `program_tag_assignments` → `program_tags` の PostgREST 複合 FK join がサイレントエラー
+    - 修正: 2クエリ + メモリ結合に変更（`lib/programs/program-library.ts`）
   - `loading` / `empty` / `error` 実装済み
   - summary の戻り先を `/programs` に統一済み
 - Program Detail MVP

@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-3b 完了 / `/programs` 一覧の metadata 表示を実装）
+最終更新: 2026-04-13（C-3b live 修正完了 / metadata badge 本番表示を確認）
 
 ---
 
@@ -30,7 +30,7 @@
 | **C-3: プログラム難易度・タグ管理（仕様固定）** | **✅ 設計完了（2026-04-13）** |
 | **C-3a: metadata 基盤実装** | **✅ 完了（2026-04-13）** |
 | **C-3a-live: metadata live 反映** | **✅ 完了（2026-04-13）** |
-| **C-3b: `/programs` metadata 表示** | **✅ 完了（2026-04-13）** |
+| **C-3b: `/programs` metadata 表示** | **✅ 完了 + live 修正済み（2026-04-13）** |
 | **C-3c: Program Detail metadata 表示** | **🔄 次の作業** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
@@ -116,7 +116,17 @@
 - `gzclp-base` と `starting-strength-base` の差分が一覧で見える状態に更新
   - 共通: `Strength / Barbell / Full Body`
   - 差分: `starting-strength-base` に `Squat Focus`
-- 次は C-3c として detail page 側の metadata 表示に進む
+
+### C-3b live 修正メモ（2026-04-13）
+
+- **症状:** 本番 `/programs` で `Beginner` / `3 days / week` / `3 weeks` は表示されるが metadata badge (`Strength / Barbell / Full Body / Squat Focus`) が未表示
+- **原因:** `listProgramTagsByProgramId` が `program_tag_assignments` → `program_tags` の PostgREST 複合 FK 埋め込み (`!inner`) でサイレントエラーを起こし、空配列で fallback していた
+  - FK は `(tag_id, axis) → program_tags(id, axis)` という複合構成で、PostgREST の関係解決が失敗していた可能性が高い
+- **修正:** `lib/programs/program-library.ts` の `listProgramTagsByProgramId` を2本の単純クエリ + メモリ結合に変更（複合 FK join を廃止）
+  1. `program_tag_assignments` から `(program_id, tag_id, axis)` を取得
+  2. `program_tags` から tag 詳細を取得
+  3. メモリ上で結合
+- **次は C-3c:** detail page 側の metadata 表示に進む
 
 ---
 

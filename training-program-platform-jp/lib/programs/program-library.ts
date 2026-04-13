@@ -44,8 +44,8 @@ type ProgramTagRow = {
 
 type ProgramTagAssignmentRow = {
   program_id: string;
+  tag_id: string;
   axis: string;
-  program_tags: ProgramTagRow | ProgramTagRow[] | null;
 };
 
 type ProgramLibraryResult = {
@@ -129,20 +129,6 @@ function mapProgramTagRow(row: ProgramTagRow): ProgramTag | null {
   };
 }
 
-function extractAssignedTag(row: ProgramTagAssignmentRow): ProgramTag | null {
-  if (!isProgramTagAxis(row.axis)) return null;
-
-  const tagRow = Array.isArray(row.program_tags)
-    ? row.program_tags[0] ?? null
-    : row.program_tags;
-
-  if (!tagRow) return null;
-
-  const mapped = mapProgramTagRow(tagRow);
-  if (!mapped || mapped.axis !== row.axis) return null;
-
-  return mapped;
-}
 
 function createEmptyProgramTagMap(programIds: string[]) {
   return new Map<string, ProgramTag[]>(programIds.map((programId) => [programId, []]));
@@ -156,22 +142,44 @@ async function listProgramTagsByProgramId(
   if (programIds.length === 0) return tagsByProgramId;
 
   try {
-    const { data, error } = await client
+    // Step 1: get assignments (program_id / tag_id / axis) — simple single-FK query
+    const { data: assignmentData, error: assignmentError } = await client
       .from("program_tag_assignments")
-      .select(
-        "program_id, axis, program_tags!inner(id, slug, label, axis, description, sort_order)"
-      )
+      .select("program_id, tag_id, axis")
       .in("program_id", programIds);
 
-    if (error) {
-      console.warn("Program metadata tags could not be loaded from Supabase.", error.message);
+    if (assignmentError) {
+      console.warn("Program tag assignments could not be loaded.", assignmentError.message);
       return tagsByProgramId;
     }
 
-    for (const row of (data ?? []) as ProgramTagAssignmentRow[]) {
-      const tag = extractAssignedTag(row);
-      if (!tag) continue;
-      tagsByProgramId.get(row.program_id)?.push(tag);
+    const assignments = (assignmentData ?? []) as ProgramTagAssignmentRow[];
+    if (assignments.length === 0) return tagsByProgramId;
+
+    // Step 2: fetch tag details for all referenced tag IDs
+    const tagIds = [...new Set(assignments.map((a) => a.tag_id))];
+    const { data: tagData, error: tagError } = await client
+      .from("program_tags")
+      .select("id, slug, label, axis, description, sort_order")
+      .in("id", tagIds);
+
+    if (tagError) {
+      console.warn("Program tags could not be loaded.", tagError.message);
+      return tagsByProgramId;
+    }
+
+    const tagRowById = new Map<string, ProgramTagRow>(
+      (tagData ?? []).map((row) => [row.id as string, row as ProgramTagRow])
+    );
+
+    // Step 3: in-memory join
+    for (const assignment of assignments) {
+      if (!isProgramTagAxis(assignment.axis)) continue;
+      const tagRow = tagRowById.get(assignment.tag_id);
+      if (!tagRow) continue;
+      const tag = mapProgramTagRow(tagRow);
+      if (!tag || tag.axis !== assignment.axis) continue;
+      tagsByProgramId.get(assignment.program_id)?.push(tag);
     }
 
     for (const [programId, tags] of tagsByProgramId.entries()) {
