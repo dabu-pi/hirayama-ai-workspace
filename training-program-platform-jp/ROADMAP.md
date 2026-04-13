@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（program source audit 完了 / live SQL hold 維持）
+最終更新: 2026-04-13（C-5 gzclp-base live correction SQL + runbook 作成 — live 反映直前段階）
 
 ## 2026-04-13 Program Source Audit
 
@@ -21,19 +21,20 @@
   - `custom` 扱いへ固定
 - `programs` に source metadata を追加
 
-### 次の live 反映方針
+### 次の live 反映方針（確定）
 
-1. `20260413_000010_program_source_metadata.sql` を先に適用する
-2. `gzclp-base` の live row をどう更新するか
-   - 既存 row を保持したまま別 slug へ逃がすか
-   - destructive に入れ替えるか
-   を先に決める
-3. `starting-strength-base` title/source metadata 反映を行う
-4. `upper-lower-base.sql` と `program-metadata.sql` は上記判断後にまとめて適用する
+1. `gzclp-base-live-correction.sql` STEP 0（pre-check）
+2. `gzclp-base-live-correction.sql` STEP 1（correction、transaction で slug 維持 + 構造置換）
+3. `gzclp-base-live-correction.sql` STEP 2（post-check）
+4. `program-metadata.sql`（tags / assignments upsert、3 programs 対象）
+5. `upper-lower-base.sql`（upper-lower-base 未作成の場合のみ）
+
+詳細は `docs/live-runbook-gzclp-correction.md` を参照。
 
 ### 参照
 
 - `docs/program-source-audit.md`
+- `docs/live-runbook-gzclp-correction.md`
 
 最終更新: 2026-04-13（C-4 seed 追加 / Upper Lower Base — live 反映は手動 SQL 実行待ち）
 
@@ -72,6 +73,7 @@
 | **Programs 一覧 CTA UX 修正** | **✅ 完了（2026-04-13）** |
 | **C-3d: Programs filter UI** | **✅ 完了（2026-04-13）** |
 | **C-4: 3本目プログラム seed（Upper Lower Base）** | **✅ 実装完了（2026-04-13）— live 反映は手動 SQL 実行待ち** |
+| **C-5: gzclp-base live correction SQL + runbook** | **✅ 完了（2026-04-13）— live 反映直前段階** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果

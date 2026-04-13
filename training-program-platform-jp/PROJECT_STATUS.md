@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（program source audit 完了 / live SQL hold 維持）
+最終更新: 2026-04-13（C-5 gzclp-base live correction SQL + runbook 作成 — live 反映直前段階）
 
 ## 2026-04-13 Program Source Audit
 
@@ -46,6 +46,48 @@
 ### 参照
 
 - `docs/program-source-audit.md`
+
+## 2026-04-13 C-5 — live 反映直前段階
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| gzclp-base correction SQL | 完了 |
+| live runbook | 完了 |
+| live Supabase 反映 | **手動実行待ち** |
+
+### 作成・更新ファイル
+
+| ファイル | 種別 | 内容 |
+|---|---|---|
+| `seed/programs/gzclp-base-live-correction.sql` | NEW | 既存 gzclp-base を原典準拠構成へ安全に更新する SQL（transaction + pre/post-check 付き） |
+| `docs/live-runbook-gzclp-correction.md` | NEW | live 反映の実行手順書（確認チェックリスト・ロールバック観点・実行順まとめ） |
+
+### gzclp-base-live-correction.sql の設計
+
+| 観点 | 内容 |
+|---|---|
+| slug | 維持（`gzclp-base`）— route / enrollment FK 継続性を保つ |
+| program.id | 維持 — `workout_sessions.program_enrollment_id` FK を壊さない |
+| transaction | `begin; ... commit;` で囲む。エラー時は自動ロールバック |
+| 構造更新方式 | `program_weeks` を DELETE → CASCADE（days / exercises も消える）→ 再 INSERT |
+| enrollment 安全性 | `program_enrollments.current_week/day` は integer 型 — FK なし。削除後も壊れない |
+| `workout_sessions.program_day_id` | `SET NULL` FK のため、旧 day_id は NULL になる（許容範囲） |
+| 事前ガード | `gzclp-base` slug が存在しない場合は EXCEPTION で即 ABORT |
+| enrollment NOTICE | active enrollment がある場合は RAISE NOTICE で警告（ブロックしない） |
+
+### live 反映 SQL 実行順
+
+```
+1. gzclp-base-live-correction.sql  STEP 0（pre-check）
+2. gzclp-base-live-correction.sql  STEP 1（correction、transaction）
+3. gzclp-base-live-correction.sql  STEP 2（post-check）
+4. program-metadata.sql            （tags / assignments upsert）
+5. upper-lower-base.sql            （upper-lower-base が未作成の場合のみ）
+```
+
+詳細は `docs/live-runbook-gzclp-correction.md` を参照。
 
 最終更新: 2026-04-13（C-4 完了 / Upper Lower Base seed 追加 — live 反映は手動 SQL 実行待ち）
 
