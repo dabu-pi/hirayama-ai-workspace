@@ -1,10 +1,10 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（限定公開準備完了 / Vercel + Supabase デプロイガイド・チェックリスト作成）
+最終更新: 2026-04-13（限定公開開始済み / 次アクションは C-2）
 
 ## 現在地
 
-### フェーズ B 到達点（2026-04-13 時点）
+### 限定公開到達点（2026-04-13 時点）
 
 | 項目 | 状態 |
 |---|---|
@@ -18,6 +18,8 @@
 | **Phase B 限定公開判断** | **Go ✅（2026-04-13）** |
 | **Phase C-1 seed 運用 docs 化** | **完了 ✅（2026-04-13）** |
 | **限定公開準備（デプロイガイド）** | **完了 ✅（2026-04-13）** |
+| **限定公開実施** | **開始済み ✅（2026-04-13）** |
+| **本番 URL** | **`https://training-program-platform-jp.vercel.app`** |
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -28,6 +30,10 @@
 - Programs list / detail / train selection は Supabase `programs` 読込を土台にしている
 - route 用 slug の正本は `programs.slug` に移行済み
 - **Program Detail → StartSessionScreen → session 開始** の最小 MVP が完成した
+- **限定公開を開始（2026-04-13）**
+  - 本番 URL: `https://training-program-platform-jp.vercel.app`
+  - Supabase Authentication → URL Configuration 設定済み
+  - 招待制運用で live 導線確認を完了
 - **Phase B の設計固定（Auth / user_id 必須化 / RLS / 移行順）が完了**
   - 設計メモ: `docs/auth-rls-design.md`
   - 方針: `programs` は public のまま、session / enrollment / summary / history は auth 必須へ戻す
@@ -202,19 +208,14 @@
 
 ## 次アクション
 
-1. **限定公開実施（デプロイ作業）**
-   - `docs/limited-release-guide.md` の手順に従い Vercel にデプロイ
-   - `docs/limited-release-checklist.md` のチェックリストを上から実施
-   - Supabase Authentication → URL Configuration を Vercel URL に更新
-   - 招待ユーザーのアカウントを Supabase Dashboard で作成
-2. **C-2: 2本目のプログラム追加**
+1. **C-2: 2本目のプログラム追加**
    - `docs/seed-program-guide.md` と `seed/programs/_template.sql` を参照
    - Starting Strength Base か Upper/Lower Strength が候補（mock catalog に slug が既定義）
    - template を埋めて seed を Supabase に適用するだけで `/programs` に表示される
-3. **B-6: sign up 429 の再確認（低優先）**
+2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
-4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+3. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
@@ -224,8 +225,21 @@
 - service role は通常ユーザーフローでは使用しない方針。管理処理専用に限定する
 - Delete undo は MVP スコープ外
 - live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち（外部レート制限、実装不備ではない）
+- 招待制運用のため、案内先 URL と配布アカウントの棚卸しを継続する
 
 ## Phase C 進捗
+
+### 限定公開開始（完了 2026-04-13）
+
+- Vercel 本番 URL: `https://training-program-platform-jp.vercel.app`
+- Supabase URL Configuration を本番 URL に更新済み
+- live 確認結果
+  - `/programs` 表示成功
+  - 未ログインで保護ページは `/login` へ redirect
+  - ログイン後 `/exercise-history/squat` 表示成功
+  - `/train` → Finish → `/workout-summary` 成功
+  - `/exercise-history/overhead-press` に 5 セット履歴反映成功
+- 判定: 限定公開は成功。次フェーズは C-2 に戻る
 
 ### 限定公開準備（完了 2026-04-13）
 
@@ -268,6 +282,13 @@
   - pass
 - `npm run build`
   - pass
+- **限定公開 live 実施確認（2026-04-13 完了）**
+  - 本番 URL: `https://training-program-platform-jp.vercel.app`
+  - `/programs` 表示成功 ✅
+  - 未ログインで保護ページは `/login` に redirect ✅
+  - ログイン後 `/exercise-history/squat` 表示成功 ✅
+  - `/train` → Finish → `/workout-summary` 成功 ✅
+  - `/exercise-history/overhead-press` に 5 セット履歴反映成功 ✅
 - **Phase B B-7: Exercise History auth 強化 + live 確認（2026-04-13 完了）**
   - 未ログイン `/exercise-history/squat` → `/login?next=%2Fexercise-history%2Fsquat` redirect ✅
   - 未ログイン `/exercise-history/overhead-press` → `/login?next=%2Fexercise-history%2Foverhead-press` redirect ✅（slug 変更でも `next` 正確）

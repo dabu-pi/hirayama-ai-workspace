@@ -1,6 +1,7 @@
 # 限定公開ガイド（Vercel + Supabase）
 
 作成: 2026-04-13
+最終更新: 2026-04-13（限定公開開始）
 
 ---
 
@@ -9,6 +10,39 @@
 このガイドは `training-program-platform-jp` を Vercel + Supabase live 環境で招待制限定公開する手順をまとめたものです。
 
 **公開方針:** URL は公開するが、ワークアウト機能はログイン必須。招待したユーザーのみ実使用可能。
+
+---
+
+## 今回の限定公開実施結果（2026-04-13）
+
+| 項目 | 内容 |
+|---|---|
+| 判定 | 成功（限定公開開始済み） |
+| 本番 URL | `https://training-program-platform-jp.vercel.app` |
+| URL Configuration | Supabase Authentication → URL Configuration 設定済み |
+| 公開範囲 | 招待制。URL は案内先を限定し、ワークアウト系はログイン必須 |
+
+### 実施して確認した項目
+
+- `/programs` が本番環境で表示される
+- 未ログインで保護ページへアクセスしたとき `/login` に redirect される
+- ログイン後に `/exercise-history/squat` が表示される
+- `/train` → Finish → `/workout-summary` が完走する
+- `/exercise-history/overhead-press` に 5 セット履歴が反映される
+
+### 今回成功した項目
+
+- Vercel 本番デプロイ完了
+- Supabase URL Configuration 反映完了
+- 未ログイン保護の live 確認完了
+- ログイン後の programs / history / workout summary 動線確認完了
+- workout 実行結果の history 反映確認完了
+
+### 残課題
+
+- C-2 として 2 本目のプログラム seed 追加が未着手
+- `sign up 429` は外部レート制限のため低優先で再確認待ち
+- 招待制運用のため、アカウント配布と不要アカウント整理を継続する
 
 ---
 
@@ -71,8 +105,8 @@ Supabase Dashboard → Authentication → URL Configuration
 
 | 項目 | 設定値 |
 |---|---|
-| **Site URL** | `https://your-project.vercel.app`（本番 URL） |
-| **Redirect URLs** | `https://your-project.vercel.app/**`（ワイルドカード可） |
+| **Site URL** | `https://training-program-platform-jp.vercel.app` |
+| **Redirect URLs** | `https://training-program-platform-jp.vercel.app/**` |
 
 **注意:**
 - Vercel のプロジェクト名が変わると URL が変わるため、カスタムドメインを使う場合は早めに設定する
@@ -142,6 +176,14 @@ Redirect URLs に追加: https://[vercel-project].vercel.app/**
 
 `docs/limited-release-checklist.md` のスモークテストを実施する。
 
+### 6. 実施結果を状態ファイルへ反映
+
+限定公開の確認が完了したら、少なくとも次を更新する。
+
+- `PROJECT_STATUS.md` に本番 URL / 実施日 / 成功項目 / 残課題 / 次アクションを記録
+- `ROADMAP.md` に「限定公開開始済み」と次フェーズの優先タスクを反映
+- 必要に応じてこのガイドと `docs/limited-release-checklist.md` に実施ログを追記
+
 ---
 
 ## 招待制運用ポリシー
@@ -175,6 +217,13 @@ Supabase Dashboard → Authentication → Users → "Create new user"
 ```
 
 **注意:** `public.users` テーブルへの行挿入は `trg_create_user_profile` trigger が自動で行う。手動 INSERT は不要。
+
+### 限定公開後の運用補足
+
+- 招待対象は少人数に絞り、URL の共有先を都度把握する
+- パスワードを管理者が作る場合は、メールとは別経路で初期パスワードを共有する
+- テスト用アカウントは使い回さず、不要になったら Supabase 側で削除または無効化する
+- 問い合わせ対応時は `exercise-history` と `workout-summary` の挙動を優先確認する
 
 ---
 

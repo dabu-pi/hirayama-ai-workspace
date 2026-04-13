@@ -1,6 +1,7 @@
 # 限定公開前チェックリスト
 
 作成: 2026-04-13
+最終更新: 2026-04-13（限定公開実施ログ追記）
 
 詳細手順は `docs/limited-release-guide.md` を参照。
 
@@ -75,6 +76,30 @@
 - [ ] `PROJECT_STATUS.md` に限定公開完了を記録
 - [ ] Vercel URL を `PROJECT_STATUS.md` に記載
 - [ ] `git push` 済み
+
+---
+
+## 2026-04-13 実施ログ
+
+| 項目 | 結果 |
+|---|---|
+| 本番 URL | `https://training-program-platform-jp.vercel.app` |
+| 実施日 | 2026-04-13 |
+| 判定 | 成功（限定公開開始済み） |
+
+### 確認した項目
+
+- [x] `/programs` 表示成功
+- [x] 未ログインで保護ページが `/login` へ redirect
+- [x] ログイン後に `/exercise-history/squat` 表示成功
+- [x] `/train` → Finish → `/workout-summary` 成功
+- [x] `/exercise-history/overhead-press` に 5 セット履歴反映成功
+- [x] Supabase URL Configuration 設定完了
+
+### 残課題
+
+- [ ] C-2: 2本目プログラム seed 追加
+- [ ] `sign up 429` の再確認（低優先）
 
 ---
 
