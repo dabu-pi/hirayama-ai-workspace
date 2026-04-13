@@ -47,6 +47,22 @@
   - サーバーログ: error なし ✅
   - コンソールログ: error なし ✅
   - 注: ローカル dev 環境では Supabase 接続なしのため mock catalog fallback が動作。live Supabase への full flow 確認は手動チェック待ち
+- **Phase B B-5: Add Exercise / Swap Exercise コードレビュー完了（2026-04-13）**
+  - Add Exercise (`POST /api/workout-sessions/[id]/exercises`)
+    - 未認証 → `getAuthenticatedWorkoutUserId()` が null → 401 を返す（live 環境で動作）
+    - 他人 session_id → `findOwnedWorkoutSession` が null → 404（Step 2 と同じ owner guard パターン）
+    - 本人 session → INSERT `workout_session_exercises` + `workout_sets` → RLS INSERT ポリシーを通過する構造を確認
+      - exercise INSERT: `workout_session_id = session.id`（検証済み session）→ `session.user_id = auth.uid()` ✅
+      - set INSERT: 直前の exercise INSERT 後に実行 → チェーン (set→exercise→session→auth.uid()) が成立 ✅
+  - Swap Exercise (`PATCH /api/workout-sessions/[id]/exercises/[exerciseId]`)
+    - 未認証 → 401（同上）
+    - 他人 session_id → 404（同上）
+    - exercise lookup: `.eq("workout_session_id", session.id)` で自分のセッションのみ対象 ✅
+    - blocking set check: RLS で自分の session の sets のみ可視 ✅
+    - UPDATE `workout_session_exercises` → RLS UPDATE ポリシー通過 ✅
+  - ローカル dev テスト（Supabase 未設定）: 500 を返す（env vars なしで `createSupabaseServerClient()` が throw するため。live 環境では 401 → 404 → 成功の期待動作を実装通り確認）
+  - **live ブラウザ clickthrough（StartSession → Add Exercise → Swap Exercise → Finish）は手動確認待ち**
+    - コード上は Step 2 で live 検証済みの `findOwnedWorkoutSession` と同一パターンを使用
 
 ## 完了済み
 
@@ -171,15 +187,12 @@
 
 ## 次アクション
 
-1. **B-3/B-4 live 全体フロー確認（手動 — `docs/phase-b-step3-checklist.md` 参照）**
-   - Supabase dashboard で null 件数 = 0 / NOT NULL 確認 / RLS ポリシー表示を確認する
-   - ログイン済みユーザーで StartSession → Train → Finish → Summary の通しを確認する
-   - 他ユーザーの session_id で Summary アクセス → not found を確認する
-   - 確認完了後 B-3/B-4 を完了クローズする
-2. **B-5: Add Exercise / Swap Exercise の live clickthrough 補完確認**
-   - Step 2 では owner helper を通す実装まで完了
-   - auth 状態での live clickthrough をまだ実施していない
-3. **B-6: sign up 429 の再確認**
+1. **B-3/B-4/B-5 live 手動確認（`docs/phase-b-step3-checklist.md` 参照）**
+   - Supabase dashboard で null 件数 = 0 / NOT NULL / RLS ポリシー表示を確認する
+   - ログイン済みユーザーで StartSession → Add Exercise → Swap Exercise → Finish → Summary の通し確認
+   - 他ユーザーの session_id で Summary / Add / Swap → not found / 404 を確認する
+   - 確認完了後 B-3/B-4/B-5 を完了クローズする
+2. **B-6: sign up 429 の再確認**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
 4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する

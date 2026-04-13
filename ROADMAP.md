@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-13（Phase B Step 1・2 完了反映 / 公開判断・プラットフォーム将来タスク追加）
+作成: 2026-03-05 / 最終更新: 2026-04-13（B-3/B-4 migration 適用済み / B-5 コードレビュー完了）
 
 ---
 
@@ -393,9 +393,9 @@
 |---|---|---|
 | B-1 | **[Step 1]** Supabase Auth 整備（login 画面・middleware・`auth→public.users` trigger） | ✅ 完了 |
 | B-2 | **[Step 2]** アプリ側 owner guard（finish / summary / set mutation を本人限定・他人は 404） | ✅ 完了 |
-| B-3 | **[Step 3]** `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に復元 | ⏸ 待機 |
-| B-4 | **[Step 3]** RLS（Row Level Security）設計・適用 | ⏸ 待機（B-3 と同時） |
-| B-5 | Add Exercise / Swap Exercise の live clickthrough 補完確認 | ⏸ 待機 |
+| B-3 | **[Step 3]** `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に復元 | 🔄 migration 適用済み・live 手動確認待ち |
+| B-4 | **[Step 3]** RLS（Row Level Security）設計・適用 | 🔄 migration 適用済み・live 手動確認待ち |
+| B-5 | Add Exercise / Swap Exercise の live clickthrough 補完確認 | 🔄 コードレビュー完了・live ブラウザ操作待ち |
 | B-6 | sign up 429 エラー（`over_email_send_rate_limit`）の再確認 | ⏸ 待機（外部レート制限が解消次第） |
 | B-7 | Exercise History の auth 対応（user_id 絞り込み強化） | ⏸ 待機（B-3 以降） |
 
@@ -444,4 +444,4 @@
 
 ---
 
-最終更新: 2026-04-13（Phase B Step 1・2 完了反映 / 公開判断・プラットフォーム将来タスク追加）
+最終更新: 2026-04-13（B-3/B-4 migration 適用済み / B-5 コードレビュー完了）
