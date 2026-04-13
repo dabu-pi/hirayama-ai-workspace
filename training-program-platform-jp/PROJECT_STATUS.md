@@ -1,6 +1,45 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-5 gzclp-base live correction SQL + runbook 作成 — live 反映直前段階）
+最終更新: 2026-04-14（C-4 / C-5 live pass 確認 — live SQL hold 解除）
+
+## 2026-04-14 C-4 / C-5 live 最終確認
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| C-4 live（Upper Lower Base） | **pass ✅** |
+| C-5 live（gzclp-base correction） | **pass ✅** |
+| 原典準拠ルール | **live 反映済み ✅** |
+| live SQL hold | **解除 ✅** |
+
+### live 確認結果（2026-04-14）
+
+| ページ | 確認項目 | 結果 |
+|---|---|---|
+| `/programs` | 3本表示（GZCLP Base / Starting Strength Phase 2 Base / Upper Lower Base） | ✅ |
+| `/programs` | Level filter（Beginner 2件 / Intermediate 1件）が成立 | ✅ |
+| `/programs` | filter chips（Beginner / Intermediate / Barbell / Full Body / Strength / Squat Focus / Explosive） | ✅ |
+| `/programs/starting-strength-base` | title = `Starting Strength Phase 2 Base` | ✅ |
+| `/programs/starting-strength-base` | Level=Beginner / 3 days/week / 3 weeks | ✅ |
+| `/programs/starting-strength-base` | tags = Strength / Barbell / Full Body / Squat Focus | ✅ |
+| `/programs/gzclp-base` | title = `GZCLP Base` | ✅ |
+| `/programs/gzclp-base` | Level=Beginner / 3 days/week / 4 weeks | ✅ |
+| `/programs/gzclp-base` | tags = Strength / Barbell / Full Body | ✅ |
+
+### 軽微な観察事項
+
+- `Upper Lower Base` カードに tags バッジが非表示（`upper-lower` split タグ未反映の可能性）
+- filter chips に `Upper / Lower` が未表示。program-metadata.sql の upper-lower-base 分が live DB に未適用の可能性あり
+- 現時点では一覧表示・detail・filter の主要動線に影響なし。次セッションで確認推奨
+
+### 確定した原典準拠ルール
+
+- `gzclp-base`: `source_fidelity = original`（Cody Lefever GZCLP base month 準拠）
+- `starting-strength-base`: `source_fidelity = original`（Starting Strength Novice Program Phase 2 切り出し）
+- `upper-lower-base`: `source_fidelity = custom`（単一原典なしの internal template）
+
+---
 
 ## 2026-04-13 Program Source Audit
 
@@ -10,7 +49,7 @@
 |---|---|
 | audit | 完了 |
 | seed correction | 完了 |
-| live SQL hold | 維持 |
+| live SQL hold | **解除（2026-04-14）** |
 
 ### この更新で固定した原則
 
@@ -39,9 +78,9 @@
 
 | slug | title | source_program_name | source_fidelity | live 反映 |
 |---|---|---|---|---|
-| `gzclp-base` | `GZCLP Base` | `GZCLP` | `original` | 保留 |
-| `starting-strength-base` | `Starting Strength Phase 2 Base` | `Starting Strength Novice Program - Phase 2` | `original` | 保留 |
-| `upper-lower-base` | `Upper Lower Base` | `null` | `custom` | 保留 |
+| `gzclp-base` | `GZCLP Base` | `GZCLP` | `original` | **live pass ✅** |
+| `starting-strength-base` | `Starting Strength Phase 2 Base` | `Starting Strength Novice Program - Phase 2` | `original` | **live pass ✅** |
+| `upper-lower-base` | `Upper Lower Base` | `null` | `custom` | **live pass ✅**（tags 要確認） |
 
 ### 参照
 

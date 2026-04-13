@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-5 gzclp-base live correction SQL + runbook 作成 — live 反映直前段階）
+最終更新: 2026-04-14（C-4 / C-5 live pass 確認 — live SQL hold 解除）
 
 ## 2026-04-13 Program Source Audit
 
@@ -72,8 +72,9 @@
 | **Vercel Production Branch 統一** | **✅ `feature/auto-dev-phase3-loop` に変更済み** |
 | **Programs 一覧 CTA UX 修正** | **✅ 完了（2026-04-13）** |
 | **C-3d: Programs filter UI** | **✅ 完了（2026-04-13）** |
-| **C-4: 3本目プログラム seed（Upper Lower Base）** | **✅ 実装完了（2026-04-13）— live 反映は手動 SQL 実行待ち** |
-| **C-5: gzclp-base live correction SQL + runbook** | **✅ 完了（2026-04-13）— live 反映直前段階** |
+| **C-4: 3本目プログラム seed（Upper Lower Base）** | **✅ live pass（2026-04-14）** |
+| **C-5: gzclp-base live correction SQL + runbook** | **✅ live pass（2026-04-14）** |
+| **C-4/C-5 live 最終確認・クローズ** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -88,9 +89,9 @@
 
 ### 次フェーズの優先タスク（C-4 以降）
 
-1. C-4 live 反映: Supabase Dashboard SQL Editor で `upper-lower-base.sql` → `program-metadata.sql` の順で実行する
-2. live 確認: `/programs` に "Upper Lower Base (Intermediate / Upper Lower)" が表示されること、filter で Level / Tag が意味ある絞り込みになること
-3. 次候補: プログラム詳細ページの追加情報（week 構成プレビュー、種目リスト）など
+1. **Upper Lower Base tags 確認**: `upper-lower` split タグが live DB に未適用の可能性あり。`/programs` の Upper Lower Base カードに tags バッジが未表示のため確認推奨
+2. 次候補: プログラム詳細ページの追加情報（week 構成プレビュー、種目リスト）など
+3. 次候補: program-metadata.sql の upper-lower-base 分が live DB に正しく反映されているかの確認
 
 ### C-2 完了メモ
 

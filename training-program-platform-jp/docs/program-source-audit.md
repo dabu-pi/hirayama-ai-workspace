@@ -1,6 +1,6 @@
 # Program Source Audit
 
-最終更新: 2026-04-13
+最終更新: 2026-04-14（live 反映済み・hold 解除）
 
 ## 目的
 
@@ -93,7 +93,17 @@
 
 ## Live Apply Policy
 
-- この監査の時点では live SQL は保留
-- `gzclp-base` は既存 live row が旧構造の可能性があるため、structure 更新方法を先に決める
-- `starting-strength-base` は title/source metadata の live 反映前に既存 route と表示差分を確認する
-- `upper-lower-base` は新規追加なので比較的安全だが、source metadata migration のあとにまとめて入れる
+- **live 反映済み（2026-04-14）— hold 解除**
+- C-4 / C-5 の live pass を 2026-04-14 に確認し、hold を解除した
+
+### live 反映結果
+
+| slug | live title | Level / Freq / Duration | tags | live 状態 |
+|---|---|---|---|---|
+| `gzclp-base` | `GZCLP Base` | Beginner / 3 days/week / 4 weeks | Strength / Barbell / Full Body | **pass ✅** |
+| `starting-strength-base` | `Starting Strength Phase 2 Base` | Beginner / 3 days/week / 3 weeks | Strength / Barbell / Full Body / Squat Focus | **pass ✅** |
+| `upper-lower-base` | `Upper Lower Base` | Intermediate / 4 days/week / 4 weeks | （tags 未表示 — 要確認） | pass（tags 軽微未反映） |
+
+### 軽微な残課題
+
+- `upper-lower-base` の tags バッジが `/programs` 一覧で非表示。program-metadata.sql の upper-lower-base 分の live 適用を次セッションで確認すること
