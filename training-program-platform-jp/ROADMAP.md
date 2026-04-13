@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-2 完了 / Starting Strength Base live 反映）
+最終更新: 2026-04-13（C-2b 完了 / seed 原本整合回復）
 
 ---
 
@@ -26,6 +26,7 @@
 | 限定公開実施（Vercel デプロイ + live 確認） | ✅ 完了（2026-04-13） |
 | C-1: seed 運用ルール docs 化 | ✅ 完了（2026-04-13） |
 | **C-2: 2本目プログラム seed 追加** | **✅ 完了（2026-04-13, Starting Strength Base live 反映）** |
+| **C-2b: seed 原本整合回復** | **✅ 完了（2026-04-13）** |
 | **C-3: プログラム難易度・タグ管理** | **🔄 次の作業** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
@@ -54,6 +55,13 @@
 - `seed/programs/starting-strength-base.sql` を live Supabase へ反映済み
 - SQL 確認: `starting-strength-base` program 存在、3 weeks / 9 days / 27 day_exercises、`power-clean` 参照成立
 - live 確認: `/programs` と `/programs/starting-strength-base` 表示成功、`Go to Train` の入口も確認済み
+
+### C-2b 完了メモ
+
+- live DB で手修正した日本語文言を `seed/programs/starting-strength-base.sql` へ戻し込み済み
+- 日本語の実データ文字列は Unicode escape 形式へ変更し、別環境再投入時の文字化け耐性を上げた
+- `docs/seed-program-guide.md` に UTF-8 保存と貼り付け時の注意を追記
+- 「正本は repo、live はその反映結果」という前提を回復済み
 
 ---
 

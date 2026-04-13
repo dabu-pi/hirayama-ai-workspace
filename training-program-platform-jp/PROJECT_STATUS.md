@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-2 完了 / Starting Strength Base を live 反映）
+最終更新: 2026-04-13（C-2b 完了 / seed 原本と live の整合回復）
 
 ## 現在地
 
@@ -294,6 +294,19 @@
 - 補足
   - 初回適用時に Power Clean の日本語名と description が `?` で入ったため、live DB 上で日本語文字列を修正済み
   - 既存 `GZCLP Base` は `slug / title / level / is_public / duration_weeks / days_per_week` に変更なし
+
+### C-2b: seed 原本整合（完了 2026-04-13）
+
+- `seed/programs/starting-strength-base.sql` の日本語文字列を live 修正内容に合わせて更新
+  - `power-clean.name_ja`
+  - `program.description`
+  - `program_days.progression_guide`
+  - `program_days.notes`
+- seed 内の実データ文字列は `U&'...'` の Unicode escape 形式へ変更し、文字コード差分の影響を受けにくくした
+- `docs/seed-program-guide.md` に UTF-8 保存と SQL Editor 貼り付け時の注意を追記
+- 正本方針を回復
+  - repo の seed 原本 = live DB へ反映したい状態
+  - live DB の手修正内容は seed 原本へ戻し込み済み
 
 ---
 

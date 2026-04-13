@@ -192,6 +192,14 @@ end if;
 5. 確認クエリ（下記）を別途実行して構造を確認する
 ```
 
+### 日本語文字列を含む seed の保存時注意
+
+- `.sql` ファイルは **UTF-8** で保存する。BOM なしを推奨
+- PowerShell の here-string や、端末経由でスクリプト文字列を組み立てて流す方法では、日本語が `?` に化けることがある
+- 日本語の表示文言を確実に再現したい seed では、`U&'...'` の Unicode escape 文字列を使うと再現性が高い
+- 反映時は「ファイルを UTF-8 で開く → SQL Editor に直接貼る」を基本にし、途中で別エンコーディングへ変換しない
+- 反映後は `exercises.name_ja`、`programs.description`、`program_days.notes / progression_guide` を確認クエリまたは live 画面で必ず確認する
+
 **ローカル Supabase CLI 経由の場合（任意）:**
 ```bash
 psql $DATABASE_URL -f seed/programs/[program-slug].sql
