@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-13（B-3/B-4/B-5 live 手動確認完了 / B-7 Exercise History auth 強化を次タスクに設定）
+作成: 2026-03-05 / 最終更新: 2026-04-13（B-7 Exercise History auth 強化完了 / server client 統一・middleware 保護追加・typecheck build pass）
 
 ---
 
@@ -40,7 +40,7 @@
 │                             数値入力 → Claude API実装 → 月次レポート
 │
 └─ 【トレーニングプログラムプラットフォーム】──────────────────────→
-       MVP基盤 ✅ → Auth/owner guard ✅ → NOT NULL・RLS ✅ → B-7 History auth → 限定公開 → プログラム追加
+       MVP基盤 ✅ → Auth/owner guard ✅ → NOT NULL・RLS ✅ → History auth ✅ → 限定公開判断 → プログラム追加
 ```
 
 ---
@@ -295,7 +295,8 @@
 | **4月中旬** | トレーニングプログラムプラットフォーム: Phase A 完了（live E2E・enrollment Day 進行確認済み） | ✅ 完了 |
 | **4月中旬** | トレーニングプログラムプラットフォーム: Phase B Step 1・2 完了（Auth 基盤・アプリ側 owner guard live 確認済み） | ✅ 完了 |
 | **4月中旬** | トレーニングプログラムプラットフォーム: B-3/B-4/B-5 完了（NOT NULL + RLS live 適用・Add/Swap live 確認済み） | ✅ 完了 |
-| **4月下旬〜5月** | トレーニングプログラムプラットフォーム: B-7 Exercise History auth 強化・限定公開判断 | 🔄 進行中 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: B-7 Exercise History auth 強化完了（server client 統一・middleware 保護） | ✅ 完了 |
+| **4月下旬〜5月** | トレーニングプログラムプラットフォーム: 限定公開判断・Phase C プログラム追加 | ⏸ 待機 |
 | **4月下旬** | 廃棄物日報システム: 要件定義完了・設計開始 | ⏸ 待機 |
 | **5月** | 接骨院経営戦略AI: 数値入力完了・Claude APIで月次レポート初回生成 | ⏸ 待機 |
 | **6月以降** | 全システム安定稼働・KPIダッシュボード構築 | ⏸ 待機 |
@@ -319,7 +320,7 @@
    7. 運動器初期評価システム JASSESS-01: Phase 1 シート生成 → Phase 2 ロジック実装 → Phase 5 Claude API連携
    8. 接骨院経営戦略AI: 数値入力 → Claude API実装
    9. 廃棄物日報システム: 要件定義 → 設計 → 実装
-  10. トレーニングプログラムプラットフォーム Phase B: B-7 Exercise History auth 強化 → 限定公開判断 → プログラム追加
+  10. トレーニングプログラムプラットフォーム Phase B 完了 → 限定公開判断 → Phase C プログラム追加
 ```
 
 ---
@@ -398,7 +399,7 @@
 | B-4 | **[Step 3]** RLS（Row Level Security）設計・適用 | ✅ 完了（live 手動確認 2026-04-13） |
 | B-5 | Add Exercise / Swap Exercise の live clickthrough 補完確認 | ✅ 完了（live 通し確認 2026-04-13） |
 | B-6 | sign up 429 エラー（`over_email_send_rate_limit`）の再確認 | ⏸ 待機（外部レート制限が解消次第） |
-| B-7 | Exercise History の auth 対応（admin client → server client 切替・RLS 適用） | 🔄 次タスク |
+| B-7 | Exercise History の auth 対応（admin client → server client 切替・RLS 適用・middleware 保護追加） | ✅ 完了（typecheck/build pass 2026-04-13 / live 確認推奨） |
 
 #### 公開判断の段階
 
@@ -445,4 +446,4 @@
 
 ---
 
-最終更新: 2026-04-13（B-3/B-4/B-5 live 手動確認完了 / B-7 Exercise History auth 強化を次タスクに設定）
+最終更新: 2026-04-13（B-7 Exercise History auth 強化完了 / server client 統一・middleware 保護追加・typecheck build pass）

@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（B-3/B-4/B-5 live 手動確認完了 / B-7 Exercise History auth 強化を次タスクに設定）
+最終更新: 2026-04-13（B-7 Exercise History auth 強化完了 / server client 統一・middleware 保護追加）
 
 ## 現在地
 
@@ -13,7 +13,8 @@
 | アプリ側 owner guard | finish / summary / set mutation / add exercise / swap exercise = 本人のみ ✅ |
 | DB 側制限 | user_id NOT NULL 復元 + RLS 全テーブル適用済み ✅ |
 | live workout flow | Program Detail → StartSession → Train → Add/Swap → Finish → Summary 通し確認済み ✅ |
-| 次の課題 | Exercise History の auth 強化（B-7）/ sign up 429 再確認（B-6）|
+| Exercise History auth 強化 | admin client → server client 統一 / middleware で `/exercise-history/*` 保護 ✅ |
+| 次の課題 | sign up 429 再確認（B-6）/ 限定公開判断 |
 
 - `training-program-platform-jp` は **Next.js App Router + React + TypeScript + Route Handlers + Supabase PostgreSQL + Supabase Auth** で MVP 実装を継続中
 - `/train` は workout session の実行画面として利用中
@@ -198,22 +199,23 @@
 
 ## 次アクション
 
-1. **B-7: Exercise History auth 強化（次タスク・最優先）**
-   - `lib/workout/exercise-history.ts` が admin client を使用している場合は server client へ切替え（RLS 適用）
-   - `lib/workout/train-session.ts` / `lib/workout/workout-summary.ts` も admin client の可能性あり → 確認・切替え
-   - `lib/programs/program-library.ts` / `lib/programs/program-detail.ts` は programs が public RLS ポリシーのため優先度低（Phase C で整理）
-   - `/exercise-history/[exerciseSlug]` で未ログイン時に 401 / ログイン後に自分の履歴のみ表示されることを live 確認
-2. **B-6: sign up 429 の再確認（低優先）**
+1. **B-7 live 確認（推奨）**
+   - 未ログイン状態で `/exercise-history/[slug]` へアクセス → `/login?next=...` redirect を確認
+   - ログイン済み状態で `/exercise-history/[slug]` → 本人履歴のみ表示・他人データ混入なしを確認
+   - 実装変更は完了済み（typecheck / build pass）。live 確認は手動チェック
+2. **限定公開判断**
+   - `docs/phase-b-step3-checklist.md` の公開条件（B-3/B-4/B-5/B-7）を確認し、限定公開の判断を行う
+3. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
-3. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
+4. helper 旧形式 slug から DB slug への redirect 方針が必要かを判断する
 
 ## 保留事項
 
 - Supabase 読込失敗時のみ `mock_catalog` fallback が残る
 - `lib/programs/program-library.ts` / `lib/programs/program-detail.ts` は admin client のまま（programs は public RLS ポリシーがあるため実害なし。Phase C で server client 統一を検討）
-- `lib/workout/train-session.ts` / `lib/workout/workout-summary.ts` / `lib/workout/exercise-history.ts` は admin client の可能性あり → B-7 で確認・切替え
-- service role は通常ユーザーフローでは原則不要にする方針。管理処理専用に限定する
+- user-scoped な通常ユーザーフロー（train/summary/history）は server client + RLS に統一済み
+- service role は通常ユーザーフローでは使用しない方針。管理処理専用に限定する
 - Delete undo は MVP スコープ外
 - live sign up は `over_email_send_rate_limit` が解消するまで再試行待ち（外部レート制限、実装不備ではない）
 
@@ -223,6 +225,23 @@
   - pass
 - `npm run build`
   - pass
+- **Phase B B-7: Exercise History auth 強化（2026-04-13 実装完了）**
+  - `lib/workout/exercise-history.ts`: admin client 条件分岐を削除し、常に server client を使用
+    - 変更前: `hasSupabaseServiceRoleEnv() ? createSupabaseAdminClient() : serverClient`
+    - 変更後: `const queryClient = serverClient`
+    - 不要になった `createSupabaseAdminClient` / `hasSupabaseServiceRoleEnv` import を削除
+  - `middleware.ts`: matcher に `/exercise-history/:path*` を追加
+    - 未ログイン時は `/login?next=/exercise-history/[slug]` へ redirect
+    - 変更前: `matcher: ["/workout-summary/:path*"]`
+    - 変更後: `matcher: ["/workout-summary/:path*", "/exercise-history/:path*"]`
+  - `train-session.ts` / `workout-summary.ts`: B-3 で `createWorkoutQueryClient()` → server client 統一済み。追加変更なし
+  - typecheck: pass / build: pass 確認済み（commit 後 live 確認推奨）
+  - 認可境界の担保:
+    - middleware で未ログイン遮断（redirect to `/login`）
+    - `getExerciseHistoryView` 内で `auth.getUser()` による userId チェック（二重防衛）
+    - `selectRecentUserSessions` で `.eq("user_id", userId)` — 本人セッションのみ取得
+    - RLS: `workout_sessions` の SELECT ポリシー `auth.uid() = user_id` がクエリを本人に限定
+    - 後続の `session_exercises` / `sets` クエリは本人セッション IDs を起点とするため他ユーザーデータ混入なし
 - **Phase B B-3/B-4/B-5 live 手動確認（2026-04-13 完了）**
   - Program Detail → StartSession → Train → Add Exercise → Swap Exercise → Finish → Summary 通し確認 ✅
   - Supabase dashboard: null user_id = 0 件 / NOT NULL 制約 / RLS ポリシー適用済み ✅

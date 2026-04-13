@@ -3,10 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
-  createSupabaseAdminClient,
   createSupabaseServerClient,
-  hasSupabasePublicEnv,
-  hasSupabaseServiceRoleEnv
+  hasSupabasePublicEnv
 } from "@/lib/supabase/server";
 import type { ExerciseHistoryView, ExerciseType } from "@/types/workout";
 
@@ -300,9 +298,7 @@ export async function getExerciseHistoryView(
       };
     }
 
-    const queryClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : serverClient;
+    const queryClient = serverClient;
 
     const exercise = await selectExerciseBySlug(queryClient, exerciseSlug);
 
