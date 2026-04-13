@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-13（C-3c 完了 / Program Detail metadata 表示 + Vercel production branch 統一メモ）
+最終更新: 2026-04-13（C-3b/C-3c live pass / programs 一覧 CTA UX 修正完了）
 
 ---
 
@@ -31,9 +31,11 @@
 | **C-3a: metadata 基盤実装** | **✅ 完了（2026-04-13）** |
 | **C-3a-live: metadata live 反映** | **✅ 完了（2026-04-13）** |
 | **C-3b: `/programs` metadata 表示** | **✅ 完了 + live 修正済み（2026-04-13）** |
-| **C-3c: Program Detail metadata 表示** | **✅ 完了（2026-04-13）** |
-| **Vercel Production Branch 統一** | **⚠️ 要手動作業（`feature/auto-dev-phase3-loop` に変更）** |
-| C-3d: filter UI / タグ絞り込み | 📋 候補（C-3c 後に検討） |
+| **C-3c: Program Detail metadata 表示** | **✅ 完了 + live pass（2026-04-13）** |
+| **C-3b/C-3c live 確認** | **✅ pass（2026-04-13）** |
+| **Vercel Production Branch 統一** | **✅ `feature/auto-dev-phase3-loop` に変更済み** |
+| **Programs 一覧 CTA UX 修正** | **✅ 完了（2026-04-13）** |
+| C-3d: filter UI / タグ絞り込み | 📋 候補（優先度検討） |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果

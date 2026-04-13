@@ -147,15 +147,6 @@
   color: #fcd34d;
 }
 
-.detailHint {
-  display: inline-flex;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  white-space: nowrap;
-}
 
 .goalText {
   margin: 0;
@@ -201,9 +192,22 @@
   border-top: 1px solid rgba(63, 63, 70, 0.7);
 }
 
-.futureLink {
-  color: var(--text-muted);
+.openCta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(249, 115, 22, 0.28);
+  background: rgba(249, 115, 22, 0.08);
+  color: #fdba74;
   font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.card:hover .openCta {
+  background: rgba(249, 115, 22, 0.16);
+  border-color: rgba(249, 115, 22, 0.48);
 }
 
 @media (min-width: 720px) {

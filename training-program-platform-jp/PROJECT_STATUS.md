@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-3c 完了 / Program Detail metadata 表示 + Vercel production branch 統一メモ）
+最終更新: 2026-04-13（C-3b/C-3c live pass 確認済み / programs 一覧 CTA UX 修正完了）
 
 ## 現在地
 
@@ -15,6 +15,8 @@
 | live workout flow | Program Detail → StartSession → Train → Add/Swap → Finish → Summary 通し確認済み ✅ |
 | Exercise History auth 強化 | admin client → server client 統一 / middleware で `/exercise-history/*` 保護 ✅ |
 | B-7 live 確認 | 未ログイン redirect（2 slug）/ ログイン済み表示（2 slug）/ 公開ルート非影響 ✅ |
+| **C-3b live 確認** | **✅ pass（2026-04-13）— badge 表示確認済み** |
+| **C-3c live 確認** | **✅ pass（2026-04-13）— detail metadata 行確認済み** |
 | **Phase B 限定公開判断** | **Go ✅（2026-04-13）** |
 | **Phase C-1 seed 運用 docs 化** | **完了 ✅（2026-04-13）** |
 | **限定公開準備（デプロイガイド）** | **完了 ✅（2026-04-13）** |

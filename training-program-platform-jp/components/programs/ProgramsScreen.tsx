@@ -104,7 +104,6 @@ export function ProgramsScreen({
                       ) : null}
                     </div>
                   </div>
-                  <span className={styles.detailHint}>Open detail</span>
                 </div>
 
                 <p className={styles.goalText}>{program.goal ?? "Goal TBD"}</p>
@@ -129,7 +128,7 @@ export function ProgramsScreen({
                 </div>
 
                 <div className={styles.cardFooter}>
-                  <span className={styles.futureLink}>Open program detail</span>
+                  <span className={styles.openCta}>Open detail →</span>
                 </div>
               </Link>
             );
