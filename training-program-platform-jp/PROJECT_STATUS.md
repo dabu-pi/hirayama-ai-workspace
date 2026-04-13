@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-13（C-2 seed 下書き作成中 / Starting Strength Base を候補決定）
+最終更新: 2026-04-13（C-2 完了 / Starting Strength Base を live 反映）
 
 ## 現在地
 
@@ -208,10 +208,10 @@
 
 ## 次アクション
 
-1. **C-2: 2本目のプログラム追加**
-   - 候補は `Starting Strength Base` に決定
-   - `seed/programs/starting-strength-base.sql` を Supabase SQL Editor に適用する
-   - 適用後は確認クエリで `programs / program_weeks / program_days / program_day_exercises` を確認し、`/programs` 表示を確認する
+1. **C-3: プログラム難易度・タグ管理**
+   - 2本目プログラム追加まで完了したため、複数プログラムを前提に比較しやすいメタ情報整理へ進む
+   - `programs.level` の表示方針と将来の tag 設計をまとめる
+   - `/programs` 一覧で初心者向け 2 本が並んだ前提の見せ方を検討する
 2. **B-6: sign up 429 の再確認（低優先）**
    - live Supabase Auth の `over_email_send_rate_limit` により未通過（外部レート制限、実装不備ではない）
    - 時間経過後に再試行する
@@ -268,27 +268,32 @@
   - 週 / 日 / 種目の構造を拡張しやすい形で記述
   - 確認クエリをコメントで同梱
 
-### C-2 以降（待機中）
+### C-2 以降（更新 2026-04-13）
 
-- C-2: 2本目のプログラム追加（Starting Strength Base の seed 下書き作成済み。次は Supabase 適用）
+- C-2: 2本目のプログラム追加（Starting Strength Base を live 反映済み）
 - C-3: プログラム難易度・タグ管理
 - C-4: ユーザー進捗ダッシュボード
 
-### C-2: 2本目プログラム seed 下書き（進行中 2026-04-13）
+### C-2: 2本目プログラム追加（完了 2026-04-13）
 
 - 候補: `Starting Strength Base`
 - 判断理由
   - `GZCLP Base` と同じ初心者向けバーベル軸だが、`Starting Strength Base` は「スクワット毎回」「A/B 交互」「Power Clean を含む」構成で役割を分けやすい
   - 既存 seed の `squat / bench-press / overhead-press / deadlift` を再利用でき、追加種目は `power-clean` の 1 つだけで済む
-- 作成物
+- 適用結果
   - `seed/programs/starting-strength-base.sql`
-  - 3 weeks x 3 days の idempotent seed
-  - `is_public = true`
-  - `program_days.progression_guide` / `notes` まで入力済み
-- 次に確認すれば適用できる状態
-  - Supabase SQL Editor で seed を実行
-  - 末尾の確認クエリで day 構造と exercise 配置を確認
-  - `/programs` 一覧と `/programs/starting-strength-base` 表示を確認
+  - service role 経由で live Supabase に反映済み（CLI / `psql` 未導入のため）
+  - `starting-strength-base` program 作成済み
+  - 3 weeks x 3 days、27 件の `program_day_exercises` を確認済み
+  - `power-clean` を含む exercise 参照成立済み
+- live 確認結果
+  - `/programs` に `Starting Strength Base` 表示成功
+  - `/programs/starting-strength-base` 表示成功
+  - detail の `Go to Train` が `/train?program=starting-strength-base&programDayId=...` を指すことを確認
+  - `/train` 入口で `Starting Strength Base` / `Week 1 / Day 1` / `Start Workout` を確認
+- 補足
+  - 初回適用時に Power Clean の日本語名と description が `?` で入ったため、live DB 上で日本語文字列を修正済み
+  - 既存 `GZCLP Base` は `slug / title / level / is_public / duration_weeks / days_per_week` に変更なし
 
 ---
 
