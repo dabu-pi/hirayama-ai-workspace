@@ -107,6 +107,54 @@
 - **completed runs の比較表示:** 現状 completed enrollment は history として残るだけで UI 導線なし。session-history からたどる必要がある。将来 "N 周目" 表示をする場合は enrollment 単位のグルーピング UI が必要
 - **multi-cycle analytics:** volume/e1RM trend は現状 enrollment 単位で集計（H-4 / H-4b）。複数周回をまたいだ長期推移を見せる場合は user × program 単位での集計が必要になる
 
+### Verification（2026-04-15）
+
+**静的検証（AI 実施）:**
+
+| 項目 | 結果 |
+|---|---|
+| `tsc --noEmit` | ✅ exit 0（型エラーなし）|
+| `next build` | ✅ success — `/api/programs/[programId]/restart` が route table に登録 |
+| API smoke（未ログイン POST）| ✅ 401 `unauthenticated` / 日本語メッセージ `ログインが必要です。` を返却 |
+| API smoke（不正 UUID POST）| ✅ 401（auth gate が UUID 検証より先に発火、情報漏洩なし）|
+
+**DB 一意性保証:**
+
+```sql
+-- supabase/migrations/20260413_000007_not_null_user_id.sql
+create unique index idx_program_enrollments_active_user_program
+  on public.program_enrollments (user_id, program_id)
+  where status = 'active';
+```
+
+- `(user_id, program_id) WHERE status='active'` の **partial UNIQUE INDEX 確認済み**
+- `findActiveEnrollment` → INSERT が非アトミックでも、DB レイヤで同一 (user, program) の 2 件目 active INSERT を拒否
+- client の `isBusy` flag と組み合わせて 2 段構えで冪等性を担保
+
+**Production 反映:**
+
+- commit `0e21dfb` は `feature/auto-dev-phase3-loop` に push 済み
+- Vercel の production branch が `feature/auto-dev-phase3-loop` のため **push 時点で自動デプロイ実行**
+- live endpoint: `https://training-program-platform-jp.vercel.app/api/programs/[programId]/restart`
+- 未ログイン POST で 401 レスポンス live 確認済み
+
+**AI で未実施の E2E（ユーザー検証項目）:**
+
+localhost / preview の両方で、以下はサインイン済みブラウザでの実機確認が必要:
+
+1. プログラム完走 → Summary の "Restart Program" ボタンクリック → Home に遷移
+2. Home の active program card に新 enrollment が progress=0 で表示される
+3. 同じプログラムをもう一度 Restart（2 重クリック含む）→ 409 等のエラーにならず 200 reuse される
+4. Restart 連打中にボタンが "Restarting…" に変わり二重 POST が飛ばない
+5. broken program（Week 1/Day 1 が無いシード）での Restart → 422 で safe fail
+6. cancelled enrollment は履歴として残り、新 active の進行を妨げない
+
+**preview URL:**
+
+Vercel production branch = `feature/auto-dev-phase3-loop` のため、専用 preview deploy は作成せず production URL を preview として共有する運用。
+
+→ **ユーザー確認 URL: `https://training-program-platform-jp.vercel.app`**
+
 ---
 
 ## 2026-04-14 S-6 — Workout Summary 改善
