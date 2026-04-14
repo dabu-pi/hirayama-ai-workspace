@@ -1,6 +1,44 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（D-1 day progression UI 完了）
+最終更新: 2026-04-14（D-3 idempotency guard 完了）
+
+## 2026-04-14 D-3 — idempotency guard（同一 day 再実行対策）
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| root cause 特定 | **完了 ✅** |
+| `advanceEnrollmentAfterSessionComplete` に guard 追加 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/day-progression-spec.md` 更新 | **完了 ✅** |
+
+### ROOT CAUSE
+
+`advanceEnrollmentAfterSessionComplete` が `session.program_day_id` から next day を計算して enrollment を更新する際、`enrollment.current_program_day_id` がすでに先に進んでいるかを確認していなかった。
+
+古い day の新規セッションを Finish すると enrollment が巻き戻る（regression）可能性があった。
+
+### FIX
+
+`enrollment.current_program_day_id !== session.program_day_id` の場合に早期 return を追加。
+
+```typescript
+if (enrollment.current_program_day_id !== session.program_day_id) {
+  return;  // 既に advance 済み — no-op
+}
+```
+
+### 動作マトリクス
+
+| シナリオ | 修正後 |
+|---|---|
+| 通常の初回 Finish | 正常に advance ✅ |
+| 同一 session 再 Finish | Finish route が early return → guard 未到達 ✅ |
+| 古い day の新規 session を Finish | guard で skip → regression なし ✅ |
+| 最終 day 完了後の新規 session Finish | enrollment が completed → active 検索で取得不可 → return ✅ |
+
+---
 
 ## 2026-04-14 D-1 — day progression（Summary Up Next / Program Complete）
 

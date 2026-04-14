@@ -84,11 +84,58 @@ UI は `status='completed'` を参照して完走を判断する。
 
 ---
 
+## D-3 — idempotency guard（2026-04-14 実装済み）
+
+### 問題
+
+`advanceEnrollmentAfterSessionComplete` は `session.program_day_id` から next day を計算して enrollment を更新する。
+しかし enrollment の `current_program_day_id` が既に先に進んでいる場合（=その day は既に処理済み）でも advance が走っていた。
+
+### 発生パターン
+
+| # | 操作 | 実態（修正前） |
+|---|---|---|
+| 1 | Day 1 を完了 → enrollment が Day 2 に advance | 正常 |
+| 2 | Day 2 を完了 → enrollment が Day 3 に advance | 正常 |
+| 3 | Day 1 の session を再 Finish（同一 session ID） | Finish route が `session.status === 'completed'` を検出して early return → advance 呼ばれない ✅ |
+| 4 | Day 1 の新規 session を開始して Finish | `session.program_day_id = Day 1`, `enrollment.current = Day 3` → `findNextProgramDayId(Day 1) = Day 2` → enrollment が Day 3 → Day 2 に**巻き戻る** ❌ |
+| 5 | 同様に Day 2 の新規 session を Finish | enrollment が Day 3 → Day 3（上書き、変化なし）→ 偶然 no-op だが意図は不明確 △ |
+
+### 修正
+
+`advanceEnrollmentAfterSessionComplete` に idempotency guard を追加:
+
+```typescript
+// enrollment がすでに先の day を指している場合はスキップ
+if (enrollment.current_program_day_id !== session.program_day_id) {
+  return;
+}
+```
+
+このガードにより:
+- `enrollment.current_program_day_id === session.program_day_id` の場合のみ advance する
+- それ以外（enrollment が既に先に進んでいる）は no-op になる
+
+### 動作確認マトリクス（修正後）
+
+| シナリオ | guard 評価 | 結果 |
+|---|---|---|
+| 通常の初回 Finish（current = session day） | `current === session.day` → pass | 正常に advance ✅ |
+| 同一 session 再 Finish | Finish route が early return → guard に到達しない | advance なし ✅ |
+| 古い day の新規 session を Finish | `current ≠ session.day` → skip | advance なし ✅ |
+| 最終 day 完了後の再 Finish（同一 session） | Finish route が early return | enrollment 維持 ✅ |
+| 最終 day 完了後の新規 session Finish | enrollment が `completed` → `eq("status","active")` で取得できない → return | advance なし ✅ |
+
+### 修正ファイル
+
+`lib/workout/enrollment.ts` — `advanceEnrollmentAfterSessionComplete` 内、enrollment 取得後・`findNextProgramDayId` 呼び出し前に guard を追加
+
+---
+
 ## 未対応事項（今後の課題）
 
 | 項目 | 概要 |
 |---|---|
-| 同一 day re-do 防止 | 同じ day を再実行すると enrollment が 2 day 進んでしまう。session の program_day_id と enrollment の current_program_day_id を比較して skip するロジックが必要 |
-| program 完走後の re-enroll | status='completed' になった enrollment を active に戻す、または新規 enrollment を作るフローが未実装 |
-| Summary から次 day の Train への直接リンク | 現在は「Back to Train」でトップに戻る。Detail → Go to Train の迂回が必要 |
+| program 完走後の re-enroll | status='completed' になった enrollment を active に戻す、または新規 enrollment を作るフローが未実装（D-4 候補） |
+| Summary から次 day の Train への直接リンク | 現在は「Back to Train」でトップに戻る。Detail → Go to Train の迂回が必要（D-2 候補） |
 | completion 通知 UI | program 完走時の専用ページ / モーダルは未実装 |

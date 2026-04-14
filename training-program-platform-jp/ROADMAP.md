@@ -78,6 +78,7 @@
 | **C-6: Program Detail week preview** | **✅ 完了（2026-04-14）** |
 | **C-7: 4本目 seed — Dumbbell Full Body Base** | **✅ fully closed（2026-04-14）** |
 | **D-1: day progression — Summary Up Next / Program Complete UI** | **✅ 完了（2026-04-14）** |
+| **D-3: idempotency guard — 同一 day 再実行で enrollment が 2 回進む問題修正** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -116,11 +117,11 @@
 
 ### 利用完遂モード — 次フェーズ候補
 
-| 優先 | タスク | 概要 |
-|---|---|---|
-| D-2 | Summary → 次 day への直接リンク | Back to Train の迂回を解消。current enrollment day に直接飛ぶ CTA |
-| D-3 | re-do 防止（同一 day 2 回 Finish 問題） | session.program_day_id と enrollment.current_program_day_id を比較して advance を skip |
-| D-4 | program 完走後 re-enroll | status='completed' enrollment からの再開フロー |
+| 優先 | タスク | 概要 | 状態 |
+|---|---|---|---|
+| D-2 | Summary → 次 day への直接リンク | Back to Train の迂回を解消。current enrollment day に直接飛ぶ CTA | 未着手 |
+| D-3 | re-do 防止（同一 day 2 回 Finish 問題） | session.program_day_id と enrollment.current_program_day_id を比較して advance を skip | **✅ 完了** |
+| D-4 | program 完走後 re-enroll | status='completed' enrollment からの再開フロー | 未着手 |
 
 ### C-2 完了メモ
 

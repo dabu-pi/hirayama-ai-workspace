@@ -253,6 +253,14 @@ export async function findNextProgramDayId(
  *   Rationale: nulling it loses information about where the user was.
  *   The UI can check status='completed' to know the program is done.
  *
+ * Idempotency guard (D-3):
+ *   Advancement only occurs when enrollment.current_program_day_id matches
+ *   session.program_day_id. If the enrollment has already moved past the
+ *   session's day (e.g. a stale session for an old day is re-finished, or a
+ *   new session was started for an already-completed day), this function
+ *   returns without modifying the enrollment. This prevents both regression
+ *   (rolling back to an earlier day) and double-advance.
+ *
  * Silently returns on any error — session finish should not fail because of enrollment.
  */
 export async function advanceEnrollmentAfterSessionComplete(
@@ -303,7 +311,14 @@ export async function advanceEnrollmentAfterSessionComplete(
 
     if (enrollmentError || !enrollment) return;
 
-    // 3. Find next day
+    // 3. Idempotency guard: only advance when the session's day is still the
+    //    enrollment's current day. If current_program_day_id has already moved
+    //    past session.program_day_id, the day was already processed — skip.
+    if (enrollment.current_program_day_id !== session.program_day_id) {
+      return;
+    }
+
+    // 4. Find next day
     const nextDayId = await findNextProgramDayId(session.program_day_id);
 
     if (nextDayId) {
