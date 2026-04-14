@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（S-3 /train entry resolution — blocked state 完了）
+最終更新: 2026-04-14（S-4 session completion → enrollment advancement 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -91,6 +91,7 @@
 | **H-4b: e1RM Trend — primary T1 lift の Epley e1RM 推移** | **✅ 完了（2026-04-14）** |
 | **S-2: Home Resume/Start CTA — in-progress 判定で Resume/Start を切り替え** | **✅ 完了（2026-04-14）** |
 | **S-3: /train entry resolution — blocked state で別 day 起動を防止** | **✅ 完了（2026-04-14）** |
+| **S-4: session completion → enrollment advancement deterministic 化** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -109,6 +110,23 @@
 2. 次候補: week preview の拡張（T1/T2/T3 表示 / セット数・レップ数折りたたみ）
 3. 次候補: 4本目プログラム seed ← **C-7 として実装済み（live SQL 実行待ち）**
 4. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
+
+### S-4 完了メモ（2026-04-14）
+
+- **発見した問題（recovery gap）:** `/api/workout-sessions/[id]/finish` の early-return パス（`session.status === 'completed'` 分岐）が `advanceEnrollmentAfterSessionComplete` を呼ばなかった。session 更新は成功したが enrollment advance がネットワークエラー等で失敗した場合、再試行してもこの分岐に入り enrollment が永続的にスタックする問題があった。
+- **修正:** 早期リターン前にも `advanceEnrollmentAfterSessionComplete` を呼ぶ。`advanceEnrollmentAfterSessionComplete` 内の idempotency guard（D-3: `current_program_day_id !== session.program_day_id` で skip）により、enrollment がすでに進んでいれば no-op になる。
+- **追加:** `revalidatePath("/")` を finish route に追加し、Home の progress / CTA が session 完了後に確実にリフレッシュされるようにした。
+- **D-1〜D-4 で実装済みだった部分:**
+  - `advanceEnrollmentAfterSessionComplete()` — enrollment 進行 + 最終 day 完了時の `status='completed'` への遷移
+  - `findNextProgramDayId()` — week_number/day_number 順で次 day を解決
+  - Finish ボタン UI（`WorkoutScreen.handleFinish()`）と不完了 set 確認ダイアログ
+  - D-3 idempotency guard（`current_program_day_id === session.program_day_id` チェック）
+  - Summary 画面の `isProgramCompleted` / Up Next / Restart Program CTA（D-1/D-2/D-4）
+- **最終 day の設計:**
+  - `findNextProgramDayId` が null → `enrollment.status = 'completed'`、`current_program_day_id` は最後の day のまま保持（情報損失を防ぐため null にしない）
+  - Home の active-program クエリは `status = 'active'` のみを対象とするため、完了済み enrollment は自動的に非表示になる
+- **変更ファイル:** `app/api/workout-sessions/[id]/finish/route.ts` のみ（2箇所）
+- TypeScript エラーなし / tsc pass 確認済み
 
 ### S-3 完了メモ（2026-04-14）
 

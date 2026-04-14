@@ -1,6 +1,90 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（S-3 /train entry resolution 完了）
+最終更新: 2026-04-14（S-4 session completion → enrollment advancement 完了）
+
+## 2026-04-14 S-4 — Session Completion → Enrollment Advancement
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| session finish → `advanceEnrollmentAfterSessionComplete` 呼び出し（新規 path） | **完了 ✅** |
+| 既存 completed session の early-return で enrollment advance が skip される recovery gap を修正 | **完了 ✅** |
+| `revalidatePath("/")` 追加（Home progress 即時反映） | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+
+### 実装概要
+
+S-4 の大部分（finish ボタン / API / enrollment 進行 / idempotency guard / summary 画面）は D-1〜D-4 で実装済みだった。
+今回修正したのは 1 箇所のみ: `POST /api/workout-sessions/[id]/finish` の `session.status === 'completed'` early-return パス。
+
+#### 修正前の問題（recovery gap）
+
+```
+first POST:
+  1. UPDATE workout_sessions SET status='completed' ✅
+  2. advanceEnrollmentAfterSessionComplete()         ← 失敗 (silent)
+     → enrollment がスタックしたまま
+
+retry POST (session already completed):
+  session.status === 'completed' → early return     ← advance は呼ばれない
+  → enrollment が永続的にスタック
+```
+
+#### 修正後
+
+```
+retry POST (session already completed):
+  session.status === 'completed'
+  → advanceEnrollmentAfterSessionComplete() を呼ぶ  ← 追加
+    - enrollment 進んでいれば idempotency guard で no-op
+    - enrollment スタックなら advance を実行して回復
+  → 200 return
+```
+
+### 状態遷移ルール（完全版）
+
+| 条件 | 挙動 |
+|---|---|
+| in_progress session → finish | `status='completed'`, `finished_at=now()`, enrollment 進行 |
+| 既に completed session → retry finish | session 更新なし、enrollment advance を retry して return 200 |
+| 中間 day 完了 | `enrollment.current_program_day_id` = 次の day UUID |
+| 最終 day 完了 | `enrollment.status = 'completed'`、`current_program_day_id` は最終 day のまま保持 |
+| enrollment.current_program_day_id ≠ session.program_day_id（idempotency guard） | advance を skip（D-3: 二重進行防止） |
+| incomplete sets > 0, forceFinish = false | 409 + `requiresConfirmation: true` → ブラウザ確認 dialog |
+| broken data (program_day_id null, no enrollment) | silent skip、session のみ完了扱い |
+
+### 最終 day の設計判断
+
+`findNextProgramDayId` が null（プログラム完走）のとき:
+- `enrollment.status = 'completed'` に更新
+- `current_program_day_id` は**最後の day のまま保持**（null にしない）
+- 理由: どこまでやったかの情報を保持するため。Home は `status='active'` のみを対象とするため完了 enrollment は自動的に非表示になる
+
+### S-3 との整合
+
+| ケース | 挙動 |
+|---|---|
+| completed session の `program_day_id` で `/train` 再入場 | `resolveTrainingEntry` は `status='in_progress'` のみを検索 → in_progress なし → `mode='start'` → StartSessionScreen（re-session 可能） |
+| Home に戻ると | `force-dynamic` で毎回再取得 + `revalidatePath("/")` で即時反映 |
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `app/api/workout-sessions/[id]/finish/route.ts` | `session.status === 'completed'` 分岐内に `advanceEnrollmentAfterSessionComplete` 呼び出しを追加。`revalidatePath("/")` を追加 |
+
+### 既存実装（D-1〜D-4）の再確認
+
+| 機能 | 場所 | 状態 |
+|---|---|---|
+| `findNextProgramDayId()` — 次 day 解決 | `lib/workout/enrollment.ts` | ✅ 実装済み |
+| `advanceEnrollmentAfterSessionComplete()` — enrollment 進行 | `lib/workout/enrollment.ts` | ✅ 実装済み |
+| D-3 idempotency guard | `lib/workout/enrollment.ts` | ✅ 実装済み |
+| Finish ボタン + 確認 dialog | `components/workout/WorkoutScreen.tsx` | ✅ 実装済み |
+| Summary (isProgramCompleted / Up Next / Restart) | `lib/workout/workout-summary.ts` + `WorkoutSummaryScreen.tsx` | ✅ 実装済み |
+
+---
 
 ## 2026-04-14 S-3 — /train Entry Resolution (blocked state)
 

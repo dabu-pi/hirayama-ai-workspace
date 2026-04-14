@@ -120,6 +120,16 @@ export async function POST(request: Request, { params }: RouteContext) {
     const incompleteSetCount = await countIncompleteSets(params.id, supabase);
 
     if (session.status === "completed") {
+      // S-4: Recovery path — if the session was previously marked complete but
+      // enrollment advancement silently failed (network error, DB blip), retrying
+      // the finish request would have skipped advanceEnrollmentAfterSessionComplete
+      // and left the enrollment permanently stuck on the old day.
+      //
+      // By calling advance here too, we get idempotent recovery for free:
+      //   - If enrollment already advanced → idempotency guard in advance() returns immediately.
+      //   - If enrollment was NOT advanced → advance() completes it now.
+      await advanceEnrollmentAfterSessionComplete(params.id, userId);
+
       return NextResponse.json({
         id: session.id,
         status: "completed",
@@ -169,6 +179,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     await advanceEnrollmentAfterSessionComplete(params.id, userId);
 
     revalidatePath("/train");
+    revalidatePath("/"); // Ensure Home progress / CTA reflects new enrollment state
 
     return NextResponse.json({
       id: params.id,
