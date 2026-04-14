@@ -160,6 +160,9 @@ export function WorkoutSummaryScreen({
                     {exercise.exerciseNameEn}
                   </strong>
                   <span className={styles.exerciseSub}>{exercise.exerciseNameJa}</span>
+                  {exercise.wasSwapped && (
+                    <span className={styles.swappedBadge}>Swapped this session</span>
+                  )}
                 </div>
                 <span className={styles.countPill}>
                   {exercise.completedSetCount} / {exercise.totalVisibleSetCount} sets

@@ -1,6 +1,46 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（H-1 Session History 実装完了）
+最終更新: 2026-04-14（S-1 Exercise Swap MVP 完了）
+
+## 2026-04-14 S-1 — Exercise Swap MVP
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| API（PATCH swap endpoint） | **実装済み ✅**（S-1 以前から） |
+| `postSwapExercise` クライアント関数 | **実装済み ✅**（S-1 以前から） |
+| UI modal（Add/Swap 共有） | **実装済み ✅**（S-1 以前から） |
+| `was_swapped` DB 列 | **実装済み ✅**（S-1 以前から） |
+| Train「Swapped」バッジ追加 | **完了 ✅** |
+| Summary「Swapped this session」バッジ追加 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/swap-spec.md` 作成 | **完了 ✅** |
+
+### DISCOVERY
+
+S-1 のコア機能（API・クライアント・モーダル・型・DB）は実装済みだった。
+今回追加したのは視覚フィードバック（Swapped バッジ）のみ。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `components/workout/WorkoutScreen.tsx` | `wasSwapped` 時に Swapped バッジ表示（`headerHint` を差し替え） |
+| `components/workout/WorkoutScreen.module.css` | `.swappedBadge` スタイル追加 |
+| `components/summary/WorkoutSummaryScreen.tsx` | `wasSwapped` 時に「Swapped this session」バッジ追加 |
+| `components/summary/WorkoutSummaryScreen.module.css` | `.swappedBadge` スタイル追加 |
+| `docs/swap-spec.md` | 新規作成（API仕様・UIフロー・blocker条件・スコープ外） |
+
+### OPEN ISSUES
+
+| ID | 内容 |
+|---|---|
+| S-2 | 恒久 swap（program day への書き戻し） |
+| S-3 | 代替種目の自動推薦 |
+| S-4 | `original_exercise_id` DB 列追加（元種目追跡） |
+
+---
 
 ## 2026-04-14 H-1 — Session History（直近セッション一覧）
 

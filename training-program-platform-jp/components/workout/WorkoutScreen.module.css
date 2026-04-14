@@ -224,6 +224,21 @@
   font-size: var(--text-xs);
 }
 
+.swappedBadge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+}
+
 .setTable {
   display: grid;
   gap: var(--space-2);

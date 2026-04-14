@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（H-1 Session History 実装完了）
+最終更新: 2026-04-14（S-1 Exercise Swap MVP 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -81,6 +81,7 @@
 | **D-3: idempotency guard — 同一 day 再実行で enrollment が 2 回進む問題修正** | **✅ 完了（2026-04-14）** |
 | **D-2: Summary → 次 day 直接 CTA（Go to Next Day）** | **✅ 完了（2026-04-14）** |
 | **H-1: Session History — 直近セッション一覧** | **✅ 完了（2026-04-14）** |
+| **S-1: Exercise Swap MVP — 当日 session 限定の種目差し替え** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -138,7 +139,18 @@
 | D-2 | Summary → 次 day への直接リンク | Back to Train の迂回を解消。current enrollment day に直接飛ぶ CTA | **✅ 完了** |
 | D-3 | re-do 防止（同一 day 2 回 Finish 問題） | session.program_day_id と enrollment.current_program_day_id を比較して advance を skip | **✅ 完了** |
 | H-1 | Session History — 直近セッション一覧 | `/session-history` ページ。実施日・prog・week/day・status・種目数 | **✅ 完了** |
+| S-1 | Exercise Swap MVP | Train 画面で当日 session 限定の種目差し替え。Swapped バッジ表示 | **✅ 完了** |
 | D-4 | program 完走後 re-enroll | status='completed' enrollment からの再開フロー | 未着手 |
+
+### S-1 完了メモ（2026-04-14）
+
+- DISCOVERY: API（PATCH）・クライアント関数（postSwapExercise）・UI ハンドラ・モーダル・型定義・DB 列はすべて S-1 以前から実装済みだった
+- 追加実装: Swapped バッジ（紫）を Train / Summary の exercise card ヘッダーに追加
+  - `WorkoutScreen.tsx`: `wasSwapped === true` のとき「履歴へ」ヒントを「Swapped」バッジに差し替え
+  - `WorkoutSummaryScreen.tsx`: `wasSwapped === true` のとき種目名の下に「Swapped this session」バッジを追加
+  - 各 CSS module に `.swappedBadge` スタイル追加（`rgba(167,139,250,0.14)` / `#c4b5fd`）
+- TypeScript エラーなし / modal 開閉・置換対象表示を preview で確認済み
+- `docs/swap-spec.md` 作成（API 仕様・UI フロー・ブロック条件・スコープ外）
 
 ### H-1 完了メモ（2026-04-14）
 

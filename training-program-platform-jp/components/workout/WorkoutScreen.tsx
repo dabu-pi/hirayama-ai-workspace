@@ -998,7 +998,11 @@ export function WorkoutScreen({
                 <span>{exercise.exerciseNameEn}</span>
                 <span aria-hidden="true">→</span>
               </Link>
-              <span className={styles.headerHint}>履歴へ</span>
+              {exercise.wasSwapped ? (
+                <span className={styles.swappedBadge}>Swapped</span>
+              ) : (
+                <span className={styles.headerHint}>履歴へ</span>
+              )}
             </div>
 
             <div className={styles.swipeHint}>
