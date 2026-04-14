@@ -70,9 +70,14 @@ function NoProgramCard() {
 }
 
 function ErrorCard({ message }: { message: string }) {
+  // Always offer a Sign In escape so users stuck on this card (e.g. stale
+  // auth cookies causing data-load failures) can reach /login and recover.
   return (
     <div className={`${styles.emptyCard} ${styles.errorCard}`}>
       <p className={styles.emptyBody}>{message}</p>
+      <Link className={styles.emptyAction} href="/login">
+        Sign In
+      </Link>
     </div>
   );
 }

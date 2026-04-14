@@ -637,6 +637,11 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
     };
   }
 
+  // Tracks whether we got past auth resolution before a failure — so the
+  // catch block doesn't mis-report unauthenticated users as authenticated
+  // and leave them stranded on an error card with no Sign In path.
+  let authConfirmed = false;
+
   try {
     const serverClient = createSupabaseServerClient();
     const scopedUser = await serverClient.auth.getUser();
@@ -645,6 +650,8 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
     if (!userId) {
       return { views: [], isAuthenticated: false, errorMessage: null };
     }
+
+    authConfirmed = true;
 
     const enrollments = await selectActiveEnrollments(serverClient, userId);
 
@@ -863,6 +870,14 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
     return { views, isAuthenticated: true, errorMessage: null };
   } catch (error) {
     console.error("Failed to load active program view.", error);
+
+    // If the failure happened before we confirmed a signed-in user, treat as
+    // unauthenticated instead of showing an error card — this covers the
+    // common case of stale / expired auth cookies where auth.getUser() itself
+    // throws. The UI's NotSignedIn card offers the Sign In link.
+    if (!authConfirmed) {
+      return { views: [], isAuthenticated: false, errorMessage: null };
+    }
 
     return {
       views: [],

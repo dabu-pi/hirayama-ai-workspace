@@ -1,6 +1,76 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-15（S-7 Restart Program フロー 完了）
+最終更新: 2026-04-15（S-7 後の auth blocker 解消 / deployed environment での sign-in 導線復旧）
+
+## 2026-04-15 Auth blocker fix — ErrorCard の sign-in 導線復旧
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `ActiveProgramCard` の `ErrorCard` に Sign In リンク追加 | **完了 ✅** |
+| `getActiveProgramView` — 認証未確定で throw した場合は `isAuthenticated: false` を返す | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| localhost での unauth home 再確認（Sign In card 表示）| **pass ✅** |
+| localhost での stale cookie シミュレーション（`sb-*` ダミー値）→ Sign In card 表示 | **pass ✅** |
+
+### 現象（Vercel production）
+
+- Home (`/`) を開くと "Could not load your active program. Please try again." の赤い error card が表示
+- Home にも他ページにも header / nav に Sign In リンクが存在せず、error card の中にも Sign In なし
+- ユーザーは `/login` へたどり着けず **E2E 検証が blocker で停止**
+
+### ROOT CAUSE
+
+1. **`getActiveProgramView` の catch 節が誤って `isAuthenticated: true` を返していた**
+   - `auth.getUser()` 自体が throw する経路（expired / broken session cookie 等）でも catch が発火
+   - catch 節では auth が確認できたかに関わらず `isAuthenticated: true` + errorMessage をセット
+   - localhost では常に fresh state で throw しないため顕在化せず、実ユーザー環境（cookie が蓄積）でのみ再現
+
+2. **`ErrorCard` が escape link を持たなかった**
+   - `ActiveProgramCard` の優先順位は `errorMessage → !isAuthenticated → NoProgramCard`
+   - errorMessage が立つと Sign In card が描画されず、sign in 導線を完全に失う
+   - layout にも global header がなく、error card の外側に login 導線が存在しない
+
+**localhost で通る理由:** fresh dev session では `auth.getUser()` が throw しない → userId=null 経路 → `isAuthenticated:false, errorMessage:null` → NotSignedIn 描画。Vercel 側でも fresh cookie では同じく正常。**"以前 sign in したことがあるブラウザ" の残存 cookie 経由でのみ誤った catch に入る。**
+
+### 変更内容
+
+**components/home/ActiveProgramCard.tsx**
+- `ErrorCard` に `/login` への Sign In リンクを追加。どんな error path でも sign in 導線を保つ
+
+**lib/workout/active-program.ts**
+- `authConfirmed: boolean` フラグを追加。`auth.getUser()` で `userId` が確定した直後に true にセット
+- catch 節で `authConfirmed === false` の場合は `isAuthenticated: false` で返す（stale cookie → fresh "Sign in" card にフォールバック）
+- auth 確定後の DB failure のみ従来どおり errorMessage を設定（実害のある error のみ表示）
+
+### 環境変数・設定変更
+
+- **なし**。Vercel 側の env / middleware / Supabase 設定は変更していない
+- middleware の matcher は変更せず（`/workout-summary/*` と `/exercise-history/*` のみ保護。Home は public のまま）
+- auth callback URL / site URL / cookie 設定は既定のまま
+
+### CHECKS
+
+**localhost（dev server）:**
+- 未ログイン GET `/` → "Sign in to track your progress" + "Sign In" link（errCard=false, signIn=true, loginLink=1）
+- 破損 cookie 付き GET `/` → "Sign in to track your progress" + "Sign In" link（errCard=false, signIn=true, loginLink=1）
+- `tsc --noEmit` → pass
+
+**Vercel（deploy 後に確認するポイント）:**
+- 未ログイン `/` → Sign In card が表示される
+- stale cookie で `/` → 正常に Sign In card へフォールバック（または errorCard に Sign In link が見える）
+- `/login` でサインイン → `/programs` 遷移 → Home で active program card が正常表示
+
+### NEXT
+
+- Vercel 反映後、ユーザーは `https://training-program-platform-jp.vercel.app` で以下を確認:
+  1. `/` を開き Sign In card が出ること
+  2. "Sign In" リンクから `/login` に遷移できること
+  3. sign up / sign in 後に `/programs` → Home に戻り、active program card が progress 表示で出ること
+- その後 S-7 E2E（Restart Program ボタン → Home の新 active card）を継続
+
+---
 
 ## 2026-04-15 S-7 — Restart Program フロー
 
