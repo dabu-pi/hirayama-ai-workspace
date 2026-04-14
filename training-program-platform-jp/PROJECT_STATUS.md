@@ -1,6 +1,45 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（C-7 実装完了 — live SQL 実行待ち）
+最終更新: 2026-04-14（D-1 day progression UI 完了）
+
+## 2026-04-14 D-1 — day progression（Summary Up Next / Program Complete）
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| DB の day advancement | **既存実装が稼働中**（`advanceEnrollmentAfterSessionComplete` / `findNextProgramDayId`） |
+| `WorkoutSummaryView` 型拡張 | **完了 ✅** |
+| `getWorkoutSummaryView` に next day 解決追加 | **完了 ✅** |
+| Summary UI — Up Next / Program Complete | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| ローカル確認（`/programs` 4 本・filter・認証ガード） | **pass ✅** |
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `WorkoutSummaryView` に `isProgramCompleted` / `nextProgramDayLabel` 追加 |
+| `lib/workout/workout-summary.ts` | `findNextProgramDayId` を呼び出し next day ラベルを解決。`buildSummaryView` に渡す |
+| `components/summary/WorkoutSummaryScreen.tsx` | Up Next カード・Program Complete カード・hero 色・back リンク先を分岐 |
+| `components/summary/WorkoutSummaryScreen.module.css` | `.heroCompleted` / `.nextUpCard` / `.completedCard` を追加 |
+| `docs/day-progression-spec.md` | 仕様・edge case・未対応事項を新規作成 |
+
+### Summary の表示分岐
+
+| 状態 | 表示 |
+|---|---|
+| 通常完了（次 day あり） | Up Next: Week N / Day N（青カード）/ Back to Train |
+| プログラム完走（最終 day） | 完走メッセージ（黄金カード）/ Back to Programs |
+| session 未完了 / エラー | state ごとのメッセージ |
+
+### 未対応（今後の課題）
+
+- 同一 day 再実行で enrollment が 2 day 進む問題（D-3 候補）
+- Summary → 次 day 直接リンク（D-2 候補）
+- program 完走後の re-enroll フロー（D-4 候補）
+
+---
 
 ## 2026-04-14 C-7 — Dumbbell Full Body Base（4本目 seed）
 
@@ -11,8 +50,8 @@
 | seed SQL（dumbbell-full-body-base.sql） | **実装完了・commit 3551def ✅** |
 | program-metadata.sql（general-fitness / dumbbell タグ追加） | **更新完了・commit 3551def ✅** |
 | mock catalog エントリ（program-catalog.ts） | **追加済み ✅** |
-| live Supabase 反映 | **手動 SQL 実行待ち ⏳** |
-| program creation フェーズ | **C-7 live 完了後に一時終了** |
+| live Supabase 反映 | **fully closed ✅（2026-04-14）** |
+| program creation フェーズ | **一時終了 ✅** |
 
 ### seed 構成
 

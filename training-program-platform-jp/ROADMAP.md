@@ -76,7 +76,8 @@
 | **C-5: gzclp-base live correction SQL + runbook** | **✅ fully closed（2026-04-14）** |
 | **upper-lower-base tags live fix** | **✅ 完了（2026-04-14、live-only 補修）** |
 | **C-6: Program Detail week preview** | **✅ 完了（2026-04-14）** |
-| **C-7: 4本目 seed — Dumbbell Full Body Base（実装完了）** | **✅ commit 3551def / live SQL 実行待ち ⏳** |
+| **C-7: 4本目 seed — Dumbbell Full Body Base** | **✅ fully closed（2026-04-14）** |
+| **D-1: day progression — Summary Up Next / Program Complete UI** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -96,17 +97,30 @@
 3. 次候補: 4本目プログラム seed ← **C-7 として実装済み（live SQL 実行待ち）**
 4. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
 
-### C-7 live 完了後の方針（2026-04-14 確定）
+### C-7 / D-1 完了後の方針（2026-04-14 確定）
 
-- program creation フェーズをいったん終了する
-- 次フェーズは **利用完遂モード** に切り替える
-- 対象: enrollment / day progression / daily logging / history / swap / completion の整備
-- 最初の着手点: **day progression（セッション完了後の次 day 自動移行）**
-  - 理由: 他のすべての流れ（logging → history → swap → completion）の前提になる
-  - 現状は StartSession → Train → Finish → Summary の 1 回限りフローは動いているが、
-    「翌日に戻ってきたとき正しい day が表示されるか」が未確認・未整備
-  - enrollment.current_program_day_id の更新タイミングと Finish 後の advancement を整備することで、
-    継続利用の根幹が確立する
+- program creation フェーズをいったん終了（C-7 fully closed）
+- D-1 にて day progression の実態調査と Summary UI を完成
+- **DB レベルの day advancement は C-7 以前から既に実装済みだった**
+  - `advanceEnrollmentAfterSessionComplete` / `findNextProgramDayId` / `resolveStartProgramDayId` が稼働中
+  - 欠けていたのは Summary ページへの "Up Next" / "Program Complete" の表示のみ → D-1 で補完済み
+
+### D-1 完了メモ（2026-04-14）
+
+- `types/workout.ts`: `WorkoutSummaryView` に `isProgramCompleted` / `nextProgramDayLabel` を追加
+- `lib/workout/workout-summary.ts`: `findNextProgramDayId` を呼び出し next day ラベルを解決
+- `WorkoutSummaryScreen.tsx`: Up Next カード（青）/ Program Complete カード（黄金）/ hero 色分岐を追加
+- `WorkoutSummaryScreen.module.css`: `.heroCompleted` / `.nextUpCard` / `.completedCard` を追加
+- `docs/day-progression-spec.md`: 仕様・edge case・未対応事項を記録
+- TypeScript エラーなし / `/programs` 4 本表示・新 filter chip 確認済み
+
+### 利用完遂モード — 次フェーズ候補
+
+| 優先 | タスク | 概要 |
+|---|---|---|
+| D-2 | Summary → 次 day への直接リンク | Back to Train の迂回を解消。current enrollment day に直接飛ぶ CTA |
+| D-3 | re-do 防止（同一 day 2 回 Finish 問題） | session.program_day_id と enrollment.current_program_day_id を比較して advance を skip |
+| D-4 | program 完走後 re-enroll | status='completed' enrollment からの再開フロー |
 
 ### C-2 完了メモ
 

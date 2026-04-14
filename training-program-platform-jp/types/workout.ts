@@ -163,6 +163,16 @@ export type WorkoutSummaryView = {
   totalCompletedSets: number;
   totalVisibleSets: number;
   exercises: WorkoutSummaryExercise[];
+  /**
+   * True when the completed session was the final day of the program.
+   * Derived from findNextProgramDayId returning null for the session's program_day_id.
+   */
+  isProgramCompleted: boolean;
+  /**
+   * Human-readable label for the next session (e.g. "Week 2 / Day 1").
+   * Null when isProgramCompleted is true or program_day_id is unavailable.
+   */
+  nextProgramDayLabel: string | null;
 };
 
 export type WorkoutSummaryState =

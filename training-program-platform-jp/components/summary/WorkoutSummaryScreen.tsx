@@ -27,12 +27,13 @@ function formatDateTime(value: string | null) {
   return parsed.toLocaleString("ja-JP");
 }
 
-function resolveStateTitle(state: WorkoutSummaryState) {
+function resolveStateTitle(state: WorkoutSummaryState, isProgramCompleted: boolean) {
   if (state === "loading") return "Loading workout summary";
   if (state === "unauthenticated") return "Sign in required";
   if (state === "not_found") return "Workout summary not found";
   if (state === "not_completed") return "Workout still in progress";
   if (state === "error") return "Workout summary unavailable";
+  if (isProgramCompleted) return "Program complete";
   return "Workout complete";
 }
 
@@ -65,21 +66,27 @@ export function WorkoutSummaryScreen({
   const isReady = state === "ready" && summary !== null;
   const showMetadata = summary !== null;
   const stateBody = resolveStateBody(state, errorMessage);
+  const isProgramCompleted = summary?.isProgramCompleted ?? false;
+  const nextProgramDayLabel = summary?.nextProgramDayLabel ?? null;
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.backLink} href="/train">
+        <Link className={styles.backLink} href={isProgramCompleted ? "/programs" : "/train"}>
           <span aria-hidden="true">&larr;</span>
-          <span>Back to Train</span>
+          <span>{isProgramCompleted ? "Back to Programs" : "Back to Train"}</span>
         </Link>
       </header>
 
-      <section className={styles.hero}>
+      <section className={isProgramCompleted ? styles.heroCompleted : styles.hero}>
         <span className={styles.eyebrow}>
-          {isReady ? "Workout Complete" : "Workout Summary"}
+          {isReady
+            ? isProgramCompleted
+              ? "Program Complete"
+              : "Workout Complete"
+            : "Workout Summary"}
         </span>
-        <h1 className={styles.title}>{resolveStateTitle(state)}</h1>
+        <h1 className={styles.title}>{resolveStateTitle(state, isProgramCompleted)}</h1>
         {showMetadata ? (
           <>
             <p className={styles.meta}>
@@ -88,6 +95,17 @@ export function WorkoutSummaryScreen({
             <p className={styles.subtle}>
               Finished at {formatDateTime(summary.finishedAt)}
             </p>
+            {isReady && nextProgramDayLabel && (
+              <div className={styles.nextUpCard}>
+                <span className={styles.nextUpLabel}>Up Next</span>
+                <span className={styles.nextUpValue}>{nextProgramDayLabel}</span>
+              </div>
+            )}
+            {isReady && isProgramCompleted && (
+              <div className={styles.completedCard}>
+                You finished all {summary.programTitle} sessions. Start a new program from the library.
+              </div>
+            )}
           </>
         ) : stateBody ? (
           <p className={styles.subtle}>{stateBody}</p>
@@ -147,11 +165,17 @@ export function WorkoutSummaryScreen({
       )}
 
       <div className={styles.actions}>
-        <Link className={styles.primaryAction} href="/train">
-          Back to Train
-        </Link>
+        {isProgramCompleted ? (
+          <Link className={styles.primaryAction} href="/programs">
+            Back to Programs
+          </Link>
+        ) : (
+          <Link className={styles.primaryAction} href="/train">
+            Back to Train
+          </Link>
+        )}
         <Link className={styles.secondaryAction} href="/programs">
-          Back to Programs
+          Browse Programs
         </Link>
       </div>
     </main>

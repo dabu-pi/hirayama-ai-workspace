@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { hasSupabasePublicEnv } from "@/lib/supabase/server";
+import { findNextProgramDayId } from "@/lib/workout/enrollment";
 import {
   createWorkoutQueryClient,
   getAuthenticatedWorkoutUserId
@@ -218,7 +219,9 @@ function buildSummaryView(
   programWeekLabel: string,
   workoutSessionExercises: WorkoutSessionExerciseRow[],
   exercises: ExerciseRow[],
-  visibleSets: WorkoutSetRow[]
+  visibleSets: WorkoutSetRow[],
+  isProgramCompleted: boolean,
+  nextProgramDayLabel: string | null
 ): WorkoutSummaryView {
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const setCounts = new Map<
@@ -278,7 +281,9 @@ function buildSummaryView(
       (total, exercise) => total + exercise.totalVisibleSetCount,
       0
     ),
-    exercises: summaryExercises
+    exercises: summaryExercises,
+    isProgramCompleted,
+    nextProgramDayLabel
   };
 }
 
@@ -335,6 +340,27 @@ export async function getWorkoutSummaryView(
       workoutSessionExercises.map((item) => item.id)
     );
 
+    // Resolve day progression state for the summary footer.
+    // findNextProgramDayId returns null for the last day of the program.
+    let isProgramCompleted = false;
+    let nextProgramDayLabel: string | null = null;
+
+    if (session.program_day_id) {
+      const nextDayId = await findNextProgramDayId(session.program_day_id);
+      if (nextDayId) {
+        const nextDay = await selectProgramDay(queryClient, nextDayId);
+        const nextWeek = await selectProgramWeek(
+          queryClient,
+          nextDay?.program_week_id ?? null
+        );
+        if (nextWeek && nextDay) {
+          nextProgramDayLabel = `Week ${nextWeek.week_number} / Day ${nextDay.day_number}`;
+        }
+      } else {
+        isProgramCompleted = true;
+      }
+    }
+
     const summary = buildSummaryView(
       session,
       program?.title ?? null,
@@ -345,7 +371,9 @@ export async function getWorkoutSummaryView(
       ),
       workoutSessionExercises,
       exercises,
-      visibleSets
+      visibleSets,
+      isProgramCompleted,
+      nextProgramDayLabel
     );
 
     return {
