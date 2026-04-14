@@ -1,6 +1,55 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（H-2 Session Detail 完了）
+最終更新: 2026-04-14（H-3 Active Program Dashboard 完了）
+
+## 2026-04-14 H-3 — Active Program Dashboard
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `ActiveProgramSession` / `ActiveProgramView` / `ActiveProgramResult` 型追加 | **完了 ✅** |
+| `lib/workout/active-program.ts` — `getActiveProgramView` 実装 | **完了 ✅** |
+| `app/page.tsx` — SSR 化（force-dynamic）+ ActiveProgramCard 組み込み | **完了 ✅** |
+| `components/home/ActiveProgramCard.tsx` + `.module.css` 新規作成 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/h3-active-program-spec.md` 作成 | **完了 ✅** |
+
+### DISCOVERY
+
+- `program_enrollments.program_id` は直接カラムとして存在 → program join に program_day → program_week 経由の traversal 不要
+- `current_program_day_id` から Continue Training URL を直接生成できる
+- 既存の `/login` がサインイン入口（`/auth/signin` は存在しない）
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `ActiveProgramSession` / `ActiveProgramView` / `ActiveProgramResult` を追加 |
+| `lib/workout/active-program.ts` | 新規作成。`getActiveProgramView()` — active enrollment → program → day/week → recent 3 sessions |
+| `app/page.tsx` | SSR 化、`ActiveProgramCard` + nav grid（Programs / Train / History）を配置 |
+| `app/page.module.css` | nav grid スタイル追加、旧 card/list スタイル削除 |
+| `components/home/ActiveProgramCard.tsx` | My Program カード（active / empty / 未認証 / エラー 4状態） |
+| `components/home/ActiveProgramCard.module.css` | カードスタイル |
+| `docs/h3-active-program-spec.md` | 新規作成 |
+
+### 表示分岐
+
+| 状態 | 表示 |
+|---|---|
+| active enrollment あり | My Program カード（タイトル・level・頻度・期間・Up Next・Continue Training・直近3セッション） |
+| 認証済み + enrollment なし | "No active program" + Browse Programs |
+| 未認証 | "Sign in to track your progress" + Sign In → `/login` |
+| エラー | エラーメッセージ |
+
+### OPEN ISSUES
+
+| ID | 内容 |
+|---|---|
+| H-3b | 全体進捗バー（完了 day 数 / 総 day 数） |
+| H-3c | 複数 active enrollment のサポート（現在 LIMIT 1） |
+
+---
 
 ## 2026-04-14 H-2 — Session Detail
 

@@ -255,6 +255,40 @@ export type WorkoutSummaryState =
   | "not_completed"
   | "error";
 
+export type ActiveProgramSession = {
+  sessionId: string;
+  /** YYYY-MM-DD */
+  startedAt: string;
+  status: WorkoutSessionStatus;
+  programWeekDayLabel: string | null;
+};
+
+export type ActiveProgramView = {
+  enrollmentId: string;
+  programId: string;
+  programSlug: string;
+  programTitle: string;
+  level: string | null;
+  /** e.g. "4 days / week" */
+  frequencyLabel: string;
+  /** e.g. "12 weeks" */
+  durationLabel: string;
+  currentProgramDayId: string | null;
+  /** e.g. "Week 2 / Day 1" — null when enrollment has no current day set */
+  currentWeekDayLabel: string | null;
+  /** /train?program=<slug>&programDayId=<uuid> or /train?program=<slug> when day is null */
+  continueUrl: string;
+  enrollmentStartedAt: string;
+  recentSessions: ActiveProgramSession[];
+};
+
+export type ActiveProgramResult = {
+  view: ActiveProgramView | null;
+  /** true = user is signed in but has no active enrollment */
+  isAuthenticated: boolean;
+  errorMessage: string | null;
+};
+
 export type WorkoutSessionFinishResponse = {
   id: string;
   status: WorkoutSessionStatus;
