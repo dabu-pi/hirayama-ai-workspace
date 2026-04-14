@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（H-4 Volume Trend first slice 完了）
+最終更新: 2026-04-14（H-4b e1RM Trend 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -88,6 +88,7 @@
 | **H-3b: Progress Bar — completedDays / totalDays / %** | **✅ 完了（2026-04-14）** |
 | **H-3c: Multi-enrollment — 複数 active enrollment の Home 表示** | **✅ 完了（2026-04-14）** |
 | **H-4: Volume Trend first slice — enrollment ごとの session volume 推移** | **✅ 完了（2026-04-14）** |
+| **H-4b: e1RM Trend — primary T1 lift の Epley e1RM 推移** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果

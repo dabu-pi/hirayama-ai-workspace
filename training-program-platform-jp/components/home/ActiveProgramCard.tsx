@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { ActiveProgramView, VolumeTrend } from "@/types/workout";
+import type { ActiveProgramView, E1RMTrend, VolumeTrend } from "@/types/workout";
 
 import styles from "./ActiveProgramCard.module.css";
 
@@ -150,6 +150,78 @@ function TrendSection({ trend }: { trend: VolumeTrend }) {
 }
 
 // ---------------------------------------------------------------------------
+// H-4b: Estimated 1RM trend section (T1 primary lift)
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders the e1RM trend for the enrollment's primary T1 lift.
+ * - 0 sessions with T1 data → returns null (section hidden)
+ * - 1 session → shows latest e1RM + "Not enough data"
+ * - 2+ sessions → shows sparkline + previous → latest + change %
+ */
+function E1RMSection({ e1rmTrend }: { e1rmTrend: E1RMTrend }) {
+  if (e1rmTrend.recentE1RMs.length === 0) return null;
+
+  const maxE1RM = Math.max(...e1rmTrend.recentE1RMs, 1);
+  const hasComparison =
+    e1rmTrend.latestE1RM !== null &&
+    e1rmTrend.previousE1RM !== null &&
+    e1rmTrend.e1rmChangePercent !== null;
+
+  return (
+    <div className={styles.trendSection}>
+      <div className={styles.trendHeader}>
+        <span className={styles.trendLabel}>Est. 1RM · T1</span>
+        <span className={styles.trendMeta}>
+          Last {e1rmTrend.recentE1RMs.length} session
+          {e1rmTrend.recentE1RMs.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Mini sparkline — bars normalized to max e1RM */}
+      <div className={styles.sparkline} aria-hidden="true">
+        {e1rmTrend.recentE1RMs.map((v, i) => {
+          const isLatest = i === e1rmTrend.recentE1RMs.length - 1;
+          return (
+            <div
+              key={i}
+              className={`${styles.sparkBar} ${isLatest ? styles.sparkBarLatest : ""}`}
+              style={{ height: `${Math.max(Math.round((v / maxE1RM) * 100), 4)}%` }}
+            />
+          );
+        })}
+      </div>
+
+      {/* E1RM comparison */}
+      <div className={styles.trendValues}>
+        {hasComparison ? (
+          <>
+            <span className={styles.trendVolume}>
+              {e1rmTrend.previousE1RM!.toFixed(1)} → {e1rmTrend.latestE1RM!.toFixed(1)} kg
+            </span>
+            <span
+              className={`${styles.trendChange} ${
+                e1rmTrend.e1rmChangePercent! >= 0 ? styles.trendUp : styles.trendDown
+              }`}
+            >
+              {e1rmTrend.e1rmChangePercent! >= 0 ? "+" : ""}
+              {e1rmTrend.e1rmChangePercent}%
+            </span>
+          </>
+        ) : (
+          <>
+            <span className={styles.trendVolume}>
+              {e1rmTrend.latestE1RM!.toFixed(1)} kg
+            </span>
+            <span className={styles.trendInsufficient}>Not enough data</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Single program card body
 // Extracted so it can be rendered for each enrollment independently.
 // ---------------------------------------------------------------------------
@@ -244,6 +316,9 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
 
       {/* ---- H-4: volume trend ---- */}
       <TrendSection trend={view.trend} />
+
+      {/* ---- H-4b: e1RM trend (primary T1 lift) ---- */}
+      <E1RMSection e1rmTrend={view.e1rmTrend} />
     </div>
   );
 }

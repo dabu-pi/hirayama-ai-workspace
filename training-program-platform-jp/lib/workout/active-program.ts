@@ -10,6 +10,7 @@ import type {
   ActiveProgramResult,
   ActiveProgramSession,
   ActiveProgramView,
+  E1RMTrend,
   VolumeTrend,
   WorkoutSessionStatus
 } from "@/types/workout";
@@ -80,6 +81,10 @@ type TrendSessionRow = {
 type TrendExerciseRow = {
   id: string;
   workout_session_id: string;
+  /** 'T1' | 'T2' | 'T3' — used to identify T1 sets for e1RM calculation */
+  exercise_type: string;
+  /** UUID of the exercise master record — used to identify the primary T1 lift */
+  exercise_id: string;
 };
 
 type TrendSetRow = {
@@ -251,6 +256,11 @@ async function selectTrendSessions(
  * H-4: Batch-fetches workout_session_exercises for the given session IDs.
  * Used to bridge sessions → sets for volume aggregation.
  */
+/**
+ * H-4 / H-4b: Batch-fetches workout_session_exercises for the given session IDs.
+ * Selects exercise_type and exercise_id to support T1 filtering for e1RM
+ * without any additional queries.
+ */
 async function selectTrendExercises(
   client: DatabaseClient,
   sessionIds: string[]
@@ -259,7 +269,7 @@ async function selectTrendExercises(
 
   const { data, error } = await client
     .from("workout_session_exercises")
-    .select("id, workout_session_id")
+    .select("id, workout_session_id, exercise_type, exercise_id")
     .in("workout_session_id", sessionIds);
 
   if (error) return [];
@@ -420,6 +430,125 @@ function buildVolumeTrend(
   }
 
   return { recentVolumes, latestVolume, previousVolume, volumeChangePercent };
+}
+
+// ---------------------------------------------------------------------------
+// E1RM trend computation (H-4b)
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the E1RMTrend for one enrollment.
+ *
+ * T1 judgment:  exercise_type = 'T1' in workout_session_exercises.
+ * Primary lift: T1 exercise_id that appears in the most sessions for this enrollment.
+ *               Ties are broken by Map insertion order (deterministic per call).
+ * Session rep:  max Epley e1RM among all qualifying T1 sets in that session.
+ * Epley:        e1RM = weight_kg × (1 + reps_done / 30)
+ *
+ * Sessions with no qualifying T1 data are excluded from recentE1RMs (not shown
+ * in sparkline) but are still counted toward TREND_SESSION_LIMIT.
+ *
+ * Defensive: returns empty trend if no T1 exercises or no qualifying sets.
+ */
+function buildE1RMTrend(
+  enrollmentId: string,
+  trendSessions: TrendSessionRow[],
+  trendExercises: TrendExerciseRow[],
+  trendSets: TrendSetRow[]
+): E1RMTrend {
+  const empty: E1RMTrend = {
+    recentE1RMs: [],
+    latestE1RM: null,
+    previousE1RM: null,
+    e1rmChangePercent: null
+  };
+
+  // Sessions for this enrollment (DESC from DB → take top N → reverse to chronological)
+  const enrollmentSessions = trendSessions
+    .filter((s) => s.program_enrollment_id === enrollmentId)
+    .slice(0, TREND_SESSION_LIMIT)
+    .reverse();
+
+  if (enrollmentSessions.length === 0) return empty;
+
+  const enrollmentSessionIds = new Set(enrollmentSessions.map((s) => s.id));
+
+  // T1 session_exercises that belong to this enrollment's sessions
+  const t1Exercises = trendExercises.filter(
+    (e) => e.exercise_type === "T1" && enrollmentSessionIds.has(e.workout_session_id)
+  );
+
+  if (t1Exercises.length === 0) return empty;
+
+  // Find the primary T1 lift: exercise_id present in the most sessions
+  const sessionsByExerciseId = new Map<string, Set<string>>();
+  for (const e of t1Exercises) {
+    const sessions = sessionsByExerciseId.get(e.exercise_id) ?? new Set<string>();
+    sessions.add(e.workout_session_id);
+    sessionsByExerciseId.set(e.exercise_id, sessions);
+  }
+
+  let primaryExerciseId = "";
+  let maxCount = 0;
+  for (const [exId, sessions] of sessionsByExerciseId) {
+    if (sessions.size > maxCount) {
+      maxCount = sessions.size;
+      primaryExerciseId = exId;
+    }
+  }
+
+  // session_exercise IDs that belong to the primary T1 lift
+  const primaryT1ExIds = new Set(
+    t1Exercises.filter((e) => e.exercise_id === primaryExerciseId).map((e) => e.id)
+  );
+
+  // exercise UUID → session_id lookup (covers all exercises, not just T1)
+  const exerciseToSession = new Map(trendExercises.map((e) => [e.id, e.workout_session_id]));
+
+  // Compute max Epley e1RM per session for the primary T1 lift
+  const sessionE1RM = new Map<string, number | null>(
+    enrollmentSessions.map((s) => [s.id, null])
+  );
+
+  for (const set of trendSets) {
+    if (!primaryT1ExIds.has(set.workout_session_exercise_id)) continue;
+    if (set.weight_kg === null || set.weight_kg <= 0) continue;
+    if (set.reps_done === null || set.reps_done <= 0) continue;
+
+    const sessionId = exerciseToSession.get(set.workout_session_exercise_id);
+    if (!sessionId || !enrollmentSessionIds.has(sessionId)) continue;
+
+    const e1rm = set.weight_kg * (1 + set.reps_done / 30); // Epley
+    const current = sessionE1RM.get(sessionId) ?? null;
+    if (current === null || e1rm > current) {
+      sessionE1RM.set(sessionId, e1rm);
+    }
+  }
+
+  // Build recentE1RMs — only sessions where primary T1 data was found
+  const sessionsWithData = enrollmentSessions.filter(
+    (s) => (sessionE1RM.get(s.id) ?? null) !== null
+  );
+
+  if (sessionsWithData.length === 0) return empty;
+
+  // Round to 1 decimal (e.g. 142.5)
+  const recentE1RMs = sessionsWithData.map((s) =>
+    Math.round((sessionE1RM.get(s.id) ?? 0) * 10) / 10
+  );
+
+  const latestE1RM = recentE1RMs[recentE1RMs.length - 1] ?? null;
+  const previousE1RM = recentE1RMs.length >= 2
+    ? (recentE1RMs[recentE1RMs.length - 2] ?? null)
+    : null;
+
+  let e1rmChangePercent: number | null = null;
+  if (latestE1RM !== null && previousE1RM !== null && previousE1RM > 0) {
+    e1rmChangePercent =
+      Math.round(((latestE1RM - previousE1RM) / previousE1RM) * 1000) / 10;
+  }
+
+  return { recentE1RMs, latestE1RM, previousE1RM, e1rmChangePercent };
 }
 
 // ---------------------------------------------------------------------------
@@ -623,6 +752,14 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       // H-4: build volume trend for this enrollment
       const trend = buildVolumeTrend(enrollment.id, trendSessions, sessionVolumeMap);
 
+      // H-4b: build e1RM trend for the primary T1 lift of this enrollment
+      const e1rmTrend = buildE1RMTrend(
+        enrollment.id,
+        trendSessions,
+        trendExercises,
+        trendSets
+      );
+
       const continueUrl = enrollment.current_program_day_id
         ? `/train?program=${programSlug}&programDayId=${enrollment.current_program_day_id}`
         : `/train?program=${programSlug}`;
@@ -647,7 +784,8 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
         completedDays,
         totalDays,
         progressPercent,
-        trend
+        trend,
+        e1rmTrend
       };
     });
 

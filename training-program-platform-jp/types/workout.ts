@@ -264,6 +264,34 @@ export type ActiveProgramSession = {
 };
 
 /**
+ * H-4b: Estimated 1RM trend for one active enrollment.
+ *
+ * Formula: Epley — e1RM = weight_kg × (1 + reps_done / 30)
+ * Scope:
+ *   - T1 exercises only (exercise_type = 'T1' in workout_session_exercises)
+ *   - Primary T1 lift = T1 exercise_id that appears in the most sessions
+ *   - Session representative = max e1RM among all T1 completed sets in that session
+ *   - Only sessions with at least one qualifying T1 set appear in recentE1RMs
+ */
+export type E1RMTrend = {
+  /**
+   * Max T1 e1RM per session in chronological order (oldest → newest).
+   * Only sessions where primary-T1 data exists are included.
+   * Values are rounded to 1 decimal (e.g. 142.5).
+   */
+  recentE1RMs: number[];
+  /** Max T1 e1RM in the most recent session with data. null when none. */
+  latestE1RM: number | null;
+  /** Max T1 e1RM in the second-most-recent session with data. null when fewer than 2. */
+  previousE1RM: number | null;
+  /**
+   * Percentage change from previousE1RM to latestE1RM (1 decimal, e.g. 4.8).
+   * null when fewer than 2 sessions with data or previousE1RM is 0.
+   */
+  e1rmChangePercent: number | null;
+};
+
+/**
  * H-4: Session volume trend for one active enrollment.
  * Volume = sum of (weight_kg × reps_done) for completed, non-deleted sets
  * across completed sessions tied to this enrollment.
@@ -311,6 +339,8 @@ export type ActiveProgramView = {
   progressPercent: number;
   /** H-4: Volume trend for this enrollment's recent completed sessions. */
   trend: VolumeTrend;
+  /** H-4b: Estimated 1RM trend for the primary T1 lift of this enrollment. */
+  e1rmTrend: E1RMTrend;
 };
 
 export type ActiveProgramResult = {

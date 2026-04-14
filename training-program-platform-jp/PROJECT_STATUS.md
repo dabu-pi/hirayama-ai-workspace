@@ -1,6 +1,73 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（H-4 Volume Trend first slice 完了）
+最終更新: 2026-04-14（H-4b e1RM Trend 完了）
+
+## 2026-04-14 H-4b — e1RM Trend (T1 primary lift)
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `E1RMTrend` 型を `types/workout.ts` に追加 | **完了 ✅** |
+| `ActiveProgramView` に `e1rmTrend: E1RMTrend` フィールドを追加 | **完了 ✅** |
+| `TrendExerciseRow` に `exercise_type` / `exercise_id` を追加（クエリ拡張） | **完了 ✅** |
+| `buildE1RMTrend` — primary T1 lift 選定 + Epley e1RM 算出 | **完了 ✅** |
+| `getActiveProgramView` — `e1rmTrend` を各 enrollment view に追加 | **完了 ✅** |
+| `E1RMSection` コンポーネント追加（sparkline + 数値比較） | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| 追加クエリ数 | **0（12クエリ固定維持）** |
+
+### T1 判定ルール
+
+| 項目 | ルール |
+|---|---|
+| T1 判定 | `workout_session_exercises.exercise_type = 'T1'`（DB カラム、NOT NULL） |
+| fallback | 不要（カラムが存在するため） |
+| Primary T1 lift | T1 exercise_id の中で最多 session 数のもの（tie は Map 挿入順で先勝ち） |
+| スコープ | enrollment 単位で独立選定（enrollment ごとに主役 lift が異なってよい） |
+
+### e1RM 定義
+
+| 項目 | 定義 |
+|---|---|
+| 計算式 | Epley: `e1RM = weight_kg × (1 + reps_done / 30)` |
+| Session 代表値 | その session 内の primary T1 completed sets のうち **e1RM 最大値** |
+| 除外条件 | `weight_kg = null / ≤ 0`（自重種目等）/ `reps_done = null / ≤ 0` |
+| 丸め | `Math.round(e1rm × 10) / 10`（1 decimal）。表示は `.toFixed(1)` |
+| sparkline | T1 データが存在する session のみ（データなし session はバー非表示） |
+
+### クエリ変更
+
+- `selectTrendExercises` の select に `exercise_type, exercise_id` を追加のみ
+- 新規クエリ追加なし → **12クエリ固定を維持**
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `E1RMTrend` 型追加、`ActiveProgramView.e1rmTrend` フィールド追加 |
+| `lib/workout/active-program.ts` | `TrendExerciseRow` に `exercise_type` / `exercise_id` 追加、`selectTrendExercises` 拡張、`buildE1RMTrend` 追加、view 構築に `e1rmTrend` 追加 |
+| `components/home/ActiveProgramCard.tsx` | `E1RMSection` コンポーネント追加、`ProgramCard` に配置 |
+
+### 表示ルール
+
+| recentE1RMs 数 | 表示 |
+|---|---|
+| 0（T1データなし） | e1RM section 非表示 |
+| 1 | sparkline 1本 + `X.X kg` + "Not enough data" |
+| 2+ | sparkline + `prev → latest (+X.X%)` |
+
+### Defensive handling
+
+| ケース | 対処 |
+|---|---|
+| T1 exercises 0件 | `empty` を返す（section 非表示） |
+| primary T1 が複数 session に均等分布 | Map 挿入順で先勝ち（安全、deterministic） |
+| `weight_kg = null` / `reps_done = null` | continue でスキップ |
+| `previousE1RM = 0` | `e1rmChangePercent = null`（0除算防止） |
+| 異種 T1 混在（Upper/Lower 等） | primary lift 1本に絞る → 比較不能を防ぐ |
+
+---
 
 ## 2026-04-14 H-4 — Volume Trend (first slice)
 
