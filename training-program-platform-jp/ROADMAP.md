@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（D-4 Re-enroll フロー完了）
+最終更新: 2026-04-14（H-2 Session Detail 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -83,6 +83,7 @@
 | **H-1: Session History — 直近セッション一覧** | **✅ 完了（2026-04-14）** |
 | **S-1: Exercise Swap MVP — 当日 session 限定の種目差し替え** | **✅ 完了（2026-04-14）** |
 | **D-4: program 完走後 re-enroll フロー** | **✅ 完了（2026-04-14）** |
+| **H-2: Session Detail — per-set weight/reps 詳細画面** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果

@@ -1,6 +1,50 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（D-4 Re-enroll フロー完了）
+最終更新: 2026-04-14（H-2 Session Detail 完了）
+
+## 2026-04-14 H-2 — Session Detail
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `WorkoutSessionDetailSet` / `WorkoutSessionDetailExercise` / `WorkoutSessionDetailView` / `SessionDetailResult` 型追加 | **完了 ✅** |
+| `lib/workout/session-detail.ts` — `getWorkoutSessionDetailView` 実装 | **完了 ✅** |
+| `app/session-history/[sessionId]/page.tsx` — 動的ルートページ作成 | **完了 ✅** |
+| `SessionDetailScreen.tsx` + `.module.css` — 詳細画面コンポーネント作成 | **完了 ✅** |
+| `SessionHistoryScreen.tsx` — "View summary" → "View detail" リンク先を `/session-history/<id>` に変更 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/h2-session-detail-spec.md` 作成 | **完了 ✅** |
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `WorkoutSessionDetailSet` / `WorkoutSessionDetailExercise` / `WorkoutSessionDetailView` / `SessionDetailResult` を追加 |
+| `lib/workout/session-detail.ts` | 新規作成。`getWorkoutSessionDetailView(sessionId)` — 8クエリ（session owner guard → exercises → sets → program day/week/program） |
+| `app/session-history/[sessionId]/page.tsx` | 動的ルートページ 新規作成（force-dynamic） |
+| `components/history/SessionDetailScreen.tsx` | 詳細画面コンポーネント 新規作成 |
+| `components/history/SessionDetailScreen.module.css` | 詳細画面スタイル 新規作成 |
+| `components/history/SessionHistoryScreen.tsx` | "View summary →" → "View detail →"、リンク先を `/session-history/<id>` へ変更 |
+| `docs/h2-session-detail-spec.md` | 新規作成 |
+
+### 画面構成
+
+- Hero: 日付 / プログラム名 — Week N / Day N / ステータスバッジ
+- Stats Grid: Started / Finished / Sets Done（completed/total）
+- Exercise List: エクササイズカード × N（T1/T2/T3 バッジ / Swapped バッジ / Added バッジ / セットテーブル）
+- セットテーブル: # / Kg / Reps / Done（✓/—）/ Note（note があるエクササイズのみ列表示）
+- 完了行: `color: --text-primary`、未完了行: `opacity: 0.5`
+
+### OPEN ISSUES
+
+| ID | 内容 |
+|---|---|
+| H-2b | セット編集（詳細画面からのインライン修正） |
+| H-2c | 種目別パフォーマンスグラフ |
+| H-3 | セッション削除・アーカイブ |
+
+---
 
 ## 2026-04-14 D-4 — Program Re-enroll
 

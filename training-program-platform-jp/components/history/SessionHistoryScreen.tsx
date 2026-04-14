@@ -83,14 +83,12 @@ export function SessionHistoryScreen({
                       ? "1 exercise"
                       : `${session.exerciseCount} exercises`}
                 </span>
-                {session.status === "completed" && (
-                  <Link
-                    className={styles.summaryLink}
-                    href={`/workout-summary/${session.sessionId}`}
-                  >
-                    View summary →
-                  </Link>
-                )}
+                <Link
+                  className={styles.summaryLink}
+                  href={`/session-history/${session.sessionId}`}
+                >
+                  View detail →
+                </Link>
               </div>
             </article>
           ))}

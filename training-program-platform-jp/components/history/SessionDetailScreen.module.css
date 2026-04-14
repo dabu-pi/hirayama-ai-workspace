@@ -1,0 +1,335 @@
+.page {
+  width: min(100%, var(--page-max));
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ---- hero ---- */
+
+.hero {
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+}
+
+.eyebrow {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  line-height: 1.2;
+}
+
+.meta {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ---- status badge ---- */
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.statusCompleted {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.statusInProgress {
+  background: rgba(251, 146, 60, 0.12);
+  color: #fdba74;
+}
+
+.statusCancelled {
+  background: rgba(113, 113, 122, 0.12);
+  color: var(--text-muted);
+}
+
+/* ---- stats grid ---- */
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+}
+
+.statLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.statValue {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* ---- status card (error / empty) ---- */
+
+.statusCard {
+  padding: var(--space-6) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ---- exercise list ---- */
+
+.exerciseList {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.exerciseCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.exerciseHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.typeT1 {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fde68a;
+}
+
+.typeT2 {
+  background: rgba(96, 165, 250, 0.14);
+  color: #93c5fd;
+}
+
+.typeT3 {
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+}
+
+.exerciseTitleWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exerciseName {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.exerciseSub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.swappedBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-1);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+  align-self: flex-start;
+}
+
+.addedBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-1);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(96, 165, 250, 0.14);
+  color: #93c5fd;
+  align-self: flex-start;
+}
+
+/* ---- set table ---- */
+
+.noSets {
+  margin: 0;
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.setTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.setTable thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.setTable th {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.setTable td {
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+}
+
+.rowCompleted td {
+  color: var(--text-primary);
+}
+
+.rowIncomplete td {
+  opacity: 0.5;
+}
+
+.colSet {
+  width: 32px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.colKg {
+  width: 72px;
+}
+
+.colReps {
+  width: 56px;
+}
+
+.colDone {
+  width: 48px;
+  text-align: center;
+}
+
+.colNote {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.checkmark {
+  color: #86efac;
+  font-weight: 700;
+}
+
+.dash {
+  color: var(--text-muted);
+}
+
+/* ---- actions ---- */
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-6);
+}
+
+.secondaryAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-weight: 600;
+}

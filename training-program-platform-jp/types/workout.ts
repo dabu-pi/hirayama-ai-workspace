@@ -210,6 +210,43 @@ export type SessionHistoryResult = {
   errorMessage: string | null;
 };
 
+export type WorkoutSessionDetailSet = {
+  id: string;
+  setNumber: number;
+  weightKg: number | null;
+  repsDone: number | null;
+  isCompleted: boolean;
+  note: string;
+};
+
+export type WorkoutSessionDetailExercise = {
+  id: string;
+  exerciseId: string;
+  exerciseSlug: string;
+  exerciseNameJa: string;
+  exerciseNameEn: string;
+  exerciseType: ExerciseType;
+  orderIndex: number;
+  wasAdded: boolean;
+  wasSwapped: boolean;
+  sets: WorkoutSessionDetailSet[];
+};
+
+export type WorkoutSessionDetailView = {
+  sessionId: string;
+  status: WorkoutSessionStatus;
+  startedAt: string;
+  finishedAt: string | null;
+  programTitle: string | null;
+  programWeekDayLabel: string | null;
+  exercises: WorkoutSessionDetailExercise[];
+};
+
+export type SessionDetailResult = {
+  detail: WorkoutSessionDetailView | null;
+  errorMessage: string | null;
+};
+
 export type WorkoutSummaryState =
   | "ready"
   | "loading"
