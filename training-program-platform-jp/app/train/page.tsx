@@ -1,6 +1,8 @@
+import { BlockedSessionScreen } from "@/components/train/BlockedSessionScreen";
 import { StartSessionScreen } from "@/components/workout/StartSessionScreen";
 import { WorkoutScreen } from "@/components/workout/WorkoutScreen";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
+import { resolveTrainingEntry } from "@/lib/workout/train-entry";
 import { getTrainProgramSelection } from "@/lib/workout/train-selection";
 import {
   findWorkoutSessionByDayId,
@@ -22,14 +24,36 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     searchParams?.programDayId
   );
 
-  // programDayId が渡されている場合: 既存セッションを探す
-  // 既存セッションがなければ StartSessionScreen（開始確認画面）を表示する
+  // programDayId が渡されている場合: セッション状態を解決してから処理する
   if (
     selectedProgram.state === "selected" &&
     selectedProgram.programDayId &&
     selectedProgram.programSlug &&
     selectedProgram.programTitle
   ) {
+    // S-3: Resolve entry mode before attempting to start/resume.
+    // - 'blocked'  → same enrollment has a different day in progress; show warning.
+    // - 'resume'   → in-progress session exists for this exact day; load it.
+    // - 'start'    → no in-progress session; show start confirmation.
+    // - 'invalid'  → resolver failed (unauthenticated / env missing); fall through
+    //               to existing session lookup for graceful degradation.
+    const entry = await resolveTrainingEntry(selectedProgram.programDayId);
+
+    if (entry.mode === "blocked") {
+      return (
+        <BlockedSessionScreen
+          programSlug={selectedProgram.programSlug}
+          programTitle={selectedProgram.programTitle}
+          blockedByDayLabel={entry.blockedByDayLabel}
+          blockedByProgramDayId={entry.blockedByProgramDayId}
+        />
+      );
+    }
+
+    // For 'resume', 'start', and 'invalid' — proceed with the existing
+    // session lookup. findWorkoutSessionByDayId returns the in-progress
+    // session for this day (resume) or null (start), so the conditional
+    // below handles both correctly.
     const [existingSession, programDayLabel] = await Promise.all([
       findWorkoutSessionByDayId(selectedProgram.programDayId),
       getProgramDayLabel(selectedProgram.programDayId)

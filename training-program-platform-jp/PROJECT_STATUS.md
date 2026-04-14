@@ -1,6 +1,56 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（S-2 Home Resume/Start CTA 完了）
+最終更新: 2026-04-14（S-3 /train entry resolution 完了）
+
+## 2026-04-14 S-3 — /train Entry Resolution (blocked state)
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `TrainEntryResolution` 型を `types/workout.ts` に追加 | **完了 ✅** |
+| `lib/workout/train-entry.ts` — `resolveTrainingEntry()` 新規作成 | **完了 ✅** |
+| `components/train/BlockedSessionScreen.tsx` / `.module.css` 新規作成 | **完了 ✅** |
+| `app/train/page.tsx` — blocked 分岐を追加 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+
+### Resolution モード
+
+| mode | 条件 | 挙動 |
+|---|---|---|
+| `resume` | 同 day の `in_progress` session が存在する | 既存フロー通過 → WorkoutScreen |
+| `start` | `in_progress` session なし、または enrollment 未作成 | 既存フロー通過 → StartSessionScreen |
+| `blocked` | 同 enrollment の**別 day** に `in_progress` session あり | `BlockedSessionScreen` を返す（新 session 作成をブロック） |
+| `invalid` | unauthenticated / supabase 不達 | 既存フロー通過（graceful degradation） |
+
+### BlockedSessionScreen
+
+- エラーカード（赤テーマ）で blocking session の day label を表示
+- CTA: "Resume [day label]" → `/train?program=<slug>&programDayId=<blockedByProgramDayId>`
+- "Start anyway" は意図的に非実装（現フェーズ外）
+- 副アクション: "Go to Home"
+
+### クエリ予算（resolveTrainingEntry — 最大 5 クエリ、N+1 なし）
+
+| ステップ | クエリ | 条件 |
+|---|---|---|
+| 1a | `program_days` で `program_week_id` を解決 | 常時 |
+| 1b | `program_weeks` で `program_id` を解決 | 常時 |
+| 2 | `program_enrollments` で active enrollment を検索 | `program_id` 解決済みの場合 |
+| 3 | `workout_sessions` で in_progress sessions を検索 | enrollment あり |
+| 4 | `getProgramDayLabel` で blocking day ラベルを取得 | mode = `blocked` のみ |
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `TrainEntryResolution` 型を追加 |
+| `lib/workout/train-entry.ts` | **新規作成** — `resolveTrainingEntry(programDayId)` |
+| `components/train/BlockedSessionScreen.tsx` | **新規作成** |
+| `components/train/BlockedSessionScreen.module.css` | **新規作成** |
+| `app/train/page.tsx` | `resolveTrainingEntry()` を呼び出し、blocked 時に `BlockedSessionScreen` を返す |
+
+---
 
 ## 2026-04-14 S-2 — Home Resume/Start CTA
 

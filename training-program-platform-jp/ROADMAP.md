@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（S-2 Home Resume/Start CTA 完了）
+最終更新: 2026-04-14（S-3 /train entry resolution — blocked state 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -90,6 +90,7 @@
 | **H-4: Volume Trend first slice — enrollment ごとの session volume 推移** | **✅ 完了（2026-04-14）** |
 | **H-4b: e1RM Trend — primary T1 lift の Epley e1RM 推移** | **✅ 完了（2026-04-14）** |
 | **S-2: Home Resume/Start CTA — in-progress 判定で Resume/Start を切り替え** | **✅ 完了（2026-04-14）** |
+| **S-3: /train entry resolution — blocked state で別 day 起動を防止** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -108,6 +109,20 @@
 2. 次候補: week preview の拡張（T1/T2/T3 表示 / セット数・レップ数折りたたみ）
 3. 次候補: 4本目プログラム seed ← **C-7 として実装済み（live SQL 実行待ち）**
 4. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
+
+### S-3 完了メモ（2026-04-14）
+
+- **解決した問題:** 同一 enrollment の別 day に in_progress session がある状態で新 session を開始しようとすると、idempotency guard をすり抜けて 2 つ目の in_progress session が INSERT されていた
+- **解決アプローチ:** `/train` page への entry 前に `resolveTrainingEntry()` を呼び出し、enrollment 単位で in_progress 状態を確認してから処理を分岐
+- **新ファイル:**
+  - `lib/workout/train-entry.ts`: `resolveTrainingEntry(programDayId)` — enrollment を特定し in_progress sessions を確認。`mode: 'resume' | 'start' | 'blocked' | 'invalid'` を返す
+  - `components/train/BlockedSessionScreen.tsx` / `.module.css`: blocked 時の警告 UI。"Resume [day label]" CTA のみ、"Start anyway" なし
+- **変更ファイル:**
+  - `types/workout.ts`: `TrainEntryResolution` 型を追加
+  - `app/train/page.tsx`: `resolveTrainingEntry()` を呼び出し、blocked の場合は `BlockedSessionScreen` を返す。resume / start / invalid は既存 `findWorkoutSessionByDayId` フローへ通過
+- **クエリ予算:** 最大 5 クエリ（program_days × 1 + program_weeks × 1 + program_enrollments × 1 + workout_sessions × 1 + day label × 1）— N+1 なし
+- **"start anyway" は意図的に非実装:** blocked のまま強制起動するユースケースは現フェーズでは不要
+- TypeScript エラーなし / tsc pass 確認済み
 
 ### C-7 / D-1 完了後の方針（2026-04-14 確定）
 

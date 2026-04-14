@@ -375,3 +375,52 @@ export type WorkoutSessionFinishResponse = {
   requiresConfirmation?: boolean;
   message?: string;
 };
+
+/**
+ * S-3: Result of resolveTrainingEntry().
+ *
+ * mode:
+ *   'resume'  — an in_progress session exists for the requested day; load it.
+ *   'start'   — no in_progress sessions for this enrollment; safe to start.
+ *   'blocked' — a different day's in_progress session exists in the same enrollment.
+ *   'invalid' — resolver could not run (unauthenticated / supabase unavailable).
+ */
+export type TrainEntryResolution = {
+  mode: "resume" | "start" | "blocked" | "invalid";
+  /** The program_day_id the user requested via query param. */
+  requestedProgramDayId: string | null;
+  /**
+   * The program_day_id that should be loaded.
+   * Equals requestedProgramDayId for 'start' and 'resume'.
+   * null for 'blocked' and 'invalid'.
+   */
+  resolvedProgramDayId: string | null;
+  /**
+   * ID of the in_progress session to resume.
+   * Set only when mode = 'resume'.
+   */
+  sessionId: string | null;
+  /**
+   * ID of the in_progress session that is blocking a new start.
+   * Set only when mode = 'blocked'.
+   */
+  blockedBySessionId: string | null;
+  /**
+   * program_day_id of the blocking session.
+   * Used to construct the "Resume current workout" CTA URL.
+   * Set only when mode = 'blocked'.
+   */
+  blockedByProgramDayId: string | null;
+  /**
+   * Human-readable label of the blocking session's day (e.g. "Week 2 / Day 3").
+   * Set only when mode = 'blocked'.
+   */
+  blockedByDayLabel: string | null;
+  /**
+   * Short reason string for debugging / logging.
+   * null when mode is 'start' or 'resume'.
+   */
+  reason: string | null;
+  /** Number of in_progress sessions found for the enrollment. */
+  incompleteSessionCount: number;
+};
