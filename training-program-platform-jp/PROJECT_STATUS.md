@@ -1,6 +1,43 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（D-2 Summary → 次 day 直接 CTA 完了）
+最終更新: 2026-04-14（H-1 Session History 実装完了）
+
+## 2026-04-14 H-1 — Session History（直近セッション一覧）
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `WorkoutSessionListItem` / `SessionHistoryResult` 型追加 | **完了 ✅** |
+| `lib/workout/session-list.ts` 新規作成 | **完了 ✅** |
+| `app/session-history/page.tsx` 新規作成 | **完了 ✅** |
+| `components/history/SessionHistoryScreen.tsx` 新規作成 | **完了 ✅** |
+| Home ページに Session History リンク追加 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/session-history-spec.md` 作成 | **完了 ✅** |
+
+### 変更ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `types/workout.ts` | `WorkoutSessionListItem` / `SessionHistoryResult` 型追加 |
+| `lib/workout/session-list.ts` | 新規 — `getSessionHistoryView()` / 5クエリで session リストを構築 |
+| `app/session-history/page.tsx` | 新規 — Server Component（`force-dynamic`） |
+| `components/history/SessionHistoryScreen.tsx` | 新規 — カードリスト UI / auth guard / empty state |
+| `components/history/SessionHistoryScreen.module.css` | 新規 |
+| `app/page.tsx` | "Session History" ボタン追加 |
+| `docs/session-history-spec.md` | 新規 — 仕様書 |
+
+### 表示分岐
+
+| 状態 | 表示 |
+|---|---|
+| 未ログイン | "Sign in is required to view session history." |
+| 0 件 | Empty state + Train へのリンク |
+| 1 件以上 | カード一覧（実施日・ステータス・プログラム名・種目数） |
+| completed | "View summary →" リンク表示 |
+
+---
 
 ## 2026-04-14 D-2 — Summary → 次 day 直接 CTA
 

@@ -21,6 +21,9 @@ export default function HomePage() {
           <Link className={styles.secondaryButton} href="/train">
             Open Train
           </Link>
+          <Link className={styles.secondaryButton} href="/session-history">
+            Session History
+          </Link>
         </div>
       </section>
 

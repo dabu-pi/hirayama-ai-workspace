@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（D-2 Summary → 次 day 直接 CTA 実装完了）
+最終更新: 2026-04-14（H-1 Session History 実装完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -80,6 +80,7 @@
 | **D-1: day progression — Summary Up Next / Program Complete UI** | **✅ 完了（2026-04-14）** |
 | **D-3: idempotency guard — 同一 day 再実行で enrollment が 2 回進む問題修正** | **✅ 完了（2026-04-14）** |
 | **D-2: Summary → 次 day 直接 CTA（Go to Next Day）** | **✅ 完了（2026-04-14）** |
+| **H-1: Session History — 直近セッション一覧** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -136,7 +137,21 @@
 |---|---|---|---|
 | D-2 | Summary → 次 day への直接リンク | Back to Train の迂回を解消。current enrollment day に直接飛ぶ CTA | **✅ 完了** |
 | D-3 | re-do 防止（同一 day 2 回 Finish 問題） | session.program_day_id と enrollment.current_program_day_id を比較して advance を skip | **✅ 完了** |
+| H-1 | Session History — 直近セッション一覧 | `/session-history` ページ。実施日・prog・week/day・status・種目数 | **✅ 完了** |
 | D-4 | program 完走後 re-enroll | status='completed' enrollment からの再開フロー | 未着手 |
+
+### H-1 完了メモ（2026-04-14）
+
+- `types/workout.ts`: `WorkoutSessionListItem` / `SessionHistoryResult` 型を追加
+- `lib/workout/session-list.ts`: `getSessionHistoryView()` を新規作成（5クエリ構成 — sessions → exercise counts → program_days → program_weeks → programs）
+- `app/session-history/page.tsx`: Server Component（`force-dynamic`）を新規作成
+- `components/history/SessionHistoryScreen.tsx` / `.module.css`: カードリスト UI を新規作成
+  - 実施日・ステータスバッジ（Completed / In Progress / Cancelled）・プログラム名・Week/Day・種目数
+  - completed セッションは "View summary →" リンクを表示
+  - empty state / auth guard / error state あり
+- `app/page.tsx`: "Session History" ボタン追加
+- `docs/session-history-spec.md`: 仕様書を新規作成
+- TypeScript エラーなし / preview snapshot で auth guard 動作確認済み
 
 ### C-2 完了メモ
 

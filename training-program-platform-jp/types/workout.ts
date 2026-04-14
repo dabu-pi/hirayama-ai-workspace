@@ -186,6 +186,23 @@ export type WorkoutSummaryView = {
   programSlug: string | null;
 };
 
+export type WorkoutSessionListItem = {
+  sessionId: string;
+  status: WorkoutSessionStatus;
+  /** YYYY-MM-DD derived from started_at */
+  startedAt: string;
+  finishedAt: string | null;
+  programTitle: string | null;
+  /** "Week N / Day N" or null when session has no program */
+  programWeekDayLabel: string | null;
+  exerciseCount: number;
+};
+
+export type SessionHistoryResult = {
+  sessions: WorkoutSessionListItem[];
+  errorMessage: string | null;
+};
+
 export type WorkoutSummaryState =
   | "ready"
   | "loading"
