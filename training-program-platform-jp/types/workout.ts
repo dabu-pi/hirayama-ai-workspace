@@ -377,6 +377,14 @@ export type WorkoutSessionFinishResponse = {
 };
 
 /**
+ * S-5: Response from POST /api/workout-sessions/[id]/cancel
+ */
+export type WorkoutSessionCancelResponse = {
+  id: string;
+  status: WorkoutSessionStatus;
+};
+
+/**
  * S-3: Result of resolveTrainingEntry().
  *
  * mode:

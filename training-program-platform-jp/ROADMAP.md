@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（S-4 session completion → enrollment advancement 完了）
+最終更新: 2026-04-14（S-5 Cancel workout 導線 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -92,6 +92,7 @@
 | **S-2: Home Resume/Start CTA — in-progress 判定で Resume/Start を切り替え** | **✅ 完了（2026-04-14）** |
 | **S-3: /train entry resolution — blocked state で別 day 起動を防止** | **✅ 完了（2026-04-14）** |
 | **S-4: session completion → enrollment advancement deterministic 化** | **✅ 完了（2026-04-14）** |
+| **S-5: Cancel workout — in_progress session の明示的破棄導線** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -110,6 +111,27 @@
 2. 次候補: week preview の拡張（T1/T2/T3 表示 / セット数・レップ数折りたたみ）
 3. 次候補: 4本目プログラム seed ← **C-7 として実装済み（live SQL 実行待ち）**
 4. 次候補: ユーザー向けプログラム選択補助 UI（level/tag での推奨表示など）
+
+### S-5 完了メモ（2026-04-14）
+
+- **新規ファイル:** `app/api/workout-sessions/[id]/cancel/route.ts`
+  - `in_progress` → `status = 'cancelled'`（`finished_at` は更新しない）
+  - `cancelled` → 200 idempotent return
+  - `completed` → 409（完了済みは取り消し不可）
+  - `advanceEnrollmentAfterSessionComplete` は**呼ばない** — `current_program_day_id` 保持、次回 Start next workout 可能
+  - `revalidatePath("/")` + `revalidatePath("/train")` で Home / Train を即時更新
+- **型追加:** `types/workout.ts` に `WorkoutSessionCancelResponse` 追加
+- **`WorkoutScreen.tsx` 変更:**
+  - `isSessionCancelled` / `isSessionEnded` 変数を追加
+  - `postCancelSession()` API 呼び出し関数を追加
+  - `isCancelling` state を追加
+  - `handleCancel()` — completedSetCount に応じた confirm dialog → cancel API → `router.push("/")`
+  - topBar を `topBarActions` div で再構成: Cancel ボタン + Finish ボタン（`isSessionEnded` で Cancel を隠す）
+  - Finish ボタンテキスト: Completed / Cancelled / Finishing... / Finish を分岐
+  - `cancelledBanner` セクション追加
+  - すべての mutation guard を `isSessionCompleted` → `isSessionEnded` に統一
+- **`WorkoutScreen.module.css` 変更:** `.topBarActions` / `.cancelButton` / `.cancelledBanner` / `.finishButtonCancelled` を追加
+- TypeScript エラーなし / tsc pass 確認済み
 
 ### S-4 完了メモ（2026-04-14）
 

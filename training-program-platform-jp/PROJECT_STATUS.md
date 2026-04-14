@@ -1,6 +1,66 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（S-4 session completion → enrollment advancement 完了）
+最終更新: 2026-04-14（S-5 Cancel workout 導線 完了）
+
+## 2026-04-14 S-5 — Cancel Workout (in_progress session discard)
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `POST /api/workout-sessions/[id]/cancel` 新規作成 | **完了 ✅** |
+| `WorkoutSessionCancelResponse` 型追加 | **完了 ✅** |
+| `WorkoutScreen` — Cancel ボタン + `handleCancel` + `isSessionCancelled` / `isSessionEnded` | **完了 ✅** |
+| mutation guard を `isSessionEnded` に統一 | **完了 ✅** |
+| CSS — `.cancelButton` / `.cancelledBanner` / `.topBarActions` / `.finishButtonCancelled` | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+
+### 状態遷移ルール
+
+| 条件 | Cancel API 挙動 | enrollment |
+|---|---|---|
+| `in_progress` | `status = 'cancelled'` | 変更なし（`current_program_day_id` 保持） |
+| `cancelled` | 200 no-op（idempotent） | 変更なし |
+| `completed` | 409 エラー | 変更なし |
+| session not found | 404 | — |
+
+### Cancel 後の各画面の見え方
+
+| 画面 | 挙動 |
+|---|---|
+| Cancel 直後 | `router.push("/")` でホームへ遷移 |
+| Home CTA | `actionType = 'start'`（in_progress session がなくなるため）→ "Start next workout" |
+| `/train?program=slug&programDayId=sameDay` | `resolveTrainingEntry` = `mode='start'`（in_progress がないため）→ StartSessionScreen |
+| session-history | 一覧に `status='cancelled'` で表示（既存リスト実装より） |
+| trend / e1RM / volume | `status='completed'` のみ集計のため影響なし |
+
+### UI 詳細
+
+- topBar に `topBarActions` div を追加: `[Cancel] [Finish]` 横並び
+- Cancel ボタンは `isSessionEnded` のとき非表示（completed / cancelled 後は不要）
+- Finish ボタンラベル: `Completed` / `Cancelled` / `Finishing...` / `Finish`
+- confirm dialog 文言:
+  - completedSetCount = 0: `"Discard this workout? No completed sets will be lost."`
+  - completedSetCount ≥ 1: `"Discard this workout? N completed set(s) will be kept in history but this session will be marked as cancelled."`
+- Cancel 成功後は `router.push("/")` — WorkoutScreen を離れる
+
+### データ保持方針
+
+- `workout_sets` / `workout_session_exercises` は**物理削除しない**
+- `status = 'cancelled'` による論理無効化のみ
+- 理由: audit / future analytics / 誤 cancel からの recovery 余地を残す
+- 集計クエリ（trend / e1RM）は `status='completed'` のみを対象にしているため汚染なし
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `app/api/workout-sessions/[id]/cancel/route.ts` | **新規作成** |
+| `types/workout.ts` | `WorkoutSessionCancelResponse` 追加 |
+| `components/workout/WorkoutScreen.tsx` | Cancel ボタン / `handleCancel` / `isCancelling` / `isSessionCancelled` / `isSessionEnded` / mutation guard 統一 / cancelled banner |
+| `components/workout/WorkoutScreen.module.css` | `.topBarActions` / `.cancelButton` / `.cancelledBanner` / `.finishButtonCancelled` 追加 |
+
+---
 
 ## 2026-04-14 S-4 — Session Completion → Enrollment Advancement
 

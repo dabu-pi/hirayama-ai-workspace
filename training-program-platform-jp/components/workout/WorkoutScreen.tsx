@@ -10,6 +10,7 @@ import type {
   SwapExerciseResponse,
   TrainProgramSelection,
   WorkoutExerciseBlock,
+  WorkoutSessionCancelResponse,
   WorkoutSessionFinishResponse,
   WorkoutSet,
   WorkoutSessionStatus,
@@ -239,6 +240,27 @@ async function postFinishSession(sessionId: string, forceFinish: boolean) {
   return payload as WorkoutSessionFinishResponse;
 }
 
+async function postCancelSession(sessionId: string): Promise<WorkoutSessionCancelResponse> {
+  const response = await fetch(`/api/workout-sessions/${sessionId}/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | WorkoutSessionCancelResponse
+    | { error?: { message?: string } }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(
+      payload && "error" in payload && payload.error?.message
+        ? payload.error.message
+        : "Cancel に失敗しました。"
+    );
+  }
+
+  return payload as WorkoutSessionCancelResponse;
+}
+
 async function postAddExercise(sessionId: string, exerciseId: string) {
   const response = await fetch(`/api/workout-sessions/${sessionId}/exercises`, {
     method: "POST",
@@ -337,6 +359,7 @@ export function WorkoutScreen({
   const [savingSetIds, setSavingSetIds] = useState<string[]>([]);
   const [focusSetId, setFocusSetId] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
 
@@ -388,6 +411,9 @@ export function WorkoutScreen({
   }, [scrollToExerciseId, exercises]);
 
   const isSessionCompleted = sessionMeta.status === "completed";
+  const isSessionCancelled = sessionMeta.status === "cancelled";
+  /** True when session is no longer editable (completed or cancelled). */
+  const isSessionEnded = isSessionCompleted || isSessionCancelled;
 
   const refreshTrainScreen = () => {
     startRefreshTransition(() => router.refresh());
@@ -418,12 +444,12 @@ export function WorkoutScreen({
   };
 
   const handleSwipeStart = (setId: string, clientX: number) => {
-    if (isSessionCompleted) return;
+    if (isSessionEnded) return;
     swipeRef.current = { setId, startX: clientX };
   };
 
   const handleSwipeEnd = (setId: string, clientX: number) => {
-    if (isSessionCompleted || !swipeRef.current) return;
+    if (isSessionEnded || !swipeRef.current) return;
     const deltaX = clientX - swipeRef.current.startX;
     if (deltaX <= -40) setRevealedSetId(setId);
     if (deltaX >= 20 && revealedSetId === setId) setRevealedSetId(null);
@@ -437,7 +463,7 @@ export function WorkoutScreen({
     field: "weightKg" | "repsDone",
     nextValue: string
   ) => {
-    if (isSessionCompleted) return;
+    if (isSessionEnded) return;
     const exercise = exercises.find((item) => item.id === exerciseId);
     const targetSet = exercise?.sets.find((item) => item.id === setId);
     if (!exercise || !targetSet || targetSet.isLocked) return;
@@ -490,7 +516,7 @@ export function WorkoutScreen({
     const exercise = exercises.find((item) => item.id === exerciseId);
     const targetSet = exercise?.sets.find((item) => item.id === setId);
     if (
-      isSessionCompleted ||
+      isSessionEnded ||
       !exercise ||
       !targetSet ||
       targetSet.isLocked ||
@@ -559,7 +585,7 @@ export function WorkoutScreen({
   };
 
   const handleAddSet = async (exerciseId: string) => {
-    if (isSessionCompleted || pendingAddExerciseId || pendingMutation || isFinishing) return;
+    if (isSessionEnded || pendingAddExerciseId || pendingMutation || isFinishing) return;
     setPendingAddExerciseId(exerciseId);
     setErrorMessage(null);
 
@@ -605,7 +631,7 @@ export function WorkoutScreen({
     const exercise = exercises.find((item) => item.id === exerciseId);
     const targetSet = exercise?.sets.find((item) => item.id === setId);
     if (
-      isSessionCompleted ||
+      isSessionEnded ||
       !exercise ||
       !targetSet ||
       targetSet.isLocked ||
@@ -648,7 +674,7 @@ export function WorkoutScreen({
   };
 
   const handleComplete = async (exerciseId: string, setId: string) => {
-    if (isSessionCompleted || pendingMutation || savingSetIds.includes(setId) || isFinishing) {
+    if (isSessionEnded || pendingMutation || savingSetIds.includes(setId) || isFinishing) {
       return;
     }
 
@@ -683,7 +709,7 @@ export function WorkoutScreen({
   };
 
   const handleUnlock = async (exerciseId: string, setId: string) => {
-    if (isSessionCompleted || pendingMutation || savingSetIds.includes(setId) || isFinishing) {
+    if (isSessionEnded || pendingMutation || savingSetIds.includes(setId) || isFinishing) {
       return;
     }
 
@@ -720,7 +746,7 @@ export function WorkoutScreen({
 
   const handleFinish = async (forceFinish = false) => {
     if (
-      isSessionCompleted ||
+      isSessionEnded ||
       isFinishing ||
       pendingMutation !== null ||
       pendingAddExerciseId !== null ||
@@ -757,6 +783,49 @@ export function WorkoutScreen({
     }
   };
 
+  const handleCancel = async () => {
+    if (
+      isSessionEnded ||
+      isCancelling ||
+      isFinishing ||
+      pendingMutation !== null ||
+      savingSetIds.length > 0
+    ) {
+      return;
+    }
+
+    // Count completed sets to decide dialog wording
+    const completedSetCount = exercises.reduce(
+      (acc, block) =>
+        acc +
+        block.sets.filter((s) => s.isCompleted && s.deletedAt === null).length,
+      0
+    );
+
+    const message =
+      completedSetCount > 0
+        ? `Discard this workout? ${completedSetCount} completed set${completedSetCount !== 1 ? "s" : ""} will be kept in history but this session will be marked as cancelled.`
+        : "Discard this workout? No completed sets will be lost.";
+
+    const confirmed = window.confirm(message);
+    if (!confirmed) return;
+
+    setIsCancelling(true);
+    setErrorMessage(null);
+
+    try {
+      await postCancelSession(sessionMeta.id);
+      router.push("/");
+    } catch (error) {
+      console.error("Failed to cancel workout session.", error);
+      setErrorMessage(
+        error instanceof Error ? error.message : "セッションのキャンセルに失敗しました。"
+      );
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const loadExercises = async () => {
     setIsLoadingExercises(true);
     setAddExerciseError(null);
@@ -786,7 +855,7 @@ export function WorkoutScreen({
   };
 
   const openAddExerciseModal = async () => {
-    if (isSessionCompleted) return;
+    if (isSessionEnded) return;
     setExerciseModalMode("add");
     setSwapTargetBlockId(null);
     setIsAddExerciseModalOpen(true);
@@ -795,7 +864,7 @@ export function WorkoutScreen({
   };
 
   const openSwapModal = async (blockId: string) => {
-    if (isSessionCompleted) return;
+    if (isSessionEnded) return;
     setExerciseModalMode("swap");
     setSwapTargetBlockId(blockId);
     setIsAddExerciseModalOpen(true);
@@ -928,20 +997,50 @@ export function WorkoutScreen({
         <button className={styles.iconButton} type="button">Rest</button>
         <button className={styles.iconButton} type="button">Calc</button>
         <div className={styles.timer}>00:00</div>
-        <button
-          className={`${styles.finishButton} ${isSessionCompleted ? styles.finishButtonCompleted : ""}`}
-          disabled={
-            isSessionCompleted ||
-            isFinishing ||
-            pendingMutation !== null ||
-            pendingAddExerciseId !== null ||
-            savingSetIds.length > 0
-          }
-          onClick={() => handleFinish()}
-          type="button"
-        >
-          {isSessionCompleted ? "Completed" : isFinishing ? "Finishing..." : "Finish"}
-        </button>
+        <div className={styles.topBarActions}>
+          {!isSessionEnded && (
+            <button
+              className={styles.cancelButton}
+              disabled={
+                isCancelling ||
+                isFinishing ||
+                pendingMutation !== null ||
+                savingSetIds.length > 0
+              }
+              onClick={handleCancel}
+              type="button"
+            >
+              {isCancelling ? "..." : "Cancel"}
+            </button>
+          )}
+          <button
+            className={`${styles.finishButton} ${
+              isSessionCompleted
+                ? styles.finishButtonCompleted
+                : isSessionCancelled
+                ? styles.finishButtonCancelled
+                : ""
+            }`}
+            disabled={
+              isSessionEnded ||
+              isFinishing ||
+              isCancelling ||
+              pendingMutation !== null ||
+              pendingAddExerciseId !== null ||
+              savingSetIds.length > 0
+            }
+            onClick={() => handleFinish()}
+            type="button"
+          >
+            {isSessionCompleted
+              ? "Completed"
+              : isSessionCancelled
+              ? "Cancelled"
+              : isFinishing
+              ? "Finishing..."
+              : "Finish"}
+          </button>
+        </div>
       </div>
 
       <section className={styles.programCard}>
@@ -980,6 +1079,13 @@ export function WorkoutScreen({
           <strong>このワークアウトは完了済みです。</strong>
           <span>{formatFinishedAt(sessionMeta.finishedAt)}</span>
           <span>未完了セット残数: {sessionMeta.incompleteSetCount}</span>
+        </section>
+      ) : null}
+
+      {isSessionCancelled ? (
+        <section className={styles.cancelledBanner}>
+          <strong>このワークアウトはキャンセルされました。</strong>
+          <span>セットデータは履歴に残っています。</span>
         </section>
       ) : null}
 
@@ -1024,7 +1130,7 @@ export function WorkoutScreen({
                 const isSaving = savingSetIds.includes(set.id);
                 const isMutating = pendingMutation?.setId === set.id;
                 const isBusy = isSaving || isMutating;
-                const isDeleteDisabled = set.isLocked || isBusy || isSessionCompleted;
+                const isDeleteDisabled = set.isLocked || isBusy || isSessionEnded;
 
                 return (
                   <div className={styles.swipeRow} key={set.id}>
@@ -1059,7 +1165,7 @@ export function WorkoutScreen({
                         <input
                           aria-label={`${exercise.exerciseNameEn} set ${set.displaySetNumber} kg`}
                           className={`${styles.input} ${isSaving ? styles.inputSaving : ""} ${set.isAutoFilled ? styles.inputAutoFilled : ""}`}
-                          disabled={set.isLocked || isSaving || isSessionCompleted}
+                          disabled={set.isLocked || isSaving || isSessionEnded}
                           inputMode="decimal"
                           onBlur={() => handleInputSave(exercise.id, set.id)}
                           onChange={(event) => handleInputChange(exercise.id, set.id, "weightKg", event.target.value)}
@@ -1078,7 +1184,7 @@ export function WorkoutScreen({
                         <input
                           aria-label={`${exercise.exerciseNameEn} set ${set.displaySetNumber} reps`}
                           className={`${styles.input} ${isSaving ? styles.inputSaving : ""}`}
-                          disabled={set.isLocked || isSaving || isSessionCompleted}
+                          disabled={set.isLocked || isSaving || isSessionEnded}
                           inputMode="numeric"
                           onBlur={() => handleInputSave(exercise.id, set.id)}
                           onChange={(event) => handleInputChange(exercise.id, set.id, "repsDone", event.target.value)}
@@ -1094,7 +1200,7 @@ export function WorkoutScreen({
                         {set.isLocked ? (
                           <button
                             className={`${styles.actionButton} ${styles.unlockButton}`}
-                            disabled={isBusy || isSessionCompleted}
+                            disabled={isBusy || isSessionEnded}
                             onClick={() => handleUnlock(exercise.id, set.id)}
                             type="button"
                           >
@@ -1104,7 +1210,7 @@ export function WorkoutScreen({
                           <button
                             aria-label={set.isCompleted ? "completed" : "mark complete"}
                             className={`${styles.actionButton} ${styles.check} ${set.isCompleted ? styles.checkDone : ""}`}
-                            disabled={isBusy || isSessionCompleted}
+                            disabled={isBusy || isSessionEnded}
                             onClick={() => handleComplete(exercise.id, set.id)}
                             type="button"
                           >
@@ -1125,7 +1231,7 @@ export function WorkoutScreen({
             <div className={styles.exerciseActions}>
               <button
                 className={styles.primaryGhostButton}
-                disabled={pendingAddExerciseId === exercise.id || isSessionCompleted}
+                disabled={pendingAddExerciseId === exercise.id || isSessionEnded}
                 onClick={() => handleAddSet(exercise.id)}
                 type="button"
               >
@@ -1133,13 +1239,13 @@ export function WorkoutScreen({
               </button>
               <button
                 className={styles.subtleButton}
-                disabled={isSessionCompleted}
+                disabled={isSessionEnded}
                 onClick={() => openSwapModal(exercise.id)}
                 type="button"
               >
                 Swap
               </button>
-              <button className={styles.subtleButton} disabled={isSessionCompleted} type="button">
+              <button className={styles.subtleButton} disabled={isSessionEnded} type="button">
                 ...
               </button>
             </div>
@@ -1150,7 +1256,7 @@ export function WorkoutScreen({
       <div className={styles.footerAction}>
         <button
           className={styles.primaryGhostButton}
-          disabled={isSessionCompleted}
+          disabled={isSessionEnded}
           onClick={openAddExerciseModal}
           type="button"
         >
