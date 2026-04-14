@@ -279,9 +279,13 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
         </div>
       )}
 
-      {/* ---- primary CTA ---- */}
+      {/* ---- S-2: primary CTA (Resume / Start / fallback) ---- */}
       <Link className={styles.continueButton} href={view.continueUrl}>
-        Continue Training
+        {view.actionType === "resume"
+          ? "Resume workout"
+          : view.actionType === "start"
+          ? "Start next workout"
+          : "Continue Training"}
       </Link>
 
       {/* ---- recent sessions ---- */}

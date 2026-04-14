@@ -1,6 +1,63 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（H-4b e1RM Trend 完了）
+最終更新: 2026-04-14（S-2 Home Resume/Start CTA 完了）
+
+## 2026-04-14 S-2 — Home Resume/Start CTA
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `ActiveProgramView` に `actionType` / `activeSessionId` 追加 | **完了 ✅** |
+| `InProgressSessionRow` 型 / `selectInProgressSessionsForEnrollments` 追加 | **完了 ✅** |
+| Batch 1 に `inProgressSessions` を追加（13クエリ固定） | **完了 ✅** |
+| `inProgressByEnrollmentId` マップ構築 + `actionType` / `continueUrl` 算出 | **完了 ✅** |
+| `ActiveProgramCard.tsx` — CTA ラベルを actionType で切り替え | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+
+### actionType 判定ルール
+
+| 条件 | actionType | CTA ラベル |
+|---|---|---|
+| `in_progress` session あり | `'resume'` | **Resume workout** |
+| `in_progress` なし + `current_program_day_id` あり | `'start'` | **Start next workout** |
+| `current_program_day_id` なし（edge case） | `'none'` | Continue Training (fallback) |
+
+### 遷移先（continueUrl）
+
+| ケース | URL |
+|---|---|
+| resume | `/train?program=${slug}&programDayId=${in_progress_session.program_day_id}` |
+| start | `/train?program=${slug}&programDayId=${enrollment.current_program_day_id}` |
+| none | `/train?program=${slug}` |
+
+- train ページが `programDayId` を受け取り、in-progress session の存在を自動検出して resume/start を切り替える（既存ロジックをそのまま再利用）
+- 二重作成防止も `startSessionForDay()` の既存 idempotency guard が担う
+
+### クエリ追加
+
+- `selectInProgressSessionsForEnrollments`: 1クエリ追加（Batch 1 に同時並列）
+- 合計 **13クエリ固定**（enrollment 数に依存しない）
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `actionType: 'start'|'resume'|'none'` / `activeSessionId: string|null` を `ActiveProgramView` に追加 |
+| `lib/workout/active-program.ts` | `InProgressSessionRow` 型、`selectInProgressSessionsForEnrollments`、`inProgressByEnrollmentId` マップ、`actionType` + resume-aware `continueUrl` 算出を追加 |
+| `components/home/ActiveProgramCard.tsx` | CTA ラベルを actionType で三分岐 |
+
+### Defensive handling
+
+| ケース | 対処 |
+|---|---|
+| enrollment 0件 | 既存 empty state 維持（変化なし） |
+| `current_program_day_id = null` | `actionType = 'none'` → "Continue Training" fallback |
+| in-progress session が複数（異常系） | DESC order で最新1件を `inProgressByEnrollmentId` に格納（先着）|
+| in-progress session の `program_day_id = null` | `enrollment.current_program_day_id` にフォールバック |
+| `selectInProgressSessionsForEnrollments` エラー | `[]` を返す（card 全体は維持） |
+
+---
 
 ## 2026-04-14 H-4b — e1RM Trend (T1 primary lift)
 

@@ -341,6 +341,18 @@ export type ActiveProgramView = {
   trend: VolumeTrend;
   /** H-4b: Estimated 1RM trend for the primary T1 lift of this enrollment. */
   e1rmTrend: E1RMTrend;
+  /**
+   * S-2: CTA action type derived from in-progress session state.
+   * 'resume' — an in_progress session exists for this enrollment.
+   * 'start'  — no in_progress session; current_program_day_id is set.
+   * 'none'   — current_program_day_id is null (edge case; CTA falls back to generic).
+   */
+  actionType: "start" | "resume" | "none";
+  /**
+   * S-2: Session ID of the in_progress session for this enrollment.
+   * null when actionType is 'start' or 'none'.
+   */
+  activeSessionId: string | null;
 };
 
 export type ActiveProgramResult = {

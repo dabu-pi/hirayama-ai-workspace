@@ -71,6 +71,14 @@ type SessionRow = {
   program_enrollment_id: string | null;
 };
 
+// S-2: in-progress session row
+type InProgressSessionRow = {
+  id: string;
+  program_enrollment_id: string;
+  /** program_day_id of the in-progress session — used to build resume URL */
+  program_day_id: string | null;
+};
+
 // H-4: trend row types
 type TrendSessionRow = {
   id: string;
@@ -221,6 +229,33 @@ async function selectRecentSessionsForEnrollments(
 
   if (error) return [];
   return (data ?? []) as SessionRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Queries — in-progress sessions (S-2)
+// ---------------------------------------------------------------------------
+
+/**
+ * S-2: Batch-fetches in-progress sessions for the given enrollment IDs.
+ * Returns at most one row per enrollment in normal usage (二重作成防止).
+ * In the abnormal case of multiple in-progress sessions per enrollment,
+ * DESC order by started_at ensures the most recent one is processed first.
+ */
+async function selectInProgressSessionsForEnrollments(
+  client: DatabaseClient,
+  enrollmentIds: string[]
+): Promise<InProgressSessionRow[]> {
+  if (enrollmentIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from("workout_sessions")
+    .select("id, program_enrollment_id, program_day_id")
+    .in("program_enrollment_id", enrollmentIds)
+    .eq("status", "in_progress")
+    .order("started_at", { ascending: false });
+
+  if (error) return [];
+  return (data ?? []) as InProgressSessionRow[];
 }
 
 // ---------------------------------------------------------------------------
@@ -625,14 +660,22 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       .filter((id): id is string => Boolean(id));
 
     // ── Batch 1: all independent ──────────────────────────────────────────
-    const [programs, currentDays, allWeeks, recentSessions, trendSessions] =
-      await Promise.all([
-        selectProgramsBatch(serverClient, programIds),
-        selectProgramDaysBatch(serverClient, currentDayIds),
-        selectAllProgramWeeksByProgramIds(serverClient, programIds),
-        selectRecentSessionsForEnrollments(serverClient, userId, enrollmentIds),
-        selectTrendSessions(serverClient, userId, enrollmentIds)
-      ]);
+    // S-2 adds selectInProgressSessionsForEnrollments → total queries: 13 (fixed)
+    const [
+      programs,
+      currentDays,
+      allWeeks,
+      recentSessions,
+      trendSessions,
+      inProgressSessions
+    ] = await Promise.all([
+      selectProgramsBatch(serverClient, programIds),
+      selectProgramDaysBatch(serverClient, currentDayIds),
+      selectAllProgramWeeksByProgramIds(serverClient, programIds),
+      selectRecentSessionsForEnrollments(serverClient, userId, enrollmentIds),
+      selectTrendSessions(serverClient, userId, enrollmentIds),
+      selectInProgressSessionsForEnrollments(serverClient, enrollmentIds)
+    ]);
 
     // Collect IDs needed for batch 2
     const currentDayWeekIds = [...new Set(currentDays.map((d) => d.program_week_id))];
@@ -701,6 +744,15 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       }
     }
 
+    // S-2: Build in-progress session map (enrollment_id → InProgressSessionRow)
+    // Only the most recent in-progress session per enrollment is stored (DESC order).
+    const inProgressByEnrollmentId = new Map<string, InProgressSessionRow>();
+    for (const s of inProgressSessions) {
+      if (!inProgressByEnrollmentId.has(s.program_enrollment_id)) {
+        inProgressByEnrollmentId.set(s.program_enrollment_id, s);
+      }
+    }
+
     // H-4: Aggregate session volumes across all trend sessions
     const sessionVolumeMap = aggregateSessionVolumes(
       trendSessions,
@@ -760,9 +812,26 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
         trendSets
       );
 
-      const continueUrl = enrollment.current_program_day_id
-        ? `/train?program=${programSlug}&programDayId=${enrollment.current_program_day_id}`
+      // S-2: Determine actionType and resume URL
+      const inProgressSession = inProgressByEnrollmentId.get(enrollment.id) ?? null;
+      const activeSessionId = inProgressSession?.id ?? null;
+
+      // Resume URL uses the in-progress session's program_day_id when available,
+      // so the train page finds the exact session rather than relying on
+      // current_program_day_id (which may have advanced in edge cases).
+      const resumeDayId =
+        inProgressSession?.program_day_id ?? enrollment.current_program_day_id;
+
+      const continueUrl = resumeDayId
+        ? `/train?program=${programSlug}&programDayId=${resumeDayId}`
         : `/train?program=${programSlug}`;
+
+      const actionType: "start" | "resume" | "none" =
+        activeSessionId !== null
+          ? "resume"
+          : enrollment.current_program_day_id !== null
+          ? "start"
+          : "none";
 
       return {
         enrollmentId: enrollment.id,
@@ -785,7 +854,9 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
         totalDays,
         progressPercent,
         trend,
-        e1rmTrend
+        e1rmTrend,
+        actionType,
+        activeSessionId
       };
     });
 
