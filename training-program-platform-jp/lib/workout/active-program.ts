@@ -175,6 +175,88 @@ async function selectProgramWeeksBatch(
   return (data ?? []) as ProgramWeekRow[];
 }
 
+/**
+ * Fetches all weeks for a program ordered by week_number.
+ * Used to compute total program day count for the progress bar.
+ */
+async function selectAllProgramWeeks(
+  client: DatabaseClient,
+  programId: string
+): Promise<Array<{ id: string; week_number: number }>> {
+  const { data, error } = await client
+    .from("program_weeks")
+    .select("id, week_number")
+    .eq("program_id", programId)
+    .order("week_number", { ascending: true });
+
+  if (error) return [];
+
+  return (data ?? []) as Array<{ id: string; week_number: number }>;
+}
+
+/**
+ * Fetches all days for the given week IDs.
+ * Used alongside selectAllProgramWeeks to build the full ordered day list.
+ */
+async function selectAllProgramDays(
+  client: DatabaseClient,
+  weekIds: string[]
+): Promise<ProgramDayRow[]> {
+  if (weekIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from("program_days")
+    .select("id, day_number, program_week_id")
+    .in("program_week_id", weekIds);
+
+  if (error) return [];
+
+  return (data ?? []) as ProgramDayRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Progress computation
+// ---------------------------------------------------------------------------
+
+type ProgressResult = {
+  completedDays: number;
+  totalDays: number;
+  progressPercent: number;
+};
+
+function computeProgress(
+  allWeeks: Array<{ id: string; week_number: number }>,
+  allDays: ProgramDayRow[],
+  currentProgramDayId: string | null
+): ProgressResult {
+  const weekOrderMap = new Map(allWeeks.map((w) => [w.id, w.week_number]));
+
+  // Sort all days by (week_number ASC, day_number ASC)
+  const sortedDays = [...allDays].sort((a, b) => {
+    const weekA = weekOrderMap.get(a.program_week_id) ?? 0;
+    const weekB = weekOrderMap.get(b.program_week_id) ?? 0;
+    if (weekA !== weekB) return weekA - weekB;
+    return a.day_number - b.day_number;
+  });
+
+  const totalDays = sortedDays.length;
+
+  if (totalDays === 0) {
+    return { completedDays: 0, totalDays: 0, progressPercent: 0 };
+  }
+
+  // current_program_day_id is the *next* day to do.
+  // Its 0-based index in the sorted array equals the number of completed days.
+  const currentIndex = currentProgramDayId
+    ? sortedDays.findIndex((d) => d.id === currentProgramDayId)
+    : -1;
+
+  const completedDays = currentIndex >= 0 ? currentIndex : 0;
+  const progressPercent = Math.round((completedDays / totalDays) * 100);
+
+  return { completedDays, totalDays, progressPercent };
+}
+
 // ---------------------------------------------------------------------------
 // Formatters
 // ---------------------------------------------------------------------------
@@ -232,32 +314,41 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       return { view: null, isAuthenticated: true, errorMessage: null };
     }
 
-    // Resolve program, current day/week in parallel where possible
-    const [program, currentDay, recentSessions] = await Promise.all([
+    // First batch: program + currentDay + recentSessions + allWeeks (all independent)
+    const [program, currentDay, recentSessions, allWeeks] = await Promise.all([
       selectProgram(serverClient, enrollment.program_id),
       selectProgramDay(serverClient, enrollment.current_program_day_id),
-      selectRecentSessions(serverClient, userId)
+      selectRecentSessions(serverClient, userId),
+      selectAllProgramWeeks(serverClient, enrollment.program_id)
     ]);
 
-    const currentWeek = await selectProgramWeek(
-      serverClient,
-      currentDay?.program_week_id ?? null
-    );
-
-    // Build recent session labels
+    // Second batch: currentWeek + allDays + sessionDays (all now unblocked)
     const sessionDayIds = recentSessions
       .map((s) => s.program_day_id)
       .filter((id): id is string => Boolean(id));
 
-    const sessionDays = await selectProgramDaysBatch(serverClient, sessionDayIds);
-    const sessionDayMap = new Map(sessionDays.map((d) => [d.id, d]));
+    const [currentWeek, allDays, sessionDays] = await Promise.all([
+      selectProgramWeek(serverClient, currentDay?.program_week_id ?? null),
+      selectAllProgramDays(serverClient, allWeeks.map((w) => w.id)),
+      selectProgramDaysBatch(serverClient, sessionDayIds)
+    ]);
 
+    // Third: session weeks (depends on sessionDays)
     const sessionWeekIds = Array.from(
       new Set(sessionDays.map((d) => d.program_week_id))
     );
     const sessionWeeks = await selectProgramWeeksBatch(serverClient, sessionWeekIds);
     const sessionWeekMap = new Map(sessionWeeks.map((w) => [w.id, w]));
+    const sessionDayMap = new Map(sessionDays.map((d) => [d.id, d]));
 
+    // Progress
+    const { completedDays, totalDays, progressPercent } = computeProgress(
+      allWeeks,
+      allDays,
+      enrollment.current_program_day_id
+    );
+
+    // Recent session view models
     const recentSessionViews: ActiveProgramSession[] = recentSessions.map((session) => {
       const day = session.program_day_id
         ? sessionDayMap.get(session.program_day_id) ?? null
@@ -297,7 +388,10 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       ),
       continueUrl,
       enrollmentStartedAt: enrollment.started_at,
-      recentSessions: recentSessionViews
+      recentSessions: recentSessionViews,
+      completedDays,
+      totalDays,
+      progressPercent
     };
 
     return { view, isAuthenticated: true, errorMessage: null };

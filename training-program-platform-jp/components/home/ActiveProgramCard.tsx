@@ -92,6 +92,31 @@ export function ActiveProgramCard({
         <span className={styles.metaItem}>{view.durationLabel}</span>
       </div>
 
+      {/* ---- progress bar ---- */}
+      {view.totalDays > 0 && (
+        <div className={styles.progressSection}>
+          <div className={styles.progressHeader}>
+            <span className={styles.progressText}>
+              {view.completedDays} / {view.totalDays} days complete
+            </span>
+            <span className={styles.progressPct}>{view.progressPercent}%</span>
+          </div>
+          <div
+            className={styles.progressBar}
+            role="progressbar"
+            aria-valuenow={view.progressPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`${view.progressPercent}% complete`}
+          >
+            <div
+              className={styles.progressFill}
+              style={{ width: `${view.progressPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ---- current position ---- */}
       {view.currentWeekDayLabel && (
         <div className={styles.positionRow}>

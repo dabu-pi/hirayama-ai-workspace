@@ -1,6 +1,40 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（H-3 Active Program Dashboard 完了）
+最終更新: 2026-04-14（H-3b Progress Bar 完了）
+
+## 2026-04-14 H-3b — Progress Bar
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `completedDays` / `totalDays` / `progressPercent` を `ActiveProgramView` に追加 | **完了 ✅** |
+| `selectAllProgramWeeks` / `selectAllProgramDays` / `computeProgress` 追加 | **完了 ✅** |
+| `Promise.all` 再編（第1バッチに allWeeks、第2バッチに allDays + currentWeek + sessionDays）| **完了 ✅** |
+| `ActiveProgramCard.tsx` — progress bar セクション追加 | **完了 ✅** |
+| `ActiveProgramCard.module.css` — progress bar スタイル追加 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/h3b-progress-bar-spec.md` 作成 | **完了 ✅** |
+
+### 算出ロジック
+
+- `totalDays` = program の全 program_days 数
+- `completedDays` = `current_program_day_id` の sorted index（week_number ASC → day_number ASC）
+- `progressPercent` = `Math.round(completedDays / totalDays * 100)`
+- `current_program_day_id = null` → completedDays = 0（safe fallback）
+- `totalDays = 0` → progress bar 非表示
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `ActiveProgramView` に `completedDays` / `totalDays` / `progressPercent` 追加 |
+| `lib/workout/active-program.ts` | `selectAllProgramWeeks` / `selectAllProgramDays` / `computeProgress` 追加、Promise.all 再編 |
+| `components/home/ActiveProgramCard.tsx` | progress bar セクション（meta 直下、positionRow 直上） |
+| `components/home/ActiveProgramCard.module.css` | progress bar スタイル群追加 |
+| `docs/h3b-progress-bar-spec.md` | 新規作成 |
+
+---
 
 ## 2026-04-14 H-3 — Active Program Dashboard
 

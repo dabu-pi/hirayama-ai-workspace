@@ -280,6 +280,12 @@ export type ActiveProgramView = {
   continueUrl: string;
   enrollmentStartedAt: string;
   recentSessions: ActiveProgramSession[];
+  /** Days completed before current_program_day_id (0 = first day not yet started) */
+  completedDays: number;
+  /** Total program_days in the program */
+  totalDays: number;
+  /** 0–100, Math.round. 0 when totalDays is 0. */
+  progressPercent: number;
 };
 
 export type ActiveProgramResult = {
