@@ -162,6 +162,12 @@ export type WorkoutSummaryView = {
   finishedAt: string | null;
   totalCompletedSets: number;
   totalVisibleSets: number;
+  /**
+   * S-6: Total session volume in kg (Math.round of sum weight_kg × reps_done).
+   * Uses same definition as H-4: completed, non-deleted sets with non-null weight.
+   * null when no qualifying sets exist (e.g. bodyweight-only sessions).
+   */
+  sessionVolume: number | null;
   exercises: WorkoutSummaryExercise[];
   /**
    * True when the completed session was the final day of the program.
@@ -253,6 +259,7 @@ export type WorkoutSummaryState =
   | "unauthenticated"
   | "not_found"
   | "not_completed"
+  | "cancelled"
   | "error";
 
 export type ActiveProgramSession = {

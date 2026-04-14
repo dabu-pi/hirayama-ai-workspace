@@ -1,6 +1,64 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（S-5 Cancel workout 導線 完了）
+最終更新: 2026-04-14（S-6 Workout Summary 改善 完了）
+
+## 2026-04-14 S-6 — Workout Summary 改善
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `WorkoutSummaryState` に `"cancelled"` 追加 | **完了 ✅** |
+| `WorkoutSummaryView` に `sessionVolume: number \| null` 追加 | **完了 ✅** |
+| `workout-summary.ts` — sets に `weight_kg` / `reps_done` を SELECT、volume 計算 | **完了 ✅** |
+| `workout-summary.ts` — cancelled session → `state: "cancelled"` + summary データ返却 | **完了 ✅** |
+| `WorkoutSummaryScreen` — cancelled 専用ヒーロー・バナー表示 | **完了 ✅** |
+| `WorkoutSummaryScreen` — `sessionVolume` stat card 追加 | **完了 ✅** |
+| `WorkoutSummaryScreen` — "Back to Home" / "View all sessions" CTA 追加 | **完了 ✅** |
+| `WorkoutSummaryScreen` — back link を `/train` → `/` に修正 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+
+### 変更内容
+
+#### types/workout.ts
+- `WorkoutSummaryState` に `"cancelled"` を追加
+- `WorkoutSummaryView` に `sessionVolume: number | null` を追加（totalVisibleSets の直後）
+
+#### lib/workout/workout-summary.ts
+- `WorkoutSetRow` に `weight_kg: number | null` / `reps_done: number | null` を追加
+- `selectVisibleWorkoutSets` SELECT に `weight_kg, reps_done` を追加
+- `buildSummaryView` — `visibleSets` ループ内で volume 累計（H-4 と同定義: completed + non-null weight）→ `sessionVolume` 算出
+- `getWorkoutSummaryView` の最終 return を修正:
+  - `completed` → `state: "ready"`
+  - `cancelled` → `state: "cancelled"`（summary データも返す — UI でキャンセル済みセッションの実績を表示可能）
+  - `in_progress` → `state: "not_completed"`
+
+#### components/summary/WorkoutSummaryScreen.tsx
+- `resolveStateTitle` / `resolveStateBody` に `"cancelled"` 分岐追加
+- `isCancelled` フラグ追加、`showMetadata` / `showExercises` を `isReady || isCancelled` で拡張
+- キャンセル済みセッション: `heroCancelled` スタイル + `cancelledBanner` を表示
+- stats grid に `sessionVolume` カード追加（null 時は非表示）
+- "Completed At" → キャンセル時は "Started At" へ切り替え
+- CTA 構造を再設計:
+  - cancelled: "Back to Home"（primary）/ "View all sessions"（secondary）
+  - isProgramCompleted: "Restart Program" / "Browse Programs"（primary）+ "Back to Home" / "View all sessions" / "Choose Another Program"（secondary）
+  - nextTrainUrl あり: "Go to Next Day"（primary）+ "Back to Home" / "View all sessions"（secondary）
+  - fallback: "Back to Home"（primary）/ "View all sessions" / "Browse Programs"（secondary）
+- back link: `isProgramCompleted ? "/programs" : "/"`（旧: `/train`）
+
+#### components/summary/WorkoutSummaryScreen.module.css
+- `.heroCancelled` — 赤系グラジェント hero
+- `.cancelledBanner` — キャンセル通知バナー
+
+### session volume 定義（H-4 と同一）
+
+```
+sessionVolume = Math.round(Σ weight_kg × reps_done)
+  where: is_completed = true AND deleted_at IS NULL AND weight_kg IS NOT NULL AND reps_done IS NOT NULL
+null when no qualifying sets (bodyweight-only session 等)
+```
+
+---
 
 ## 2026-04-14 S-5 — Cancel Workout (in_progress session discard)
 

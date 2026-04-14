@@ -32,6 +32,7 @@ function resolveStateTitle(state: WorkoutSummaryState, isProgramCompleted: boole
   if (state === "unauthenticated") return "Sign in required";
   if (state === "not_found") return "Workout summary not found";
   if (state === "not_completed") return "Workout still in progress";
+  if (state === "cancelled") return "Workout cancelled";
   if (state === "error") return "Workout summary unavailable";
   if (isProgramCompleted) return "Program complete";
   return "Workout complete";
@@ -55,6 +56,7 @@ function resolveStateBody(
   if (state === "error") {
     return "Please try again after refreshing the page.";
   }
+  // "cancelled" and "ready" return null — summary data renders instead
   return null;
 }
 
@@ -64,7 +66,11 @@ export function WorkoutSummaryScreen({
   errorMessage = null
 }: WorkoutSummaryScreenProps) {
   const isReady = state === "ready" && summary !== null;
-  const showMetadata = summary !== null;
+  const isCancelled = state === "cancelled" && summary !== null;
+  // Show metadata (stats grid, header info) for completed and cancelled sessions
+  const showMetadata = summary !== null && (isReady || isCancelled);
+  // Show exercise list for completed and cancelled sessions
+  const showExercises = showMetadata;
   const stateBody = resolveStateBody(state, errorMessage);
   const isProgramCompleted = summary?.isProgramCompleted ?? false;
   const nextProgramDayLabel = summary?.nextProgramDayLabel ?? null;
@@ -80,22 +86,36 @@ export function WorkoutSummaryScreen({
       ? `/train?program=${programSlug}&programDayId=${firstProgramDayId}`
       : null;
 
+  // S-6: Back link — home for normal flow, programs when program is complete
+  const backHref = isProgramCompleted ? "/programs" : "/";
+  const backLabel = isProgramCompleted ? "Back to Programs" : "Back to Home";
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.backLink} href={isProgramCompleted ? "/programs" : "/train"}>
+        <Link className={styles.backLink} href={backHref}>
           <span aria-hidden="true">&larr;</span>
-          <span>{isProgramCompleted ? "Back to Programs" : "Back to Train"}</span>
+          <span>{backLabel}</span>
         </Link>
       </header>
 
-      <section className={isProgramCompleted ? styles.heroCompleted : styles.hero}>
+      {/* S-6: Cancelled banner */}
+      {isCancelled && (
+        <section className={styles.cancelledBanner}>
+          <strong>このワークアウトはキャンセルされました。</strong>
+          <span>完了済みセットのデータは履歴に保存されています。</span>
+        </section>
+      )}
+
+      <section className={isCancelled ? styles.heroCancelled : isProgramCompleted ? styles.heroCompleted : styles.hero}>
         <span className={styles.eyebrow}>
-          {isReady
-            ? isProgramCompleted
-              ? "Program Complete"
-              : "Workout Complete"
-            : "Workout Summary"}
+          {isCancelled
+            ? "Workout Cancelled"
+            : isReady
+              ? isProgramCompleted
+                ? "Program Complete"
+                : "Workout Complete"
+              : "Workout Summary"}
         </span>
         <h1 className={styles.title}>{resolveStateTitle(state, isProgramCompleted)}</h1>
         {showMetadata ? (
@@ -104,7 +124,9 @@ export function WorkoutSummaryScreen({
               {summary.programTitle} / {summary.programWeekLabel}
             </p>
             <p className={styles.subtle}>
-              Finished at {formatDateTime(summary.finishedAt)}
+              {isCancelled
+                ? `Started at ${formatDateTime(summary.startedAt)}`
+                : `Finished at ${formatDateTime(summary.finishedAt)}`}
             </p>
             {isReady && nextProgramDayLabel && (
               <div className={styles.nextUpCard}>
@@ -127,9 +149,9 @@ export function WorkoutSummaryScreen({
       {showMetadata ? (
         <section className={styles.statsGrid}>
           <article className={styles.statCard}>
-            <span className={styles.statLabel}>Completed At</span>
+            <span className={styles.statLabel}>{isCancelled ? "Started At" : "Completed At"}</span>
             <strong className={styles.statValue}>
-              {formatDateTime(summary.finishedAt)}
+              {formatDateTime(isCancelled ? summary.startedAt : summary.finishedAt)}
             </strong>
           </article>
           <article className={styles.statCard}>
@@ -142,16 +164,24 @@ export function WorkoutSummaryScreen({
               {summary.totalCompletedSets} / {summary.totalVisibleSets}
             </strong>
           </article>
+          {summary.sessionVolume !== null && (
+            <article className={styles.statCard}>
+              <span className={styles.statLabel}>Session Volume</span>
+              <strong className={styles.statValue}>
+                {summary.sessionVolume.toLocaleString()} kg
+              </strong>
+            </article>
+          )}
         </section>
       ) : null}
 
-      {!isReady ? (
+      {!showExercises ? (
         <section className={styles.statusCard}>
           {stateBody ? <p>{stateBody}</p> : null}
         </section>
       ) : summary.exercises.length === 0 ? (
         <section className={styles.statusCard}>
-          <p>No visible exercises were recorded for this completed session.</p>
+          <p>No visible exercises were recorded for this session.</p>
         </section>
       ) : (
         <section className={styles.exerciseList}>
@@ -180,39 +210,61 @@ export function WorkoutSummaryScreen({
       )}
 
       <div className={styles.actions}>
-        {isProgramCompleted ? (
-          restartUrl ? (
-            <Link className={styles.primaryAction} href={restartUrl}>
-              Restart Program
+        {/* S-6: Cancelled — primary CTA is always Back to Home */}
+        {isCancelled ? (
+          <>
+            <Link className={styles.primaryAction} href="/">
+              Back to Home
             </Link>
-          ) : (
-            <Link className={styles.primaryAction} href="/programs">
+            <Link className={styles.secondaryAction} href="/session-history">
+              View all sessions
+            </Link>
+          </>
+        ) : isProgramCompleted ? (
+          <>
+            {restartUrl ? (
+              <Link className={styles.primaryAction} href={restartUrl}>
+                Restart Program
+              </Link>
+            ) : (
+              <Link className={styles.primaryAction} href="/programs">
+                Browse Programs
+              </Link>
+            )}
+            <Link className={styles.secondaryAction} href="/">
+              Back to Home
+            </Link>
+            <Link className={styles.secondaryAction} href="/session-history">
+              View all sessions
+            </Link>
+            <Link className={styles.secondaryAction} href="/programs">
+              Choose Another Program
+            </Link>
+          </>
+        ) : nextTrainUrl ? (
+          <>
+            <Link className={styles.primaryAction} href={nextTrainUrl}>
+              Go to Next Day
+            </Link>
+            <Link className={styles.secondaryAction} href="/">
+              Back to Home
+            </Link>
+            <Link className={styles.secondaryAction} href="/session-history">
+              View all sessions
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link className={styles.primaryAction} href="/">
+              Back to Home
+            </Link>
+            <Link className={styles.secondaryAction} href="/session-history">
+              View all sessions
+            </Link>
+            <Link className={styles.secondaryAction} href="/programs">
               Browse Programs
             </Link>
-          )
-        ) : nextTrainUrl ? (
-          <Link className={styles.primaryAction} href={nextTrainUrl}>
-            Go to Next Day
-          </Link>
-        ) : (
-          <Link className={styles.primaryAction} href="/train">
-            Back to Train
-          </Link>
-        )}
-        {isProgramCompleted && (
-          <Link className={styles.secondaryAction} href="/programs">
-            Choose Another Program
-          </Link>
-        )}
-        {!isProgramCompleted && (
-          <Link className={styles.secondaryAction} href="/train">
-            Back to Train
-          </Link>
-        )}
-        {!isProgramCompleted && (
-          <Link className={styles.secondaryAction} href="/programs">
-            Browse Programs
-          </Link>
+          </>
         )}
       </div>
     </main>

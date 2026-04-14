@@ -70,6 +70,9 @@ type ExerciseRow = {
 type WorkoutSetRow = {
   workout_session_exercise_id: string;
   is_completed: boolean;
+  /** S-6: needed for session volume computation (same as H-4 formula) */
+  weight_kg: number | null;
+  reps_done: number | null;
 };
 
 function buildProgramWeekLabel(
@@ -232,7 +235,7 @@ async function selectVisibleWorkoutSets(
 
   const { data, error } = await client
     .from("workout_sets")
-    .select("workout_session_exercise_id, is_completed")
+    .select("workout_session_exercise_id, is_completed, weight_kg, reps_done")
     .in("workout_session_exercise_id", workoutSessionExerciseIds)
     .is("deleted_at", null);
 
@@ -265,6 +268,10 @@ function buildSummaryView(
     }
   >();
 
+  // S-6: session volume — same formula as H-4 (completed, non-deleted, weight not null)
+  let volumeSum = 0;
+  let hasVolume = false;
+
   visibleSets.forEach((set) => {
     const current = setCounts.get(set.workout_session_exercise_id) ?? {
       completed: 0,
@@ -274,10 +281,16 @@ function buildSummaryView(
     current.total += 1;
     if (set.is_completed) {
       current.completed += 1;
+      if (set.weight_kg !== null && set.reps_done !== null) {
+        volumeSum += set.weight_kg * set.reps_done;
+        hasVolume = true;
+      }
     }
 
     setCounts.set(set.workout_session_exercise_id, current);
   });
+
+  const sessionVolume = hasVolume ? Math.round(volumeSum) : null;
 
   const summaryExercises = workoutSessionExercises.map((sessionExercise) => {
     const exercise = exerciseMap.get(sessionExercise.exercise_id);
@@ -314,6 +327,7 @@ function buildSummaryView(
       (total, exercise) => total + exercise.totalVisibleSetCount,
       0
     ),
+    sessionVolume,
     exercises: summaryExercises,
     isProgramCompleted,
     nextProgramDayLabel,
@@ -423,14 +437,21 @@ export async function getWorkoutSummaryView(
       firstProgramDayId
     );
 
-    return {
-      summary,
-      state: session.status === "completed" ? "ready" : "not_completed",
-      errorMessage:
-        session.status === "completed"
-          ? null
-          : "This workout session is still in progress."
-    };
+    // S-6: cancelled sessions return their summary with state "cancelled" so the
+    // UI can display what was done before the discard. In-progress sessions still
+    // return "not_completed" — the summary data is present but the UI ignores it.
+    const state =
+      session.status === "completed"
+        ? "ready"
+        : session.status === "cancelled"
+          ? "cancelled"
+          : "not_completed";
+    const errorMessage =
+      session.status === "in_progress"
+        ? "This workout session is still in progress."
+        : null;
+
+    return { summary, state, errorMessage };
   } catch (error) {
     console.error("Failed to load workout summary from Supabase.", error);
 
