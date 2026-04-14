@@ -10,12 +10,19 @@ import type {
   ActiveProgramResult,
   ActiveProgramSession,
   ActiveProgramView,
+  VolumeTrend,
   WorkoutSessionStatus
 } from "@/types/workout";
 
 type DatabaseClient = SupabaseClient;
 
 const RECENT_SESSION_LIMIT = 3;
+/** Number of recent completed sessions used to compute the volume trend. */
+const TREND_SESSION_LIMIT = 6;
+
+// ---------------------------------------------------------------------------
+// Row types
+// ---------------------------------------------------------------------------
 
 type EnrollmentRow = {
   id: string;
@@ -63,14 +70,31 @@ type SessionRow = {
   program_enrollment_id: string | null;
 };
 
+// H-4: trend row types
+type TrendSessionRow = {
+  id: string;
+  program_enrollment_id: string;
+  started_at: string;
+};
+
+type TrendExerciseRow = {
+  id: string;
+  workout_session_id: string;
+};
+
+type TrendSetRow = {
+  workout_session_exercise_id: string;
+  weight_kg: number | null;
+  reps_done: number | null;
+};
+
 // ---------------------------------------------------------------------------
-// Queries
+// Queries — enrollment / programs / weeks / days
 // ---------------------------------------------------------------------------
 
 /**
  * Returns all active enrollments for the user, ordered by most-recently-
  * updated first (updated_at desc, created_at desc as fallback).
- * H-3c: replaces single-enrollment LIMIT 1 query.
  */
 async function selectActiveEnrollments(
   client: DatabaseClient,
@@ -91,9 +115,6 @@ async function selectActiveEnrollments(
   return (data ?? []) as EnrollmentRow[];
 }
 
-/**
- * Batch-fetches programs by ID list. One query for all enrollments.
- */
 async function selectProgramsBatch(
   client: DatabaseClient,
   programIds: string[]
@@ -106,14 +127,9 @@ async function selectProgramsBatch(
     .in("id", programIds);
 
   if (error) return [];
-
   return (data ?? []) as ProgramRow[];
 }
 
-/**
- * Batch-fetches program_days for the given day IDs.
- * Used both for current_program_day_id lookups and session day lookups.
- */
 async function selectProgramDaysBatch(
   client: DatabaseClient,
   dayIds: string[]
@@ -126,14 +142,9 @@ async function selectProgramDaysBatch(
     .in("id", dayIds);
 
   if (error) return [];
-
   return (data ?? []) as ProgramDayRow[];
 }
 
-/**
- * Batch-fetches program_weeks by week ID list.
- * Used for current-week label and session-week label lookups.
- */
 async function selectProgramWeeksBatch(
   client: DatabaseClient,
   weekIds: string[]
@@ -146,15 +157,9 @@ async function selectProgramWeeksBatch(
     .in("id", weekIds);
 
   if (error) return [];
-
   return (data ?? []) as ProgramWeekRow[];
 }
 
-/**
- * Batch-fetches all program weeks for the given program IDs (includes
- * program_id for grouping). Used to build totalDays / progress per program.
- * H-3c: replaces single-program selectAllProgramWeeks.
- */
 async function selectAllProgramWeeksByProgramIds(
   client: DatabaseClient,
   programIds: string[]
@@ -168,14 +173,9 @@ async function selectAllProgramWeeksByProgramIds(
     .order("week_number", { ascending: true });
 
   if (error) return [];
-
   return (data ?? []) as ProgramWeekWithProgramId[];
 }
 
-/**
- * Batch-fetches all program_days for the given week IDs.
- * Called once with all week IDs across all enrollments.
- */
 async function selectAllProgramDays(
   client: DatabaseClient,
   weekIds: string[]
@@ -188,18 +188,16 @@ async function selectAllProgramDays(
     .in("program_week_id", weekIds);
 
   if (error) return [];
-
   return (data ?? []) as ProgramDayRow[];
 }
 
+// ---------------------------------------------------------------------------
+// Queries — recent sessions (display)
+// ---------------------------------------------------------------------------
+
 /**
- * Fetches recent sessions for the given enrollment IDs, ordered by
- * started_at desc. Returns enough rows to give up to RECENT_SESSION_LIMIT
- * per enrollment after in-memory grouping.
- *
- * H-3c: replaces global user-scoped query; filters by enrollment so each
- * card shows only its own sessions. Sessions without a matched
- * program_enrollment_id are excluded (e.g. free-training sessions).
+ * Fetches recent sessions for display in the card (all statuses).
+ * Groups in-memory, up to RECENT_SESSION_LIMIT per enrollment.
  */
 async function selectRecentSessionsForEnrollments(
   client: DatabaseClient,
@@ -217,8 +215,77 @@ async function selectRecentSessionsForEnrollments(
     .limit(enrollmentIds.length * RECENT_SESSION_LIMIT);
 
   if (error) return [];
-
   return (data ?? []) as SessionRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Queries — trend sessions / exercises / sets (H-4)
+// ---------------------------------------------------------------------------
+
+/**
+ * H-4: Fetches recent *completed* sessions per enrollment for volume trend.
+ * Only status='completed' sessions are used for trend calculation.
+ * Returns enough rows to give up to TREND_SESSION_LIMIT per enrollment.
+ */
+async function selectTrendSessions(
+  client: DatabaseClient,
+  userId: string,
+  enrollmentIds: string[]
+): Promise<TrendSessionRow[]> {
+  if (enrollmentIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from("workout_sessions")
+    .select("id, program_enrollment_id, started_at")
+    .eq("user_id", userId)
+    .in("program_enrollment_id", enrollmentIds)
+    .eq("status", "completed")
+    .order("started_at", { ascending: false })
+    .limit(enrollmentIds.length * TREND_SESSION_LIMIT);
+
+  if (error) return [];
+  return (data ?? []) as TrendSessionRow[];
+}
+
+/**
+ * H-4: Batch-fetches workout_session_exercises for the given session IDs.
+ * Used to bridge sessions → sets for volume aggregation.
+ */
+async function selectTrendExercises(
+  client: DatabaseClient,
+  sessionIds: string[]
+): Promise<TrendExerciseRow[]> {
+  if (sessionIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from("workout_session_exercises")
+    .select("id, workout_session_id")
+    .in("workout_session_id", sessionIds);
+
+  if (error) return [];
+  return (data ?? []) as TrendExerciseRow[];
+}
+
+/**
+ * H-4: Batch-fetches completed, non-deleted sets for the given exercise IDs.
+ * Only is_completed=true and deleted_at IS NULL sets are included.
+ * Weight-null sets are fetched but excluded from volume in the aggregation step.
+ */
+async function selectTrendSets(
+  client: DatabaseClient,
+  exerciseIds: string[]
+): Promise<TrendSetRow[]> {
+  if (exerciseIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from("workout_sets")
+    .select("workout_session_exercise_id, weight_kg, reps_done")
+    .in("workout_session_exercise_id", exerciseIds)
+    .eq("is_completed", true)
+    .is("deleted_at", null);
+
+  if (error) return [];
+  return (data ?? []) as TrendSetRow[];
 }
 
 // ---------------------------------------------------------------------------
@@ -233,11 +300,7 @@ type ProgressResult = {
 
 /**
  * Computes progress for a single enrollment.
- *
- * - allWeeks: weeks belonging to this enrollment's program (week_number for sort)
- * - allDays:  days belonging to this enrollment's program
- * - currentProgramDayId: the *next* day to do; its 0-based index = completedDays
- *
+ * current_program_day_id is the *next* day to do; its 0-based index = completedDays.
  * Defensive: returns 0% if totalDays=0 or currentProgramDayId not found in list.
  */
 function computeProgress(
@@ -264,11 +327,99 @@ function computeProgress(
     ? sortedDays.findIndex((d) => d.id === currentProgramDayId)
     : -1;
 
-  // currentIndex === -1 means null or unknown day → treat as 0 completed (safe)
   const completedDays = currentIndex >= 0 ? currentIndex : 0;
   const progressPercent = Math.round((completedDays / totalDays) * 100);
 
   return { completedDays, totalDays, progressPercent };
+}
+
+// ---------------------------------------------------------------------------
+// Volume trend computation (H-4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a session_id → total volume map.
+ *
+ * Volume definition:
+ *   sum of (weight_kg × reps_done) per completed, non-deleted set.
+ *   Sets with null/zero weight or null/zero reps are excluded (bodyweight / incomplete data).
+ *   Session volume can be 0 if all sets in that session are bodyweight-only.
+ */
+function aggregateSessionVolumes(
+  trendSessions: TrendSessionRow[],
+  trendExercises: TrendExerciseRow[],
+  trendSets: TrendSetRow[]
+): Map<string, number> {
+  // exercise_id → session_id
+  const exerciseToSession = new Map<string, string>();
+  for (const e of trendExercises) {
+    exerciseToSession.set(e.id, e.workout_session_id);
+  }
+
+  // Initialize all sessions to 0 (sessions with no qualifying sets get 0)
+  const sessionVolume = new Map<string, number>();
+  for (const s of trendSessions) {
+    sessionVolume.set(s.id, 0);
+  }
+
+  for (const set of trendSets) {
+    if (set.weight_kg === null || set.weight_kg <= 0) continue;
+    if (set.reps_done === null || set.reps_done <= 0) continue;
+
+    const sessionId = exerciseToSession.get(set.workout_session_exercise_id);
+    if (!sessionId) continue;
+    if (!sessionVolume.has(sessionId)) continue; // safety — shouldn't happen
+
+    sessionVolume.set(sessionId, sessionVolume.get(sessionId)! + set.weight_kg * set.reps_done);
+  }
+
+  return sessionVolume;
+}
+
+/**
+ * Builds the VolumeTrend for one enrollment from pre-aggregated data.
+ *
+ * - trendSessions must be pre-filtered to status='completed' and sorted DESC.
+ * - Takes the top TREND_SESSION_LIMIT for this enrollment, then reverses to
+ *   chronological order (oldest → newest) for sparkline display.
+ */
+function buildVolumeTrend(
+  enrollmentId: string,
+  trendSessions: TrendSessionRow[],
+  sessionVolumeMap: Map<string, number>
+): VolumeTrend {
+  // Sessions are sorted DESC from DB; take top N for this enrollment, then reverse
+  const enrollmentSessions = trendSessions
+    .filter((s) => s.program_enrollment_id === enrollmentId)
+    .slice(0, TREND_SESSION_LIMIT)
+    .reverse(); // oldest → newest (chronological)
+
+  if (enrollmentSessions.length === 0) {
+    return {
+      recentVolumes: [],
+      latestVolume: null,
+      previousVolume: null,
+      volumeChangePercent: null
+    };
+  }
+
+  const recentVolumes = enrollmentSessions.map((s) =>
+    Math.round(sessionVolumeMap.get(s.id) ?? 0)
+  );
+
+  const latestVolume = recentVolumes[recentVolumes.length - 1] ?? null;
+  const previousVolume = recentVolumes.length >= 2
+    ? (recentVolumes[recentVolumes.length - 2] ?? null)
+    : null;
+
+  let volumeChangePercent: number | null = null;
+  if (latestVolume !== null && previousVolume !== null && previousVolume > 0) {
+    // 1 decimal place, e.g. 11.7
+    volumeChangePercent =
+      Math.round(((latestVolume - previousVolume) / previousVolume) * 1000) / 10;
+  }
+
+  return { recentVolumes, latestVolume, previousVolume, volumeChangePercent };
 }
 
 // ---------------------------------------------------------------------------
@@ -305,13 +456,13 @@ function formatSessionDate(startedAt: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * H-3c: Returns all active program views for the current user.
+ * Returns all active program views for the current user.
  *
- * Query budget: 9 queries regardless of enrollment count (N+1 free).
- *   1. selectActiveEnrollments
- *   2–5. parallel: programs, currentDays, allWeeks, recentSessions
- *   6–8. parallel: currentWeeks, allDays, sessionDays
- *   9. sessionWeeks
+ * Query budget: 12 queries regardless of enrollment count (N+1 free).
+ *   1.     selectActiveEnrollments
+ *   2–6.   parallel: programs, currentDays, allWeeks, recentSessions, trendSessions
+ *   7–10.  parallel: currentWeeks, allDays, sessionDays, trendExercises
+ *   11–12. parallel: sessionWeeks, trendSets
  */
 export async function getActiveProgramView(): Promise<ActiveProgramResult> {
   if (!hasSupabasePublicEnv()) {
@@ -337,25 +488,22 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       return { views: [], isAuthenticated: true, errorMessage: null };
     }
 
-    // Deduplicate program IDs (multiple enrollments may share a program)
     const programIds = [...new Set(enrollments.map((e) => e.program_id))];
+    const enrollmentIds = enrollments.map((e) => e.id);
 
-    // Collect current_program_day_ids (non-null only)
     const currentDayIds = enrollments
       .map((e) => e.current_program_day_id)
       .filter((id): id is string => Boolean(id));
 
     // ── Batch 1: all independent ──────────────────────────────────────────
-    const [programs, currentDays, allWeeks, recentSessions] = await Promise.all([
-      selectProgramsBatch(serverClient, programIds),
-      selectProgramDaysBatch(serverClient, currentDayIds),
-      selectAllProgramWeeksByProgramIds(serverClient, programIds),
-      selectRecentSessionsForEnrollments(
-        serverClient,
-        userId,
-        enrollments.map((e) => e.id)
-      )
-    ]);
+    const [programs, currentDays, allWeeks, recentSessions, trendSessions] =
+      await Promise.all([
+        selectProgramsBatch(serverClient, programIds),
+        selectProgramDaysBatch(serverClient, currentDayIds),
+        selectAllProgramWeeksByProgramIds(serverClient, programIds),
+        selectRecentSessionsForEnrollments(serverClient, userId, enrollmentIds),
+        selectTrendSessions(serverClient, userId, enrollmentIds)
+      ]);
 
     // Collect IDs needed for batch 2
     const currentDayWeekIds = [...new Set(currentDays.map((d) => d.program_week_id))];
@@ -367,17 +515,25 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
           .filter((id): id is string => Boolean(id))
       )
     ];
+    const trendSessionIds = trendSessions.map((s) => s.id);
 
     // ── Batch 2: unblocked after batch 1 ─────────────────────────────────
-    const [currentWeeks, allDays, sessionDays] = await Promise.all([
+    const [currentWeeks, allDays, sessionDays, trendExercises] = await Promise.all([
       selectProgramWeeksBatch(serverClient, currentDayWeekIds),
       selectAllProgramDays(serverClient, allWeekIds),
-      selectProgramDaysBatch(serverClient, sessionDayIds)
+      selectProgramDaysBatch(serverClient, sessionDayIds),
+      selectTrendExercises(serverClient, trendSessionIds)
     ]);
 
-    // ── Batch 3: session weeks (depends on sessionDays) ──────────────────
+    // Collect IDs needed for batch 3
     const sessionWeekIds = [...new Set(sessionDays.map((d) => d.program_week_id))];
-    const sessionWeeks = await selectProgramWeeksBatch(serverClient, sessionWeekIds);
+    const trendExerciseIds = trendExercises.map((e) => e.id);
+
+    // ── Batch 3: parallel (sessionWeeks + trendSets) ──────────────────────
+    const [sessionWeeks, trendSets] = await Promise.all([
+      selectProgramWeeksBatch(serverClient, sessionWeekIds),
+      selectTrendSets(serverClient, trendExerciseIds)
+    ]);
 
     // ── Build lookup maps ─────────────────────────────────────────────────
     const programMap = new Map(programs.map((p) => [p.id, p]));
@@ -394,7 +550,6 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       weeksByProgramId.set(w.program_id, list);
     }
 
-    // week_id → program_id (needed to assign days to a program)
     const weekIdToProgramId = new Map(allWeeks.map((w) => [w.id, w.program_id]));
 
     const daysByProgramId = new Map<string, ProgramDayRow[]>();
@@ -416,6 +571,13 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
         sessionsByEnrollmentId.set(s.program_enrollment_id, list);
       }
     }
+
+    // H-4: Aggregate session volumes across all trend sessions
+    const sessionVolumeMap = aggregateSessionVolumes(
+      trendSessions,
+      trendExercises,
+      trendSets
+    );
 
     // ── Build one view per enrollment ─────────────────────────────────────
     const views: ActiveProgramView[] = enrollments.map((enrollment) => {
@@ -458,6 +620,9 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
         }
       );
 
+      // H-4: build volume trend for this enrollment
+      const trend = buildVolumeTrend(enrollment.id, trendSessions, sessionVolumeMap);
+
       const continueUrl = enrollment.current_program_day_id
         ? `/train?program=${programSlug}&programDayId=${enrollment.current_program_day_id}`
         : `/train?program=${programSlug}`;
@@ -481,7 +646,8 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
         recentSessions: recentSessionViews,
         completedDays,
         totalDays,
-        progressPercent
+        progressPercent,
+        trend
       };
     });
 

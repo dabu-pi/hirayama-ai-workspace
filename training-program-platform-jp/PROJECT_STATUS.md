@@ -1,6 +1,76 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（H-3c Multi-enrollment 完了）
+最終更新: 2026-04-14（H-4 Volume Trend first slice 完了）
+
+## 2026-04-14 H-4 — Volume Trend (first slice)
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `VolumeTrend` 型を `types/workout.ts` に追加 | **完了 ✅** |
+| `ActiveProgramView` に `trend: VolumeTrend` フィールドを追加 | **完了 ✅** |
+| `selectTrendSessions` / `selectTrendExercises` / `selectTrendSets` バッチクエリ追加 | **完了 ✅** |
+| `aggregateSessionVolumes` — session ごとの volume 集計 | **完了 ✅** |
+| `buildVolumeTrend` — enrollment ごとの trend 算出 | **完了 ✅** |
+| `getActiveProgramView` — 12クエリ固定で trend データをバッチ取得に組み込み | **完了 ✅** |
+| `TrendSection` コンポーネント追加（sparkline + 数値比較） | **完了 ✅** |
+| `ActiveProgramCard.module.css` — trend section スタイル追加 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+
+### Volume 定義
+
+| 項目 | 定義 |
+|---|---|
+| 対象セッション | `status = 'completed'` かつ `program_enrollment_id IN (enrollment_ids)` |
+| 対象セット | `is_completed = true` かつ `deleted_at IS NULL` |
+| Volume 計算式 | `SUM(weight_kg × reps_done)` |
+| 除外条件 | `weight_kg IS NULL or ≤ 0`（自重種目等）/ `reps_done IS NULL or ≤ 0` |
+| セッション volume | 上記セットの合計（自重種目のみのセッションは volume = 0 だが sessions 数に計上） |
+| 集計対象件数 | 直近最大 6 セッション（`TREND_SESSION_LIMIT`）/ enrollment ごと |
+
+### クエリ構成（12クエリ固定、N+1なし）
+
+| バッチ | クエリ | 依存 |
+|---|---|---|
+| 1 (parallel×5) | programs / currentDays / allWeeks / recentSessions / **trendSessions** | enrollmentIds のみ |
+| 2 (parallel×4) | currentWeeks / allDays / sessionDays / **trendExercises** | trendSessions.ids |
+| 3 (parallel×2) | sessionWeeks / **trendSets** | trendExercises.ids |
+
+### 表示ルール
+
+| sessions 数 | 表示 |
+|---|---|
+| 0 | trend section 非表示 |
+| 1 | sparkline 1本 + latest volume (kg) + "Not enough data" |
+| 2+ | sparkline + `previous → latest (+X.X%)` |
+
+### Defensive handling
+
+- `weight_kg = null` → 0 扱い（volume に加算しない、session は count される）
+- `volumeChangePercent = null` when `previousVolume = 0`（0除算防止）
+- `recentVolumes = []` → `TrendSection` が null を返す（crash なし）
+- `latestVolume = null` → trend section 非表示（null チェック明示）
+- `sessionVolumeMap.get(...)` が `undefined` → 0 に fallback（`?? 0`）
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `VolumeTrend` 型追加、`ActiveProgramView` に `trend` フィールド追加 |
+| `lib/workout/active-program.ts` | `TrendSessionRow` / `TrendExerciseRow` / `TrendSetRow` 追加、3クエリ関数追加、`aggregateSessionVolumes` / `buildVolumeTrend` 追加、`getActiveProgramView` をバッチ拡張 |
+| `components/home/ActiveProgramCard.tsx` | `TrendSection` コンポーネント追加、`ProgramCard` 内の最下部に配置 |
+| `components/home/ActiveProgramCard.module.css` | trend section 用スタイル追加（sparkline / trendValues / trendUp / trendDown 等） |
+
+### OPEN ISSUES（次段階: e1RM）
+
+- **exercise 選定:** T1 種目（Squat / Bench / Deadlift 等）に絞る必要あり。全種目 e1RM 表示は意味が薄い
+- **算出式:** Epley（`w × (1 + r/30)`）か Brzycki か選定が必要
+- **top set の定義:** セッション内で最重量のセット（重量優先）or 最高 RPE セットか要決定
+- **表示粒度:** enrollment 全体の top set e1RM か、最新セッションのみか
+- **実装タイミング:** volume trend の動作と表示設計が固まってから着手推奨
+
+---
 
 ## 2026-04-14 H-3c — Multi-enrollment Home
 

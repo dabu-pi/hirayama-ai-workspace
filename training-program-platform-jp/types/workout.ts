@@ -263,6 +263,29 @@ export type ActiveProgramSession = {
   programWeekDayLabel: string | null;
 };
 
+/**
+ * H-4: Session volume trend for one active enrollment.
+ * Volume = sum of (weight_kg × reps_done) for completed, non-deleted sets
+ * across completed sessions tied to this enrollment.
+ * Bodyweight / weight-null sets are excluded from the sum (but sessions still counted).
+ */
+export type VolumeTrend = {
+  /**
+   * Session volumes in chronological order (oldest → newest). Length 0–6.
+   * Each value is Math.round(weight_kg * reps_done sum) for that session.
+   */
+  recentVolumes: number[];
+  /** Volume of the most recent completed session. null when no completed sessions. */
+  latestVolume: number | null;
+  /** Volume of the second-most-recent completed session. null when fewer than 2. */
+  previousVolume: number | null;
+  /**
+   * Percentage change from previousVolume to latestVolume (1 decimal, e.g. 11.7).
+   * null when fewer than 2 sessions or previousVolume is 0.
+   */
+  volumeChangePercent: number | null;
+};
+
 export type ActiveProgramView = {
   enrollmentId: string;
   programId: string;
@@ -286,6 +309,8 @@ export type ActiveProgramView = {
   totalDays: number;
   /** 0–100, Math.round. 0 when totalDays is 0. */
   progressPercent: number;
+  /** H-4: Volume trend for this enrollment's recent completed sessions. */
+  trend: VolumeTrend;
 };
 
 export type ActiveProgramResult = {

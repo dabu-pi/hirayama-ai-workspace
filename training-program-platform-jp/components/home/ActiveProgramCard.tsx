@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { ActiveProgramView } from "@/types/workout";
+import type { ActiveProgramView, VolumeTrend } from "@/types/workout";
 
 import styles from "./ActiveProgramCard.module.css";
 
@@ -73,6 +73,78 @@ function ErrorCard({ message }: { message: string }) {
   return (
     <div className={`${styles.emptyCard} ${styles.errorCard}`}>
       <p className={styles.emptyBody}>{message}</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// H-4: Volume trend section
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders the volume trend for one enrollment.
+ * - 0 completed sessions → returns null (section hidden)
+ * - 1 session → shows latest volume + "Not enough data"
+ * - 2+ sessions → shows sparkline + previous → latest + change %
+ */
+function TrendSection({ trend }: { trend: VolumeTrend }) {
+  if (trend.recentVolumes.length === 0) return null;
+
+  const maxVolume = Math.max(...trend.recentVolumes, 1);
+  const hasComparison =
+    trend.latestVolume !== null &&
+    trend.previousVolume !== null &&
+    trend.volumeChangePercent !== null;
+
+  return (
+    <div className={styles.trendSection}>
+      <div className={styles.trendHeader}>
+        <span className={styles.trendLabel}>Volume trend</span>
+        <span className={styles.trendMeta}>
+          Last {trend.recentVolumes.length} session
+          {trend.recentVolumes.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Mini sparkline — bars normalized to max volume */}
+      <div className={styles.sparkline} aria-hidden="true">
+        {trend.recentVolumes.map((v, i) => {
+          const isLatest = i === trend.recentVolumes.length - 1;
+          return (
+            <div
+              key={i}
+              className={`${styles.sparkBar} ${isLatest ? styles.sparkBarLatest : ""}`}
+              style={{ height: `${Math.max(Math.round((v / maxVolume) * 100), 4)}%` }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Volume comparison */}
+      <div className={styles.trendValues}>
+        {hasComparison ? (
+          <>
+            <span className={styles.trendVolume}>
+              {trend.previousVolume!.toLocaleString()} → {trend.latestVolume!.toLocaleString()}
+            </span>
+            <span
+              className={`${styles.trendChange} ${
+                trend.volumeChangePercent! >= 0 ? styles.trendUp : styles.trendDown
+              }`}
+            >
+              {trend.volumeChangePercent! >= 0 ? "+" : ""}
+              {trend.volumeChangePercent}%
+            </span>
+          </>
+        ) : (
+          <>
+            <span className={styles.trendVolume}>
+              {trend.latestVolume!.toLocaleString()} kg
+            </span>
+            <span className={styles.trendInsufficient}>Not enough data</span>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -169,6 +241,9 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
           </Link>
         </div>
       )}
+
+      {/* ---- H-4: volume trend ---- */}
+      <TrendSection trend={view.trend} />
     </div>
   );
 }
