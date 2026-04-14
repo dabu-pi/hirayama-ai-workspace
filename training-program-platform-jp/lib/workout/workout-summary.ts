@@ -157,6 +157,35 @@ async function selectProgram(client: DatabaseClient, programId: string | null) {
   return data;
 }
 
+async function selectFirstProgramDayId(
+  client: DatabaseClient,
+  programId: string | null
+): Promise<string | null> {
+  if (!programId) return null;
+
+  // Week 1 of the program
+  const { data: week1, error: week1Error } = await client
+    .from("program_weeks")
+    .select("id")
+    .eq("program_id", programId)
+    .eq("week_number", 1)
+    .maybeSingle<{ id: string }>();
+
+  if (week1Error || !week1) return null;
+
+  // Day 1 of Week 1
+  const { data: day1, error: day1Error } = await client
+    .from("program_days")
+    .select("id")
+    .eq("program_week_id", week1.id)
+    .eq("day_number", 1)
+    .maybeSingle<{ id: string }>();
+
+  if (day1Error) return null;
+
+  return day1?.id ?? null;
+}
+
 async function selectWorkoutSessionExercises(
   client: DatabaseClient,
   workoutSessionId: string
@@ -224,7 +253,8 @@ function buildSummaryView(
   isProgramCompleted: boolean,
   nextProgramDayLabel: string | null,
   nextProgramDayId: string | null,
-  programSlug: string | null
+  programSlug: string | null,
+  firstProgramDayId: string | null
 ): WorkoutSummaryView {
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const setCounts = new Map<
@@ -288,7 +318,8 @@ function buildSummaryView(
     isProgramCompleted,
     nextProgramDayLabel,
     nextProgramDayId,
-    programSlug
+    programSlug,
+    firstProgramDayId
   };
 }
 
@@ -368,6 +399,12 @@ export async function getWorkoutSummaryView(
       }
     }
 
+    // When the program is complete, resolve the first day so the UI can
+    // offer a "Restart Program" re-enroll CTA.
+    const firstProgramDayId = isProgramCompleted
+      ? await selectFirstProgramDayId(queryClient, program?.id ?? null)
+      : null;
+
     const summary = buildSummaryView(
       session,
       program?.title ?? null,
@@ -382,7 +419,8 @@ export async function getWorkoutSummaryView(
       isProgramCompleted,
       nextProgramDayLabel,
       nextProgramDayId,
-      program?.slug ?? null
+      program?.slug ?? null,
+      firstProgramDayId
     );
 
     return {

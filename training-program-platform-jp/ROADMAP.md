@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（S-1 Exercise Swap MVP 完了）
+最終更新: 2026-04-14（D-4 Re-enroll フロー完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -82,6 +82,7 @@
 | **D-2: Summary → 次 day 直接 CTA（Go to Next Day）** | **✅ 完了（2026-04-14）** |
 | **H-1: Session History — 直近セッション一覧** | **✅ 完了（2026-04-14）** |
 | **S-1: Exercise Swap MVP — 当日 session 限定の種目差し替え** | **✅ 完了（2026-04-14）** |
+| **D-4: program 完走後 re-enroll フロー** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -140,7 +141,17 @@
 | D-3 | re-do 防止（同一 day 2 回 Finish 問題） | session.program_day_id と enrollment.current_program_day_id を比較して advance を skip | **✅ 完了** |
 | H-1 | Session History — 直近セッション一覧 | `/session-history` ページ。実施日・prog・week/day・status・種目数 | **✅ 完了** |
 | S-1 | Exercise Swap MVP | Train 画面で当日 session 限定の種目差し替え。Swapped バッジ表示 | **✅ 完了** |
-| D-4 | program 完走後 re-enroll | status='completed' enrollment からの再開フロー | 未着手 |
+| D-4 | program 完走後 re-enroll | Summary に "Restart Program" CTA。新 enrollment INSERT、旧は履歴保持 | **✅ 完了** |
+
+### D-4 完了メモ（2026-04-14）
+
+- DISCOVERY: `findOrCreateEnrollment` は completed enrollment を無視して新 enrollment を INSERT する — re-enroll のコアロジックは実装済みだった。UNIQUE INDEX は `WHERE status='active'` のみに適用されるため completed は複数残る
+- 追加実装: Summary 画面に "Restart Program" CTA を追加
+  - `types/workout.ts`: `WorkoutSummaryView` に `firstProgramDayId: string | null` を追加
+  - `lib/workout/workout-summary.ts`: `selectFirstProgramDayId` (2クエリ: week_number=1 → day_number=1) を追加、`isProgramCompleted` 時にのみ呼び出し
+  - `WorkoutSummaryScreen.tsx`: `restartUrl` を組み立て（`/train?program=<slug>&programDayId=<firstDayId>`）、完走時の actions を "Restart Program" → "Choose Another Program" に変更
+- TypeScript エラーなし / tsc pass 確認済み
+- `docs/d4-reenroll-spec.md` 作成
 
 ### S-1 完了メモ（2026-04-14）
 

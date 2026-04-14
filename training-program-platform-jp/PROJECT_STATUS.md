@@ -1,6 +1,42 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（S-1 Exercise Swap MVP 完了）
+最終更新: 2026-04-14（D-4 Re-enroll フロー完了）
+
+## 2026-04-14 D-4 — Program Re-enroll
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `firstProgramDayId` 型追加（`WorkoutSummaryView`） | **完了 ✅** |
+| `selectFirstProgramDayId` 実装（`workout-summary.ts`） | **完了 ✅** |
+| "Restart Program" CTA（`WorkoutSummaryScreen.tsx`） | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/d4-reenroll-spec.md` 作成 | **完了 ✅** |
+
+### DISCOVERY
+
+- `findOrCreateEnrollment` は completed enrollment を無視し、**新 enrollment を INSERT** — re-enroll コアロジックは既実装
+- `UNIQUE INDEX` が `WHERE status='active'` のみに適用 → completed は複数保持可能
+- 欠けていたのは「Summary から firstProgramDayId を受け取り、Restart Program CTA を出す」UIだけ
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `WorkoutSummaryView` に `firstProgramDayId: string \| null` を追加 |
+| `lib/workout/workout-summary.ts` | `selectFirstProgramDayId` 追加。`isProgramCompleted` 時のみ呼び出し（+2クエリ） |
+| `components/summary/WorkoutSummaryScreen.tsx` | `restartUrl` 生成、完走時 actions を "Restart Program" + "Choose Another Program" に変更 |
+| `docs/d4-reenroll-spec.md` | 新規作成 |
+
+### 完走後の CTA 分岐
+
+| 状態 | Primary | Secondary |
+|---|---|---|
+| 完走 + firstDayId あり | **Restart Program** → `/train?program=<slug>&programDayId=<firstDayId>` | Choose Another Program → `/programs` |
+| 完走 + firstDayId なし | Browse Programs → `/programs` | — |
+
+---
 
 ## 2026-04-14 S-1 — Exercise Swap MVP
 

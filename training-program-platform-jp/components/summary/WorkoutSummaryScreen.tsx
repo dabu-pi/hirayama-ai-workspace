@@ -70,9 +70,14 @@ export function WorkoutSummaryScreen({
   const nextProgramDayLabel = summary?.nextProgramDayLabel ?? null;
   const nextProgramDayId = summary?.nextProgramDayId ?? null;
   const programSlug = summary?.programSlug ?? null;
+  const firstProgramDayId = summary?.firstProgramDayId ?? null;
   const nextTrainUrl =
     !isProgramCompleted && nextProgramDayId && programSlug
       ? `/train?program=${programSlug}&programDayId=${nextProgramDayId}`
+      : null;
+  const restartUrl =
+    isProgramCompleted && firstProgramDayId && programSlug
+      ? `/train?program=${programSlug}&programDayId=${firstProgramDayId}`
       : null;
 
   return (
@@ -109,7 +114,8 @@ export function WorkoutSummaryScreen({
             )}
             {isReady && isProgramCompleted && (
               <div className={styles.completedCard}>
-                You finished all {summary.programTitle} sessions. Start a new program from the library.
+                You finished all {summary.programTitle} sessions.{" "}
+                {restartUrl ? "Restart from Week 1 or choose a new program." : "Choose your next program from the library."}
               </div>
             )}
           </>
@@ -175,9 +181,15 @@ export function WorkoutSummaryScreen({
 
       <div className={styles.actions}>
         {isProgramCompleted ? (
-          <Link className={styles.primaryAction} href="/programs">
-            Back to Programs
-          </Link>
+          restartUrl ? (
+            <Link className={styles.primaryAction} href={restartUrl}>
+              Restart Program
+            </Link>
+          ) : (
+            <Link className={styles.primaryAction} href="/programs">
+              Browse Programs
+            </Link>
+          )
         ) : nextTrainUrl ? (
           <Link className={styles.primaryAction} href={nextTrainUrl}>
             Go to Next Day
@@ -187,14 +199,21 @@ export function WorkoutSummaryScreen({
             Back to Train
           </Link>
         )}
+        {isProgramCompleted && (
+          <Link className={styles.secondaryAction} href="/programs">
+            Choose Another Program
+          </Link>
+        )}
         {!isProgramCompleted && (
           <Link className={styles.secondaryAction} href="/train">
             Back to Train
           </Link>
         )}
-        <Link className={styles.secondaryAction} href="/programs">
-          Browse Programs
-        </Link>
+        {!isProgramCompleted && (
+          <Link className={styles.secondaryAction} href="/programs">
+            Browse Programs
+          </Link>
+        )}
       </div>
     </main>
   );

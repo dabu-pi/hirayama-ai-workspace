@@ -184,6 +184,13 @@ export type WorkoutSummaryView = {
    * Null when the session has no associated program.
    */
   programSlug: string | null;
+  /**
+   * UUID of the first program_day (Week 1 / Day 1) of the program.
+   * Populated only when isProgramCompleted is true.
+   * Used to build the "Restart Program" re-enroll CTA.
+   * Null when the session has no associated program or first day could not be resolved.
+   */
+  firstProgramDayId: string | null;
 };
 
 export type WorkoutSessionListItem = {
