@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（C-6 week preview MVP 実装完了）
+最終更新: 2026-04-14（D-2 Summary → 次 day 直接 CTA 実装完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -79,6 +79,7 @@
 | **C-7: 4本目 seed — Dumbbell Full Body Base** | **✅ fully closed（2026-04-14）** |
 | **D-1: day progression — Summary Up Next / Program Complete UI** | **✅ 完了（2026-04-14）** |
 | **D-3: idempotency guard — 同一 day 再実行で enrollment が 2 回進む問題修正** | **✅ 完了（2026-04-14）** |
+| **D-2: Summary → 次 day 直接 CTA（Go to Next Day）** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
@@ -115,11 +116,25 @@
 - `docs/day-progression-spec.md`: 仕様・edge case・未対応事項を記録
 - TypeScript エラーなし / `/programs` 4 本表示・新 filter chip 確認済み
 
+### D-2 完了メモ（2026-04-14）
+
+- `types/workout.ts`: `WorkoutSummaryView` に `nextProgramDayId: string | null` / `programSlug: string | null` を追加
+- `lib/workout/workout-summary.ts`:
+  - `ProgramRow` に `slug` フィールドを追加、`selectProgram` で `slug` を取得
+  - 次 day 解決時に `nextProgramDayId`（UUID）も保持し view に渡す
+  - `program?.slug` を view に渡す
+- `WorkoutSummaryScreen.tsx`:
+  - `nextTrainUrl` を組み立て（`/train?program=<slug>&programDayId=<uuid>`）
+  - 通常完了時 → Primary: **Go to Next Day**、Secondary: Back to Train
+  - program 完走時 → Primary: Back to Programs
+  - program なし → Primary: Back to Train
+- TypeScript エラーなし
+
 ### 利用完遂モード — 次フェーズ候補
 
 | 優先 | タスク | 概要 | 状態 |
 |---|---|---|---|
-| D-2 | Summary → 次 day への直接リンク | Back to Train の迂回を解消。current enrollment day に直接飛ぶ CTA | 未着手 |
+| D-2 | Summary → 次 day への直接リンク | Back to Train の迂回を解消。current enrollment day に直接飛ぶ CTA | **✅ 完了** |
 | D-3 | re-do 防止（同一 day 2 回 Finish 問題） | session.program_day_id と enrollment.current_program_day_id を比較して advance を skip | **✅ 完了** |
 | D-4 | program 完走後 re-enroll | status='completed' enrollment からの再開フロー | 未着手 |
 

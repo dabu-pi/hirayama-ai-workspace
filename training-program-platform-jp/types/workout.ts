@@ -173,6 +173,17 @@ export type WorkoutSummaryView = {
    * Null when isProgramCompleted is true or program_day_id is unavailable.
    */
   nextProgramDayLabel: string | null;
+  /**
+   * UUID of the next program_day. Used to build the direct /train CTA URL.
+   * Null when isProgramCompleted is true or program_day_id is unavailable.
+   */
+  nextProgramDayId: string | null;
+  /**
+   * Slug of the program the session belongs to.
+   * Used alongside nextProgramDayId to build /train?program=<slug>&programDayId=<uuid>.
+   * Null when the session has no associated program.
+   */
+  programSlug: string | null;
 };
 
 export type WorkoutSummaryState =

@@ -48,6 +48,7 @@ type ProgramWeekRow = {
 type ProgramRow = {
   id: string;
   title: string;
+  slug: string;
 };
 
 type WorkoutSessionExerciseRow = {
@@ -145,7 +146,7 @@ async function selectProgram(client: DatabaseClient, programId: string | null) {
 
   const { data, error } = await client
     .from("programs")
-    .select("id, title")
+    .select("id, title, slug")
     .eq("id", programId)
     .maybeSingle<ProgramRow>();
 
@@ -221,7 +222,9 @@ function buildSummaryView(
   exercises: ExerciseRow[],
   visibleSets: WorkoutSetRow[],
   isProgramCompleted: boolean,
-  nextProgramDayLabel: string | null
+  nextProgramDayLabel: string | null,
+  nextProgramDayId: string | null,
+  programSlug: string | null
 ): WorkoutSummaryView {
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const setCounts = new Map<
@@ -283,7 +286,9 @@ function buildSummaryView(
     ),
     exercises: summaryExercises,
     isProgramCompleted,
-    nextProgramDayLabel
+    nextProgramDayLabel,
+    nextProgramDayId,
+    programSlug
   };
 }
 
@@ -344,11 +349,13 @@ export async function getWorkoutSummaryView(
     // findNextProgramDayId returns null for the last day of the program.
     let isProgramCompleted = false;
     let nextProgramDayLabel: string | null = null;
+    let nextProgramDayId: string | null = null;
 
     if (session.program_day_id) {
-      const nextDayId = await findNextProgramDayId(session.program_day_id);
-      if (nextDayId) {
-        const nextDay = await selectProgramDay(queryClient, nextDayId);
+      const resolvedNextDayId = await findNextProgramDayId(session.program_day_id);
+      if (resolvedNextDayId) {
+        nextProgramDayId = resolvedNextDayId;
+        const nextDay = await selectProgramDay(queryClient, resolvedNextDayId);
         const nextWeek = await selectProgramWeek(
           queryClient,
           nextDay?.program_week_id ?? null
@@ -373,7 +380,9 @@ export async function getWorkoutSummaryView(
       exercises,
       visibleSets,
       isProgramCompleted,
-      nextProgramDayLabel
+      nextProgramDayLabel,
+      nextProgramDayId,
+      program?.slug ?? null
     );
 
     return {

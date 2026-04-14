@@ -1,6 +1,37 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（D-3 idempotency guard 完了）
+最終更新: 2026-04-14（D-2 Summary → 次 day 直接 CTA 完了）
+
+## 2026-04-14 D-2 — Summary → 次 day 直接 CTA
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `WorkoutSummaryView` に `nextProgramDayId` / `programSlug` 追加 | **完了 ✅** |
+| `workout-summary.ts` で UUID と slug を解決・返却 | **完了 ✅** |
+| `WorkoutSummaryScreen.tsx` に Go to Next Day CTA 追加 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+| `docs/day-progression-spec.md` 更新（D-2 セクション追加） | **完了 ✅** |
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `WorkoutSummaryView` に `nextProgramDayId: string \| null` / `programSlug: string \| null` を追加 |
+| `lib/workout/workout-summary.ts` | `ProgramRow` に `slug` を追加、`nextProgramDayId` を outer scope に保持して view に渡す |
+| `components/summary/WorkoutSummaryScreen.tsx` | `nextTrainUrl` 生成ロジック追加、actions に "Go to Next Day" CTA 追加 |
+| `docs/day-progression-spec.md` | D-2 セクション追加（CTA ロジック・URL 組み立て・表示分岐） |
+
+### CTA 表示分岐
+
+| 状態 | Primary | Secondary |
+|---|---|---|
+| 通常完了（next day あり） | **Go to Next Day** → `/train?program=<slug>&programDayId=<uuid>` | Back to Train / Browse Programs |
+| program 完走 | Back to Programs | Browse Programs |
+| program なしセッション | Back to Train | Browse Programs |
+
+---
 
 ## 2026-04-14 D-3 — idempotency guard（同一 day 再実行対策）
 

@@ -68,6 +68,12 @@ export function WorkoutSummaryScreen({
   const stateBody = resolveStateBody(state, errorMessage);
   const isProgramCompleted = summary?.isProgramCompleted ?? false;
   const nextProgramDayLabel = summary?.nextProgramDayLabel ?? null;
+  const nextProgramDayId = summary?.nextProgramDayId ?? null;
+  const programSlug = summary?.programSlug ?? null;
+  const nextTrainUrl =
+    !isProgramCompleted && nextProgramDayId && programSlug
+      ? `/train?program=${programSlug}&programDayId=${nextProgramDayId}`
+      : null;
 
   return (
     <main className={styles.page}>
@@ -169,8 +175,17 @@ export function WorkoutSummaryScreen({
           <Link className={styles.primaryAction} href="/programs">
             Back to Programs
           </Link>
+        ) : nextTrainUrl ? (
+          <Link className={styles.primaryAction} href={nextTrainUrl}>
+            Go to Next Day
+          </Link>
         ) : (
           <Link className={styles.primaryAction} href="/train">
+            Back to Train
+          </Link>
+        )}
+        {!isProgramCompleted && (
+          <Link className={styles.secondaryAction} href="/train">
             Back to Train
           </Link>
         )}

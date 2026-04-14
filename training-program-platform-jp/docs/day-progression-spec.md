@@ -1,6 +1,6 @@
 # D-1 — Day Progression Spec
 
-最終更新: 2026-04-14（D-1 実装完了）
+最終更新: 2026-04-14（D-2 実装完了）
 
 ## 目的
 
@@ -132,10 +132,40 @@ if (enrollment.current_program_day_id !== session.program_day_id) {
 
 ---
 
+## D-2 — Summary → 次 day 直接 CTA（2026-04-14 実装済み）
+
+### 追加した実装
+
+| 変更 | ファイル | 内容 |
+|---|---|---|
+| 型追加 | `types/workout.ts` | `WorkoutSummaryView` に `nextProgramDayId: string \| null` / `programSlug: string \| null` を追加 |
+| データ追加 | `lib/workout/workout-summary.ts` | `ProgramRow` に `slug` フィールドを追加。`resolvedNextDayId` を outer scope に保持して view に渡す。`program?.slug` も view に渡す |
+| CTA 追加 | `components/summary/WorkoutSummaryScreen.tsx` | `nextTrainUrl` を組み立て（`/train?program=<slug>&programDayId=<uuid>`）。通常完了時に「Go to Next Day」を primary action として表示。完了済みでない場合は「Back to Train」を secondary に格下げ |
+
+### CTA 表示ロジック
+
+| 状態 | Primary CTA | Secondary CTA |
+|---|---|---|
+| 通常完了（`nextProgramDayId` & `programSlug` あり） | **Go to Next Day** → `/train?program=<slug>&programDayId=<uuid>` | Back to Train / Browse Programs |
+| program 完走（`isProgramCompleted = true`） | Back to Programs | Browse Programs |
+| program なしセッション（`nextProgramDayId` が null） | Back to Train | Browse Programs |
+
+### URL 組み立て
+
+```typescript
+const nextTrainUrl =
+  !isProgramCompleted && nextProgramDayId && programSlug
+    ? `/train?program=${programSlug}&programDayId=${nextProgramDayId}`
+    : null;
+```
+
+`/train` ページは既存の `?program=<slug>&programDayId=<uuid>` パラメータを解釈して直接 day を開く（`resolveStartProgramDayId` / `findOrCreateEnrollment` 経由）。
+
+---
+
 ## 未対応事項（今後の課題）
 
 | 項目 | 概要 |
 |---|---|
 | program 完走後の re-enroll | status='completed' になった enrollment を active に戻す、または新規 enrollment を作るフローが未実装（D-4 候補） |
-| Summary から次 day の Train への直接リンク | 現在は「Back to Train」でトップに戻る。Detail → Go to Train の迂回が必要（D-2 候補） |
 | completion 通知 UI | program 完走時の専用ページ / モーダルは未実装 |
