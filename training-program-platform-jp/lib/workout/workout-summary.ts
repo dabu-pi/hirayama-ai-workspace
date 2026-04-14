@@ -257,7 +257,8 @@ function buildSummaryView(
   nextProgramDayLabel: string | null,
   nextProgramDayId: string | null,
   programSlug: string | null,
-  firstProgramDayId: string | null
+  firstProgramDayId: string | null,
+  programId: string | null
 ): WorkoutSummaryView {
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const setCounts = new Map<
@@ -333,7 +334,8 @@ function buildSummaryView(
     nextProgramDayLabel,
     nextProgramDayId,
     programSlug,
-    firstProgramDayId
+    firstProgramDayId,
+    programId
   };
 }
 
@@ -434,7 +436,8 @@ export async function getWorkoutSummaryView(
       nextProgramDayLabel,
       nextProgramDayId,
       program?.slug ?? null,
-      firstProgramDayId
+      firstProgramDayId,
+      program?.id ?? null
     );
 
     // S-6: cancelled sessions return their summary with state "cancelled" so the

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { WorkoutSummaryState, WorkoutSummaryView } from "@/types/workout";
 
+import { RestartProgramButton } from "./RestartProgramButton";
 import styles from "./WorkoutSummaryScreen.module.css";
 
 type WorkoutSummaryScreenProps = {
@@ -77,14 +78,20 @@ export function WorkoutSummaryScreen({
   const nextProgramDayId = summary?.nextProgramDayId ?? null;
   const programSlug = summary?.programSlug ?? null;
   const firstProgramDayId = summary?.firstProgramDayId ?? null;
+  const programId = summary?.programId ?? null;
   const nextTrainUrl =
     !isProgramCompleted && nextProgramDayId && programSlug
       ? `/train?program=${programSlug}&programDayId=${nextProgramDayId}`
       : null;
-  const restartUrl =
+  // S-7: Restart Program CTA uses the dedicated API. The fallback URL is
+  // retained so the UI can still offer a link-based flow if programId is
+  // unavailable (e.g. older summary payloads without S-7 fields).
+  const canRestartViaApi = isProgramCompleted && programId !== null;
+  const restartFallbackUrl =
     isProgramCompleted && firstProgramDayId && programSlug
       ? `/train?program=${programSlug}&programDayId=${firstProgramDayId}`
       : null;
+  const hasRestartCta = canRestartViaApi || restartFallbackUrl !== null;
 
   // S-6: Back link — home for normal flow, programs when program is complete
   const backHref = isProgramCompleted ? "/programs" : "/";
@@ -137,7 +144,7 @@ export function WorkoutSummaryScreen({
             {isReady && isProgramCompleted && (
               <div className={styles.completedCard}>
                 You finished all {summary.programTitle} sessions.{" "}
-                {restartUrl ? "Restart from Week 1 or choose a new program." : "Choose your next program from the library."}
+                {hasRestartCta ? "Restart from Week 1 or choose a new program." : "Choose your next program from the library."}
               </div>
             )}
           </>
@@ -222,8 +229,17 @@ export function WorkoutSummaryScreen({
           </>
         ) : isProgramCompleted ? (
           <>
-            {restartUrl ? (
-              <Link className={styles.primaryAction} href={restartUrl}>
+            {/* S-7: preferred path — dedicated restart API, navigates to Home */}
+            {canRestartViaApi && programId ? (
+              <RestartProgramButton
+                className={styles.primaryAction}
+                programId={programId}
+              >
+                Restart Program
+              </RestartProgramButton>
+            ) : restartFallbackUrl ? (
+              /* Fallback for older payloads without programId — link-based flow via /train */
+              <Link className={styles.primaryAction} href={restartFallbackUrl}>
                 Restart Program
               </Link>
             ) : (

@@ -197,6 +197,26 @@ export type WorkoutSummaryView = {
    * Null when the session has no associated program or first day could not be resolved.
    */
   firstProgramDayId: string | null;
+  /**
+   * S-7: UUID of the program this session belongs to.
+   * Used to call POST /api/programs/:programId/restart from the Summary.
+   * Null when the session has no associated program.
+   */
+  programId: string | null;
+};
+
+/**
+ * S-7: Response from POST /api/programs/[programId]/restart
+ */
+export type RestartProgramResponse = {
+  /** Enrollment id that is now active (may be newly created or reused). */
+  enrollmentId: string;
+  /** UUID of the first program_day (Week 1 / Day 1) the enrollment points at. */
+  programDayId: string;
+  /** true when an existing active enrollment was reused; false when a new row was inserted. */
+  reused: boolean;
+  /** Client should navigate here after success. Typically "/" (Home). */
+  redirectUrl: string;
 };
 
 export type WorkoutSessionListItem = {

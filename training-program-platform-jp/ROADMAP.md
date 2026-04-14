@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（S-6 Workout Summary 改善 完了）
+最終更新: 2026-04-15（S-7 Restart Program フロー 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -94,6 +94,7 @@
 | **S-4: session completion → enrollment advancement deterministic 化** | **✅ 完了（2026-04-14）** |
 | **S-5: Cancel workout — in_progress session の明示的破棄導線** | **✅ 完了（2026-04-14）** |
 | **S-6: Workout Summary 改善 — volume stat / cancelled 表示 / CTA 整理** | **✅ 完了（2026-04-14）** |
+| **S-7: Restart Program フロー — completed summary からの再受講（新 enrollment INSERT）** | **✅ 完了（2026-04-15）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果

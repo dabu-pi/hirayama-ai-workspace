@@ -1,6 +1,113 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（S-6 Workout Summary 改善 完了）
+最終更新: 2026-04-15（S-7 Restart Program フロー 完了）
+
+## 2026-04-15 S-7 — Restart Program フロー
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `lib/workout/restart-program.ts`（`restartProgramEnrollment`）新規作成 | **完了 ✅** |
+| `app/api/programs/[programId]/restart/route.ts` POST 新規作成 | **完了 ✅** |
+| `components/summary/RestartProgramButton.tsx` 新規作成（client） | **完了 ✅** |
+| `WorkoutSummaryView` に `programId: string \| null` 追加 | **完了 ✅** |
+| `RestartProgramResponse` 型追加 | **完了 ✅** |
+| `workout-summary.ts` — `programId` を view に渡す | **完了 ✅** |
+| `WorkoutSummaryScreen` — 完走時 CTA を dedicated button に差し替え（Link fallback 残す） | **完了 ✅** |
+| idempotency — 既存 active enrollment があれば reuse | **完了 ✅** |
+| first day 不在 / broken program は 422 で safe fail | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅**（`tsc --noEmit` pass）|
+
+### 設計方針
+
+**再開ではなく再受講:**
+- completed enrollment は履歴として保持（update しない）
+- 新しい enrollment を INSERT（status='active', current_program_day_id = week 1 / day 1）
+- DB の UNIQUE INDEX は `WHERE status='active'` のみに適用されるため、completed は何件でも残る
+
+**restart 条件:**
+
+| 条件 | 動作 | レスポンス |
+|---|---|---|
+| signed-in + program 存在 + first day 解決可 + 既存 active なし | 新 enrollment INSERT | 201, `reused: false` |
+| signed-in + program 存在 + first day 解決可 + 既存 active あり | 既存を返す | 200, `reused: true` |
+| program 不存在 | 作成しない | 404 `program_not_found` |
+| Week 1 / Day 1 が存在しない（broken program）| 作成しない | 422 `first_day_not_found` |
+| 未ログイン | 作成しない | 401 `unauthenticated` |
+| Supabase 未設定 | 作成しない | 503 `supabase_unavailable` |
+
+**first day 解決ルール:**
+
+```
+1. program_weeks を week_number = 1 で lookup
+2. 該当 week の program_days を day_number = 1 で lookup
+3. 見つからなければ null → 422 safe fail
+```
+
+（`lib/workout/workout-summary.ts` の `selectFirstProgramDayId` と同一仕様 — summary 内部に依存せず独立実装）
+
+**既存 active enrollment がある場合:**
+- 新規作成しない（idempotent）
+- 既存の id と current_program_day_id を返す（current_program_day_id が null の場合のみ first day に fallback）
+- 二重クリック耐性: client 側で `isBusy` flag で連打ブロック + server 側で findActiveEnrollment による reuse
+
+**遷移先:**
+- 成功時は `redirectUrl: "/"`（Home）
+- Home の active-program card で新 enrollment を progress = 0 として表示
+- 直接 /train に飛ばさないことで「新しい active enrollment ができた」ことを明示
+
+### 変更内容
+
+#### types/workout.ts
+- `WorkoutSummaryView` に `programId: string | null` を追加（restart API 呼び出しに必要）
+- `RestartProgramResponse` 型を新規追加（`enrollmentId` / `programDayId` / `reused` / `redirectUrl`）
+
+#### lib/workout/restart-program.ts（新規）
+- `restartProgramEnrollment(programId, userId)` server function
+- `resolveFirstProgramDayId(client, programId)` private helper（2 queries）
+- `RestartProgramResult` discriminated union を export
+- 認証失敗 / program 不在 / first day 不在 / insert 失敗 を明示的に分岐
+
+#### app/api/programs/[programId]/restart/route.ts（新規）
+- POST endpoint — auth check → `restartProgramEnrollment` 呼び出し → revalidatePath("/")
+- 成功時は 201（新規）or 200（reuse）で `RestartProgramResponse` を返す
+- `first_day_not_found` は 422（broken data の明示）
+
+#### lib/workout/workout-summary.ts
+- `buildSummaryView` のシグネチャに `programId: string | null` を追加
+- `getWorkoutSummaryView` から `program?.id ?? null` を view に渡す
+
+#### components/summary/RestartProgramButton.tsx（新規）
+- `"use client"` + `useRouter` + `useTransition`
+- POST `/api/programs/:programId/restart` → 成功時は redirectUrl（既定 /）へ navigate + `router.refresh()`
+- `isBusy`（local state + transition）で連打ブロック
+- エラー時はボタン下に赤文字で表示
+
+#### components/summary/WorkoutSummaryScreen.tsx
+- `RestartProgramButton` を import
+- `programId` を summary から取り出し、`canRestartViaApi` を導出
+- 完走時 primary CTA を 3 パターンで分岐:
+  1. `canRestartViaApi` → `RestartProgramButton`（推奨経路）
+  2. fallback: `restartFallbackUrl`（旧 payload との互換用リンク → `/train?...`）
+  3. どちらも不可 → `Browse Programs` リンク
+- completedCard 文言分岐を `hasRestartCta` に変更
+
+### 今回やらないこと（スコープ外）
+
+- completed enrollment の上書き reset
+- restart reason / cycle number の保存
+- completed runs の比較 UI
+- multi-cycle analytics（N 周目表示・前周との比較）
+- paused enrollment からの再開
+- 同一 program の複数 active enrollment を正式サポートする設計変更
+
+### OPEN ISSUES
+
+- **completed runs の比較表示:** 現状 completed enrollment は history として残るだけで UI 導線なし。session-history からたどる必要がある。将来 "N 周目" 表示をする場合は enrollment 単位のグルーピング UI が必要
+- **multi-cycle analytics:** volume/e1RM trend は現状 enrollment 単位で集計（H-4 / H-4b）。複数周回をまたいだ長期推移を見せる場合は user × program 単位での集計が必要になる
+
+---
 
 ## 2026-04-14 S-6 — Workout Summary 改善
 
