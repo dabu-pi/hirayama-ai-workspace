@@ -4,11 +4,20 @@ import type { ActiveProgramView } from "@/types/workout";
 
 import styles from "./ActiveProgramCard.module.css";
 
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
 type ActiveProgramCardProps = {
-  view: ActiveProgramView | null;
+  /** All active enrollments, ordered by most-recently-updated first. */
+  views: ActiveProgramView[];
   isAuthenticated: boolean;
   errorMessage: string | null;
 };
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function levelLabel(level: string | null): string | null {
   if (!level) return null;
@@ -26,6 +35,10 @@ function statusClass(status: string): string {
   if (status === "in_progress") return `${styles.sessionStatus} ${styles.statusActive}`;
   return `${styles.sessionStatus} ${styles.statusCancelled}`;
 }
+
+// ---------------------------------------------------------------------------
+// Empty / error states
+// ---------------------------------------------------------------------------
 
 function NotSignedIn() {
   return (
@@ -64,15 +77,12 @@ function ErrorCard({ message }: { message: string }) {
   );
 }
 
-export function ActiveProgramCard({
-  view,
-  isAuthenticated,
-  errorMessage
-}: ActiveProgramCardProps) {
-  if (errorMessage) return <ErrorCard message={errorMessage} />;
-  if (!isAuthenticated) return <NotSignedIn />;
-  if (!view) return <NoProgramCard />;
+// ---------------------------------------------------------------------------
+// Single program card body
+// Extracted so it can be rendered for each enrollment independently.
+// ---------------------------------------------------------------------------
 
+function ProgramCard({ view }: { view: ActiveProgramView }) {
   return (
     <div className={styles.card}>
       {/* ---- header ---- */}
@@ -92,7 +102,7 @@ export function ActiveProgramCard({
         <span className={styles.metaItem}>{view.durationLabel}</span>
       </div>
 
-      {/* ---- progress bar ---- */}
+      {/* ---- progress bar (hidden when totalDays = 0) ---- */}
       {view.totalDays > 0 && (
         <div className={styles.progressSection}>
           <div className={styles.progressHeader}>
@@ -160,5 +170,34 @@ export function ActiveProgramCard({
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Public export
+// ---------------------------------------------------------------------------
+
+/**
+ * H-3c: Renders 0 / 1 / N enrollment cards.
+ *
+ * - 0 enrollments → empty state (same as before)
+ * - 1 enrollment  → single ProgramCard (identical appearance to pre-H-3c)
+ * - 2+ enrollments → multiple ProgramCards stacked vertically
+ */
+export function ActiveProgramCard({
+  views,
+  isAuthenticated,
+  errorMessage
+}: ActiveProgramCardProps) {
+  if (errorMessage) return <ErrorCard message={errorMessage} />;
+  if (!isAuthenticated) return <NotSignedIn />;
+  if (views.length === 0) return <NoProgramCard />;
+
+  return (
+    <>
+      {views.map((view) => (
+        <ProgramCard key={view.enrollmentId} view={view} />
+      ))}
+    </>
   );
 }

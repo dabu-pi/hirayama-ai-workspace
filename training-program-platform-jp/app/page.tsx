@@ -8,7 +8,7 @@ import { getActiveProgramView } from "@/lib/workout/active-program";
 import styles from "./page.module.css";
 
 export default async function HomePage() {
-  const { view, isAuthenticated, errorMessage } = await getActiveProgramView();
+  const { views, isAuthenticated, errorMessage } = await getActiveProgramView();
 
   return (
     <main className={styles.page}>
@@ -23,7 +23,7 @@ export default async function HomePage() {
 
       <section className={styles.section}>
         <ActiveProgramCard
-          view={view}
+          views={views}
           isAuthenticated={isAuthenticated}
           errorMessage={errorMessage}
         />

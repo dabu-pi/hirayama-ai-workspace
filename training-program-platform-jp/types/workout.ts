@@ -289,7 +289,11 @@ export type ActiveProgramView = {
 };
 
 export type ActiveProgramResult = {
-  view: ActiveProgramView | null;
+  /**
+   * All active enrollments for the current user, ordered by most-recently-updated first.
+   * Empty array when the user has no active enrollment.
+   */
+  views: ActiveProgramView[];
   /** true = user is signed in but has no active enrollment */
   isAuthenticated: boolean;
   errorMessage: string | null;

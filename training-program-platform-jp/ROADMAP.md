@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-14（H-3b Progress Bar 完了）
+最終更新: 2026-04-14（H-3c Multi-enrollment 完了）
 
 ## 2026-04-13 Program Source Audit
 
@@ -86,6 +86,7 @@
 | **H-2: Session Detail — per-set weight/reps 詳細画面** | **✅ 完了（2026-04-14）** |
 | **H-3: Active Program Progress — home dashboard** | **✅ 完了（2026-04-14）** |
 | **H-3b: Progress Bar — completedDays / totalDays / %** | **✅ 完了（2026-04-14）** |
+| **H-3c: Multi-enrollment — 複数 active enrollment の Home 表示** | **✅ 完了（2026-04-14）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果

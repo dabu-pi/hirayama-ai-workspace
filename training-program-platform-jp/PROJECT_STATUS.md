@@ -1,6 +1,57 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-14（H-3b Progress Bar 完了）
+最終更新: 2026-04-14（H-3c Multi-enrollment 完了）
+
+## 2026-04-14 H-3c — Multi-enrollment Home
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `ActiveProgramResult.view` → `views: ActiveProgramView[]` に変更 | **完了 ✅** |
+| `selectActiveEnrollments` — LIMIT 1 撤去、updated_at / created_at desc 順 | **完了 ✅** |
+| `selectProgramsBatch` / `selectCurrentDaysBatch` バッチ取得に置換 | **完了 ✅** |
+| `selectAllProgramWeeksByProgramIds` — program_ids バッチ取得 | **完了 ✅** |
+| `selectRecentSessionsForEnrollments` — enrollment_ids バッチ取得 + in-memory 分配 | **完了 ✅** |
+| `computeProgress` を enrollment ごとに独立呼び出し | **完了 ✅** |
+| `ActiveProgramCard.tsx` — `ProgramCard` 抽出 / 0-1-N 表示分岐 | **完了 ✅** |
+| `app/page.tsx` — `views` 配列を渡すよう変更 | **完了 ✅** |
+| TypeScript 型エラー | **なし ✅** |
+
+### クエリ方針（N+1 なし）
+
+- total 9 クエリ固定（enrollment 数に比例しない）
+  1. `selectActiveEnrollments`
+  2–5. parallel: `selectProgramsBatch` / `selectProgramDaysBatch`(currentDays) / `selectAllProgramWeeksByProgramIds` / `selectRecentSessionsForEnrollments`
+  6–8. parallel: `selectProgramWeeksBatch`(currentWeeks) / `selectAllProgramDays` / `selectProgramDaysBatch`(sessionDays)
+  9. `selectProgramWeeksBatch`(sessionWeeks)
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `ActiveProgramResult.view → views: ActiveProgramView[]` |
+| `lib/workout/active-program.ts` | 全 query 関数をバッチ対応に置換、`getActiveProgramView` を N-enrollment 対応に書き直し |
+| `components/home/ActiveProgramCard.tsx` | `ProgramCard` サブコンポーネント抽出、props を `views[]` に変更、0/1/N 表示分岐 |
+| `app/page.tsx` | `views` 配列を渡すよう変更 |
+
+### 表示分岐
+
+| enrollments 数 | 表示 |
+|---|---|
+| 0 | 既存 empty state（変化なし） |
+| 1 | 既存 ProgramCard と同一の外見 |
+| 2+ | ProgramCard を縦に複数枚 |
+
+### Defensive handling
+
+- `current_program_day_id = null` → `completedDays = 0`（progress 0%）
+- `current_program_day_id` が day 一覧に存在しない → `completedDays = 0`（crash しない）
+- `totalDays = 0` → progress bar 非表示（既存挙動を維持）
+- inactive / archived program が program_id に対応しない → title "Current Program" でフォールバック
+- enrollment に program_enrollment_id のない sessions → in-memory 分配で自動スキップ
+
+---
 
 ## 2026-04-14 H-3b — Progress Bar
 
