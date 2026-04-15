@@ -105,5 +105,8 @@ training-program-platform-jp/.claude/
 
 # aios-orchestrator — ローカルデータ・認証情報
 aios-orchestrator/data/
+aios-orchestrator/dual-agent-poc/data/
 aios-orchestrator/.env
+aios-orchestrator/dual-agent-poc/.env
 aios-orchestrator/src/__pycache__/
+aios-orchestrator/dual-agent-poc/__pycache__/
