@@ -709,3 +709,5 @@ LLM: dry_run=True（approval_test モック）/ Dashboard 書き込み: dry_run=
 | **Phase 3 実 API** | 4 ターン → Sheet 書き込み → 冪等確認 | **OK（CLOSED）** |
 | **Phase 4 dry-run** | 承認フロー冪等修正（7 シナリオ） | **OK** |
 | **Phase 4 実 API** | waiting_approval→STOP / completed→SUCCESS 各 1 行 Sheet 書き込み | **OK（CLOSED）** |
+| **Phase 5 調査** | 修正前: 500字超過(最大673字)・12件超過・コードブロック出力を確認 | **問題検出** |
+| **Phase 5 修正後 実 API** | 12 ターン・全 7 事実保持・全ターン 500字以内 | **OK（CLOSED）** |

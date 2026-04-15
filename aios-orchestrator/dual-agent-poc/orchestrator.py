@@ -22,7 +22,7 @@ import argparse
 import sys
 import textwrap
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 # ─── 依存モジュール（同一ディレクトリ）────────────────────────────────────────
 from store import (
@@ -303,13 +303,19 @@ def _update_summary_safely(
             return
 
         update_summary(db_path, conversation_id, new_summary)
+        meta: dict[str, Any] = {"event": event}
+        if result.get("over_limit"):
+            meta["over_limit"] = True
+            meta["char_count"] = result.get("char_count")
+            if verbose:
+                print(f"[Turn {turn_id}] [WARN] summary が {result.get('char_count')} 字（上限500字超過）")
         log_summary_updated(
             db_path, conversation_id, turn_id,
             model=result.get("model"),
             tokens_in=result.get("tokens_in"),
             tokens_out=result.get("tokens_out"),
             duration_ms=result.get("duration_ms"),
-            metadata={"event": event},
+            metadata=meta,
         )
         if verbose:
             cost = calc_cost(
