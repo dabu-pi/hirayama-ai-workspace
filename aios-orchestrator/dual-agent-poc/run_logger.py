@@ -25,6 +25,10 @@ EVENT_SESSION_END         = "session_end"
 # Phase 2
 EVENT_SUMMARY_UPDATED     = "summary_updated"
 EVENT_SUMMARY_FAILED      = "summary_update_failed"
+# Phase 3
+EVENT_DASHBOARD_REPORTED  = "dashboard_reported"
+EVENT_DASHBOARD_FAILED    = "dashboard_report_failed"
+EVENT_DASHBOARD_SKIPPED   = "dashboard_skipped"
 
 
 # ─── 内部ユーティリティ ───────────────────────────────────────────────────────
@@ -323,6 +327,84 @@ def log_summary_failed(
         turn_id=turn_id,
         event_type=EVENT_SUMMARY_FAILED,
         model=model,
+        metadata=metadata,
+    )
+
+
+def log_dashboard_reported(
+    db_path: str,
+    conversation_id: str,
+    metadata: Optional[dict] = None,
+) -> str:
+    """
+    Dashboard Run_Log シートへの書き込みが成功したことを記録する（Phase 3）。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID
+        metadata:        追加情報（local_path / sheet_result / idempotent_skip 等）
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=None,
+        event_type=EVENT_DASHBOARD_REPORTED,
+        metadata=metadata,
+    )
+
+
+def log_dashboard_failed(
+    db_path: str,
+    conversation_id: str,
+    metadata: Optional[dict] = None,
+) -> str:
+    """
+    Dashboard 反映が失敗したことを記録する（Phase 3）。
+
+    失敗は orchestrator 本体を止めない設計のため、
+    呼び出し側は例外を握りつぶした上でこの関数だけ叩く。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID
+        metadata:        エラー情報（{"error": "...", "sheet_result": "..."}）
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=None,
+        event_type=EVENT_DASHBOARD_FAILED,
+        metadata=metadata,
+    )
+
+
+def log_dashboard_skipped(
+    db_path: str,
+    conversation_id: str,
+    metadata: Optional[dict] = None,
+) -> str:
+    """
+    Dashboard 反映を冪等スキップしたことを記録する（Phase 3）。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID
+        metadata:        スキップ理由（{"reason": "already_reported"}）
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=None,
+        event_type=EVENT_DASHBOARD_SKIPPED,
         metadata=metadata,
     )
 

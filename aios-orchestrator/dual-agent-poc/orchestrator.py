@@ -54,9 +54,13 @@ from run_logger import (
     log_session_end,
     log_summary_updated,
     log_summary_failed,
+    log_dashboard_reported,
+    log_dashboard_failed,
+    log_dashboard_skipped,
     calc_cost,
 )
 from summarizer import generate_summary, mock_summary
+from dashboard_reporter import report_session as _report_to_dashboard
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -731,7 +735,76 @@ def command_run(args: argparse.Namespace) -> int:
     if conv:
         print(f"  conversations.status : {conv['status']}")
         print(f"  turn_count           : {conv['turn_count']}")
+
+    # ── Phase 3: Dashboard Run_Log シートへ反映 ───────────────────────────
+    _report_to_dashboard_safely(
+        db_path=db_path,
+        conversation_id=conv_id,
+        dry_run=dry_run,
+        verbose=True,
+    )
     return 0
+
+
+def _report_to_dashboard_safely(
+    db_path: str,
+    conversation_id: str,
+    dry_run: bool = False,
+    verbose: bool = True,
+) -> None:
+    """
+    Dashboard Run_Log シートへセッション結果を反映する。
+    失敗しても orchestrator 本体は止まらない。
+
+    Phase 3: report_session() を呼び出し、結果を run_log に記録する。
+    """
+    try:
+        conv = get_conversation(db_path, conversation_id)
+        if conv is None:
+            return
+
+        run_logs = get_run_log(db_path, conversation_id)
+        report = _report_to_dashboard(
+            conv=conv,
+            run_logs=run_logs,
+            dry_run=dry_run,
+            verbose=verbose,
+        )
+
+        if report["idempotent_skip"]:
+            log_dashboard_skipped(
+                db_path, conversation_id,
+                metadata={"reason": "already_reported"},
+            )
+        elif report["success"]:
+            log_dashboard_reported(
+                db_path, conversation_id,
+                metadata={
+                    "local_path":   report.get("local_path"),
+                    "sheet_result": report.get("sheet_result", "")[:200],
+                    "dry_run":      dry_run,
+                },
+            )
+        else:
+            log_dashboard_failed(
+                db_path, conversation_id,
+                metadata={
+                    "sheet_result": report.get("sheet_result", "")[:200],
+                    "local_path":   report.get("local_path"),
+                },
+            )
+
+    except Exception as exc:  # noqa: BLE001
+        # 最終安全網: 予期しない例外でも本体は止まらない
+        if verbose:
+            print(f"[Dashboard] [WARN] 予期しないエラー（無視して続行）: {exc}")
+        try:
+            log_dashboard_failed(
+                db_path, conversation_id,
+                metadata={"error": str(exc), "type": type(exc).__name__},
+            )
+        except Exception:  # noqa: BLE001
+            pass  # ログ書き込みも失敗した場合は完全に無視
 
 
 def command_pending(args: argparse.Namespace) -> int:
