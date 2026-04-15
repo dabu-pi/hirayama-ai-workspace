@@ -428,3 +428,57 @@ def get_pending_approvals(db_path: str) -> list[dict]:
         ).fetchall()
 
     return [dict(row) for row in rows]
+
+
+# ─────────────────────────────────────────────
+# 単件取得（orchestrator / コマンドから使う）
+# ─────────────────────────────────────────────
+
+def get_conversation(db_path: str, conversation_id: str) -> Optional[dict]:
+    """
+    conversation_id で会話を1件取得する。
+
+    Returns:
+        conversations の全カラムを含む dict。存在しない場合は None。
+    """
+    with get_conn(db_path) as conn:
+        row = conn.execute(
+            "SELECT * FROM conversations WHERE conversation_id = ?",
+            (conversation_id,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_message(db_path: str, message_id: str) -> Optional[dict]:
+    """
+    message_id でメッセージを1件取得する。
+
+    Returns:
+        messages の全カラムを含む dict。存在しない場合は None。
+    """
+    with get_conn(db_path) as conn:
+        row = conn.execute(
+            "SELECT * FROM messages WHERE message_id = ?",
+            (message_id,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_run_log(db_path: str, conversation_id: str) -> list[dict]:
+    """
+    conversation_id に紐づく run_log を時系列で返す。
+
+    Returns:
+        run_log の全カラムを含む dict リスト（created_at 昇順）
+    """
+    with get_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM run_log
+            WHERE conversation_id = ?
+            ORDER BY created_at ASC
+            """,
+            (conversation_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
