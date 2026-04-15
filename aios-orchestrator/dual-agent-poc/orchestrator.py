@@ -31,13 +31,15 @@ from store import (
     get_conversation,
     get_message,
     get_run_log,
-    get_history,
     get_pending_approvals,
+    build_context,
+    get_recent_history,
     append_message,
     set_message_approval,
     set_conversation_status,
     increment_turn_count,
 )
+# get_history は残っているが orchestrator 本体では使わない（全履歴読み防止）
 from openai_client import chat_openai
 from anthropic_client import chat_anthropic
 from approval_gate import parse_requires_approval, needs_approval, prompt_approval_with_message_id
@@ -64,6 +66,48 @@ _MAX_CONSECUTIVE_BLOCKED = 3
 # ─────────────────────────────────────────────────────────────────────────────
 # System Prompt 構築
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ─── context 構築設定 ────────────────────────────────────────────────────────
+# Planner / Executor に渡す最大メッセージ件数
+# 全履歴ではなく直近 N 件のみを渡す（トークン肥大化・他会話混入を防ぐ）
+_CONTEXT_LIMIT = 10
+
+
+def _build_messages_for_llm(ctx: dict) -> list[dict[str, str]]:
+    """
+    build_context() の戻り値から LLM に渡す messages リストを構築する。
+
+    構成:
+      1. summary があれば先頭に user ロールで要約を挿入する
+      2. recent_history をそのまま連結する
+
+    summary は assistant ではなく user として渡す（OpenAI/Anthropic の
+    先頭 role 制約を回避し、会話文脈として自然に読ませるため）。
+
+    他 conversation_id / project_id のデータは混ぜない。
+    """
+    messages: list[dict[str, str]] = []
+
+    if ctx.get("summary"):
+        messages.append({
+            "role": "user",
+            "content": f"[会話の要約]\n{ctx['summary']}",
+        })
+        # summary に対する形式上の返答（Anthropic の交互制約対策）
+        messages.append({
+            "role": "assistant",
+            "content": "了解しました。要約を踏まえて続けます。",
+        })
+
+    # recent_history（role / content のみを渡す）
+    for msg in ctx.get("recent_history", []):
+        messages.append({
+            "role": msg["role"],
+            "content": msg["content"],
+        })
+
+    return messages
+
 
 def build_planner_system_prompt(max_turns: int = _DEFAULT_MAX_TURNS) -> str:
     """
@@ -159,17 +203,22 @@ def run_single_turn(
     turn_id = conv["turn_count"] + 1
     if verbose:
         print(f"\n{_SEP}")
-        print(f"[Turn {turn_id}] 開始")
+        print(f"[Turn {turn_id}] 開始  project={conv.get('project_id', 'default')}")
 
-    # ── 1. 履歴取得 ──────────────────────────────────────────────────────────
-    history = get_history(db_path, conversation_id)
+    # ── 1. 文脈構築（全履歴ではなく summary + recent_history のみ） ───────────
+    ctx = build_context(db_path, conversation_id, limit=_CONTEXT_LIMIT)
+    planner_messages = _build_messages_for_llm(ctx)
+
+    if verbose:
+        print(f"[Turn {turn_id}] context: recent={len(ctx['recent_history'])}件"
+              f"  summary={'あり' if ctx['summary'] else 'なし'}")
 
     # ── 2. Planner 呼び出し (OpenAI) ─────────────────────────────────────────
     planner_system = build_planner_system_prompt(max_turns)
     if verbose:
         print(f"[Turn {turn_id}] Planner (OpenAI) 呼び出し中...")
     try:
-        planner_result = chat_openai(planner_system, history)
+        planner_result = chat_openai(planner_system, planner_messages)
     except Exception as exc:
         log_error(db_path, conversation_id, turn_id,
                   {"error": str(exc), "type": type(exc).__name__}, model="openai")
@@ -233,12 +282,15 @@ def run_single_turn(
         return "waiting_approval"
 
     # ── 6. Executor 呼び出し (Anthropic) ─────────────────────────────────────
-    history = get_history(db_path, conversation_id)  # Planner 発言を含む最新状態
+    # Planner 発言を含む最新状態で context を再構築する
+    ctx_exec = build_context(db_path, conversation_id, limit=_CONTEXT_LIMIT)
+    executor_messages = _build_messages_for_llm(ctx_exec)
+
     executor_system = build_executor_system_prompt()
     if verbose:
         print(f"[Turn {turn_id}] Executor (Anthropic) 呼び出し中...")
     try:
-        executor_result = chat_anthropic(executor_system, history)
+        executor_result = chat_anthropic(executor_system, executor_messages)
     except Exception as exc:
         log_error(db_path, conversation_id, turn_id,
                   {"error": str(exc), "type": type(exc).__name__}, model="anthropic")
@@ -375,22 +427,29 @@ def command_start(args: argparse.Namespace) -> int:
     新しい会話を開始し conversation_id を表示する。
 
     - DB を初期化（初回のみスキーマ作成）
-    - conversation を新規作成
+    - conversation を新規作成（project_id を保存）
     - ゴールを最初の user メッセージとして保存
     - run_log に session_start を記録
     """
-    db_path = args.db
+    db_path    = args.db
+    goal       = args.goal
+    project_id = getattr(args, "project_id", "default") or "default"
+
     init_db(db_path)
 
-    goal  = args.goal
-    title = goal[:80]  # タイトルはゴールの先頭80文字
+    title = goal[:80]
 
     role_system = (
         "ChatGPT（Planner）と Claude（Executor）が協調してタスクを実行する。"
         "Planner が指示を書き、Executor が実行・報告する。"
     )
 
-    conv_id = create_conversation(db_path, title=title, role_system=role_system)
+    conv_id = create_conversation(
+        db_path,
+        title=title,
+        role_system=role_system,
+        project_id=project_id,
+    )
 
     # ゴールを最初の user メッセージとして保存
     append_message(
@@ -407,6 +466,7 @@ def command_start(args: argparse.Namespace) -> int:
 
     print(f"\n会話を開始しました。")
     print(f"  conversation_id : {conv_id}")
+    print(f"  project_id      : {project_id}")
     print(f"  goal            : {goal}")
     print(f"\n次のステップ:")
     print(f"  python orchestrator.py run --conv-id {conv_id}")
@@ -461,6 +521,7 @@ def command_pending(args: argparse.Namespace) -> int:
         preview = item["content"][:100].replace("\n", " ")
         print(f"  message_id  : {item['message_id']}")
         print(f"  conv_id     : {item['conversation_id'][:8]}...")
+        print(f"  project_id  : {item.get('project_id', '-')}")
         print(f"  title       : {item['title']}")
         print(f"  turn_id     : {item['turn_id']}")
         print(f"  created_at  : {item['created_at']}")
@@ -594,6 +655,7 @@ def command_show(args: argparse.Namespace) -> int:
 
     print(f"\n{_SEP}")
     print(f"  conversation_id : {conv['conversation_id']}")
+    print(f"  project_id      : {conv.get('project_id', '-')}")
     print(f"  title           : {conv['title']}")
     print(f"  status          : {conv['status']}")
     print(f"  turn_count      : {conv['turn_count']}")
@@ -629,6 +691,8 @@ def _build_parser() -> argparse.ArgumentParser:
     # start
     p_start = sub.add_parser("start", help="会話を新規開始する")
     p_start.add_argument("--goal", required=True, help="達成したいゴール")
+    p_start.add_argument("--project-id", default="default", dest="project_id",
+                         help="プロジェクト識別子（未指定: default）")
 
     # run
     p_run = sub.add_parser("run", help="会話を指定ターン数実行する")

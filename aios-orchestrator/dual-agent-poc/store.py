@@ -76,6 +76,7 @@ def create_conversation(
     db_path: str,
     title: str,
     role_system: str,
+    project_id: str = "default",
 ) -> str:
     """
     会話セッションを新規作成し、conversation_id を返す。
@@ -84,6 +85,7 @@ def create_conversation(
         db_path:     SQLite ファイルのパス
         title:       ゴールの概要（人間が読む）
         role_system: 全体の方針（Planner system prompt の基盤）
+        project_id:  プロジェクト識別子（未指定時は "default"）
 
     Returns:
         生成した conversation_id（UUID4 文字列）
@@ -95,11 +97,11 @@ def create_conversation(
         conn.execute(
             """
             INSERT INTO conversations
-                (conversation_id, title, role_system, status,
+                (conversation_id, project_id, title, role_system, status,
                  turn_count, created_at, updated_at)
-            VALUES (?, ?, ?, 'in_progress', 0, ?, ?)
+            VALUES (?, ?, ?, ?, 'in_progress', 0, ?, ?)
             """,
-            (conv_id, title, role_system, now, now),
+            (conv_id, project_id, title, role_system, now, now),
         )
 
     return conv_id
@@ -418,7 +420,8 @@ def get_pending_approvals(db_path: str) -> list[dict]:
                 m.turn_id,
                 m.content,
                 m.created_at,
-                c.title
+                c.title,
+                c.project_id
             FROM messages m
             JOIN conversations c ON m.conversation_id = c.conversation_id
             WHERE m.requires_approval = 1
@@ -482,3 +485,142 @@ def get_run_log(db_path: str, conversation_id: str) -> list[dict]:
             (conversation_id,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+# ─────────────────────────────────────────────
+# project_id / context 制御（Task 5 追加）
+# ─────────────────────────────────────────────
+
+def get_conversation_project_id(db_path: str, conversation_id: str) -> str:
+    """
+    conversation_id から project_id を返す。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID
+
+    Returns:
+        project_id 文字列。会話が見つからない場合は "default" を返す。
+    """
+    with get_conn(db_path) as conn:
+        row = conn.execute(
+            "SELECT project_id FROM conversations WHERE conversation_id = ?",
+            (conversation_id,),
+        ).fetchone()
+    return row["project_id"] if row else "default"
+
+
+def get_recent_history(
+    db_path: str,
+    conversation_id: str,
+    limit: int = 10,
+) -> list[dict]:
+    """
+    指定 conversation_id のメッセージを新しい順に limit 件取得し、
+    会話順（古い順）に並べ直して返す。
+
+    全履歴ではなく直近 N 件だけを渡すことで、
+    トークン肥大化と他会話の混入を防ぐ。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID（他 conversation_id は一切参照しない）
+        limit:           取得する最大件数（デフォルト 10）
+
+    Returns:
+        get_history() と同じ形式の dict リスト（turn_id 昇順）
+    """
+    if limit <= 0:
+        limit = 10  # 0 以下は許容しない
+
+    with get_conn(db_path) as conn:
+        # 新しい順で limit 件取得してから古い順に並べ直す
+        rows = conn.execute(
+            """
+            SELECT
+                message_id,
+                turn_id,
+                role_executor,
+                source_model,
+                content,
+                requires_approval,
+                status,
+                created_at
+            FROM messages
+            WHERE conversation_id = ?
+            ORDER BY turn_id DESC, created_at DESC
+            LIMIT ?
+            """,
+            (conversation_id, limit),
+        ).fetchall()
+
+    # 古い順に並べ直す
+    rows = list(reversed(rows))
+
+    result: list[dict] = []
+    for row in rows:
+        api_role = "user" if row["role_executor"] == "planner" else "assistant"
+        result.append(
+            {
+                "role": api_role,
+                "content": row["content"],
+                "turn_id": row["turn_id"],
+                "source_model": row["source_model"],
+                "role_executor": row["role_executor"],
+                "message_id": row["message_id"],
+                "status": row["status"],
+                "requires_approval": bool(row["requires_approval"]),
+            }
+        )
+
+    return result
+
+
+def build_context(
+    db_path: str,
+    conversation_id: str,
+    limit: int = 10,
+) -> dict:
+    """
+    LLM に渡す文脈を構築して返す。
+
+    全履歴ではなく summary + recent_history の組み合わせを使うことで、
+    トークン数を抑え、他会話の混入を防ぐ。
+
+    Returns:
+        {
+            "conversation_id": str,
+            "project_id":      str,
+            "summary":         str | None,   # conversations.summary
+            "latest_output":   str | None,   # 直近の Executor 出力
+            "recent_history":  list[dict],   # get_recent_history() の結果
+            "latest_message":  dict | None,  # recent_history の最末尾
+        }
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID（他会話・他プロジェクトは参照しない）
+        limit:           recent_history の最大件数（デフォルト 10）
+    """
+    conv = get_conversation(db_path, conversation_id)
+    if conv is None:
+        return {
+            "conversation_id": conversation_id,
+            "project_id":      "default",
+            "summary":         None,
+            "latest_output":   None,
+            "recent_history":  [],
+            "latest_message":  None,
+        }
+
+    recent = get_recent_history(db_path, conversation_id, limit=limit)
+    latest = recent[-1] if recent else None
+
+    return {
+        "conversation_id": conversation_id,
+        "project_id":      conv.get("project_id", "default"),
+        "summary":         conv.get("summary"),
+        "latest_output":   conv.get("latest_output"),
+        "recent_history":  recent,
+        "latest_message":  latest,
+    }

@@ -2,6 +2,10 @@
 -- AIOS Dual-Agent Orchestrator — SQLite スキーマ
 -- 設計根拠: aios-orchestrator/02_data_model.md
 -- ============================================================
+-- [v2] project_id を conversations に追加（Task 5 / 2026-04-15）
+--   既存 DB との互換: DB を再作成するか、手動で ALTER TABLE を実行すること。
+--   ALTER TABLE conversations ADD COLUMN project_id TEXT NOT NULL DEFAULT 'default';
+-- ============================================================
 
 PRAGMA foreign_keys = ON;
 
@@ -11,6 +15,8 @@ PRAGMA foreign_keys = ON;
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS conversations (
     conversation_id   TEXT PRIMARY KEY,             -- uuid4
+    project_id        TEXT        NOT NULL DEFAULT 'default',
+                                                     -- プロジェクト識別子。文脈を隔離する単位
     title             TEXT        NOT NULL,          -- ゴールの概要（人間が読む）
     role_system       TEXT        NOT NULL,          -- 全体の方針（Planner system prompt 基盤）
     status            TEXT        NOT NULL DEFAULT 'in_progress',
@@ -21,6 +27,9 @@ CREATE TABLE IF NOT EXISTS conversations (
     created_at        TEXT        NOT NULL,          -- ISO8601
     updated_at        TEXT        NOT NULL           -- ISO8601
 );
+
+CREATE INDEX IF NOT EXISTS idx_conversations_project
+    ON conversations(project_id);
 
 -- ------------------------------------------------------------
 -- messages
