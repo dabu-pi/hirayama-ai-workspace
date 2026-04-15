@@ -78,6 +78,14 @@ def init_db(db_path: str) -> None:
                 "ALTER TABLE conversations ADD COLUMN summary_updated_at TEXT"
             )
 
+        # Phase 6: artifacts.language 列のマイグレーション（既存 DB 互換）
+        art_cols = conn.execute("PRAGMA table_info(artifacts)").fetchall()
+        art_col_names = {c["name"] for c in art_cols}
+        if "language" not in art_col_names:
+            conn.execute(
+                "ALTER TABLE artifacts ADD COLUMN language TEXT NOT NULL DEFAULT ''"
+            )
+
 
 # ─────────────────────────────────────────────
 # conversations
@@ -289,6 +297,7 @@ def append_artifact(
     artifact_type: str,
     filename: Optional[str],
     content: str,
+    language: str = "",
 ) -> str:
     """
     成果物を追記し、artifact_id を返す。
@@ -302,6 +311,7 @@ def append_artifact(
         artifact_type: 'code' | 'file' | 'json' | 'markdown' | 'shell'
         filename:      ファイル名（任意）
         content:       成果物本文
+        language:      コードブロックの言語タグ（'python', 'sql', '' など）[Phase 6]
 
     Returns:
         生成した artifact_id（UUID4 文字列）
@@ -313,13 +323,69 @@ def append_artifact(
         conn.execute(
             """
             INSERT INTO artifacts
-                (artifact_id, message_id, artifact_type, filename, content, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (artifact_id, message_id, artifact_type, filename, content, language, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (art_id, message_id, artifact_type, filename, content, now),
+            (art_id, message_id, artifact_type, filename, content, language, now),
         )
 
     return art_id
+
+
+def get_artifacts(db_path: str, message_id: str) -> list[dict]:
+    """
+    指定メッセージに紐づく artifact 一覧を返す（Phase 6）。
+
+    Args:
+        db_path:    SQLite ファイルのパス
+        message_id: 親メッセージの ID
+
+    Returns:
+        artifact_id / message_id / artifact_type / language /
+        filename / content / created_at を含む dict リスト
+    """
+    with get_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT artifact_id, message_id, artifact_type, language,
+                   filename, content, created_at
+            FROM artifacts
+            WHERE message_id = ?
+            ORDER BY created_at
+            """,
+            (message_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_artifacts_by_conv(db_path: str, conversation_id: str) -> list[dict]:
+    """
+    指定会話に紐づく全 artifact を返す（Phase 6）。
+
+    messages テーブルと JOIN して conversation_id でフィルタする。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 会話 ID
+
+    Returns:
+        artifact_id / message_id / turn_id / artifact_type / language /
+        filename / content / created_at を含む dict リスト
+    """
+    with get_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT a.artifact_id, a.message_id, m.turn_id,
+                   a.artifact_type, a.language, a.filename,
+                   a.content, a.created_at
+            FROM artifacts a
+            JOIN messages m ON a.message_id = m.message_id
+            WHERE m.conversation_id = ?
+            ORDER BY m.turn_id, a.created_at
+            """,
+            (conversation_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 # ─────────────────────────────────────────────

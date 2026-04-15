@@ -57,10 +57,15 @@ from run_logger import (
     log_dashboard_reported,
     log_dashboard_failed,
     log_dashboard_skipped,
+    log_artifact_saved,
+    log_artifact_failed,
+    log_artifact_skipped,
     calc_cost,
 )
 from summarizer import generate_summary, mock_summary
 from dashboard_reporter import report_session as _report_to_dashboard
+from artifact_parser import parse_artifacts
+from store import get_artifacts, append_artifact as _store_artifact
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -339,6 +344,96 @@ def _update_summary_safely(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Artifact 自動保存（Phase 6）
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _save_artifacts_safely(
+    db_path: str,
+    conversation_id: str,
+    message_id: str,
+    executor_content: str,
+    turn_id: int,
+    verbose: bool = True,
+) -> None:
+    """
+    Executor 発言からコードブロックを抽出し artifacts テーブルへ保存する。
+    失敗しても orchestrator 本体は止まらない。
+
+    冪等性:
+      - 同一 message_id に対して既に artifact が存在する場合はスキップする。
+      - 別ターンで同内容が出た場合はそれぞれ保存する（message_id が異なるため別行）。
+
+    Args:
+        db_path:          SQLite ファイルのパス
+        conversation_id:  対象会話 ID
+        message_id:       Executor メッセージの ID
+        executor_content: Executor の発言テキスト
+        turn_id:          ターン番号
+        verbose:          ログ出力フラグ
+    """
+    try:
+        # 冪等チェック: 同一 message_id に artifact が既にあればスキップ
+        existing = get_artifacts(db_path, message_id)
+        if existing:
+            log_artifact_skipped(
+                db_path, conversation_id, turn_id,
+                metadata={
+                    "reason":     "already_saved",
+                    "message_id": message_id,
+                    "count":      len(existing),
+                },
+            )
+            if verbose:
+                print(f"[Turn {turn_id}] artifact スキップ: 既に {len(existing)} 件保存済み")
+            return
+
+        candidates = parse_artifacts(executor_content)
+        if not candidates:
+            if verbose:
+                print(f"[Turn {turn_id}] artifact: 0 件（コードブロックなし）")
+            return
+
+        saved_ids: list[str] = []
+        for art in candidates:
+            art_id = _store_artifact(
+                db_path=db_path,
+                message_id=message_id,
+                artifact_type=art["artifact_type"],
+                filename=art["filename"],
+                content=art["body"],
+                language=art["language"],
+            )
+            saved_ids.append(art_id)
+            log_artifact_saved(
+                db_path, conversation_id, turn_id,
+                metadata={
+                    "artifact_id":   art_id,
+                    "artifact_type": art["artifact_type"],
+                    "language":      art["language"],
+                    "filename":      art["filename"],
+                    "body_length":   len(art["body"]),
+                },
+            )
+
+        if verbose:
+            types_str = ", ".join(
+                f"{a['language'] or a['artifact_type']}" for a in candidates
+            )
+            print(f"[Turn {turn_id}] artifact 保存: {len(saved_ids)} 件 ({types_str})")
+
+    except Exception as exc:  # noqa: BLE001
+        try:
+            log_artifact_failed(
+                db_path, conversation_id, turn_id,
+                metadata={"error": str(exc), "type": type(exc).__name__},
+            )
+        except Exception:
+            pass
+        if verbose:
+            print(f"[Turn {turn_id}] [WARN] artifact 保存失敗（無視して続行）: {exc}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 1ターン実行
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -512,7 +607,7 @@ def run_single_turn(
         print(f"[Turn {turn_id}] Executor: {preview}{'...' if len(executor_content) > 120 else ''}")
 
     # ── 7. Executor メッセージ保存 ────────────────────────────────────────────
-    append_message(
+    executor_msg_id = append_message(
         db_path, conversation_id, turn_id,
         role_executor="executor",
         source_model=executor_model,
@@ -547,6 +642,16 @@ def run_single_turn(
         event="turn_end",
         verbose=verbose,
         dry_run=dry_run,
+    )
+
+    # Phase 6: artifact 自動抽出・保存
+    _save_artifacts_safely(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        message_id=executor_msg_id,
+        executor_content=executor_content,
+        turn_id=turn_id,
+        verbose=verbose,
     )
 
     # BLOCKED 検出（差し戻し通知のみ。ループ継続はrun_loop側で上限管理）

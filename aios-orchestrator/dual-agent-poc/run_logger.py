@@ -29,6 +29,10 @@ EVENT_SUMMARY_FAILED      = "summary_update_failed"
 EVENT_DASHBOARD_REPORTED  = "dashboard_reported"
 EVENT_DASHBOARD_FAILED    = "dashboard_report_failed"
 EVENT_DASHBOARD_SKIPPED   = "dashboard_skipped"
+# Phase 6
+EVENT_ARTIFACT_SAVED      = "artifact_saved"
+EVENT_ARTIFACT_FAILED     = "artifact_save_failed"
+EVENT_ARTIFACT_SKIPPED    = "artifact_skipped"
 
 
 # ─── 内部ユーティリティ ───────────────────────────────────────────────────────
@@ -507,3 +511,79 @@ def calc_cost(model: str, tokens_in: int, tokens_out: int) -> float:
             {"in": 0.0, "out": 0.0},
         )
     return (tokens_in * rate["in"] + tokens_out * rate["out"]) / 1_000_000
+
+
+# ─── Phase 6: artifact ログ関数 ───────────────────────────────────────────────
+
+def log_artifact_saved(
+    db_path: str,
+    conversation_id: str,
+    turn_id: Optional[int],
+    metadata: Optional[dict] = None,
+) -> str:
+    """
+    artifact の保存成功を記録する（Phase 6）。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID
+        turn_id:         ターン番号
+        metadata:        追加情報（artifact_id / artifact_type / language 等）
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        event_type=EVENT_ARTIFACT_SAVED,
+        metadata=metadata,
+    )
+
+
+def log_artifact_failed(
+    db_path: str,
+    conversation_id: str,
+    turn_id: Optional[int],
+    metadata: Optional[dict] = None,
+) -> str:
+    """
+    artifact の保存失敗を記録する（Phase 6）。
+
+    会話本体は止まらない設計のため、呼び出し側は例外を握りつぶして
+    この関数だけ叩く。
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        event_type=EVENT_ARTIFACT_FAILED,
+        metadata=metadata,
+    )
+
+
+def log_artifact_skipped(
+    db_path: str,
+    conversation_id: str,
+    turn_id: Optional[int],
+    metadata: Optional[dict] = None,
+) -> str:
+    """
+    artifact の保存をスキップしたことを記録する（Phase 6）。
+
+    同一 message_id に対して既に artifact が存在する場合など。
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        event_type=EVENT_ARTIFACT_SKIPPED,
+        metadata=metadata,
+    )
