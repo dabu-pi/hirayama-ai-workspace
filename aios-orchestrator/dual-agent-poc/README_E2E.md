@@ -481,14 +481,169 @@ pending count: 2（dry-run 残 1件 + 実 API 新規 1件）
 
 ---
 
-## 次にやること（Phase 2 以降）
+## 次にやること（Phase 3 以降）
 
 | 優先度 | 内容 |
 |---|---|
-| 1 | `summary` フィールドの更新ロジック実装（現状: Executor が更新しない） |
-| 2 | artifacts の自動パース・保存（Phase 2） |
-| 3 | context 件数が増えてきた際の summary 自動生成（Phase B） |
-| 4 | run_log → Dashboard 連携（Phase C） |
+| 1 | artifacts の自動パース・保存（コードブロックを artifacts テーブルへ分離） |
+| 2 | run_log → Dashboard 連携 |
+| 3 | 長時間会話（10ターン超）での summary 情報ロス確認（Phase 2 は 2 ターンのみ実測） |
+
+---
+
+## Phase 2 — conversations.summary 自動更新（2026-04-15）
+
+### 目的
+長い会話で `build_context()` が `summary` を活用できる状態にする。
+Phase 1 までは Executor が summary を更新しておらず、Turn 2 以降も
+`summary=null` のまま recent_history だけで文脈を送っていた。
+
+### SPEC — summary 更新ルール
+
+| 項目 | 内容 |
+|---|---|
+| 更新タイミング | ① ターン正常終了後 (`turn_end`) ② `TASK_COMPLETE` 検出時 ③ `waiting_approval` 遷移時 |
+| 更新方式 | **増分更新**。既存 summary + 直前 1 ターンの Planner/Executor 発言だけを渡す。全履歴の再要約はしない |
+| 使用モデル | `gpt-4o-mini`（`.env` の `SUMMARY_MODEL` で上書き可能） |
+| 出力構造 | 5 項目固定: 目的 / 重要な決定事項 / 未完了タスク / 保留・承認待ち / 次アクション |
+| 文字数 | 500 字以内をプロンプトで強制 |
+| 失敗時 | 会話本体は続行。`run_log.event_type='summary_update_failed'` に例外を記録 |
+| 補助列 | `conversations.summary_updated_at`（ISO8601） |
+| マイグレーション | `init_db()` が `PRAGMA table_info` 確認 → 不足なら `ALTER TABLE`（冪等） |
+
+**含める情報:**
+- 目的（ゴール）
+- 重要な決定事項（採用した方針・仕様）
+- 未完了タスク（残っている作業）
+- 保留 / 承認待ち（危険操作・approve/reject 待ち）
+- 次アクション（直近で Planner が出すべき 1 手）
+
+**含めない情報:**
+- 逐語引用・長いコードブロック
+- 生ログ・ターン毎の冗長な記録
+- 5 項目以外の自由記述
+
+### CHANGES — ファイル一覧
+
+| ファイル | 変更内容 |
+|---|---|
+| `schema.sql` | `conversations.summary_updated_at TEXT` 列を追加 |
+| `store.py` | `init_db()` に冪等マイグレーション / `update_summary()` 新設 |
+| `summarizer.py` | **新規**。`generate_summary()` / `mock_summary()` / 5項目 system prompt |
+| `run_logger.py` | `EVENT_SUMMARY_UPDATED` / `EVENT_SUMMARY_FAILED` 定数 + log ヘルパー 2 つ |
+| `orchestrator.py` | `_update_summary_safely()` 追加 → 3 箇所にフック / `show` 表示強化 / `command_show` 改善 |
+| `test_phase2_summary.py` | **新規**。dry-run 検証スクリプト（5 テスト） |
+| `.gitignore` | `dual-agent-poc/.venv_phase2/` を追加 |
+
+### CHECKS — 実施した確認（dry-run）
+
+**テストスクリプト:** `python test_phase2_summary.py`
+
+| # | シナリオ | 結果 |
+|---|---|---|
+| 1 | 通常フロー（TASK_COMPLETE 到達まで 2 ターン） | **OK** — summary が Turn 1 `turn_end` / Turn 2 `task_complete` で計 2 回更新 |
+| 2 | 承認フロー（REQUIRES_APPROVAL 検出 → waiting_approval） | **OK** — summary 1 件更新、`event=waiting_approval` がメタデータに残る |
+| 3 | summary 生成で例外を投げた場合 | **OK** — `status=completed` 到達、`summary_update_failed` が run_log に 2 件記録、会話本体は無傷 |
+| 4 | summary なし（新規会話）での `build_context()` | **OK** — `summary=None` を返し、recent_history のみで従来動作 |
+| 5 | `_build_messages_for_llm()` が summary を先頭注入 | **OK** — user ロールで `[会話の要約]` が messages に含まれる |
+
+**回帰テスト（Phase 1 シナリオ A と同じコマンド）:**
+
+```
+[Turn 1] context: recent=1件  summary=なし         ← 初回は従来通り
+[Turn 1] summary 更新 (dry-run / event=turn_end)
+[Turn 2] context: recent=3件  summary=あり         ← Phase 2 で有効化された箇所
+[Turn 2] TASK_COMPLETE 検出 — 会話を完了にします
+[Turn 2] summary 更新 (dry-run / event=task_complete)
+```
+
+`log` コマンド出力にも `summary_updated` が T01 / T02 で 2 件記録される。
+
+### RISKS — 残る限界
+
+| リスク | 内容 | 対処方針 |
+|---|---|---|
+| 実 API での品質未検証 | dry-run mock で書き込みパスは確認済み。LLM が 5 項目構造を安定維持するかは未実測 | 実 API での Phase 2 実測を Phase 3 の優先事項に |
+| コスト加算 | summary 生成で 1 ターンあたり 1 回の追加 API コール（gpt-4o-mini） | `SUMMARY_MODEL` で上書き可。ターンあたり数百トークン想定で過大にはならない |
+| summary 更新失敗の連鎖 | 毎ターン失敗し続けると summary は古いまま。次ターンには反映されない | 現状は `run_log` に残すのみ。閾値超えでアラートは Phase 3 以降 |
+| approved 後のフォロー更新なし | `approve` / `reject` コマンドで summary は更新しない（次 `run` ターンで自然に更新） | 運用上の問題が出たら専用フックを追加 |
+
+### 次に進むべき 1 手
+
+~~Phase 2 は dry-run 全シナリオ通過・回帰なし。実 API での Phase 2 動作確認を行ってから CLOSED にする。~~
+**→ 実 API 実測完了（2026-04-15）。Phase 2 CLOSED。**
+
+---
+
+## Phase 2 — 実 API 実測結果（2026-04-15）
+
+**ステータス: CLOSED**
+
+### 実行内容
+
+| 項目 | 内容 |
+|---|---|
+| 実施日時 | 2026-04-15 12:33 UTC |
+| goal | `FizzBuzzをPythonで実装し、1〜15の結果をMarkdownリストで報告せよ` |
+| project_id | `phase2-real` |
+| max-turns | 4（実際は 2 ターンで TASK_COMPLETE） |
+| 使用 Planner モデル | `gpt-4o-2024-08-06` |
+| 使用 Executor モデル | `claude-sonnet-4-6` |
+| 使用 summary モデル | `gpt-4o-mini-2024-07-18` |
+| 総コスト | $0.01878 |
+
+### summary 品質確認
+
+| 確認項目 | 結果 |
+|---|---|
+| 文字数（500字以内） | **275字 — OK** |
+| 5 項目すべて存在 | **OK** （目的 / 重要な決定事項 / 未完了タスク / 保留・承認待ち / 次アクション） |
+| 増分更新 | **OK** （Turn 1: `turn_end` / Turn 2: `task_complete` で各 1 回更新） |
+| 完了時の最終状態反映 | **OK** （未完了タスク: なし / 次アクション: （完了）） |
+
+**Turn 2 完了時の summary 内容:**
+
+```
+目的: FizzBuzzをPythonで実装し、1〜15の結果をMarkdownリストで報告せよ
+重要な決定事項:
+- 1から15までの数値のループ処理で結果を生成する方針
+- 数値が3で割り切れる場合は「Fizz」、5で割り切れる場合は「Buzz」、両方で割り切れる場合は「FizzBuzz」とする
+- その他の場合はその数値をそのまま出力する仕様を採用
+- 1〜15の出力結果をMarkdownリスト形式で報告
+- 全15件を正常に処理したことを確認
+未完了タスク:
+- なし
+保留 / 承認待ち: なし
+次アクション: （完了）
+```
+
+### run_log 確認
+
+| event_type | count | 内容 |
+|---|---|---|
+| `session_start` | 1 | — |
+| `api_call` (gpt-4o) | 2 | T01: in=313/out=94 / T02: in=895/out=47 |
+| `api_call` (claude-sonnet) | 1 | T01: in=430/out=356 |
+| `summary_updated` | 2 | T01 `turn_end` / T02 `task_complete` |
+| `summary_update_failed` | **0** | 失敗なし |
+| `session_end` | 1 | — |
+
+### 確認済み項目
+
+- [x] 実 Planner (gpt-4o) / 実 Executor (claude-sonnet-4-6) が正常に連携
+- [x] Turn 2 で `context: recent=3件 summary=あり` → summary が次ターンの文脈に使用された
+- [x] summary が 5 項目固定構造・500字以内に収まった
+- [x] 増分更新: Turn 1 `turn_end` → Turn 2 `task_complete` の 2 段階で更新
+- [x] `summary_update_failed` が 0 件 — エラーなし
+- [x] `summary_updated_at` が DB に記録された
+- [x] `show` コマンドで summary と更新日時が表示された
+
+### 問題・未解決事項
+
+| 項目 | 内容 |
+|---|---|
+| 問題 | なし |
+| 未解決 | なし（approval 分岐は dry-run で済んでいるため追加実測は不要と判断） |
 
 ---
 
@@ -507,3 +662,5 @@ pending count: 2（dry-run 残 1件 + 実 API 新規 1件）
 | 実 API 第1回 OpenAI | Planner API 呼び出し | **NG**（429 quota — 解消済み） |
 | 実 API 第2回 シナリオ A | Planner → Executor → TASK_COMPLETE | **OK**（3ターン / $0.009292） |
 | 実 API 第2回 シナリオ B | REQUIRES_APPROVAL 検出 → waiting_approval | **OK**（実 Planner が自主申告） |
+| **Phase 2 dry-run** | summary 自動更新・5 シナリオ | **OK** |
+| **Phase 2 実 API** | summary 品質・増分更新・run_log 確認 | **OK（CLOSED）** |

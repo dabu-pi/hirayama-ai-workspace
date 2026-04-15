@@ -38,6 +38,7 @@ from store import (
     set_message_approval,
     set_conversation_status,
     increment_turn_count,
+    update_summary,
 )
 # get_history は残っているが orchestrator 本体では使わない（全履歴読み防止）
 from openai_client import chat_openai
@@ -51,8 +52,11 @@ from run_logger import (
     log_error,
     log_session_start,
     log_session_end,
+    log_summary_updated,
+    log_summary_failed,
     calc_cost,
 )
+from summarizer import generate_summary, mock_summary
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -227,6 +231,104 @@ def build_executor_system_prompt() -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Summary 自動更新（Phase 2）
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _update_summary_safely(
+    db_path: str,
+    conversation_id: str,
+    turn_id: int,
+    planner_content: str,
+    executor_content: Optional[str],
+    goal: Optional[str],
+    event: str,
+    verbose: bool = True,
+    dry_run: bool = False,
+) -> None:
+    """
+    conversations.summary を増分更新する。失敗しても会話本体は壊さない。
+
+    - 成功時: update_summary() で書き込み + log_summary_updated で記録
+    - 失敗時: log_summary_failed に例外を記録し、ログ出力して続行
+    - dry_run: API を呼ばず mock_summary を書き込む（フロー検証専用）
+
+    Args:
+        event: 'turn_end' | 'task_complete' | 'waiting_approval'
+    """
+    conv = get_conversation(db_path, conversation_id)
+    existing = conv.get("summary") if conv else None
+
+    try:
+        if dry_run:
+            new_summary = mock_summary(
+                existing_summary=existing,
+                planner_content=planner_content,
+                executor_content=executor_content,
+                goal=goal,
+                turn_id=turn_id,
+                event=event,
+            )
+            update_summary(db_path, conversation_id, new_summary)
+            log_summary_updated(
+                db_path, conversation_id, turn_id,
+                model="dry-run-summarizer",
+                metadata={"event": event, "mode": "dry_run"},
+            )
+            if verbose:
+                print(f"[Turn {turn_id}] summary 更新 (dry-run / event={event})")
+            return
+
+        result = generate_summary(
+            existing_summary=existing,
+            planner_content=planner_content,
+            executor_content=executor_content,
+            goal=goal,
+            turn_id=turn_id,
+            event=event,
+        )
+        new_summary = result["summary"]
+        if not new_summary:
+            # 空応答は更新しない（既存 summary を残す）
+            log_summary_failed(
+                db_path, conversation_id, turn_id,
+                metadata={"event": event, "error": "empty summary returned"},
+                model=result.get("model"),
+            )
+            if verbose:
+                print(f"[Turn {turn_id}] [WARN] summary 更新スキップ: 空応答")
+            return
+
+        update_summary(db_path, conversation_id, new_summary)
+        log_summary_updated(
+            db_path, conversation_id, turn_id,
+            model=result.get("model"),
+            tokens_in=result.get("tokens_in"),
+            tokens_out=result.get("tokens_out"),
+            duration_ms=result.get("duration_ms"),
+            metadata={"event": event},
+        )
+        if verbose:
+            cost = calc_cost(
+                result.get("model") or "",
+                result.get("tokens_in") or 0,
+                result.get("tokens_out") or 0,
+            )
+            print(f"[Turn {turn_id}] summary 更新 OK (event={event}, ${cost:.5f})")
+    except Exception as exc:
+        # 会話本体を壊さず、失敗だけ記録して続行
+        log_summary_failed(
+            db_path, conversation_id, turn_id,
+            metadata={
+                "event": event,
+                "error": str(exc),
+                "type": type(exc).__name__,
+            },
+        )
+        if verbose:
+            print(f"[Turn {turn_id}] [WARN] summary 更新失敗 (event={event}): {exc}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 1ターン実行
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -334,6 +436,16 @@ def run_single_turn(
             db_path, conversation_id, "completed",
             latest_output=planner_content,
         )
+        # Phase 2: 最終状態を summary に反映（Executor は呼ばれていない）
+        _update_summary_safely(
+            db_path, conversation_id, turn_id,
+            planner_content=planner_content,
+            executor_content=None,
+            goal=conv.get("title"),
+            event="task_complete",
+            verbose=verbose,
+            dry_run=dry_run,
+        )
         log_session_end(db_path, conversation_id, "completed", total_turns=turn_id)
         return "completed"
 
@@ -344,6 +456,16 @@ def run_single_turn(
             {"message_id": planner_msg_id, "flagged_by_planner": planner_flagged},
         )
         set_conversation_status(db_path, conversation_id, "waiting_approval")
+        # Phase 2: 承認待ちを summary に記録（Executor は呼ばれていない）
+        _update_summary_safely(
+            db_path, conversation_id, turn_id,
+            planner_content=planner_content,
+            executor_content=None,
+            goal=conv.get("title"),
+            event="waiting_approval",
+            verbose=verbose,
+            dry_run=dry_run,
+        )
         print(f"\n[承認待ち] Turn {turn_id} — Planner が危険操作を要求しています")
         print(f"  message_id : {planner_msg_id}")
         print(f"  承認: python orchestrator.py approve --message-id {planner_msg_id}")
@@ -403,6 +525,18 @@ def run_single_turn(
     set_conversation_status(
         db_path, conversation_id, "in_progress",
         latest_output=executor_content,
+    )
+
+    # Phase 2: 正常完了したターンの summary 更新
+    # （BLOCKED の場合も「差し戻しが必要」と記録するため同じフックで書き込む）
+    _update_summary_safely(
+        db_path, conversation_id, turn_id,
+        planner_content=planner_content,
+        executor_content=executor_content,
+        goal=conv.get("title"),
+        event="turn_end",
+        verbose=verbose,
+        dry_run=dry_run,
     )
 
     # BLOCKED 検出（差し戻し通知のみ。ループ継続はrun_loop側で上限管理）
@@ -759,7 +893,8 @@ def command_show(args: argparse.Namespace) -> int:
     print(f"  updated_at      : {conv['updated_at']}")
 
     if conv.get("summary"):
-        print(f"\n  [summary]\n  {conv['summary']}")
+        updated_at = conv.get("summary_updated_at") or "-"
+        print(f"\n  [summary] (updated_at={updated_at})\n  " + conv["summary"].replace("\n", "\n  "))
     if conv.get("latest_output"):
         preview = conv["latest_output"][:300].replace("\n", "\n  ")
         print(f"\n  [latest_output]\n  {preview}"

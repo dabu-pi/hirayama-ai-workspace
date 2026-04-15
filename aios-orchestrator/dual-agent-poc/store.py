@@ -58,6 +58,9 @@ def init_db(db_path: str) -> None:
     schema.sql を読み込んでテーブル・インデックスを作成する。
     既にテーブルが存在する場合は何もしない（IF NOT EXISTS）。
     db_path の親ディレクトリが存在しない場合は自動作成する。
+
+    [Phase 2] 既存 DB に summary_updated_at 列が欠けていたら
+    自動で ALTER TABLE を実行する（冪等マイグレーション）。
     """
     path = Path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,6 +69,14 @@ def init_db(db_path: str) -> None:
 
     with get_conn(db_path) as conn:
         conn.executescript(schema)
+
+        # Phase 2: summary_updated_at 列のマイグレーション（既存 DB 互換）
+        cols = conn.execute("PRAGMA table_info(conversations)").fetchall()
+        col_names = {c["name"] for c in cols}
+        if "summary_updated_at" not in col_names:
+            conn.execute(
+                "ALTER TABLE conversations ADD COLUMN summary_updated_at TEXT"
+            )
 
 
 # ─────────────────────────────────────────────
@@ -144,6 +155,34 @@ def set_conversation_status(
         conn.execute(
             f"UPDATE conversations SET {', '.join(fields)} WHERE conversation_id = ?",
             values,
+        )
+
+
+def update_summary(
+    db_path: str,
+    conversation_id: str,
+    summary: str,
+) -> None:
+    """
+    conversations.summary を更新する（status は変更しない）。
+
+    Phase 2: 毎ターン増分更新を想定した専用関数。
+    summary_updated_at と updated_at を同時に更新する。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象の会話 ID
+        summary:         新しい summary 本文
+    """
+    now = _now()
+    with get_conn(db_path) as conn:
+        conn.execute(
+            """
+            UPDATE conversations
+            SET summary = ?, summary_updated_at = ?, updated_at = ?
+            WHERE conversation_id = ?
+            """,
+            (summary, now, now, conversation_id),
         )
 
 

@@ -5,6 +5,10 @@
 -- [v2] project_id を conversations に追加（Task 5 / 2026-04-15）
 --   既存 DB との互換: DB を再作成するか、手動で ALTER TABLE を実行すること。
 --   ALTER TABLE conversations ADD COLUMN project_id TEXT NOT NULL DEFAULT 'default';
+-- [v3] summary_updated_at を conversations に追加（Phase 2 / 2026-04-15）
+--   init_db() が自動で ALTER TABLE を行うため、既存 DB でもマイグレーション不要。
+--   手動で実行する場合:
+--   ALTER TABLE conversations ADD COLUMN summary_updated_at TEXT;
 -- ============================================================
 
 PRAGMA foreign_keys = ON;
@@ -21,7 +25,8 @@ CREATE TABLE IF NOT EXISTS conversations (
     role_system       TEXT        NOT NULL,          -- 全体の方針（Planner system prompt 基盤）
     status            TEXT        NOT NULL DEFAULT 'in_progress',
                                                      -- in_progress | waiting_approval | completed | failed
-    summary           TEXT,                          -- 現在地の要約（Executor が毎ターン更新）
+    summary           TEXT,                          -- 現在地の要約（Phase 2: 毎ターン自動更新）
+    summary_updated_at TEXT,                          -- summary の最終更新時刻（ISO8601）
     latest_output     TEXT,                          -- 直近の Executor 出力
     turn_count        INTEGER     NOT NULL DEFAULT 0,
     created_at        TEXT        NOT NULL,          -- ISO8601

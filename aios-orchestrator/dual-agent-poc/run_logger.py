@@ -22,6 +22,9 @@ EVENT_REJECTED            = "rejected"
 EVENT_ERROR               = "error"
 EVENT_SESSION_START       = "session_start"
 EVENT_SESSION_END         = "session_end"
+# Phase 2
+EVENT_SUMMARY_UPDATED     = "summary_updated"
+EVENT_SUMMARY_FAILED      = "summary_update_failed"
 
 
 # ─── 内部ユーティリティ ───────────────────────────────────────────────────────
@@ -247,6 +250,78 @@ def log_error(
         conversation_id=conversation_id,
         turn_id=turn_id,
         event_type=EVENT_ERROR,
+        model=model,
+        metadata=metadata,
+    )
+
+
+def log_summary_updated(
+    db_path: str,
+    conversation_id: str,
+    turn_id: Optional[int],
+    model: Optional[str] = None,
+    tokens_in: Optional[int] = None,
+    tokens_out: Optional[int] = None,
+    duration_ms: Optional[int] = None,
+    metadata: Optional[dict] = None,
+) -> str:
+    """
+    conversations.summary の更新が成功したことを記録する（Phase 2）。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID
+        turn_id:         ターン番号
+        model:           summary 生成に使ったモデル
+        tokens_in:       入力トークン数
+        tokens_out:      出力トークン数
+        duration_ms:     処理時間（ミリ秒）
+        metadata:        追加情報（event='turn_end'|'task_complete'|'waiting_approval' 等）
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        event_type=EVENT_SUMMARY_UPDATED,
+        model=model,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        duration_ms=duration_ms,
+        metadata=metadata,
+    )
+
+
+def log_summary_failed(
+    db_path: str,
+    conversation_id: str,
+    turn_id: Optional[int],
+    metadata: Optional[dict] = None,
+    model: Optional[str] = None,
+) -> str:
+    """
+    conversations.summary の更新に失敗したことを記録する（Phase 2）。
+
+    summary 更新の失敗は会話本体を壊さない設計のため、
+    呼び出し側は例外を握りつぶした上でこの関数だけ叩く。
+
+    Args:
+        db_path:         SQLite ファイルのパス
+        conversation_id: 対象会話の ID
+        turn_id:         ターン番号
+        metadata:        エラー情報（{"error": "...", "type": "...", "event": "..."}）
+        model:           summary 生成で呼んでいたモデル（任意）
+
+    Returns:
+        生成した log_id
+    """
+    return log_event(
+        db_path=db_path,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        event_type=EVENT_SUMMARY_FAILED,
         model=model,
         metadata=metadata,
     )
