@@ -13,6 +13,11 @@
 --   init_db() が自動で ALTER TABLE を行うため、既存 DB でもマイグレーション不要。
 --   手動で実行する場合:
 --   ALTER TABLE artifacts ADD COLUMN language TEXT NOT NULL DEFAULT '';
+-- [v5] artifacts.filename_source を追加（Phase 10 / 2026-04-15）
+--   'explicit' | 'inferred' | 'none'。明示 filename かどうかを記録する。
+--   init_db() が自動で ALTER TABLE を行うため、既存 DB でもマイグレーション不要。
+--   手動で実行する場合:
+--   ALTER TABLE artifacts ADD COLUMN filename_source TEXT NOT NULL DEFAULT 'inferred';
 -- ============================================================
 
 PRAGMA foreign_keys = ON;
@@ -75,6 +80,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
     artifact_type     TEXT        NOT NULL,          -- 'code' | 'file' | 'json' | 'markdown' | 'shell'
     language          TEXT        NOT NULL DEFAULT '', -- コードブロック言語タグ（Phase 6）
     filename          TEXT,                          -- ファイル名（任意）
+    filename_source   TEXT        NOT NULL DEFAULT 'inferred', -- 'explicit' | 'inferred' | 'none'（Phase 10）
     content           TEXT        NOT NULL,          -- 成果物本文
     created_at        TEXT        NOT NULL           -- ISO8601
 );

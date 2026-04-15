@@ -85,6 +85,11 @@ def init_db(db_path: str) -> None:
             conn.execute(
                 "ALTER TABLE artifacts ADD COLUMN language TEXT NOT NULL DEFAULT ''"
             )
+        # Phase 10: artifacts.filename_source 列のマイグレーション（既存 DB 互換）
+        if "filename_source" not in art_col_names:
+            conn.execute(
+                "ALTER TABLE artifacts ADD COLUMN filename_source TEXT NOT NULL DEFAULT 'inferred'"
+            )
 
 
 # ─────────────────────────────────────────────
@@ -298,6 +303,7 @@ def append_artifact(
     filename: Optional[str],
     content: str,
     language: str = "",
+    filename_source: str = "inferred",
 ) -> str:
     """
     成果物を追記し、artifact_id を返す。
@@ -306,12 +312,13 @@ def append_artifact(
     自動実行は orchestrator.py 側で禁止する。
 
     Args:
-        db_path:       SQLite ファイルのパス
-        message_id:    親メッセージの ID
-        artifact_type: 'code' | 'file' | 'json' | 'markdown' | 'shell'
-        filename:      ファイル名（任意）
-        content:       成果物本文
-        language:      コードブロックの言語タグ（'python', 'sql', '' など）[Phase 6]
+        db_path:          SQLite ファイルのパス
+        message_id:       親メッセージの ID
+        artifact_type:    'code' | 'file' | 'json' | 'markdown' | 'shell'
+        filename:         ファイル名（任意）
+        content:          成果物本文
+        language:         コードブロックの言語タグ（'python', 'sql', '' など）[Phase 6]
+        filename_source:  'explicit' | 'inferred' | 'none' [Phase 10]
 
     Returns:
         生成した artifact_id（UUID4 文字列）
@@ -323,10 +330,12 @@ def append_artifact(
         conn.execute(
             """
             INSERT INTO artifacts
-                (artifact_id, message_id, artifact_type, filename, content, language, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (artifact_id, message_id, artifact_type, filename, filename_source,
+                 content, language, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (art_id, message_id, artifact_type, filename, content, language, now),
+            (art_id, message_id, artifact_type, filename, filename_source,
+             content, language, now),
         )
 
     return art_id
@@ -348,7 +357,7 @@ def get_artifacts(db_path: str, message_id: str) -> list[dict]:
         rows = conn.execute(
             """
             SELECT artifact_id, message_id, artifact_type, language,
-                   filename, content, created_at
+                   filename, filename_source, content, created_at
             FROM artifacts
             WHERE message_id = ?
             ORDER BY created_at
@@ -376,7 +385,7 @@ def get_artifacts_by_conv(db_path: str, conversation_id: str) -> list[dict]:
         rows = conn.execute(
             """
             SELECT a.artifact_id, a.message_id, m.turn_id,
-                   a.artifact_type, a.language, a.filename,
+                   a.artifact_type, a.language, a.filename, a.filename_source,
                    a.content, a.created_at
             FROM artifacts a
             JOIN messages m ON a.message_id = m.message_id

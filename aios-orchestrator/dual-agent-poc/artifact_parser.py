@@ -1,5 +1,5 @@
 """
-artifact_parser.py — Executor 出力から artifact 候補を抽出する (Phase 6)
+artifact_parser.py — Executor 出力から artifact 候補を抽出する (Phase 6 / Phase 10)
 
 Markdown のフェンスコードブロック（``` ... ```）を解析して、
 artifact の候補リストを返す。1 メッセージに複数ブロックがあっても対応する。
@@ -24,7 +24,18 @@ artifact の候補リストを返す。1 メッセージに複数ブロックが
     * markdown / md → 'markdown'
     * その他 / 未指定 → 'code'
 
-設計根拠: aios-orchestrator/dual-agent-poc/README_Phase6.md
+filename 明示指定（Phase 10）:
+  コードブロック直前 3 行またはブロック先頭 1 行に以下の記法があれば、
+  その filename を推定 filename より優先して使用する。
+    // filename: foo.py      （JS / TS / Java スタイル）
+    # filename: foo.py       （Python / bash スタイル）
+    -- filename: schema.sql  （SQL スタイル）
+    filename: config.yaml    （プレーン）
+  明示 filename が安全でない場合（パストラバーサル等）は推定にフォールバックする。
+
+設計根拠:
+  aios-orchestrator/dual-agent-poc/README_Phase6.md
+  aios-orchestrator/dual-agent-poc/README_Phase10.md
 """
 
 from __future__ import annotations
@@ -105,6 +116,80 @@ def _is_valid_lang(lang: str) -> bool:
     return True
 
 
+# ─── filename 明示指定パーサー（Phase 10）────────────────────────────────────
+# 認識する記法（行全体を 1 行として扱う）:
+#   // filename: foo.py      JS / TS / Java スタイル
+#   # filename: foo.py       Python / bash スタイル
+#   -- filename: schema.sql  SQL スタイル
+#   filename: config.yaml    プレーン
+_FILENAME_ANNOTATION_RE = re.compile(
+    r"^\s*"                         # 行頭の空白
+    r"(?://|#|--|\*|/\*)?"          # オプション: コメントプレフィックス
+    r"\s*"                          # 空白
+    r"filename\s*:\s*"              # "filename:" キーワード（大文字小文字無視）
+    r"([^\s/\\:*?\"<>|\r\n]+)"      # キャプチャ: ファイル名本体（パス区切り・制御文字除外）
+    r"\s*$",                        # 末尾空白
+    re.IGNORECASE,
+)
+
+# 安全でない filename を弾くためのチェック
+_UNSAFE_FILENAME_RE = re.compile(
+    r"\.\."           # パストラバーサル (..)
+    r"|[/\\]"         # パス区切り
+    r"|[\x00-\x1f]"  # 制御文字
+)
+
+
+def _extract_explicit_filename(pre_lines: list[str], first_body_line: str) -> Optional[str]:
+    """
+    コードブロック直前の行リストとブロック先頭行から filename 指定を探す。
+
+    検索順序:
+      1. pre_lines を後ろから順に（直前行を優先）
+      2. first_body_line（ブロック先頭行）
+
+    見つかった場合: 正規化済みのファイル名文字列を返す
+    見つからない / 不正な場合: None を返す
+    """
+    candidates: list[str] = list(reversed(pre_lines)) + [first_body_line]
+    for line in candidates:
+        m = _FILENAME_ANNOTATION_RE.match(line)
+        if m:
+            raw = m.group(1).strip()
+            sanitized = _sanitize_filename(raw)
+            if sanitized:
+                return sanitized
+    return None
+
+
+def _sanitize_filename(raw: str) -> Optional[str]:
+    """
+    filename 文字列を安全に正規化する。
+
+    拒否ルール:
+      - 空文字 / 空白のみ
+      - `..` を含む（パストラバーサル）
+      - `/` または `\\` を含む（パス区切り）
+      - 制御文字を含む
+      - 255 文字超
+
+    通過ルール:
+      - 拡張子なし（Dockerfile, Makefile 等）は許可
+      - 先頭・末尾の空白は除去する
+
+    Returns:
+        正規化済み文字列 or None（不正な場合）
+    """
+    name = raw.strip()
+    if not name:
+        return None
+    if len(name) > 255:
+        return None
+    if _UNSAFE_FILENAME_RE.search(name):
+        return None
+    return name
+
+
 # ─── フェンスコードブロックの正規表現 ─────────────────────────────────────────
 # グループ:
 #   1: バッククォート数（3以上）
@@ -156,14 +241,18 @@ def parse_artifacts(content: str) -> list[dict]:
     Returns:
         以下の dict のリスト（空ブロックは除外）:
         {
-            "artifact_type": str,   # 'code' | 'shell' | 'json' | 'file' | 'markdown'
-            "language":      str,   # フェンス言語タグ（'python', 'sql', '', ...）
-            "filename":      str | None,  # 推定ファイル名（任意）
-            "body":          str,   # コードブロック本文
+            "artifact_type":    str,        # 'code' | 'shell' | 'json' | 'file' | 'markdown'
+            "language":         str,        # フェンス言語タグ（'python', 'sql', '', ...）
+            "filename":         str | None, # 明示 filename（優先） or 推定 filename
+            "filename_source":  str,        # 'explicit' | 'inferred' | 'none'
+            "body":             str,        # コードブロック本文
         }
     """
     results = []
     seen_bodies: set[str] = set()  # 同一内容の重複を除外
+
+    # 行単位リスト（直前行抽出に使用）
+    content_lines = content.splitlines()
 
     for idx, match in enumerate(_FENCED_CODE_RE.finditer(content)):
         lang = (match.group(2) or "").strip()
@@ -184,13 +273,35 @@ def parse_artifacts(content: str) -> list[dict]:
         seen_bodies.add(body_key)
 
         artifact_type = _lang_to_type(lang)
-        filename = _infer_filename(lang, idx)
+
+        # ── filename 決定（Phase 10）────────────────────────────────────────
+        # 1. コードブロック開始位置より前の行リストを取得（最大 3 行）
+        block_start_pos  = match.start()
+        pre_text         = content[:block_start_pos]
+        pre_lines        = pre_text.splitlines()
+        pre_lines_tail   = pre_lines[-3:] if len(pre_lines) >= 3 else pre_lines
+
+        # 2. コードブロック本文の先頭行
+        body_lines       = body.splitlines()
+        first_body_line  = body_lines[0] if body_lines else ""
+
+        # 3. 明示指定を探す
+        explicit_fname = _extract_explicit_filename(pre_lines_tail, first_body_line)
+
+        if explicit_fname:
+            filename        = explicit_fname
+            filename_source = "explicit"
+        else:
+            inferred        = _infer_filename(lang, idx)
+            filename        = inferred
+            filename_source = "inferred" if inferred else "none"
 
         results.append({
-            "artifact_type": artifact_type,
-            "language":      lang,
-            "filename":      filename,
-            "body":          body,
+            "artifact_type":   artifact_type,
+            "language":        lang,
+            "filename":        filename,
+            "filename_source": filename_source,
+            "body":            body,
         })
 
     return results

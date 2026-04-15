@@ -407,22 +407,26 @@ def _save_artifacts_safely(
                 filename=art["filename"],
                 content=art["body"],
                 language=art["language"],
+                filename_source=art.get("filename_source", "inferred"),
             )
             saved_ids.append(art_id)
             log_artifact_saved(
                 db_path, conversation_id, turn_id,
                 metadata={
-                    "artifact_id":   art_id,
-                    "artifact_type": art["artifact_type"],
-                    "language":      art["language"],
-                    "filename":      art["filename"],
-                    "body_length":   len(art["body"]),
+                    "artifact_id":      art_id,
+                    "artifact_type":    art["artifact_type"],
+                    "language":         art["language"],
+                    "filename":         art["filename"],
+                    "filename_source":  art.get("filename_source", "inferred"),
+                    "body_length":      len(art["body"]),
                 },
             )
 
         if verbose:
             types_str = ", ".join(
-                f"{a['language'] or a['artifact_type']}" for a in candidates
+                f"{a['language'] or a['artifact_type']}"
+                f"{'[E]' if a.get('filename_source') == 'explicit' else ''}"
+                for a in candidates
             )
             print(f"[Turn {turn_id}] artifact 保存: {len(saved_ids)} 件 ({types_str})")
 
