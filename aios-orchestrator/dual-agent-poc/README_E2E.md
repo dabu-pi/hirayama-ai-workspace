@@ -713,3 +713,4 @@ LLM: dry_run=True（approval_test モック）/ Dashboard 書き込み: dry_run=
 | **Phase 5 修正後 実 API** | 12 ターン・全 7 事実保持・全ターン 500字以内 | **OK（CLOSED）** |
 | **Phase 6 dry-run** | artifact 抽出・保存・冪等・失敗耐性（7 テスト） | **OK** |
 | **Phase 6 実 API** | FizzBuzz → python コード artifact 保存確認 | **OK（CLOSED）** |
+| **Phase 7 dry-run** | false positive フィルタ + artifacts CLI（7 テスト） | **OK（CLOSED）** |

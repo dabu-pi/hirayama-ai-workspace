@@ -81,6 +81,30 @@ _LANG_TO_TYPE: dict[str, str] = {
     "md":         "markdown",
 }
 
+# ─── 無効 language タグのフィルタ ────────────────────────────────────────────
+# 以下のタグは artifact 候補から除外する（false positive 対策 / Phase 7）:
+#   - 数字のみ（行番号誤認: "1", "123" 等）
+#   - 空白を含む（2語以上: "python code" 等）
+# 正当な 1 文字タグ（"c", "r" 等）は許可する。
+_INVALID_LANG_RE = re.compile(r"^\d+$")
+
+
+def _is_valid_lang(lang: str) -> bool:
+    """
+    language タグが有効かを判定する。
+
+    False を返す場合はその artifact をスキップする。
+    空文字（`` ``` `` のみ）は有効（language 未指定として扱う）。
+    """
+    if not lang:
+        return True  # 言語未指定は有効
+    if _INVALID_LANG_RE.match(lang):
+        return False  # 数字のみ → 行番号の誤認
+    if " " in lang or "\t" in lang:
+        return False  # スペースを含む → 言語タグではない
+    return True
+
+
 # ─── フェンスコードブロックの正規表現 ─────────────────────────────────────────
 # グループ:
 #   1: バッククォート数（3以上）
@@ -144,6 +168,10 @@ def parse_artifacts(content: str) -> list[dict]:
     for idx, match in enumerate(_FENCED_CODE_RE.finditer(content)):
         lang = (match.group(2) or "").strip()
         body = match.group(3).rstrip()  # 末尾の空白行を除去
+
+        # 無効 language タグをスキップ（数字のみ / スペース含む）
+        if not _is_valid_lang(lang):
+            continue
 
         # 空ブロックを除外
         if not body.strip():

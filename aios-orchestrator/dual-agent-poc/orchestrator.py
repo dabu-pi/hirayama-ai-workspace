@@ -65,7 +65,7 @@ from run_logger import (
 from summarizer import generate_summary, mock_summary
 from dashboard_reporter import report_session as _report_to_dashboard
 from artifact_parser import parse_artifacts
-from store import get_artifacts, append_artifact as _store_artifact
+from store import get_artifacts, get_artifacts_by_conv, append_artifact as _store_artifact
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -1087,6 +1087,66 @@ def command_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_artifacts(args: argparse.Namespace) -> int:
+    """
+    会話の artifact 一覧を表示する。
+    --artifact-id を指定した場合はその artifact の本文も出力する。
+    """
+    db_path  = args.db
+    conv_id  = args.conv_id
+    art_id   = getattr(args, "artifact_id", None)
+    init_db(db_path)
+
+    conv = get_conversation(db_path, conv_id)
+    if conv is None:
+        print(f"[ERROR] conversation_id が見つかりません: {conv_id}", file=sys.stderr)
+        return 1
+
+    arts = get_artifacts_by_conv(db_path, conv_id)
+
+    print(f"\nArtifacts: {conv['title'][:60]}")
+    print(f"  conv_id : {conv_id}")
+    print(f"  count   : {len(arts)}")
+    print(_SEP)
+
+    if not arts:
+        print("  (artifact なし)")
+        print(_SEP)
+        return 0
+
+    for a in arts:
+        body_preview = (a["content"] or "")[:80].replace("\n", "\\n")
+        ellipsis     = "..." if len(a["content"] or "") > 80 else ""
+        lang_str     = f"  lang={a['language']}" if a.get("language") else ""
+        print(
+            f"  T{a['turn_id']:02d}  {a['artifact_id'][:8]}..."
+            f"  type={a['artifact_type']}{lang_str}"
+            f"  file={a.get('filename') or '-'}"
+        )
+        print(f"       {body_preview}{ellipsis}")
+
+    print(_SEP)
+
+    # --artifact-id 指定時は本文全体を表示
+    if art_id:
+        target = next((a for a in arts if a["artifact_id"].startswith(art_id)), None)
+        if target is None:
+            print(f"[ERROR] artifact_id が見つかりません: {art_id}", file=sys.stderr)
+            return 1
+        lang = target.get("language") or ""
+        fence = f"```{lang}" if lang else "```"
+        print(f"\n  artifact_id : {target['artifact_id']}")
+        print(f"  type        : {target['artifact_type']}")
+        print(f"  language    : {lang or '(未指定)'}")
+        print(f"  filename    : {target.get('filename') or '-'}")
+        print(f"  turn_id     : {target['turn_id']}")
+        print(f"\n{fence}")
+        print(target["content"])
+        print("```")
+
+    return 0
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # argparse エントリポイント
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1139,6 +1199,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p_show = sub.add_parser("show", help="会話の要約を表示する")
     p_show.add_argument("--conv-id", required=True, dest="conv_id")
 
+    # artifacts
+    p_arts = sub.add_parser("artifacts", help="会話の artifact 一覧を表示する")
+    p_arts.add_argument("--conv-id", required=True, dest="conv_id", help="conversation_id")
+    p_arts.add_argument("--artifact-id", default=None, dest="artifact_id",
+                        help="指定時はその artifact の本文を全文表示（前方一致）")
+
     return parser
 
 
@@ -1152,8 +1218,9 @@ def main() -> int:
         "pending": command_pending,
         "approve": command_approve,
         "reject":  command_reject,
-        "log":     command_log,
-        "show":    command_show,
+        "log":       command_log,
+        "show":      command_show,
+        "artifacts": command_artifacts,
     }
 
     handler = dispatch.get(args.command)

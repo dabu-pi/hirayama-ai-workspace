@@ -144,7 +144,7 @@ _save_artifacts_safely(db, conv_id, executor_msg_id, executor_content, turn_id)
 
 | 項目 | 内容 |
 |---|---|
-| false positive：lang=数字 | Executor が実行出力を ` ```1 ` のように書いた場合（行番号をタグと誤認）。保存はされるが language タグが無意味。実害は小さい |
+| false positive：lang=数字 | ~~Executor が実行出力を ` ```1 ` のように書いた場合（行番号をタグと誤認）。保存はされるが language タグが無意味。実害は小さい~~ → **Phase 7 で修正済み**（`_is_valid_lang()` フィルタ） |
 | インデントブロック非対応 | 4スペース / タブのコードブロックは抽出しない |
 | ファイル名推定の精度 | 言語拡張子から推定するが、実際のファイル名とは異なる場合がある |
 | 本文の long-run 重複 | 別ターンで同内容が繰り返し出た場合はそれぞれ保存される（意図的な設計）|
@@ -156,6 +156,6 @@ _save_artifacts_safely(db, conv_id, executor_msg_id, executor_content, turn_id)
 | 候補 | 内容 |
 |---|---|
 | ファイル名の明示指定 | Executor が `// filename: foo.py` のようなコメントをつけた場合にパース |
-| artifact 検索 API | `show artifacts --conv-id` コマンドで成果物一覧を CLI 表示 |
+| ~~artifact 検索 API~~ | ~~`show artifacts --conv-id` コマンドで成果物一覧を CLI 表示~~ → **Phase 7 で実装済み** |
 | artifact diff | 同一ファイル名の artifact を複数ターン間で diff 表示 |
-| false positive フィルタ | lang が数字のみ / 1 文字の場合はスキップ |
+| ~~false positive フィルタ~~ | ~~lang が数字のみ / 1 文字の場合はスキップ~~ → **Phase 7 で実装済み** |
