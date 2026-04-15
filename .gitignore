@@ -102,3 +102,8 @@ gas-projects/**/transfer_batch*.ndjson
 
 # Claude Code local settings (per-project)
 training-program-platform-jp/.claude/
+
+# aios-orchestrator — ローカルデータ・認証情報
+aios-orchestrator/data/
+aios-orchestrator/.env
+aios-orchestrator/src/__pycache__/
