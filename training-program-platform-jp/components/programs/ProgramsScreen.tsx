@@ -13,10 +13,17 @@ import type {
 
 import styles from "./ProgramsScreen.module.css";
 
+type ActiveEnrollmentInfo = {
+  title: string;
+  continueUrl: string;
+};
+
 type ProgramsScreenProps = {
   state: ProgramListState;
   view: ProgramListView;
   errorMessage?: string | null;
+  /** Active enrollment for the current user, if any. */
+  activeEnrollment?: ActiveEnrollmentInfo | null;
 };
 
 function formatSourceLabel(source: ProgramListView["source"]) {
@@ -83,7 +90,8 @@ function deriveAvailableTags(items: ProgramListItem[]): ProgramTag[] {
 export function ProgramsScreen({
   state,
   view,
-  errorMessage = null
+  errorMessage = null,
+  activeEnrollment = null
 }: ProgramsScreenProps) {
   const isReady = state === "ready";
   const bodyText = resolveBody(state, errorMessage);
@@ -113,6 +121,20 @@ export function ProgramsScreen({
 
   return (
     <main className={styles.page}>
+      {activeEnrollment && (
+        <div className={styles.enrollmentBanner} role="status">
+          <div className={styles.enrollmentBannerText}>
+            <span className={styles.enrollmentBannerTitle}>
+              {activeEnrollment.title}
+            </span>
+            進行中のプログラムがあります
+          </div>
+          <Link className={styles.enrollmentBannerCta} href={activeEnrollment.continueUrl}>
+            続ける →
+          </Link>
+        </div>
+      )}
+
       <header className={styles.hero}>
         <span className={styles.eyebrow}>Program Library</span>
         <h1 className={styles.title}>{resolveTitle(state)}</h1>

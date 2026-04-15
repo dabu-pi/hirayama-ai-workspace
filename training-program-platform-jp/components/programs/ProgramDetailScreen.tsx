@@ -56,10 +56,18 @@ function WeekPreviewSection({ weekPreviews }: { weekPreviews: WeekPreview[] }) {
   );
 }
 
+type AnyActiveEnrollment = {
+  title: string;
+  continueUrl: string;
+  programSlug: string;
+};
+
 type ProgramDetailScreenProps = {
   state: ProgramDetailState;
   view: ProgramDetailView;
   errorMessage?: string | null;
+  /** Any active enrollment the user currently has (may be a different program). */
+  anyActiveEnrollment?: AnyActiveEnrollment | null;
 };
 
 function formatSourceLabel(source: ProgramDetailView["source"]) {
@@ -91,7 +99,8 @@ function resolveBody(
 export function ProgramDetailScreen({
   state,
   view,
-  errorMessage = null
+  errorMessage = null,
+  anyActiveEnrollment = null
 }: ProgramDetailScreenProps) {
   const program = view.program;
   const isReady = state === "ready" && program !== null;
@@ -100,7 +109,6 @@ export function ProgramDetailScreen({
   function buildTrainHref() {
     if (!isReady) return "/train";
     const params = new URLSearchParams({ program: program.slug });
-    // startProgramDayId: enrollment current day (if active) or first day
     if (view.startProgramDayId) {
       params.set("programDayId", view.startProgramDayId);
     }
@@ -108,6 +116,17 @@ export function ProgramDetailScreen({
   }
 
   const trainHref = buildTrainHref();
+
+  // Enrollment state classification
+  // - "this": user is already enrolled in THIS program → CTA = "Resume"
+  // - "other": user is enrolled in a DIFFERENT program → show warning
+  // - "none": no active enrollment
+  const enrollmentState =
+    view.hasActiveEnrollment
+      ? "this"
+      : anyActiveEnrollment && isReady && anyActiveEnrollment.programSlug !== program?.slug
+        ? "other"
+        : "none";
 
   return (
     <main className={styles.page}>
@@ -189,13 +208,44 @@ export function ProgramDetailScreen({
         </>
       )}
 
+      {enrollmentState === "other" && anyActiveEnrollment && (
+        <div className={styles.enrollmentWarning} role="status">
+          <div className={styles.enrollmentWarningText}>
+            <span className={styles.enrollmentWarningTitle}>
+              進行中のプログラムがあります
+            </span>
+            {anyActiveEnrollment.title} — 別のプログラムを開始する前に現在のプログラムを完了または中断してください。
+          </div>
+          <div className={styles.enrollmentWarningActions}>
+            <Link className={styles.enrollmentContinueCta} href={anyActiveEnrollment.continueUrl}>
+              今のプログラムを続ける
+            </Link>
+            <Link className={styles.enrollmentSwitchCta} href={trainHref}>
+              このプログラムへ切り替える
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className={styles.actions}>
-        <Link className={styles.primaryAction} href={trainHref}>
-          Go to Train
-        </Link>
-        <Link className={styles.secondaryAction} href="/programs">
-          Back to Programs
-        </Link>
+        {enrollmentState === "this" ? (
+          <Link className={styles.primaryAction} href={trainHref}>
+            Resume Training
+          </Link>
+        ) : enrollmentState === "other" ? (
+          <Link className={styles.secondaryAction} href="/programs">
+            Back to Programs
+          </Link>
+        ) : (
+          <>
+            <Link className={styles.primaryAction} href={trainHref}>
+              Start Program
+            </Link>
+            <Link className={styles.secondaryAction} href="/programs">
+              Back to Programs
+            </Link>
+          </>
+        )}
       </div>
     </main>
   );

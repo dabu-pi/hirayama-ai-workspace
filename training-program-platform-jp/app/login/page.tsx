@@ -37,7 +37,7 @@ export default function LoginPage() {
       .then(({ data, error }) => {
         if (!isActive || error) return;
         if (data.user) {
-          router.replace("/programs");
+          router.replace("/");
           router.refresh();
         }
       })
@@ -74,7 +74,7 @@ export default function LoginPage() {
           return;
         }
 
-        router.push("/programs");
+        router.push("/");
         router.refresh();
         return;
       }
@@ -90,7 +90,7 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        router.push("/programs");
+        router.push("/");
         router.refresh();
         return;
       }
