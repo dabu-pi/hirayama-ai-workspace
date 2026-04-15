@@ -93,9 +93,9 @@ export function WorkoutSummaryScreen({
       : null;
   const hasRestartCta = canRestartViaApi || restartFallbackUrl !== null;
 
-  // S-6: Back link — home for normal flow, programs when program is complete
-  const backHref = isProgramCompleted ? "/programs" : "/";
-  const backLabel = isProgramCompleted ? "Back to Programs" : "Back to Home";
+  // Back link — Train for normal flow, Programs when program is complete
+  const backHref = isProgramCompleted ? "/programs" : "/train";
+  const backLabel = isProgramCompleted ? "Back to Programs" : "Back to Train";
 
   return (
     <main className={styles.page}>
@@ -220,8 +220,8 @@ export function WorkoutSummaryScreen({
         {/* S-6: Cancelled — primary CTA is always Back to Home */}
         {isCancelled ? (
           <>
-            <Link className={styles.primaryAction} href="/">
-              Back to Home
+            <Link className={styles.primaryAction} href="/train">
+              Back to Train
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
               View all sessions
@@ -247,8 +247,8 @@ export function WorkoutSummaryScreen({
                 Browse Programs
               </Link>
             )}
-            <Link className={styles.secondaryAction} href="/">
-              Back to Home
+            <Link className={styles.secondaryAction} href="/train">
+              Back to Train
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
               View all sessions
@@ -262,8 +262,8 @@ export function WorkoutSummaryScreen({
             <Link className={styles.primaryAction} href={nextTrainUrl}>
               Go to Next Day
             </Link>
-            <Link className={styles.secondaryAction} href="/">
-              Back to Home
+            <Link className={styles.secondaryAction} href="/train">
+              Back to Train
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
               View all sessions
@@ -271,8 +271,8 @@ export function WorkoutSummaryScreen({
           </>
         ) : (
           <>
-            <Link className={styles.primaryAction} href="/">
-              Back to Home
+            <Link className={styles.primaryAction} href="/train">
+              Back to Train
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
               View all sessions

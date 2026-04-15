@@ -28,10 +28,6 @@ export function SessionHistoryScreen({
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.backLink} href="/">
-          <span aria-hidden="true">←</span>
-          <span>Home</span>
-        </Link>
         <div className={styles.titleWrap}>
           <span className={styles.eyebrow}>Workout History</span>
           <h1 className={styles.title}>Recent Sessions</h1>
@@ -83,12 +79,22 @@ export function SessionHistoryScreen({
                       ? "1 exercise"
                       : `${session.exerciseCount} exercises`}
                 </span>
-                <Link
-                  className={styles.summaryLink}
-                  href={`/session-history/${session.sessionId}`}
-                >
-                  View detail →
-                </Link>
+                <div className={styles.cardLinks}>
+                  {session.status === "completed" && (
+                    <Link
+                      className={styles.summaryLink}
+                      href={`/workout-summary/${session.sessionId}`}
+                    >
+                      Summary →
+                    </Link>
+                  )}
+                  <Link
+                    className={styles.detailLink}
+                    href={`/session-history/${session.sessionId}`}
+                  >
+                    Detail →
+                  </Link>
+                </div>
               </div>
             </article>
           ))}

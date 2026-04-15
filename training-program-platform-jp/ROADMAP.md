@@ -96,6 +96,8 @@
 | **S-6: Workout Summary 改善 — volume stat / cancelled 表示 / CTA 整理** | **✅ 完了（2026-04-14）** |
 | **S-7: Restart Program フロー — completed summary からの再受講（新 enrollment INSERT）** | **✅ 完了（2026-04-15）/ 静的検証 + API smoke + DB unique index 確認 pass / live auto-deploy 済 / ユーザー E2E 待ち** |
 | **Auth blocker fix — Home ErrorCard に Sign In 導線追加 / catch は unauth にフォールバック** | **✅ 完了（2026-04-15）/ S-7 E2E 再開可能化のための最小修正** |
+| **H-4: IA redesign — BottomTabBar / smart redirect / enrollment guard** | **✅ 完了（2026-04-15）/ Programs・Train・History 責務整理 + 永続ナビ導入** |
+| **H-4-E2E: IA E2E 検証 & 仕上げ** | **✅ 完了（2026-04-15）/ BackToHome リンク修正 / History→Summary 導線追加 / dev server E2E pass** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果

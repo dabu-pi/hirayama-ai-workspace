@@ -1,6 +1,66 @@
 # PROJECT_STATUS
 
-最終更新: 2026-04-15（S-7 後の auth blocker 解消 / deployed environment での sign-in 導線復旧）
+最終更新: 2026-04-15（H-4 IA redesign E2E 検証完了 / BottomTabBar・smart redirect・enrollment guard 実装 pass）
+
+## 2026-04-15 H-4 — IA redesign E2E 検証完了
+
+### STATUS
+
+| 確認項目 | 状態 |
+|---|---|
+| `/` → smart redirect（未ログイン → `/programs`） | **pass ✅** |
+| `/login` で BottomTabBar 非表示 | **pass ✅** |
+| `/programs` で BottomTabBar 表示 / Programs タブ active | **pass ✅** |
+| `/train` で BottomTabBar 表示 / Train タブ active | **pass ✅** |
+| `/session-history` で BottomTabBar 表示 / History タブ active | **pass ✅** |
+| SessionHistoryScreen の "← Home" 削除済み | **pass ✅** |
+| Program Detail（enrollment なし）→ "Start Program" CTA | **pass ✅** |
+| スクロールスペーサーで CTA がタブに隠れない | **pass ✅** |
+| コンソールエラー・警告 | **なし ✅** |
+| TypeScript `tsc --noEmit` | **pass ✅** |
+| WorkoutSummaryScreen — "Back to Home" → "Back to Train" 修正 | **完了 ✅** |
+| History → completed session に "Summary →" リンク追加 | **完了 ✅** |
+| active enrollment あり分岐（Programs バナー / Detail 警告）| **実装済み / Supabase 接続環境で E2E 要確認** |
+| Restart Program → `/` → `/train` smart redirect | **設計上 pass（`/` が active enrollment → /train へ振る）** |
+
+### 実装サマリー（H-4）
+
+**新規ファイル:**
+- `components/navigation/BottomTabBar.tsx` — Programs / Train / History の 3 タブ固定ナビ（SVG アイコン / active 状態 / safe-area 対応）
+- `components/navigation/AppNav.tsx` — pathname ベースの表示制御 + スクロールスペーサー（`/login` は非表示）
+
+**変更ファイル:**
+- `app/layout.tsx` — AppNav を root layout に注入
+- `app/page.tsx` — Home → smart router（enrollment → `/train`、それ以外 → `/programs`）
+- `app/login/page.tsx` — ログイン後 `/` へ redirect（Home がルーターとして機能）
+- `app/programs/page.tsx` — enrollment バナーデータを並列取得して ProgramsScreen へ渡す
+- `ProgramsScreen.tsx` + CSS — 進行中プログラムバナー追加（「続ける →」CTA）
+- `app/programs/[slug]/page.tsx` — anyActiveEnrollment を取得して Detail へ渡す
+- `ProgramDetailScreen.tsx` + CSS — enrollment 3 パターン分岐（Resume / 警告+切り替え / Start）
+
+**E2E 仕上げ（H-4-E2E）:**
+- `WorkoutSummaryScreen.tsx` — `href="/"` + "Back to Home" → `href="/train"` + "Back to Train"（全 4 箇所）
+- `SessionHistoryScreen.tsx` — "← Home" バックリンク削除
+- `SessionHistoryScreen.tsx` + CSS — completed セッションに `/workout-summary/[id]` "Summary →" リンク追加
+
+### 導線整合マップ（H-4 後）
+
+| ユーザー状態 | 着地点 |
+|---|---|
+| 未ログイン → `/` | `/programs`（ゲスト閲覧） |
+| ログイン + enrollment あり → `/` | `/train`（ワークアウト継続） |
+| ログイン + enrollment なし → `/` | `/programs` |
+| ログイン後 `/login` redirect | `/` → 上記分岐 |
+| Restart Program → API → redirect | `/` → `/train`（新 enrollment active） |
+| History → completed session | "Summary →" で `/workout-summary/[id]` へ直接 |
+
+### NEXT
+
+- Vercel auto-deploy 確認（push 済み）
+- active enrollment あり状態での E2E（Programs バナー / ProgramDetail 警告バナー）はログイン環境で確認
+- 次フェーズ: 入力 UI 改善（weight/reps 入力体験）または Analytics 準備
+
+---
 
 ## 2026-04-15 Auth blocker fix — ErrorCard の sign-in 導線復旧
 
