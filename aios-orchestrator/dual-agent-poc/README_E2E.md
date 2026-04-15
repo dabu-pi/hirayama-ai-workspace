@@ -715,3 +715,4 @@ LLM: dry_run=True（approval_test モック）/ Dashboard 書き込み: dry_run=
 | **Phase 6 実 API** | FizzBuzz → python コード artifact 保存確認 | **OK（CLOSED）** |
 | **Phase 7 dry-run** | false positive フィルタ + artifacts CLI（7 テスト） | **OK（CLOSED）** |
 | **Phase 8 実 API** | artifact E2E: 3ターン / 6件保存 / CLI一覧・本文取得 / false positive 0件 | **OK（CLOSED）** |
+| **Phase 9 dry-run** | artifact diff: グループ化・diff計算・CLI全モード・失敗ケース・実データ確認（9テスト） | **OK（CLOSED）** |

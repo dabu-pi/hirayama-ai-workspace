@@ -66,6 +66,11 @@ from summarizer import generate_summary, mock_summary
 from dashboard_reporter import report_session as _report_to_dashboard
 from artifact_parser import parse_artifacts
 from store import get_artifacts, get_artifacts_by_conv, append_artifact as _store_artifact
+from artifact_diff import (
+    group_artifacts, group_artifacts_all,
+    compute_diff, diff_stat, consecutive_pairs,
+    find_by_prefix, find_prev_in_group, find_next_in_group,
+)
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -1147,6 +1152,132 @@ def command_artifacts(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_artifact_diff(args: argparse.Namespace) -> int:
+    """
+    会話内の artifact ターン間差分を表示する。
+
+    モード:
+      (デフォルト)   同一系統の全連続ペアを diff 表示
+      --artifact-id  指定 artifact と直前バージョンを diff
+      --left --right 明示的な 2 artifact を diff
+    """
+    db_path     = args.db
+    conv_id     = args.conv_id
+    art_id      = getattr(args, "artifact_id", None)
+    left_prefix = getattr(args, "left",        None)
+    right_prefix= getattr(args, "right",       None)
+    context     = getattr(args, "context",     5)
+    init_db(db_path)
+
+    conv = get_conversation(db_path, conv_id)
+    if conv is None:
+        print(f"[ERROR] conversation_id が見つかりません: {conv_id}", file=sys.stderr)
+        return 1
+
+    arts = get_artifacts_by_conv(db_path, conv_id)
+
+    if not arts:
+        print(f"[INFO] {conv_id[:8]}... に artifact がありません。")
+        return 0
+
+    # ── モード 1: --left / --right 明示比較 ───────────────────────────────
+    if left_prefix or right_prefix:
+        if not (left_prefix and right_prefix):
+            print("[ERROR] --left と --right は両方指定してください。", file=sys.stderr)
+            return 1
+        left_art  = find_by_prefix(arts, left_prefix)
+        right_art = find_by_prefix(arts, right_prefix)
+        if left_art is None:
+            print(f"[ERROR] --left artifact_id が見つかりません: {left_prefix}", file=sys.stderr)
+            return 1
+        if right_art is None:
+            print(f"[ERROR] --right artifact_id が見つかりません: {right_prefix}", file=sys.stderr)
+            return 1
+        return _print_single_diff(left_art, right_art, context)
+
+    # ── モード 2: --artifact-id 起点 ─────────────────────────────────────
+    if art_id:
+        target = find_by_prefix(arts, art_id)
+        if target is None:
+            print(f"[ERROR] artifact_id が見つかりません: {art_id}", file=sys.stderr)
+            return 1
+
+        # 同一系統グループを全量で取得（1件でも返す all グループ）
+        all_groups = group_artifacts_all(arts)
+        from artifact_diff import _group_key
+        gkey = _group_key(target)
+        group_arts = all_groups.get(gkey, [target])
+
+        prev_art = find_prev_in_group(target, group_arts)
+        if prev_art is None:
+            # 直後を試みる
+            next_art = find_next_in_group(target, group_arts)
+            if next_art is None:
+                print(f"[INFO] {art_id} は系統内に比較対象がありません（1件のみ）。")
+                return 0
+            print(f"[INFO] 直前バージョンがないため、直後との diff を表示します。")
+            return _print_single_diff(target, next_art, context)
+
+        return _print_single_diff(prev_art, target, context)
+
+    # ── モード 3: デフォルト — 全系統の連続 diff ─────────────────────────
+    groups = group_artifacts(arts)
+
+    if not groups:
+        # 比較できる系統がない（全系統が 1 件のみ）
+        all_groups = group_artifacts_all(arts)
+        print(f"\nArtifact Diff: {conv['title'][:60]}")
+        print(f"  conv_id : {conv_id}")
+        print(f"  系統数  : {len(all_groups)}  /  diff 可能: 0")
+        print(_SEP)
+        print("  (すべての系統が 1 件のみ — diff 対象なし)")
+        print(_SEP)
+        return 0
+
+    print(f"\nArtifact Diff: {conv['title'][:60]}")
+    print(f"  conv_id : {conv_id}")
+    print(f"  diff 対象系統: {len(groups)}")
+    print(_SEP)
+
+    for gkey, sorted_arts in groups.items():
+        pairs = consecutive_pairs(sorted_arts)
+        print(f"\n  系統: {gkey}  ({len(sorted_arts)} バージョン / {len(pairs)} diff)")
+        print()
+        for left, right in pairs:
+            rc = _print_single_diff(left, right, context, indent="  ")
+            if rc != 0:
+                return rc
+
+    print(_SEP)
+    return 0
+
+
+def _print_single_diff(left: dict, right: dict, context: int, indent: str = "") -> int:
+    """
+    2 つの artifact の diff を表示するヘルパー。
+    差分なしの場合も安全に表示する。
+    """
+    diff_text = compute_diff(left, right, context=context)
+    added, deleted = diff_stat(diff_text) if diff_text else (0, 0)
+
+    left_label  = f"T{left['turn_id']:02d}  {left['artifact_id'][:8]}..."
+    right_label = f"T{right['turn_id']:02d}  {right['artifact_id'][:8]}..."
+
+    print(f"{indent}  {left_label}  →  {right_label}")
+
+    if not diff_text:
+        print(f"{indent}  (差分なし — 本文は同一)")
+        print()
+        return 0
+
+    print(f"{indent}  +{added} 行追加 / -{deleted} 行削除")
+    print()
+    for line in diff_text.splitlines():
+        print(f"{indent}{line}")
+    print()
+    return 0
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # argparse エントリポイント
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1205,6 +1336,18 @@ def _build_parser() -> argparse.ArgumentParser:
     p_arts.add_argument("--artifact-id", default=None, dest="artifact_id",
                         help="指定時はその artifact の本文を全文表示（前方一致）")
 
+    # artifact-diff
+    p_diff = sub.add_parser("artifact-diff", help="artifact のターン間差分を表示する")
+    p_diff.add_argument("--conv-id",      required=True, dest="conv_id",      help="conversation_id")
+    p_diff.add_argument("--artifact-id",  default=None,  dest="artifact_id",
+                        help="この artifact と直前バージョンを diff（前方一致）")
+    p_diff.add_argument("--left",         default=None,  dest="left",
+                        help="明示比較: 比較元 artifact_id（前方一致）")
+    p_diff.add_argument("--right",        default=None,  dest="right",
+                        help="明示比較: 比較先 artifact_id（前方一致）")
+    p_diff.add_argument("--context",      type=int, default=5, dest="context",
+                        help="diff に含める前後行数（デフォルト: 5）")
+
     return parser
 
 
@@ -1220,7 +1363,8 @@ def main() -> int:
         "reject":  command_reject,
         "log":       command_log,
         "show":      command_show,
-        "artifacts": command_artifacts,
+        "artifacts":     command_artifacts,
+        "artifact-diff": command_artifact_diff,
     }
 
     handler = dispatch.get(args.command)
