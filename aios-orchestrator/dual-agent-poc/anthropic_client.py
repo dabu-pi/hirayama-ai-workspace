@@ -46,7 +46,7 @@ def load_anthropic_config() -> dict[str, str]:
     Raises:
         ValueError: ANTHROPIC_API_KEY が未設定の場合
     """
-    load_dotenv(dotenv_path=_ENV_PATH, override=False)
+    load_dotenv(dotenv_path=_ENV_PATH, override=True)
 
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key:

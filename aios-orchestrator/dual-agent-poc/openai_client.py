@@ -41,7 +41,7 @@ def load_openai_config() -> dict[str, str]:
     Raises:
         ValueError: OPENAI_API_KEY が未設定の場合
     """
-    load_dotenv(dotenv_path=_ENV_PATH, override=False)
+    load_dotenv(dotenv_path=_ENV_PATH, override=True)
 
     api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
