@@ -293,6 +293,205 @@ error イベントが run_log に正常記録されていることを確認。
 
 ---
 
+## 実 API E2E — 第2回試行（2026-04-15）
+
+実施日: 2026-04-15
+環境: Windows 11 / Python 3.x / openai 2.31.0 / anthropic 0.95.0
+
+### 使用モデル（実 API 返却値）
+
+| 役割 | モデル（.env 設定） | API 実返却モデル名 |
+|---|---|---|
+| Planner (OpenAI) | `gpt-4o` | `gpt-4o-2024-08-06` |
+| Executor (Anthropic) | `claude-sonnet-4-5` | `claude-sonnet-4-5-20250929` |
+
+---
+
+### 事前疎通確認
+
+```
+OpenAI API:    OK — gpt-4o-2024-08-06 / 2015ms
+Anthropic API: OK — claude-sonnet-4-5-20250929 / 1039ms
+```
+
+前回の 429 quota 不足が解消したことを確認。
+
+---
+
+### 軽微修正: calc_cost プレフィックス前方一致対応
+
+**問題:** API が返すモデル名は `gpt-4o-2024-08-06` のように日付サフィックス付きであり、
+`_COST_RATES` の完全一致キーにヒットせずコストが常に `$0.000000` になっていた。
+
+**修正内容（`run_logger.py`）:**
+
+- `_COST_RATES` に `claude-sonnet-4-5` レートを追加
+- `calc_cost()` を完全一致優先 → プレフィックス前方一致のフォールバックに変更
+
+```python
+# 変更前
+rate = _COST_RATES.get(model, {"in": 0.0, "out": 0.0})
+
+# 変更後
+if model in _COST_RATES:
+    rate = _COST_RATES[model]
+else:
+    rate = next(
+        (v for k, v in _COST_RATES.items() if model.startswith(k)),
+        {"in": 0.0, "out": 0.0},
+    )
+```
+
+---
+
+### シナリオ A — 実 API 通常フロー（結果: 成功）
+
+**実行コマンド:**
+
+```bash
+# conv_id: 9094e5ce-d4fa-4819-b2f7-990afb711364
+python orchestrator.py start --project-id aios-poc --goal "1+1を計算してMarkdownで報告せよ"
+python orchestrator.py show  --conv-id 9094e5ce-d4fa-4819-b2f7-990afb711364
+python orchestrator.py run   --conv-id 9094e5ce-d4fa-4819-b2f7-990afb711364 --max-turns 3
+python orchestrator.py log   --conv-id 9094e5ce-d4fa-4819-b2f7-990afb711364
+```
+
+**実行ログ:**
+
+```
+[Turn 1] 開始  project=aios-poc
+[Turn 1] context: recent=1件  summary=なし
+[Turn 1] Planner: 1+1を計算してください。
+[Turn 1] Executor: # 実行結果報告 / 計算結果: 1 + 1 = 2 / ステータス: 成功
+[Turn 1] 完了 | コスト概算: $0.00384
+
+[Turn 2] 開始  project=aios-poc
+[Turn 2] context: recent=3件  summary=なし
+[Turn 2] Planner: 1+1を計算してください。
+[Turn 2] Executor: # 実行結果報告 / 計算完了 / 1 + 1 = 2
+[Turn 2] 完了 | コスト概算: $0.00409
+
+[Turn 3] 開始  project=aios-poc
+[Turn 3] context: recent=5件  summary=なし
+[Turn 3] Planner: TASK_COMPLETE
+         1+1を計算し、Markdown形式での報告を完了しました。計算結果は期待通りでした。
+[Turn 3] TASK_COMPLETE 検出 — 会話を完了にします
+run_loop result: completed
+```
+
+**最終状態（DB確認）:**
+
+| 項目 | 値 |
+|---|---|
+| conversations.status | `completed` |
+| turn_count | `3` |
+| project_id | `aios-poc` |
+| latest_output | `TASK_COMPLETE\n\n1+1 を計算し、Markdown 形式での...` |
+
+**run_log:**
+
+| event_type | model | tokens_in | tokens_out | cost |
+|---|---|---|---|---|
+| session_start | - | 0 | 0 | $0.000000 |
+| api_call | gpt-4o-2024-08-06 | 303 | 8 | $0.000838 |
+| api_call | claude-sonnet-4-5-20250929 | 307 | 121 | $0.002736 |
+| api_call | gpt-4o-2024-08-06 | 419 | 8 | $0.001128 |
+| api_call | claude-sonnet-4-5-20250929 | 441 | 109 | $0.002958 |
+| session_end | - | 0 | 0 | $0.000000 |
+| api_call | gpt-4o-2024-08-06 | 525 | 32 | $0.001633 |
+| **合計** | | **1,995** | **278** | **$0.009292** |
+
+**確認済み項目:**
+
+- [x] start — DB 保存・project_id=aios-poc
+- [x] show — 全フィールド正常表示
+- [x] Turn 1: Planner（OpenAI）実応答 → Executor（Anthropic）実応答 → DB 保存
+- [x] Turn 2: 2回目の Planner → Executor → context が 3件に増加
+- [x] Turn 3: Planner が自主的に TASK_COMPLETE → completed に遷移
+- [x] run_log: session_start / api_call×5 / session_end 正常記録
+- [x] トークン数・コスト概算（プレフィックス修正後）正常計算
+- [x] latest_output に TASK_COMPLETE 応答が保存される
+
+---
+
+### シナリオ B — 実 API 承認フロー（結果: 成功）
+
+**実行コマンド:**
+
+```bash
+# conv_id: ad987755-48fa-4894-a23c-df4648f79e60
+python orchestrator.py start --project-id aios-poc --goal "sample.txt を削除する手順を提案せよ"
+python orchestrator.py run   --conv-id ad987755-48fa-4894-a23c-df4648f79e60 --max-turns 2
+python orchestrator.py pending
+```
+
+**実行ログ:**
+
+```
+[Turn 1] 開始  project=aios-poc
+[Turn 1] Planner: REQUIRES_APPROVAL: true
+         sample.txt を削除する。
+
+[承認待ち] Turn 1 — Planner が危険操作を要求しています
+  message_id : 1f26bf31-a581-42b5-a24a-366d0ecd2442
+  承認: python orchestrator.py approve --message-id 1f26bf31-...
+  却下: python orchestrator.py reject  --message-id 1f26bf31-...
+run_loop result: waiting_approval
+```
+
+**pending 表示:**
+
+```
+pending count: 2（dry-run 残 1件 + 実 API 新規 1件）
+  message_id : 1f26bf31-a581-42b5-a24a-366d0ecd2442
+  conv_id    : ad987755...
+  project_id : aios-poc
+  turn_id    : 1
+  content    : REQUIRES_APPROVAL: true\nsample.txt を削除する。
+```
+
+**run_log（シナリオ B）:**
+
+| event_type | model | tokens_in | tokens_out | cost |
+|---|---|---|---|---|
+| session_start | - | 0 | 0 | $0.000000 |
+| api_call | gpt-4o-2024-08-06 | 302 | 15 | $0.000905 |
+| approval_requested | - | 0 | 0 | $0.000000 |
+
+**確認済み項目:**
+
+- [x] 実 Planner（gpt-4o）が自主的に `REQUIRES_APPROVAL: true` を返した
+- [x] conversations.status = `waiting_approval` に遷移
+- [x] Executor を呼ばずに停止
+- [x] message_id / approve/reject コマンドが表示される
+- [x] run_log に `approval_requested` イベントが記録される
+- [x] `pending` に project_id 付きで承認待ち 1件が表示される
+
+---
+
+## 発生した問題まとめ（全試行）
+
+| 問題 | 種別 | 原因 | 対処 | ステータス |
+|---|---|---|---|---|
+| 旧スキーマ DB（project_id なし） | 旧DB残存 | Task 5 以前の DB が残っていた | store.db 削除・再作成 | 解消済み |
+| Windows ターミナル文字化け | 環境 | cp932 vs UTF-8 不一致 | TextIOWrapper で UTF-8 ラップ | 運用回避済み |
+| ANTHROPIC_API_KEY が読まれない | コードバグ | `override=False` が空文字を「設定済み」と判断 | `override=True` に変更 | **修正済み** |
+| OpenAI 429 quota 不足 | アカウント | クレジット不足 | OpenAI Billing でクレジット追加 | **解消済み** |
+| コスト計算が常に $0 | コードバグ | API 返却モデル名の日付サフィックスが完全一致しない | プレフィックス前方一致に変更 + claude-sonnet-4-5 追加 | **修正済み** |
+
+---
+
+## 次にやること（Phase 2 以降）
+
+| 優先度 | 内容 |
+|---|---|
+| 1 | `summary` フィールドの更新ロジック実装（現状: Executor が更新しない） |
+| 2 | artifacts の自動パース・保存（Phase 2） |
+| 3 | context 件数が増えてきた際の summary 自動生成（Phase B） |
+| 4 | run_log → Dashboard 連携（Phase C） |
+
+---
+
 ## 動作確認結果まとめ（Task 1〜5 + E2E 全体）
 
 | タスク | 内容 | 結果 |
@@ -304,6 +503,7 @@ error イベントが run_log に正常記録されていることを確認。
 | Task 5 | project_id 隔離 / build_context(limit=10) | OK |
 | E2E dry-run A | 通常フロー（TASK_COMPLETE まで 2ターン） | **OK** |
 | E2E dry-run B | 承認フロー（REQUIRES_APPROVAL 検出・停止） | **OK** |
-| 実 API Anthropic 単独 | Executor 単独 API 呼び出し | **OK**（1039ms / claude-sonnet-4-5-20250929） |
-| 実 API OpenAI 単独 | Planner API 呼び出し | **NG**（429 quota 不足） |
-| 実 API E2E フル | Planner → Executor 通し | **未完**（OpenAI quota 追加待ち） |
+| 実 API 第1回 Anthropic 単独 | Executor 単独 API 呼び出し | **OK**（1039ms） |
+| 実 API 第1回 OpenAI | Planner API 呼び出し | **NG**（429 quota — 解消済み） |
+| 実 API 第2回 シナリオ A | Planner → Executor → TASK_COMPLETE | **OK**（3ターン / $0.009292） |
+| 実 API 第2回 シナリオ B | REQUIRES_APPROVAL 検出 → waiting_approval | **OK**（実 Planner が自主申告） |

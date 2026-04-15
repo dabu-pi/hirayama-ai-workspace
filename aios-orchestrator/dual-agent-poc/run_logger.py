@@ -311,10 +311,13 @@ def log_session_end(
 # ─── コスト集計（診断用） ─────────────────────────────────────────────────────
 
 # モデル別レート（$/1M tokens）。2026-04 時点。
+# API が返すモデル名は日付サフィックス付き（例: gpt-4o-2024-08-06）なので
+# プレフィックス前方一致で検索する（calc_cost 参照）。
 _COST_RATES: dict[str, dict[str, float]] = {
     "gpt-4o":            {"in": 2.50,  "out": 10.00},
-    "claude-sonnet-4-6": {"in": 3.00,  "out": 15.00},
     "claude-opus-4-6":   {"in": 15.00, "out": 75.00},
+    "claude-sonnet-4-6": {"in": 3.00,  "out": 15.00},
+    "claude-sonnet-4-5": {"in": 3.00,  "out": 15.00},
     "claude-haiku-4-5":  {"in": 0.80,  "out": 4.00},
 }
 
@@ -326,13 +329,24 @@ def calc_cost(model: str, tokens_in: int, tokens_out: int) -> float:
     レートが未登録のモデルは 0.0 を返す。
     あくまで概算値であり、公式の請求額とは異なる場合がある。
 
+    API が返すモデル名は日付サフィックス付き（例: gpt-4o-2024-08-06）の場合がある。
+    完全一致を優先し、なければプレフィックス前方一致で検索する。
+
     Args:
-        model:      モデル名（_COST_RATES のキーと一致する必要がある）
+        model:      モデル名（API 返却値またはショートネーム）
         tokens_in:  入力トークン数
         tokens_out: 出力トークン数
 
     Returns:
         推定コスト（USD）
     """
-    rate = _COST_RATES.get(model, {"in": 0.0, "out": 0.0})
+    # 完全一致優先
+    if model in _COST_RATES:
+        rate = _COST_RATES[model]
+    else:
+        # プレフィックス前方一致（日付サフィックス付きモデル名の吸収）
+        rate = next(
+            (v for k, v in _COST_RATES.items() if model.startswith(k)),
+            {"in": 0.0, "out": 0.0},
+        )
     return (tokens_in * rate["in"] + tokens_out * rate["out"]) / 1_000_000
