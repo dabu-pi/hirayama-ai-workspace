@@ -206,10 +206,84 @@ _assert("forced dashboard failure" in meta_str,
 print("\n=== [Test 6] reported_sessions.json にエントリが残る ===")
 
 reported = _load_reported()
-_assert(conv_id in reported,
-        f"test 3 の conv_id が reported_sessions.json に記録されている")
-_assert("reported_at" in reported[conv_id],
+# Phase 4: キーは {conv_id}_{result} 形式になった
+key_success = f"{conv_id}_SUCCESS"
+_assert(key_success in reported,
+        f"test 3 の conv_id_SUCCESS キーが reported_sessions.json に記録されている")
+_assert("reported_at" in reported[key_success],
         "reported_at フィールドが含まれる")
+
+# ─── Test 7: Phase 4 — waiting_approval → completed の両方が報告される ─────
+print("\n=== [Test 7] Phase 4: waiting_approval → completed を別イベントとして報告 ===")
+
+import sqlite3
+
+conv_id3 = _start_conv("承認フローテスト", project_id="test-phase4-approval")
+
+# ① waiting_approval 状態で報告 → STOP として記録
+# status を waiting_approval に手動セット
+conn = sqlite3.connect(_DB)
+conn.execute(
+    "UPDATE conversations SET status=? WHERE conversation_id=?",
+    ("waiting_approval", conv_id3),
+)
+conn.commit()
+conn.close()
+
+_report_to_dashboard_safely(
+    db_path=_DB, conversation_id=conv_id3,
+    dry_run=True, verbose=False,
+)
+logs7a = get_run_log(_DB, conv_id3)
+dash7a = [r for r in logs7a if r["event_type"] in
+          ("dashboard_reported", "dashboard_skipped", "dashboard_report_failed")]
+_assert(len(dash7a) >= 1, f"waiting_approval 報告イベントが記録された (actual: {len(dash7a)})")
+_assert(dash7a[0]["event_type"] == "dashboard_reported",
+        f"waiting_approval が dashboard_reported として記録 (actual: {dash7a[0]['event_type']})")
+
+# reported_sessions.json に STOP キーが記録されているか確認
+reported7 = _load_reported()
+key_stop = f"{conv_id3}_STOP"
+_assert(key_stop in reported7,
+        f"STOP キーが reported_sessions.json に記録された")
+
+# ② completed に遷移して再度報告 → SUCCESS として記録（スキップされない）
+conn = sqlite3.connect(_DB)
+conn.execute(
+    "UPDATE conversations SET status=? WHERE conversation_id=?",
+    ("completed", conv_id3),
+)
+conn.commit()
+conn.close()
+
+_report_to_dashboard_safely(
+    db_path=_DB, conversation_id=conv_id3,
+    dry_run=True, verbose=False,
+)
+logs7b = get_run_log(_DB, conv_id3)
+dash7b = [r for r in logs7b if r["event_type"] in
+          ("dashboard_reported", "dashboard_skipped", "dashboard_report_failed")]
+# 1回目(STOP) + 2回目(SUCCESS) = 2件
+reported_events = [r for r in dash7b if r["event_type"] == "dashboard_reported"]
+_assert(len(reported_events) == 2,
+        f"waiting_approval と completed が各1回 dashboard_reported (actual: {len(reported_events)})")
+
+# reported_sessions.json に STOP / SUCCESS 両方のキーが存在
+reported7b = _load_reported()
+_assert(key_stop in reported7b, "STOP キーが reported_sessions.json に残っている")
+key_success3 = f"{conv_id3}_SUCCESS"
+_assert(key_success3 in reported7b,
+        "SUCCESS キーが reported_sessions.json に追加された")
+
+# ③ もう一度 completed 報告 → 今度はスキップ
+_report_to_dashboard_safely(
+    db_path=_DB, conversation_id=conv_id3,
+    dry_run=True, verbose=False,
+)
+logs7c = get_run_log(_DB, conv_id3)
+skip7 = [r for r in logs7c if r["event_type"] == "dashboard_skipped"]
+_assert(len(skip7) >= 1,
+        f"3回目(completed再報告)は dashboard_skipped (actual: {len(skip7)})")
 
 # ─── クリーンアップ ──────────────────────────────────────────────────────────
 dr_mod._REPORTED_FILE = _orig_reported_file

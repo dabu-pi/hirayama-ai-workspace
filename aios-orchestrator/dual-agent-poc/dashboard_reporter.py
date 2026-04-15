@@ -167,7 +167,7 @@ def build_entry(
     )
 
     return {
-        "log_id":          f"aios-{conv_id[:8]}",
+        "log_id":          f"aios-{conv_id[:8]}-{result.lower()}",
         "datetime":        _iso_to_display(conv.get("updated_at")),
         "system":          _SYSTEM_NAME,
         "project":         conv.get("project_id", "default"),
@@ -199,7 +199,8 @@ def export_local(
 
     ts = timestamp or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     conv_short = (entry.get("conversation_id") or "")[:8] or "unknown"
-    filename = f"aios_{ts}_{conv_short}.json"
+    result_lower = (entry.get("result") or "unknown").lower()
+    filename = f"aios_{ts}_{conv_short}_{result_lower}.json"
     path = _LOCAL_LOG_DIR / filename
 
     path.write_text(
@@ -319,14 +320,17 @@ def report_session(
         if verbose:
             print(f"[Dashboard] ローカル保存: {local_path.name}")
 
-        # 3. 冪等チェック
+        # 3. 冪等チェック（キー: {conv_id}_{result} — Phase 4 event-level idempotency）
+        # waiting_approval (STOP) と completed (SUCCESS) は別イベントとして扱う。
+        # 同一 result が 2 回報告された場合のみスキップする。
+        idempotency_key = f"{conv_id}_{entry['result']}"
         reported = _load_reported()
-        if conv_id in reported:
+        if idempotency_key in reported:
             result["idempotent_skip"] = True
             result["success"]        = True
             result["sheet_result"]   = "skip (already reported)"
             if verbose:
-                print(f"[Dashboard] スキップ: {conv_id[:8]}... は既に報告済み")
+                print(f"[Dashboard] スキップ: {conv_id[:8]}..._{entry['result']} は既に報告済み")
             return result
 
         # 4. Sheet 書き込み
@@ -344,7 +348,7 @@ def report_session(
 
         # 5. reported_sessions.json を更新（Sheet 成功 or dry_run のみ記録）
         if sheet_ok:
-            reported[conv_id] = {
+            reported[idempotency_key] = {
                 "reported_at": _now_jst_str(),
                 "entry":       entry,
             }

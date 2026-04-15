@@ -1,6 +1,7 @@
 # README_Task6 — run_log → Dashboard 連携（Phase 3）
 
-実装日: 2026-04-15
+実装日: 2026-04-15  
+Phase 4 修正日: 2026-04-15  
 ステータス: **CLOSED**
 
 ---
@@ -66,14 +67,39 @@ _report_to_dashboard_safely()
 
 ---
 
-## Idempotency 方針
+## Idempotency 方針（Phase 4 更新）
 
-- `logs/aios-orchestrator/reported_sessions.json` で報告済み `conversation_id` を追跡
-- 同一 `conversation_id` が 2 回 `report_session()` を呼ばれた場合:
-  - Sheet への書き込みをスキップ
+### キー設計
+
+| フェーズ | キー形式 | 問題 |
+|---|---|---|
+| Phase 3 | `conversation_id` | `waiting_approval → completed` で 2 回目がスキップされる |
+| **Phase 4** | **`{conversation_id}_{result}`** | STOP / SUCCESS を別イベントとして扱う |
+
+- `logs/aios-orchestrator/reported_sessions.json` で報告済みキーを追跡
+- キー例: `"9e32f23a-..._STOP"` / `"9e32f23a-..._SUCCESS"`
+- 同一キーが 2 回 `report_session()` を呼ばれた場合のみスキップ
   - `run_log.event_type = "dashboard_skipped"` を記録
-  - ローカル JSON は**毎回**書き出す（上書きではなく新しいタイムスタンプで追記）
+  - ローカル JSON は**毎回**書き出す（タイムスタンプ + result サフィックス付きファイル名）
 - `reported_sessions.json` への記録は Sheet 書き込み成功後のみ
+
+### ローカル JSON ファイル名（Phase 4）
+
+```
+aios_YYYYMMDD_HHMMSS_<conv_id[:8]>_<result_lower>.json
+例:
+  aios_20260415_130128_21b7eef2_stop.json
+  aios_20260415_130129_21b7eef2_success.json
+```
+
+### log_id（Phase 4）
+
+```
+aios-<conv_id[:8]>-<result_lower>
+例: aios-21b7eef2-stop / aios-21b7eef2-success
+```
+
+Sheet の各行が一意に識別できるため、Run_Log での重複判別が容易になった。
 
 ---
 
@@ -140,7 +166,7 @@ workspace/logs/aios-orchestrator/
 | 項目 | 内容 |
 |---|---|
 | Projects シート同期なし | `de` コマンドが行う Projects 列更新（次アクション / 最終更新日 / 補足）は未実装。Run_Log への append のみ |
-| `waiting_approval` → 再 run 後の再報告 | `approve` 後に `run` を再実行すると conv_id が同一なので冪等スキップになる。最終状態が Sheet に反映されない |
+| `waiting_approval` → 再 run 後の再報告 | **Phase 4 で修正済み。** `{conv_id}_STOP` と `{conv_id}_SUCCESS` を別キーとして扱うため、両方が Sheet に記録される |
 | `failed` セッションの再試行 | 同上。`failed` 後に新 session を立てれば別 conv_id として記録される |
 | summary なし時の `next_action` | summary が書き込まれていない場合は `next_action = ""`（空） |
 | timestamp 精度 | `reported_sessions.json` は UTC 秒精度 |
@@ -159,6 +185,8 @@ workspace/logs/aios-orchestrator/
 
 ## 検証結果サマリ
 
+### Phase 3 (test_phase3_dashboard.py)
+
 | # | テスト | 結果 |
 |---|---|---|
 | 1 | status → result マッピング（5ケース） | OK |
@@ -169,3 +197,15 @@ workspace/logs/aios-orchestrator/
 | 6 | `reported_sessions.json` 保存 | OK |
 | 実 API | 4 ターン → Sheet 書き込み → `dashboard_reported` | OK |
 | 冪等 real | 同 conv_id に 2 回呼び出し → Sheet 書き込みなし | OK |
+
+### Phase 4 (test_phase3_dashboard.py Test 7 + test_phase4_real.py)
+
+| # | テスト | 結果 |
+|---|---|---|
+| 7 | waiting_approval → STOP 報告 | OK |
+| 7 | completed → SUCCESS 報告（スキップされない） | OK |
+| 7 | 3回目 → `dashboard_skipped` | OK |
+| 7 | `reported_sessions.json` に STOP / SUCCESS 両キー | OK |
+| real | waiting_approval → STOP を Sheet に書き込み | OK |
+| real | approve → completed → SUCCESS を Sheet に書き込み | OK |
+| real | 3回目 → `dashboard_skipped` | OK |
