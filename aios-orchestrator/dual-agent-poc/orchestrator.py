@@ -64,6 +64,62 @@ _MAX_CONSECUTIVE_BLOCKED = 3
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Dry-run モック（APIキー未設定環境でのフロー検証用）
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _mock_planner_response(turn_id: int, goal_hint: str) -> dict:
+    """
+    dry-run 時に Planner (OpenAI) の代わりに返すモック応答。
+    turn_id=2 以降で TASK_COMPLETE を含めて会話を終わらせる。
+    """
+    if turn_id >= 2:
+        content = (
+            f"TASK_COMPLETE\n"
+            f"ターン {turn_id} でタスクが完了しました。"
+            f"Executor の報告を確認し、目標を達成したと判断します。"
+        )
+    else:
+        content = f"[DRY-RUN Turn {turn_id}] {goal_hint} について、まず概要を Markdown 形式で作成してください。"
+    return {
+        "content": content,
+        "model": "dry-run-gpt-4o",
+        "usage": {"prompt_tokens": 100, "completion_tokens": 50},
+        "duration_ms": 0,
+    }
+
+
+def _mock_executor_response(turn_id: int) -> dict:
+    """
+    dry-run 時に Executor (Anthropic) の代わりに返すモック応答。
+    """
+    content = (
+        f"[DRY-RUN Turn {turn_id}] 実行結果を報告します。\n\n"
+        f"```markdown\n# 結果\n- 計算完了\n- 値: 2\n```\n\n"
+        f"以上です。"
+    )
+    return {
+        "content": content,
+        "model": "dry-run-claude-sonnet",
+        "usage": {"input_tokens": 120, "output_tokens": 80},
+        "duration_ms": 0,
+    }
+
+
+def _mock_approval_planner_response(turn_id: int) -> dict:
+    """dry-run 承認テスト用: 必ず REQUIRES_APPROVAL: true を含む。"""
+    return {
+        "content": (
+            f"REQUIRES_APPROVAL: true\n"
+            f"[DRY-RUN Turn {turn_id}] sample.txt を削除する手順:\n"
+            f"1. os.remove('sample.txt') を実行する"
+        ),
+        "model": "dry-run-gpt-4o",
+        "usage": {"prompt_tokens": 80, "completion_tokens": 60},
+        "duration_ms": 0,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # System Prompt 構築
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -179,6 +235,8 @@ def run_single_turn(
     conversation_id: str,
     max_turns: int = _DEFAULT_MAX_TURNS,
     verbose: bool = True,
+    dry_run: bool = False,
+    approval_test: bool = False,
 ) -> str:
     """
     Planner → 承認チェック → Executor の 1 ターンを実行する。
@@ -188,6 +246,8 @@ def run_single_turn(
         conversation_id: 対象会話の ID
         max_turns:       system prompt に渡すターン上限ヒント
         verbose:         進捗を stdout に出力するか
+        dry_run:         True の場合 API を呼ばずモック応答を使う
+        approval_test:   dry_run=True 時に承認フロー確認用モック応答を使う
 
     Returns:
         'continue'          — 正常完了。次のターンへ
@@ -216,9 +276,18 @@ def run_single_turn(
     # ── 2. Planner 呼び出し (OpenAI) ─────────────────────────────────────────
     planner_system = build_planner_system_prompt(max_turns)
     if verbose:
-        print(f"[Turn {turn_id}] Planner (OpenAI) 呼び出し中...")
+        mode = "[DRY-RUN]" if dry_run else ""
+        print(f"[Turn {turn_id}] Planner (OpenAI) 呼び出し中... {mode}")
     try:
-        planner_result = chat_openai(planner_system, planner_messages)
+        if dry_run:
+            goal_hint = (ctx.get("recent_history") or [{}])[0].get("content", "")[:40]
+            planner_result = (
+                _mock_approval_planner_response(turn_id)
+                if approval_test
+                else _mock_planner_response(turn_id, goal_hint)
+            )
+        else:
+            planner_result = chat_openai(planner_system, planner_messages)
     except Exception as exc:
         log_error(db_path, conversation_id, turn_id,
                   {"error": str(exc), "type": type(exc).__name__}, model="openai")
@@ -288,9 +357,13 @@ def run_single_turn(
 
     executor_system = build_executor_system_prompt()
     if verbose:
-        print(f"[Turn {turn_id}] Executor (Anthropic) 呼び出し中...")
+        mode = "[DRY-RUN]" if dry_run else ""
+        print(f"[Turn {turn_id}] Executor (Anthropic) 呼び出し中... {mode}")
     try:
-        executor_result = chat_anthropic(executor_system, executor_messages)
+        if dry_run:
+            executor_result = _mock_executor_response(turn_id)
+        else:
+            executor_result = chat_anthropic(executor_system, executor_messages)
     except Exception as exc:
         log_error(db_path, conversation_id, turn_id,
                   {"error": str(exc), "type": type(exc).__name__}, model="anthropic")
@@ -359,6 +432,8 @@ def run_loop(
     conversation_id: str,
     max_turns: int = _DEFAULT_MAX_TURNS,
     verbose: bool = True,
+    dry_run: bool = False,
+    approval_test: bool = False,
 ) -> str:
     """
     max_turns を上限に run_single_turn を繰り返す。
@@ -369,9 +444,16 @@ def run_loop(
         - 'failed'           — エラーまたは reject
         - turn_count >= max_turns — ターン上限到達
 
+    Args:
+        dry_run:       True の場合 API を呼ばずモック応答を使う
+        approval_test: dry_run=True 時に承認フロー確認用モックを使う
+
     Returns:
         最後の run_single_turn の戻り値（または 'max_turns_reached'）
     """
+    if dry_run and verbose:
+        print("[DRY-RUN] モード: 実 API は呼びません。モック応答を使います。")
+
     blocked_streak = 0
 
     for _ in range(max_turns):
@@ -390,7 +472,11 @@ def run_loop(
                 print("\n[INFO] 承認待ち中です。approve / reject してから run を再実行してください。")
             return "waiting_approval"
 
-        result = run_single_turn(db_path, conversation_id, max_turns=max_turns, verbose=verbose)
+        result = run_single_turn(
+            db_path, conversation_id,
+            max_turns=max_turns, verbose=verbose,
+            dry_run=dry_run, approval_test=approval_test,
+        )
 
         if result == "blocked":
             blocked_streak += 1
@@ -476,10 +562,13 @@ def command_start(args: argparse.Namespace) -> int:
 def command_run(args: argparse.Namespace) -> int:
     """
     指定した会話で run_loop を実行する。
+    --dry-run フラグで実 API を呼ばずモック応答でフローを検証できる。
     """
-    db_path   = args.db
-    conv_id   = args.conv_id
-    max_turns = args.max_turns
+    db_path       = args.db
+    conv_id       = args.conv_id
+    max_turns     = args.max_turns
+    dry_run       = getattr(args, "dry_run", False)
+    approval_test = getattr(args, "approval_test", False)
 
     init_db(db_path)
 
@@ -488,12 +577,19 @@ def command_run(args: argparse.Namespace) -> int:
         print(f"[ERROR] conversation_id が見つかりません: {conv_id}", file=sys.stderr)
         return 1
 
-    print(f"\n[run] conv_id={conv_id[:8]}... max_turns={max_turns}")
-    print(f"  title  : {conv['title']}")
-    print(f"  status : {conv['status']}")
-    print(f"  turns  : {conv['turn_count']}")
+    mode_str = " [DRY-RUN]" if dry_run else ""
+    print(f"\n[run{mode_str}] conv_id={conv_id[:8]}... max_turns={max_turns}")
+    print(f"  title      : {conv['title']}")
+    print(f"  project_id : {conv.get('project_id', '-')}")
+    print(f"  status     : {conv['status']}")
+    print(f"  turns      : {conv['turn_count']}")
 
-    result = run_loop(db_path, conv_id, max_turns=max_turns)
+    result = run_loop(
+        db_path, conv_id,
+        max_turns=max_turns,
+        dry_run=dry_run,
+        approval_test=approval_test,
+    )
     print(f"\n[run] 終了ステータス: {result}")
 
     # 最終状態を表示
@@ -699,6 +795,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--conv-id", required=True, dest="conv_id", help="conversation_id")
     p_run.add_argument("--max-turns", type=int, default=_DEFAULT_MAX_TURNS,
                        dest="max_turns", help=f"最大ターン数 (デフォルト: {_DEFAULT_MAX_TURNS})")
+    p_run.add_argument("--dry-run", action="store_true", dest="dry_run",
+                       help="実 API を呼ばずモック応答でフローを検証する")
+    p_run.add_argument("--approval-test", action="store_true", dest="approval_test",
+                       help="dry-run 時に承認フロー確認用モックを使う")
 
     # pending
     sub.add_parser("pending", help="承認待ちメッセージの一覧を表示する")
