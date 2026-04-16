@@ -234,6 +234,15 @@ def build_executor_system_prompt() -> str:
         - コードを生成した場合は ```コードブロック``` で囲むこと
         - 応答は簡潔にまとめること（長文は避ける）
 
+        【ファイル名の明示（Phase 12）】
+        コードブロックを出力するときは、ブロック直前の行にファイル名を書くこと。
+        言語に応じて以下の記法を使い分ける（どれか 1 つでよい）。
+          # filename: main.py          （Python / bash）
+          // filename: index.js        （JavaScript / TypeScript / Java）
+          -- filename: schema.sql      （SQL）
+          filename: config.yaml        （YAML / その他）
+        複数ファイルを出力する場合は、各ブロックの直前にそれぞれ書くこと。
+
         【PoC 期間中の制約】
         - 実ファイルの変更・外部 API の呼び出し・シェルコマンドの実行は行わない
         - 「実行した体での結果要約」として応答してよい
