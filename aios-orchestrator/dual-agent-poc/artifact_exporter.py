@@ -1,5 +1,5 @@
 """
-artifact_exporter.py — 保存済み artifact をローカルファイルに書き出す (Phase 11)
+artifact_exporter.py — 保存済み artifact をローカルファイルに書き出す (Phase 11 / Phase 13)
 
 設計方針:
   - 出力ディレクトリ外へのパス抜けを完全に防ぐ（path traversal 対策）
@@ -8,6 +8,11 @@ artifact_exporter.py — 保存済み artifact をローカルファイルに書
   - 空 artifact（content が None または空白のみ）はスキップ
   - 単体 artifact_id 指定 export もサポート
 
+safe-default 拡張子（Phase 13 改善）:
+  lang='' または未知タグの場合、_infer_ext_from_content() で内容を軽量判定する。
+  判定順序: Markdown → ログ/テスト結果 → Python → bash → .txt（デフォルト）
+  これにより lang='' の Markdown/ログ artifact に .py が付く問題を解消する。
+
 使い方（orchestrator.py 経由）:
     python orchestrator.py artifact-export --conv-id <id> --output ./output/
     python orchestrator.py artifact-export --conv-id <id> --artifact-id <prefix> --output ./output/
@@ -15,6 +20,7 @@ artifact_exporter.py — 保存済み artifact をローカルファイルに書
 
 設計根拠:
   aios-orchestrator/dual-agent-poc/README_Phase11.md
+  aios-orchestrator/dual-agent-poc/README_Phase13.md
 """
 
 from __future__ import annotations
@@ -66,6 +72,7 @@ _LANG_TO_EXT: dict[str, str] = {
 }
 
 # artifact_type → 拡張子フォールバック
+# NOTE: lang='' かつ artifact_type='code' の場合は _infer_ext_from_content() を優先する（Phase 13）
 _TYPE_TO_EXT: dict[str, str] = {
     "code":     ".py",
     "shell":    ".sh",
@@ -73,6 +80,91 @@ _TYPE_TO_EXT: dict[str, str] = {
     "markdown": ".md",
     "file":     ".txt",
 }
+
+
+# ─── 内容ベースの拡張子推定（Phase 13）──────────────────────────────────────
+
+def _infer_ext_from_content(content: str) -> str:
+    """
+    artifact の本文から最も妥当な拡張子を推定する（Phase 13）。
+
+    lang='' または未知タグ時の safe-default が '.py' に不自然に倒れる問題を改善する。
+    PoC 向け軽量実装: 複雑な言語判定器にはしない。
+
+    判定順序（先にマッチした方が採用）:
+      1. Markdown らしい
+         - テーブル行（|...|）が 3 行以上  → .md（高信頼度）
+         - 見出し/箇条書き/テーブルのうち 2 種類以上  → .md
+      2. ログ/テスト結果らしい
+         - '... ok' / '... FAIL' などの unittest 出力パターン → .txt（高信頼度）
+         - 'Ran N tests' / '-----' 区切り / 独立した OK/FAILED のうち 2 種類以上 → .txt
+      3. Python コードらしい
+         - def/class/import/from の先頭 + コロン終端 + 4 スペースインデント の 2 種類以上 → .py
+      4. bash らしい
+         - shebang(#!/) / 一般コマンド / 環境変数のいずれか 1 つ → .sh
+      5. 判定不能 → .txt（'.py' より安全な既定値）
+
+    Args:
+        content: artifact の本文テキスト
+
+    Returns:
+        推定拡張子文字列（先頭ドット付き）: '.md' | '.txt' | '.py' | '.sh'
+    """
+    text = content.strip()
+    if not text:
+        return ".txt"
+
+    # ── 1. Markdown ────────────────────────────────────────────────────────
+    md_table_lines = len(re.findall(r"^\|.+\|", text, re.MULTILINE))
+    if md_table_lines >= 3:
+        return ".md"  # テーブル行 3+ は高信頼度
+
+    md_features = [
+        bool(re.search(r"^#{1,6}\s+\S", text, re.MULTILINE)),    # 見出し
+        bool(re.search(r"^[-*+]\s+\S",  text, re.MULTILINE)),    # 箇条書き
+        bool(re.search(r"^\d+\.\s+\S",  text, re.MULTILINE)),    # 番号付きリスト
+        md_table_lines >= 1,                                       # テーブル行あり
+    ]
+    if sum(md_features) >= 2:
+        return ".md"
+
+    # ── 2. ログ/テスト結果 ─────────────────────────────────────────────────
+    # 高信頼度パターン（1つで .txt）
+    if re.search(r"\.\.\.\s*(ok|FAIL|ERROR)\b", text, re.IGNORECASE):
+        return ".txt"
+    if re.search(r"\bRan \d+ tests?\b", text):
+        return ".txt"
+
+    # 中信頼度パターン（2つ以上で .txt）
+    log_features = [
+        bool(re.search(r"^[-=]{20,}",                         text, re.MULTILINE)),
+        bool(re.search(r"^\s*(OK|FAILED|ERROR)\s*$",          text, re.MULTILINE | re.IGNORECASE)),
+        bool(re.search(r"\bTraceback \(most recent call",      text)),
+        bool(re.search(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}", text, re.MULTILINE)),  # タイムスタンプ
+    ]
+    if sum(log_features) >= 2:
+        return ".txt"
+
+    # ── 3. Python コード ────────────────────────────────────────────────────
+    py_features = [
+        bool(re.search(r"^(def |class |import |from )\S", text, re.MULTILINE)),
+        bool(re.search(r":\s*$",                           text, re.MULTILINE)),
+        bool(re.search(r"^\s{4}\S",                        text, re.MULTILINE)),   # 4 スペースインデント
+    ]
+    if sum(py_features) >= 2:
+        return ".py"
+
+    # ── 4. bash / shell ────────────────────────────────────────────────────
+    bash_features = [
+        bool(re.search(r"^#!/",                                   text)),
+        bool(re.search(r"^(echo|cd |ls |git |python |pip )\S",   text, re.MULTILINE)),
+        bool(re.search(r"\$[A-Z_][A-Z_0-9]*",                    text)),
+    ]
+    if sum(bash_features) >= 1:
+        return ".sh"
+
+    # ── 5. デフォルト ─────────────────────────────────────────────────────
+    return ".txt"
 
 
 # ─── filename 安全チェック ────────────────────────────────────────────────────
@@ -116,15 +208,28 @@ def _safe_default_filename(art: dict, index: int) -> str:
     命名規則: artifact_t<turn_id>_<index><ext>
     turn_id と index はゼロ埋め 2 桁。
 
+    拡張子決定（Phase 13 改善）:
+      1. 既知の lang があれば _LANG_TO_EXT で解決（例: 'python' → '.py'）
+      2. lang='' または未知タグ → _infer_ext_from_content() で本文から推定
+         （lang='' の Markdown/ログ artifact が '.py' になる問題を解消）
+      3. artifact_type フォールバック（推定不能時の最終手段）
+
     Args:
-        art:   artifact dict（turn_id, language, artifact_type を参照）
+        art:   artifact dict（turn_id, language, artifact_type, content を参照）
         index: artifact リスト内の連番（0 始まり）
     """
-    lang = (art.get("language") or "").lower().strip()
+    lang     = (art.get("language") or "").lower().strip()
     art_type = (art.get("artifact_type") or "code").lower()
-    turn_id = art.get("turn_id") or 0
+    turn_id  = art.get("turn_id") or 0
+    content  = art.get("content") or ""
 
-    ext = _LANG_TO_EXT.get(lang) or _TYPE_TO_EXT.get(art_type) or ".txt"
+    # 1. 既知言語タグで直接解決
+    ext = _LANG_TO_EXT.get(lang)
+
+    # 2. lang='' または未知タグ → 内容ベース推定（Phase 13）
+    if ext is None:
+        ext = _infer_ext_from_content(content)
+
     return f"artifact_t{turn_id:02d}_{index:02d}{ext}"
 
 

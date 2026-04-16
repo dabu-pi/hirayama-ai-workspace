@@ -1,5 +1,5 @@
 """
-artifact_parser.py — Executor 出力から artifact 候補を抽出する (Phase 6 / Phase 10)
+artifact_parser.py — Executor 出力から artifact 候補を抽出する (Phase 6 / Phase 10 / Phase 13)
 
 Markdown のフェンスコードブロック（``` ... ```）を解析して、
 artifact の候補リストを返す。1 メッセージに複数ブロックがあっても対応する。
@@ -24,6 +24,14 @@ artifact の候補リストを返す。1 メッセージに複数ブロックが
     * markdown / md → 'markdown'
     * その他 / 未指定 → 'code'
 
+language tag 正規化（Phase 13）:
+  コードブロックの言語タグを normalize_lang() で正規化してから処理する。
+    * 前後の空白・大文字 → 正規化
+    * 英数字を含まないタグ（'.....' '---' '###' など） → '' に変換
+    * 30 文字超 → '' に変換
+    * エイリアス（'py'→'python', 'sh'→'bash', 'md'→'markdown' 等）→ 正規名に変換
+  これにより safe-default 拡張子が .py に不自然に倒れるケースを削減する。
+
 filename 明示指定（Phase 10）:
   コードブロック直前 3 行またはブロック先頭 1 行に以下の記法があれば、
   その filename を推定 filename より優先して使用する。
@@ -36,6 +44,7 @@ filename 明示指定（Phase 10）:
 設計根拠:
   aios-orchestrator/dual-agent-poc/README_Phase6.md
   aios-orchestrator/dual-agent-poc/README_Phase10.md
+  aios-orchestrator/dual-agent-poc/README_Phase13.md
 """
 
 from __future__ import annotations
@@ -106,6 +115,8 @@ def _is_valid_lang(lang: str) -> bool:
 
     False を返す場合はその artifact をスキップする。
     空文字（`` ``` `` のみ）は有効（language 未指定として扱う）。
+
+    NOTE: normalize_lang() 適用後の値を渡すこと（Phase 13 以降）。
     """
     if not lang:
         return True  # 言語未指定は有効
@@ -114,6 +125,50 @@ def _is_valid_lang(lang: str) -> bool:
     if " " in lang or "\t" in lang:
         return False  # スペースを含む → 言語タグではない
     return True
+
+
+# ─── language タグ正規化（Phase 13）─────────────────────────────────────────
+
+# 短縮形 → 正規名のエイリアスマッピング
+# 型マッピング (_LANG_TO_TYPE) および拡張子マッピング (_infer_filename) と一致する
+_LANG_ALIASES: dict[str, str] = {
+    "py":  "python",
+    "js":  "javascript",
+    "ts":  "typescript",
+    "sh":  "bash",        # shell 型・.sh 拡張子として同一
+    "md":  "markdown",
+    "c++": "cpp",
+}
+
+
+def normalize_lang(raw: str) -> str:
+    """
+    language タグを正規化して返す（Phase 13）。
+
+    正規化ルール（この順で適用）:
+      1. 前後の空白を除去し、小文字化する
+      2. 空文字 → '' を返す（言語未指定として扱う）
+      3. 30 文字超 → '' を返す（タグとして長すぎ）
+      4. 英数字（[a-z0-9]）を 1 文字も含まない → '' を返す
+         （'.....' / '---' / '###' などの記号のみタグを無効化）
+      5. エイリアスを正規名へ変換（'py'→'python' / 'sh'→'bash' / 'md'→'markdown' 等）
+      6. それ以外はそのまま返す
+
+    Args:
+        raw: コードフェンスから抽出した生の language 文字列
+
+    Returns:
+        正規化済みの language 文字列。無効なタグは '' を返す。
+    """
+    tag = raw.strip().lower()
+    if not tag:
+        return ""
+    if len(tag) > 30:
+        return ""
+    # 英数字を 1 文字も含まない → 記号のみ → 無効タグ
+    if not re.search(r"[a-z0-9]", tag):
+        return ""
+    return _LANG_ALIASES.get(tag, tag)
 
 
 # ─── filename 明示指定パーサー（Phase 10）────────────────────────────────────
@@ -255,7 +310,8 @@ def parse_artifacts(content: str) -> list[dict]:
     content_lines = content.splitlines()
 
     for idx, match in enumerate(_FENCED_CODE_RE.finditer(content)):
-        lang = (match.group(2) or "").strip()
+        # Phase 13: normalize_lang() で正規化してから _is_valid_lang() に渡す
+        lang = normalize_lang(match.group(2) or "")
         body = match.group(3).rstrip()  # 末尾の空白行を除去
 
         # 無効 language タグをスキップ（数字のみ / スペース含む）
