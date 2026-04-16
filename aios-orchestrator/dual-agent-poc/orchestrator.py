@@ -72,6 +72,9 @@ from artifact_diff import (
     find_by_prefix, find_prev_in_group, find_next_in_group,
 )
 from artifact_exporter import export_artifacts, write_manifest
+from artifact_manifest_diff import (
+    diff_manifests, print_diff_report, ManifestLoadError,
+)
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -1353,6 +1356,70 @@ def command_artifact_export(args: argparse.Namespace) -> int:
     return 1 if errors else 0
 
 
+def command_manifest_diff(args: argparse.Namespace) -> int:
+    """
+    2 つの manifest JSON を比較して差分を表示する（Phase 18）。
+
+    --old-manifest: 比較元（前回 export）の manifest パス
+    --new-manifest: 比較先（今回 export）の manifest パス
+    --verbose:      unchanged エントリも表示する
+    --json:         差分を JSON 形式で出力する（デフォルトは人間可読テキスト）
+
+    判定カテゴリ:
+      added     今回の manifest にのみ存在する artifact
+      removed   前回の manifest にのみ存在する artifact
+      changed   両方に存在するが final_filename / filename_source /
+                collision_resolved / requested_filename / language / status
+                のいずれかが異なる
+      unchanged 両方に存在し、上記フィールドが全て同一
+    """
+    import json as _json  # 関数スコープで json を使う（モジュールレベルは import 済み）
+
+    old_path = args.old_manifest
+    new_path = args.new_manifest
+    verbose  = getattr(args, "verbose", False)
+    as_json  = getattr(args, "json_output", False)
+
+    try:
+        result = diff_manifests(old_path, new_path)
+    except ManifestLoadError as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 1
+
+    if as_json:
+        # JSON 出力モード
+        def _entry_to_dict(d) -> dict:
+            return {
+                "artifact_id":    d.artifact_id,
+                "category":       d.category,
+                "changed_fields": d.changed_fields,
+                "old_filename":   (d.old_entry or {}).get("final_filename"),
+                "new_filename":   (d.new_entry or {}).get("final_filename"),
+            }
+        out = {
+            "old_path":      result.old_path,
+            "new_path":      result.new_path,
+            "conv_id":       result.new_conv_id,
+            "old_timestamp": result.old_timestamp,
+            "new_timestamp": result.new_timestamp,
+            "summary": {
+                "added":     len(result.added),
+                "removed":   len(result.removed),
+                "changed":   len(result.changed),
+                "unchanged": len(result.unchanged),
+            },
+            "added":     [_entry_to_dict(d) for d in result.added],
+            "removed":   [_entry_to_dict(d) for d in result.removed],
+            "changed":   [_entry_to_dict(d) for d in result.changed],
+            "unchanged": [_entry_to_dict(d) for d in result.unchanged],
+        }
+        print(_json.dumps(out, ensure_ascii=False, indent=2))
+    else:
+        print_diff_report(result, verbose=verbose)
+
+    return 0
+
+
 def _print_single_diff(left: dict, right: dict, context: int, indent: str = "") -> int:
     """
     2 つの artifact の diff を表示するヘルパー。
@@ -1448,6 +1515,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p_exp.add_argument("--no-manifest",  action="store_true", dest="no_manifest",
                         help="manifest JSON の生成を抑止する（デフォルトは生成）")
 
+    # manifest-diff
+    p_mdiff = sub.add_parser("manifest-diff", help="2 つの manifest JSON を比較して差分を表示する")
+    p_mdiff.add_argument("--old-manifest", required=True, dest="old_manifest",
+                         help="比較元（前回 export）の manifest JSON パス")
+    p_mdiff.add_argument("--new-manifest", required=True, dest="new_manifest",
+                         help="比較先（今回 export）の manifest JSON パス")
+    p_mdiff.add_argument("--verbose",      action="store_true", dest="verbose",
+                         help="unchanged エントリも表示する")
+    p_mdiff.add_argument("--json",         action="store_true", dest="json_output",
+                         help="差分を JSON 形式で出力する")
+
     # artifact-diff
     p_diff = sub.add_parser("artifact-diff", help="artifact のターン間差分を表示する")
     p_diff.add_argument("--conv-id",      required=True, dest="conv_id",      help="conversation_id")
@@ -1478,6 +1556,7 @@ def main() -> int:
         "artifacts":       command_artifacts,
         "artifact-diff":   command_artifact_diff,
         "artifact-export": command_artifact_export,
+        "manifest-diff":   command_manifest_diff,
     }
 
     handler = dispatch.get(args.command)
