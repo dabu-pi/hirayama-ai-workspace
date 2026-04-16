@@ -71,6 +71,7 @@ from artifact_diff import (
     compute_diff, diff_stat, consecutive_pairs,
     find_by_prefix, find_prev_in_group, find_next_in_group,
 )
+from artifact_exporter import export_artifacts
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -1256,6 +1257,73 @@ def command_artifact_diff(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_artifact_export(args: argparse.Namespace) -> int:
+    """
+    保存済み artifact を実ファイルとして書き出す（Phase 11）。
+
+    --conv-id   : 対象会話。この会話の全 artifact を書き出す。
+    --output    : 書き出し先ディレクトリ（存在しない場合は自動作成）。
+    --artifact-id: 指定した場合はその 1 件のみ書き出す（前方一致）。
+    --dry-run   : ファイルを書かず、書き出し計画だけ表示する。
+
+    filename 決定優先順位:
+      1. explicit filename (filename_source='explicit') かつ安全
+      2. inferred filename (filename_source='inferred') かつ安全
+      3. safe-default: artifact_t<turn>_<index><ext>
+
+    同名衝突時は <stem>_<n><ext> で回避（上書きしない）。
+    """
+    db_path  = args.db
+    conv_id  = args.conv_id
+    out_dir  = args.output
+    art_id   = getattr(args, "artifact_id", None)
+    dry_run  = getattr(args, "dry_run", False)
+    init_db(db_path)
+
+    conv = get_conversation(db_path, conv_id)
+    if conv is None:
+        print(f"[ERROR] conversation_id が見つかりません: {conv_id}", file=sys.stderr)
+        return 1
+
+    arts = get_artifacts_by_conv(db_path, conv_id)
+
+    # --artifact-id 指定時は 1 件に絞る
+    if art_id:
+        arts = [a for a in arts if a["artifact_id"].startswith(art_id)]
+        if not arts:
+            print(f"[ERROR] artifact_id が見つかりません: {art_id}", file=sys.stderr)
+            return 1
+
+    mode_str = " [DRY-RUN]" if dry_run else ""
+    print(f"\nArtifact Export{mode_str}: {conv['title'][:60]}")
+    print(f"  conv_id    : {conv_id}")
+    print(f"  artifacts  : {len(arts)} 件")
+    print(f"  output_dir : {out_dir}")
+    print(_SEP)
+
+    if not arts:
+        print("  (artifact なし — 書き出し対象ゼロ)")
+        print(_SEP)
+        return 0
+
+    results = export_artifacts(arts, output_dir=out_dir, dry_run=dry_run, verbose=True)
+
+    exported = [r for r in results if r["status"] == "exported"]
+    skipped  = [r for r in results if r["status"] == "skipped"]
+    errors   = [r for r in results if r["status"] == "error"]
+
+    print(_SEP)
+    print(f"  成功: {len(exported)} 件  /  スキップ: {len(skipped)} 件  /  エラー: {len(errors)} 件")
+    if exported and not dry_run:
+        print(f"  出力先: {out_dir}")
+    if errors:
+        print(f"  [WARN] エラーが {len(errors)} 件ありました。")
+        for r in errors:
+            print(f"    {r['artifact_id'][:8]}...  {r['reason']}")
+
+    return 1 if errors else 0
+
+
 def _print_single_diff(left: dict, right: dict, context: int, indent: str = "") -> int:
     """
     2 つの artifact の diff を表示するヘルパー。
@@ -1340,6 +1408,15 @@ def _build_parser() -> argparse.ArgumentParser:
     p_arts.add_argument("--artifact-id", default=None, dest="artifact_id",
                         help="指定時はその artifact の本文を全文表示（前方一致）")
 
+    # artifact-export
+    p_exp = sub.add_parser("artifact-export", help="保存済み artifact を実ファイルに書き出す")
+    p_exp.add_argument("--conv-id",     required=True, dest="conv_id",     help="conversation_id")
+    p_exp.add_argument("--output",      required=True, dest="output",      help="書き出し先ディレクトリ")
+    p_exp.add_argument("--artifact-id", default=None,  dest="artifact_id",
+                       help="指定した場合はその 1 件のみ書き出す（前方一致）")
+    p_exp.add_argument("--dry-run",     action="store_true", dest="dry_run",
+                       help="ファイルを書かず、書き出し計画だけ表示する")
+
     # artifact-diff
     p_diff = sub.add_parser("artifact-diff", help="artifact のターン間差分を表示する")
     p_diff.add_argument("--conv-id",      required=True, dest="conv_id",      help="conversation_id")
@@ -1367,8 +1444,9 @@ def main() -> int:
         "reject":  command_reject,
         "log":       command_log,
         "show":      command_show,
-        "artifacts":     command_artifacts,
-        "artifact-diff": command_artifact_diff,
+        "artifacts":       command_artifacts,
+        "artifact-diff":   command_artifact_diff,
+        "artifact-export": command_artifact_export,
     }
 
     handler = dispatch.get(args.command)
