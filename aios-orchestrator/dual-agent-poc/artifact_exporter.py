@@ -1,5 +1,5 @@
 """
-artifact_exporter.py — 保存済み artifact をローカルファイルに書き出す (Phase 11 / Phase 13)
+artifact_exporter.py — 保存済み artifact をローカルファイルに書き出す (Phase 11 / Phase 13 / Phase 14)
 
 設計方針:
   - 出力ディレクトリ外へのパス抜けを完全に防ぐ（path traversal 対策）
@@ -13,19 +13,29 @@ safe-default 拡張子（Phase 13 改善）:
   判定順序: Markdown → ログ/テスト結果 → Python → bash → .txt（デフォルト）
   これにより lang='' の Markdown/ログ artifact に .py が付く問題を解消する。
 
+manifest 出力（Phase 14）:
+  export 完了後に write_manifest() を呼ぶと artifact_export_manifest.json を output_dir に保存する。
+  manifest には conv_id / タイムスタンプ / 件数サマリー / 各 artifact の詳細を記録する。
+  dry_run 時も manifest を生成し、ヘッダーに "dry_run": true を含める。
+  path はすべて絶対パスで記録する。
+
 使い方（orchestrator.py 経由）:
     python orchestrator.py artifact-export --conv-id <id> --output ./output/
     python orchestrator.py artifact-export --conv-id <id> --artifact-id <prefix> --output ./output/
     python orchestrator.py artifact-export --conv-id <id> --output ./output/ --dry-run
+    python orchestrator.py artifact-export --conv-id <id> --output ./output/ --no-manifest
 
 設計根拠:
   aios-orchestrator/dual-agent-poc/README_Phase11.md
   aios-orchestrator/dual-agent-poc/README_Phase13.md
+  aios-orchestrator/dual-agent-poc/README_Phase14.md
 """
 
 from __future__ import annotations
 
+import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -328,6 +338,9 @@ def _safe_resolved_path(output_dir: Path, filename: str) -> Optional[Path]:
 
 ExportResult = dict  # 型エイリアス
 
+# ─── manifest ファイル名 ──────────────────────────────────────────────────────
+MANIFEST_FILENAME = "artifact_export_manifest.json"
+
 
 def export_artifacts(
     artifacts: list[dict],
@@ -350,14 +363,18 @@ def export_artifacts(
 
     Returns:
         各 artifact の処理結果を含む ExportResult dict のリスト。
-        各 dict のキー:
-          artifact_id:     元の artifact UUID
-          filename:        確定ファイル名（スキップ時は None の場合あり）
-          path:            書き出し先の絶対パス文字列（スキップ/エラー時は None の場合あり）
-          status:          'exported' | 'skipped' | 'error'
-          reason:          詳細理由文字列
-          filename_source: 'explicit' | 'inferred' | 'default'（エラー/スキップ時は省略）
-          turn_id:         ターン番号（エラー/スキップ時は省略）
+        各 dict のキー（Phase 14 で拡充）:
+          artifact_id:         元の artifact UUID
+          artifact_index:      この export 内でのループインデックス（0 始まり）
+          turn_id:             ターン番号
+          language:            正規化済み language タグ（'' の場合あり）
+          filename_source:     'explicit' | 'inferred' | 'default'
+          requested_filename:  衝突回避前のファイル名（スキップ時は None）
+          filename:            確定ファイル名（= final_filename、スキップ時は None）
+          path:                書き出し先の絶対パス文字列（スキップ/エラー時は None）
+          collision_resolved:  衝突回避が発生したか（bool）
+          status:              'exported' | 'skipped' | 'error'
+          reason:              詳細理由文字列
     """
     out_dir = Path(output_dir)
 
@@ -370,15 +387,23 @@ def export_artifacts(
     for i, art in enumerate(artifacts):
         art_id  = art.get("artifact_id") or "unknown"
         content = art.get("content") or ""
+        turn_id = art.get("turn_id") or 0
+        language = (art.get("language") or "")
 
         # ── 空コンテンツはスキップ ────────────────────────────────────────────
         if not content.strip():
             r: ExportResult = {
-                "artifact_id": art_id,
-                "filename":    None,
-                "path":        None,
-                "status":      "skipped",
-                "reason":      "empty_content",
+                "artifact_id":        art_id,
+                "artifact_index":     i,
+                "turn_id":            turn_id,
+                "language":           language,
+                "filename_source":    "none",
+                "requested_filename": None,
+                "filename":           None,
+                "path":               None,
+                "collision_resolved": False,
+                "status":             "skipped",
+                "reason":             "empty_content",
             }
             results.append(r)
             if verbose:
@@ -390,16 +415,23 @@ def export_artifacts(
 
         # ── 衝突回避 ──────────────────────────────────────────────────────────
         final_filename = _resolve_unique_name(base_filename, used_names, out_dir)
+        collision_resolved = (final_filename != base_filename)
 
         # ── パス安全確認（二重チェック） ──────────────────────────────────────
         safe_path = _safe_resolved_path(out_dir, final_filename)
         if safe_path is None:
             r = {
-                "artifact_id": art_id,
-                "filename":    final_filename,
-                "path":        None,
-                "status":      "skipped",
-                "reason":      "unsafe_path",
+                "artifact_id":        art_id,
+                "artifact_index":     i,
+                "turn_id":            turn_id,
+                "language":           language,
+                "filename_source":    used_source,
+                "requested_filename": base_filename,
+                "filename":           final_filename,
+                "path":               None,
+                "collision_resolved": collision_resolved,
+                "status":             "skipped",
+                "reason":             "unsafe_path",
             }
             results.append(r)
             if verbose:
@@ -409,18 +441,20 @@ def export_artifacts(
         # 使用済みとして記録
         used_names.add(final_filename.lower())
 
-        turn_id = art.get("turn_id") or 0
-
         # ── dry-run ───────────────────────────────────────────────────────────
         if dry_run:
             r = {
-                "artifact_id":     art_id,
-                "filename":        final_filename,
-                "path":            str(safe_path),
-                "status":          "exported",
-                "reason":          "dry_run",
-                "filename_source": used_source,
-                "turn_id":         turn_id,
+                "artifact_id":        art_id,
+                "artifact_index":     i,
+                "turn_id":            turn_id,
+                "language":           language,
+                "filename_source":    used_source,
+                "requested_filename": base_filename,
+                "filename":           final_filename,
+                "path":               str(safe_path),
+                "collision_resolved": collision_resolved,
+                "status":             "exported",
+                "reason":             "dry_run",
             }
             results.append(r)
             if verbose:
@@ -432,13 +466,17 @@ def export_artifacts(
         try:
             safe_path.write_text(content, encoding="utf-8")
             r = {
-                "artifact_id":     art_id,
-                "filename":        final_filename,
-                "path":            str(safe_path),
-                "status":          "exported",
-                "reason":          "ok",
-                "filename_source": used_source,
-                "turn_id":         turn_id,
+                "artifact_id":        art_id,
+                "artifact_index":     i,
+                "turn_id":            turn_id,
+                "language":           language,
+                "filename_source":    used_source,
+                "requested_filename": base_filename,
+                "filename":           final_filename,
+                "path":               str(safe_path),
+                "collision_resolved": collision_resolved,
+                "status":             "exported",
+                "reason":             "ok",
             }
             results.append(r)
             if verbose:
@@ -446,14 +484,104 @@ def export_artifacts(
                 print(f"  [OK]   T{turn_id:02d}  {art_id[:8]}...  → {final_filename}  {tag}")
         except OSError as exc:
             r = {
-                "artifact_id": art_id,
-                "filename":    final_filename,
-                "path":        str(safe_path),
-                "status":      "error",
-                "reason":      str(exc),
+                "artifact_id":        art_id,
+                "artifact_index":     i,
+                "turn_id":            turn_id,
+                "language":           language,
+                "filename_source":    used_source,
+                "requested_filename": base_filename,
+                "filename":           final_filename,
+                "path":               str(safe_path),
+                "collision_resolved": collision_resolved,
+                "status":             "error",
+                "reason":             str(exc),
             }
             results.append(r)
             if verbose:
                 print(f"  [ERR]  T{turn_id:02d}  {art_id[:8]}...  {exc}")
 
     return results
+
+
+# ─── manifest 生成・書き出し（Phase 14）──────────────────────────────────────
+
+def write_manifest(
+    results: list[ExportResult],
+    output_dir: str | Path,
+    *,
+    conv_id: str = "",
+    dry_run: bool = False,
+) -> Path:
+    """
+    export 結果の manifest を JSON ファイルとして output_dir に保存する（Phase 14）。
+
+    manifest は export の「監査・追跡・再開」を目的とした補助ファイルであり、
+    export 本体の成功条件には影響しない。
+
+    dry_run 時の扱い:
+      - manifest は生成する（何が書き出される予定だったかを記録することに価値がある）
+      - ヘッダーに "dry_run": true を含め、実ファイルが書かれていないことを明示する
+
+    path の扱い:
+      - output_dir / final_path はすべて絶対パスで記録する
+
+    Args:
+        results:    export_artifacts() の戻り値
+        output_dir: manifest を保存するディレクトリ（export 先と同一を想定）
+        conv_id:    会話 ID（manifest ヘッダーに記録）
+        dry_run:    True の場合、manifest に "dry_run": true を付与する
+
+    Returns:
+        書き出した manifest ファイルの絶対 Path
+
+    Raises:
+        OSError: ファイル書き込み失敗時
+    """
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    exported = [r for r in results if r.get("status") == "exported"]
+    skipped  = [r for r in results if r.get("status") == "skipped"]
+    errors   = [r for r in results if r.get("status") == "error"]
+
+    # ── 各 artifact の詳細エントリを組み立てる ────────────────────────────────
+    artifact_entries = []
+    for r in results:
+        entry: dict = {
+            "artifact_id":        r.get("artifact_id"),
+            "turn_no":            r.get("turn_id", 0),
+            "artifact_index":     r.get("artifact_index", 0),
+            "language":           r.get("language", ""),
+            "filename_source":    r.get("filename_source", "none"),
+            "requested_filename": r.get("requested_filename"),
+            "final_filename":     r.get("filename"),
+            "final_path":         r.get("path"),
+            "collision_resolved": r.get("collision_resolved", False),
+            "status":             r.get("status"),
+        }
+        # skipped / error 時は reason を skipped_reason / error_reason として記録
+        if r.get("status") == "skipped":
+            entry["skipped_reason"] = r.get("reason")
+        elif r.get("status") == "error":
+            entry["error_reason"] = r.get("reason")
+        artifact_entries.append(entry)
+
+    # ── manifest 全体を組み立てる ─────────────────────────────────────────────
+    manifest = {
+        "conv_id":          conv_id,
+        "export_timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "output_dir":       str(out_dir.resolve()),
+        "dry_run":          dry_run,
+        "total":            len(results),
+        "exported":         len(exported),
+        "skipped":          len(skipped),
+        "errors":           len(errors),
+        "artifacts":        artifact_entries,
+    }
+
+    manifest_path = out_dir / MANIFEST_FILENAME
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return manifest_path

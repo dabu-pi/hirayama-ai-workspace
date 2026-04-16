@@ -71,7 +71,7 @@ from artifact_diff import (
     compute_diff, diff_stat, consecutive_pairs,
     find_by_prefix, find_prev_in_group, find_next_in_group,
 )
-from artifact_exporter import export_artifacts
+from artifact_exporter import export_artifacts, write_manifest
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -1268,12 +1268,13 @@ def command_artifact_diff(args: argparse.Namespace) -> int:
 
 def command_artifact_export(args: argparse.Namespace) -> int:
     """
-    保存済み artifact を実ファイルとして書き出す（Phase 11）。
+    保存済み artifact を実ファイルとして書き出す（Phase 11 / Phase 14）。
 
-    --conv-id   : 対象会話。この会話の全 artifact を書き出す。
-    --output    : 書き出し先ディレクトリ（存在しない場合は自動作成）。
+    --conv-id    : 対象会話。この会話の全 artifact を書き出す。
+    --output     : 書き出し先ディレクトリ（存在しない場合は自動作成）。
     --artifact-id: 指定した場合はその 1 件のみ書き出す（前方一致）。
-    --dry-run   : ファイルを書かず、書き出し計画だけ表示する。
+    --dry-run    : ファイルを書かず、書き出し計画だけ表示する。
+    --no-manifest: manifest JSON を生成しない（デフォルトは生成する）。
 
     filename 決定優先順位:
       1. explicit filename (filename_source='explicit') かつ安全
@@ -1281,12 +1282,18 @@ def command_artifact_export(args: argparse.Namespace) -> int:
       3. safe-default: artifact_t<turn>_<index><ext>
 
     同名衝突時は <stem>_<n><ext> で回避（上書きしない）。
+
+    manifest:
+      デフォルトで artifact_export_manifest.json を output_dir に保存する。
+      dry_run 時も manifest を生成し "dry_run": true を含める。
+      --no-manifest で抑止可能。
     """
-    db_path  = args.db
-    conv_id  = args.conv_id
-    out_dir  = args.output
-    art_id   = getattr(args, "artifact_id", None)
-    dry_run  = getattr(args, "dry_run", False)
+    db_path     = args.db
+    conv_id     = args.conv_id
+    out_dir     = args.output
+    art_id      = getattr(args, "artifact_id", None)
+    dry_run     = getattr(args, "dry_run", False)
+    no_manifest = getattr(args, "no_manifest", False)
     init_db(db_path)
 
     conv = get_conversation(db_path, conv_id)
@@ -1329,6 +1336,19 @@ def command_artifact_export(args: argparse.Namespace) -> int:
         print(f"  [WARN] エラーが {len(errors)} 件ありました。")
         for r in errors:
             print(f"    {r['artifact_id'][:8]}...  {r['reason']}")
+
+    # ── manifest 出力（Phase 14）──────────────────────────────────────────────
+    if not no_manifest:
+        try:
+            manifest_path = write_manifest(
+                results,
+                output_dir=out_dir,
+                conv_id=conv_id,
+                dry_run=dry_run,
+            )
+            print(f"  manifest   : {manifest_path}")
+        except OSError as exc:
+            print(f"  [WARN] manifest 書き込み失敗: {exc}", file=sys.stderr)
 
     return 1 if errors else 0
 
@@ -1419,12 +1439,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # artifact-export
     p_exp = sub.add_parser("artifact-export", help="保存済み artifact を実ファイルに書き出す")
-    p_exp.add_argument("--conv-id",     required=True, dest="conv_id",     help="conversation_id")
-    p_exp.add_argument("--output",      required=True, dest="output",      help="書き出し先ディレクトリ")
-    p_exp.add_argument("--artifact-id", default=None,  dest="artifact_id",
-                       help="指定した場合はその 1 件のみ書き出す（前方一致）")
-    p_exp.add_argument("--dry-run",     action="store_true", dest="dry_run",
-                       help="ファイルを書かず、書き出し計画だけ表示する")
+    p_exp.add_argument("--conv-id",      required=True, dest="conv_id",     help="conversation_id")
+    p_exp.add_argument("--output",       required=True, dest="output",      help="書き出し先ディレクトリ")
+    p_exp.add_argument("--artifact-id",  default=None,  dest="artifact_id",
+                        help="指定した場合はその 1 件のみ書き出す（前方一致）")
+    p_exp.add_argument("--dry-run",      action="store_true", dest="dry_run",
+                        help="ファイルを書かず、書き出し計画だけ表示する")
+    p_exp.add_argument("--no-manifest",  action="store_true", dest="no_manifest",
+                        help="manifest JSON の生成を抑止する（デフォルトは生成）")
 
     # artifact-diff
     p_diff = sub.add_parser("artifact-diff", help="artifact のターン間差分を表示する")
