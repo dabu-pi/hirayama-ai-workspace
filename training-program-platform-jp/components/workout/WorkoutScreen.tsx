@@ -84,16 +84,58 @@ function stringifyNumber(value: number | null) {
   return value === null ? "" : String(value);
 }
 
+/**
+ * Parses the leading integer from a target_reps_text string.
+ * "3+"  → 3
+ * "10"  → 10
+ * "15+" → 15
+ * "8-10"→ 8 (lower bound)
+ * null / unparseable → null
+ */
+function parseTargetReps(targetRepsText: string | null | undefined): number | null {
+  if (!targetRepsText) return null;
+  const match = targetRepsText.match(/^(\d+)/);
+  if (!match) return null;
+  const n = parseInt(match[1], 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Default reps initial value for a set:
+ *   1. repsDone already set (resuming session) → use it
+ *   2. targetRepsText has a parseable number → use it
+ *   3. fallback → "10"
+ */
+function defaultRepsDraft(
+  repsDone: number | null,
+  targetRepsText: string | null | undefined
+): string {
+  if (repsDone !== null) return stringifyNumber(repsDone);
+  const fromTarget = parseTargetReps(targetRepsText);
+  return fromTarget !== null ? String(fromTarget) : "10";
+}
+
 function buildDraftInputs(exercises: WorkoutExerciseBlock[]) {
   return exercises.reduce<SetDraftMap>((accumulator, exercise) => {
     exercise.sets.forEach((set) => {
       accumulator[set.id] = {
         weightKg: stringifyNumber(set.weightKg),
-        repsDone: stringifyNumber(set.repsDone)
+        repsDone: defaultRepsDraft(set.repsDone, set.targetRepsText)
       };
     });
     return accumulator;
   }, {});
+}
+
+/** Formats elapsed seconds as MM:SS or H:MM:SS. */
+function formatElapsed(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 function withDisplaySetNumbers(exercises: WorkoutExerciseBlock[]) {
@@ -353,6 +395,10 @@ export function WorkoutScreen({
     finishedAt: session.finishedAt,
     incompleteSetCount: session.incompleteSetCount
   });
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(() => {
+    const startedAt = new Date(session.startedAt).getTime();
+    return Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+  });
   const [revealedSetId, setRevealedSetId] = useState<string | null>(null);
   const [pendingMutation, setPendingMutation] = useState<PendingMutation>(null);
   const [pendingAddExerciseId, setPendingAddExerciseId] = useState<string | null>(null);
@@ -410,6 +456,17 @@ export function WorkoutScreen({
     setScrollToExerciseId(null);
   }, [scrollToExerciseId, exercises]);
 
+  // Tick the elapsed timer once per second while the session is in progress.
+  useEffect(() => {
+    const startedAt = new Date(session.startedAt).getTime();
+    const tick = () => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [session.startedAt]);
+
   const isSessionCompleted = sessionMeta.status === "completed";
   const isSessionCancelled = sessionMeta.status === "cancelled";
   /** True when session is no longer editable (completed or cancelled). */
@@ -441,6 +498,31 @@ export function WorkoutScreen({
 
   const clearSaving = (setId: string) => {
     setSavingSetIds((current) => current.filter((item) => item !== setId));
+  };
+
+  /**
+   * Clicking the Target reps cell fills the repsDone input with the parsed
+   * target value. This is a quick-fill convenience, especially for GZCL
+   * where the target is "3+" / "10" / "15+".
+   */
+  const handleFillFromTarget = (
+    exerciseId: string,
+    setId: string,
+    targetRepsText: string | null | undefined
+  ) => {
+    if (isSessionEnded) return;
+    const exercise = exercises.find((item) => item.id === exerciseId);
+    const targetSet = exercise?.sets.find((item) => item.id === setId);
+    if (!exercise || !targetSet || targetSet.isLocked) return;
+
+    const parsed = parseTargetReps(targetRepsText);
+    if (parsed === null) return;
+
+    setDraftInputs((current) => ({
+      ...current,
+      [setId]: { ...getSetDraft(current, targetSet), repsDone: String(parsed) }
+    }));
+    setErrorMessage(null);
   };
 
   const handleSwipeStart = (setId: string, clientX: number) => {
@@ -615,7 +697,10 @@ export function WorkoutScreen({
       );
       setDraftInputs((current) => ({
         ...current,
-        [newSet.id]: { weightKg: "", repsDone: "" }
+        [newSet.id]: {
+          weightKg: "",
+          repsDone: defaultRepsDraft(null, newSet.targetRepsText)
+        }
       }));
       updateIncompleteSetCount(1);
       setFocusSetId(newSet.id);
@@ -713,11 +798,37 @@ export function WorkoutScreen({
       return;
     }
 
+    // Capture the previous set state for rollback on error.
+    const prevSet = exercises
+      .find((ex) => ex.id === exerciseId)
+      ?.sets.find((s) => s.id === setId);
+
+    if (!prevSet) return;
+
+    // Optimistic update: flip to unlocked immediately for instant feedback.
+    setExercises((current) =>
+      updateExerciseState(current, exerciseId, (exerciseItem) => ({
+        ...exerciseItem,
+        sets: exerciseItem.sets.map((set) =>
+          set.id === setId
+            ? { ...set, isCompleted: false, isLocked: false, completedAt: null }
+            : set
+        )
+      }))
+    );
+    updateIncompleteSetCount(1);
+    setRevealedSetId((current) => (current === setId ? null : current));
+
     setPendingMutation({ setId, kind: "unlock" });
     setErrorMessage(null);
 
     try {
-      const payload = await postSetAction(setId, "unlock");
+      await postSetAction(setId, "unlock");
+      // Server confirmed — keep optimistic state. Soft refresh for consistency.
+      refreshTrainScreen();
+    } catch (error) {
+      console.error("Failed to unlock workout set.", error);
+      // Rollback to the previous locked state.
       setExercises((current) =>
         updateExerciseState(current, exerciseId, (exerciseItem) => ({
           ...exerciseItem,
@@ -725,19 +836,15 @@ export function WorkoutScreen({
             set.id === setId
               ? {
                   ...set,
-                  isCompleted: payload.isCompleted ?? false,
-                  isLocked: payload.isLocked ?? false,
-                  completedAt: payload.completedAt ?? null
+                  isCompleted: prevSet.isCompleted,
+                  isLocked: prevSet.isLocked,
+                  completedAt: prevSet.completedAt
                 }
               : set
           )
         }))
       );
-      updateIncompleteSetCount(1);
-      setRevealedSetId((current) => (current === setId ? null : current));
-      refreshTrainScreen();
-    } catch (error) {
-      console.error("Failed to unlock workout set.", error);
+      updateIncompleteSetCount(-1);
       setErrorMessage(error instanceof Error ? error.message : "ロック解除に失敗しました。");
     } finally {
       setPendingMutation(null);
@@ -996,7 +1103,7 @@ export function WorkoutScreen({
       <div className={styles.topBar}>
         <button className={styles.iconButton} type="button">Rest</button>
         <button className={styles.iconButton} type="button">Calc</button>
-        <div className={styles.timer}>00:00</div>
+        <div className={styles.timer}>{formatElapsed(elapsedSeconds)}</div>
         <div className={styles.topBarActions}>
           {!isSessionEnded && (
             <button
@@ -1069,8 +1176,7 @@ export function WorkoutScreen({
           </div>
         ) : null}
         <div className={styles.hint}>
-          <span>Kg / Reps は onBlur で保存</span>
-          <span>Add Set は DB 保存済み</span>
+          <span>Reps はターゲット値を初期入力。Kg / Reps は onBlur で保存</span>
         </div>
       </section>
 
@@ -1112,7 +1218,7 @@ export function WorkoutScreen({
             </div>
 
             <div className={styles.swipeHint}>
-              左スワイプで Delete を表示します。1セット目の Kg は空欄の後続セットに自動反映されます。
+              左スワイプで Delete ／ Kg はセット1の値を後続セットに自動反映
             </div>
 
             <div className={styles.setTable}>
@@ -1161,7 +1267,15 @@ export function WorkoutScreen({
                         <span className={`${styles.mono} ${set.previousDisplay === "-" ? styles.previousEmpty : ""}`}>
                           {set.previousDisplay}
                         </span>
-                        <span className={styles.target}>{set.targetRepsText ?? "-"}</span>
+                        <button
+                          className={`${styles.target}${!set.isLocked && !isSessionEnded ? ` ${styles.targetClickable}` : ""}`}
+                          disabled={set.isLocked || isSessionEnded}
+                          onClick={() => handleFillFromTarget(exercise.id, set.id, set.targetRepsText)}
+                          title="クリックでRepsに反映"
+                          type="button"
+                        >
+                          {set.targetRepsText ?? "-"}
+                        </button>
                         <input
                           aria-label={`${exercise.exerciseNameEn} set ${set.displaySetNumber} kg`}
                           className={`${styles.input} ${isSaving ? styles.inputSaving : ""} ${set.isAutoFilled ? styles.inputAutoFilled : ""}`}

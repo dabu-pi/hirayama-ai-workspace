@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-15（S-7 後 / auth blocker 解消 — Home ErrorCard に Sign In 導線追加 + getActiveProgramView catch を unauth 側へフォールバック）
+最終更新: 2026-04-16（U-1〜U-4: ワークアウト画面 UX 改善 — タイマー機能化 / Reps 初期値 / Target クリックで Reps 反映 / Unlock 楽観的更新）
 
 ## 2026-04-13 Program Source Audit
 
@@ -98,6 +98,10 @@
 | **Auth blocker fix — Home ErrorCard に Sign In 導線追加 / catch は unauth にフォールバック** | **✅ 完了（2026-04-15）/ S-7 E2E 再開可能化のための最小修正** |
 | **H-4: IA redesign — BottomTabBar / smart redirect / enrollment guard** | **✅ 完了（2026-04-15）/ Programs・Train・History 責務整理 + 永続ナビ導入** |
 | **H-4-E2E: IA E2E 検証 & 仕上げ** | **✅ 完了（2026-04-15）/ BackToHome リンク修正 / History→Summary 導線追加 / dev server E2E pass** |
+| **U-1: Workout Timer — session.startedAt から経過秒数を 1 秒ごとに更新** | **✅ 完了（2026-04-16）** |
+| **U-2: Reps 初期値 — target_reps_text を parse して repsDone draft を pre-fill** | **✅ 完了（2026-04-16）** |
+| **U-3: Target セルをボタン化 — タップで Reps に反映（GZCL "3+" / "10" / "15+" 対応）** | **✅ 完了（2026-04-16）** |
+| **U-4: Unlock 楽観的更新 — 即時 UI 反映 + エラー時ロールバック** | **✅ 完了（2026-04-16）** |
 | B-6: sign up 429 再確認 | 低優先（外部レート制限） |
 
 ### 限定公開完了の確認結果
