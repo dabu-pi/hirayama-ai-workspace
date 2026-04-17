@@ -1,5 +1,35 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-17 - Cancel / Finish write path コード検証 + build 確認
+
+### STATUS: 完了（コード解析 + typecheck + build pass）
+
+live 実機テスト（認証済みセッション）は credentials がないため local preview では未実施。
+コード解析・静的検証で正常を確認。
+
+### 検証結果
+
+| 確認項目 | 結果 |
+|---|---|
+| `getAuthenticatedWorkoutContext()` が auth エラー時に throw しない（U-14 fix） | ✅ 適用済み |
+| cancel route: 401/404/409/500 各パスの分岐 | ✅ 正常 |
+| finish route: 401/404/409(requiresConfirmation)/409(conflict)/500 各パスの分岐 | ✅ 正常 |
+| `postCancelSession`: `!response.ok` で throw → `handleCancel` の catch で `errorMessage` セット | ✅ 正常 |
+| `postFinishSession`: 409 + requiresConfirmation は throw せず confirm ダイアログへ | ✅ 正常 |
+| Cancel 成功後 `router.push("/")` → authenticated user は `/login` に飛ばない | ✅ `HomePage` は `isAuthenticated` が true の場合 `/login` に遷移しない |
+| Finish 成功後 `router.push(payload.summaryPath)` = `/workout-summary/${id}` | ✅ 正常 |
+| `npm run typecheck` | ✅ pass |
+| `npm run build` | ✅ pass |
+
+### 残確認項目（ユーザー手動 live 実機）
+
+- ログイン済みセッションで Cancel → `/` → `/train` に戻り StartSession 画面が出ること
+- ログイン済みセッションで Finish → `/workout-summary/{id}` が表示されること
+
+### 追加修正なし
+
+コード・ルート・クライアント側いずれも期待通り。追加修正は不要と判断。
+
 ## 2026-04-17 U-16 - 未認証導線 live 手動確認（0cd5545 検証）
 
 ### STATUS: 完了（未認証フロー全シナリオ ✅）
