@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-13（Phase C-1 seed 運用 docs 化完了 / C-2 プログラム追加可能な状態）
+作成: 2026-03-05 / 最終更新: 2026-04-17（/train・Cancel 障害対応完了・本番確認済み）
 
 ---
 
@@ -296,6 +296,7 @@
 | **4月中旬** | トレーニングプログラムプラットフォーム: Phase B Step 1・2 完了（Auth 基盤・アプリ側 owner guard live 確認済み） | ✅ 完了 |
 | **4月中旬** | トレーニングプログラムプラットフォーム: B-3/B-4/B-5 完了（NOT NULL + RLS live 適用・Add/Swap live 確認済み） | ✅ 完了 |
 | **4月中旬** | トレーニングプログラムプラットフォーム: B-7 Exercise History auth 強化完了（server client 統一・middleware 保護） | ✅ 完了 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: /train・Cancel 本番障害 3件修正・本番確認済み（mock ID 流入防止 / created_at query 修正 / Cancel後ループ修正） | ✅ 完了（2026-04-17） |
 | **4月下旬〜5月** | トレーニングプログラムプラットフォーム: 限定公開判断・Phase C プログラム追加 | ⏸ 待機 |
 | **4月下旬** | 廃棄物日報システム: 要件定義完了・設計開始 | ⏸ 待機 |
 | **5月** | 接骨院経営戦略AI: 数値入力完了・Claude APIで月次レポート初回生成 | ⏸ 待機 |
@@ -373,6 +374,7 @@
 **位置づけ:** トレーニングプログラムを継続的に追加していくプラットフォームとして育てる想定。単発アプリではなく、複数プログラムを提供・管理する基盤として設計する。
 
 **現状:** フェーズ B 全タスク（B-1〜B-7）完了・live 確認済み（2026-04-13）。限定公開 Go 判断。Phase C プログラム拡張が次ステップ。
+/train・Cancel 本番障害（3件）を 2026-04-17 に修正・本番確認済み。
 
 #### フェーズ A — MVP 基盤（完了）
 
@@ -426,6 +428,17 @@
 | 複数プログラム掲載 | GZCLP 以外に最低 1 プログラムを追加済み |
 | プライバシー・利用規約 | 最小限の掲載（Supabase ホスト前提の基本文） |
 
+#### 本番障害対応 — /train・Cancel 不具合（✅ 完了 2026-04-17）
+
+| # | 障害内容 | 修正内容 | Commit | ステータス |
+|---|---|---|---|---|
+| INC-1 | mock session ID が実 API に到達して Cancel/Finish が 500 | `train/page.tsx` の mock fallback を削除 → `redirect("/programs")`。cancel / finish / exercises / exercises/[exerciseId] 4ルートに `isLikelyUuid()` UUID ガード追加 | a85922a | ✅ 完了 |
+| INC-2 | `getActiveProgramView` が 400 (42703) で失敗し `/train` が `/programs` に誤リダイレクト | `selectActiveEnrollments` の `.order("created_at")` を削除（`program_enrollments` に存在しない列） | 35f6e03 | ✅ 完了 |
+| INC-3 | Cancel 成功後に `/train` → StartSessionScreen ループ | `app/page.tsx` を `actionType === "resume"` のみ `/train` にリダイレクトするよう修正。`router.push("/")` → `router.replace("/")` | 6327372 | ✅ 完了 |
+
+> 本番確認: Start Workout → workout 画面表示 → Cancel → /programs 着地（ループなし）を手動確認済み（2026-04-17）
+> フォローアップ: 診断ログ削減 PR を 1〜2 週間後に検討（緊急性なし）
+
 #### フェーズ C — プラットフォーム拡張（将来）
 
 **方針:** 管理画面を先に作らず、まず SQL / seed ベースでプログラムを追加していく。管理画面は運用負荷が増えた段階で後続フェーズとして判断する。
@@ -449,4 +462,4 @@
 
 ---
 
-最終更新: 2026-04-13（Phase C-1 seed 運用 docs 化完了 / C-2 プログラム追加可能な状態）
+最終更新: 2026-04-17（/train・Cancel 障害対応 3件完了・本番確認済み）

@@ -1,7 +1,7 @@
 # PROJECTS.md — プロジェクト設計図
 
 平山克司ワークスペース全プロジェクトの構成・目的・技術方針をまとめた設計図。
-最終更新: 2026-04-08（training-trend-analyzer 追加 / 上位ドキュメント再開導線更新）
+最終更新: 2026-04-17（training-program-platform-jp 障害対応完了を反映）
 
 ---
 
@@ -399,6 +399,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 | JBIZ-04 | 接骨院経営戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
 | HAIKI-05 | 廃棄物日報システム | `workspace/waste-report-system` | `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）` | active_setup_pending | keep |
 | AINV-07 | AI投資プロジェクト | `workspace/ai-invest` | `AI投資用スプレッドシート` | registration_candidate | keep |
+| TPPJ-08 | トレーニングプログラムプラットフォーム | `workspace/training-program-platform-jp` | — (Supabase / Vercel) | active_limited_release | keep |
 
 Notes:
 - `JREC-01` is the current operational center project and its main sheet is the
@@ -407,3 +408,4 @@ Notes:
   archive candidate until the remaining data handling is confirmed.
 - `HAIKI-05` now adopts `workspace/waste-report-system` as the canonical local
   folder path, even if the local implementation is still being prepared.
+- `TPPJ-08` 2026-04-17 障害対応完了: /train mock ID 流入防止・created_at query 修正・Cancel後ループ修正の3件を本番確認済み。フォローアップ: 1〜2週間後に診断ログ削減PR検討。
