@@ -1,5 +1,21 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-10 - Train top bar Boostcamp pass
+### STATUS
+
+| Item | Result |
+|---|---|
+| Rest / Calc を補助操作として整理 | **implemented** |
+| Session timer を中央の主表示に整理 | **implemented** |
+| Finish / Cancel の主従を明確化 | **implemented** |
+
+### Notes
+
+- Top bar は既存の 4 列構成を維持しつつ、`Rest` / `Calc` を二段ラベルの小さな補助ボタンに変更しました。
+- タイマーは中央の panel にまとめ、セッション経過時間を最も読み取りやすい要素として強調しました。
+- `Finish` は Boostcamp 寄せの強い黄系 CTA、`Cancel` は控えめな赤の secondary action として差を明確化しました。
+- Mobile check at `390 x 844`: top bar height was `61px`, all controls stayed on one row, and the button widths remained usable (`Rest 48px`, `Calc 48px`, `Finish 64px`).
+
 ## 2026-04-17 U-9 - DONE action reliability and mobile fit
 ### STATUS
 

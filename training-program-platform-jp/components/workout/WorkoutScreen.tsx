@@ -1198,15 +1198,24 @@ export function WorkoutScreen({
     <main className={styles.page}>
       <div className={styles.topBar}>
         <button
-          className={`${styles.iconButton}${restSecondsLeft !== null ? ` ${restSecondsLeft === 0 ? styles.restDone : styles.restActive}` : ""}`}
+          className={`${styles.iconButton} ${styles.toolButton}${restSecondsLeft !== null ? ` ${restSecondsLeft === 0 ? styles.restDone : styles.restActive}` : ""}`}
           onClick={handleRestTimer}
           title={restSecondsLeft !== null ? "タップでキャンセル" : "レスト開始 (1:30)"}
           type="button"
         >
-          {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : "Rest"}
+          <span className={styles.toolButtonLabel}>Rest</span>
+          <span className={styles.toolButtonValue}>
+            {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : "1:30"}
+          </span>
         </button>
-        <button className={styles.iconButton} type="button">Calc</button>
-        <div className={styles.timer}>{formatElapsed(elapsedSeconds)}</div>
+        <button className={`${styles.iconButton} ${styles.toolButton}`} type="button">
+          <span className={styles.toolButtonLabel}>Calc</span>
+          <span className={styles.toolButtonHint}>1RM</span>
+        </button>
+        <div className={styles.timerPanel}>
+          <span className={styles.timerLabel}>Session</span>
+          <div className={styles.timer}>{formatElapsed(elapsedSeconds)}</div>
+        </div>
         <div className={styles.topBarActions}>
           {!isSessionEnded && (
             <button
