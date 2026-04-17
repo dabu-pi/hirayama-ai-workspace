@@ -1,5 +1,36 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-7 - /train cancelled session fallback 修正
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| `/train` の primary session 選択から `cancelled` / `completed` を除外 | **完了 ✅** |
+| active enrollment の current day を start 画面へ優先接続 | **完了 ✅** |
+| cancel 後の rest / swipe UI 残留 cleanup | **完了 ✅** |
+| TypeScript / build 検証 | **完了 ✅** |
+
+### 原因
+
+- `/train` のクエリなし表示が `getCurrentWorkoutSessionView()` を通じて「最新 session」をそのまま返していた
+- そのため `in_progress` が存在しないタイミングでは、最新が `cancelled` の場合でも `WorkoutScreen` にそのまま表示されていた
+- `Go to Train` / `Back to Train` のように `/train` へ素で戻る導線では、この fallback が active enrollment の current day より優先されてしまっていた
+
+### 修正内容
+
+- `lib/workout/train-session.ts`
+  - current session 解決を `in_progress` 限定に変更し、`cancelled` / `completed` を primary display 対象から除外
+- `app/train/page.tsx`
+  - 優先順位を `in_progress -> active enrollment current day の StartSessionScreen -> mock fallback` に整理
+- `components/workout/WorkoutScreen.tsx`
+  - cancel 成功後に rest timer と swipe reveal state を明示 cleanup してから遷移
+
+### 再発防止メモ
+
+- `/train` の primary display は「編集可能な現在セッション」だけを対象にし、履歴状態は session-history / summary 側へ限定する
+- `cancelled` / `completed` を見せたい場合は明示的に履歴導線から遷移した時だけ扱う
+
 ## 2026-04-17 U-6c - Workout row Boostcamp寄せ 手動確認
 
 ### STATUS

@@ -127,7 +127,7 @@ function formatPreviousDisplay(
   return `x ${repsDone}`;
 }
 
-async function selectCurrentSession(
+async function selectCurrentInProgressSession(
   client: DatabaseClient,
   userId: string
 ) {
@@ -148,25 +148,7 @@ async function selectCurrentSession(
     );
   }
 
-  if (inProgressSession) {
-    return inProgressSession;
-  }
-
-  const { data: latestSession, error: latestError } = await client
-    .from("workout_sessions")
-    .select(
-      "id, user_id, program_enrollment_id, program_day_id, started_at, finished_at, status"
-    )
-    .eq("user_id", userId)
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<WorkoutSessionRow>();
-
-  if (latestError) {
-    throw new Error(`Failed to load latest workout session: ${latestError.message}`);
-  }
-
-  return latestSession;
+  return inProgressSession;
 }
 
 async function selectSessionByDayId(
@@ -597,7 +579,7 @@ async function loadSessionView(
   };
 }
 
-export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView> {
+export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView | null> {
   if (!hasSupabasePublicEnv()) {
     return getMockWorkoutSession();
   }
@@ -611,10 +593,10 @@ export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView
 
     const queryClient = createWorkoutQueryClient();
 
-    const session = await selectCurrentSession(queryClient, userId);
+    const session = await selectCurrentInProgressSession(queryClient, userId);
 
     if (!session) {
-      return getMockWorkoutSession();
+      return null;
     }
 
     return await loadSessionView(queryClient, session);

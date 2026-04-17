@@ -1,6 +1,8 @@
 import { BlockedSessionScreen } from "@/components/train/BlockedSessionScreen";
 import { StartSessionScreen } from "@/components/workout/StartSessionScreen";
 import { WorkoutScreen } from "@/components/workout/WorkoutScreen";
+import { getMockWorkoutSession } from "@/lib/mock/workout";
+import { getActiveProgramView } from "@/lib/workout/active-program";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
 import { resolveTrainingEntry } from "@/lib/workout/train-entry";
 import { getTrainProgramSelection } from "@/lib/workout/train-selection";
@@ -76,5 +78,33 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
 
   // programDayId なし（クエリなし / invalid）: 従来どおり現在セッションを表示
   const session = await getCurrentWorkoutSessionView();
-  return <WorkoutScreen selectedProgram={selectedProgram} session={session} />;
+  if (session) {
+    return <WorkoutScreen selectedProgram={selectedProgram} session={session} />;
+  }
+
+  const { views, isAuthenticated } = await getActiveProgramView();
+  const primaryView = views[0] ?? null;
+
+  if (
+    isAuthenticated &&
+    primaryView?.actionType === "start" &&
+    primaryView.currentProgramDayId &&
+    primaryView.programSlug
+  ) {
+    return (
+      <StartSessionScreen
+        programDayId={primaryView.currentProgramDayId}
+        programDayLabel={primaryView.currentWeekDayLabel || "Current Workout"}
+        programSlug={primaryView.programSlug}
+        programTitle={primaryView.programTitle}
+      />
+    );
+  }
+
+  return (
+    <WorkoutScreen
+      selectedProgram={selectedProgram}
+      session={getMockWorkoutSession()}
+    />
+  );
 }

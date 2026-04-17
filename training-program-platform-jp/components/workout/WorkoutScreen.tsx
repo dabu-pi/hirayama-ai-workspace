@@ -977,6 +977,10 @@ export function WorkoutScreen({
 
     try {
       await postCancelSession(sessionMeta.id);
+      setRevealedSetId(null);
+      restEndTimeRef.current = null;
+      clearRestDoneTimeout();
+      setRestSecondsLeft(null);
       router.push("/");
     } catch (error) {
       console.error("Failed to cancel workout session.", error);
