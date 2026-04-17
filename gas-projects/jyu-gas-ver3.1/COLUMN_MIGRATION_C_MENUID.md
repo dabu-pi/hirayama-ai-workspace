@@ -255,8 +255,8 @@ live データから把握する。**完全 read-only。書き込みは一切行
 
 ### 実行手順（人間が手動で実施）
 
-1. JREC スプレッドシートを開く:
-   https://docs.google.com/spreadsheets/d/121BkW7jEnKUjmU_NNVAPyJRs_UVmmoqkHDPMHL-RJeA
+1. JREC live スプレッドシートを開く:
+   https://docs.google.com/spreadsheets/d/1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM
 2. 拡張機能 → Apps Script でエディタを開く
 3. 関数選択ドロップダウンから `auditLegacyMenuIds_V3` を選択
 4. ▶ 実行
@@ -265,6 +265,16 @@ live データから把握する。**完全 read-only。書き込みは一切行
 
 GAS メニューから実行する場合:
 `管理者用 → 【監査】自費明細 legacy menu_id`
+
+### 監査先 ID 修正履歴（2026-04-18）
+
+| 項目 | 内容 |
+|---|---|
+| 旧 ID（誤り） | `121BkW7jEnKUjmU_NNVAPyJRs_UVmmoqkHDPMHL-RJeA`（運用ポータル側であり自費明細は存在しない）|
+| 新 ID（正） | `1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM`（JREC live ブック・`menu_id` / `メニュー名` / `単価` を保持）|
+| シート探索 | まず `自費明細` を探し、見つからない場合は `自費明細一覧` / `自費売上` / `売上明細` / `明細` の順で候補探索 |
+| 見つからない場合 | 実在シート一覧を Logger に出力して abort |
+| Read-only 維持 | `setValue` / `appendRow` / `delete` 不使用（監査目的のため） |
 
 ### 監査項目
 

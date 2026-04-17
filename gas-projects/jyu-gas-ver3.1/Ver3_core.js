@@ -4531,8 +4531,16 @@ function migrateJBIZMemberRules_V3() {
  */
 function auditLegacyMenuIds_V3() {
   var startMs = Date.now();
-  var JREC_SS_ID = "121BkW7jEnKUjmU_NNVAPyJRs_UVmmoqkHDPMHL-RJeA";
-  var SHEET_NAME = "自費明細";
+  // 監査先 = JREC live ブック（自費明細シートを保持）
+  // 旧 ID `121BkW7jEnKUjmU_NNVAPyJRs_UVmmoqkHDPMHL-RJeA` は運用ポータルであり誤り（2026-04-18 訂正）
+  var JREC_SS_ID = "1rXWkfAc_ppOfMV5Dxmb3maX9ORVrZbpSOX2Lz7RouZM";
+  var SHEET_NAME_CANDIDATES = [
+    "自費明細",
+    "自費明細一覧",
+    "自費売上",
+    "売上明細",
+    "明細"
+  ];
 
   var ss;
   try {
@@ -4541,9 +4549,20 @@ function auditLegacyMenuIds_V3() {
     Logger.log("[ERROR] JREC スプレッドシートを開けません: " + e.message);
     return;
   }
-  var sh = ss.getSheetByName(SHEET_NAME);
+
+  var sh = null;
+  var SHEET_NAME = null;
+  for (var i = 0; i < SHEET_NAME_CANDIDATES.length; i++) {
+    var candidate = SHEET_NAME_CANDIDATES[i];
+    var found = ss.getSheetByName(candidate);
+    if (found) {
+      sh = found;
+      SHEET_NAME = candidate;
+      break;
+    }
+  }
   if (!sh) {
-    Logger.log("[ERROR] シートが見つかりません: " + SHEET_NAME);
+    Logger.log("[ERROR] 自費明細シートが見つかりません。候補: " + SHEET_NAME_CANDIDATES.join(" / "));
     Logger.log("実在シート: " + ss.getSheets().map(function(s){return s.getName();}).join(" / "));
     return;
   }
