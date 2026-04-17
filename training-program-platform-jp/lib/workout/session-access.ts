@@ -2,7 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseTokenClient
+} from "@/lib/supabase/server";
 import type { WorkoutSessionStatus } from "@/types/workout";
 
 type DatabaseClient = SupabaseClient;
@@ -53,8 +56,9 @@ export function createWorkoutQueryClient(): DatabaseClient {
 }
 
 export async function getAuthenticatedWorkoutContext(): Promise<AuthenticatedWorkoutContext> {
-  const client = createWorkoutQueryClient();
-  const { data, error } = await client.auth.getUser();
+  // cookieClient is used only for auth.getUser() — it reads the session from cookies.
+  const cookieClient = createWorkoutQueryClient();
+  const { data, error } = await cookieClient.auth.getUser();
 
   if (error) {
     // auth.getUser() errors (expired token, missing session, network) mean the user
@@ -63,13 +67,24 @@ export async function getAuthenticatedWorkoutContext(): Promise<AuthenticatedWor
       name: error.name,
       message: error.message
     });
-    return { client, userId: null };
+    return { client: cookieClient, userId: null };
   }
 
-  return {
-    client,
-    userId: data.user?.id ?? null
-  };
+  if (!data.user) {
+    return { client: cookieClient, userId: null };
+  }
+
+  // After auth.getUser() (which may have refreshed the token internally), read the
+  // in-memory session to get the current access token.  Then build an explicit-token
+  // client for all DB queries: this passes the token directly in the Authorization
+  // header instead of re-reading from cookies, which avoids the race where PostgREST
+  // receives a stale/expired cookie token even after a successful auth.getUser().
+  const { data: sessionData } = await cookieClient.auth.getSession();
+  const dbClient = sessionData.session?.access_token
+    ? createSupabaseTokenClient(sessionData.session.access_token)
+    : cookieClient;
+
+  return { client: dbClient, userId: data.user.id };
 }
 
 export async function getAuthenticatedWorkoutUserId() {

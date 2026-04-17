@@ -1,5 +1,60 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-19 - Cancel lookup failure: explicit-token client で cookie re-read 問題を根本修正
+
+### STATUS: 修正完了 — live 実機確認待ち
+
+### DEPLOYMENT_CHECK
+
+commit 541a27a (admin client fallback) がデプロイ済みでも live で失敗している。
+→ `SUPABASE_SERVICE_ROLE_KEY` が Vercel 本番環境に未設定の場合、
+  `hasSupabaseServiceRoleEnv()` が false → server client (cookie ベース) にフォールバック → 同じ JWT 問題が継続。
+
+### VERCEL_ENV_CHECK
+
+`SUPABASE_SERVICE_ROLE_KEY` が Vercel に設定されているか確認が必要。
+未設定の場合: 今回の修正（explicit-token client）が根本対処になる。
+設定済みの場合: admin client が使われるはずだが、それでも失敗するなら別の問題がある。
+
+### ROOT_CAUSE (確定)
+
+`@supabase/ssr` の `createServerClient` は DB クエリのたびに `getAll()`（= リクエスト Cookie）から
+access token を再読み込みする可能性がある。
+`auth.getUser()` がトークンをリフレッシュしてもリクエスト Cookie は変わらない（Set-Cookie ヘッダは
+レスポンス側に書かれ、同一リクエスト内では古い Cookie が読まれ続ける）。
+→ PostgREST が失効済み JWT を受け取り `PGRST301` を返す → `findOwnedWorkoutSession` が throw →
+"Workout session lookup failed."
+
+### CHANGES (U-19)
+
+| ファイル | 変更内容 |
+|---|---|
+| `lib/supabase/server.ts` | `createSupabaseTokenClient(accessToken)` を追加: Bearer トークンを Authorization ヘッダに直接セットするクライアント生成関数 |
+| `lib/workout/session-access.ts` | `getAuthenticatedWorkoutContext()` を修正: auth.getUser() 後に auth.getSession() でトークンを取得し、explicit-token client を DB クライアントとして返す。Cookie 再読み込みを完全に回避 |
+
+### 修正後の認証フロー
+
+```
+auth.getUser()  → Cookie から JWT を取得してネットワーク検証 → 必要に応じてリフレッシュ
+auth.getSession() → in-memory から最新 access_token を取得（ネットワーク不要）
+createSupabaseTokenClient(token) → Authorization: Bearer <token> を全リクエストに付与
+DB クエリ → 常に検証済み・最新トークンを使用（Cookie 再読み込みなし）
+```
+
+admin client 優先順位（cancel/finish route）:
+1. `SUPABASE_SERVICE_ROLE_KEY` あり → admin client（RLS バイパス）
+2. なし → explicit-token client（getSession() からの JWT）
+3. session なし（稀）→ cookie client（従来と同じ、フォールバック）
+
+### TESTS: typecheck ✅ / build ✅
+
+### MANUAL_CHECK (live 実機 — 要確認)
+
+- ログイン済みセッションで Cancel ボタン → "Workout session lookup failed." が出ない
+- Cancel 成功後 / → /train → StartSession 画面
+- Finish → /workout-summary/{id}
+- Vercel ログで `dbClientType` と新しい context フローが確認できる
+
 ## 2026-04-17 U-18 - Cancel / Finish: session lookup failure 根本原因特定 + admin client 修正
 
 ### STATUS: 修正実装完了 — live 実機手動確認待ち

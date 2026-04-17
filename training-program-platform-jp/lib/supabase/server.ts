@@ -73,6 +73,28 @@ export function createSupabaseServerClient() {
   });
 }
 
+/**
+ * Creates a Supabase client that authenticates via an explicit Bearer token instead
+ * of reading from cookies. Use this when you already have a verified access token
+ * (e.g., obtained from auth.getSession() after auth.getUser()) and want to avoid
+ * the cookie-based session re-reading that can expose a stale token to PostgREST.
+ */
+export function createSupabaseTokenClient(accessToken: string) {
+  const { url, anonKey } = getSupabaseServerEnv();
+  return createClient(url, anonKey, {
+    global: {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      fetch: (input: FetchInput, init?: FetchInit) =>
+        fetch(input, { ...init, cache: "no-store" })
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  });
+}
+
 export function createSupabaseAdminClient() {
   const { url } = getSupabaseServerEnv();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
