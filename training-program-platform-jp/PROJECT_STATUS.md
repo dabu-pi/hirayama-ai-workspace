@@ -1,5 +1,23 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-12 - Cancel failure escape hatch
+### STATUS
+
+| Item | Result |
+|---|---|
+| Cancel 失敗時の `/train` 退避導線追加 | **implemented** |
+| Cancel failure 後の retry / Home / History 導線保証 | **implemented** |
+| TypeScript / build | **pass** |
+
+### Notes
+
+- live 環境では `Workout session lookup failed.` がまだ起こり得るため、今回は root cause の完全解消よりも「失敗しても `/train` に閉じ込められない」ことを優先しました。
+- `WorkoutScreen` に `failedAction = "cancel"` を持たせ、Cancel failure のときだけ recovery actions を赤バナー内へ表示するようにしました。
+- recovery actions は `Leave to Home` / `Session History` / `Retry Cancel` の 3 つです。Home / History は通常の `href` 遷移なので、client router state に依存せず退避できます。
+- Cancel failure 時は `isCancelling` を finally で解除しつつ、`revealedSetId` を閉じて swipe 状態だけを cleanup するようにしました。workout 自体は継続中なので rest timer や入力 state は壊さない方針です。
+- 他の編集操作や session 更新時には `failedAction` を clear して、Cancel failure 用の退避 UI が残留しないようにしています。
+- Manual check: 今回は local で JSX / CSS と disabled 条件を確認する範囲までです。認証済み live での `Cancel failure -> Leave to Home` は次回 1 回見るとより安心です。
+
 ## 2026-04-17 U-11 - Cancel session lookup hardening
 ### STATUS
 

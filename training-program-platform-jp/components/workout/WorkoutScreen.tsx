@@ -48,6 +48,8 @@ type SessionMetaState = {
   incompleteSetCount: number;
 };
 
+type FailedAction = "cancel" | null;
+
 type SetMutationResponse = {
   id: string;
   weightKg?: number | null;
@@ -415,6 +417,7 @@ export function WorkoutScreen({
   const [isFinishing, setIsFinishing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [failedAction, setFailedAction] = useState<FailedAction>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const REST_DEFAULT_SEC = 90;
   const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
@@ -451,6 +454,8 @@ export function WorkoutScreen({
       incompleteSetCount: session.incompleteSetCount
     });
     setRevealedSetId(null);
+    setFailedAction(null);
+    setErrorMessage(null);
     restEndTimeRef.current = null;
     clearRestDoneTimeout();
     setRestSecondsLeft(null);
@@ -528,6 +533,7 @@ export function WorkoutScreen({
   const isSessionCancelled = sessionMeta.status === "cancelled";
   /** True when session is no longer editable (completed or cancelled). */
   const isSessionEnded = isSessionCompleted || isSessionCancelled;
+  const showCancelRecoveryActions = failedAction === "cancel" && !isSessionEnded;
 
   const refreshTrainScreen = () => {
     startRefreshTransition(() => router.refresh());
@@ -557,6 +563,11 @@ export function WorkoutScreen({
     setSavingSetIds((current) => current.filter((item) => item !== setId));
   };
 
+  const clearTransientError = () => {
+    setErrorMessage(null);
+    setFailedAction(null);
+  };
+
   /**
    * Clicking the Target reps cell fills the repsDone input with the parsed
    * target value. This is a quick-fill convenience, especially for GZCL
@@ -579,7 +590,7 @@ export function WorkoutScreen({
       ...current,
       [setId]: { ...getSetDraft(current, targetSet), repsDone: String(parsed) }
     }));
-    setErrorMessage(null);
+    clearTransientError();
   };
 
   const handleSwipeStart = (setId: string, clientX: number) => {
@@ -607,7 +618,7 @@ export function WorkoutScreen({
     const targetSet = exercise?.sets.find((item) => item.id === setId);
     if (!exercise || !targetSet) return;
 
-    setErrorMessage(null);
+    clearTransientError();
     const shouldReflectWeight =
       field === "weightKg" && targetSet.displaySetNumber === 1 && nextValue.trim() !== "";
 
@@ -725,7 +736,7 @@ export function WorkoutScreen({
   const handleAddSet = async (exerciseId: string) => {
     if (isSessionEnded || pendingAddExerciseId || pendingMutation || isFinishing) return;
     setPendingAddExerciseId(exerciseId);
-    setErrorMessage(null);
+    clearTransientError();
 
     try {
       const payload = await postAddSet(exerciseId);
@@ -787,7 +798,7 @@ export function WorkoutScreen({
     if (!confirmed) return;
 
     setPendingMutation({ setId, kind: "delete" });
-    setErrorMessage(null);
+    clearTransientError();
 
     try {
       await postSetAction(setId, "delete");
@@ -843,7 +854,7 @@ export function WorkoutScreen({
     setRevealedSetId((current) => (current === setId ? null : current));
     updateIncompleteSetCount(-1);
     setPendingMutation({ setId, kind: "complete" });
-    setErrorMessage(null);
+    clearTransientError();
 
     try {
       const payload = await postSetAction(setId, "complete");
@@ -913,7 +924,7 @@ export function WorkoutScreen({
     setRevealedSetId((current) => (current === setId ? null : current));
 
     setPendingMutation({ setId, kind: "unlock" });
-    setErrorMessage(null);
+    clearTransientError();
 
     try {
       await postSetAction(setId, "unlock");
@@ -955,7 +966,7 @@ export function WorkoutScreen({
     }
 
     setIsFinishing(true);
-    setErrorMessage(null);
+    clearTransientError();
 
     try {
       const payload = await postFinishSession(sessionMeta.id, forceFinish);
@@ -1010,7 +1021,7 @@ export function WorkoutScreen({
     if (!confirmed) return;
 
     setIsCancelling(true);
-    setErrorMessage(null);
+    clearTransientError();
 
     try {
       await postCancelSession(sessionMeta.id);
@@ -1021,6 +1032,8 @@ export function WorkoutScreen({
       router.push("/");
     } catch (error) {
       console.error("Failed to cancel workout session.", error);
+      setRevealedSetId(null);
+      setFailedAction("cancel");
       setErrorMessage(
         error instanceof Error ? error.message : "セッションのキャンセルに失敗しました。"
       );
@@ -1032,6 +1045,7 @@ export function WorkoutScreen({
   const loadExercises = async () => {
     setIsLoadingExercises(true);
     setAddExerciseError(null);
+    setFailedAction(null);
     try {
       const response = await fetch("/api/exercises");
       const payload = (await response.json().catch(() => null)) as
@@ -1307,7 +1321,29 @@ export function WorkoutScreen({
         </section>
       ) : null}
 
-      {errorMessage ? <div className={styles.statusMessage} role="alert">{errorMessage}</div> : null}
+      {errorMessage ? (
+        <section className={styles.statusMessage} role="alert">
+          <span>{errorMessage}</span>
+          {showCancelRecoveryActions ? (
+            <div className={styles.statusActions}>
+              <a className={styles.statusActionPrimary} href="/">
+                Leave to Home
+              </a>
+              <a className={styles.statusActionSecondary} href="/session-history">
+                Session History
+              </a>
+              <button
+                className={styles.statusActionRetry}
+                disabled={isCancelling || isFinishing}
+                onClick={handleCancel}
+                type="button"
+              >
+                Retry Cancel
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className={styles.exerciseList}>
         {exercises.map((exercise) => (
