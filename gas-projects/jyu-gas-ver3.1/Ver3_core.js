@@ -4625,6 +4625,150 @@ function verifyJbizV2Switch_V3() {
   Logger.log("[INFO] read-only 確認完了。書き込みは一切行っていません。");
 }
 
+/**
+ * 初回評価3分割が MISS の原因を read-only で特定する診断関数。
+ * 完全 read-only。setValue / appendRow / delete 等の書き込みは一切行わない。
+ *
+ * 「価格設定_v2」の全行から、初回評価関連に該当しそうな行を
+ * 候補文字列で部分一致検索し、各行について
+ *   - 行番号
+ *   - menu_id / メニュー名
+ *   - 確定状況 / 有効フラグ
+ *   - 一般価格 / 会員価格
+ *   - getSelfPayMenuMaster_V3 の通過可否（どの条件で落ちるか）
+ * を Logger に出力する。
+ */
+function diagnoseEvalMiss_V3() {
+  Logger.log("=== 初回評価3分割 MISS 原因診断 ===");
+
+  var jbizSS;
+  try {
+    jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  } catch (e) {
+    Logger.log("[ERROR] JBIZ を開けません: " + e.message);
+    return;
+  }
+  var sh = getJBIZMenuSheet_(jbizSS);
+  if (!sh) {
+    Logger.log("[ERROR] JBIZ マスタシートが見つかりません");
+    return;
+  }
+  var sheetName = sh.getName();
+  var col = pickJbizCol_(sheetName);
+  var colKind = (col === JBIZ_COL_V2) ? "JBIZ_COL_V2 (v2)" : "JBIZ_COL (v1)";
+  Logger.log("対象シート: " + sheetName + " / 列マップ: " + colKind);
+
+  var data = sh.getDataRange().getValues();
+  Logger.log("総行数: " + data.length + "（ヘッダ含む）");
+
+  // ヘッダ内容（実シート列との突き合わせ用）
+  Logger.log("");
+  Logger.log("--- ヘッダ行（実値） ---");
+  var head = data[0];
+  head.forEach(function(h, i){
+    Logger.log("  [" + i + "] " + String(h || ""));
+  });
+
+  // 期待 index を明示出力
+  Logger.log("");
+  Logger.log("--- pickJbizCol_ が返した列 index ---");
+  Object.keys(col).forEach(function(k){
+    var idx = col[k];
+    var headName = (idx != null && head[idx] != null) ? String(head[idx]) : "(n/a)";
+    Logger.log("  " + k + " = " + idx + " → ヘッダ値: " + headName);
+  });
+
+  // 候補文字列
+  var needles = ["SELFPAY_EVAL", "SELF_EVAL", "初回評価", "腰", "首", "肩", "膝"];
+  Logger.log("");
+  Logger.log("--- 候補文字列での部分一致検索 ---");
+  Logger.log("候補: " + needles.join(" / "));
+
+  var matchedRows = [];
+  for (var r = 1; r < data.length; r++) {
+    var row = data[r];
+    // 検索対象: menu_id / menuName / patientName / description / subcategory / category
+    var searchBlob = [
+      row[col.menuId],
+      row[col.menuName],
+      col.patientName != null ? row[col.patientName] : "",
+      col.description  != null ? row[col.description]  : "",
+      col.subcategory  != null ? row[col.subcategory]  : "",
+      col.category     != null ? row[col.category]     : ""
+    ].map(function(v){ return String(v || ""); }).join(" | ");
+
+    var hitNeedle = null;
+    for (var i = 0; i < needles.length; i++) {
+      if (searchBlob.indexOf(needles[i]) >= 0) { hitNeedle = needles[i]; break; }
+    }
+    if (!hitNeedle) continue;
+
+    matchedRows.push({ r: r, row: row, needle: hitNeedle });
+  }
+
+  Logger.log("マッチ行数: " + matchedRows.length);
+  if (matchedRows.length === 0) {
+    Logger.log("[判定] 行が存在しない可能性が高い（候補文字列のいずれにもマッチなし）");
+  }
+
+  // 各マッチ行の詳細 + getSelfPayMenuMaster_V3 通過判定
+  matchedRows.forEach(function(hit){
+    var r   = hit.r;
+    var row = hit.row;
+    var sheetRow = r + 1;  // 1-indexed (スプレッドシート行番号)
+
+    var menuId    = String(row[col.menuId]   || "").trim();
+    var menuName  = String(row[col.menuName] || "").trim();
+    var status    = String(row[col.status]   || "").trim();
+    var unitPrice = Number(row[col.price])       || 0;
+    var memberPrice = Number(row[col.memberPrice]) || 0;
+    var isActiveRaw = col.isActive != null ? row[col.isActive] : null;
+    var isActiveStr = col.isActive != null ? String(isActiveRaw).toUpperCase() : "(v1 列なし)";
+    var patientName = col.patientName != null ? String(row[col.patientName] || "").trim() : "";
+    var subcategory = col.subcategory != null ? String(row[col.subcategory] || "").trim() : "";
+
+    // getSelfPayMenuMaster_V3 の各フィルタに対して、どこで落ちるか判定
+    var filterResults = [];
+    if (!menuId) filterResults.push("menu_id 空");
+    if (status !== "確定") filterResults.push("確定状況 != '確定'（実値: '" + status + "'）");
+    if (col.isActive != null && (isActiveRaw === false || isActiveStr === "FALSE")) {
+      filterResults.push("有効フラグ FALSE");
+    }
+    if (!menuName) filterResults.push("メニュー名 空");
+    var willPass = (filterResults.length === 0);
+
+    Logger.log("");
+    Logger.log("  Row " + sheetRow + " [hit: '" + hit.needle + "']");
+    Logger.log("    menu_id     : '" + menuId + "'");
+    Logger.log("    メニュー名  : '" + menuName + "'");
+    Logger.log("    患者向け名  : '" + patientName + "'");
+    Logger.log("    中区分      : '" + subcategory + "'");
+    Logger.log("    確定状況    : '" + status + "'");
+    Logger.log("    有効フラグ  : " + isActiveStr + "（raw: " + JSON.stringify(isActiveRaw) + "）");
+    Logger.log("    一般価格    : ¥" + unitPrice + " / 会員価格: ¥" + memberPrice);
+    Logger.log("    通過判定    : " + (willPass ? "PASS" : "REJECT"));
+    if (!willPass) {
+      Logger.log("    落ちる条件  : " + filterResults.join(" / "));
+    }
+  });
+
+  // 3ID 固有チェック: 期待 menu_id の行が存在するか
+  var expectedIds = ["SELFPAY_EVAL_LOWBACK30","SELFPAY_EVAL_NECKSHOULDER30","SELFPAY_EVAL_KNEE30"];
+  Logger.log("");
+  Logger.log("--- 期待 menu_id 完全一致チェック（C/D列の menu_id 列のみ） ---");
+  expectedIds.forEach(function(id){
+    var found = [];
+    for (var r = 1; r < data.length; r++) {
+      var m = String(data[r][col.menuId] || "").trim();
+      if (m === id) found.push(r + 1);
+    }
+    Logger.log("  " + id + " : " + (found.length ? ("Row " + found.join(",")) : "NOT FOUND"));
+  });
+
+  Logger.log("");
+  Logger.log("[INFO] read-only 診断完了。書き込みは一切行っていません。");
+}
+
 /* =======================================================================
    自費明細 legacy menu_id 監査（2026-04-18 追加 / read-only）
    ======================================================================= */
