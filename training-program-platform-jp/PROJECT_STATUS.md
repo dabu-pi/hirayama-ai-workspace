@@ -1,5 +1,53 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-14 - Cancel route: auth error throw が outer catch に伝播する問題を修正
+
+### STATUS
+
+| Item | Result |
+|---|---|
+| root cause 特定: `getAuthenticatedWorkoutContext()` が auth エラー時に throw | **confirmed** |
+| `session-access.ts`: auth エラーを throw せず `{ client, userId: null }` で返すよう変更 | **implemented** |
+| `cancel/route.ts`: outer catch ログに name / message / stack を追加 | **implemented** |
+| TypeScript / build | **pass** |
+
+### Root Cause
+
+`eb7ab3e` で導入した `getAuthenticatedWorkoutContext()` が `auth.getUser()` エラー時に `throw` するが、
+cancel route ではこの呼び出しが内側の try-catch（lookup を囲む部分）より前に位置するため、
+例外が outer catch まで伝播して "Unexpected error occurred while cancelling workout session." になっていた。
+
+```
+POST /cancel
+  try {                                      ← outer try
+    await getAuthenticatedWorkoutContext()   ← ここで throw → outer catch に直行
+    try {
+      findOwnedWorkoutSession(...)           ← inner try-catch (lookup 専用)
+    } catch (lookupError) { ... }           ← auth エラーはここでは捕まらない
+    ...
+  } catch (error) {
+    // "Unexpected error occurred while cancelling workout session."  ← ここへ落ちる
+  }
+```
+
+### Fix
+
+`getAuthenticatedWorkoutContext()` の auth エラー処理を throw から `console.warn + return { client, userId: null }` に変更。
+- `userId === null` のケースは各 route が既に `!userId → 401` で正しく処理済み
+- expired token / missing session / network error はすべて「未認証」として 401 で応答する（500 ではなく）
+- 再発デバッグのため outer catch も `err.name / message / stack` をログに含めるよう強化
+
+### Reproduction Pattern
+
+live 環境で token が期限切れ・refresh 失敗・cookie 破損のいずれかが起きると `auth.getUser()` がエラーを返す。
+旧 `getAuthenticatedWorkoutUserId()` はエラーを無視して null を返していたため 401 になっていたが、
+`getAuthenticatedWorkoutContext()` への置き換え後は throw するようになり 500 に変わった。
+
+### 再発防止観点
+
+`getAuthenticatedWorkoutContext()` を呼ぶ全 route が恩恵を受ける（cancel 以外の finish / unlock / complete も同様に修正済み）。
+auth エラーは原則 throw せず `userId: null` → 401 で処理する。予期しない例外だけ outer catch が 500 を返す設計に統一。
+
 ## 2026-04-17 U-13 - Live mutation auth/query client unification
 ### STATUS
 

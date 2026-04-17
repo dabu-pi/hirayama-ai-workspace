@@ -57,7 +57,13 @@ export async function getAuthenticatedWorkoutContext(): Promise<AuthenticatedWor
   const { data, error } = await client.auth.getUser();
 
   if (error) {
-    throw new Error(`Failed to resolve authenticated workout user: ${error.message}`);
+    // auth.getUser() errors (expired token, missing session, network) mean the user
+    // is not authenticated — return null userId so routes return 401 rather than 500.
+    console.warn("getAuthenticatedWorkoutContext: auth.getUser() failed — treating as unauthenticated", {
+      name: error.name,
+      message: error.message
+    });
+    return { client, userId: null };
   }
 
   return {

@@ -162,7 +162,13 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     return NextResponse.json({ id: updatedSession.id, status: updatedSession.status });
   } catch (error) {
-    console.error("Failed to cancel workout session.", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error("workout-session-cancel:unexpected_error", {
+      sessionId: params.id,
+      name: err.name,
+      message: err.message,
+      stack: err.stack
+    });
 
     return NextResponse.json(
       {
