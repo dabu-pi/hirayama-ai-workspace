@@ -1,5 +1,59 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-15 - 未認証ユーザーの /train ルーティング正常化・ログイン導線追加
+
+### STATUS
+
+| Item | Result |
+|---|---|
+| root cause 特定: 未認証時に `/train` が mock WorkoutScreen を表示 | **confirmed** |
+| `app/page.tsx`: 未認証 → `/login` リダイレクト | **implemented** |
+| `app/train/page.tsx`: 早期認証チェック → `TrainAuthRequired` 表示 | **implemented** |
+| `components/train/TrainAuthRequired.tsx` 作成 | **implemented** |
+| `lib/workout/train-session.ts`: 未認証時 null 返却に修正 | **implemented** |
+| TypeScript / build | **pass** |
+
+### Root Cause
+
+複数の問題が重なっていた。
+
+**① `getCurrentWorkoutSessionView()` が未認証時に mock セッションを返していた**
+```typescript
+if (!userId) {
+  return getMockWorkoutSession();  // ← 未認証でも workout 画面が出た
+}
+```
+`train/page.tsx` は `session` が truthy なら `WorkoutScreen` を表示するため、
+未認証ユーザーが `/train` に直接アクセスすると mock exercises が見えていた。
+その後のボタン操作で API が 401 → "ログインが必要です。" が出るが、ログインへのリンクがない。
+
+**② `app/train/page.tsx` に認証ガードがなかった**
+`!userId` のフォールスルーパスが最終的に `WorkoutScreen(getMockWorkoutSession())` に落ちていた。
+
+**③ `app/page.tsx` が未認証ユーザーを `/programs` に送っていた**
+`/programs` は public なので正しいが、ユーザー体験として「ワークアウト開始 → /train → 詰む」の導線が残っていた。
+
+### Fix
+
+1. `app/page.tsx`: `!isAuthenticated → redirect("/login")` に変更。未ログインはまず認証を促す。
+2. `app/train/page.tsx`: ページ先頭で `getAuthenticatedWorkoutUserId()` を呼び、未認証なら即 `<TrainAuthRequired />` を返す。
+3. `components/train/TrainAuthRequired.tsx`: ログインへのボタン + プログラム一覧へのリンクを持つシンプルなエラー画面。
+4. `lib/workout/train-session.ts`: `getCurrentWorkoutSessionView()` の未認証時 `getMockWorkoutSession()` → `null` に変更。エラーキャッチ時も同様。
+
+### Routing Table (after fix)
+
+| 状態 | `/` 遷移先 | `/train` 直アクセス |
+|---|---|---|
+| 未認証 | `/login` | `TrainAuthRequired`（ログインボタン + Programs リンク） |
+| 認証済み + enrollment あり | `/train` | workout or StartSession |
+| 認証済み + enrollment なし | `/programs` | StartSession or mock fallback |
+
+### Manual Check
+
+- Cookie クリア後に `/` → `/login` へ飛ぶことを確認
+- Cookie クリア後に `/train` 直アクセス → "ログインが必要です" 画面とボタンが出ることを確認
+- 認証済みで `/` → `/train` への正常ルーティングが変わっていないことを確認
+
 ## 2026-04-17 U-14 - Cancel route: auth error throw が outer catch に伝播する問題を修正
 
 ### STATUS

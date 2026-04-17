@@ -1,10 +1,12 @@
 import { BlockedSessionScreen } from "@/components/train/BlockedSessionScreen";
+import { TrainAuthRequired } from "@/components/train/TrainAuthRequired";
 import { StartSessionScreen } from "@/components/workout/StartSessionScreen";
 import { WorkoutScreen } from "@/components/workout/WorkoutScreen";
 import { getMockWorkoutSession } from "@/lib/mock/workout";
 import { getActiveProgramView } from "@/lib/workout/active-program";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
 import { resolveTrainingEntry } from "@/lib/workout/train-entry";
+import { getAuthenticatedWorkoutUserId } from "@/lib/workout/session-access";
 import { getTrainProgramSelection } from "@/lib/workout/train-selection";
 import {
   findWorkoutSessionByDayId,
@@ -21,6 +23,12 @@ type TrainPageProps = {
 };
 
 export default async function TrainPage({ searchParams }: TrainPageProps) {
+  // Auth gate: unauthenticated users get a login prompt regardless of URL params.
+  const userId = await getAuthenticatedWorkoutUserId();
+  if (!userId) {
+    return <TrainAuthRequired />;
+  }
+
   const selectedProgram = await getTrainProgramSelection(
     searchParams?.program,
     searchParams?.programDayId
@@ -101,6 +109,8 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     );
   }
 
+  // Authenticated but no active session and no enrollment with an actionable day.
+  // Show mock workout so the UI is not blank (dev/demo fallback only).
   return (
     <WorkoutScreen
       selectedProgram={selectedProgram}

@@ -588,7 +588,7 @@ export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView
     const userId = await getAuthenticatedWorkoutUserId();
 
     if (!userId) {
-      return getMockWorkoutSession();
+      return null;
     }
 
     const queryClient = createWorkoutQueryClient();
@@ -602,7 +602,7 @@ export async function getCurrentWorkoutSessionView(): Promise<WorkoutSessionView
     return await loadSessionView(queryClient, session);
   } catch (error) {
     console.error("Failed to load train session from Supabase.", error);
-    return getMockWorkoutSession();
+    return null;
   }
 }
 
