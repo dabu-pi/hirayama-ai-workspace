@@ -36,14 +36,13 @@ const SHEETS = {
 // ===== JBIZ 連携定数（Phase 3: 価格マスタ正本参照） =====
 const JBIZ_SS_ID    = "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc";
 // シート名候補（実名が変わっても候補に追加するだけで対応できるよう配列化）
-// 2026-03-23 バグ修正: 実名は「価格設定」（「メニューマスタ（価格設定）」ではなかった）
-// 2026-04-18 v2 昇格: 価格設定_v2（SELFPAY_* 命名・17列構造）を読み取り先の先頭に昇格。
-//   v1「価格設定」は fallback として残す（rename / archive / 候補除外は次ターン以降）。
-//   pickJbizCol_ がシート名に応じて自動で v1/v2 列マップを選ぶため、書き換え不要。
+// 2026-04-18 v2 切替確定: 価格設定_v2 に一本化。
+//   旧 v1「価格設定」は `archiveJbizV1Sheet_V3()` で `価格設定_v1_archive` に rename 済み。
+//   旧「メニューマスタ（価格設定）」は実在しなかった設計時想定名のため除外。
+//   live 確認: getSelfPayMenuMaster_V3 は v2 から 12 件取得（物療3種・初回評価3分割を含む）。
+//   pickJbizCol_ がシート名に応じて v2 列マップを返すため読み取り経路は安定。
 const JBIZ_MENU_SHEET_CANDIDATES = [
-  "価格設定_v2",                  // 正（v2: 17列構造・SELFPAY_* 命名）
-  "メニューマスタ（価格設定）",  // 設計時の想定名（旧）
-  "価格設定",                     // v1 fallback（14列構造・rename は次ターン）
+  "価格設定_v2",  // 正（v2: 17列構造・SELFPAY_* 命名）
 ];
 // 列インデックス（0始まり、A=0）— v1（既存「価格設定」用・14列構造）
 const JBIZ_COL = {
@@ -423,6 +422,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "JBIZ menu_id 追加", functionName: "setupJBIZMenuMasterId_V3" },
       { label: "JBIZ 会員傷行レコード移行", functionName: "migrateJBIZMemberRules_V3" },
       { label: "【監査】自費明細 legacy menu_id", functionName: "auditLegacyMenuIds_V3" },
+      { label: "【1回限り】JBIZ v1 シートを archive", functionName: "archiveJbizV1Sheet_V3" },
       { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
       { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
       { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
@@ -4514,6 +4514,72 @@ function migrateJBIZMemberRules_V3() {
     "会員優待ルール移行完了。\n移行行数: " + moved + " 行\n"
     + "「会員優待ルール」シートを確認してください。\n"
     + "移行後、不要になった空行はスプレッドシートで手動削除できます。"
+  );
+}
+
+/* =======================================================================
+   JBIZ v1 → v2 切替: v1 シート archive（2026-04-18 追加 / 1回限り実行）
+   ======================================================================= */
+
+/**
+ * JBIZ 旧 v1 シート「価格設定」を「価格設定_v1_archive」に rename する。
+ * - 実行前に confirm ダイアログを出す（不可逆操作ではないが誤操作防止）。
+ * - rename のみ。セル書き換え・削除は一切行わない。
+ * - 「価格設定_v1_archive」が既に存在する場合は中止（重複実行防止）。
+ * - 既存の「価格設定_v2」が存在しない場合は中止（read path 断絶防止）。
+ *
+ * 実行後は `JBIZ_MENU_SHEET_CANDIDATES` が v2 のみになっているため、
+ * 通常運用では archive シートは参照されない。
+ */
+function archiveJbizV1Sheet_V3() {
+  var ui = SpreadsheetApp.getUi();
+  var V1_NAME      = "価格設定";
+  var V1_ARCHIVE   = "価格設定_v1_archive";
+  var V2_NAME      = "価格設定_v2";
+
+  var jbizSS;
+  try {
+    jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  } catch (e) {
+    ui.alert("JBIZ を開けません: " + e.message);
+    return;
+  }
+
+  var v1 = jbizSS.getSheetByName(V1_NAME);
+  var v2 = jbizSS.getSheetByName(V2_NAME);
+  var existsArchive = jbizSS.getSheetByName(V1_ARCHIVE);
+
+  if (!v1) {
+    ui.alert(V1_NAME + " は既に存在しません。\n（archive 済みまたは未作成）");
+    return;
+  }
+  if (!v2) {
+    ui.alert(V2_NAME + " が存在しません。\n"
+      + "read path が断絶するため rename を中止します。");
+    return;
+  }
+  if (existsArchive) {
+    ui.alert(V1_ARCHIVE + " が既に存在するため中止します。");
+    return;
+  }
+
+  var res = ui.alert(
+    "JBIZ v1 シート archive",
+    V1_NAME + " → " + V1_ARCHIVE + " に rename します。\n\n"
+    + "・シート値の書き換え・削除は一切行いません（rename のみ）\n"
+    + "・JBIZ_MENU_SHEET_CANDIDATES は既に " + V2_NAME + " のみになっています\n"
+    + "・rename 後は v1 は参照されません\n\n"
+    + "続行しますか？",
+    ui.ButtonSet.YES_NO
+  );
+  if (res !== ui.Button.YES) return;
+
+  v1.setName(V1_ARCHIVE);
+  Logger.log("archiveJbizV1Sheet_V3: " + V1_NAME + " → " + V1_ARCHIVE + " 完了");
+  ui.alert(
+    V1_NAME + " → " + V1_ARCHIVE + " に rename 完了。\n\n"
+    + "次のステップ: verifyJbizV2Switch_V3 を再実行し、\n"
+    + "解決シートが " + V2_NAME + "、取得件数 12 件であることを確認してください。"
   );
 }
 
