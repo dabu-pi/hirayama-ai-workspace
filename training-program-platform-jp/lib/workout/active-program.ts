@@ -6,6 +6,10 @@ import {
   createSupabaseServerClient,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
+import {
+  classifySupabaseQueryError,
+  isLikelyUuid
+} from "@/lib/workout/session-access";
 import type {
   ActiveProgramResult,
   ActiveProgramSession,
@@ -14,6 +18,14 @@ import type {
   VolumeTrend,
   WorkoutSessionStatus
 } from "@/types/workout";
+
+type ActiveProgramFailureCause =
+  | "invalid_id_format"
+  | "missing_enrollment"
+  | "missing_program_day"
+  | "query_bad_request"
+  | "permission_denied"
+  | "unknown";
 
 type DatabaseClient = SupabaseClient;
 
@@ -108,22 +120,74 @@ type TrendSetRow = {
 /**
  * Returns all active enrollments for the user, ordered by most-recently-
  * updated first (updated_at desc, created_at desc as fallback).
+ *
+ * NOTE: the secondary .order("created_at") requires that column to exist on
+ * program_enrollments. If it does not, PostgREST returns 400. This is the
+ * most likely cause of "Failed to load active program view" errors.
  */
 async function selectActiveEnrollments(
   client: DatabaseClient,
   userId: string
 ): Promise<EnrollmentRow[]> {
+  const queryName = "selectActiveEnrollments";
+  const userIdIsUuid = isLikelyUuid(userId);
+
+  console.info("active-program-query:start", {
+    queryName,
+    table: "program_enrollments",
+    select: "id, program_id, current_program_day_id, status, started_at, updated_at",
+    filters: { user_id: userId, status: "active" },
+    orderBy: ["updated_at DESC", "created_at DESC"],
+    userId,
+    userIdIsUuid,
+    note: "created_at order will 400 if column does not exist on program_enrollments"
+  });
+
+  if (!userIdIsUuid) {
+    console.warn("active-program-query:precheck_failed", {
+      queryName,
+      reason: "userId is not a valid UUID",
+      userId,
+      cause: "invalid_id_format" satisfies ActiveProgramFailureCause
+    });
+  }
+
   const { data, error } = await client
     .from("program_enrollments")
     .select("id, program_id, current_program_day_id, status, started_at, updated_at")
     .eq("user_id", userId)
     .eq("status", "active")
-    .order("updated_at", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("updated_at", { ascending: false });
 
   if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    const cause = classifySupabaseQueryError(pgErr);
+    console.error("active-program-query:error", {
+      queryName,
+      table: "program_enrollments",
+      filters: { user_id: userId, status: "active" },
+      orderBy: ["updated_at DESC", "created_at DESC"],
+      userId,
+      userIdIsUuid,
+      cause,
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details,
+      suspectedCause:
+        pgErr.code === "42703" || (typeof pgErr.details === "string" && String(pgErr.details).includes("created_at"))
+          ? "created_at column may not exist on program_enrollments — remove secondary .order()"
+          : null
+    });
     throw new Error(`Failed to load active enrollments: ${error.message}`);
   }
+
+  console.info("active-program-query:ok", {
+    queryName,
+    rowCount: (data ?? []).length,
+    enrollmentIds: (data ?? []).map((r: Record<string, unknown>) => r.id)
+  });
 
   return (data ?? []) as EnrollmentRow[];
 }
@@ -139,7 +203,21 @@ async function selectProgramsBatch(
     .select("id, slug, title, level, days_per_week, duration_weeks")
     .in("id", programIds);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectProgramsBatch",
+      table: "programs",
+      filters: { id_in: programIds },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as ProgramRow[];
 }
 
@@ -154,7 +232,21 @@ async function selectProgramDaysBatch(
     .select("id, day_number, program_week_id")
     .in("id", dayIds);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectProgramDaysBatch",
+      table: "program_days",
+      filters: { id_in: dayIds },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as ProgramDayRow[];
 }
 
@@ -169,7 +261,21 @@ async function selectProgramWeeksBatch(
     .select("id, week_number, label")
     .in("id", weekIds);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectProgramWeeksBatch",
+      table: "program_weeks",
+      filters: { id_in: weekIds },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as ProgramWeekRow[];
 }
 
@@ -185,7 +291,21 @@ async function selectAllProgramWeeksByProgramIds(
     .in("program_id", programIds)
     .order("week_number", { ascending: true });
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectAllProgramWeeksByProgramIds",
+      table: "program_weeks",
+      filters: { program_id_in: programIds },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as ProgramWeekWithProgramId[];
 }
 
@@ -200,7 +320,21 @@ async function selectAllProgramDays(
     .select("id, day_number, program_week_id")
     .in("program_week_id", weekIds);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectAllProgramDays",
+      table: "program_days",
+      filters: { program_week_id_in: weekIds },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as ProgramDayRow[];
 }
 
@@ -227,7 +361,21 @@ async function selectRecentSessionsForEnrollments(
     .order("started_at", { ascending: false })
     .limit(enrollmentIds.length * RECENT_SESSION_LIMIT);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectRecentSessionsForEnrollments",
+      table: "workout_sessions",
+      filters: { user_id: userId, program_enrollment_id_in: enrollmentIds },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as SessionRow[];
 }
 
@@ -254,7 +402,21 @@ async function selectInProgressSessionsForEnrollments(
     .eq("status", "in_progress")
     .order("started_at", { ascending: false });
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectInProgressSessionsForEnrollments",
+      table: "workout_sessions",
+      filters: { program_enrollment_id_in: enrollmentIds, status: "in_progress" },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as InProgressSessionRow[];
 }
 
@@ -283,7 +445,21 @@ async function selectTrendSessions(
     .order("started_at", { ascending: false })
     .limit(enrollmentIds.length * TREND_SESSION_LIMIT);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectTrendSessions",
+      table: "workout_sessions",
+      filters: { user_id: userId, program_enrollment_id_in: enrollmentIds, status: "completed" },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as TrendSessionRow[];
 }
 
@@ -307,7 +483,21 @@ async function selectTrendExercises(
     .select("id, workout_session_id, exercise_type, exercise_id")
     .in("workout_session_id", sessionIds);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectTrendExercises",
+      table: "workout_session_exercises",
+      filters: { workout_session_id_in: sessionIds },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as TrendExerciseRow[];
 }
 
@@ -329,7 +519,21 @@ async function selectTrendSets(
     .eq("is_completed", true)
     .is("deleted_at", null);
 
-  if (error) return [];
+  if (error) {
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.warn("active-program-query:silent_error", {
+      queryName: "selectTrendSets",
+      table: "workout_sets",
+      filters: { workout_session_exercise_id_in: exerciseIds, is_completed: true, deleted_at: "IS NULL" },
+      cause: classifySupabaseQueryError(pgErr),
+      errorCode: pgErr.code,
+      errorStatus: pgErr.status ?? pgErr.statusCode,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
+    return [];
+  }
   return (data ?? []) as TrendSetRow[];
 }
 
@@ -869,7 +1073,29 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
 
     return { views, isAuthenticated: true, errorMessage: null };
   } catch (error) {
-    console.error("Failed to load active program view.", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    // Classify the failure so Vercel logs show a stable cause bucket.
+    // selectActiveEnrollments is the only query that throws; all others
+    // silently return [] and log via active-program-query:silent_error.
+    const causeFromMessage = ((): ActiveProgramFailureCause => {
+      const msg = err.message.toLowerCase();
+      if (msg.includes("invalid") || msg.includes("uuid") || msg.includes("22p02")) {
+        return "invalid_id_format";
+      }
+      if (msg.includes("enrollment")) return "missing_enrollment";
+      if (msg.includes("permission") || msg.includes("42501")) return "permission_denied";
+      if (msg.includes("bad request") || msg.includes("400")) return "query_bad_request";
+      return "unknown";
+    })();
+
+    console.error("active-program:fatal_error", {
+      failedQuery: "selectActiveEnrollments",
+      authConfirmed,
+      cause: causeFromMessage,
+      errorMessage: err.message,
+      errorName: err.name,
+      hint: "If cause=query_bad_request or unknown with 400: check selectActiveEnrollments .order('created_at') — that column may not exist on program_enrollments"
+    });
 
     // If the failure happened before we confirmed a signed-in user, treat as
     // unauthenticated instead of showing an error card — this covers the
