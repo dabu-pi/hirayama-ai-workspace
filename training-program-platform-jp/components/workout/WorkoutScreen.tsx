@@ -1029,7 +1029,10 @@ export function WorkoutScreen({
       restEndTimeRef.current = null;
       clearRestDoneTimeout();
       setRestSecondsLeft(null);
-      router.push("/");
+      // replace() instead of push() so back-navigation doesn't return to the
+      // cancelled session. Home redirects to /train only when a session is
+      // resumable (actionType="resume"); after cancel it routes to /programs.
+      router.replace("/");
     } catch (error) {
       console.error("Failed to cancel workout session.", error);
       setRevealedSetId(null);
