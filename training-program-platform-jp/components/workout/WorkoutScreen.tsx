@@ -1391,12 +1391,12 @@ export function WorkoutScreen({
                           }
                           type="button"
                         >
-                          {isMutating &&
-                          (pendingMutation?.kind === "complete" || pendingMutation?.kind === "unlock")
-                            ? "..."
-                            : set.isCompleted
-                              ? "✓"
-                              : ""}
+                          <span aria-hidden="true" className={styles.checkIcon}>
+                            {isMutating &&
+                            (pendingMutation?.kind === "complete" || pendingMutation?.kind === "unlock")
+                              ? "..."
+                              : "\u2713"}
+                          </span>
                         </button>
                       </div>
                     </div>

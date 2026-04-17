@@ -1,5 +1,30 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-8 - DONE button 視認性改善
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| 未完了 / 完了の DONE ボタン差分を強化 | **完了 ✅** |
+| 完了後も Kg / Reps 編集可の挙動維持 | **完了 ✅** |
+| TypeScript / build 検証 | **完了 ✅** |
+
+### 変更内容
+
+- `components/workout/WorkoutScreen.module.css`
+  - 未完了ボタンをダークで控えめな見た目に整理
+  - 完了時は緑の塗り + 明るいチェック + 軽いシャドウで一瞬で認識できる見た目へ変更
+  - row 全体の演出は増やさず、DONE ボタン単体の視認性を最優先
+- `components/workout/WorkoutScreen.tsx`
+  - DONE ボタン内を `checkIcon` span に整理し、未完了でも薄いチェックを見せて操作対象を分かりやすくした
+
+### 判断理由
+
+- 現状は完了・未完了の差が弱く、スマホ幅でどこまで終わったかを一目で追いづらかった
+- Boostcamp 寄せとして、まずは DONE ボタン自体の色差で進行状況が分かることを優先した
+- Kg / Reps 編集可の仕様は維持したいので、row 全体のロック風演出は強めず、右端ボタンだけで状態差を作った
+
 ## 2026-04-17 U-7 - /train cancelled session fallback 修正
 
 ### STATUS
