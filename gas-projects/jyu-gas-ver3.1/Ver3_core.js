@@ -422,6 +422,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "ヘッダ確認（デバッグ）", functionName: "checkHeaders_V3" },
       { label: "JBIZ menu_id 追加", functionName: "setupJBIZMenuMasterId_V3" },
       { label: "JBIZ 会員傷行レコード移行", functionName: "migrateJBIZMemberRules_V3" },
+      { label: "【監査】自費明細 legacy menu_id", functionName: "auditLegacyMenuIds_V3" },
       { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
       { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
       { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
@@ -4506,6 +4507,233 @@ function migrateJBIZMemberRules_V3() {
     + "「会員優待ルール」シートを確認してください。\n"
     + "移行後、不要になった空行はスプレッドシートで手動削除できます。"
   );
+}
+
+/* =======================================================================
+   自費明細 legacy menu_id 監査（2026-04-18 追加 / read-only）
+   ======================================================================= */
+
+/**
+ * JREC 自費明細シートに保存されている legacy menu_id を集計する。
+ * 完全 read-only。setValue / appendRow / delete 等の書き込みは一切行わない。
+ *
+ * 出力:
+ *   a) menu_id ごとの件数（降順）
+ *   b) SELF_* 系のみの内訳
+ *   c) SELFPAY_* 系の件数
+ *   d) その他（空白 / M001 / 未知ID）の件数
+ *   e) SELF_INITIAL_EVAL が存在すれば、該当行の {施術日, 患者ID, メニュー名, 単価} を全件ダンプ
+ *   f) menu_id とメニュー名の不一致ペア
+ *   g) SELF_* 系の最古・最新日付
+ *
+ * 実行: Apps Script エディタで関数 auditLegacyMenuIds_V3 を選択して実行。
+ * 出力先: Apps Script エディタの「実行ログ」パネル（Logger）。
+ */
+function auditLegacyMenuIds_V3() {
+  var startMs = Date.now();
+  var JREC_SS_ID = "121BkW7jEnKUjmU_NNVAPyJRs_UVmmoqkHDPMHL-RJeA";
+  var SHEET_NAME = "自費明細";
+
+  var ss;
+  try {
+    ss = SpreadsheetApp.openById(JREC_SS_ID);
+  } catch (e) {
+    Logger.log("[ERROR] JREC スプレッドシートを開けません: " + e.message);
+    return;
+  }
+  var sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) {
+    Logger.log("[ERROR] シートが見つかりません: " + SHEET_NAME);
+    Logger.log("実在シート: " + ss.getSheets().map(function(s){return s.getName();}).join(" / "));
+    return;
+  }
+  if (sh.getLastRow() < 2) {
+    Logger.log("[INFO] " + SHEET_NAME + " はヘッダ行のみ。データなし。");
+    return;
+  }
+
+  // 全データ取得（read-only）
+  var data    = sh.getDataRange().getValues();
+  var headRow = data[0];
+  var colIdx  = {};
+  headRow.forEach(function(name, i) { colIdx[String(name || "").trim()] = i; });
+
+  // 期待列を動的に解決（固定 index 決め打ちしない）
+  var iMenuId    = colIdx["menu_id"];
+  var iMenuName  = colIdx["メニュー名"];
+  var iTreatDate = colIdx["施術日"];
+  var iPatientId = colIdx["患者ID"];
+  var iUnitPrice = colIdx["単価"];
+
+  Logger.log("=== 自費明細 legacy menu_id 監査 ===");
+  Logger.log("対象シート: " + SHEET_NAME + " (データ行数: " + (data.length - 1) + ")");
+  Logger.log("列位置: menu_id=" + iMenuId + " / メニュー名=" + iMenuName
+    + " / 施術日=" + iTreatDate + " / 患者ID=" + iPatientId + " / 単価=" + iUnitPrice);
+  if (iMenuId == null || iMenuName == null) {
+    Logger.log("[ERROR] 必須列が見つかりません（ヘッダを確認してください）");
+    return;
+  }
+
+  // 集計バケツ
+  var countByMenuId = {};
+  var selfPrefixCount   = {};  // SELF_*
+  var selfpayPrefixCount = {}; // SELFPAY_*
+  var otherCount = { 空白: 0, M001系: 0, 未知: 0 };
+  var initialEvalRows = [];    // SELF_INITIAL_EVAL ダンプ用
+  var nameMismatchPairs = [];  // menu_id と メニュー名 の不一致
+  var selfOldestDate = null;
+  var selfNewestDate = null;
+
+  // SELF_* 時代に存在が期待される menu_id ↔ メニュー名 の期待マップ
+  var expectedNameByMenuId = {
+    "SELF_CHRONIC50":           "慢性ケア手技50分",
+    "SELF_EVAL_LOWBACK30":      "腰痛改善 運動療法 初回評価",
+    "SELF_EVAL_NECKSHOULDER30": "首肩こり改善 運動療法 初回評価",
+    "SELF_EVAL_KNEE30":         "膝改善 運動療法 初回評価",
+    "SELF_INITIAL_EVAL":        "症状別初回評価",
+    "SELFPAY_CHRONIC50":        "慢性ケア手技50分",
+    "SELFPAY_EVAL_LOWBACK30":   "腰痛改善 運動療法 初回評価",
+    "SELFPAY_EVAL_NECKSHOULDER30": "首肩こり改善 運動療法 初回評価",
+    "SELFPAY_EVAL_KNEE30":      "膝改善 運動療法 初回評価",
+    "SELFPAY_MICROCURRENT":     "マイクロカレント",
+    "SELFPAY_HIGHVOLTAGE":      "ハイボルテージ",
+    "SELFPAY_ULTRASOUND":       "超音波"
+  };
+
+  for (var r = 1; r < data.length; r++) {
+    var row      = data[r];
+    var menuId   = String(row[iMenuId]   || "").trim();
+    var menuName = String(row[iMenuName] || "").trim();
+    var treatDate = row[iTreatDate];
+    var patientId = String(row[iPatientId] || "").trim();
+    var unitPrice = Number(row[iUnitPrice]) || 0;
+
+    // a) menu_id 件数
+    countByMenuId[menuId || "（空白）"] = (countByMenuId[menuId || "（空白）"] || 0) + 1;
+
+    // b/c/d) プレフィックス分類
+    if (!menuId) {
+      otherCount.空白++;
+    } else if (menuId.indexOf("SELFPAY_") === 0) {
+      selfpayPrefixCount[menuId] = (selfpayPrefixCount[menuId] || 0) + 1;
+    } else if (menuId.indexOf("SELF_") === 0) {
+      selfPrefixCount[menuId] = (selfPrefixCount[menuId] || 0) + 1;
+      // g) SELF_* 系の日付範囲
+      if (treatDate instanceof Date) {
+        if (selfOldestDate === null || treatDate < selfOldestDate) selfOldestDate = treatDate;
+        if (selfNewestDate === null || treatDate > selfNewestDate) selfNewestDate = treatDate;
+      }
+    } else if (/^M\d{3,}$/.test(menuId)) {
+      otherCount.M001系++;
+    } else {
+      otherCount.未知++;
+    }
+
+    // e) SELF_INITIAL_EVAL ダンプ
+    if (menuId === "SELF_INITIAL_EVAL") {
+      initialEvalRows.push({
+        施術日:       treatDate instanceof Date ? Utilities.formatDate(treatDate, "Asia/Tokyo", "yyyy-MM-dd") : String(treatDate || ""),
+        患者ID:       patientId,
+        メニュー名:   menuName,
+        単価:         unitPrice,
+        行番号:       r + 1
+      });
+    }
+
+    // f) 期待名との不一致
+    var expected = expectedNameByMenuId[menuId];
+    if (menuId && expected && menuName && menuName !== expected) {
+      nameMismatchPairs.push({
+        行番号:     r + 1,
+        menu_id:    menuId,
+        メニュー名: menuName,
+        期待名:     expected
+      });
+    }
+  }
+
+  // --- 出力 a) menu_id 件数（降順） ---
+  Logger.log("");
+  Logger.log("--- a) menu_id 件数（降順） ---");
+  var sortedAll = Object.keys(countByMenuId).map(function(k){return [k, countByMenuId[k]];});
+  sortedAll.sort(function(x, y){return y[1] - x[1];});
+  sortedAll.forEach(function(p){ Logger.log("  " + p[0] + " : " + p[1] + " 件"); });
+
+  // --- b) SELF_* 内訳 ---
+  Logger.log("");
+  Logger.log("--- b) SELF_* 内訳 ---");
+  var selfKeys = Object.keys(selfPrefixCount).sort();
+  if (selfKeys.length === 0) {
+    Logger.log("  （該当なし）");
+  } else {
+    selfKeys.forEach(function(k){ Logger.log("  " + k + " : " + selfPrefixCount[k] + " 件"); });
+  }
+
+  // --- c) SELFPAY_* 件数 ---
+  Logger.log("");
+  Logger.log("--- c) SELFPAY_* 件数 ---");
+  var selfpayKeys = Object.keys(selfpayPrefixCount).sort();
+  if (selfpayKeys.length === 0) {
+    Logger.log("  （該当なし）");
+  } else {
+    selfpayKeys.forEach(function(k){ Logger.log("  " + k + " : " + selfpayPrefixCount[k] + " 件"); });
+  }
+
+  // --- d) その他 ---
+  Logger.log("");
+  Logger.log("--- d) その他（空白 / M001 / 未知） ---");
+  Logger.log("  空白: " + otherCount.空白 + " 件");
+  Logger.log("  M001系: " + otherCount.M001系 + " 件");
+  Logger.log("  未知: " + otherCount.未知 + " 件");
+
+  // --- e) SELF_INITIAL_EVAL ダンプ ---
+  Logger.log("");
+  Logger.log("--- e) SELF_INITIAL_EVAL 該当行ダンプ ---");
+  if (initialEvalRows.length === 0) {
+    Logger.log("  （該当なし）");
+  } else {
+    Logger.log("  件数: " + initialEvalRows.length);
+    initialEvalRows.forEach(function(row){
+      Logger.log("    Row " + row.行番号 + " | "
+        + row.施術日 + " | 患者ID=" + row.患者ID
+        + " | " + row.メニュー名 + " | ¥" + row.単価);
+    });
+  }
+
+  // --- f) menu_id と メニュー名 の不一致 ---
+  Logger.log("");
+  Logger.log("--- f) menu_id とメニュー名の不一致 ---");
+  if (nameMismatchPairs.length === 0) {
+    Logger.log("  （不一致なし）");
+  } else {
+    Logger.log("  件数: " + nameMismatchPairs.length);
+    nameMismatchPairs.forEach(function(p){
+      Logger.log("    Row " + p.行番号 + " | " + p.menu_id
+        + " | 実: " + p.メニュー名 + " | 期待: " + p.期待名);
+    });
+  }
+
+  // --- g) SELF_* 系 日付範囲 ---
+  Logger.log("");
+  Logger.log("--- g) SELF_* 系 日付範囲 ---");
+  if (selfOldestDate === null) {
+    Logger.log("  （SELF_* 系 日付データなし）");
+  } else {
+    Logger.log("  最古: " + Utilities.formatDate(selfOldestDate, "Asia/Tokyo", "yyyy-MM-dd"));
+    Logger.log("  最新: " + Utilities.formatDate(selfNewestDate, "Asia/Tokyo", "yyyy-MM-dd"));
+  }
+
+  // --- サマリ ---
+  Logger.log("");
+  Logger.log("=== サマリ ===");
+  Logger.log("  総データ行数: " + (data.length - 1));
+  var selfTotal = 0; selfKeys.forEach(function(k){ selfTotal += selfPrefixCount[k]; });
+  var selfpayTotal = 0; selfpayKeys.forEach(function(k){ selfpayTotal += selfpayPrefixCount[k]; });
+  Logger.log("  SELF_* 系合計: " + selfTotal);
+  Logger.log("  SELFPAY_* 系合計: " + selfpayTotal);
+  Logger.log("  その他合計: " + (otherCount.空白 + otherCount.M001系 + otherCount.未知));
+  Logger.log("  処理時間: " + (Date.now() - startMs) + " ms");
+  Logger.log("[INFO] read-only 監査完了。書き込みは一切行っていません。");
 }
 
 /* =======================================================================
