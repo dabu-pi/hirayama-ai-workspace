@@ -90,21 +90,21 @@ export async function POST(_: Request, { params }: RouteContext) {
       );
     }
 
-    if (targetSet.is_completed && targetSet.is_locked) {
+    if (targetSet.is_completed && !targetSet.is_locked) {
       return NextResponse.json({
         id: targetSet.id,
         isCompleted: true,
-        isLocked: true,
+        isLocked: false,
         completedAt: targetSet.completed_at
       });
     }
 
-    const completedAt = new Date().toISOString();
+    const completedAt = targetSet.completed_at ?? new Date().toISOString();
     const { error: updateError } = await supabase
       .from("workout_sets")
       .update({
         is_completed: true,
-        is_locked: true,
+        is_locked: false,
         completed_at: completedAt
       })
       .eq("id", targetSet.id)
@@ -127,7 +127,7 @@ export async function POST(_: Request, { params }: RouteContext) {
     return NextResponse.json({
       id: targetSet.id,
       isCompleted: true,
-      isLocked: true,
+      isLocked: false,
       completedAt
     });
   } catch (error) {

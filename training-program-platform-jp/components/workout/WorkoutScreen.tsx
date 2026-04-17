@@ -127,6 +127,14 @@ function buildDraftInputs(exercises: WorkoutExerciseBlock[]) {
   }, {});
 }
 
+/** Formats rest-timer seconds as M:SS. 0 returns "Done!". */
+function formatRestTime(seconds: number): string {
+  if (seconds === 0) return "Done!";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 /** Formats elapsed seconds as MM:SS or H:MM:SS. */
 function formatElapsed(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -408,6 +416,10 @@ export function WorkoutScreen({
   const [isCancelling, setIsCancelling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
+  const REST_DEFAULT_SEC = 90;
+  const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
+  const restEndTimeRef = useRef<number | null>(null);
+  const restDoneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Add Exercise / Swap modal
   const [isAddExerciseModalOpen, setIsAddExerciseModalOpen] = useState(false);
@@ -421,6 +433,13 @@ export function WorkoutScreen({
   const [scrollToExerciseId, setScrollToExerciseId] = useState<string | null>(null);
   const exerciseBlockRefs = useRef<Record<string, HTMLElement | null>>({});
 
+  const clearRestDoneTimeout = () => {
+    if (restDoneTimeoutRef.current !== null) {
+      clearTimeout(restDoneTimeoutRef.current);
+      restDoneTimeoutRef.current = null;
+    }
+  };
+
   useEffect(() => {
     const nextExercises = buildInitialExercises(session);
     setExercises(nextExercises);
@@ -432,6 +451,9 @@ export function WorkoutScreen({
       incompleteSetCount: session.incompleteSetCount
     });
     setRevealedSetId(null);
+    restEndTimeRef.current = null;
+    clearRestDoneTimeout();
+    setRestSecondsLeft(null);
   }, [session]);
 
   useEffect(() => {
@@ -466,6 +488,41 @@ export function WorkoutScreen({
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [session.startedAt]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (restEndTimeRef.current === null) return;
+      const remaining = Math.max(0, Math.ceil((restEndTimeRef.current - Date.now()) / 1000));
+      if (remaining === 0) {
+        restEndTimeRef.current = null;
+        setRestSecondsLeft(0);
+        clearRestDoneTimeout();
+        restDoneTimeoutRef.current = setTimeout(() => {
+          restDoneTimeoutRef.current = null;
+          setRestSecondsLeft(null);
+        }, 2500);
+      } else {
+        setRestSecondsLeft(remaining);
+      }
+    }, 250);
+
+    return () => {
+      clearInterval(interval);
+      clearRestDoneTimeout();
+    };
+  }, []);
+
+  const handleRestTimer = () => {
+    clearRestDoneTimeout();
+    if (restEndTimeRef.current !== null) {
+      restEndTimeRef.current = null;
+      setRestSecondsLeft(null);
+      return;
+    }
+
+    restEndTimeRef.current = Date.now() + REST_DEFAULT_SEC * 1000;
+    setRestSecondsLeft(REST_DEFAULT_SEC);
+  };
 
   const isSessionCompleted = sessionMeta.status === "completed";
   const isSessionCancelled = sessionMeta.status === "cancelled";
@@ -513,7 +570,7 @@ export function WorkoutScreen({
     if (isSessionEnded) return;
     const exercise = exercises.find((item) => item.id === exerciseId);
     const targetSet = exercise?.sets.find((item) => item.id === setId);
-    if (!exercise || !targetSet || targetSet.isLocked) return;
+    if (!exercise || !targetSet) return;
 
     const parsed = parseTargetReps(targetRepsText);
     if (parsed === null) return;
@@ -548,7 +605,7 @@ export function WorkoutScreen({
     if (isSessionEnded) return;
     const exercise = exercises.find((item) => item.id === exerciseId);
     const targetSet = exercise?.sets.find((item) => item.id === setId);
-    if (!exercise || !targetSet || targetSet.isLocked) return;
+    if (!exercise || !targetSet) return;
 
     setErrorMessage(null);
     const shouldReflectWeight =
@@ -556,7 +613,7 @@ export function WorkoutScreen({
 
     const reflectedSetIds = shouldReflectWeight
       ? exercise.sets
-          .filter((candidate) => candidate.id !== setId && !candidate.isLocked)
+          .filter((candidate) => candidate.id !== setId && !candidate.isCompleted)
           .filter((candidate) => {
             const candidateDraft = getSetDraft(draftInputs, candidate);
             return candidateDraft.weightKg.trim() === "" || candidate.isAutoFilled;
@@ -601,7 +658,6 @@ export function WorkoutScreen({
       isSessionEnded ||
       !exercise ||
       !targetSet ||
-      targetSet.isLocked ||
       savingSetIds.includes(setId)
     ) {
       return;
@@ -719,7 +775,6 @@ export function WorkoutScreen({
       isSessionEnded ||
       !exercise ||
       !targetSet ||
-      targetSet.isLocked ||
       pendingMutation ||
       isFinishing
     ) {
@@ -776,7 +831,7 @@ export function WorkoutScreen({
               ? {
                   ...set,
                   isCompleted: payload.isCompleted ?? true,
-                  isLocked: payload.isLocked ?? true,
+                  isLocked: payload.isLocked ?? false,
                   completedAt: payload.completedAt ?? new Date().toISOString()
                 }
               : set
@@ -793,7 +848,7 @@ export function WorkoutScreen({
     }
   };
 
-  const handleUnlock = async (exerciseId: string, setId: string) => {
+  const handleUncomplete = async (exerciseId: string, setId: string) => {
     if (isSessionEnded || pendingMutation || savingSetIds.includes(setId) || isFinishing) {
       return;
     }
@@ -1101,7 +1156,14 @@ export function WorkoutScreen({
   return (
     <main className={styles.page}>
       <div className={styles.topBar}>
-        <button className={styles.iconButton} type="button">Rest</button>
+        <button
+          className={`${styles.iconButton}${restSecondsLeft !== null ? ` ${restSecondsLeft === 0 ? styles.restDone : styles.restActive}` : ""}`}
+          onClick={handleRestTimer}
+          title={restSecondsLeft !== null ? "タップでキャンセル" : "レスト開始 (1:30)"}
+          type="button"
+        >
+          {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : "Rest"}
+        </button>
         <button className={styles.iconButton} type="button">Calc</button>
         <div className={styles.timer}>{formatElapsed(elapsedSeconds)}</div>
         <div className={styles.topBarActions}>
@@ -1218,7 +1280,7 @@ export function WorkoutScreen({
             </div>
 
             <div className={styles.swipeHint}>
-              左スワイプで Delete ／ Kg はセット1の値を後続セットに自動反映
+              左スワイプで Delete ・ 完了後も Kg / Reps はそのまま編集できます
             </div>
 
             <div className={styles.setTable}>
@@ -1236,22 +1298,24 @@ export function WorkoutScreen({
                 const isSaving = savingSetIds.includes(set.id);
                 const isMutating = pendingMutation?.setId === set.id;
                 const isBusy = isSaving || isMutating;
-                const isDeleteDisabled = set.isLocked || isBusy || isSessionEnded;
+                const isDeleteDisabled = isBusy || isSessionEnded;
 
                 return (
                   <div className={styles.swipeRow} key={set.id}>
-                    <div className={styles.deleteLane}>
+                    <div
+                      className={`${styles.deleteLane} ${
+                        revealedSetId === set.id ? styles.deleteLaneVisible : ""
+                      }`}
+                    >
                       <button
                         className={`${styles.deleteButton} ${isDeleteDisabled ? styles.deleteDisabled : ""}`}
                         disabled={isDeleteDisabled}
                         onClick={() => handleDelete(exercise.id, set.id)}
                         type="button"
                       >
-                        {set.isLocked
-                          ? "Unlock first"
-                          : isMutating && pendingMutation?.kind === "delete"
-                            ? "Deleting..."
-                            : "Delete"}
+                        {isMutating && pendingMutation?.kind === "delete"
+                          ? "Deleting..."
+                          : "Delete"}
                       </button>
                     </div>
 
@@ -1262,14 +1326,14 @@ export function WorkoutScreen({
                       onTouchStart={(event) => handleSwipeStart(set.id, event.changedTouches[0].clientX)}
                       onTouchEnd={(event) => handleSwipeEnd(set.id, event.changedTouches[0].clientX)}
                     >
-                      <div className={`${styles.setRow} ${set.isLocked ? styles.lockedRow : ""}`}>
+                      <div className={`${styles.setRow} ${set.isCompleted ? styles.completedRow : ""}`}>
                         <span className={styles.mono}>{set.displaySetNumber}</span>
-                        <span className={`${styles.mono} ${set.previousDisplay === "-" ? styles.previousEmpty : ""}`}>
+                        <span className={`${styles.previous} ${set.previousDisplay === "-" ? styles.previousEmpty : ""}`}>
                           {set.previousDisplay}
                         </span>
                         <button
-                          className={`${styles.target}${!set.isLocked && !isSessionEnded ? ` ${styles.targetClickable}` : ""}`}
-                          disabled={set.isLocked || isSessionEnded}
+                          className={`${styles.target}${!isSessionEnded ? ` ${styles.targetClickable}` : ""}`}
+                          disabled={isSessionEnded}
                           onClick={() => handleFillFromTarget(exercise.id, set.id, set.targetRepsText)}
                           title="クリックでRepsに反映"
                           type="button"
@@ -1279,7 +1343,7 @@ export function WorkoutScreen({
                         <input
                           aria-label={`${exercise.exerciseNameEn} set ${set.displaySetNumber} kg`}
                           className={`${styles.input} ${isSaving ? styles.inputSaving : ""} ${set.isAutoFilled ? styles.inputAutoFilled : ""}`}
-                          disabled={set.isLocked || isSaving || isSessionEnded}
+                          disabled={isSaving || isSessionEnded}
                           inputMode="decimal"
                           onBlur={() => handleInputSave(exercise.id, set.id)}
                           onChange={(event) => handleInputChange(exercise.id, set.id, "weightKg", event.target.value)}
@@ -1298,7 +1362,7 @@ export function WorkoutScreen({
                         <input
                           aria-label={`${exercise.exerciseNameEn} set ${set.displaySetNumber} reps`}
                           className={`${styles.input} ${isSaving ? styles.inputSaving : ""}`}
-                          disabled={set.isLocked || isSaving || isSessionEnded}
+                          disabled={isSaving || isSessionEnded}
                           inputMode="numeric"
                           onBlur={() => handleInputSave(exercise.id, set.id)}
                           onChange={(event) => handleInputChange(exercise.id, set.id, "repsDone", event.target.value)}
@@ -1311,30 +1375,25 @@ export function WorkoutScreen({
                           type="number"
                           value={draft.repsDone}
                         />
-                        {set.isLocked ? (
-                          <button
-                            className={`${styles.actionButton} ${styles.unlockButton}`}
-                            disabled={isBusy || isSessionEnded}
-                            onClick={() => handleUnlock(exercise.id, set.id)}
-                            type="button"
-                          >
-                            {isMutating && pendingMutation?.kind === "unlock" ? "..." : "Unlock"}
-                          </button>
-                        ) : (
-                          <button
-                            aria-label={set.isCompleted ? "completed" : "mark complete"}
-                            className={`${styles.actionButton} ${styles.check} ${set.isCompleted ? styles.checkDone : ""}`}
-                            disabled={isBusy || isSessionEnded}
-                            onClick={() => handleComplete(exercise.id, set.id)}
-                            type="button"
-                          >
-                            {isMutating && pendingMutation?.kind === "complete"
-                              ? "..."
-                              : set.isCompleted
-                                ? "✓"
-                                : "○"}
-                          </button>
-                        )}
+                        <button
+                          aria-label={set.isCompleted ? "mark incomplete" : "mark complete"}
+                          aria-pressed={set.isCompleted}
+                          className={`${styles.actionButton} ${styles.check} ${set.isCompleted ? styles.checkDone : ""}`}
+                          disabled={isBusy || isSessionEnded}
+                          onClick={() =>
+                            set.isCompleted
+                              ? handleUncomplete(exercise.id, set.id)
+                              : handleComplete(exercise.id, set.id)
+                          }
+                          type="button"
+                        >
+                          {isMutating &&
+                          (pendingMutation?.kind === "complete" || pendingMutation?.kind === "unlock")
+                            ? "..."
+                            : set.isCompleted
+                              ? "✓"
+                              : ""}
+                        </button>
                       </div>
                     </div>
                   </div>

@@ -1,5 +1,112 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-6b - Workout row Boostcamp寄せ 検証完了
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| Delete を通常非表示にして、左スワイプ時のみ表示 | **完了 ✅** |
+| モバイルで Kg / Reps 入力欄を拡張 | **完了 ✅** |
+| lock / unlock 操作をやめ、check ベースの完了操作に統一 | **完了 ✅** |
+| 完了後も Kg / Reps をそのまま編集可能に変更 | **完了 ✅** |
+| TypeScript / build 検証 | **完了 ✅** |
+
+### 変更内容
+
+- `components/workout/WorkoutScreen.tsx`
+  - Delete lane を通常非表示にし、左スワイプ時だけ表示する挙動へ変更
+  - 完了操作を check ボタン 1つに統一し、完了後も Kg / Reps を編集可能に変更
+  - 補助文言を Boostcamp 寄せの操作説明へ更新
+- `components/workout/WorkoutScreen.module.css`
+  - モバイル時の row grid を調整して Kg / Reps 入力欄を拡張
+  - delete lane の reveal 表示と completed row の見た目を調整
+- `app/api/workout-sets/[id]/route.ts`
+  - PATCH 時の `is_locked` 制約を外し、旧データも `is_locked: false` に正規化
+- `app/api/workout-sets/[id]/complete/route.ts`
+  - complete 後も編集できるよう `is_locked: false` を返す実装へ変更
+- `app/api/workout-sets/[id]/delete/route.ts`
+  - 完了済みセットでも削除できるよう制約を整理
+
+### 検証
+
+- `npm run typecheck` : pass
+- `npm run build` : pass
+
+### NEXT
+
+- ローカル画面で swipe reveal / check toggle / 完了後編集の見た目を最終確認
+
+## 2026-04-17 U-6 — Workout row Boostcamp 寄せ
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| Delete を通常時は隠し、左スワイプ時のみ表示 | **完了 ✅** |
+| 完了後も Kg / Reps を編集可能に変更 | **完了 ✅** |
+| lock / unlock ボタン分岐をやめ、check ベース操作に統一 | **完了 ✅** |
+| モバイルで Kg / Reps 入力幅を拡張 | **完了 ✅** |
+| TypeScript / build 検証 | **確認予定** |
+
+### 変更内容
+
+- `components/workout/WorkoutScreen.tsx`
+  - 完了済みセットでも Kg / Reps を編集できるよう UI ガードを緩和
+  - Done 列を常時 check ボタンに統一し、完了済みは再タップで未完了へ戻せる形に変更
+  - Delete lane は `revealedSetId` のときだけ可視化
+  - 補助文言を `左スワイプで Delete ・ 完了後も Kg / Reps はそのまま編集できます` に更新
+- `components/workout/WorkoutScreen.module.css`
+  - set row の列幅を見直し、Done 列を圧縮して Kg / Reps を広げた
+  - delete lane を非表示→表示のトランジションに変更
+  - completed row の軽いハイライトを追加
+- `app/api/workout-sets/[id]/route.ts`
+  - `is_locked` による PATCH ブロックを撤去し、保存時は `is_locked: false` に正規化
+- `app/api/workout-sets/[id]/complete/route.ts`
+  - complete 時に `is_locked: false` を返すよう変更
+- `app/api/workout-sets/[id]/delete/route.ts`
+  - delete 時の `Unlock first` 制約を撤去
+
+### 修正理由
+
+- 現状 UI は Delete が常時透けて見え、Boostcamp のような「左スワイプ時だけ Delete」が再現できていなかった。
+- また complete 後に lock されるため重量・回数の微修正がしにくく、何セット目まで終わったかを check だけで追える Boostcamp の操作感とずれていた。
+
+### NEXT
+
+- `npm run typecheck` / `npm run build` を実行して静的検証
+- ローカル画面で swipe reveal / check toggle / complete 後編集を目視確認
+
+## 2026-04-17 U-5 — Rest Timer 安定化
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| WorkoutScreen の Rest ボタンから 90 秒カウントダウン開始 | **完了 ✅** |
+| カウント完了後に `Done!` を一時表示 | **完了 ✅** |
+| `Done!` 表示中に再スタートしても旧 timeout が新タイマーを消さない | **完了 ✅** |
+| セッション切替 / unmount 時の rest timer 後始末 | **完了 ✅** |
+| TypeScript `tsc --noEmit` | **完了 ✅** |
+
+### 変更内容
+
+- `components/workout/WorkoutScreen.tsx`
+  - `restDoneTimeoutRef` を追加し、`Done!` 表示を消す timeout を明示管理
+  - 新しいレスト開始時に旧 timeout を必ず `clearTimeout` するよう修正
+  - `session` 切替時に rest timer state / ref をリセット
+  - rest timer interval cleanup 時にも timeout を後始末
+
+### 修正理由
+
+- 2026-04-16 時点の Rest Timer 実装は UI 上ほぼ完成していたが、`Done!` 表示を消す `setTimeout` が次のレスト開始後も残るため、短時間で再スタートすると新しいカウントダウン表示が途中で消えるレース条件があった。
+- 今回は仕様追加ではなく、既存 UX を壊さずに安定化する最小修正だけを入れた。
+
+### NEXT
+
+- ローカル画面で Rest → Done! → 即再スタートの挙動を目視確認
+- 必要なら `Done!` 表示時間（現状 2.5 秒）を UX 観点で微調整
+
 最終更新: 2026-04-15（H-4 IA redesign E2E 検証完了 / BottomTabBar・smart redirect・enrollment guard 実装 pass）
 
 ## 2026-04-15 H-4 — IA redesign E2E 検証完了

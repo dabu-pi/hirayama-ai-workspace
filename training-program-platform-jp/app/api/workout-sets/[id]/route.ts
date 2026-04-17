@@ -142,28 +142,16 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    if (targetSet.is_locked) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "set_locked",
-            message: "Locked workout set cannot be edited. Unlock it first."
-          }
-        },
-        { status: 409 }
-      );
-    }
-
     const { data: updatedSet, error: updateError } = await supabase
       .from("workout_sets")
       .update({
         weight_kg: weightKg,
         reps_done: repsDone,
-        is_auto_filled: isAutoFilled
+        is_auto_filled: isAutoFilled,
+        is_locked: false
       })
       .eq("id", targetSet.id)
       .is("deleted_at", null)
-      .eq("is_locked", false)
       .select(
         "id, weight_kg, reps_done, is_auto_filled, is_locked, is_completed, completed_at, deleted_at"
       )

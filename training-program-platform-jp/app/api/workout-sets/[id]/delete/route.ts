@@ -82,18 +82,6 @@ export async function POST(_: Request, { params }: RouteContext) {
       );
     }
 
-    if (targetSet.is_locked) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "set_locked",
-            message: "Locked set cannot be deleted. Unlock it first."
-          }
-        },
-        { status: 409 }
-      );
-    }
-
     const deletedAt = new Date().toISOString();
     const { error: updateError } = await supabase
       .from("workout_sets")
