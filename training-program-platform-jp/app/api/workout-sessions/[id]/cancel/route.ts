@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import {
   createWorkoutQueryClient,
+  findOwnedWorkoutSession,
   getAuthenticatedWorkoutUserId
 } from "@/lib/workout/session-access";
 
@@ -10,12 +11,6 @@ type RouteContext = {
   params: {
     id: string;
   };
-};
-
-type SessionRow = {
-  id: string;
-  user_id: string;
-  status: "in_progress" | "completed" | "cancelled";
 };
 
 /**
@@ -53,14 +48,15 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     const supabase = createWorkoutQueryClient();
 
-    const { data: session, error: sessionError } = await supabase
-      .from("workout_sessions")
-      .select("id, user_id, status")
-      .eq("id", params.id)
-      .eq("user_id", userId)
-      .maybeSingle<SessionRow>();
-
-    if (sessionError) {
+    let session;
+    try {
+      session = await findOwnedWorkoutSession(supabase, params.id, userId);
+    } catch (lookupError) {
+      console.error("Failed to resolve workout session before cancel.", {
+        sessionId: params.id,
+        userId,
+        lookupError
+      });
       return NextResponse.json(
         {
           error: {
@@ -110,6 +106,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       .from("workout_sessions")
       .update({ status: "cancelled" })
       .eq("id", params.id)
+      .eq("user_id", userId)
       .eq("status", "in_progress");
 
     if (updateError) {

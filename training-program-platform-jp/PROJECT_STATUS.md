@@ -1,5 +1,23 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-11 - Cancel session lookup hardening
+### STATUS
+
+| Item | Result |
+|---|---|
+| `/train` Cancel の `Workout session lookup failed.` 修正 | **implemented** |
+| cancel route の ownership lookup を共通 helper に統一 | **implemented** |
+| TypeScript / build | **pass** |
+
+### Notes
+
+- Cancel route だけが `workout_sessions` を直接 lookup しており、他の session mutation route と実装がずれていました。
+- 今回は `findOwnedWorkoutSession()` に統一し、Cancel 前の session 解決を他 route と同じ ownership check に揃えました。
+- lookup が失敗した場合は `sessionId` / `userId` / `lookupError` を server log に残すようにして、再発時に stale id か query failure かを切り分けやすくしました。
+- `update(...).eq("user_id", userId).eq("status", "in_progress")` に寄せ、Cancel mutation も lookup と同じ user scope で閉じるようにしました。
+- `components/workout/WorkoutScreen.tsx` 側の cleanup / redirect は既存実装を維持しているため、今回の修正範囲は cancel API の session 解決に限定しています。
+- Manual check: このセッションでは認証済みブラウザの Cancel E2E までは未実施です。次回は production 実データで `Cancel -> Home -> Go to Train` を 1 回確認すれば今回の修正を閉じられます。
+
 ## 2026-04-17 U-10 - Train top bar Boostcamp pass
 ### STATUS
 
