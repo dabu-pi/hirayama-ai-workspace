@@ -2,9 +2,8 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createWorkoutQueryClient,
   findOwnedWorkoutSession,
-  getAuthenticatedWorkoutUserId
+  getAuthenticatedWorkoutContext
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -32,7 +31,8 @@ type RouteContext = {
  */
 export async function POST(_request: Request, { params }: RouteContext) {
   try {
-    const userId = await getAuthenticatedWorkoutUserId();
+    const routeName = "workout-session-cancel";
+    const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(
@@ -45,8 +45,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
         { status: 401 }
       );
     }
-
-    const supabase = createWorkoutQueryClient();
+    console.info(`${routeName}:start`, { sessionId: params.id, userId });
 
     let session;
     try {
@@ -67,6 +66,12 @@ export async function POST(_request: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+    console.info(`${routeName}:lookup`, {
+      sessionId: params.id,
+      userId,
+      found: Boolean(session),
+      status: session?.status ?? null
+    });
 
     if (!session) {
       return NextResponse.json(
@@ -102,14 +107,21 @@ export async function POST(_request: Request, { params }: RouteContext) {
     // Extra WHERE clause (.eq("status", "in_progress")) provides a concurrency
     // guard — if the session was completed by another request in flight, this
     // update affects 0 rows and we return success anyway (the session is done).
-    const { error: updateError } = await supabase
+    const { data: updatedSession, error: updateError } = await supabase
       .from("workout_sessions")
       .update({ status: "cancelled" })
       .eq("id", params.id)
       .eq("user_id", userId)
-      .eq("status", "in_progress");
+      .eq("status", "in_progress")
+      .select("id, status")
+      .maybeSingle<{ id: string; status: "cancelled" }>();
 
     if (updateError) {
+      console.error(`${routeName}:update_error`, {
+        sessionId: params.id,
+        userId,
+        updateError
+      });
       return NextResponse.json(
         {
           error: {
@@ -120,6 +132,26 @@ export async function POST(_request: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+    if (!updatedSession) {
+      console.warn(`${routeName}:update_conflict`, {
+        sessionId: params.id,
+        userId
+      });
+      return NextResponse.json(
+        {
+          error: {
+            code: "session_cancel_conflict",
+            message: "Workout session could not be cancelled."
+          }
+        },
+        { status: 409 }
+      );
+    }
+    console.info(`${routeName}:update_success`, {
+      sessionId: updatedSession.id,
+      userId,
+      status: updatedSession.status
+    });
 
     // NOTE: advanceEnrollmentAfterSessionComplete is intentionally NOT called.
     // enrollment.current_program_day_id is preserved so the user can start the
@@ -128,7 +160,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     revalidatePath("/train");
     revalidatePath("/"); // Home CTA transitions from "Resume" → "Start next workout"
 
-    return NextResponse.json({ id: params.id, status: "cancelled" });
+    return NextResponse.json({ id: updatedSession.id, status: updatedSession.status });
   } catch (error) {
     console.error("Failed to cancel workout session.", error);
 

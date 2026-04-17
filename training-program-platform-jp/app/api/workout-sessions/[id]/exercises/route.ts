@@ -2,9 +2,8 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createWorkoutQueryClient,
   findOwnedWorkoutSession,
-  getAuthenticatedWorkoutUserId
+  getAuthenticatedWorkoutContext
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -68,7 +67,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const userId = await getAuthenticatedWorkoutUserId();
+    const routeName = "workout-session-add-exercise";
+    const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(
@@ -82,12 +82,15 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const supabase = createWorkoutQueryClient();
-
     let session;
     try {
       session = await findOwnedWorkoutSession(supabase, params.id, userId);
-    } catch {
+    } catch (lookupError) {
+      console.error(`${routeName}:lookup_error`, {
+        sessionId: params.id,
+        userId,
+        lookupError
+      });
       return NextResponse.json(
         {
           error: {

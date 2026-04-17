@@ -2,9 +2,8 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createWorkoutQueryClient,
   findOwnedWorkoutSet,
-  getAuthenticatedWorkoutUserId
+  getAuthenticatedWorkoutContext
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -15,7 +14,8 @@ type RouteContext = {
 
 export async function POST(_: Request, { params }: RouteContext) {
   try {
-    const userId = await getAuthenticatedWorkoutUserId();
+    const routeName = "workout-set-delete";
+    const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(
@@ -29,12 +29,15 @@ export async function POST(_: Request, { params }: RouteContext) {
       );
     }
 
-    const supabase = createWorkoutQueryClient();
-
     let targetSet;
     try {
       targetSet = await findOwnedWorkoutSet(supabase, params.id, userId);
-    } catch {
+    } catch (lookupError) {
+      console.error(`${routeName}:lookup_error`, {
+        setId: params.id,
+        userId,
+        lookupError
+      });
       return NextResponse.json(
         {
           error: {

@@ -7,6 +7,11 @@ import type { WorkoutSessionStatus } from "@/types/workout";
 
 type DatabaseClient = SupabaseClient;
 
+export type AuthenticatedWorkoutContext = {
+  client: DatabaseClient;
+  userId: string | null;
+};
+
 export type OwnedWorkoutSession = {
   id: string;
   user_id: string;
@@ -47,10 +52,23 @@ export function createWorkoutQueryClient(): DatabaseClient {
   return createSupabaseServerClient();
 }
 
+export async function getAuthenticatedWorkoutContext(): Promise<AuthenticatedWorkoutContext> {
+  const client = createWorkoutQueryClient();
+  const { data, error } = await client.auth.getUser();
+
+  if (error) {
+    throw new Error(`Failed to resolve authenticated workout user: ${error.message}`);
+  }
+
+  return {
+    client,
+    userId: data.user?.id ?? null
+  };
+}
+
 export async function getAuthenticatedWorkoutUserId() {
-  const serverClient = createSupabaseServerClient();
-  const { data } = await serverClient.auth.getUser();
-  return data.user?.id ?? null;
+  const { userId } = await getAuthenticatedWorkoutContext();
+  return userId;
 }
 
 export async function findOwnedWorkoutSession(

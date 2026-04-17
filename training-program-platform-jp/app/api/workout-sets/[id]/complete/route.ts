@@ -2,9 +2,8 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
-  createWorkoutQueryClient,
   findOwnedWorkoutSet,
-  getAuthenticatedWorkoutUserId
+  getAuthenticatedWorkoutContext
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -23,7 +22,8 @@ type WorkoutSetMutationRow = {
 
 export async function POST(_: Request, { params }: RouteContext) {
   try {
-    const userId = await getAuthenticatedWorkoutUserId();
+    const routeName = "workout-set-complete";
+    const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(
@@ -36,8 +36,7 @@ export async function POST(_: Request, { params }: RouteContext) {
         { status: 401 }
       );
     }
-
-    const supabase = createWorkoutQueryClient();
+    console.info(`${routeName}:start`, { setId: params.id, userId });
 
     let targetSet;
     try {
@@ -58,6 +57,14 @@ export async function POST(_: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+    console.info(`${routeName}:lookup`, {
+      setId: params.id,
+      userId,
+      found: Boolean(targetSet),
+      sessionStatus: targetSet?.sessionExercise.session.status ?? null,
+      deletedAt: targetSet?.deleted_at ?? null,
+      isCompleted: targetSet?.is_completed ?? null
+    });
 
     if (!targetSet) {
       return NextResponse.json(
@@ -105,7 +112,7 @@ export async function POST(_: Request, { params }: RouteContext) {
     }
 
     const completedAt = targetSet.completed_at ?? new Date().toISOString();
-    const { error: updateError } = await supabase
+    const { data: updatedSet, error: updateError } = await supabase
       .from("workout_sets")
       .update({
         is_completed: true,
@@ -113,9 +120,16 @@ export async function POST(_: Request, { params }: RouteContext) {
         completed_at: completedAt
       })
       .eq("id", targetSet.id)
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .select("id, is_completed, is_locked, completed_at, deleted_at")
+      .maybeSingle<WorkoutSetMutationRow>();
 
     if (updateError) {
+      console.error(`${routeName}:update_error`, {
+        setId: targetSet.id,
+        userId,
+        updateError
+      });
       return NextResponse.json(
         {
           error: {
@@ -126,14 +140,35 @@ export async function POST(_: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+    if (!updatedSet) {
+      console.warn(`${routeName}:update_conflict`, {
+        setId: targetSet.id,
+        userId
+      });
+      return NextResponse.json(
+        {
+          error: {
+            code: "complete_update_conflict",
+            message: "Workout set could not be completed."
+          }
+        },
+        { status: 409 }
+      );
+    }
+    console.info(`${routeName}:update_success`, {
+      setId: updatedSet.id,
+      userId,
+      isCompleted: updatedSet.is_completed,
+      isLocked: updatedSet.is_locked
+    });
 
     revalidatePath("/train");
 
     return NextResponse.json({
-      id: targetSet.id,
-      isCompleted: true,
-      isLocked: false,
-      completedAt
+      id: updatedSet.id,
+      isCompleted: updatedSet.is_completed,
+      isLocked: updatedSet.is_locked,
+      completedAt: updatedSet.completed_at
     });
   } catch (error) {
     console.error("Failed to complete workout set.", error);

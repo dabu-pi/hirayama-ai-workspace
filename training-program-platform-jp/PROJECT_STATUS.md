@@ -1,5 +1,26 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-13 - Live mutation auth/query client unification
+### STATUS
+
+| Item | Result |
+|---|---|
+| `/train` write path の共通 auth/query 差分を調査 | **implemented** |
+| complete / unlock / cancel / finish の構造化ログ追加 | **implemented** |
+| `/train` mutation route を単一 Supabase client 化 | **implemented** |
+| TypeScript / build | **pass** |
+
+### Notes
+
+- root cause は、`/train` mutation route 群だけが「`auth.getUser()` 用 client」と「lookup / update 用 client」を別々に作っていたことだと判断しました。
+- `startSessionForDay()` は 1 request 内で単一の Supabase server client を使っており live でも動いていた一方、壊れていた mutation 群は `getAuthenticatedWorkoutUserId()` と `createWorkoutQueryClient()` を別呼びしていました。
+- live で token refresh や cookie 更新が必要なタイミングだと、最初の client では user を解決できても、2 個目の client が同一 request 内で同じ auth state を見られず、lookup / update だけが失敗する構造になっていました。
+- 今回は `getAuthenticatedWorkoutContext()` を追加して、同じ Supabase client で `auth.getUser()` とその後の select / update を実行する形に統一しました。
+- あわせて `complete / unlock / cancel / finish` には `route name / userId / setId or sessionId / lookup result / update result / error` の構造化ログを追加し、live 再発時にどの段階で落ちたかを追いやすくしました。
+- 同じ根を踏む `/train` 配下の `PATCH workout-set`、`delete workout-set`、`add set`、`add exercise`、`swap exercise` も単一 client 化しています。
+- update 系 route では `.select(...).maybeSingle()` を返して、`updateError` だけでなく「0 rows 更新」の conflict も区別できるようにしました。
+- Manual check: このセッションでは認証済み live E2E までは未実施です。次回は production で `complete -> undo -> cancel -> finish` を 1 回通し、追加した route logs と結果を合わせて確認すると完了確定しやすいです。
+
 ## 2026-04-17 U-12 - Cancel failure escape hatch
 ### STATUS
 

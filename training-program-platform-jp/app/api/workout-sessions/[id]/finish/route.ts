@@ -1,10 +1,11 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { advanceEnrollmentAfterSessionComplete } from "@/lib/workout/enrollment";
 import {
-  createWorkoutQueryClient,
-  getAuthenticatedWorkoutUserId
+  findOwnedWorkoutSession,
+  getAuthenticatedWorkoutContext
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -23,7 +24,7 @@ type WorkoutSessionExerciseRow = {
 
 async function countIncompleteSets(
   workoutSessionId: string,
-  supabase: ReturnType<typeof createWorkoutQueryClient>
+  supabase: SupabaseClient
 ) {
   const { data: sessionExercises, error: sessionExercisesError } = await supabase
     .from("workout_session_exercises")
@@ -62,10 +63,11 @@ async function countIncompleteSets(
 
 export async function POST(request: Request, { params }: RouteContext) {
   try {
+    const routeName = "workout-session-finish";
     const body = (await request.json().catch(() => ({}))) as FinishRequestBody;
     const forceFinish = body.forceFinish === true;
     const summaryPath = `/workout-summary/${params.id}`;
-    const userId = await getAuthenticatedWorkoutUserId();
+    const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(
@@ -78,22 +80,21 @@ export async function POST(request: Request, { params }: RouteContext) {
         { status: 401 }
       );
     }
+    console.info(`${routeName}:start`, {
+      sessionId: params.id,
+      userId,
+      forceFinish
+    });
 
-    const supabase = createWorkoutQueryClient();
-
-    const { data: session, error: sessionError } = await supabase
-      .from("workout_sessions")
-      .select("id, user_id, status, finished_at")
-      .eq("id", params.id)
-      .eq("user_id", userId)
-      .maybeSingle<{
-        id: string;
-        user_id: string;
-        status: "in_progress" | "completed" | "cancelled";
-        finished_at: string | null;
-      }>();
-
-    if (sessionError) {
+    let session;
+    try {
+      session = await findOwnedWorkoutSession(supabase, params.id, userId);
+    } catch (lookupError) {
+      console.error(`${routeName}:lookup_error`, {
+        sessionId: params.id,
+        userId,
+        lookupError
+      });
       return NextResponse.json(
         {
           error: {
@@ -104,6 +105,12 @@ export async function POST(request: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+    console.info(`${routeName}:lookup`, {
+      sessionId: params.id,
+      userId,
+      found: Boolean(session),
+      status: session?.status ?? null
+    });
 
     if (!session) {
       return NextResponse.json(
@@ -118,6 +125,11 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const incompleteSetCount = await countIncompleteSets(params.id, supabase);
+    console.info(`${routeName}:incomplete_count`, {
+      sessionId: params.id,
+      userId,
+      incompleteSetCount
+    });
 
     if (session.status === "completed") {
       // S-4: Recovery path — if the session was previously marked complete but
@@ -155,15 +167,28 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const finishedAt = new Date().toISOString();
-    const { error: updateError } = await supabase
+    const { data: updatedSession, error: updateError } = await supabase
       .from("workout_sessions")
       .update({
         status: "completed",
         finished_at: finishedAt
       })
-      .eq("id", params.id);
+      .eq("id", params.id)
+      .eq("user_id", userId)
+      .eq("status", "in_progress")
+      .select("id, status, finished_at")
+      .maybeSingle<{
+        id: string;
+        status: "completed";
+        finished_at: string | null;
+      }>();
 
     if (updateError) {
+      console.error(`${routeName}:update_error`, {
+        sessionId: params.id,
+        userId,
+        updateError
+      });
       return NextResponse.json(
         {
           error: {
@@ -174,6 +199,27 @@ export async function POST(request: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+    if (!updatedSession) {
+      console.warn(`${routeName}:update_conflict`, {
+        sessionId: params.id,
+        userId
+      });
+      return NextResponse.json(
+        {
+          error: {
+            code: "session_finish_conflict",
+            message: "Workout session could not be finished."
+          }
+        },
+        { status: 409 }
+      );
+    }
+    console.info(`${routeName}:update_success`, {
+      sessionId: updatedSession.id,
+      userId,
+      status: updatedSession.status,
+      finishedAt: updatedSession.finished_at
+    });
 
     // Advance enrollment to next day (silent — does not fail the request on error)
     await advanceEnrollmentAfterSessionComplete(params.id, userId);
@@ -182,9 +228,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     revalidatePath("/"); // Ensure Home progress / CTA reflects new enrollment state
 
     return NextResponse.json({
-      id: params.id,
-      status: "completed",
-      finishedAt,
+      id: updatedSession.id,
+      status: updatedSession.status,
+      finishedAt: updatedSession.finished_at,
       incompleteSetCount,
       summaryPath
     });
