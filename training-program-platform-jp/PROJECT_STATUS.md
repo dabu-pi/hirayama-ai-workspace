@@ -1,5 +1,34 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-16 - 未認証導線 live 手動確認（0cd5545 検証）
+
+### STATUS: 完了（未認証フロー全シナリオ ✅）
+
+| シナリオ | 結果 | 備考 |
+|---|---|---|
+| Cookie クリア後 `/` → `/login` へ遷移 | ✅ PASS | pathname = /login 確認 |
+| 未ログインで `/train` → `TrainAuthRequired` 表示 | ✅ PASS | 「LOGIN REQUIRED」「ログインが必要です」表示 |
+| `ログインへ` ボタン → `/login` 遷移 | ✅ PASS | click 後 pathname = /login 確認 |
+| `プログラム一覧へ戻る` → `/programs` 遷移 | ✅ PASS | click 後 pathname = /programs 確認 |
+| ログイン後 `/train` 正常表示 | 🔲 要手動確認 | credentials 不要で代替確認不可 |
+| 既存ログイン済み導線（Go to Train等）正常 | 🔲 要手動確認 | 同上 |
+
+### スクリーンショット確認
+
+`TrainAuthRequired` 画面が正しいスタイルで表示された（オレンジバッジ + ログインへボタン + プログラム一覧リンク）。
+BottomTabBar の Train タブもハイライトされている（正常）。
+
+### 残確認項目（ユーザー手動）
+
+認証済み状態での確認（live または local .env.local ログイン後）:
+- ログイン → `/` → `/train` へ正常リダイレクトされること
+- `/train` でワークアウト画面が表示されること
+- Cancel / Finish が正常に動作すること（U-14 の修正効果確認）
+
+### Changes / 修正なし
+
+今回確認のみ。routing は期待通りに動作しているため追加修正なし。
+
 ## 2026-04-17 U-15 - 未認証ユーザーの /train ルーティング正常化・ログイン導線追加
 
 ### STATUS
