@@ -1,5 +1,32 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-6c - Workout row Boostcamp寄せ 手動確認
+
+### STATUS
+
+| 項目 | 状態 |
+|---|---|
+| スマホ幅で Kg / Reps 入力欄が押しやすいか | **pass** |
+| Delete が通常時に見えず、左スワイプ時のみ表示されるか | **pass** |
+| チェック完了後も Kg / Reps 編集が可能か | **pass** |
+| 何セット目をやっているか視認しやすいか | **pass** |
+| complete / update / delete API が今回 UI 変更と矛盾しないか | **pass（コード確認 + ローカル補助確認）** |
+| Rest Timer が row UX 変更で崩れていないか | **pass** |
+
+### 確認結果
+
+- Headless Chrome を 390 x 844 のスマホ幅で起動し、`/train` を確認
+- 初期表示では row の横スクロールは発生せず、Kg / Reps は各 `48px` 幅で確保されていた
+- 左スワイプ後だけ Delete lane が表示され、通常時 opacity は `0`、reveal 時は `1` を確認
+- check 完了後も Kg / Reps は disabled にならず、そのまま編集・blur 保存できることを確認
+- Rest Timer は `Rest -> 1:29` へ遷移し、active 表示クラスも維持されていた
+
+### 補足
+
+- ローカル未認証の `/train` は mock session fallback になるため、complete / update / delete の UI 操作確認は一時的な API スタブで実施
+- 実 API 自体は `app/api/workout-sets/[id]/route.ts` / `complete/route.ts` / `delete/route.ts` を再確認し、完了後編集可・完了済み削除可・`is_locked: false` 正規化の方針と矛盾がないことを確認
+- 今回はコード修正不要。状態記録のみ更新
+
 ## 2026-04-17 U-6b - Workout row Boostcamp寄せ 検証完了
 
 ### STATUS
