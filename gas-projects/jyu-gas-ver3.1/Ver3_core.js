@@ -37,13 +37,13 @@ const SHEETS = {
 const JBIZ_SS_ID    = "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc";
 // シート名候補（実名が変わっても候補に追加するだけで対応できるよう配列化）
 // 2026-03-23 バグ修正: 実名は「価格設定」（「メニューマスタ（価格設定）」ではなかった）
-// 2026-04-18 注記: 価格設定_v2（SELFPAY_* 命名・17列構造）は既に転記済みだが、
-//   v2 参照スイッチは次ターンで行う。今ターンでは候補順は変更しない（v1 動作を維持）。
-//   v2 を先頭へ追加するのは、pickJbizCol_ と fallback の SELFPAY_ 対応が安定してから。
+// 2026-04-18 v2 昇格: 価格設定_v2（SELFPAY_* 命名・17列構造）を読み取り先の先頭に昇格。
+//   v1「価格設定」は fallback として残す（rename / archive / 候補除外は次ターン以降）。
+//   pickJbizCol_ がシート名に応じて自動で v1/v2 列マップを選ぶため、書き換え不要。
 const JBIZ_MENU_SHEET_CANDIDATES = [
+  "価格設定_v2",                  // 正（v2: 17列構造・SELFPAY_* 命名）
   "メニューマスタ（価格設定）",  // 設計時の想定名（旧）
-  "価格設定",                     // 実際のシート名（正・v1 正本）
-  // "価格設定_v2",              // TODO(next): v2 切替時に先頭へ昇格させる
+  "価格設定",                     // v1 fallback（14列構造・rename は次ターン）
 ];
 // 列インデックス（0始まり、A=0）— v1（既存「価格設定」用・14列構造）
 const JBIZ_COL = {
@@ -4515,6 +4515,93 @@ function migrateJBIZMemberRules_V3() {
     + "「会員優待ルール」シートを確認してください。\n"
     + "移行後、不要になった空行はスプレッドシートで手動削除できます。"
   );
+}
+
+/* =======================================================================
+   JBIZ v2 切替確認（2026-04-18 追加 / read-only）
+   ======================================================================= */
+
+/**
+ * JBIZ マスタ読み取り先が v2 に昇格しているかを確認する read-only 関数。
+ * 完全 read-only。setValue / appendRow / delete 等の書き込みは一切行わない。
+ *
+ * 出力（Logger）:
+ *   1) 実際に解決された JBIZ マスタシート名
+ *   2) pickJbizCol_ が返した列マップの種類（v1 / v2）
+ *   3) getSelfPayMenuMaster_V3() の返却 menu 一覧
+ *   4) 物療3種（MICROCURRENT / HIGHVOLTAGE / ULTRASOUND）の検出結果
+ *   5) 初回評価3分割（LOWBACK30 / NECKSHOULDER30 / KNEE30）の検出結果
+ *   6) setupJBIZMenuMasterId_V3 が対象とするシートの推定
+ *   7) 既存 C列/D列 menu_id の件数（上書きされない行数）
+ */
+function verifyJbizV2Switch_V3() {
+  Logger.log("=== JBIZ v2 切替確認 ===");
+  Logger.log("JBIZ_MENU_SHEET_CANDIDATES: " + JBIZ_MENU_SHEET_CANDIDATES.join(" / "));
+
+  var jbizSS;
+  try {
+    jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  } catch (e) {
+    Logger.log("[ERROR] JBIZ を開けません: " + e.message);
+    return;
+  }
+
+  // 1) 実際に解決されるシート名
+  var sh = getJBIZMenuSheet_(jbizSS);
+  if (!sh) {
+    Logger.log("[ERROR] 候補配列のいずれも存在しません");
+    Logger.log("実在シート: " + jbizSS.getSheets().map(function(s){return s.getName();}).join(" / "));
+    return;
+  }
+  var sheetName = sh.getName();
+  Logger.log("1) 解決されたシート名: " + sheetName);
+
+  // 2) 列マップ種別
+  var col = pickJbizCol_(sheetName);
+  var colKind = (col === JBIZ_COL_V2) ? "JBIZ_COL_V2 (v2)" : "JBIZ_COL (v1)";
+  Logger.log("2) 使用される列マップ: " + colKind);
+  Logger.log("   menuId 列 index: " + col.menuId + " / menuName 列 index: " + col.menuName
+    + " / isActive: " + (col.isActive == null ? "なし(v1)" : String(col.isActive)));
+
+  // 3) getSelfPayMenuMaster_V3 の返却
+  var menus = getSelfPayMenuMaster_V3();
+  Logger.log("3) getSelfPayMenuMaster_V3 返却件数: " + menus.length);
+  menus.forEach(function(m){
+    Logger.log("   - " + m.menuId + " | " + m.menuName + " | ¥" + m.unitPrice
+      + " (会員¥" + (m.memberPrice || 0) + ")");
+  });
+
+  // 4) 物療3種
+  var bulkIds = ["SELFPAY_MICROCURRENT","SELFPAY_HIGHVOLTAGE","SELFPAY_ULTRASOUND"];
+  Logger.log("4) 物療3種の検出:");
+  bulkIds.forEach(function(id){
+    var hit = menus.some(function(m){return m.menuId === id;});
+    Logger.log("   " + id + ": " + (hit ? "OK" : "MISS"));
+  });
+
+  // 5) 初回評価3分割
+  var evalIds = ["SELFPAY_EVAL_LOWBACK30","SELFPAY_EVAL_NECKSHOULDER30","SELFPAY_EVAL_KNEE30"];
+  Logger.log("5) 初回評価3分割の検出:");
+  evalIds.forEach(function(id){
+    var hit = menus.some(function(m){return m.menuId === id;});
+    Logger.log("   " + id + ": " + (hit ? "OK" : "MISS"));
+  });
+
+  // 6) setupJBIZMenuMasterId_V3 が対象にするシート
+  Logger.log("6) setupJBIZMenuMasterId_V3 の対象シート: " + sheetName
+    + "（getJBIZMenuSheet_ 経由のため上と同一）");
+
+  // 7) 既存 menu_id 件数（上書きされない行数）
+  var data = sh.getDataRange().getValues();
+  var existingCount = 0;
+  for (var r = 1; r < data.length; r++) {
+    var existing = String(data[r][col.menuId] || "").trim();
+    if (existing) existingCount++;
+  }
+  Logger.log("7) 既存 menu_id が入っている行数: " + existingCount
+    + "（setupJBIZMenuMasterId_V3 は既存値を上書きしない）");
+
+  Logger.log("[INFO] read-only 確認完了。書き込みは一切行っていません。");
 }
 
 /* =======================================================================
