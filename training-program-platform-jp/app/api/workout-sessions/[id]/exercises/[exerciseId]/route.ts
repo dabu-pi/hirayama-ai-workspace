@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 
 import {
   findOwnedWorkoutSession,
-  getAuthenticatedWorkoutContext
+  getAuthenticatedWorkoutContext,
+  isLikelyUuid
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -38,6 +39,25 @@ type BlockingSetRow = {
 };
 
 export async function PATCH(request: Request, { params }: RouteContext) {
+  const routeName = "workout-session-swap-exercise";
+
+  // Hard guard: non-UUID session ids never reach PostgREST.
+  if (!isLikelyUuid(params.id)) {
+    console.warn(`${routeName}:invalid_session_id_format`, {
+      sessionId: params.id,
+      cause: "query_bad_request"
+    });
+    return NextResponse.json(
+      {
+        error: {
+          code: "invalid_session_id_format",
+          message: "Session id must be a UUID."
+        }
+      },
+      { status: 400 }
+    );
+  }
+
   try {
     const body = (await request.json().catch(() => ({}))) as SwapRequestBody;
     const newExerciseId = body.exercise_id;
@@ -54,7 +74,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    const routeName = "workout-session-swap-exercise";
     const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {

@@ -9,7 +9,8 @@ import {
 } from "@/lib/supabase/server";
 import {
   findOwnedWorkoutSession,
-  getAuthenticatedWorkoutContext
+  getAuthenticatedWorkoutContext,
+  isLikelyUuid
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -66,13 +67,34 @@ async function countIncompleteSets(
 }
 
 export async function POST(request: Request, { params }: RouteContext) {
+  const routeName = "workout-session-finish";
+
+  // Hard guard: non-UUID ids never reach PostgREST (would yield 400 22P02).
+  if (!isLikelyUuid(params.id)) {
+    console.warn(`${routeName}:invalid_session_id_format`, {
+      sessionId: params.id,
+      cause: "query_bad_request"
+    });
+    return NextResponse.json(
+      {
+        error: {
+          code: "invalid_session_id_format",
+          message: "Session id must be a UUID."
+        }
+      },
+      { status: 400 }
+    );
+  }
+
   try {
-    const routeName = "workout-session-finish";
     const body = (await request.json().catch(() => ({}))) as FinishRequestBody;
     const forceFinish = body.forceFinish === true;
     const summaryPath = `/workout-summary/${params.id}`;
     // Auth check via server client (cookie-based auth.getUser())
-    const { client: authClient, userId } = await getAuthenticatedWorkoutContext();
+    const {
+      client: authClient,
+      userId
+    } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(

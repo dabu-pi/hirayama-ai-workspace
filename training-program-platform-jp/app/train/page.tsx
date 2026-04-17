@@ -1,8 +1,9 @@
+import { redirect } from "next/navigation";
+
 import { BlockedSessionScreen } from "@/components/train/BlockedSessionScreen";
 import { TrainAuthRequired } from "@/components/train/TrainAuthRequired";
 import { StartSessionScreen } from "@/components/workout/StartSessionScreen";
 import { WorkoutScreen } from "@/components/workout/WorkoutScreen";
-import { getMockWorkoutSession } from "@/lib/mock/workout";
 import { getActiveProgramView } from "@/lib/workout/active-program";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
 import { resolveTrainingEntry } from "@/lib/workout/train-entry";
@@ -110,11 +111,9 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
   }
 
   // Authenticated but no active session and no enrollment with an actionable day.
-  // Show mock workout so the UI is not blank (dev/demo fallback only).
-  return (
-    <WorkoutScreen
-      selectedProgram={selectedProgram}
-      session={getMockWorkoutSession()}
-    />
-  );
+  // Previously this rendered a mock WorkoutSession (id = "session-demo-20260411").
+  // That id is not a UUID, so pressing Cancel/Finish hit PostgREST with a 400
+  // 22P02 (invalid_text_representation) which surfaced as a 500 response.
+  // Route the user to the program picker instead.
+  redirect("/programs");
 }

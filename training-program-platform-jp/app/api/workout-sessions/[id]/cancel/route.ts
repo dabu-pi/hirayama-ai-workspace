@@ -6,8 +6,11 @@ import {
   hasSupabaseServiceRoleEnv
 } from "@/lib/supabase/server";
 import {
+  classifySupabaseQueryError,
   findOwnedWorkoutSession,
-  getAuthenticatedWorkoutContext
+  getAuthenticatedWorkoutContext,
+  isLikelyUuid,
+  type WorkoutQueryFailureCause
 } from "@/lib/workout/session-access";
 
 type RouteContext = {
@@ -34,12 +37,43 @@ type RouteContext = {
  *   (those already filter on status='completed' only).
  */
 export async function POST(_request: Request, { params }: RouteContext) {
+  const routeName = "workout-session-cancel";
+  const sessionIdIsUuid = isLikelyUuid(params.id);
+
+  // Hard guard: non-UUID ids (mock sessions, malformed client input) never
+  // reach PostgREST. Returning 400 here yields a clear cause in logs instead
+  // of a 500 caused by invalid_text_representation.
+  if (!sessionIdIsUuid) {
+    console.warn(`${routeName}:invalid_session_id_format`, {
+      sessionId: params.id,
+      cause: "query_bad_request" satisfies WorkoutQueryFailureCause
+    });
+    return NextResponse.json(
+      {
+        error: {
+          code: "invalid_session_id_format",
+          message: "Session id must be a UUID."
+        }
+      },
+      { status: 400 }
+    );
+  }
+
   try {
-    const routeName = "workout-session-cancel";
     // Auth check via server client (cookie-based auth.getUser())
-    const { client: authClient, userId } = await getAuthenticatedWorkoutContext();
+    const {
+      client: authClient,
+      userId,
+      authSource
+    } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
+      console.warn(`${routeName}:cause`, {
+        sessionId: params.id,
+        sessionIdIsUuid,
+        authSource,
+        cause: "auth_failed" satisfies WorkoutQueryFailureCause
+      });
       return NextResponse.json(
         {
           error: {
@@ -54,26 +88,57 @@ export async function POST(_request: Request, { params }: RouteContext) {
     // DB operations use admin client when available to avoid JWT/RLS pass-through
     // issues in Route Handlers (auth.getUser() can refresh in-memory but PostgREST
     // may still receive an expired token). Security: explicit .eq("user_id", userId).
-    const dbClient = hasSupabaseServiceRoleEnv()
-      ? createSupabaseAdminClient()
-      : authClient;
+    const usingAdmin = hasSupabaseServiceRoleEnv();
+    const dbClient = usingAdmin ? createSupabaseAdminClient() : authClient;
+    const dbClientType: "admin" | "token" | "cookie" = usingAdmin
+      ? "admin"
+      : authSource === "token"
+        ? "token"
+        : "cookie";
 
     console.info(`${routeName}:start`, {
       sessionId: params.id,
       userId,
-      dbClientType: hasSupabaseServiceRoleEnv() ? "admin" : "server"
+      sessionIdIsUuid,
+      authSource,
+      dbClientType
     });
+
+    // Early warning: mock / non-UUID session IDs (e.g. "session-demo-20260411")
+    // will be rejected by PostgREST as 400 22P02. We log here explicitly so the
+    // cause appears in logs even before the first DB call.
+    if (!sessionIdIsUuid) {
+      console.warn(`${routeName}:sessionId_not_uuid`, {
+        sessionId: params.id,
+        note: "PostgREST will reject non-UUID ids with 400 22P02"
+      });
+    }
 
     let session;
     try {
-      session = await findOwnedWorkoutSession(dbClient, params.id, userId);
+      session = await findOwnedWorkoutSession(dbClient, params.id, userId, {
+        queryName: "findOwnedWorkoutSessionForCancel",
+        route: routeName,
+        authSource
+      });
     } catch (lookupError) {
-      const le = lookupError instanceof Error ? lookupError : new Error(String(lookupError));
-      console.error("Failed to resolve workout session before cancel.", {
+      const le =
+        lookupError instanceof Error
+          ? lookupError
+          : new Error(String(lookupError));
+      const pgErr = (lookupError as unknown as { pgErr?: Record<string, unknown> })
+        .pgErr;
+      const cause = !sessionIdIsUuid
+        ? ("query_bad_request" satisfies WorkoutQueryFailureCause)
+        : classifySupabaseQueryError(pgErr ?? null);
+      console.error(`${routeName}:cause`, {
+        failedQuery: "findOwnedWorkoutSessionForCancel",
         sessionId: params.id,
         userId,
-        errorMessage: le.message,
-        errorStack: le.stack
+        sessionIdIsUuid,
+        authSource,
+        cause,
+        errorMessage: le.message
       });
       return NextResponse.json(
         {
@@ -93,6 +158,13 @@ export async function POST(_request: Request, { params }: RouteContext) {
     });
 
     if (!session) {
+      console.info(`${routeName}:cause`, {
+        sessionId: params.id,
+        userId,
+        sessionIdIsUuid,
+        authSource,
+        cause: "session_not_found"
+      });
       return NextResponse.json(
         {
           error: {
@@ -126,6 +198,23 @@ export async function POST(_request: Request, { params }: RouteContext) {
     // Extra WHERE clause (.eq("status", "in_progress")) provides a concurrency
     // guard — if the session was completed by another request in flight, this
     // update affects 0 rows and we return success anyway (the session is done).
+    const cancelUpdateFilters = {
+      id: params.id,
+      user_id: userId,
+      status: "in_progress"
+    };
+    console.info("workout-query:start", {
+      route: routeName,
+      queryName: "cancelUpdate",
+      table: "workout_sessions",
+      op: "update.select.maybeSingle",
+      set: { status: "cancelled" },
+      filters: cancelUpdateFilters,
+      sessionIdIsUuid,
+      authSource,
+      dbClientType
+    });
+
     const { data: updatedSession, error: updateError } = await dbClient
       .from("workout_sessions")
       .update({ status: "cancelled" })
@@ -136,10 +225,31 @@ export async function POST(_request: Request, { params }: RouteContext) {
       .maybeSingle<{ id: string; status: "cancelled" }>();
 
     if (updateError) {
-      console.error(`${routeName}:update_error`, {
+      const pgErr = updateError as unknown as Record<string, unknown>;
+      const cause = classifySupabaseQueryError(pgErr);
+      console.error("workout-query:error", {
+        route: routeName,
+        queryName: "cancelUpdate",
+        table: "workout_sessions",
+        op: "update.select.maybeSingle",
+        filters: cancelUpdateFilters,
+        sessionIdIsUuid,
+        authSource,
+        dbClientType,
+        cause,
+        errorCode: pgErr.code,
+        errorStatus: pgErr.status ?? pgErr.statusCode,
+        errorMessage: updateError.message,
+        errorHint: pgErr.hint,
+        errorDetails: pgErr.details
+      });
+      console.error(`${routeName}:cause`, {
+        failedQuery: "cancelUpdate",
         sessionId: params.id,
         userId,
-        updateError
+        sessionIdIsUuid,
+        authSource,
+        cause
       });
       return NextResponse.json(
         {
@@ -154,7 +264,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
     if (!updatedSession) {
       console.warn(`${routeName}:update_conflict`, {
         sessionId: params.id,
-        userId
+        userId,
+        note: "cancelUpdate affected 0 rows — another request may have completed the session"
       });
       return NextResponse.json(
         {
@@ -182,11 +293,18 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ id: updatedSession.id, status: updatedSession.status });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    console.error("workout-session-cancel:unexpected_error", {
+    console.error(`${routeName}:unexpected_error`, {
       sessionId: params.id,
+      sessionIdIsUuid,
       name: err.name,
       message: err.message,
       stack: err.stack
+    });
+    console.error(`${routeName}:cause`, {
+      sessionId: params.id,
+      sessionIdIsUuid,
+      cause: "unknown" satisfies WorkoutQueryFailureCause,
+      errorMessage: err.message
     });
 
     return NextResponse.json(
