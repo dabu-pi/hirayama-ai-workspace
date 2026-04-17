@@ -2,6 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv
+} from "@/lib/supabase/server";
+import {
   findOwnedWorkoutSession,
   getAuthenticatedWorkoutContext
 } from "@/lib/workout/session-access";
@@ -32,7 +36,8 @@ type RouteContext = {
 export async function POST(_request: Request, { params }: RouteContext) {
   try {
     const routeName = "workout-session-cancel";
-    const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
+    // Auth check via server client (cookie-based auth.getUser())
+    const { client: authClient, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(
@@ -45,16 +50,30 @@ export async function POST(_request: Request, { params }: RouteContext) {
         { status: 401 }
       );
     }
-    console.info(`${routeName}:start`, { sessionId: params.id, userId });
+
+    // DB operations use admin client when available to avoid JWT/RLS pass-through
+    // issues in Route Handlers (auth.getUser() can refresh in-memory but PostgREST
+    // may still receive an expired token). Security: explicit .eq("user_id", userId).
+    const dbClient = hasSupabaseServiceRoleEnv()
+      ? createSupabaseAdminClient()
+      : authClient;
+
+    console.info(`${routeName}:start`, {
+      sessionId: params.id,
+      userId,
+      dbClientType: hasSupabaseServiceRoleEnv() ? "admin" : "server"
+    });
 
     let session;
     try {
-      session = await findOwnedWorkoutSession(supabase, params.id, userId);
+      session = await findOwnedWorkoutSession(dbClient, params.id, userId);
     } catch (lookupError) {
+      const le = lookupError instanceof Error ? lookupError : new Error(String(lookupError));
       console.error("Failed to resolve workout session before cancel.", {
         sessionId: params.id,
         userId,
-        lookupError
+        errorMessage: le.message,
+        errorStack: le.stack
       });
       return NextResponse.json(
         {
@@ -107,7 +126,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     // Extra WHERE clause (.eq("status", "in_progress")) provides a concurrency
     // guard — if the session was completed by another request in flight, this
     // update affects 0 rows and we return success anyway (the session is done).
-    const { data: updatedSession, error: updateError } = await supabase
+    const { data: updatedSession, error: updateError } = await dbClient
       .from("workout_sessions")
       .update({ status: "cancelled" })
       .eq("id", params.id)

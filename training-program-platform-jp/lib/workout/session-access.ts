@@ -92,6 +92,16 @@ export async function findOwnedWorkoutSession(
     .maybeSingle<OwnedWorkoutSession>();
 
   if (error) {
+    // Log full Supabase error details for Vercel log diagnosis
+    const pgErr = error as unknown as Record<string, unknown>;
+    console.error("findOwnedWorkoutSession: Supabase query error", {
+      sessionId,
+      userId,
+      errorCode: pgErr.code,
+      errorMessage: error.message,
+      errorHint: pgErr.hint,
+      errorDetails: pgErr.details
+    });
     throw new Error(`Failed to load owned workout session: ${error.message}`);
   }
 

@@ -4,6 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { advanceEnrollmentAfterSessionComplete } from "@/lib/workout/enrollment";
 import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv
+} from "@/lib/supabase/server";
+import {
   findOwnedWorkoutSession,
   getAuthenticatedWorkoutContext
 } from "@/lib/workout/session-access";
@@ -67,7 +71,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     const body = (await request.json().catch(() => ({}))) as FinishRequestBody;
     const forceFinish = body.forceFinish === true;
     const summaryPath = `/workout-summary/${params.id}`;
-    const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
+    // Auth check via server client (cookie-based auth.getUser())
+    const { client: authClient, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return NextResponse.json(
@@ -80,20 +85,29 @@ export async function POST(request: Request, { params }: RouteContext) {
         { status: 401 }
       );
     }
+
+    // DB operations use admin client when available — same rationale as cancel route.
+    const dbClient = hasSupabaseServiceRoleEnv()
+      ? createSupabaseAdminClient()
+      : authClient;
+
     console.info(`${routeName}:start`, {
       sessionId: params.id,
       userId,
-      forceFinish
+      forceFinish,
+      dbClientType: hasSupabaseServiceRoleEnv() ? "admin" : "server"
     });
 
     let session;
     try {
-      session = await findOwnedWorkoutSession(supabase, params.id, userId);
+      session = await findOwnedWorkoutSession(dbClient, params.id, userId);
     } catch (lookupError) {
+      const le = lookupError instanceof Error ? lookupError : new Error(String(lookupError));
       console.error(`${routeName}:lookup_error`, {
         sessionId: params.id,
         userId,
-        lookupError
+        errorMessage: le.message,
+        errorStack: le.stack
       });
       return NextResponse.json(
         {
@@ -124,7 +138,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const incompleteSetCount = await countIncompleteSets(params.id, supabase);
+    const incompleteSetCount = await countIncompleteSets(params.id, dbClient);
     console.info(`${routeName}:incomplete_count`, {
       sessionId: params.id,
       userId,
@@ -167,7 +181,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const finishedAt = new Date().toISOString();
-    const { data: updatedSession, error: updateError } = await supabase
+    const { data: updatedSession, error: updateError } = await dbClient
       .from("workout_sessions")
       .update({
         status: "completed",

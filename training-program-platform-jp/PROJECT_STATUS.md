@@ -1,5 +1,50 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-18 - Cancel / Finish: session lookup failure 根本原因特定 + admin client 修正
+
+### STATUS: 修正実装完了 — live 実機手動確認待ち
+
+### ROOT_CAUSE
+
+`auth.getUser()` は Supabase Auth API へのネットワーク呼び出しでトークンを検証・リフレッシュするが、
+その後の PostgREST クエリには JWT を Authorization ヘッダーとして直接渡す。
+Route Handler 内で JWT が期限切れになっていた場合、`auth.getUser()` はリフレッシュ成功・userId 取得できるが、
+PostgREST 側で同 JWT の期限切れを検出し `PGRST301` エラーを返す可能性がある。
+この場合 `maybeSingle()` が `{ data: null, error: { ... } }` を返し → `findOwnedWorkoutSession` が throw →
+内側の catch が "Workout session lookup failed." (500) を返していた。
+
+補足: `eb7ab3e` で cancel/finish が admin client → server client に変更されたが、
+ワークアウト中に JWT が期限切れになるとこの問題が顕在化する。
+
+### LOOKUP_FAILURE_TYPE
+
+`findOwnedWorkoutSession` が throw する = Supabase query error (error != null)。
+RLS や "no row" ではなく、JWT/PostgREST レベルのエラー。
+
+### CHANGES
+
+| ファイル | 変更内容 |
+|---|---|
+| `lib/workout/session-access.ts` | `findOwnedWorkoutSession`: Supabase error 発生時に errorCode/errorMessage/errorHint/errorDetails を構造化ログ出力してから throw |
+| `app/api/workout-sessions/[id]/cancel/route.ts` | admin client 導入: `SUPABASE_SERVICE_ROLE_KEY` がある場合は `createSupabaseAdminClient()`、なければ server client にフォールバック。lookup と update 両方を `dbClient` に切り替え。catch の Error シリアライズも修正 |
+| `app/api/workout-sessions/[id]/finish/route.ts` | 同上 (cancel と同じパターン) |
+
+セキュリティ維持: userId は引き続き `auth.getUser()` (server client) から取得し、
+DB クエリには `.eq("user_id", userId)` を明示的に付けている。admin client は RLS をバイパスするが
+アプリレベルのオーナーチェックで同等の保証を維持する。
+
+### MANUAL_CHECK (live 実機 — 要確認)
+
+- ログイン済みセッションで Cancel ボタン押下 → "Workout session lookup failed." が出ない
+- Cancel 成功後 `/` → `/train` に戻り StartSession 画面が出ること
+- Finish ボタン押下 → `/workout-summary/{id}` に遷移すること
+- Vercel ログで `dbClientType: "admin"` が出ていること（admin client が使われていることの確認）
+
+### TESTS
+
+- `npm run typecheck` ✅
+- `npm run build` ✅
+
 ## 2026-04-17 U-17 - Cancel / Finish write path コード検証 + build 確認
 
 ### STATUS: 完了（コード解析 + typecheck + build pass）
