@@ -4222,6 +4222,11 @@ function updateH8Status_V3_(uiSh, count) {
  * @param {Sheet}  detailSh
  * @param {string} visitKey
  * @returns {Array} [{menuName, subtotal, lineNo, unitPrice, qty, menuId, ...}, ...]
+ *
+ * 2026-04-18: 読み出し時に `normalizeMenuId_()` を経由させ、保存済み `SELF_*` を
+ *             現行 `SELFPAY_*` に正規化して返す（read-only 正規化。シートは書き換えない）。
+ *             `SELF_INITIAL_EVAL` は 3分割不可のため手動判断対象となり alias 未登録
+ *             （そのまま返却される）。
  */
 function readSelfPayDetailsForVisit_V3_(detailSh, visitKey) {
   if (!detailSh || detailSh.getLastRow() < 2) return [];
@@ -4236,6 +4241,7 @@ function readSelfPayDetailsForVisit_V3_(detailSh, visitKey) {
   var result = [];
   for (var r = 1; r < data.length; r++) {
     if (String(data[r][vkCol] || "") !== visitKey) continue;
+    var rawMenuId = data[r][colIdx["menu_id"] || 6] || "";
     result.push({
       selfPayDetailId: data[r][colIdx["明細ID"]       || 0] || "",
       visitKey:        visitKey,
@@ -4243,7 +4249,7 @@ function readSelfPayDetailsForVisit_V3_(detailSh, visitKey) {
       treatDate:       data[r][colIdx["施術日"]        || 3] || "",
       patientId:       data[r][colIdx["患者ID"]        || 4] || "",
       accountingType:  data[r][colIdx["会計区分"]      || 5] || "",
-      menuId:          data[r][colIdx["menu_id"]       || 6] || "",
+      menuId:          normalizeMenuId_(rawMenuId),
       menuName:        data[r][colIdx["メニュー名"]    || 7] || "",
       unitPrice:       data[r][colIdx["単価"]          || 8] || 0,
       qty:             data[r][colIdx["数量"]          || 9] || 1,
@@ -4383,7 +4389,9 @@ function getSelfPayMenuMaster_V3() {
       if (!menuName) continue;
       var unitPrice   = Number(row[col.price])       || 0;  // v1:G / v2:I
       var memberPrice = Number(row[col.memberPrice]) || 0;  // v1:H / v2:J
-      result.push({menuId: menuId, menuName: menuName, unitPrice: unitPrice, memberPrice: memberPrice});
+      // 2026-04-18: JBIZ 側 C列に legacy SELF_* が残っていた場合の現行統一（read-only）。
+      // SELF_INITIAL_EVAL は 3分割不可のため alias 未登録 → そのまま返る（手動判断対象）。
+      result.push({menuId: normalizeMenuId_(menuId), menuName: menuName, unitPrice: unitPrice, memberPrice: memberPrice});
     }
     if (result.length === 0) {
       Logger.log("getSelfPayMenuMaster_V3: JBIZ 確定メニュー 0件 → fallback");

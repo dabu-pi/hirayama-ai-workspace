@@ -352,3 +352,65 @@ GAS メニューから実行する場合:
 | SELF_* 存在・`SELF_INITIAL_EVAL` なし | `normalizeMenuId_` を読み出し経路に接続。rename は保留可 |
 | `SELF_INITIAL_EVAL` あり | 該当行のメニュー名・患者カルテから 3ID のどれかを手動割当 |
 | menu_id ↔ 名前不一致あり | 個別に原因調査（メニュー名変更 or 手動誤入力）|
+
+---
+
+## 2026-04-18 追記: 監査結果と normalizeMenuId_ の読み出し経路接続
+
+### 監査結果（JREC live 実行）
+
+| 項目 | 件数 |
+|---|---|
+| 総データ行数 | 1 |
+| SELF_* 系合計 | 0 |
+| SELFPAY_* 系合計 | 0 |
+| その他合計 | 1 |
+| SELF_INITIAL_EVAL | 0 |
+| menu_id ↔ メニュー名 不一致 | 0 |
+
+legacy 履歴マイグレーションの必要性は現時点で低い（将来の混入に備えた保険として alias 層を接続）。
+
+### normalizeMenuId_ を接続した関数
+
+| 関数 | 接続箇所 | 効果 |
+|---|---|---|
+| `readSelfPayDetailsForVisit_V3_` | `menuId:` フィールド生成時 | 自費明細シートの C列（menu_id）に legacy SELF_* が保存されていた場合、画面返却時に SELFPAY_* に統一される |
+| `getSelfPayMenuMaster_V3` | `result.push` の menuId | JBIZ 価格マスタ C列（menu_id）に legacy SELF_* が残存していた場合、ダイアログ表示時に SELFPAY_* に統一される |
+
+### SELF_* → SELFPAY_* の実変換表（`JBIZ_MENU_ID_LEGACY_ALIAS`）
+
+| 旧 ID | 新 ID |
+|---|---|
+| `SELF_CHRONIC50` | `SELFPAY_CHRONIC50` |
+| `SELF_EVAL_LOWBACK30` | `SELFPAY_EVAL_LOWBACK30` |
+| `SELF_EVAL_NECKSHOULDER30` | `SELFPAY_EVAL_NECKSHOULDER30` |
+| `SELF_EVAL_KNEE30` | `SELFPAY_EVAL_KNEE30` |
+| `SELF_INITIAL_EVAL` | **alias 未登録**（3分割不可のため手動判断対象）|
+| その他（未知 ID） | 現行値維持 |
+
+### v1 動作が維持される理由
+
+1. **シート正本は無変更** — `normalizeMenuId_` は戻り値のみ変換し、`setValue` / `appendRow` / `delete` は一切実行しない
+2. **`JBIZ_MENU_SHEET_CANDIDATES` は未変更** — 先頭が `"メニューマスタ（価格設定）" → "価格設定"` のままで、`getJBIZMenuSheet_` は v1 を返す
+3. **`pickJbizCol_` は v1 シート名に対し `JBIZ_COL`（旧定義）を返す** — 列位置は従来通り
+4. **監査結果で SELF_* / SELFPAY_* 共に 0件** — 現 live データでは alias が作用しない = 従来挙動と同一
+5. **書き込み経路（`saveSelfPayDetails_V3_` / `appendSelfPayDetailRow_V3_`）は未変更** — 画面で選択された現行 menu_id をそのまま保存
+6. **KPI逆算 / シート式 / 価格設定シートは未変更** — 集計式・参照先に影響なし
+
+### 次ターンで安全にやれる v2 スイッチ内容
+
+- [ ] `JBIZ_MENU_SHEET_CANDIDATES` の先頭に `"価格設定_v2"` を追加（昇格）
+  - 事前確認: 価格設定_v2 シートの列構造が `JBIZ_COL_V2` 定義と一致すること
+  - 期待: `getJBIZMenuSheet_` が v2 を返し、`pickJbizCol_` が v2 マップを返す
+- [ ] v2 切替後にダイアログで物療3種（マイクロカレント / ハイボルテージ / 超音波）と初回評価3分割が表示されることを確認
+- [ ] `setupJBIZMenuMasterId_V3` の対象シートが v2 に切り替わることを確認（既存 C列 menu_id は上書きされない）
+- [ ] v2 安定動作を確認後、v1 シート（`"価格設定"`）を `"価格設定_v1_archive"` に rename し、候補配列から除外
+
+### 本ターンで意図的に触らないもの
+
+| 項目 | 理由 |
+|---|---|
+| KPI逆算 C5/C6/C9 の式 | 単価抽出ロジックに依存。v2 切替と同時に見直し |
+| 価格設定シート（live） | 書き換え禁止。v1/v2 共に live 修正は別タスク |
+| `appendSelfPayDetailRow_V3_` 内の menuId | 画面選択値が既に現行。書き込み時 normalize は逆に保守性低下 |
+| 自費明細シートの過去データ（rename） | 監査で SELF_* 0件のため rename 対象が存在しない |
