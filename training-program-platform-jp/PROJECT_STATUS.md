@@ -17,6 +17,7 @@
 - Mobile width was recovered by shrinking `# / Previous / Target / Done` slightly and trimming row padding/gap while keeping `Kg / Reps` usable.
 - Added server-side logging for complete/unlock lookup failures so future regressions are diagnosable without changing API responses.
 - Manual check: headless Chrome at `390 x 844` confirmed the DONE button turns green, no red error banner appeared during the mocked complete flow, and the DONE button bounding box stayed inside the viewport.
+- E2E check on 2026-04-17: authenticated production session was verified in Chrome. A real `Dumbbell Full Body Base / Week 1 / Day 1` session was started from `/api/workout-sessions`, the first DONE action completed without any red banner, the button stayed green after reload, unlock returned it to the incomplete state, and the DONE column remained inside the narrow window width used for the check.
 
 ## 2026-04-17 U-8 - DONE button 視認性改善
 
