@@ -323,15 +323,15 @@
   display: grid;
   /* # | Prev | Target | Kg | Reps | Done
      Reduced Prev (72→60) and Target (52→44) to give more width to the input columns. */
-  grid-template-columns: 20px 74px 52px minmax(48px, 1fr) minmax(48px, 1fr) 42px;
-  gap: 6px;
+  grid-template-columns: 18px 68px 46px minmax(46px, 1fr) minmax(46px, 1fr) 38px;
+  gap: 5px;
   align-items: center;
 }
 
 @media (min-width: 430px) {
   .setHeader,
   .setRow {
-    grid-template-columns: 24px 84px 60px minmax(56px, 1fr) minmax(56px, 1fr) 44px;
+    grid-template-columns: 22px 80px 56px minmax(54px, 1fr) minmax(54px, 1fr) 42px;
     gap: var(--space-2);
   }
 }
@@ -380,7 +380,7 @@
 }
 
 .setRow {
-  padding: var(--space-2) var(--space-2);
+  padding: var(--space-2) 6px;
   background: rgba(44, 44, 46, 0.96);
   border: 1px solid rgba(63, 63, 70, 0.85);
   border-radius: 14px;
@@ -468,8 +468,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   justify-self: end;
   border-radius: 999px;
   border: 1px solid rgba(82, 82, 91, 0.96);
@@ -489,6 +489,11 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.actionButton.check {
+  padding: 0;
+  border-radius: 999px;
 }
 
 .checkIcon {
@@ -514,7 +519,7 @@
   transform: scale(0.96);
 }
 
-.checkDone {
+.check.checkDone {
   background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
   color: #f7fee7;
   border-color: rgba(134, 239, 172, 0.84);
@@ -523,7 +528,7 @@
     0 8px 18px rgba(22, 163, 74, 0.3);
 }
 
-.checkDone .checkIcon {
+.check.checkDone .checkIcon {
   opacity: 1;
   color: #f7fee7;
   transform: scale(1.04);

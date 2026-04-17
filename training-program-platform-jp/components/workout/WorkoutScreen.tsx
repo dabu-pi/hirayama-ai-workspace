@@ -804,7 +804,6 @@ export function WorkoutScreen({
       });
       if (!targetSet.isCompleted) updateIncompleteSetCount(-1);
       setRevealedSetId(null);
-      refreshTrainScreen();
     } catch (error) {
       console.error("Failed to delete workout set.", error);
       setErrorMessage(error instanceof Error ? error.message : "セット削除に失敗しました。");
@@ -818,6 +817,31 @@ export function WorkoutScreen({
       return;
     }
 
+    const prevSet = exercises
+      .find((exercise) => exercise.id === exerciseId)
+      ?.sets.find((set) => set.id === setId);
+
+    if (!prevSet) return;
+
+    const optimisticCompletedAt = prevSet.completedAt ?? new Date().toISOString();
+
+    setExercises((current) =>
+      updateExerciseState(current, exerciseId, (exerciseItem) => ({
+        ...exerciseItem,
+        sets: exerciseItem.sets.map((set) =>
+          set.id === setId
+            ? {
+                ...set,
+                isCompleted: true,
+                isLocked: false,
+                completedAt: optimisticCompletedAt
+              }
+            : set
+        )
+      }))
+    );
+    setRevealedSetId((current) => (current === setId ? null : current));
+    updateIncompleteSetCount(-1);
     setPendingMutation({ setId, kind: "complete" });
     setErrorMessage(null);
 
@@ -832,16 +856,30 @@ export function WorkoutScreen({
                   ...set,
                   isCompleted: payload.isCompleted ?? true,
                   isLocked: payload.isLocked ?? false,
-                  completedAt: payload.completedAt ?? new Date().toISOString()
+                  completedAt: payload.completedAt ?? optimisticCompletedAt
                 }
               : set
           )
         }))
       );
-      updateIncompleteSetCount(-1);
-      refreshTrainScreen();
     } catch (error) {
       console.error("Failed to complete workout set.", error);
+      setExercises((current) =>
+        updateExerciseState(current, exerciseId, (exerciseItem) => ({
+          ...exerciseItem,
+          sets: exerciseItem.sets.map((set) =>
+            set.id === setId
+              ? {
+                  ...set,
+                  isCompleted: prevSet.isCompleted,
+                  isLocked: prevSet.isLocked,
+                  completedAt: prevSet.completedAt
+                }
+              : set
+          )
+        }))
+      );
+      updateIncompleteSetCount(1);
       setErrorMessage(error instanceof Error ? error.message : "セット完了に失敗しました。");
     } finally {
       setPendingMutation(null);
@@ -880,7 +918,6 @@ export function WorkoutScreen({
     try {
       await postSetAction(setId, "unlock");
       // Server confirmed — keep optimistic state. Soft refresh for consistency.
-      refreshTrainScreen();
     } catch (error) {
       console.error("Failed to unlock workout set.", error);
       // Rollback to the previous locked state.
@@ -1383,6 +1420,7 @@ export function WorkoutScreen({
                           aria-label={set.isCompleted ? "mark incomplete" : "mark complete"}
                           aria-pressed={set.isCompleted}
                           className={`${styles.actionButton} ${styles.check} ${set.isCompleted ? styles.checkDone : ""}`}
+                          data-completed={set.isCompleted ? "true" : "false"}
                           disabled={isBusy || isSessionEnded}
                           onClick={() =>
                             set.isCompleted

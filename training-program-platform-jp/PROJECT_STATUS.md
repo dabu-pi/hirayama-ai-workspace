@@ -1,5 +1,23 @@
 # PROJECT_STATUS
 
+## 2026-04-17 U-9 - DONE action reliability and mobile fit
+### STATUS
+
+| Item | Result |
+|---|---|
+| `Complete target lookup failed.` root cause hardening | **implemented** |
+| DONE complete color switches immediately and clearly | **implemented** |
+| Mobile row width adjusted so DONE stays inside viewport | **implemented** |
+
+### Notes
+
+- `findOwnedWorkoutSessionExercise()` now selects only `id` and `workout_session_id`, which are the only fields needed for set ownership checks.
+- DONE completion now updates optimistically so the right-side check turns accented immediately, then rolls back if the API fails.
+- `router.refresh()` right after DONE / undo DONE was snapping the row back to stale server data in mock or lagging states, so DONE now stays on local confirmed state instead of flashing back.
+- Mobile width was recovered by shrinking `# / Previous / Target / Done` slightly and trimming row padding/gap while keeping `Kg / Reps` usable.
+- Added server-side logging for complete/unlock lookup failures so future regressions are diagnosable without changing API responses.
+- Manual check: headless Chrome at `390 x 844` confirmed the DONE button turns green, no red error banner appeared during the mocked complete flow, and the DONE button bounding box stayed inside the viewport.
+
 ## 2026-04-17 U-8 - DONE button 視認性改善
 
 ### STATUS

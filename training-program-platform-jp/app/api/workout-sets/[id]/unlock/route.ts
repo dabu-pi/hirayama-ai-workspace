@@ -34,7 +34,12 @@ export async function POST(_: Request, { params }: RouteContext) {
     let targetSet;
     try {
       targetSet = await findOwnedWorkoutSet(supabase, params.id, userId);
-    } catch {
+    } catch (lookupError) {
+      console.error("Failed to resolve workout set before unlock.", {
+        setId: params.id,
+        userId,
+        lookupError
+      });
       return NextResponse.json(
         {
           error: {

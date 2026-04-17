@@ -19,11 +19,6 @@ export type OwnedWorkoutSession = {
 export type OwnedWorkoutSessionExercise = {
   id: string;
   workout_session_id: string;
-  exercise_id: string;
-  exercise_type: string;
-  order_index: number;
-  was_swapped: boolean;
-  was_added: boolean;
   session: OwnedWorkoutSession;
 };
 
@@ -86,9 +81,7 @@ export async function findOwnedWorkoutSessionExercise(
 ): Promise<OwnedWorkoutSessionExercise | null> {
   const { data: sessionExercise, error: sessionExerciseError } = await client
     .from("workout_session_exercises")
-    .select(
-      "id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped, was_added"
-    )
+    .select("id, workout_session_id")
     .eq("id", sessionExerciseId)
     .maybeSingle<SessionExerciseRow>();
 
