@@ -4566,6 +4566,10 @@ function verifyJbizV2Switch_V3() {
   // 3) getSelfPayMenuMaster_V3 の返却
   var menus = getSelfPayMenuMaster_V3();
   Logger.log("3) getSelfPayMenuMaster_V3 返却件数: " + menus.length);
+  // 3a) 配列ダンプ（1行で全件把握用）
+  var menuIdsArr = menus.map(function(m){ return m.menuId; });
+  Logger.log("3a) menu_id 配列: " + JSON.stringify(menuIdsArr));
+  // 3b) 内訳（1件1行）
   menus.forEach(function(m){
     Logger.log("   - " + m.menuId + " | " + m.menuName + " | ¥" + m.unitPrice
       + " (会員¥" + (m.memberPrice || 0) + ")");
@@ -4574,16 +4578,20 @@ function verifyJbizV2Switch_V3() {
   // 4) 物療3種
   var bulkIds = ["SELFPAY_MICROCURRENT","SELFPAY_HIGHVOLTAGE","SELFPAY_ULTRASOUND"];
   Logger.log("4) 物療3種の検出:");
+  var bulkResults = {};
   bulkIds.forEach(function(id){
     var hit = menus.some(function(m){return m.menuId === id;});
+    bulkResults[id] = hit;
     Logger.log("   " + id + ": " + (hit ? "OK" : "MISS"));
   });
 
   // 5) 初回評価3分割
   var evalIds = ["SELFPAY_EVAL_LOWBACK30","SELFPAY_EVAL_NECKSHOULDER30","SELFPAY_EVAL_KNEE30"];
   Logger.log("5) 初回評価3分割の検出:");
+  var evalResults = {};
   evalIds.forEach(function(id){
     var hit = menus.some(function(m){return m.menuId === id;});
+    evalResults[id] = hit;
     Logger.log("   " + id + ": " + (hit ? "OK" : "MISS"));
   });
 
@@ -4600,6 +4608,19 @@ function verifyJbizV2Switch_V3() {
   }
   Logger.log("7) 既存 menu_id が入っている行数: " + existingCount
     + "（setupJBIZMenuMasterId_V3 は既存値を上書きしない）");
+
+  // 8) サマリ（ひと目で OK/MISS を把握）
+  var bulkHits = bulkIds.filter(function(id){return bulkResults[id];}).length;
+  var evalHits = evalIds.filter(function(id){return evalResults[id];}).length;
+  Logger.log("");
+  Logger.log("=== サマリ ===");
+  Logger.log("  解決シート: " + sheetName + " / 列マップ: " + colKind);
+  Logger.log("  取得件数: " + menus.length);
+  Logger.log("  物療3種: " + bulkHits + "/3 OK");
+  Logger.log("  初回評価3分割: " + evalHits + "/3 OK");
+  Logger.log("  既存 menu_id 行数: " + existingCount);
+  Logger.log("  → setupJBIZMenuMasterId_V3 実行可否: "
+    + (bulkHits === 3 && evalHits === 3 ? "GO（6項目すべて OK）" : "WAIT（MISS 要調査）"));
 
   Logger.log("[INFO] read-only 確認完了。書き込みは一切行っていません。");
 }
