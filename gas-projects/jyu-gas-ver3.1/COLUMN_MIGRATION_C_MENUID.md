@@ -165,3 +165,80 @@ KPI数式が参照する価格設定列（確認済み）:
   - 旧メニュー（筋膜リリース・温熱追加）の M列確定状況を「廃止」に変更（C列 menu_id はそのまま）
 - [ ] GASメニュー「【初回1回】JBIZ menu_id 列追加」を実行してC列の既知menu_idを自動設定
 - [ ] T2-3a 実機確認（自費ダイアログで新メニューが表示されることを確認）
+
+---
+
+## 2026-04-18 追記: 価格設定_v2 受け入れ準備（読み取りは v1 のまま）
+
+### 目的
+
+価格設定_v2（SELFPAY_* 命名・17列構造）は既に live に転記済み（A4:Q21）。
+本ターンでは **v1 動作を維持したまま** v2 を受け入れ可能な状態まで Ver3_core.js を準備する。
+実際の v1 → v2 読み取り切替は次ターン。
+
+### Ver3_core.js 変更内容
+
+| 項目 | 変更 |
+|---|---|
+| `JBIZ_MENU_SHEET_CANDIDATES` | 未変更。コメントで「v2 は次ターンで先頭昇格」と明記 |
+| `JBIZ_COL` | 既存（v1 用・14列構造）として維持 |
+| `JBIZ_COL_V2` | **新設**（v2 用・17列構造）|
+| `pickJbizCol_(sheetName)` | **新設**。シート名が `価格設定_v2` なら `JBIZ_COL_V2`、それ以外は `JBIZ_COL` |
+| `getSelfPayMenuMaster_V3` | `pickJbizCol_(sh.getName())` 経由に置換。v2 の `有効フラグ=FALSE` 除外処理も追加 |
+| `setupJBIZMenuMasterId_V3` | 同上 |
+| `migrateJBIZMemberRules_V3` | 同上 |
+| `JBIZ_MENU_ID_MAP` | `SELFPAY_*` 命名へ更新。初回評価3分割・物療3種追加 |
+| `JBIZ_MENU_ID_LEGACY_ALIAS` | **新設**。SELF_* → SELFPAY_* マップ（過去データ保護）|
+| `normalizeMenuId_()` | **新設**。legacy ID を現行 ID へ正規化（未知はそのまま）|
+| fallback 配列 | `SELFPAY_*` 命名 + 物療3種 + 初回評価3種に更新 |
+
+### JBIZ_COL と JBIZ_COL_V2 の対応表
+
+| キー | v1 index (列) | v2 index (列) |
+|---|---|---|
+| displayOrder | 0 (A) | 0 (A) |
+| category | 1 (B) | 1 (B) |
+| subcategory | — | 2 (C) **v2 新設** |
+| menuId | 2 (C) | 3 (D) |
+| menuName | 3 (D) | 4 (E) |
+| patientName | — | 5 (F) **v2 新設** |
+| description | 4 (E) | 6 (G) |
+| duration | 5 (F) | 7 (H) |
+| price | 6 (G) | 8 (I) |
+| memberPrice | 7 (H) | 9 (J) |
+| insurance | 8 (I) | 10 (K) |
+| unit | 9 (J) | 11 (L) |
+| isMain | 10 (K) | 12 (M) |
+| isKpi | 11 (L) | 13 (N) |
+| status | 12 (M) | 14 (O) |
+| isActive | — | 15 (P) **v2 新設** |
+| note | 13 (N) | 16 (Q) |
+
+### fallback / alias 新旧対応
+
+| 旧 menu_id（SELF_*）| 新 menu_id（SELFPAY_*）|
+|---|---|
+| SELF_CHRONIC50 | SELFPAY_CHRONIC50 |
+| SELF_EVAL_LOWBACK30 | SELFPAY_EVAL_LOWBACK30 |
+| SELF_EVAL_NECKSHOULDER30 | SELFPAY_EVAL_NECKSHOULDER30 |
+| SELF_EVAL_KNEE30 | SELFPAY_EVAL_KNEE30 |
+| SELF_INITIAL_EVAL（1件）| 3分割のため個別エイリアス不可（要手動判定）|
+
+fallback に新規追加された正式メニュー:
+- SELFPAY_MICROCURRENT / SELFPAY_HIGHVOLTAGE / SELFPAY_ULTRASOUND（物療3種）
+
+### v1 動作が維持される理由
+
+1. `JBIZ_MENU_SHEET_CANDIDATES` が `["メニューマスタ（価格設定）", "価格設定"]` のままで、v2 を含まない
+2. `getJBIZMenuSheet_` は先頭から順に検索するため、必ず v1「価格設定」を見つけて返す
+3. `pickJbizCol_` は v1 シート名に対して `JBIZ_COL`（旧定義）を返すため、列位置が従来通り
+4. `JBIZ_MENU_ID_MAP` の変更は `setupJBIZMenuMasterId_V3` を実行した場合のみ波及するが、既に C列に値がある既存行は上書きしないため影響なし
+5. fallback 配列の変更は「JBIZ 不達時のみ」発火。通常運用（JBIZ 到達）では従来通り v1 行を返す
+6. `JBIZ_MENU_ID_LEGACY_ALIAS` / `normalizeMenuId_` は新規関数で、既存の呼び出し経路にはまだ繋がっていない
+
+### 残タスク
+
+- [ ] v1 → v2 シートスイッチ（`JBIZ_MENU_SHEET_CANDIDATES` 先頭に `価格設定_v2` を追加）
+- [ ] 自費明細シートの過去データに SELF_* が保存されているか live 確認
+- [ ] 過去データ保護方針の確定（rename vs alias 層で吸収 vs ハイブリッド）
+- [ ] KPI逆算 C5/C6/C9 の v2 参照式への切替

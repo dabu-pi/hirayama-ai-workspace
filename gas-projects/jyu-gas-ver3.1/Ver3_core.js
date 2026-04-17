@@ -37,11 +37,15 @@ const SHEETS = {
 const JBIZ_SS_ID    = "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc";
 // シート名候補（実名が変わっても候補に追加するだけで対応できるよう配列化）
 // 2026-03-23 バグ修正: 実名は「価格設定」（「メニューマスタ（価格設定）」ではなかった）
+// 2026-04-18 注記: 価格設定_v2（SELFPAY_* 命名・17列構造）は既に転記済みだが、
+//   v2 参照スイッチは次ターンで行う。今ターンでは候補順は変更しない（v1 動作を維持）。
+//   v2 を先頭へ追加するのは、pickJbizCol_ と fallback の SELFPAY_ 対応が安定してから。
 const JBIZ_MENU_SHEET_CANDIDATES = [
   "メニューマスタ（価格設定）",  // 設計時の想定名（旧）
-  "価格設定",                     // 実際のシート名（正）
+  "価格設定",                     // 実際のシート名（正・v1 正本）
+  // "価格設定_v2",              // TODO(next): v2 切替時に先頭へ昇格させる
 ];
-// 列インデックス（0始まり、A=0）
+// 列インデックス（0始まり、A=0）— v1（既存「価格設定」用・14列構造）
 const JBIZ_COL = {
   displayOrder: 0,  // A: 表示順
   category:     1,  // B: 大区分
@@ -59,20 +63,87 @@ const JBIZ_COL = {
   note:         13, // N: 備考
   // O列（インデックス14）: menu_id を C列へ移動したため廃止（2026-03-23）
 };
-// menu_id マッピング（初回セットアップ用）
-const JBIZ_MENU_ID_MAP = {
-  "慢性ケア手技50分":          "SELF_CHRONIC50",
-  "パーソナルトレーニング60分": "TRAINING_PERSONAL60",
-  "4回集中コース":             "TRAINING_4PASS",
-  "ジム月会費":                "GYM_MONTHLY",
-  "症状別初回評価":            "SELF_INITIAL_EVAL",
-  "保険基本施術":              "INS_BASE",
-  "手技延長":                  "INS_OPTION_EXTEND10",
-  // 2026-03-23: 筋膜リリース（マッサージガン）→ ストレッチ（20分）に置換。旧 INS_OPTION_FASCIA_GUN 廃止。
-  "ストレッチ（20分）":         "INS_OPTION_STRETCH20",
-  // 2026-03-23: 温熱追加 → 電療追加（15分）に置換。旧 INS_OPTION_HEAT5 廃止。
-  "電療追加（15分）":           "INS_OPTION_ELECTRO15",
+// 列インデックス（0始まり）— v2（「価格設定_v2」用・17列構造 / 2026-04-17 作成）
+// v1 と比べて「中区分」「患者向け表示名」「有効フラグ」が追加され、全列位置がシフト。
+const JBIZ_COL_V2 = {
+  displayOrder: 0,  // A: 表示順
+  category:     1,  // B: 大区分
+  subcategory:  2,  // C: 中区分（v2 新設。手技主力 / 物療主力 等）
+  menuId:       3,  // D: menu_id
+  menuName:     4,  // E: メニュー名
+  patientName:  5,  // F: 患者向け表示名（v2 新設）
+  description:  6,  // G: 内容
+  duration:     7,  // H: 時間
+  price:        8,  // I: 一般料金（円）
+  memberPrice:  9,  // J: ジム会員料金（円）
+  insurance:    10, // K: 保険適用
+  unit:         11, // L: 回数・単位
+  isMain:       12, // M: 主力手技フラグ
+  isKpi:        13, // N: KPI集計対象
+  status:       14, // O: 確定状況
+  isActive:     15, // P: 有効フラグ（v2 新設。FALSE は対象外）
+  note:         16, // Q: 備考
 };
+
+/**
+ * シート名から使用する列マップを選ぶ。
+ * - "価格設定_v2"（今後追加される候補）の場合は JBIZ_COL_V2
+ * - それ以外（"価格設定" / "メニューマスタ（価格設定）"）は JBIZ_COL（v1）
+ * 今ターンでは候補配列に v2 を含めていないため、実質 JBIZ_COL のみが選ばれる。
+ * v2 切替時はこの関数が自動で正しいマップを返す。
+ */
+function pickJbizCol_(sheetName) {
+  if (String(sheetName || "").trim() === "価格設定_v2") {
+    return JBIZ_COL_V2;
+  }
+  return JBIZ_COL;
+}
+
+// menu_id マッピング（初回セットアップ用）— 2026-04-18 SELFPAY_ 命名へ更新 + v2 新規メニュー追加
+// v1 データに既に書き込まれている SELF_* とは別の値をセットアップで使うため、
+// 新規実行では SELFPAY_* が入る（既存値は上書きしないので過去データは保護）。
+const JBIZ_MENU_ID_MAP = {
+  "慢性ケア手技50分":              "SELFPAY_CHRONIC50",
+  "パーソナルトレーニング60分":     "TRAINING_PERSONAL60",
+  "4回集中コース":                 "TRAINING_4PASS",
+  "ジム月会費":                    "GYM_MONTHLY",
+  // 旧「症状別初回評価」1メニューは v2 で3メニューへ分割済み
+  "腰痛改善 運動療法 初回評価":     "SELFPAY_EVAL_LOWBACK30",
+  "首肩こり改善 運動療法 初回評価": "SELFPAY_EVAL_NECKSHOULDER30",
+  "膝改善 運動療法 初回評価":       "SELFPAY_EVAL_KNEE30",
+  // v2 で正式化された物療3種（2026-04-17 追加）
+  "マイクロカレント":              "SELFPAY_MICROCURRENT",
+  "ハイボルテージ":                "SELFPAY_HIGHVOLTAGE",
+  "超音波":                        "SELFPAY_ULTRASOUND",
+  "保険基本施術":                  "INS_BASE",
+  "手技延長":                      "INS_OPTION_EXTEND10",
+  // 2026-03-23: 筋膜リリース（マッサージガン）→ ストレッチ（20分）に置換。旧 INS_OPTION_FASCIA_GUN 廃止。
+  "ストレッチ（20分）":             "INS_OPTION_STRETCH20",
+  // 2026-03-23: 温熱追加 → 電療追加（15分）に置換。旧 INS_OPTION_HEAT5 廃止。
+  "電療追加（15分）":               "INS_OPTION_ELECTRO15",
+};
+
+// 旧 menu_id → 新 menu_id の互換エイリアス（2026-04-18 追加）
+// 自費明細シートに過去保存されている SELF_* 文字列を、画面表示・集計時に
+// SELFPAY_* と同一扱いするためのマップ。マイグレーション判断までは破壊的変更をしない。
+const JBIZ_MENU_ID_LEGACY_ALIAS = {
+  "SELF_CHRONIC50":           "SELFPAY_CHRONIC50",
+  "SELF_EVAL_LOWBACK30":      "SELFPAY_EVAL_LOWBACK30",
+  "SELF_EVAL_NECKSHOULDER30": "SELFPAY_EVAL_NECKSHOULDER30",
+  "SELF_EVAL_KNEE30":         "SELFPAY_EVAL_KNEE30",
+  // 旧 "SELF_INITIAL_EVAL"（1メニュー）は v2 で3分割されたため個別判定不能。
+  // 自費明細に残っている場合は手動で3種のどれかに置き換える必要あり。
+};
+
+/**
+ * 保存済み menu_id を現行の SELFPAY_* 系へ正規化する。
+ * 未知のIDはそのまま返す（上書きしない）。
+ */
+function normalizeMenuId_(legacyId) {
+  var s = String(legacyId || "").trim();
+  if (!s) return s;
+  return JBIZ_MENU_ID_LEGACY_ALIAS[s] || s;
+}
 
 /** ===== 患者画面 UIセル ===== */
 const UI = {
@@ -4270,12 +4341,16 @@ function getJBIZMenuSheet_(jbizSS) {
  * @returns {Array} [{menuId, menuName, unitPrice}, ...]
  */
 function getSelfPayMenuMaster_V3() {
-  // フォールバック（JBIZ 不達時の業務継続用）
+  // フォールバック（JBIZ 不達時の業務継続用）— 2026-04-18 SELFPAY_ 命名 + 物療3種・初回評価3分割に更新
   var fallback = [
-    {menuId: "SELF_CHRONIC50",      menuName: "慢性ケア手技50分",          unitPrice: 5500,  memberPrice: 0},
-    {menuId: "TRAINING_PERSONAL60", menuName: "パーソナルトレーニング60分", unitPrice: 8800,  memberPrice: 0},
-    {menuId: "TRAINING_4PASS",      menuName: "4回集中コース",              unitPrice: 35200, memberPrice: 0},
-    {menuId: "SELF_INITIAL_EVAL",   menuName: "症状別初回評価",             unitPrice: 3300,  memberPrice: 0},
+    {menuId: "SELFPAY_CHRONIC50",          menuName: "慢性ケア手技50分",                   unitPrice: 5500,  memberPrice: 4700},
+    {menuId: "SELFPAY_MICROCURRENT",       menuName: "マイクロカレント",                   unitPrice: 1000,  memberPrice: 0},
+    {menuId: "SELFPAY_HIGHVOLTAGE",        menuName: "ハイボルテージ",                     unitPrice: 1000,  memberPrice: 0},
+    {menuId: "SELFPAY_ULTRASOUND",         menuName: "超音波",                             unitPrice: 500,   memberPrice: 0},
+    {menuId: "SELFPAY_EVAL_LOWBACK30",     menuName: "腰痛改善 運動療法 初回評価",         unitPrice: 3300,  memberPrice: 2800},
+    {menuId: "SELFPAY_EVAL_NECKSHOULDER30",menuName: "首肩こり改善 運動療法 初回評価",     unitPrice: 3300,  memberPrice: 2800},
+    {menuId: "SELFPAY_EVAL_KNEE30",        menuName: "膝改善 運動療法 初回評価",           unitPrice: 3300,  memberPrice: 2800},
+    {menuId: "TRAINING_4PASS",             menuName: "4回集中コース",                      unitPrice: 22000, memberPrice: 13200},
   ];
 
   try {
@@ -4288,17 +4363,25 @@ function getSelfPayMenuMaster_V3() {
     var data = sh.getDataRange().getValues();
     if (data.length < 2) return fallback;
 
+    // 実際に読むシート名から v1/v2 列マップを選択（2026-04-18 v2 受け入れ対応）
+    var col = pickJbizCol_(sh.getName());
+
     var result = [];
     for (var r = 1; r < data.length; r++) {
       var row    = data[r];
-      var menuId = String(row[JBIZ_COL.menuId] || "").trim();
+      var menuId = String(row[col.menuId] || "").trim();
       if (!menuId) continue;
-      var status = String(row[JBIZ_COL.status] || "").trim();
+      var status = String(row[col.status] || "").trim();
       if (status !== "確定") continue;
-      var menuName    = String(row[JBIZ_COL.menuName] || "").trim();
+      // v2: 有効フラグ FALSE は除外（v1 にはこの列がないので判定はスキップ）
+      if (col.isActive != null) {
+        var active = row[col.isActive];
+        if (active === false || String(active).toUpperCase() === "FALSE") continue;
+      }
+      var menuName    = String(row[col.menuName] || "").trim();
       if (!menuName) continue;
-      var unitPrice   = Number(row[JBIZ_COL.price])       || 0;  // G列: 一般料金
-      var memberPrice = Number(row[JBIZ_COL.memberPrice]) || 0;  // H列: ジム会員料金（Phase B）
+      var unitPrice   = Number(row[col.price])       || 0;  // v1:G / v2:I
+      var memberPrice = Number(row[col.memberPrice]) || 0;  // v1:H / v2:J
       result.push({menuId: menuId, menuName: menuName, unitPrice: unitPrice, memberPrice: memberPrice});
     }
     if (result.length === 0) {
@@ -4333,17 +4416,18 @@ function setupJBIZMenuMasterId_V3() {
     return;
   }
   var data = sh.getDataRange().getValues();
-  var colIdx = JBIZ_COL.menuId + 1;  // getRange は 1始まり（C列 = 3）
+  var col = pickJbizCol_(sh.getName());  // v1/v2 列マップを自動選択
+  var colIdx = col.menuId + 1;  // getRange は 1始まり（v1: C=3 / v2: D=4）
 
-  // C1 ヘッダ設定（空欄の場合のみ）
-  if (!String(data[0][JBIZ_COL.menuId] || "").trim()) {
+  // ヘッダ設定（空欄の場合のみ）
+  if (!String(data[0][col.menuId] || "").trim()) {
     sh.getRange(1, colIdx).setValue("menu_id");
   }
 
   var set = 0;
   for (var r = 1; r < data.length; r++) {
-    var menuName = String(data[r][JBIZ_COL.menuName] || "").trim();
-    var existing = String(data[r][JBIZ_COL.menuId]   || "").trim();
+    var menuName = String(data[r][col.menuName] || "").trim();
+    var existing = String(data[r][col.menuId]   || "").trim();
     if (existing) continue;  // 既存値は上書きしない
     var mid = JBIZ_MENU_ID_MAP[menuName];
     if (mid) {
@@ -4403,8 +4487,9 @@ function migrateJBIZMemberRules_V3() {
   var moved = 0;
   var numCols = srcSh.getLastColumn();
 
+  var col = pickJbizCol_(srcSh.getName());  // v1/v2 列マップを自動選択
   for (var r = 16; r < data.length; r++) {  // 17行目（0-indexed: r=16）以降
-    var menuId = String(data[r][JBIZ_COL.menuId] || "").trim();
+    var menuId = String(data[r][col.menuId] || "").trim();
     if (menuId) continue;  // menu_id 設定済みメニュー行は移動しない
     var rowData = data[r];
     if (rowData.every(function(c) { return c === "" || c === null; })) continue;
