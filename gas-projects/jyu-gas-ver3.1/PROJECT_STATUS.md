@@ -38,7 +38,7 @@
 | # | 内容 | 担当 | 状態 |
 |---|---|---|---|
 | A | `archiveJbizV1Sheet_V3` 実行（旧 v1 シートを archive へ rename） | 院長（手動・1回限り） | **⏳ 未実施** |
-| B | KPI逆算 C5/C6/C9 の v2 参照式への切替 | Claude Code | **⏳ 未着手** |
+| B | KPI逆算 C5/C6/C9 の v2 参照式への切替 | 院長（手動・1回限り）| **🔄 GAS実装完了（2026-04-18）・実行待ち** |
 | C | `verifyJbizV2Switch_V3` / `diagnoseEvalMiss_V3` 残置関数の削除検討 | Claude Code | **⏳ 運用安定後** |
 | D | **T-SR-10v2**: clasp push + 施術録出力 実機テスト（NG-01〜NG-05 確認） | 院長（手動）| **🔄 実機テスト待ち** |
 | E | **T-SR-11**: TESTCASES.md への施術録テスト結果記録 | Claude Code | **⏳ T-SR-10 完了後** |

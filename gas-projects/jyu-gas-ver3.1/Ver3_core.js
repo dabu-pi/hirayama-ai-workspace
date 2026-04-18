@@ -423,6 +423,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "JBIZ 会員傷行レコード移行", functionName: "migrateJBIZMemberRules_V3" },
       { label: "【監査】自費明細 legacy menu_id", functionName: "auditLegacyMenuIds_V3" },
       { label: "【1回限り】JBIZ v1 シートを archive", functionName: "archiveJbizV1Sheet_V3" },
+      { label: "【1回限り】KPI逆算式を v2 対応に更新", functionName: "updateKpiReverseFormulas_V3" },
       { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
       { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
       { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
@@ -4581,6 +4582,112 @@ function archiveJbizV1Sheet_V3() {
     + "次のステップ: verifyJbizV2Switch_V3 を再実行し、\n"
     + "解決シートが " + V2_NAME + "、取得件数 12 件であることを確認してください。"
   );
+}
+
+/* =======================================================================
+   KPI逆算 v2 参照式更新（2026-04-18 追加 / 一回限り）
+   ======================================================================= */
+
+/**
+ * KPI逆算シートの C5/C6/C9 の '価格設定' 参照を
+ * '価格設定_v2' 参照 + 列シフト（K→M / G→I / D→E）へ変換する。
+ * 一回限り管理者操作。confirm ダイアログあり。書き込みは setFormula のみ。
+ *
+ * 列シフト理由: v2 は v1 に比べ C列(中区分)・F列(患者向け表示名)・P列(有効フラグ)が
+ * 追加されたため、v1 の K/G/D がそれぞれ v2 の M/I/E にシフトしている。
+ */
+function updateKpiReverseFormulas_V3() {
+  var ui = SpreadsheetApp.getUi();
+  var KPI_SHEET = "KPI逆算";
+  var CELLS = ["C5", "C6", "C9"];
+
+  var jbizSS;
+  try {
+    jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  } catch (e) {
+    ui.alert("JBIZ を開けません: " + e.message);
+    return;
+  }
+
+  var kpiSh = jbizSS.getSheetByName(KPI_SHEET);
+  if (!kpiSh) {
+    ui.alert(KPI_SHEET + " シートが見つかりません。");
+    return;
+  }
+
+  var conversions = [];
+  var hasV1Ref = false;
+  CELLS.forEach(function(cell) {
+    var rng    = kpiSh.getRange(cell);
+    var before = rng.getFormula();
+    var after  = convertKpiFormulaToV2_(before);
+    var changed = before !== after;
+    conversions.push({ cell: cell, before: before, after: after, changed: changed });
+    if (changed) hasV1Ref = true;
+  });
+
+  if (!hasV1Ref) {
+    ui.alert("C5 / C6 / C9 に '価格設定' の参照はありません。変更不要です。");
+    return;
+  }
+
+  var msg = "以下のセルの式を価格設定_v2 参照へ更新します。\n\n";
+  conversions.filter(function(c) { return c.changed; }).forEach(function(c) {
+    msg += "[" + c.cell + "]\n前: " + c.before + "\n後: " + c.after + "\n\n";
+  });
+  msg += "⚠️ 更新後、行範囲（例 M4:M15）が v2 の実データ行数と一致するか目視確認してください。\n\n続行しますか？";
+
+  var res = ui.alert("KPI逆算 式 v2 更新", msg, ui.ButtonSet.YES_NO);
+  if (res !== ui.Button.YES) return;
+
+  conversions.filter(function(c) { return c.changed; }).forEach(function(c) {
+    kpiSh.getRange(c.cell).setFormula(c.after);
+  });
+
+  Logger.log("updateKpiReverseFormulas_V3: 完了");
+  ui.alert(
+    "KPI逆算 C5/C6/C9 を価格設定_v2 参照に更新しました。\n\n"
+    + "次のステップ:\n"
+    + "1. 行範囲が v2 の実データ行（例: M2:M25）と一致するか確認\n"
+    + "2. C5/C6/C9 の計算結果が想定通りか確認"
+  );
+}
+
+/**
+ * '価格設定'!XX 参照を '価格設定_v2'!YY へ変換するヘルパー。
+ *   K → M（主力手技フラグ）
+ *   G → I（一般料金）
+ *   D → E（メニュー名）
+ * 処理パターン: 無制限列（X:X）/ 有界範囲（Xn:Xm）/ 単一セル（Xn）
+ * 対応表外の列は シート名だけ変換して列字はそのまま残す。
+ */
+function convertKpiFormulaToV2_(formula) {
+  if (!formula) return formula;
+  var COL_MAP = { K: "M", G: "I", D: "E" };
+  var result = formula;
+
+  Object.keys(COL_MAP).forEach(function(src) {
+    var dst = COL_MAP[src];
+    // 無制限列: '価格設定'!X:X
+    result = result.replace(
+      new RegExp("'価格設定'!" + src + ":" + src, "g"),
+      "'価格設定_v2'!" + dst + ":" + dst
+    );
+    // 有界範囲: '価格設定'!Xn:Xm
+    result = result.replace(
+      new RegExp("'価格設定'!" + src + "(\\d+):" + src + "(\\d+)", "g"),
+      "'価格設定_v2'!" + dst + "$1:" + dst + "$2"
+    );
+    // 単一セル: '価格設定'!Xn
+    result = result.replace(
+      new RegExp("'価格設定'!" + src + "(\\d+)", "g"),
+      "'価格設定_v2'!" + dst + "$1"
+    );
+  });
+
+  // 対応表外の未変換参照: シート名のみ変換
+  result = result.replace(/'価格設定'!/g, "'価格設定_v2'!");
+  return result;
 }
 
 /* =======================================================================
