@@ -8,8 +8,10 @@ import {
   createWorkoutQueryClient,
   getAuthenticatedWorkoutUserId
 } from "@/lib/workout/session-access";
+import { selectT1ProgressionHints } from "@/lib/workout/t1-progression";
 import type {
   ExerciseType,
+  T1ProgressionHint,
   WorkoutExerciseBlock,
   WorkoutSessionStatus,
   WorkoutSessionView
@@ -463,7 +465,8 @@ function buildExerciseBlocks(
   workoutSessionExercises: WorkoutSessionExerciseRow[],
   exercises: ExerciseRow[],
   workoutSets: WorkoutSetRow[],
-  previousDisplayMap: Map<string, string>
+  previousDisplayMap: Map<string, string>,
+  t1ProgressionHints: Map<string, T1ProgressionHint>
 ) {
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const setsByExercise = new Map<string, WorkoutSetRow[]>();
@@ -510,7 +513,8 @@ function buildExerciseBlocks(
       sets: visibleSets,
       wasAdded: sessionExercise.was_added,
       wasSwapped: sessionExercise.was_swapped,
-      swapGroupSlug: sessionExercise.swap_group_slug ?? null
+      swapGroupSlug: sessionExercise.swap_group_slug ?? null,
+      t1ProgressionHint: t1ProgressionHints.get(sessionExercise.exercise_id) ?? null
     };
   });
 }
@@ -553,6 +557,16 @@ async function loadSessionView(
     workoutSets
   );
 
+  // Load T1 progression hints (non-blocking — returns empty map on error or no state)
+  const t1ExerciseIds = workoutSessionExercises
+    .filter((e) => e.exercise_type === "T1")
+    .map((e) => e.exercise_id);
+
+  const t1ProgressionHints =
+    session.program_enrollment_id && t1ExerciseIds.length > 0
+      ? await selectT1ProgressionHints(queryClient, session.program_enrollment_id, t1ExerciseIds)
+      : new Map<string, T1ProgressionHint>();
+
   return {
     id: session.id,
     userId: session.user_id,
@@ -576,7 +590,8 @@ async function loadSessionView(
       workoutSessionExercises,
       exercises,
       workoutSets,
-      previousDisplayMap
+      previousDisplayMap,
+      t1ProgressionHints
     )
   };
 }

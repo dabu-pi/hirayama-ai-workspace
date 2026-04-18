@@ -26,6 +26,18 @@ export type WorkoutSet = {
   deletedAt: string | null;
 };
 
+/**
+ * T1 progression hint for display in the workout screen.
+ * nextWeightKg = recommendation for the NEXT session.
+ * phaseBadge   = human-readable phase label, e.g. "5×3+".
+ * Only present when a progression state row exists for this exercise
+ * (created after the first session is finished).
+ */
+export type T1ProgressionHint = {
+  nextWeightKg: number;
+  phaseBadge: string;
+};
+
 export type WorkoutExerciseBlock = {
   id: string;
   exerciseId: string;
@@ -39,6 +51,8 @@ export type WorkoutExerciseBlock = {
   wasAdded?: boolean;
   wasSwapped?: boolean;
   swapGroupSlug?: string | null;
+  /** T1-only: next recommended weight and phase. Null when no state exists yet. */
+  t1ProgressionHint?: T1ProgressionHint | null;
 };
 
 export type WorkoutSessionView = {

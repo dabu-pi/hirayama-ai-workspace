@@ -833,6 +833,31 @@
   font-style: italic;
 }
 
+/* ---- T1 progression hint bar ---- */
+
+.t1ProgressionHintBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--space-2);
+  margin-bottom: var(--space-1);
+  background: rgba(249, 115, 22, 0.08);
+  border-radius: 6px;
+}
+
+.t1ProgressionLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary, #94a3b8);
+  font-weight: 500;
+}
+
+.t1ProgressionValue {
+  font-size: var(--text-sm);
+  color: var(--accent, #f97316);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .modalSearchWrapper {
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);

@@ -1,5 +1,105 @@
 # PROJECT_STATUS
 
+## 2026-04-18 C-11 — GZCLP T1 Progression (Phase 1): state management + live hint
+
+### STATUS: implementation complete — pending live migration + manual smoke test
+
+### DESIGN_DECISION
+
+New table `t1_progression_states` (not a column on `program_enrollments`) because:
+- Each enrollment can have up to 4 T1 exercises (Squat / Bench / OHP / Deadlift —
+  different exercises are T1 on different rotation days).
+- A single-column JSONB approach would be opaque and unqueryable.
+- Separate table gives FK integrity, per-exercise indexability, and easy extension to T2/T3.
+- Follows the same "separate state table per concern" pattern as `exercise_swap_groups`.
+
+`current_weight_kg` = recommendation for the NEXT session (already advanced after each finish).
+
+Writes: admin client in `finish/route.ts` (bypasses RLS). Silent on any error.
+Reads:  cookie client in `train-session.ts` (RLS select policy). Non-blocking.
+
+### STATE_MODEL
+
+```
+t1_progression_states (
+  enrollment_id, exercise_id   -- PK pair (unique constraint)
+  phase                        -- '5x3' | '6x2' | '10x1' | 'retest_required'
+  current_weight_kg            -- recommendation for next session
+  last_result                  -- 'success' | 'fail'
+  updated_at
+)
+```
+
+Phase transitions:
+- success → same phase, weight += 2.5kg
+- fail:  5x3 → 6x2 → 10x1 → retest_required
+
+AMRAP success = last visible set is_completed=true AND reps_done >= phase minimum
+  (min parsed from target_reps_text "3+" → 3; fallback to phase constant)
+
+### LOGIC
+
+`lib/workout/t1-progression.ts` exports:
+- `determineAmrapResult(lastSet, phase)` — pure, testable
+- `computeNextState(current, result)` — pure, testable
+- `phaseBadgeLabel(phase)` — "5x3" → "5×3+"
+- `selectT1ProgressionHints(client, enrollmentId, exerciseIds)` — DB read
+- `updateT1ProgressionAfterSession(sessionId, userId, dbClient)` — DB write hook
+
+Bootstrap (first session, no existing state):
+- Phase inferred from set count: 5 sets→5x3, 6→6x2, ≥9→10x1
+- Weight seeded from session's first set weight
+
+Idempotency: called only on primary completion path in finish/route.ts,
+NOT on S-4 idempotent re-finish, to prevent double-advancing weight.
+
+### UI
+
+T1 exercise cards in WorkoutScreen show (from 2nd session onward):
+```
+[ Next: 82.5kg · 5×3+ ]
+```
+Displayed as an orange-tinted hint bar between exerciseHeader and swipeHint.
+No hint on first session (state created on finish, visible next open).
+
+### CHANGED_FILES
+
+**New:**
+- `supabase/migrations/20260418_000014_t1_progression_states.sql`
+- `lib/workout/t1-progression.ts`
+
+**Modified:**
+- `types/workout.ts` — `T1ProgressionHint` type + `WorkoutExerciseBlock.t1ProgressionHint`
+- `lib/workout/train-session.ts` — load hints via `selectT1ProgressionHints`, pass to `buildExerciseBlocks`
+- `app/api/workout-sessions/[id]/finish/route.ts` — call `updateT1ProgressionAfterSession` on primary path
+- `components/workout/WorkoutScreen.tsx` — hint bar in T1 card
+- `components/workout/WorkoutScreen.module.css` — `.t1ProgressionHintBar` + label/value styles
+
+### MANUAL_CHECK (after live migration)
+
+1. Apply migration `20260418_000014_t1_progression_states.sql` in Supabase SQL editor
+2. Complete a session with a T1 exercise (Squat, Bench, etc.)
+   → Verify `t1_progression_states` row created: `SELECT * FROM t1_progression_states;`
+   → Check `phase='5x3'`, `current_weight_kg = session_weight + 2.5` (if AMRAP passed)
+3. Open `/train` for next session
+   → T1 card should show orange hint bar: "Next: 82.5kg · 5×3+"
+4. Complete that session with AMRAP fail (enter fewer reps than minimum)
+   → Verify state updated: `phase='6x2'`, weight unchanged
+5. No hint on T2/T3 cards (only T1 shows the bar)
+6. No regression on existing sessions without progression state (no hint displayed)
+
+### OPEN_POINTS
+
+- Weight increment is fixed at 2.5kg for all T1 exercises.
+  Typically Squat/DL should be +5kg; Bench/OHP +2.5kg. Configurable increment per
+  exercise category is a natural next step (P-1 or C-12).
+- `retest_required` state has no UI guidance yet — hint shows "Retest" badge.
+  Deload flow (reduce weight by 10%, reset to 5x3) is a future iteration.
+- T2/T3 progression: table is exercise-agnostic — extending is a matter of
+  removing the `exercise_type = 'T1'` filter and adding separate logic per tier.
+
+---
+
 ## 2026-04-18 C-10 - Training History Cleanup: soft-archive for sessions and enrollments
 
 ### STATUS: fully closed（2026-04-18 live 実機確認済み）

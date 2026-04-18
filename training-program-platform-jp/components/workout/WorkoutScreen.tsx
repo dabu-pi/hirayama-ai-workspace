@@ -1375,6 +1375,17 @@ export function WorkoutScreen({
               )}
             </div>
 
+            {exercise.exerciseType === "T1" && exercise.t1ProgressionHint && (
+              <div className={styles.t1ProgressionHintBar}>
+                <span className={styles.t1ProgressionLabel}>Next:</span>
+                <span className={styles.t1ProgressionValue}>
+                  {exercise.t1ProgressionHint.nextWeightKg}kg
+                  {" · "}
+                  {exercise.t1ProgressionHint.phaseBadge}
+                </span>
+              </div>
+            )}
+
             <div className={styles.swipeHint}>
               左スワイプで Delete ・ 完了後も Kg / Reps はそのまま編集できます
             </div>

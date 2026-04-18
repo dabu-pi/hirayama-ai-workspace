@@ -12,6 +12,7 @@ import {
   getAuthenticatedWorkoutContext,
   isLikelyUuid
 } from "@/lib/workout/session-access";
+import { updateT1ProgressionAfterSession } from "@/lib/workout/t1-progression";
 
 type RouteContext = {
   params: {
@@ -259,6 +260,11 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     // Advance enrollment to next day (silent — does not fail the request on error)
     await advanceEnrollmentAfterSessionComplete(params.id, userId);
+
+    // Update T1 progression state (silent — does not fail the request on error).
+    // Called only on the primary completion path, not on S-4 idempotent re-finish,
+    // to prevent double-advancing the weight.
+    await updateT1ProgressionAfterSession(params.id, userId, dbClient);
 
     revalidatePath("/train");
     revalidatePath("/"); // Ensure Home progress / CTA reflects new enrollment state
