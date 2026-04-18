@@ -607,7 +607,7 @@ function srGetAllInitExamData_(ss, patientId) {
     if (isNaN(d)) continue;
     records.push({
       _date:          d,
-      injuryDatetime: String(row[ci(hc.injuryDatetime)] || ''),
+      injuryDatetime: srFormatDate_(row[ci(hc.injuryDatetime)], 'wareki'),
       injuryPlace:    String(row[ci(hc.injuryPlace)]    || ''),
       injuryStatus:   String(row[ci(hc.injuryStatus)]   || ''),
       initFindings:   String(row[ci(hc.initFindings)]   || ''),
