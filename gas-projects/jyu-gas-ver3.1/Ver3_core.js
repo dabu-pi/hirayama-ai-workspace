@@ -424,6 +424,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "【監査】自費明細 legacy menu_id", functionName: "auditLegacyMenuIds_V3" },
       { label: "【1回限り】JBIZ v1 シートを archive", functionName: "archiveJbizV1Sheet_V3" },
       { label: "【1回限り】KPI逆算式を v2 対応に更新", functionName: "updateKpiReverseFormulas_V3" },
+      { label: "【診断】KPI逆算 C5/C6/C9 式を確認", functionName: "diagnoseKpiFormulas_V3" },
       { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
       { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
       { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
@@ -4582,6 +4583,54 @@ function archiveJbizV1Sheet_V3() {
     + "次のステップ: verifyJbizV2Switch_V3 を再実行し、\n"
     + "解決シートが " + V2_NAME + "、取得件数 12 件であることを確認してください。"
   );
+}
+
+/* =======================================================================
+   KPI逆算 診断（2026-04-18 追加 / read-only）
+   ======================================================================= */
+
+/**
+ * KPI逆算シートの C5/C6/C9 の現在の式を読み取り、アラートで表示する。
+ * 完全 read-only。書き込みは一切行わない。
+ * 「変更不要」になった原因調査用。
+ */
+function diagnoseKpiFormulas_V3() {
+  var ui = SpreadsheetApp.getUi();
+  var KPI_SHEET = "KPI逆算";
+  var CELLS = ["C5", "C6", "C9"];
+
+  var jbizSS;
+  try {
+    jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  } catch (e) {
+    ui.alert("JBIZ を開けません: " + e.message);
+    return;
+  }
+
+  var kpiSh = jbizSS.getSheetByName(KPI_SHEET);
+  if (!kpiSh) {
+    ui.alert(KPI_SHEET + " シートが見つかりません。\nシート名の一覧を確認してください。");
+    var sheets = jbizSS.getSheets().map(function(s) { return s.getName(); }).join("\n  ");
+    Logger.log("シート一覧:\n  " + sheets);
+    return;
+  }
+
+  var lines = ["=== KPI逆算 C5/C6/C9 現在の式 ===\n"];
+  CELLS.forEach(function(cell) {
+    var formula = kpiSh.getRange(cell).getFormula();
+    var value   = kpiSh.getRange(cell).getValue();
+    lines.push("[" + cell + "]");
+    lines.push("  式: " + (formula || "（式なし）"));
+    lines.push("  値: " + value);
+    Logger.log(cell + " formula=" + formula + " value=" + value);
+  });
+
+  // シート一覧もログ出力（参照先特定用）
+  var sheetNames = jbizSS.getSheets().map(function(s) { return s.getName(); }).join(" / ");
+  lines.push("\n[JBIZ シート一覧]\n  " + sheetNames);
+  Logger.log("JBIZ シート一覧: " + sheetNames);
+
+  ui.alert("KPI逆算 式 診断", lines.join("\n"), ui.ButtonSet.OK);
 }
 
 /* =======================================================================
