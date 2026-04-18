@@ -176,22 +176,9 @@ begin
     return;
   end if;
 
-  -- A1 days: Squat T1 / Bench T2 → order 4 = deadlift-aux, order 5 = bench-aux
-  update public.program_day_exercises pde
-  set swap_group_slug = 'deadlift-aux'
-  where pde.order_index = 4
-    and pde.program_day_id in (
-      select pd.id from public.program_days pd
-      join public.program_weeks pw on pw.id = pd.program_week_id
-      where pw.program_id = prog_id
-        and pd.day_number = 1            -- A1 = week day 1
-        and pw.week_number in (1, 3)     -- A1 appears in weeks 1 and 3 (days 1)
-        -- A1: week1/day1 and week3/day1 (A1 = day1 of weeks where rotation = A1)
-    );
-
-  -- The rotation for gzclp-base-v2 follows: W1D1=A1, W1D2=B1, W1D3=A2, W2D1=B2, W2D2=A1, W2D3=B1, ...
-  -- Easier to identify by exercise pattern: A1 days have squat at order_index=1
-  -- Use exercise_id-based identification for safety
+  -- All 4 workout types identified by T1 exercise at order_index=1.
+  -- Rotation: W1D1=A1, W1D2=B1, W1D3=A2, W2D1=B2, W2D2=A1, W2D3=B1,
+  --           W3D1=A2, W3D2=B2, W3D3=A1, W4D1=B1, W4D2=A2, W4D3=B2
 
   update public.program_day_exercises pde
   set swap_group_slug = case
@@ -268,3 +255,22 @@ begin
   raise notice 'gzclp-base-v2 swap groups seeded successfully.';
 end;
 $$;
+
+-- Verification query — run after the seed to confirm assignments.
+-- Expected: 24 rows (12 days × order_index 4 and 5), each with non-null swap_group_slug.
+--
+-- select
+--   pw.week_number,
+--   pd.day_number,
+--   pde.order_index,
+--   e.name_en       as current_exercise,
+--   pde.exercise_type,
+--   pde.swap_group_slug
+-- from public.program_day_exercises pde
+-- join public.program_days pd    on pd.id = pde.program_day_id
+-- join public.program_weeks pw   on pw.id = pd.program_week_id
+-- join public.programs p         on p.id  = pw.program_id
+-- join public.exercises e        on e.id  = pde.exercise_id
+-- where p.slug = 'gzclp-base-v2'
+--   and pde.order_index in (4, 5)
+-- order by pw.week_number, pd.day_number, pde.order_index;
