@@ -1,5 +1,70 @@
 # PROJECT_STATUS
 
+## 2026-04-18 C-8 - GZCLP 5-Exercise Base (gzclp-base-v2) seed 追加
+
+### STATUS: seed 実装完了 — live SQL 実行待ち
+
+### DESIGN_DECISION
+
+既存 `gzclp-base` への上書きではなく、新 slug `gzclp-base-v2` として追加。
+理由: live DB に active enrollment が存在する可能性があり、構造変更は mid-program ユーザーに
+予期しない変更をもたらす。既存プログラムは保持し、v2 は新規 enrollment の選択肢として追加する。
+
+### CHANGES
+
+| ファイル | 変更内容 |
+|---|---|
+| `seed/programs/gzclp-base-v2.sql` | 新規作成。7 種目追加 + プログラム全構造（4 weeks × 3 days × 5 exercises = 60 rows） |
+| `seed/programs/program-metadata.sql` | gzclp-base-v2 を soft 追加（not null check 付き、既存 seeds が v2 なしで動作するよう互換維持） |
+| `lib/programs/program-catalog.ts` | mock fallback カタログに gzclp-base-v2 エントリ追加 |
+| `docs/program-source-audit.md` | gzclp-base-v2 監査エントリ追加（adapted / DESIGN_DECISION 記録） |
+| `docs/week-preview-spec.md` | gzclp-base-v2 の確認計画を追記 |
+
+### NEW_EXERCISES (7種目)
+
+| slug | name_en | category |
+|---|---|---|
+| `leg-curl` | Leg Curl | legs |
+| `triceps-pushdown` | Triceps Pushdown | arms |
+| `lateral-raise` | Lateral Raise | shoulders |
+| `back-extension` | Back Extension | back |
+| `incline-dumbbell-press` | Incline Dumbbell Press | chest |
+| `leg-extension` | Leg Extension | legs |
+| `romanian-deadlift` | Romanian Deadlift | back |
+
+### PROGRAM_STRUCTURE
+
+```
+A1: Squat(T1) / Bench(T2) / Lat Pulldown(T3) / Leg Curl(T3) / Triceps Pushdown(T3)
+B1: OHP(T1)   / Deadlift(T2) / DB Row(T3)    / Lateral Raise(T3) / Back Extension(T3)
+A2: Bench(T1) / Squat(T2)   / Lat Pulldown(T3) / Incline DB Press(T3) / Leg Extension(T3)
+B2: Deadlift(T1) / OHP(T2)  / DB Row(T3)     / Romanian Deadlift(T3) / Lateral Raise(T3)
+
+Week 1: A1 / B1 / A2  |  Week 2: B2 / A1 / B1
+Week 3: A2 / B2 / A1  |  Week 4: B1 / A2 / B2
+```
+
+### CODE_CHANGES
+
+なし。start-session.ts / WorkoutScreen.tsx / train-session.ts はすべてデータ駆動で
+order_index 順に任意件数の種目を処理するため、コード変更不要。
+
+### LIVE_APPLY
+
+Supabase Dashboard > SQL Editor で以下の順に実行:
+1. `seed/programs/gzclp-base-v2.sql` (新 program + exercises + tag assignments)
+2. `seed/programs/program-metadata.sql` (任意 — タグ情報の再確認・再適用)
+
+Post-check: 60 rows が返ること確認 (seed ファイル末尾の確認クエリを実行)
+
+### MANUAL_CHECK (live 反映後)
+
+- [ ] `/programs` に `GZCLP 5-Exercise Base` が表示される
+- [ ] `/programs/gzclp-base-v2` の week preview に 5 種目が `·` 区切りで表示される
+- [ ] `/train?program=gzclp-base-v2&programDayId=...` で 5 種目記録できる
+- [ ] T1/T2/T3 バッジが正しく色分けされる（T3 が 3 種目並ぶ）
+- [ ] gzclp-base（既存）が壊れていないこと
+
 ## 2026-04-17 U-19 - Cancel lookup failure: explicit-token client で cookie re-read 問題を根本修正
 
 ### STATUS: fully closed（2026-04-18 live 実機確認済み）

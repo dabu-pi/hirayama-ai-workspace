@@ -19,6 +19,23 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
       "Original GZCLP base month with 5x3+ T1 work, 3x10 T2 practice, and 3x15+ T3 accessories."
   },
   {
+    id: "program-gzclp-v2",
+    slug: "gzclp-base-v2",
+    title: "GZCLP 5-Exercise Base",
+    level: "Beginner",
+    levelKey: "beginner",
+    goal: "Build strength and size with GZCLP's A1/B1/A2/B2 rotation, extended to 5 exercises per session.",
+    frequencyLabel: "3 days / week",
+    durationLabel: "4 weeks",
+    sourceProgramName: "GZCLP",
+    sourceFidelity: "adapted",
+    sourceNotes:
+      "Based on Cody Lefever's original GZCLP base month. Core T1/T2/T3 tier and A1/B1/A2/B2 rotation unchanged. Extended from 3 to 5 exercises per session by adding T1-support and T2-support T3 accessories.",
+    tags: [],
+    overview:
+      "GZCLP's original four-day rotating structure (A1/B1/A2/B2) with 5×3+ T1 work, 3×10 T2 practice, and three T3 accessories per session: a fixed pull slot plus T1-support and T2-support movements."
+  },
+  {
     id: "program-starting-strength-phase2",
     slug: "starting-strength-base",
     title: "Starting Strength Phase 2 Base",

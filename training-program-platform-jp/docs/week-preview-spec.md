@@ -55,6 +55,15 @@ getProgramDetailView(slug)
 | `starting-strength-base` | 3 weeks × 3 days | Squat / Bench Press / Overhead Press / Deadlift / Power Clean | ✅ |
 | `upper-lower-base` | 4 weeks × 4 days | Bench Press / Overhead Press / Barbell Row / Squat / Deadlift | ✅ |
 
+## gzclp-base-v2 確認計画（2026-04-18 seed 作成済み — live 反映後に確認）
+
+| プログラム | week 構成 | 1日あたり種目数 | 期待表示 |
+|---|---|---|---|
+| `gzclp-base-v2` | 4 weeks × 3 days | 5 種目 | Squat · Bench Press · Lat Pulldown · Leg Curl · Triceps Pushdown（A1例） |
+
+- week preview のデータフローはそのまま流用可（order_index 順に name_en を並べるだけ）
+- コード変更なし。表示が `·` 区切りで 5 種目並ぶことを live 反映後に確認する
+
 ## 次段階の拡張候補
 
 1. exercise_type（T1/T2/T3）を day 行に小さく表示する

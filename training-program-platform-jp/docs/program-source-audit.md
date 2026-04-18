@@ -20,10 +20,31 @@
 | slug | title | source_program_name | source_fidelity | 判定 |
 |---|---|---|---|---|
 | `gzclp-base` | `GZCLP Base` | `GZCLP` | `original` | 原典準拠に修正 |
+| `gzclp-base-v2` | `GZCLP 5-Exercise Base` | `GZCLP` | `adapted` | 原典ベースの拡張版（T3 アクセサリー追加） |
 | `starting-strength-base` | `Starting Strength Phase 2 Base` | `Starting Strength Novice Program - Phase 2` | `original` | Phase 2 原典準拠として明示 |
 | `upper-lower-base` | `Upper Lower Base` | `null` | `custom` | 単一原典なしの内部テンプレート |
 
 ## Program Notes
+
+### `gzclp-base-v2`
+
+- 元ネタ: `gzclp-base` + Cody Lefever `The GZCL Method` GZCLP セクション
+- 一致している点（原典 + gzclp-base と同じ）:
+  - 3 days / week
+  - A1 / B1 / A2 / B2 の 4 ワークアウト回転
+  - T1 / T2 / T3 の役割分離
+  - T1 = 5×3+, T2 = 3×10, T3 = 3×15+
+  - T1 fail protocol = `5×3+ → 6×2+ → 10×1+ → 5RM retest`
+  - T2 fail protocol = `3×10 → 3×8 → 3×6`
+- 拡張点（gzclp-base との差分）:
+  - 1 日 3 種目 → 5 種目に拡張
+  - T3 を「pull 固定枠」「T1 補助枠」「T2 補助枠」の 3 スロットに整理
+  - 7 種目を新規追加（leg-curl / triceps-pushdown / lateral-raise / back-extension / incline-dumbbell-press / leg-extension / romanian-deadlift）
+- 判定理由:
+  - 進行ルール・tier 構造・循環は原典準拠のまま。アクセサリー追加による拡張のため `adapted`
+- DESIGN DECISION:
+  - 既存 `gzclp-base` への live 上書きを避けるため新 slug で作成。
+  - `gzclp-base` は active enrollment を持つユーザーのために保持。
 
 ### `gzclp-base`
 

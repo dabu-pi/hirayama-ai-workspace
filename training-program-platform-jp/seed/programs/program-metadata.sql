@@ -4,6 +4,7 @@
 --
 -- Targets:
 --   - gzclp-base
+--   - gzclp-base-v2  (5-exercise variant — skipped gracefully if not yet seeded)
 --   - starting-strength-base
 --   - upper-lower-base
 --   - dumbbell-full-body-base
@@ -13,9 +14,10 @@
 
 do $$
 declare
-  prog_gzclp uuid;
+  prog_gzclp             uuid;
+  prog_gzclp_v2          uuid;   -- gzclp-base-v2 (soft: null if not yet seeded)
   prog_starting_strength uuid;
-  prog_upper_lower uuid;
+  prog_upper_lower       uuid;
   prog_dumbbell_full_body uuid;
 
   tag_strength uuid;
@@ -64,9 +66,10 @@ begin
     raise exception 'Tag lookup failed for program metadata seed.';
   end if;
 
-  select id into prog_gzclp             from public.programs where slug = 'gzclp-base';
-  select id into prog_starting_strength from public.programs where slug = 'starting-strength-base';
-  select id into prog_upper_lower       from public.programs where slug = 'upper-lower-base';
+  select id into prog_gzclp              from public.programs where slug = 'gzclp-base';
+  select id into prog_gzclp_v2           from public.programs where slug = 'gzclp-base-v2';
+  select id into prog_starting_strength  from public.programs where slug = 'starting-strength-base';
+  select id into prog_upper_lower        from public.programs where slug = 'upper-lower-base';
   select id into prog_dumbbell_full_body from public.programs where slug = 'dumbbell-full-body-base';
 
   if prog_gzclp is null then
@@ -114,27 +117,43 @@ begin
     source_notes = 'Internal beginner dumbbell full-body template. No single canonical source program is being represented.'
   where id = prog_dumbbell_full_body;
 
+  -- Include v2 in the delete scope only if it exists
   delete from public.program_tag_assignments
-  where program_id in (prog_gzclp, prog_starting_strength, prog_upper_lower, prog_dumbbell_full_body);
+  where program_id in (
+    prog_gzclp, prog_starting_strength, prog_upper_lower, prog_dumbbell_full_body
+  )
+  or (prog_gzclp_v2 is not null and program_id = prog_gzclp_v2);
 
   insert into public.program_tag_assignments (program_id, tag_id, axis)
   values
-    (prog_gzclp, tag_strength, 'goal'),
-    (prog_gzclp, tag_barbell, 'equipment'),
+    (prog_gzclp, tag_strength,  'goal'),
+    (prog_gzclp, tag_barbell,   'equipment'),
     (prog_gzclp, tag_full_body, 'split'),
-    (prog_starting_strength, tag_strength, 'goal'),
-    (prog_starting_strength, tag_barbell, 'equipment'),
-    (prog_starting_strength, tag_full_body, 'split'),
-    (prog_starting_strength, tag_squat_focus, 'focus'),
-    (prog_starting_strength, tag_explosive, 'focus'),
-    (prog_upper_lower, tag_strength, 'goal'),
-    (prog_upper_lower, tag_barbell, 'equipment'),
+    (prog_starting_strength, tag_strength,   'goal'),
+    (prog_starting_strength, tag_barbell,    'equipment'),
+    (prog_starting_strength, tag_full_body,  'split'),
+    (prog_starting_strength, tag_squat_focus,'focus'),
+    (prog_starting_strength, tag_explosive,  'focus'),
+    (prog_upper_lower, tag_strength,    'goal'),
+    (prog_upper_lower, tag_barbell,     'equipment'),
     (prog_upper_lower, tag_upper_lower, 'split'),
     (prog_dumbbell_full_body, tag_general_fitness, 'goal'),
-    (prog_dumbbell_full_body, tag_dumbbell, 'equipment'),
-    (prog_dumbbell_full_body, tag_full_body, 'split');
+    (prog_dumbbell_full_body, tag_dumbbell,         'equipment'),
+    (prog_dumbbell_full_body, tag_full_body,         'split');
 
-  raise notice 'Seed complete: program metadata assigned for gzclp-base, starting-strength-base, upper-lower-base, dumbbell-full-body-base.';
+  -- gzclp-base-v2 tags (soft — skipped if v2 not yet seeded)
+  if prog_gzclp_v2 is not null then
+    insert into public.program_tag_assignments (program_id, tag_id, axis)
+    values
+      (prog_gzclp_v2, tag_strength,  'goal'),
+      (prog_gzclp_v2, tag_barbell,   'equipment'),
+      (prog_gzclp_v2, tag_full_body, 'split');
+    raise notice 'gzclp-base-v2 tag assignments applied.';
+  else
+    raise notice 'gzclp-base-v2 not found — tag assignments skipped (run gzclp-base-v2.sql first).';
+  end if;
+
+  raise notice 'Seed complete: program metadata assigned for gzclp-base, gzclp-base-v2 (if present), starting-strength-base, upper-lower-base, dumbbell-full-body-base.';
 end;
 $$;
 
