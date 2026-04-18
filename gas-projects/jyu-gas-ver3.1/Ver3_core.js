@@ -4703,39 +4703,55 @@ function updateKpiReverseFormulas_V3() {
 }
 
 /**
- * '価格設定'!XX 参照を '価格設定_v2'!YY へ変換するヘルパー。
- *   K → M（主力手技フラグ）
- *   G → I（一般料金）
- *   D → E（メニュー名）
+ * 旧 '価格設定' / '価格設定_v1_archive' 参照を '価格設定_v2'!YY へ変換するヘルパー。
+ *   K → M（主力手技フラグ）/ G → I（一般料金）/ D → E（メニュー名）
  * 処理パターン: 無制限列（X:X）/ 有界範囲（Xn:Xm）/ 単一セル（Xn）
- * 対応表外の列は シート名だけ変換して列字はそのまま残す。
+ * 有界範囲の終端行は v2 データ件数（18件以上）に対応するため 50 に拡張する。
+ * 対応表外の列はシート名のみ変換して列字はそのまま残す。
+ *
+ * 変換対象シート名:
+ *   '価格設定'           — v1 参照が残っていた場合
+ *   '価格設定_v1_archive' — archiveJbizV1Sheet_V3 実行後に GAS が自動参照更新した場合
+ *
+ * 注: 行番号マッチには [0-9]+ を使用（\d はエスケープ依存のため回避）
  */
 function convertKpiFormulaToV2_(formula) {
   if (!formula) return formula;
   var COL_MAP = { K: "M", G: "I", D: "E" };
+  var V2        = "'価格設定_v2'";
+  var V2_ENDROW = "50";  // v2 最大 18 件 + 余裕。行範囲の終端をこの値に統一する。
+  var DIGITS    = "[0-9]+";
+  // 処理順: 長い名前を先に置き、誤マッチを防ぐ
+  var SRC_SHEETS = ["'価格設定_v1_archive'", "'価格設定'"];
   var result = formula;
 
-  Object.keys(COL_MAP).forEach(function(src) {
-    var dst = COL_MAP[src];
-    // 無制限列: '価格設定'!X:X
-    result = result.replace(
-      new RegExp("'価格設定'!" + src + ":" + src, "g"),
-      "'価格設定_v2'!" + dst + ":" + dst
-    );
-    // 有界範囲: '価格設定'!Xn:Xm
-    result = result.replace(
-      new RegExp("'価格設定'!" + src + "(\\d+):" + src + "(\\d+)", "g"),
-      "'価格設定_v2'!" + dst + "$1:" + dst + "$2"
-    );
-    // 単一セル: '価格設定'!Xn
-    result = result.replace(
-      new RegExp("'価格設定'!" + src + "(\\d+)", "g"),
-      "'価格設定_v2'!" + dst + "$1"
-    );
+  SRC_SHEETS.forEach(function(srcSheet) {
+    // 正規表現の特殊文字をエスケープ（シート名に含まれる ' や _ は非特殊だが念のため）
+    var esc = srcSheet.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+
+    Object.keys(COL_MAP).forEach(function(col) {
+      var dst = COL_MAP[col];
+      // 無制限列: 'src'!X:X → 'v2'!Y:Y
+      result = result.replace(
+        new RegExp(esc + "!" + col + ":" + col, "g"),
+        V2 + "!" + dst + ":" + dst
+      );
+      // 有界範囲: 'src'!Xn:Xm → 'v2'!Yn:Y50（終端を V2_ENDROW に拡張）
+      result = result.replace(
+        new RegExp(esc + "!" + col + "([0-9]+):" + col + "[0-9]+", "g"),
+        V2 + "!" + dst + "$1:" + dst + V2_ENDROW
+      );
+      // 単一セル: 'src'!Xn → 'v2'!Yn
+      result = result.replace(
+        new RegExp(esc + "!" + col + "([0-9]+)", "g"),
+        V2 + "!" + dst + "$1"
+      );
+    });
+
+    // 対応表外の列: シート名のみ変換
+    result = result.replace(new RegExp(esc + "!", "g"), V2 + "!");
   });
 
-  // 対応表外の未変換参照: シート名のみ変換
-  result = result.replace(/'価格設定'!/g, "'価格設定_v2'!");
   return result;
 }
 
