@@ -86,10 +86,9 @@ const JBIZ_COL_V2 = {
 
 /**
  * シート名から使用する列マップを選ぶ。
- * - "価格設定_v2"（今後追加される候補）の場合は JBIZ_COL_V2
- * - それ以外（"価格設定" / "メニューマスタ（価格設定）"）は JBIZ_COL（v1）
- * 今ターンでは候補配列に v2 を含めていないため、実質 JBIZ_COL のみが選ばれる。
- * v2 切替時はこの関数が自動で正しいマップを返す。
+ * - "価格設定_v2" → JBIZ_COL_V2（17列構造）
+ * - それ以外 → JBIZ_COL（v1 / 14列構造）
+ * 2026-04-18 v2 切替確定済み。JBIZ_MENU_SHEET_CANDIDATES は "価格設定_v2" のみ。
  */
 function pickJbizCol_(sheetName) {
   if (String(sheetName || "").trim() === "価格設定_v2") {
