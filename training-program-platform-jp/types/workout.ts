@@ -38,6 +38,7 @@ export type WorkoutExerciseBlock = {
   sets: WorkoutSet[];
   wasAdded?: boolean;
   wasSwapped?: boolean;
+  swapGroupSlug?: string | null;
 };
 
 export type WorkoutSessionView = {

@@ -55,6 +55,7 @@ type WorkoutSessionExerciseRow = {
   order_index: number;
   was_swapped: boolean;
   was_added: boolean;
+  swap_group_slug: string | null;
 };
 
 type ExerciseRow = {
@@ -236,7 +237,7 @@ async function selectWorkoutSessionExercises(
   const { data, error } = await client
     .from("workout_session_exercises")
     .select(
-      "id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped, was_added"
+      "id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped, was_added, swap_group_slug"
     )
     .eq("workout_session_id", workoutSessionId)
     .order("order_index", { ascending: true });
@@ -323,7 +324,7 @@ async function selectHistoricalWorkoutSessionExercises(
   const { data, error } = await client
     .from("workout_session_exercises")
     .select(
-      "id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped, was_added"
+      "id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped, was_added, swap_group_slug"
     )
     .in("workout_session_id", workoutSessionIds)
     .in("exercise_id", exerciseIds);
@@ -508,7 +509,8 @@ function buildExerciseBlocks(
       previousSets: [],
       sets: visibleSets,
       wasAdded: sessionExercise.was_added,
-      wasSwapped: sessionExercise.was_swapped
+      wasSwapped: sessionExercise.was_swapped,
+      swapGroupSlug: sessionExercise.swap_group_slug ?? null
     };
   });
 }

@@ -428,6 +428,7 @@ export function WorkoutScreen({
   const [isAddExerciseModalOpen, setIsAddExerciseModalOpen] = useState(false);
   const [exerciseModalMode, setExerciseModalMode] = useState<"add" | "swap">("add");
   const [swapTargetBlockId, setSwapTargetBlockId] = useState<string | null>(null);
+  const [swapGroupSlug, setSwapGroupSlug] = useState<string | null>(null);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
   const [exerciseList, setExerciseList] = useState<ExerciseListItem[]>([]);
   const [isLoadingExercises, setIsLoadingExercises] = useState(false);
@@ -1045,12 +1046,15 @@ export function WorkoutScreen({
     }
   };
 
-  const loadExercises = async () => {
+  const loadExercises = async (groupSlug?: string | null) => {
     setIsLoadingExercises(true);
     setAddExerciseError(null);
     setFailedAction(null);
     try {
-      const response = await fetch("/api/exercises");
+      const url = groupSlug
+        ? `/api/exercises?swap_group=${encodeURIComponent(groupSlug)}`
+        : "/api/exercises";
+      const response = await fetch(url);
       const payload = (await response.json().catch(() => null)) as
         | { exercises: ExerciseListItem[] }
         | { error?: { message?: string } }
@@ -1078,18 +1082,20 @@ export function WorkoutScreen({
     if (isSessionEnded) return;
     setExerciseModalMode("add");
     setSwapTargetBlockId(null);
+    setSwapGroupSlug(null);
     setIsAddExerciseModalOpen(true);
     setExerciseSearchQuery("");
-    await loadExercises();
+    await loadExercises(null);
   };
 
-  const openSwapModal = async (blockId: string) => {
+  const openSwapModal = async (blockId: string, groupSlug?: string | null) => {
     if (isSessionEnded) return;
     setExerciseModalMode("swap");
     setSwapTargetBlockId(blockId);
+    setSwapGroupSlug(groupSlug ?? null);
     setIsAddExerciseModalOpen(true);
     setExerciseSearchQuery("");
-    await loadExercises();
+    await loadExercises(groupSlug);
   };
 
   const closeAddExerciseModal = () => {
@@ -1097,6 +1103,7 @@ export function WorkoutScreen({
     setExerciseSearchQuery("");
     setAddExerciseError(null);
     setSwapTargetBlockId(null);
+    setSwapGroupSlug(null);
   };
 
   const handleAddExercise = async (exerciseId: string) => {
@@ -1503,7 +1510,7 @@ export function WorkoutScreen({
               <button
                 className={styles.subtleButton}
                 disabled={isSessionEnded}
-                onClick={() => openSwapModal(exercise.id)}
+                onClick={() => openSwapModal(exercise.id, exercise.swapGroupSlug)}
                 type="button"
               >
                 Swap
@@ -1559,6 +1566,9 @@ export function WorkoutScreen({
                   {exercises.find((b) => b.id === swapTargetBlockId)
                     ?.exerciseNameEn ?? ""}
                 </strong>
+                {swapGroupSlug ? (
+                  <span className={styles.swapGroupHint}> — recommended alternatives</span>
+                ) : null}
               </div>
             ) : null}
 

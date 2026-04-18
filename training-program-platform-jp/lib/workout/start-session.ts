@@ -30,6 +30,7 @@ type ProgramDayExerciseRow = {
   set_count: number;
   target_reps_text: string | null;
   order_index: number;
+  swap_group_slug: string | null;
 };
 
 type InsertedSessionRow = {
@@ -170,7 +171,7 @@ export async function startSessionForDay(
   // 1. Load program_day_exercises
   const { data: dayExercises, error: dayExercisesError } = await client
     .from("program_day_exercises")
-    .select("id, exercise_id, exercise_type, set_count, target_reps_text, order_index")
+    .select("id, exercise_id, exercise_type, set_count, target_reps_text, order_index, swap_group_slug")
     .eq("program_day_id", programDayId)
     .order("order_index", { ascending: true });
 
@@ -223,7 +224,10 @@ export async function startSessionForDay(
         exercise_type: exercise.exercise_type,
         order_index: exercise.order_index,
         was_added: false,
-        was_swapped: false
+        was_swapped: false,
+        ...(exercise.swap_group_slug != null
+          ? { swap_group_slug: exercise.swap_group_slug }
+          : {})
       })
       .select("id")
       .single<InsertedSessionExerciseRow>();

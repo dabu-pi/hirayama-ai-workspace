@@ -20,6 +20,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim() ?? "";
+    const swapGroup = searchParams.get("swap_group")?.trim() ?? "";
 
     const supabase = hasSupabaseServiceRoleEnv()
       ? createSupabaseAdminClient()
@@ -30,6 +31,36 @@ export async function GET(request: Request) {
       .select("id, slug, name_ja, name_en, category")
       .order("name_ja", { ascending: true })
       .limit(200);
+
+    if (swapGroup) {
+      // Restrict to exercises that belong to the given swap group.
+      const { data: memberRows, error: memberError } = await supabase
+        .from("exercise_swap_group_members")
+        .select("exercise_id")
+        .eq("group_slug", swapGroup);
+
+      if (memberError) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "swap_group_lookup_failed",
+              message: "Failed to load swap group members."
+            }
+          },
+          { status: 500 }
+        );
+      }
+
+      const memberIds = ((memberRows ?? []) as { exercise_id: string }[]).map(
+        (r) => r.exercise_id
+      );
+
+      if (memberIds.length === 0) {
+        return NextResponse.json({ exercises: [] });
+      }
+
+      query = query.in("id", memberIds);
+    }
 
     if (q) {
       query = query.or(`name_ja.ilike.%${q}%,name_en.ilike.%${q}%`);

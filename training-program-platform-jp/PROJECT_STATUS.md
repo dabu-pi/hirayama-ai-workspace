@@ -1,5 +1,79 @@
 # PROJECT_STATUS
 
+## 2026-04-18 C-9 - gzclp-base-v2 Swap Pool (S-2): role-restricted accessory swap
+
+### STATUS: 実装完了 — live SQL 実行待ち
+
+### DESIGN_DECISION
+
+T3 アクセサリースロット（order_index 4・5）に対して、role に紐づいたスワップ候補プールを追加。
+pull スロット（order_index 3）は固定のまま。
+
+データ設計: `exercise_swap_groups` + `exercise_swap_group_members` の 2 新テーブル。
+`program_day_exercises.swap_group_slug` と `workout_session_exercises.swap_group_slug`（nullable）で連携。
+NULL = 制限なし（Add Exercise と同じ全量リスト）— 既存プログラムへの影響ゼロ。
+
+### POOL_DEFINITIONS
+
+| group_slug | label | メンバー（spec + 現在のデフォルト） |
+|---|---|---|
+| `squat-aux` | Squat Assistance | Leg Press / Hack Squat / Bulgarian Split Squat / Leg Extension |
+| `bench-aux` | Bench Press Assistance | Chest Press / DB Bench Press / Dips / Triceps Pushdown / Incline DB Press |
+| `deadlift-aux` | Deadlift Assistance | Leg Curl / Good Morning / Hip Thrust / Back Extension / Romanian Deadlift |
+| `ohp-aux` | OHP Assistance | Lateral Raise / Rear Delt Fly / DB Shoulder Press (soft) |
+
+### POOL_ASSIGNMENT (gzclp-base-v2)
+
+| Workout | order 4 (T1-sup) | pool | order 5 (T2-sup) | pool |
+|---|---|---|---|---|
+| A1 | Leg Curl | deadlift-aux | Triceps Pushdown | bench-aux |
+| B1 | Lateral Raise | ohp-aux | Back Extension | deadlift-aux |
+| A2 | Incline DB Press | bench-aux | Leg Extension | squat-aux |
+| B2 | Romanian Deadlift | deadlift-aux | Lateral Raise | ohp-aux |
+
+### CHANGES
+
+| ファイル | 変更内容 |
+|---|---|
+| `supabase/migrations/20260418_000011_exercise_swap_groups.sql` | 新規: `exercise_swap_groups` + `exercise_swap_group_members` テーブル + RLS |
+| `supabase/migrations/20260418_000012_swap_group_slug_columns.sql` | 新規: `program_day_exercises` + `workout_session_exercises` に `swap_group_slug` 追加 |
+| `seed/programs/gzclp-base-v2-swap-groups.sql` | 新規: 8 新種目 upsert + 4 グループ作成 + メンバー追加 + gzclp-base-v2 への assignment |
+| `types/workout.ts` | `WorkoutExerciseBlock` に `swapGroupSlug` 追加 |
+| `lib/workout/start-session.ts` | `swap_group_slug` を `program_day_exercises` から `workout_session_exercises` へコピー |
+| `lib/workout/train-session.ts` | `WorkoutSessionExerciseRow` + select + return に `swap_group_slug` 追加 |
+| `components/workout/WorkoutScreen.tsx` | `openSwapModal(blockId, groupSlug?)` + `loadExercises(groupSlug?)` + swap_group param 連携 |
+| `app/api/exercises/route.ts` | `?swap_group=<slug>` パラメータで候補を絞り込む |
+| `components/workout/WorkoutScreen.module.css` | `.swapGroupHint` スタイル追加 |
+
+### NEW_EXERCISES (8種目 — pool-only)
+
+| slug | name_en | category |
+|---|---|---|
+| `chest-press` | Chest Press | chest |
+| `dips` | Dips | chest |
+| `leg-press` | Leg Press | legs |
+| `hack-squat` | Hack Squat | legs |
+| `bulgarian-split-squat` | Bulgarian Split Squat | legs |
+| `good-morning` | Good Morning | back |
+| `hip-thrust` | Hip Thrust | legs |
+| `rear-delt-fly` | Rear Delt Fly | shoulders |
+
+### LIVE_APPLY
+
+Supabase Dashboard > SQL Editor で以下の順に実行:
+1. `supabase/migrations/20260418_000011_exercise_swap_groups.sql`
+2. `supabase/migrations/20260418_000012_swap_group_slug_columns.sql`
+3. `seed/programs/gzclp-base-v2-swap-groups.sql`
+
+### MANUAL_CHECK (live 反映後)
+
+- [ ] `/train?program=gzclp-base-v2&...` で A1 の Leg Curl Swap → deadlift-aux の候補 5 種目だけ表示される
+- [ ] B1 の Lateral Raise Swap → ohp-aux の候補 3 種目だけ表示される
+- [ ] `null` group の種目 (order 1〜3) は全量リストが表示される
+- [ ] 既存プログラム（gzclp-base / starting-strength-base）の swap は従来通り全量リスト
+
+---
+
 ## 2026-04-18 C-8 - GZCLP 5-Exercise Base (gzclp-base-v2) seed 追加
 
 ### STATUS: seed 実装完了 — live SQL 実行待ち
