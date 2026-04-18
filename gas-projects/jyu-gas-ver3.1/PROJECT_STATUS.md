@@ -1,6 +1,54 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-06（**患者画面 C12 日付入力改善 — 完了**）
+最終更新: 2026-04-18（**JBIZ 価格設定_v2 正式切替完了 — `9cd525c`**）
+
+---
+
+## ✅ 2026-04-18 JBIZ 価格設定_v2 正式切替 — 完了（commit `9cd525c`）
+
+### 何を実装したか
+
+| 対象 | 変更内容 |
+|---|---|
+| `JBIZ_MENU_SHEET_CANDIDATES` | `"価格設定_v2"` のみに縮退。旧 `"価格設定"` / 設計時想定名を除外 |
+| `archiveJbizV1Sheet_V3` | 旧 v1 シートを `価格設定_v1_archive` に rename する一回限り関数を新設 |
+| 管理者用メニュー | `柔整ツール → 管理者用 → 【1回限り】JBIZ v1 シートを archive` を追加 |
+| `COLUMN_MIGRATION_C_MENUID.md` | live 確認結果・初回評価 MISS 原因・v1 archive 方針を追記 |
+
+### なぜ必要だったか
+
+- 前ターンまでで `価格設定_v2`（17列構造 / SELFPAY_* 命名）の live 動作確認が完了していた
+- 候補配列に v1 名が残っていると、v1 archive 後に `getJBIZMenuSheet_` が fallback し誤ったシートを掴む可能性があった
+- v1 シートを放置したまま運用すると「どちらが正本か不明」になるため、archive 関数で明示的に旧版を退避する設計にした
+
+### live 確認済みの到達点
+
+| 項目 | 結果 |
+|---|---|
+| `getJBIZMenuSheet_` 解決シート名 | `価格設定_v2` |
+| 使用列マップ | `JBIZ_COL_V2`（17列構造）|
+| `getSelfPayMenuMaster_V3` 取得件数 | **12 件** |
+| 物療3種（MICROCURRENT / HIGHVOLTAGE / ULTRASOUND） | 3/3 OK |
+| 初回評価3分割（LOWBACK30 / NECKSHOULDER30 / KNEE30） | 3/3 OK ※1 |
+
+※1 初回評価3分割 MISS の原因は `価格設定_v2` 側の確定状況 = `仮`。コード側は正常動作。シート手動修正で解消済み。
+
+### 未完了・次アクション
+
+| # | 内容 | 担当 | 状態 |
+|---|---|---|---|
+| A | `archiveJbizV1Sheet_V3` 実行（旧 v1 シートを archive へ rename） | 院長（手動・1回限り） | **⏳ 未実施** |
+| B | KPI逆算 C5/C6/C9 の v2 参照式への切替 | Claude Code | **⏳ 未着手** |
+| C | `verifyJbizV2Switch_V3` / `diagnoseEvalMiss_V3` 残置関数の削除検討 | Claude Code | **⏳ 運用安定後** |
+| D | **T-SR-10v2**: clasp push + 施術録出力 実機テスト（NG-01〜NG-05 確認） | 院長（手動）| **🔄 実機テスト待ち** |
+| E | **T-SR-11**: TESTCASES.md への施術録テスト結果記録 | Claude Code | **⏳ T-SR-10 完了後** |
+
+**次の最小アクション（院長）:**
+1. `柔整ツール → 管理者用 → 【1回限り】JBIZ v1 シートを archive` を実行
+2. `柔整ツール → 施術録を出力` で患者ID + `2026-04` を入力 → NG-01〜NG-05 を目視確認
+
+**参照:**
+- 詳細チェック記録: `COLUMN_MIGRATION_C_MENUID.md`（2026-04-18 追記セクション）
 
 ---
 
