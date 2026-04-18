@@ -425,6 +425,8 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "【1回限り】JBIZ v1 シートを archive", functionName: "archiveJbizV1Sheet_V3" },
       { label: "【1回限り】KPI逆算式を v2 対応に更新", functionName: "updateKpiReverseFormulas_V3" },
       { label: "【診断】KPI逆算 C5/C6/C9 式を確認", functionName: "diagnoseKpiFormulas_V3" },
+      { label: "【診断】T-SR NG-01候補（自費のみ月）", functionName: "diagnoseNG01Candidates_V3" },
+      { label: "【診断】T-SR NG-02候補（冷/温/電あり月）", functionName: "diagnoseNG02Candidates_V3" },
       { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
       { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
       { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
@@ -5675,4 +5677,133 @@ function buildZeroInsuranceAmounts_V3_() {
     billedKubun: "", mixedFlag: "",
     case1Summary: "", case2Summary: "", chargeReason: ""
   };
+}
+
+/* =======================================================================
+   T-SR テスト候補診断（2026-04-18 追加 / read-only）
+   ======================================================================= */
+
+/**
+ * NG-01 候補探索: 来院ヘッダから「自費のみ」来院日を含む患者+月を列挙する。
+ * - 同月内に「自費のみ」1件以上 かつ 保険来院（保険のみ or 保険+自費）1件以上の組み合わせを優先表示。
+ * 完全 read-only。
+ */
+function diagnoseNG01Candidates_V3() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(SHEETS.header);
+  if (!sh) { ui.alert('来院ヘッダシートが見つかりません。'); return; }
+
+  var data    = sh.getDataRange().getValues();
+  var hdrs    = data[0];
+  var acctIdx = hdrs.indexOf(HEADER_COLS.accountingType);
+  var pidIdx  = hdrs.indexOf(HEADER_COLS.patientId);
+  var dateIdx = hdrs.indexOf(HEADER_COLS.treatDate);
+
+  if (acctIdx < 0) { ui.alert('「' + HEADER_COLS.accountingType + '」列が見つかりません。'); return; }
+
+  var byKey = {};
+  for (var r = 1; r < data.length; r++) {
+    var row  = data[r];
+    var pid  = String(row[pidIdx]  || '').trim();
+    var raw  = row[dateIdx];
+    var acct = String(row[acctIdx] || '').trim();
+    if (!pid || !raw) continue;
+    var d = (raw instanceof Date) ? raw : new Date(raw);
+    if (isNaN(d.getTime())) continue;
+    var ym  = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    var key = pid + '_' + ym;
+    if (!byKey[key]) byKey[key] = { self: 0, ins: 0 };
+    if (acct === '自費のみ') {
+      byKey[key].self++;
+    } else if (acct === '保険のみ' || acct === '保険+自費') {
+      byKey[key].ins++;
+    }
+  }
+
+  var mixed = [], selfOnly = [];
+  Object.keys(byKey).forEach(function(k) {
+    var v = byKey[k];
+    if (v.self > 0 && v.ins > 0)  mixed.push(k + ' （自費のみ:' + v.self + '日 / 保険:' + v.ins + '日）← ★推奨');
+    else if (v.self > 0)           selfOnly.push(k + ' （自費のみ:' + v.self + '日のみ）');
+  });
+
+  if (mixed.length === 0 && selfOnly.length === 0) {
+    ui.alert('NG-01 候補なし\n\n「自費のみ」来院ヘッダ行が存在しません。\n最小テストデータ作成が必要です（詳細は PROJECT_STATUS 参照）。');
+    return;
+  }
+
+  var lines = ['NG-01 テスト候補 — 「自費のみ」日を含む患者+月\n'];
+  if (mixed.length > 0) {
+    lines.push('★推奨（同月に保険来院あり）:');
+    mixed.forEach(function(s) { lines.push('  ' + s); });
+  }
+  if (selfOnly.length > 0) {
+    lines.push('\n自費のみ月（保険来院なし）:');
+    selfOnly.forEach(function(s) { lines.push('  ' + s); });
+  }
+  lines.push('\n使い方: 上記の 患者ID + 対象年月 で施術録を出力し、\n裏面の日別明細に「自費のみ」日が含まれないことを確認。');
+  ui.alert(lines.join('\n'));
+}
+
+/**
+ * NG-02 候補探索: 施術明細から 冷_確定 / 温_確定 / 電_確定 が 0 以外の患者+月を列挙する。
+ * 完全 read-only。
+ */
+function diagnoseNG02Candidates_V3() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(SHEETS.detail);
+  if (!sh) { ui.alert('施術明細シートが見つかりません。'); return; }
+
+  var data    = sh.getDataRange().getValues();
+  var hdrs    = data[0];
+  var pidIdx  = hdrs.indexOf(AM_DETAIL_COLS.patientId);
+  var dateIdx = hdrs.indexOf(AM_DETAIL_COLS.treatDate);
+  var coldIdx = hdrs.indexOf(AM_DETAIL_COLS.coldOut);
+  var warmIdx = hdrs.indexOf(AM_DETAIL_COLS.warmOut);
+  var elecIdx = hdrs.indexOf(AM_DETAIL_COLS.electroOut);
+
+  if (coldIdx < 0 && warmIdx < 0 && elecIdx < 0) {
+    ui.alert('冷_確定 / 温_確定 / 電_確定 のいずれの列も見つかりません。');
+    return;
+  }
+
+  var byKey = {};
+  for (var r = 1; r < data.length; r++) {
+    var row  = data[r];
+    var cold = coldIdx >= 0 ? Number(row[coldIdx] || 0) : 0;
+    var warm = warmIdx >= 0 ? Number(row[warmIdx] || 0) : 0;
+    var elec = elecIdx >= 0 ? Number(row[elecIdx] || 0) : 0;
+    if (cold <= 0 && warm <= 0 && elec <= 0) continue;
+    var pid = String(row[pidIdx]  || '').trim();
+    var raw = row[dateIdx];
+    if (!pid || !raw) continue;
+    var d = (raw instanceof Date) ? raw : new Date(raw);
+    if (isNaN(d.getTime())) continue;
+    var ym  = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    var key = pid + '_' + ym;
+    if (!byKey[key]) byKey[key] = { cold: 0, warm: 0, elec: 0 };
+    byKey[key].cold += cold;
+    byKey[key].warm += warm;
+    byKey[key].elec += elec;
+  }
+
+  var results = Object.keys(byKey);
+  if (results.length === 0) {
+    ui.alert('NG-02 候補なし\n\n冷/温/電 確定金額が 0 以外の明細が存在しません。\n最小テストデータ作成が必要です（詳細は PROJECT_STATUS 参照）。');
+    return;
+  }
+
+  var lines = ['NG-02 テスト候補 — 冷/温/電 実績あり患者+月\n'];
+  results.sort().forEach(function(key) {
+    var v = byKey[key];
+    var parts = [];
+    if (v.cold > 0) parts.push('冷:' + v.cold + '円');
+    if (v.warm > 0) parts.push('温:' + v.warm + '円');
+    if (v.elec > 0) parts.push('電:' + v.elec + '円');
+    lines.push('  ' + key + ' （' + parts.join(' / ') + '）');
+  });
+  lines.push('\n使い方: 上記の 患者ID + 対象年月 で施術録を出力し、\n裏面の冷/温/電 列に正しい金額が書き込まれているか確認。');
+  ui.alert(lines.join('\n'));
 }
