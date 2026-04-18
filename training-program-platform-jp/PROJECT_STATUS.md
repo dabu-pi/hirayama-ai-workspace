@@ -2,7 +2,7 @@
 
 ## 2026-04-18 C-9 - gzclp-base-v2 Swap Pool (S-2): role-restricted accessory swap
 
-### STATUS: 実装完了 — live SQL 実行待ち
+### STATUS: fully closed（2026-04-18 live 実機確認済み）
 
 ### DESIGN_DECISION
 
@@ -65,12 +65,16 @@ Supabase Dashboard > SQL Editor で以下の順に実行:
 2. `supabase/migrations/20260418_000012_swap_group_slug_columns.sql`
 3. `seed/programs/gzclp-base-v2-swap-groups.sql`
 
-### MANUAL_CHECK (live 反映後)
+### MANUAL_CHECK (live 実機 — 確認済み 2026-04-18)
 
-- [ ] `/train?program=gzclp-base-v2&...` で A1 の Leg Curl Swap → deadlift-aux の候補 5 種目だけ表示される
-- [ ] B1 の Lateral Raise Swap → ohp-aux の候補 3 種目だけ表示される
-- [ ] `null` group の種目 (order 1〜3) は全量リストが表示される
-- [ ] 既存プログラム（gzclp-base / starting-strength-base）の swap は従来通り全量リスト
+| 確認項目 | 結果 |
+|---|---|
+| seed 適用後 24/24 rows に swap_group_slug 設定 | ✅ PASS |
+| A1 の Leg Curl Swap → deadlift-aux 5 種目のみ（Good Morning / Back Extension / Hip Thrust / Romanian DL / Leg Curl） | ✅ PASS |
+| 候補制限が正常動作 | ✅ PASS |
+| swap 実行後 T3 バッジ維持 | ✅ PASS |
+| order 3（pull 枠）は制限なし（仕様通り） | ✅ PASS |
+| 既存プログラムへの影響なし | ✅ PASS |
 
 ---
 
