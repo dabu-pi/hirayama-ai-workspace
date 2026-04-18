@@ -2,7 +2,7 @@
 
 ## 2026-04-18 C-10 - Training History Cleanup: soft-archive for sessions and enrollments
 
-### STATUS: implementation complete — pending live migration + manual smoke test
+### STATUS: fully closed（2026-04-18 live 実機確認済み）
 
 ### DESIGN_DECISION
 
@@ -47,14 +47,13 @@ in-progress check (now filtered by `archived_at IS NULL`) no longer sees it as b
 - `components/programs/ProgramsScreen.module.css` — enrollmentBannerActions + enrollmentArchiveBtn styles
 - `app/programs/page.tsx` — passes enrollmentId to ProgramsScreen
 
-### MANUAL_CHECK (after live migration)
+### LIVE_CONFIRMATION（2026-04-18）
 
-1. Apply migration `20260418_000013_archived_at_columns.sql` in Supabase SQL editor
-2. Open `/session-history` → Archive button visible on each card
-3. Click Archive on a test session → confirm dialog → session disappears from list
-4. Open `/programs` → if active enrollment: Archive button visible in banner
-5. Click Archive → enrollment disappears from banner; `/programs` page refreshes
-6. Start a new session for the same program → no "blocked" message (enrollment gone)
+- archived_at migration 適用済み
+- Programs 画面で進行中 enrollment を archive → 正常に解除・非表示確認
+- History 画面で session を 3 件 archive → 一覧から除外確認
+- active program 判定・train フロー問題なし
+- 既存データへの影響なし
 
 ---
 
