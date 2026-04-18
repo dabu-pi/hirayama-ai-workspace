@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { WorkoutSessionListItem } from "@/types/workout";
 
+import { ArchiveSessionButton } from "./ArchiveSessionButton";
 import styles from "./SessionHistoryScreen.module.css";
 
 type SessionHistoryScreenProps = {
@@ -94,6 +95,7 @@ export function SessionHistoryScreen({
                   >
                     Detail →
                   </Link>
+                  <ArchiveSessionButton sessionId={session.sessionId} />
                 </div>
               </div>
             </article>

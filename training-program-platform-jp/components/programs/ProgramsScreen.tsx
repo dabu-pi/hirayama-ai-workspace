@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import type {
   ProgramListItem,
@@ -14,6 +15,7 @@ import type {
 import styles from "./ProgramsScreen.module.css";
 
 type ActiveEnrollmentInfo = {
+  enrollmentId: string;
   title: string;
   continueUrl: string;
 };
@@ -93,11 +95,36 @@ export function ProgramsScreen({
   errorMessage = null,
   activeEnrollment = null
 }: ProgramsScreenProps) {
+  const router = useRouter();
   const isReady = state === "ready";
   const bodyText = resolveBody(state, errorMessage);
 
   const [activeLevel, setActiveLevel] = useState<string | null>(null);
   const [activeTagSlug, setActiveTagSlug] = useState<string | null>(null);
+  const [archivingEnrollment, setArchivingEnrollment] = useState(false);
+
+  async function handleArchiveEnrollment() {
+    if (!activeEnrollment) return;
+    if (
+      !window.confirm(
+        `「${activeEnrollment.title}」をアーカイブしますか？\n非表示になりますが、データは保持されます。`
+      )
+    ) {
+      return;
+    }
+    setArchivingEnrollment(true);
+    try {
+      const res = await fetch(
+        `/api/enrollments/${activeEnrollment.enrollmentId}/archive`,
+        { method: "POST" }
+      );
+      if (res.ok) {
+        router.refresh();
+      }
+    } finally {
+      setArchivingEnrollment(false);
+    }
+  }
 
   const availableLevels = useMemo(() => deriveAvailableLevels(view.items), [view.items]);
   const availableTags = useMemo(() => deriveAvailableTags(view.items), [view.items]);
@@ -129,9 +156,19 @@ export function ProgramsScreen({
             </span>
             進行中のプログラムがあります
           </div>
-          <Link className={styles.enrollmentBannerCta} href={activeEnrollment.continueUrl}>
-            続ける →
-          </Link>
+          <div className={styles.enrollmentBannerActions}>
+            <Link className={styles.enrollmentBannerCta} href={activeEnrollment.continueUrl}>
+              続ける →
+            </Link>
+            <button
+              className={styles.enrollmentArchiveBtn}
+              disabled={archivingEnrollment}
+              onClick={handleArchiveEnrollment}
+              type="button"
+            >
+              {archivingEnrollment ? "…" : "Archive"}
+            </button>
+          </div>
         </div>
       )}
 

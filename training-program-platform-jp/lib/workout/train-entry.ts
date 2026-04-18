@@ -127,6 +127,7 @@ export async function resolveTrainingEntry(
       .eq("user_id", userId)
       .eq("program_id", programId)
       .eq("status", "active")
+      .is("archived_at", null)
       .maybeSingle<EnrollmentRow>();
 
     enrollmentId = enrollment?.id ?? null;
@@ -153,6 +154,7 @@ export async function resolveTrainingEntry(
     .select("id, program_day_id")
     .eq("program_enrollment_id", enrollmentId)
     .eq("status", "in_progress")
+    .is("archived_at", null)
     .order("started_at", { ascending: false });
 
   const sessions = (rawSessions ?? []) as InProgressSessionRow[];

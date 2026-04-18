@@ -68,6 +68,7 @@ export async function findActiveEnrollment(
       )
       .eq("program_id", programId)
       .eq("status", "active")
+      .is("archived_at", null)
       .eq("user_id", userId)
       .limit(1)
       .maybeSingle<EnrollmentRow>();
@@ -306,6 +307,7 @@ export async function advanceEnrollmentAfterSessionComplete(
       .select("id, user_id, status, current_program_day_id")
       .eq("id", session.program_enrollment_id)
       .eq("status", "active")
+      .is("archived_at", null)
       .eq("user_id", session.user_id)
       .maybeSingle<Pick<EnrollmentRow, "id" | "user_id" | "status" | "current_program_day_id">>();
 

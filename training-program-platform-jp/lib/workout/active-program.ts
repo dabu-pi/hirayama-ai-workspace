@@ -157,6 +157,7 @@ async function selectActiveEnrollments(
     .select("id, program_id, current_program_day_id, status, started_at, updated_at")
     .eq("user_id", userId)
     .eq("status", "active")
+    .is("archived_at", null)
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -358,6 +359,7 @@ async function selectRecentSessionsForEnrollments(
     .select("id, started_at, status, program_day_id, program_enrollment_id")
     .eq("user_id", userId)
     .in("program_enrollment_id", enrollmentIds)
+    .is("archived_at", null)
     .order("started_at", { ascending: false })
     .limit(enrollmentIds.length * RECENT_SESSION_LIMIT);
 
@@ -400,6 +402,7 @@ async function selectInProgressSessionsForEnrollments(
     .select("id, program_enrollment_id, program_day_id")
     .in("program_enrollment_id", enrollmentIds)
     .eq("status", "in_progress")
+    .is("archived_at", null)
     .order("started_at", { ascending: false });
 
   if (error) {
@@ -442,6 +445,7 @@ async function selectTrendSessions(
     .eq("user_id", userId)
     .in("program_enrollment_id", enrollmentIds)
     .eq("status", "completed")
+    .is("archived_at", null)
     .order("started_at", { ascending: false })
     .limit(enrollmentIds.length * TREND_SESSION_LIMIT);
 

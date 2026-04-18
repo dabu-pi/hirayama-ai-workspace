@@ -1,5 +1,63 @@
 # PROJECT_STATUS
 
+## 2026-04-18 C-10 - Training History Cleanup: soft-archive for sessions and enrollments
+
+### STATUS: implementation complete — pending live migration + manual smoke test
+
+### DESIGN_DECISION
+
+Soft-archive (not physical delete) for both `program_enrollments` and `workout_sessions`.
+Pattern mirrors `workout_sets.deleted_at`: `archived_at IS NULL` = visible, non-null = hidden.
+
+**What gets archived:**
+- `workout_sessions`: test/abandoned sessions, in-progress sessions that blocked new starts
+- `program_enrollments`: wrong-start programs, abandoned enrollments
+
+**Archiving an in-progress session** is allowed and safe — after archiving, `train-entry`'s
+in-progress check (now filtered by `archived_at IS NULL`) no longer sees it as blocking.
+
+**Enrollment archiving cascades visually** — archived enrollment is excluded from
+`selectActiveEnrollments`, so all related sessions also disappear from the active-program view
+(without needing to archive them individually).
+
+### CHANGED_FILES
+
+**New migrations:**
+- `supabase/migrations/20260418_000013_archived_at_columns.sql`
+  - `archived_at timestamptz null` on both `program_enrollments` and `workout_sessions`
+  - Partial indexes: `idx_program_enrollments_active_not_archived`, `idx_workout_sessions_history_not_archived`
+
+**New API routes:**
+- `app/api/workout-sessions/[id]/archive/route.ts` — POST, idempotent, ownership check
+- `app/api/enrollments/[enrollmentId]/archive/route.ts` — POST, idempotent, ownership check
+
+**Query filter additions (`.is("archived_at", null)`):**
+- `lib/workout/enrollment.ts` — `findActiveEnrollment`, `advanceEnrollmentAfterSessionComplete`
+- `lib/workout/active-program.ts` — `selectActiveEnrollments`, `selectInProgressSessionsForEnrollments`, `selectRecentSessionsForEnrollments`, `selectTrendSessions`
+- `lib/workout/train-entry.ts` — enrollment lookup, in-progress session check
+- `lib/workout/session-list.ts` — `selectSessions`
+
+**New UI components:**
+- `components/history/ArchiveSessionButton.tsx` — client component, confirm dialog + POST + router.refresh()
+- `components/history/ArchiveSessionButton.module.css`
+
+**Modified UI:**
+- `components/history/SessionHistoryScreen.tsx` — ArchiveSessionButton per card
+- `components/programs/ProgramsScreen.tsx` — enrollmentId added to ActiveEnrollmentInfo, Archive button in enrollment banner
+- `components/programs/ProgramsScreen.module.css` — enrollmentBannerActions + enrollmentArchiveBtn styles
+- `app/programs/page.tsx` — passes enrollmentId to ProgramsScreen
+
+### MANUAL_CHECK (after live migration)
+
+1. Apply migration `20260418_000013_archived_at_columns.sql` in Supabase SQL editor
+2. Open `/session-history` → Archive button visible on each card
+3. Click Archive on a test session → confirm dialog → session disappears from list
+4. Open `/programs` → if active enrollment: Archive button visible in banner
+5. Click Archive → enrollment disappears from banner; `/programs` page refreshes
+6. Start a new session for the same program → no "blocked" message (enrollment gone)
+
+---
+
 ## 2026-04-18 C-9 - gzclp-base-v2 Swap Pool (S-2): role-restricted accessory swap
 
 ### STATUS: fully closed（2026-04-18 live 実機確認済み）

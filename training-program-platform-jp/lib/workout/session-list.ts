@@ -65,6 +65,7 @@ async function selectSessions(client: DatabaseClient, userId: string) {
     .from("workout_sessions")
     .select("id, status, started_at, finished_at, program_day_id")
     .eq("user_id", userId)
+    .is("archived_at", null)
     .order("started_at", { ascending: false })
     .limit(SESSION_LIST_LIMIT);
 

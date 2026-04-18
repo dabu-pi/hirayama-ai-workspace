@@ -11,6 +11,7 @@ export default async function ProgramsPage() {
   const activeEnrollment =
     enrollmentViews.length > 0
       ? {
+          enrollmentId: enrollmentViews[0].enrollmentId,
           title: enrollmentViews[0].programTitle,
           continueUrl: enrollmentViews[0].continueUrl
         }
