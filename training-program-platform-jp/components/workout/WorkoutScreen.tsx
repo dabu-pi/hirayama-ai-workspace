@@ -1122,6 +1122,7 @@ export function WorkoutScreen({
         exerciseNameJa: sessionExercise.exerciseNameJa,
         exerciseNameEn: sessionExercise.exerciseNameEn,
         exerciseType: sessionExercise.exerciseType,
+        exerciseRoleLabel: sessionExercise.exerciseType,
         orderIndex: sessionExercise.orderIndex,
         previousSets: [],
         wasAdded: sessionExercise.wasAdded,
@@ -1363,7 +1364,9 @@ export function WorkoutScreen({
             ref={(el) => { exerciseBlockRefs.current[exercise.id] = el; }}
           >
             <div className={styles.exerciseHeader}>
-              <span className={typeClassName(exercise.exerciseType)}>{exercise.exerciseType}</span>
+              {exercise.exerciseRoleLabel ? (
+                <span className={typeClassName(exercise.exerciseType)}>{exercise.exerciseRoleLabel}</span>
+              ) : null}
               <Link className={styles.exerciseLink} href={`/exercise-history/${exercise.exerciseSlug}`}>
                 <span>{exercise.exerciseNameEn}</span>
                 <span aria-hidden="true">→</span>

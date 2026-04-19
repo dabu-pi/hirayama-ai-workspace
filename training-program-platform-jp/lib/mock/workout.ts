@@ -26,6 +26,7 @@ const workoutSession: WorkoutSessionView = {
       exerciseNameJa: "ベンチプレス",
       exerciseNameEn: "Bench Press",
       exerciseType: "T1",
+      exerciseRoleLabel: "T1",
       orderIndex: 1,
       previousSets: [
         { setNumber: 1, weightKg: 80, repsDone: 5 },
@@ -87,6 +88,7 @@ const workoutSession: WorkoutSessionView = {
       exerciseNameJa: "スクワット",
       exerciseNameEn: "Squat",
       exerciseType: "T2",
+      exerciseRoleLabel: "T2",
       orderIndex: 2,
       previousSets: [
         { setNumber: 1, weightKg: 100, repsDone: 8 },
@@ -148,6 +150,7 @@ const workoutSession: WorkoutSessionView = {
       exerciseNameJa: "ラットプルダウン",
       exerciseNameEn: "Lat Pulldown",
       exerciseType: "T3",
+      exerciseRoleLabel: "T3",
       orderIndex: 3,
       previousSets: [],
       sets: [

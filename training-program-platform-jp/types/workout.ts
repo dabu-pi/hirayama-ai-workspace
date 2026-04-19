@@ -53,6 +53,12 @@ export type WorkoutExerciseBlock = {
   swapGroupSlug?: string | null;
   /** T1-only: next recommended weight and phase. Null when no state exists yet. */
   t1ProgressionHint?: T1ProgressionHint | null;
+  /**
+   * C-13: Display label for the exercise type badge, resolved from programs.methodology.
+   * gzcl → "T1"/"T2"/"T3" | linear → "Primary"/"Secondary"/"Accessory" | generic → ""
+   * Empty string = hide badge. Defaults to exerciseType value when methodology is unknown.
+   */
+  exerciseRoleLabel: string;
 };
 
 export type WorkoutSessionView = {

@@ -47,6 +47,7 @@ type ProgramWeekRow = {
 type ProgramRow = {
   id: string;
   title: string;
+  methodology: string | null;
 };
 
 type WorkoutSessionExerciseRow = {
@@ -223,7 +224,7 @@ async function selectProgram(client: DatabaseClient, programId: string | null) {
 
   const { data, error } = await client
     .from("programs")
-    .select("id, title")
+    .select("id, title, methodology")
     .eq("id", programId)
     .maybeSingle<ProgramRow>();
 
@@ -232,6 +233,20 @@ async function selectProgram(client: DatabaseClient, programId: string | null) {
   }
 
   return data;
+}
+
+const EXERCISE_ROLE_LABELS: Record<string, Record<ExerciseType, string>> = {
+  gzcl:    { T1: "T1",        T2: "T2",         T3: "T3" },
+  linear:  { T1: "Primary",   T2: "Secondary",   T3: "Accessory" },
+  generic: { T1: "",          T2: "",            T3: "" }
+};
+
+function resolveExerciseRoleLabel(
+  exerciseType: ExerciseType,
+  methodology: string | null
+): string {
+  const map = EXERCISE_ROLE_LABELS[methodology ?? "gzcl"] ?? EXERCISE_ROLE_LABELS.gzcl;
+  return map[exerciseType];
 }
 
 async function selectWorkoutSessionExercises(
@@ -469,7 +484,8 @@ function buildExerciseBlocks(
   exercises: ExerciseRow[],
   workoutSets: WorkoutSetRow[],
   previousDisplayMap: Map<string, string>,
-  t1ProgressionHints: Map<string, T1ProgressionHint>
+  t1ProgressionHints: Map<string, T1ProgressionHint>,
+  methodology: string | null
 ) {
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const setsByExercise = new Map<string, WorkoutSetRow[]>();
@@ -517,7 +533,8 @@ function buildExerciseBlocks(
       wasAdded: sessionExercise.was_added,
       wasSwapped: sessionExercise.was_swapped,
       swapGroupSlug: sessionExercise.swap_group_slug ?? null,
-      t1ProgressionHint: t1ProgressionHints.get(sessionExercise.exercise_id) ?? null
+      t1ProgressionHint: t1ProgressionHints.get(sessionExercise.exercise_id) ?? null,
+      exerciseRoleLabel: resolveExerciseRoleLabel(sessionExercise.exercise_type, methodology)
     };
   });
 }
@@ -594,7 +611,8 @@ async function loadSessionView(
       exercises,
       workoutSets,
       previousDisplayMap,
-      t1ProgressionHints
+      t1ProgressionHints,
+      program?.methodology ?? null
     )
   };
 }

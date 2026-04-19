@@ -1,5 +1,56 @@
 # PROJECT_STATUS
 
+## 2026-04-19 C-13 Step 2 — exerciseRoleLabel in WorkoutScreen
+
+### STATUS: CLOSED (2026-04-19)
+
+### PURPOSE
+
+Resolve `exerciseRoleLabel` per methodology and display it in WorkoutScreen badge
+instead of the raw `exerciseType`. GZCL users see no change. Non-GZCL programs
+will show correct labels once the migration has been applied to Supabase.
+
+### CHANGES
+
+**types/workout.ts**
+- Added `exerciseRoleLabel: string` to `WorkoutExerciseBlock`
+  (required; always populated by loadSessionView and mock data)
+
+**lib/workout/train-session.ts**
+- `ProgramRow`: added `methodology: string | null`
+- `selectProgram()`: SELECT extended from `"id, title"` to `"id, title, methodology"`
+  (zero extra round-trips — same single-row query, one more column)
+- `EXERCISE_ROLE_LABELS` const: methodology → exerciseType → display label map
+  gzcl: T1→"T1", T2→"T2", T3→"T3"
+  linear: T1→"Primary", T2→"Secondary", T3→"Accessory"
+  generic: T1/T2/T3→"" (badge hidden)
+- `resolveExerciseRoleLabel(exerciseType, methodology): string` pure function
+- `buildExerciseBlocks()`: added `methodology` param, added `exerciseRoleLabel` to returned blocks
+- `loadSessionView()`: passes `program?.methodology ?? null` to `buildExerciseBlocks()`
+
+**lib/mock/workout.ts**
+- Added `exerciseRoleLabel: "T1"/"T2"/"T3"` to all 3 mock exercise blocks
+  (mock is GZCL, so labels equal exerciseType)
+
+**components/workout/WorkoutScreen.tsx**
+- Badge: `{exercise.exerciseType}` → `{exercise.exerciseRoleLabel}` with hide-when-empty guard
+  - Before: `<span className={typeClassName(exercise.exerciseType)}>{exercise.exerciseType}</span>`
+  - After: `{exercise.exerciseRoleLabel ? (<span className={typeClassName(exercise.exerciseType)}>{exercise.exerciseRoleLabel}</span>) : null}`
+  - CSS class still uses `exerciseType` (T1/T2/T3 color coding preserved)
+- `handleAddExercise`: `exerciseRoleLabel: sessionExercise.exerciseType` as safe fallback
+  (Add Exercise API always returns T3; label resolution without session context is deferred)
+
+### SCOPE NOT COVERED (deferred)
+
+- WorkoutSummaryScreen, ExerciseHistoryScreen, SessionDetailScreen — Step 3
+- handleAddExercise full methodology resolution (requires session.methodology propagation)
+- handleSwapExercise exerciseRoleLabel update (same constraint)
+
+### TYPECHECK
+tsc --noEmit: PASSED
+
+---
+
 ## 2026-04-19 C-13 Step 1 — programs.methodology column + MethodologyType
 
 ### STATUS: CLOSED (2026-04-19)
