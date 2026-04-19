@@ -1,5 +1,34 @@
 # PROJECT_STATUS
 
+## 2026-04-19 S-12 — Go to Train navigation fix
+
+### STATUS: fixed (2026-04-19)
+
+### ROOT_CAUSE
+
+Naked `/train` (no `programDayId`) falls through to `getCurrentWorkoutSessionView()`, then `getActiveProgramView()`.
+Train page only handled `actionType === "start"` explicitly; `actionType === "resume"` fell through to `redirect("/programs")`.
+
+Additionally, `selectCurrentInProgressSession` and `selectSessionByDayId` in `train-session.ts` lacked `.is("archived_at", null)`,
+allowing C-10-archived in-progress sessions to surface incorrectly when using the naked `/train` path.
+
+### CHANGES
+
+- `app/train/page.tsx`: Added explicit `actionType === "resume"` handler after the "start" block.
+  When `getCurrentWorkoutSessionView()` returns null but `getActiveProgramView()` reports a resume session,
+  redirect to `primaryView.continueUrl` (which carries `programDayId` → `resolveTrainingEntry` finds the session).
+- `lib/workout/train-session.ts`: Added `.is("archived_at", null)` to both `selectCurrentInProgressSession`
+  and `selectSessionByDayId` — consistent with C-10 intent and all other session queries.
+
+### MANUAL_CHECK
+
+1. `/programs` → "続ける →" → verify WorkoutScreen loads (existing in-progress session)
+2. `/programs` → "Go to Train" → verify StartSessionScreen or WorkoutScreen (not redirect to /programs)
+3. Finish a session → from Summary → "Go to Train" → verify StartSessionScreen for next day
+4. No active enrollment → "Go to Train" → redirect to /programs is still expected
+
+---
+
 ## 2026-04-18 C-11 — GZCLP T1 Progression (Phase 1): state management + live hint
 
 ### STATUS: implementation complete — Finish bug fixed (2026-04-18) — pending live migration + manual smoke test

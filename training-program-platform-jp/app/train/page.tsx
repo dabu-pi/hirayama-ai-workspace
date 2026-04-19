@@ -185,6 +185,22 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     );
   }
 
+  // S-12: resume path when getCurrentWorkoutSessionView returned null but the
+  // active-program view still reports an in-progress session. This happens when
+  // selectCurrentInProgressSession and selectInProgressSessionsForEnrollments
+  // temporarily disagree (e.g. archived_at filter difference, race condition).
+  // Redirect to continueUrl which carries programDayId → resolveTrainingEntry
+  // will find the session and load WorkoutScreen correctly.
+  if (isAuthenticated && primaryView?.actionType === "resume" && primaryView.continueUrl) {
+    console.info(`${PAGE}:branch`, {
+      branch: "redirect_resume_via_continue_url",
+      enrollmentId: primaryView.enrollmentId,
+      continueUrl: primaryView.continueUrl,
+      activeSessionId: primaryView.activeSessionId
+    });
+    redirect(primaryView.continueUrl);
+  }
+
   // Determine redirect cause for log correlation
   const redirectCause: RedirectCause = (() => {
     if (selectedProgram.state === "none") return "no_selected_program";

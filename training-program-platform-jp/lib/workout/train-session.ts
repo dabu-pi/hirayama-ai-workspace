@@ -141,6 +141,7 @@ async function selectCurrentInProgressSession(
     )
     .eq("status", "in_progress")
     .eq("user_id", userId)
+    .is("archived_at", null)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle<WorkoutSessionRow>();
@@ -167,6 +168,7 @@ async function selectSessionByDayId(
     .eq("status", "in_progress")
     .eq("program_day_id", programDayId)
     .eq("user_id", userId)
+    .is("archived_at", null)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle<WorkoutSessionRow>();
