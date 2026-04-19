@@ -222,14 +222,37 @@ Expected hint bar for next Squat session:
 [ Next: 82.5kg · 5×3+ ]
 ```
 
-### PENDING_BROWSER_VERIFICATION
+### UI_CHECK_STATUS (2026-04-19)
 
-UI rendering requires a live browser (cannot be automated):
-1. `/train` → StartSessionScreen が表示されることを目視確認
-2. WorkoutScreen で T1 Squat カードにオレンジ hint bar が表示されること
-   - 文言: "Next: 82.5kg · 5×3+"
-   - T2/T3 カードには表示されないこと
-3. 次セッション Finish 後に weight が 82.5 + 2.5 = 85.0kg に進むこと
+Dev server 起動 (port 3001) で WebFetch によるアクセスを試みたが、
+`/train` は認証必須のため `TrainAuthRequired` が返った（実装バグではない）。
+ブラウザ UI 目視は引き続き手動確認が必要。
+
+**コード監査（完全）:**
+
+| 確認項目 | コード箇所 | 結果 |
+|---|---|---|
+| hint bar 条件 | WorkoutScreen.tsx:1378 | `T1 AND t1ProgressionHint not null` のみ表示 ✅ |
+| T2/T3 が出ない保証 | buildExerciseBlocks:519 | Map キーは T1 exercise_id のみ → 構造的に null ✅ |
+| オレンジ CSS | WorkoutScreen.module.css:854 | `color: #f97316, font-weight: 700` ✅ |
+| テキスト形式 | WorkoutScreen.tsx:1380-1384 | `"Next: 82.5kg · 5×3+"` ✅ |
+
+**現在の DB 状態:**
+- enrollment: Week1/Day2 (T1=OHP, 初回 → hint なし = 正常)
+- t1_progression_states: Squat / 5x3 / 82.5kg / success
+
+**Squat hint bar の確認パス:**
+```
+W1D2: OHP T1   → hint なし (OHP 初回, 正常)
+W2D1: DL  T1   → hint なし (DL  初回, 正常)
+W2D2: Squat T1 → "Next: 82.5kg · 5×3+" ← ここで確認
+```
+
+**手動確認チェックリスト（ブラウザ）:**
+- [ ] /train → StartSessionScreen が表示される
+- [ ] W2D2 セッション開始 → Squat T1 カードに "Next: 82.5kg · 5×3+" (orange)
+- [ ] T2/T3 カードには hint bar なし
+- [ ] W2D2 Finish (AMRAP success) → weight = 85.0kg に進む
 
 ### OPEN_POINTS
 
