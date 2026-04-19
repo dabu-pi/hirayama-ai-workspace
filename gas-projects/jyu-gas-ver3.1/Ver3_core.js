@@ -379,52 +379,57 @@ var JUSEI_TOOL_MENU_SECTIONS = [
   {
     title: "柔整入力",
     items: [
-      { label: "保存", functionName: "saveVisit_V3" },
-      { label: "自動引継ぎ", functionName: "autofillFromPreviousVisit_V3" },
-      { label: "自費明細入力", functionName: "openSelfPayDialog_V3" },
-      { label: "経過履歴更新", functionName: "refreshKeikaHistoryUI_V3" },
-      { label: "画面クリア", functionName: "clearEntryUI_V3" },
-      { label: "施術録を出力", functionName: "srShowDialog" },
-      { label: "施術録＋転記データを出力", functionName: "srShowDialogCombo" }
+      { label: "保存（来院登録）",   functionName: "saveVisit_V3" },
+      { label: "自動引継ぎ",         functionName: "autofillFromPreviousVisit_V3" },
+      { label: "自費明細入力",       functionName: "openSelfPayDialog_V3" },
+      { label: "経過履歴更新",       functionName: "refreshKeikaHistoryUI_V3" },
+      { label: "画面クリア",         functionName: "clearEntryUI_V3" }
     ]
   },
   {
-    title: "柔整管理",
+    title: "帳票出力",
     items: [
-      { label: "当日内容を再読み込み", functionName: "reloadVisitToUI_V3" },
-      { label: "転帰を更新",           functionName: "updateOutcomeFromUI_V3" },
-      { label: "経過を更新",           functionName: "updateProgressFromUI_V3" },
-      { label: "ヘッダ再出力", functionName: "exportHeaderFromCases_V3" },
-      { label: "金額再計算", functionName: "menuRecalcAmounts_V3" },
-      { label: "申請書転記データを作成", functionName: "V3TR_menuBuildTransferData" },
+      { label: "施術録を出力",         functionName: "srShowDialog" },
+      { label: "申請書を出力",         functionName: "V3TR_menuGenerateApplication_B" },
+      { label: "施術録＋申請書を出力", functionName: "srShowDialogCombo" }
+    ]
+  },
+  {
+    title: "補助",
+    items: [
+      { label: "転帰を更新",             functionName: "updateOutcomeFromUI_V3" },
+      { label: "経過を更新",             functionName: "updateProgressFromUI_V3" },
+      { label: "患者検索プルダウン更新", functionName: "refreshPatientPicker_V3" }
+    ]
+  },
+  {
+    title: "管理",
+    items: [
+      // ── 保守・修正 ──────────────────────────────────────────
+      { label: "当日内容を再読み込み",               functionName: "reloadVisitToUI_V3" },
+      { label: "ヘッダ再出力",                       functionName: "exportHeaderFromCases_V3" },
+      { label: "金額再計算",                         functionName: "menuRecalcAmounts_V3" },
+      { label: "申請書転記データを作成",             functionName: "V3TR_menuBuildTransferData" },
       { label: "申請書テンプレに反映（画面確認用）", functionName: "V3TR_menuWriteApplication" },
-      { label: "患者検索プルダウン更新", functionName: "refreshPatientPicker_V3" },
-      { label: "保険者情報を患者マスタへ反映", functionName: "copyInsurerToMaster_V3" }
-    ]
-  },
-  {
-    title: "柔整設定",
-    items: [
-      { label: "転帰ドロップダウン設定", functionName: "menuSetupTenkiValidation_V3" },
-      { label: "入力バリデーション設定", functionName: "setupValidation_V3" },
+      { label: "保険者情報を患者マスタへ反映",       functionName: "copyInsurerToMaster_V3" },
+      { separator: true },
+      // ── 初回セットアップ ────────────────────────────────────
+      { label: "転帰ドロップダウン設定",     functionName: "menuSetupTenkiValidation_V3" },
+      { label: "入力バリデーション設定",     functionName: "setupValidation_V3" },
       { label: "設定シート初期セットアップ", functionName: "ensureSettingsRows_V3" },
       { label: "施術明細ヘッダセットアップ", functionName: "ensureDetailHeaders_V3" },
-      { label: "UI初期設定", functionName: "setupSelfPayValidation_V3" },
-      { label: "自費明細シート初期化", functionName: "ensureSelfPayDetailSheet_V3" },
-      { label: "患者検索プルダウン設定", functionName: "setupPatientPicker_V3" }
-    ]
-  },
-  {
-    title: "管理者用",
-    items: [
-      { label: "手動ボタン配置ガイド", functionName: "setupPatientScreenButtons_V3" },
-      { label: "ヘッダ確認（デバッグ）", functionName: "checkHeaders_V3" },
-      { label: "JBIZ menu_id 追加", functionName: "setupJBIZMenuMasterId_V3" },
-      { label: "JBIZ 会員傷行レコード移行", functionName: "migrateJBIZMemberRules_V3" },
+      { label: "UI初期設定",                 functionName: "setupSelfPayValidation_V3" },
+      { label: "自費明細シート初期化",       functionName: "ensureSelfPayDetailSheet_V3" },
+      { label: "患者検索プルダウン設定",     functionName: "setupPatientPicker_V3" },
+      { separator: true },
+      // ── デバッグ・Legacy・移行 ─────────────────────────────
+      { label: "ヘッダ確認（デバッグ）",         functionName: "checkHeaders_V3" },
+      { label: "JBIZ menu_id 追加",              functionName: "setupJBIZMenuMasterId_V3" },
+      { label: "JBIZ 会員傷行レコード移行",      functionName: "migrateJBIZMemberRules_V3" },
       { label: "【監査】自費明細 legacy menu_id", functionName: "auditLegacyMenuIds_V3" },
-      { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
-      { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
-      { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
+      { label: "来院ヘッダ列順整理",             functionName: "reorderHeaderCols_V3" },
+      { label: "一括JSON出力",                   functionName: "V3TR_menuBatchExportJson" },
+      { label: "手動ボタン配置ガイド",           functionName: "setupPatientScreenButtons_V3" }
     ]
   }
 ];
@@ -432,7 +437,11 @@ var JUSEI_TOOL_MENU_SECTIONS = [
 function buildJuseiToolSubMenu_(ui, section) {
   var subMenu = ui.createMenu(section.title);
   (section.items || []).forEach(function(item) {
-    subMenu.addItem(item.label, item.functionName);
+    if (item.separator) {
+      subMenu.addSeparator();
+    } else {
+      subMenu.addItem(item.label, item.functionName);
+    }
   });
   return subMenu;
 }
