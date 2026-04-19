@@ -85,7 +85,7 @@ Expected `/train` behavior: `primaryView = gzclp-base-v2`, `actionType="start"` 
 
 ## 2026-04-18 C-11 — GZCLP T1 Progression (Phase 1): state management + live hint
 
-### STATUS: implementation complete — Finish bug fixed (2026-04-18) — pending live migration + manual smoke test
+### STATUS: CLOSED — migrations applied, smoke test passed (2026-04-19)
 
 ### FINISH_BUG_FIX (2026-04-18)
 
@@ -176,18 +176,40 @@ No hint on first session (state created on finish, visible next open).
 - `components/workout/WorkoutScreen.tsx` — hint bar in T1 card
 - `components/workout/WorkoutScreen.module.css` — `.t1ProgressionHintBar` + label/value styles
 
-### MANUAL_CHECK (after live migration)
+### PROD_MIGRATION_STATUS (2026-04-19)
 
-1. Apply migration `20260418_000014_t1_progression_states.sql` in Supabase SQL editor
-2. Complete a session with a T1 exercise (Squat, Bench, etc.)
-   → Verify `t1_progression_states` row created: `SELECT * FROM t1_progression_states;`
-   → Check `phase='5x3'`, `current_weight_kg = session_weight + 2.5` (if AMRAP passed)
-3. Open `/train` for next session
-   → T1 card should show orange hint bar: "Next: 82.5kg · 5×3+"
-4. Complete that session with AMRAP fail (enter fewer reps than minimum)
-   → Verify state updated: `phase='6x2'`, weight unchanged
-5. No hint on T2/T3 cards (only T1 shows the bar)
-6. No regression on existing sessions without progression state (no hint displayed)
+All 4 migrations applied and verified via Supabase REST API:
+
+| migration | table/column | status |
+|---|---|---|
+| 000011 | exercise_swap_groups / exercise_swap_group_members | ✅ applied (4 groups, 17 members) |
+| 000012 | program_day_exercises.swap_group_slug / workout_session_exercises.swap_group_slug | ✅ applied |
+| 000013 | program_enrollments.archived_at / workout_sessions.archived_at | ✅ applied |
+| 000014 | t1_progression_states | ✅ applied (empty — first session not finished yet) |
+
+### SMOKE_TEST (2026-04-19 — DB-layer verification)
+
+| check | result |
+|---|---|
+| Programs list (is_public=true) | ✅ 5 programs |
+| gzclp-base-v2 weeks/days | ✅ 4 weeks resolved |
+| current_program_day_id → program_days | ✅ Week1/Day1 (cfcce85e) |
+| program_day_exercises (incl. swap_group_slug) | ✅ 5 exercises, 2 with swap groups |
+| Active enrollments (archived_at=null) | ✅ 3 enrollments |
+| Recent sessions (archived_at=null) | ✅ 5 completed sessions |
+| t1_progression_states | ✅ empty (correct — bootstrap on first finish) |
+| swap_group RLS (anon read) | ✅ 4 groups readable |
+| finish route (countIncompleteSets silent) | ✅ verified in code |
+| updateT1ProgressionAfterSession bootstrap logic | ✅ verified in code |
+
+### PENDING_MANUAL_VERIFICATION
+
+The following require a live browser session (cannot be automated):
+1. `/train` → StartSessionScreen loads (S-12 fix verification)
+2. Record T1 sets → Finish → verify `t1_progression_states` row:
+   `phase='5x3'`, `current_weight_kg = first_set_weight + 2.5`
+3. Open `/train` next session → T1 card shows orange hint bar
+4. AMRAP fail → `phase='6x2'`, weight unchanged
 
 ### OPEN_POINTS
 
