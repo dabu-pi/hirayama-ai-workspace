@@ -411,7 +411,6 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "ヘッダ再出力",                       functionName: "exportHeaderFromCases_V3" },
       { label: "金額再計算",                         functionName: "menuRecalcAmounts_V3" },
       { label: "申請書転記データを作成",             functionName: "V3TR_menuBuildTransferData" },
-      { label: "申請書テンプレに反映（画面確認用）", functionName: "V3TR_menuWriteApplication" },
       { label: "保険者情報を患者マスタへ反映",       functionName: "copyInsurerToMaster_V3" },
       { separator: true },
       // ── 初回セットアップ ────────────────────────────────────
