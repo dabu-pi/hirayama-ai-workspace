@@ -61,12 +61,12 @@ export async function POST(_: Request, { params }: RouteContext) {
       );
     }
 
-    if (targetSet.sessionExercise.session.status === "completed") {
+    if (targetSet.sessionExercise.session.status !== "in_progress") {
       return NextResponse.json(
         {
           error: {
-            code: "session_completed",
-            message: "Completed sessions cannot be edited."
+            code: "session_not_in_progress",
+            message: "Only in-progress sessions can be edited."
           }
         },
         { status: 409 }

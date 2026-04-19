@@ -1,5 +1,53 @@
 # PROJECT_STATUS
 
+## 2026-04-19 Phase 1 Sync Guard — cancelled session protection across all mutation routes
+
+### STATUS: CLOSED (2026-04-19)
+
+### PURPOSE
+
+Prevent mutations on cancelled sessions. The prior guards only blocked `=== "completed"`;
+a session cancelled on one device could still receive set/add-exercise writes from another.
+
+### ROOT_CAUSE
+
+All set mutation routes and Add/Swap Exercise routes checked `=== "completed"` but not `=== "cancelled"`.
+Add Set route had the same gap. Pattern: `!== "in_progress"` covers both states and any future terminal state.
+
+### CHANGES
+
+**7 API routes — guard upgraded from `=== "completed"` to `!== "in_progress"`:**
+
+| Route file | Old code | error_code |
+|---|---|---|
+| `app/api/workout-sets/[id]/complete/route.ts` | `=== "completed"` | `session_not_in_progress` |
+| `app/api/workout-sets/[id]/route.ts` (PATCH) | `=== "completed"` | `session_not_in_progress` |
+| `app/api/workout-sets/[id]/unlock/route.ts` | `=== "completed"` | `session_not_in_progress` |
+| `app/api/workout-sets/[id]/delete/route.ts` | `=== "completed"` | `session_not_in_progress` |
+| `app/api/workout-session-exercises/[id]/sets/route.ts` | `=== "completed"` | `session_not_in_progress` |
+| `app/api/workout-sessions/[id]/exercises/route.ts` | `=== "completed"` | `session_not_in_progress` |
+| `app/api/workout-sessions/[id]/exercises/[exerciseId]/route.ts` | `=== "completed"` | `session_not_in_progress` |
+
+**New migration:**
+- `supabase/migrations/20260419_000016_session_updated_at.sql`
+  - `workout_sessions.updated_at timestamptz NOT NULL DEFAULT now()`
+  - Back-fill: `coalesce(finished_at, started_at)`
+  - Trigger: `trg_workout_sessions_updated_at` via `set_updated_at()` function
+
+### PERFORMANCE_IMPACT
+
+None. All guards are in-memory checks after the existing `findOwnedWorkoutSet` /
+`findOwnedWorkoutSessionExercise` fetch that already retrieves `session.status`.
+
+### NOTES
+
+- Migration 000016 must be applied to production via Supabase SQL Editor (no CLI available).
+- Client-side `cancelled` error handling: existing `session_completed` path in WorkoutScreen
+  catches 409; the new `session_not_in_progress` code will surface the same generic error banner.
+- Phase 2 (polling/realtime) remains deferred.
+
+---
+
 ## 2026-04-19 C-13 Verification — methodology live check + multi-device sync design
 
 ### STATUS: CLOSED (2026-04-19)

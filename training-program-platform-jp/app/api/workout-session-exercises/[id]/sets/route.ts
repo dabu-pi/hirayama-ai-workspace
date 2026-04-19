@@ -85,12 +85,12 @@ export async function POST(_: Request, { params }: RouteContext) {
       );
     }
 
-    if (workoutSessionExercise.session.status === "completed") {
+    if (workoutSessionExercise.session.status !== "in_progress") {
       return NextResponse.json(
         {
           error: {
-            code: "session_completed",
-            message: "Cannot add a set to a completed session."
+            code: "session_not_in_progress",
+            message: "Only in-progress sessions can be edited."
           }
         },
         { status: 409 }

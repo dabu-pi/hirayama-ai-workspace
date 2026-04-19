@@ -121,12 +121,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    if (session.status === "completed") {
+    if (session.status !== "in_progress") {
       return NextResponse.json(
         {
           error: {
-            code: "session_completed",
-            message: "Cannot swap exercise in a completed session."
+            code: "session_not_in_progress",
+            message: "Only in-progress sessions can be edited."
           }
         },
         { status: 409 }
