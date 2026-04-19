@@ -20,6 +20,7 @@ type TrainPageProps = {
   searchParams?: {
     program?: string | string[];
     programDayId?: string | string[];
+    debug?: string | string[];
   };
 };
 
@@ -29,6 +30,7 @@ type RedirectCause =
   | "no_program_day"
   | "no_actionable_enrollment"
   | "no_current_session"
+  | "start_missing_slug"
   | "unexpected_fallback";
 
 export default async function TrainPage({ searchParams }: TrainPageProps) {
@@ -167,13 +169,17 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
   if (
     isAuthenticated &&
     primaryView?.actionType === "start" &&
-    primaryView.currentProgramDayId &&
-    primaryView.programSlug
+    primaryView.currentProgramDayId
+    // Note: programSlug is intentionally NOT required here. selectProgramsBatch
+    // silently returns [] on error (RLS / query failure), leaving programSlug="".
+    // An empty slug still allows StartSessionScreen to function: the session
+    // starts correctly and post-start navigation uses getCurrentWorkoutSessionView.
+    // Only the "Back to Program" link degrades (links to /programs generically).
   ) {
     console.info(`${PAGE}:branch`, {
       branch: "start_session_screen_from_enrollment",
       programDayId: primaryView.currentProgramDayId,
-      programSlug: primaryView.programSlug
+      programSlug: primaryView.programSlug || "(empty)"
     });
     return (
       <StartSessionScreen
@@ -191,7 +197,17 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
   // temporarily disagree (e.g. archived_at filter difference, race condition).
   // Redirect to continueUrl which carries programDayId → resolveTrainingEntry
   // will find the session and load WorkoutScreen correctly.
-  if (isAuthenticated && primaryView?.actionType === "resume" && primaryView.continueUrl) {
+  //
+  // Guard: only redirect when programSlug is non-empty. If programSlug="",
+  // continueUrl becomes "/train?program=&programDayId=…" which normalises to
+  // state:"none" and falls back to the naked path — causing an infinite loop.
+  // With an empty slug, fall through to redirect("/programs") instead.
+  if (
+    isAuthenticated &&
+    primaryView?.actionType === "resume" &&
+    primaryView.continueUrl &&
+    primaryView.programSlug
+  ) {
     console.info(`${PAGE}:branch`, {
       branch: "redirect_resume_via_continue_url",
       enrollmentId: primaryView.enrollmentId,
@@ -208,6 +224,11 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
       return "no_program_day";
     }
     if (!isAuthenticated || !primaryView) return "no_actionable_enrollment";
+    // actionType=start with currentProgramDayId set but programSlug="" — selectProgramsBatch
+    // failed silently; this should no longer redirect (handled above) but log if reached.
+    if (primaryView?.actionType === "start" && primaryView.currentProgramDayId && !primaryView.programSlug) {
+      return "start_missing_slug";
+    }
     if (!session) return "no_current_session";
     return "unexpected_fallback";
   })();
@@ -225,6 +246,42 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     primaryViewActiveSessionId: primaryView?.activeSessionId ?? null,
     currentSessionFound: Boolean(session)
   });
+
+  // Debug overlay: navigate to /train?debug=train to see resolved state in-browser
+  // without requiring Vercel log access. Remove once the issue is diagnosed.
+  const debugParam = Array.isArray(searchParams?.debug)
+    ? searchParams?.debug[0]
+    : searchParams?.debug;
+  if (debugParam === "train" && isAuthenticated) {
+    const debugPayload = {
+      selectedProgramState: selectedProgram.state,
+      selectedProgramSlug: selectedProgram.programSlug,
+      selectedProgramDayId: selectedProgram.programDayId,
+      currentSessionFound: Boolean(session),
+      isAuthenticated,
+      viewCount: views.length,
+      primaryViewActionType: primaryView?.actionType ?? null,
+      primaryViewCurrentProgramDayId: primaryView?.currentProgramDayId ?? null,
+      primaryViewProgramSlug: primaryView?.programSlug ?? null,
+      primaryViewContinueUrl: primaryView?.continueUrl ?? null,
+      primaryViewActiveSessionId: primaryView?.activeSessionId ?? null,
+      redirectCause
+    };
+    console.warn(`${PAGE}:debug_overlay`, debugPayload);
+    return (
+      <main style={{ padding: "1rem", fontFamily: "monospace" }}>
+        <h2 style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>
+          /train debug — cause: {redirectCause}
+        </h2>
+        <pre style={{ fontSize: "0.75rem", whiteSpace: "pre-wrap", background: "#f4f4f4", padding: "0.5rem" }}>
+          {JSON.stringify(debugPayload, null, 2)}
+        </pre>
+        <p style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.5rem" }}>
+          Remove ?debug=train to proceed normally.
+        </p>
+      </main>
+    );
+  }
 
   // Authenticated but no active session and no enrollment with an actionable day.
   // Previously this rendered a mock WorkoutSession (id = "session-demo-20260411").
