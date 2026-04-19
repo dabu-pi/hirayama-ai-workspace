@@ -426,6 +426,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "【診断】KPI逆算 C5/C6/C9 式を確認", functionName: "diagnoseKpiFormulas_V3" },
       { label: "【診断】T-SR NG-01候補（自費のみ月）", functionName: "diagnoseNG01Candidates_V3" },
       { label: "【診断】T-SR NG-02候補（冷/温/電あり月）", functionName: "diagnoseNG02Candidates_V3" },
+      { label: "【診断】JBIZ 移行状態チェック（archive / KPI）", functionName: "checkJbizMigrationStatus_V3" },
       { label: "来院ヘッダ列順整理", functionName: "reorderHeaderCols_V3" },
       { label: "一括JSON出力", functionName: "V3TR_menuBatchExportJson" },
       { label: "申請書を生成して Drive に保存", functionName: "V3TR_menuGenerateApplication_B" }
@@ -5804,5 +5805,77 @@ function diagnoseNG02Candidates_V3() {
     lines.push('  ' + key + ' （' + parts.join(' / ') + '）');
   });
   lines.push('\n使い方: 上記の 患者ID + 対象年月 で施術録を出力し、\n裏面の冷/温/電 列に正しい金額が書き込まれているか確認。');
+  ui.alert(lines.join('\n'));
+}
+
+/* =======================================================================
+   JBIZ 移行状態チェック（2026-04-18 追加 / read-only）
+   ======================================================================= */
+
+/**
+ * JBIZ スプレッドシートの移行残件を一発確認する。read-only。
+ *
+ * 確認項目:
+ *   [A] 価格設定_v1_archive シートが存在するか（archiveJbizV1Sheet_V3 実行済み判定）
+ *   [B] KPI逆算 C5/C6/C9 が 価格設定_v2 を参照しているか（updateKpiReverseFormulas_V3 実行済み判定）
+ */
+function checkJbizMigrationStatus_V3() {
+  var ui = SpreadsheetApp.getUi();
+  var V1_ARCHIVE = '価格設定_v1_archive';
+  var KPI_SHEET  = 'KPI逆算';
+  var KPI_CELLS  = ['C5', 'C6', 'C9'];
+  var V2_NAME    = '価格設定_v2';
+
+  var jbizSS;
+  try {
+    jbizSS = SpreadsheetApp.openById(JBIZ_SS_ID);
+  } catch (e) {
+    ui.alert('JBIZ を開けません: ' + e.message);
+    return;
+  }
+
+  // [A] archive シート存在確認
+  var archiveSh = jbizSS.getSheetByName(V1_ARCHIVE);
+  var archiveDone = (archiveSh !== null);
+
+  // [B] KPI逆算 C5/C6/C9 が価格設定_v2 参照か
+  var kpiSh = jbizSS.getSheetByName(KPI_SHEET);
+  var kpiResults = [];
+  var kpiAllDone = true;
+  if (!kpiSh) {
+    kpiAllDone = false;
+    kpiResults.push('  ⚠ KPI逆算シートが見つかりません');
+  } else {
+    KPI_CELLS.forEach(function(addr) {
+      var formula = kpiSh.getRange(addr).getFormula();
+      var hasV2   = formula.indexOf(V2_NAME) >= 0;
+      if (!hasV2) kpiAllDone = false;
+      kpiResults.push('  ' + addr + ': ' + (hasV2 ? '✅ v2参照' : '❌ v2参照なし') + ' — ' + (formula || '(値セル)'));
+    });
+  }
+
+  var lines = ['=== JBIZ 移行状態チェック ===\n'];
+
+  lines.push('[A] v1 シート archive (' + V1_ARCHIVE + ')');
+  lines.push('  ' + (archiveDone ? '✅ 完了（シートが存在）' : '❌ 未実施（シートが存在しない）'));
+
+  lines.push('\n[B] KPI逆算 C5/C6/C9 → ' + V2_NAME + ' 参照');
+  kpiResults.forEach(function(r) { lines.push(r); });
+  lines.push('  判定: ' + (kpiAllDone ? '✅ すべて v2 参照済み' : '❌ 一部または全部が未更新'));
+
+  lines.push('\n--- 次のアクション ---');
+  var noAction = true;
+  if (!archiveDone) {
+    lines.push('  → 管理者用メニュー「【1回限り】JBIZ v1 シートを archive」を実行');
+    noAction = false;
+  }
+  if (!kpiAllDone) {
+    lines.push('  → 管理者用メニュー「【1回限り】KPI逆算式を v2 対応に更新」を実行');
+    noAction = false;
+  }
+  if (noAction) {
+    lines.push('  ✅ 両方完了。追加操作は不要です。');
+  }
+
   ui.alert(lines.join('\n'));
 }
