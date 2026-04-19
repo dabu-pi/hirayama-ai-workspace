@@ -4607,6 +4607,7 @@ function auditLegacyMenuIds_V3() {
   var selfpayPrefixCount = {}; // SELFPAY_*
   var otherCount = { 空白: 0, M001系: 0, 未知: 0 };
   var initialEvalRows = [];    // SELF_INITIAL_EVAL ダンプ用
+  var unknownRows = [];        // 未知 menu_id ダンプ用
   var nameMismatchPairs = [];  // menu_id と メニュー名 の不一致
   var selfOldestDate = null;
   var selfNewestDate = null;
@@ -4654,6 +4655,14 @@ function auditLegacyMenuIds_V3() {
       otherCount.M001系++;
     } else {
       otherCount.未知++;
+      unknownRows.push({
+        行番号:     r + 1,
+        menu_id:    menuId,
+        メニュー名: menuName,
+        施術日:     treatDate instanceof Date ? Utilities.formatDate(treatDate, "Asia/Tokyo", "yyyy-MM-dd") : String(treatDate || ""),
+        患者ID:     patientId,
+        単価:       unitPrice
+      });
     }
 
     // e) SELF_INITIAL_EVAL ダンプ
@@ -4712,6 +4721,20 @@ function auditLegacyMenuIds_V3() {
   Logger.log("  空白: " + otherCount.空白 + " 件");
   Logger.log("  M001系: " + otherCount.M001系 + " 件");
   Logger.log("  未知: " + otherCount.未知 + " 件");
+
+  // --- d2) 未知 menu_id 行ダンプ ---
+  Logger.log("");
+  Logger.log("--- d2) 未知 menu_id 行ダンプ ---");
+  if (unknownRows.length === 0) {
+    Logger.log("  （未知 menu_id なし）");
+  } else {
+    Logger.log("  件数: " + unknownRows.length);
+    unknownRows.forEach(function(row) {
+      Logger.log("    Row " + row.行番号 + " | menu_id=[" + row.menu_id + "]"
+        + " | " + row.施術日 + " | 患者ID=" + row.患者ID
+        + " | " + row.メニュー名 + " | ¥" + row.単価);
+    });
+  }
 
   // --- e) SELF_INITIAL_EVAL ダンプ ---
   Logger.log("");
