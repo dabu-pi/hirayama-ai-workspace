@@ -810,6 +810,7 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
     # ===== 施術機関固定情報（clinic_info から取得: 全患者共通）=====
     # U1 都道府県番号 → CI2 / U2 施術機関コード → CZ2 / U4 単独 → CT9（マーカー行）
     # 下段登録記号番号 → CR51(左)/DK51(中)/DR51(右) 分割書込
+    # D5 施術証明欄 → L59(施術所名) / L58(所在地) / L62(施術者氏名)
     # clinic_info が None の場合はスキップ（後方互換: 旧NDJSON/単体テスト対応）
     if clinic_info:
         # U1: 都道府県番号 → CI2
@@ -833,6 +834,20 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
             parts = toroku.split("-")
             for i, cell_addr in enumerate(TOROKU_KIGO_SPLIT_CELLS):
                 ws[cell_addr] = parts[i] if i < len(parts) else ""
+
+        # D5: 施術証明欄（施術所名・所在地・施術者氏名）
+        # L59:BK59 = '名  称' ラベルセル → 施術所名で上書き
+        # L58:BK58 = '所在地〒' ラベルセル → 住所で上書き
+        # L62:BK62 = '氏　名' ラベルセル → 施術者氏名で上書き
+        clinic_name = str(clinic_info.get("clinicName") or "").strip()
+        clinic_addr = str(clinic_info.get("clinicAddr") or "").strip()
+        clinic_practitioner = str(clinic_info.get("clinicPractitioner") or "").strip()
+        if clinic_name:
+            put("L59", clinic_name)
+        if clinic_addr:
+            put("L58", clinic_addr)
+        if clinic_practitioner:
+            put("L62", clinic_practitioner)
 
     wb.save(output_path)
     print(f"書込完了: {output_path} ({count}セル)")
@@ -1613,8 +1628,11 @@ def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
 
     # 施術機関固定情報を meta から取得
     clinic_info = {
-        "prefectureNo": str(meta.get("prefectureNo") or ""),
-        "torokuKigoNo": str(meta.get("torokuKigoNo") or ""),
+        "prefectureNo":       str(meta.get("prefectureNo") or ""),
+        "torokuKigoNo":       str(meta.get("torokuKigoNo") or ""),
+        "clinicName":         str(meta.get("clinicName") or ""),
+        "clinicAddr":         str(meta.get("clinicAddr") or ""),
+        "clinicPractitioner": str(meta.get("clinicPractitioner") or ""),
     }
 
     results = []

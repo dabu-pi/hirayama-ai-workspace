@@ -48,6 +48,9 @@ V3TR.CONFIG = {
     outputFolderId: "出力フォルダID",
     prefectureNo: "都道府県番号",    // U1 CI2書込用（施術機関所在都道府県番号、2桁）
     torokuKigoNo: "登録記号番号",    // U2(CZ2)・下段分割欄(CR51/DK51/DR51)書込用（例: 契2804440-0-0）
+    clinicName: "施術所名",          // D5 施術証明欄: 施術所名 → L59
+    clinicAddr: "住所",              // D5 施術証明欄: 所在地 → L58
+    clinicPractitioner: "施術者氏名", // D5 施術証明欄: 施術者氏名 → L62
   },
 
   masterCols: {
@@ -687,12 +690,12 @@ function V3TR_loadSettings_(shSettings) {
 }
 
 /**
- * 設定シートから施術機関固定情報を読み込む（U1/U2/下段登録記号番号分割欄）
- * 返り値: { prefectureNo: "14", torokuKigoNo: "契2804440-0-0" }
+ * 設定シートから施術機関固定情報を読み込む（U1/U2/下段登録記号番号分割欄/D5施術証明欄）
+ * 返り値: { prefectureNo, torokuKigoNo, clinicName, clinicAddr, clinicPractitioner }
  */
 function V3TR_loadClinicInfo_(shSettings) {
   const C = V3TR.CONFIG;
-  if (!shSettings) return { prefectureNo: "", torokuKigoNo: "" };
+  if (!shSettings) return { prefectureNo: "", torokuKigoNo: "", clinicName: "", clinicAddr: "", clinicPractitioner: "" };
   const v = shSettings.getDataRange().getValues();
   const map = {};
   for (let r = 1; r < v.length; r++) {
@@ -701,8 +704,11 @@ function V3TR_loadClinicInfo_(shSettings) {
     map[k] = String(v[r][1] || "").trim();
   }
   return {
-    prefectureNo: map[C.setKeys.prefectureNo] || "",
-    torokuKigoNo: map[C.setKeys.torokuKigoNo] || "",
+    prefectureNo:       map[C.setKeys.prefectureNo]       || "",
+    torokuKigoNo:       map[C.setKeys.torokuKigoNo]       || "",
+    clinicName:         map[C.setKeys.clinicName]         || "",
+    clinicAddr:         map[C.setKeys.clinicAddr]         || "",
+    clinicPractitioner: map[C.setKeys.clinicPractitioner] || "",
   };
 }
 
@@ -2241,8 +2247,11 @@ function V3TR_menuBatchExportJson() {
     generatedAt: now,
     month: ym,
     patientCount: patientIds.length,
-    prefectureNo: clinicInfoA.prefectureNo,
-    torokuKigoNo: clinicInfoA.torokuKigoNo,
+    prefectureNo:       clinicInfoA.prefectureNo,
+    torokuKigoNo:       clinicInfoA.torokuKigoNo,
+    clinicName:         clinicInfoA.clinicName,
+    clinicAddr:         clinicInfoA.clinicAddr,
+    clinicPractitioner: clinicInfoA.clinicPractitioner,
   });
 
   var ndjsonLines = [metaLine];
