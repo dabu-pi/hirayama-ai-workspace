@@ -62,11 +62,13 @@ var SR_SUM_COL = {
 };
 
 /**
- * 施術終了年月日ルール（2026-04-04確定）:
- * 転帰なし = 空欄、転帰あり + 終了日あり = その日付を表示。
+ * 施術終了年月日ルール:
+ * 転帰なし(施術継続中) = 「年  月  日」雛形維持、転帰あり + 終了日あり = 実日付表示。
  * 表示ルールは srFormatHyomenEndDate_ に集約する。
  */
 var SR_TENKI_PLACEHOLDER = '治癒･中止･転医';
+/** 年月日が未入力のとき {{...}} を露出させずに雛形を維持するための置換文字列 */
+var SR_DATE_PLACEHOLDER = '年  月  日';
 
 /** 初検情報のデフォルト空オブジェクト（初検情報履歴なし時に使用） */
 // v6: ①集計ブロックを項目ごとに独立配置するための fallback 列。
@@ -872,9 +874,9 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
   } else {
     // 部位2なし: 全プレースホルダーをクリア（{{...}} が文書に露出しないよう年月日も空にする）
     rep('負傷名2',         '');
-    rep('負傷年月日2',     '');
-    rep('初検年月日2',     '');
-    rep('施術終了年月日2', '');
+    rep('負傷年月日2',     SR_DATE_PLACEHOLDER);
+    rep('初検年月日2',     SR_DATE_PLACEHOLDER);
+    rep('施術終了年月日2', SR_DATE_PLACEHOLDER);
     rep('日数2',           '');
     rep('施術回数2',       '');
     rep('転帰2',           '');
@@ -1454,13 +1456,13 @@ function srFindSummary1DateValueCell_(table, rowLabelText) {
 }
 
 function srFormatHyomenEndDate_(hasCase, tenkiValue, endDateText, caseNo) {
-  if (!hasCase) return '';
+  if (!hasCase) return SR_DATE_PLACEHOLDER;
 
   var resolvedTenki = String(tenkiValue || '').trim();
   var resolvedEndDate = String(endDateText || '').trim();
   if (!resolvedTenki) {
     Logger.log('[INFO] 施術終了年月日 空欄採用 row=' + caseNo + ' reason=転帰なし');
-    return '';
+    return SR_DATE_PLACEHOLDER;
   }
   if (resolvedEndDate) {
     Logger.log('[INFO] 施術終了年月日 実日付採用 row=' + caseNo + ' value=' + resolvedEndDate);
@@ -1468,7 +1470,7 @@ function srFormatHyomenEndDate_(hasCase, tenkiValue, endDateText, caseNo) {
   }
 
   Logger.log('[WARN] 転帰ありだが施術終了年月日が空欄 row=' + caseNo + ' tenki=' + resolvedTenki);
-  return '';
+  return SR_DATE_PLACEHOLDER;
 }
 
 /**
