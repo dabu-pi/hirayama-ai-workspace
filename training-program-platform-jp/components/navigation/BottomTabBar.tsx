@@ -118,6 +118,46 @@ function IconTrain({ active }: { active: boolean }) {
   );
 }
 
+function IconGym({ active }: { active: boolean }) {
+  return (
+    <svg
+      className={styles.icon}
+      viewBox="0 0 22 22"
+      fill="none"
+      aria-hidden="true"
+    >
+      {/* building body */}
+      <rect
+        x="3"
+        y="8"
+        width="16"
+        height="11"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      {/* roof */}
+      <polyline
+        points="1,8 11,3 21,8"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* door */}
+      <rect
+        x="8.5"
+        y="13"
+        width="5"
+        height="6"
+        rx="0.75"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+    </svg>
+  );
+}
+
 function IconHistory({ active }: { active: boolean }) {
   return (
     <svg
@@ -162,6 +202,12 @@ const TABS: Tab[] = [
     label: "History",
     matchPrefixes: ["/session-history", "/workout-summary"],
     icon: null
+  },
+  {
+    href: "/gym",
+    label: "Gym",
+    matchPrefixes: ["/gym"],
+    icon: null
   }
 ];
 
@@ -187,6 +233,8 @@ export function BottomTabBar() {
             <IconPrograms {...iconProps} />
           ) : label === "Train" ? (
             <IconTrain {...iconProps} />
+          ) : label === "Gym" ? (
+            <IconGym {...iconProps} />
           ) : (
             <IconHistory {...iconProps} />
           );
