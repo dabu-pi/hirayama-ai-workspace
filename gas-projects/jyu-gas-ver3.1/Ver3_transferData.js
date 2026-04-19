@@ -1641,6 +1641,13 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   const sh = ss.getSheetByName(CM.templateSheet);
   if (!sh) throw new Error("テンプレシート「" + CM.templateSheet + "」が見つかりません。");
 
+  // RC-1整合: 転記シートに旧 case2 行が残っていても
+  // caseKey が空 かつ case計=0 ならデータなしとして null 扱いにする。
+  // exportTransferJson_（B案経路）と同じ判定条件に統一する。
+  if (row2 && !String(row2["caseKey"] || "").trim() && Number(row2["case計"] || 0) === 0) {
+    row2 = null;
+  }
+
   let count = 0;
 
   /** セルに値を書き込むヘルパー（空・0は書かない） */
