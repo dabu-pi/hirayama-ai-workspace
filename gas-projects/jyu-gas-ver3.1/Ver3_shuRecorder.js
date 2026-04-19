@@ -879,7 +879,7 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
     rep('施術終了年月日2', SR_DATE_PLACEHOLDER);
     rep('日数2',           '');
     rep('施術回数2',       '');
-    rep('転帰2',           '');
+    rep('転帰2',           SR_TENKI_PLACEHOLDER);
   }
 
   // ── 負傷記録（初検情報履歴）────────────────────────────
@@ -1416,7 +1416,7 @@ function srSetCell_(row, cellIdx, text) {
 
 
 function srFormatHyomenTenki_(hasCase, tenkiValue, caseNo) {
-  if (!hasCase) return '';
+  if (!hasCase) return SR_TENKI_PLACEHOLDER;
 
   var resolved = String(tenkiValue || '').trim();
   if (resolved) {
