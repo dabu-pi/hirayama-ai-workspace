@@ -390,6 +390,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
     title: "帳票出力",
     items: [
       { label: "施術録を出力",         functionName: "srShowDialog" },
+      { label: "施術録を一括出力",     functionName: "srMenuBatchGenerateDocuments" },
       { label: "申請書を出力",         functionName: "V3TR_menuGenerateApplication_B" },
       { label: "施術録＋申請書を出力", functionName: "srShowDialogCombo" }
     ]

@@ -308,6 +308,96 @@ function srGenerateDocument(patientId, yearMonth) {
          '\nPDF:   https://drive.google.com/file/d/' + pdfId;
 }
 
+/* =======================================================================
+   月次一括施術録出力（2026-04-19 追加）
+   ======================================================================= */
+
+/**
+ * 「施術録を一括出力」メニュー用エントリポイント。
+ * 対象月を prompt で入力し、月内の全保険来院患者に srGenerateDocument をループ実行する。
+ * 既存ファイルがある患者は srGenerateDocument 内の上書き確認ダイアログが出る（患者ごと）。
+ * キャンセル応答はスキップ扱い、例外は個別記録して次患者へ継続する。
+ */
+function srMenuBatchGenerateDocuments() {
+  var ui = SpreadsheetApp.getUi();
+  var now = new Date();
+  var defaultYm = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM');
+
+  var r = ui.prompt(
+    '施術録を一括出力',
+    '対象月（YYYY-MM）を入力してください\nデフォルト: ' + defaultYm,
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+
+  var input = (r.getResponseText() || '').trim();
+  var ym = input || defaultYm;
+  if (!/^\d{4}-\d{2}$/.test(ym)) {
+    return ui.alert('形式が違います。YYYY-MM で入力してください。');
+  }
+
+  var ss = SpreadsheetApp.getActive();
+  var patientIds = V3TR_findPatientsForMonth_(ss, ym);
+  if (patientIds.length === 0) {
+    return ui.alert('対象月（' + ym + '）に来院記録のある患者が見つかりません。');
+  }
+
+  var confirmed = ui.alert(
+    '施術録を一括出力',
+    '対象月: ' + ym + '\n対象患者: ' + patientIds.length + ' 名\n\n続行しますか？',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (confirmed !== ui.Button.OK) return;
+
+  srBatchGenerateDocuments_(patientIds, ym);
+}
+
+/**
+ * 患者IDリストに対して施術録を一括生成する。
+ * srGenerateDocument の例外・キャンセル戻り値を吸収して全患者を継続処理する。
+ *
+ * @param {string[]} patientIds
+ * @param {string}   ym  YYYY-MM
+ */
+function srBatchGenerateDocuments_(patientIds, ym) {
+  var ui      = SpreadsheetApp.getUi();
+  var success = 0;
+  var skipped = 0;
+  var failed  = [];
+
+  Logger.log('[srBatch] 開始 ym=' + ym + ' 対象=' + patientIds.length + ' 名');
+
+  for (var i = 0; i < patientIds.length; i++) {
+    var pid = patientIds[i];
+    try {
+      var result = srGenerateDocument(pid, ym);
+      if (typeof result === 'string' && result.indexOf('キャンセル') !== -1) {
+        Logger.log('[srBatch] スキップ pid=' + pid + ' reason=' + result);
+        skipped++;
+      } else {
+        Logger.log('[srBatch] 成功 pid=' + pid);
+        success++;
+      }
+    } catch (e) {
+      Logger.log('[srBatch] エラー pid=' + pid + ' msg=' + e.message);
+      failed.push(pid + '（' + e.message + '）');
+    }
+  }
+
+  Logger.log('[srBatch] 完了 成功=' + success + ' スキップ=' + skipped + ' エラー=' + failed.length);
+
+  var summary =
+    '一括出力 完了\n' +
+    '対象月: '   + ym             + '\n' +
+    '成功: '     + success        + ' 件\n' +
+    'スキップ: ' + skipped        + ' 件\n' +
+    'エラー: '   + failed.length  + ' 件';
+  if (failed.length > 0) {
+    summary += '\n\nエラー患者:\n' + failed.join('\n');
+  }
+  ui.alert(summary);
+}
+
 /**
  * 開発用: T-SR-10v2 再テストの固定ケースを no-arg で実行する。
  * clasp run の JSON 引数崩れを避けるためのラッパー。
