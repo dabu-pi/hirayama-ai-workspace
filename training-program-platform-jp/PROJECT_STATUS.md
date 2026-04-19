@@ -39,6 +39,32 @@ e.g. Squat done as T2 in a past session would surface as the "Previous" column w
 | 5 | 途中重量変更もそのまま表示 | ✅ | ✅ |
 | 6 | UI は per-set 表示 | ✅ (WorkoutScreen:1438) | ✅ |
 
+### DB SIMULATION VERIFICATION (2026-04-19)
+
+typecheck: PASSED (tsc --noEmit)
+ライブUIチェック: in_progress セッションなし → Supabase 実データで手動シミュレーション実施
+
+**検証ケース: exercise `5555d754`（同一 exercise_id が T3/T1/T2 全タイプで使用歴あり）**
+
+| セッション | 時刻(JST) | タイプ | set1 completed | set2 completed |
+|---|---|---|---|---|
+| `332cbb95` | 04:09 | T3 | 20kg×10 | 20kg×10 |
+| `6ee51b45` | 07:54 | T1 | 20kg×3 | 20kg×3 |
+| `510a63b4` | 11:00 | T1 | 20kg×3 | null |
+| `ed2f9af0` | 11:06 | **T2** | 20kg×**10** | null |
+
+新セッションで同 exercise を **T1** として使った場合の set1 Previous:
+- **旧コード**: `20kg x 10`（T2 の `ed2f9af0` が最新 → T2 データ混入 ← BUG）
+- **新コード**: `20kg x 3`（T1 限定最新 `510a63b4` → 正しい T1 データ ✅）
+
+**追加確認: exercise `4595f485`（通常 T1、`8a98725e` では T2）**
+- `8a98725e` (T2): set1=80kg×10
+- `2765c7bc` (T1, より新しい): set1=100kg×3
+- 旧コード: `2765c7bc` が新しいため偶然正しい（ただし T2 セッションが最新だったら混入する）
+- 新コード: T1/T2 が完全分離され順序に依存しない ✅
+
+VERIFIED: 修正は実データで正しく動作する。ライブブラウザ確認は次回 in_progress セッション開始時に行う。
+
 ---
 
 ## 2026-04-19 S-12 — Go to Train navigation fix
