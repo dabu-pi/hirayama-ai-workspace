@@ -43,6 +43,23 @@
 | D | **T-SR-10v2**: 施術録出力 実機テスト（NG-01〜NG-06 全確認） | 院長（手動）| **✅ 全項目完了（2026-04-18）** |
 | E | **T-SR-11**: TESTCASES.md への施術録テスト結果記録 | Claude Code | **✅ 完了（2026-04-18）** |
 | F | **自費明細 legacy menu_id 監査 + 未知2件の正体確認** | 院長＋Claude Code | **✅ クローズ（2026-04-19）修正不要** |
+| G | **施術録＋転記データ 1ボタン化（Phase1）** | Claude Code | **✅ 実装完了（2026-04-19）実機確認待ち** |
+
+**施術録＋転記データ 1ボタン化 実装記録（2026-04-19）:**
+
+| 項目 | 内容 |
+|---|---|
+| 追加関数 | `srShowDialogCombo()` / `srGenerateDocumentCombo_()` — Ver3_shuRecorder.js |
+| メニュー追加 | 日常操作 → 「施術録＋転記データを出力」（`srShowDialogCombo`） |
+| 実行順 | ① `srGenerateDocument(pid, ym)` → ② `V3TR_buildTransferDataForMonth_(ss, pid, ym)` |
+| キャンセル判定 | SR戻り値に `'キャンセル'` を含む場合はステップ②をスキップ |
+| Partial failure | SR成功・転記失敗時は throw せず文字列で院長に通知。SR保存済みの旨も表示 |
+| 既存関数 | `srShowDialog` / `V3TR_menuBuildTransferData` / `V3TR_menuGenerateApplication_B` は未変更 |
+| 実機確認事項 | 新規患者（上書きなし）/ 既存患者（上書き確認YES）/ 上書き確認NO（転記スキップ確認）|
+
+**既知リスク:**
+- キャンセル判定は `srGenerateDocument` の戻り値文字列 `'施術録の出力をキャンセルしました。'`（L189）に依存。変更時は合わせて修正が必要
+- SR成功後に転記失敗した場合、施術録は保存済み。再実行すると上書き確認が出るが YES で続行すれば転記も再実行される（転記は upsert で冪等）
 
 **自費明細 legacy menu_id 監査 クローズ記録（2026-04-19）:**
 - 総データ9行: SELFPAY_* 7件 / INS_OPTION_* 2件 / 未知0件

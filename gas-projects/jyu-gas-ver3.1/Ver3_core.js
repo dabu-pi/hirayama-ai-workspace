@@ -384,7 +384,8 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "自費明細入力", functionName: "openSelfPayDialog_V3" },
       { label: "経過履歴更新", functionName: "refreshKeikaHistoryUI_V3" },
       { label: "画面クリア", functionName: "clearEntryUI_V3" },
-      { label: "施術録を出力", functionName: "srShowDialog" }
+      { label: "施術録を出力", functionName: "srShowDialog" },
+      { label: "施術録＋転記データを出力", functionName: "srShowDialogCombo" }
     ]
   },
   {
