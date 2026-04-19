@@ -1,5 +1,62 @@
 # PROJECT_STATUS
 
+## 2026-04-19 C-13 Step 1 — programs.methodology column + MethodologyType
+
+### STATUS: CLOSED (2026-04-19)
+
+### PURPOSE
+
+Introduce a methodology layer as the foundation for:
+1. exerciseRoleLabel resolution (T1→"T1" for gzcl, T1→"Primary" for linear, no badge for generic) — Step 2
+2. B2B2C gym branding layer groundwork — future phase
+
+### CHANGES
+
+**supabase/migrations/20260419_000015_programs_methodology.sql** (new)
+- `programs.methodology text NOT NULL DEFAULT 'gzcl' CHECK ('gzcl','linear','generic')`
+- `UPDATE starting-strength-base → 'linear'`
+- `UPDATE dumbbell-full-body-base → 'generic'`
+- All other programs inherit DEFAULT 'gzcl' (gzclp-base, gzclp-base-v2, upper-lower-base)
+
+**types/programs.ts**
+- Added `MethodologyType = "gzcl" | "linear" | "generic"`
+- Added `methodology: MethodologyType` to `ProgramSummary`
+
+**lib/programs/program-library.ts**
+- Added `MethodologyType` import
+- Added `methodology: string | null` to `ProgramRow`
+- Added `normalizeMethodology()` (unknown values fall back to `'gzcl'`)
+- Added `methodology` to SELECT query
+- Added `methodology: normalizeMethodology(row.methodology)` to `mapProgramRow()`
+
+**lib/programs/program-catalog.ts**
+- Added `methodology` to all 6 mock catalog entries:
+  gzclp-base→gzcl, gzclp-base-v2→gzcl, upper-lower-base→gzcl,
+  starting-strength-base→linear, dumbbell-full-body-base→generic, full-body-foundation→generic
+
+### PROGRAM METHODOLOGY ASSIGNMENTS
+
+| slug                     | methodology | reason                                  |
+|---|---|---|
+| gzclp-base               | gzcl        | GZCL T1/T2/T3 structure                 |
+| gzclp-base-v2            | gzcl        | same T1/T2/T3 structure                 |
+| upper-lower-base         | gzcl        | uses T1/T2/T3 slot structure            |
+| starting-strength-base   | linear      | linear progression model                |
+| dumbbell-full-body-base  | generic     | custom, no progression structure        |
+| full-body-foundation     | generic     | custom placeholder, no structure        |
+
+### WHAT DOES NOT CHANGE
+
+- exercise_type DB column remains 'T1'|'T2'|'T3' — internal storage unchanged
+- No UI changes — exerciseRoleLabel resolution is Step 2
+- No change to WorkoutScreen, train-session.ts, or any session recording logic
+- Existing GZCL user experience: unchanged
+
+### TYPECHECK
+tsc --noEmit: PASSED
+
+---
+
 ## 2026-04-19 C-12 — previousDisplay T1/T2/T3 isolation fix
 
 ### STATUS: CLOSED (2026-04-19)

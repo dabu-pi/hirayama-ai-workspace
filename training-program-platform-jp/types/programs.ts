@@ -8,6 +8,14 @@ export type ProgramLevel = "beginner" | "intermediate" | "advanced";
 
 export type ProgramSourceFidelity = "original" | "adapted" | "custom";
 
+/**
+ * C-13: Training methodology that describes a program's slot structure.
+ * - gzcl    : GZCL T1/T2/T3 slot structure
+ * - linear  : Linear progression (e.g. Starting Strength)
+ * - generic : No methodology-specific structure or progression state
+ */
+export type MethodologyType = "gzcl" | "linear" | "generic";
+
 export type ProgramTagAxis = "goal" | "equipment" | "split" | "focus";
 
 export type ProgramTag = {
@@ -31,6 +39,8 @@ export type ProgramSummary = {
   sourceFidelity: ProgramSourceFidelity | null;
   sourceNotes: string | null;
   tags: ProgramTag[];
+  /** C-13: Training methodology. Defaults to 'gzcl' when column is absent. */
+  methodology: MethodologyType;
 };
 
 export type ProgramCatalogItem = ProgramSummary & {

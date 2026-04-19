@@ -15,6 +15,7 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     sourceNotes:
       "Original Cody Lefever base month: A1 / B1 / A2 / B2 over 4 weeks with T1 / T2 / T3 progression.",
     tags: [],
+    methodology: "gzcl",
     overview:
       "Original GZCLP base month with 5x3+ T1 work, 3x10 T2 practice, and 3x15+ T3 accessories."
   },
@@ -32,6 +33,7 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     sourceNotes:
       "Based on Cody Lefever's original GZCLP base month. Core T1/T2/T3 tier and A1/B1/A2/B2 rotation unchanged. Extended from 3 to 5 exercises per session by adding T1-support and T2-support T3 accessories.",
     tags: [],
+    methodology: "gzcl",
     overview:
       "GZCLP's original four-day rotating structure (A1/B1/A2/B2) with 5×3+ T1 work, 3×10 T2 practice, and three T3 accessories per session: a fixed pull slot plus T1-support and T2-support movements."
   },
@@ -49,6 +51,7 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     sourceNotes:
       "Phase 2 snapshot: squat every session, bench and press alternate, deadlift on A, power clean on B.",
     tags: [],
+    methodology: "linear",
     overview:
       "Official Starting Strength Phase 2 structure packaged as a short seedable base while keeping the current route slug."
   },
@@ -66,6 +69,7 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     sourceNotes:
       "Internal MVP upper/lower template. No single canonical source program is being represented.",
     tags: [],
+    methodology: "gzcl",
     overview:
       "Custom four-day upper/lower barbell split for MVP coverage. Treated as custom rather than as a named published program."
   },
@@ -83,6 +87,7 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     sourceNotes:
       "Internal beginner dumbbell full-body template. No single canonical source program is being represented.",
     tags: [],
+    methodology: "generic",
     overview:
       "A beginner-friendly full-body routine built entirely around dumbbells. Each session covers lower body, upper push, and upper pull movements. Alternating A/B structure keeps variety across the week."
   },
@@ -99,6 +104,7 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     sourceFidelity: "custom",
     sourceNotes: "Internal placeholder program in the mock catalog.",
     tags: [],
+    methodology: "generic",
     overview:
       "A lower-complexity full-body plan designed to build consistency, movement familiarity, and recoverable weekly volume."
   }

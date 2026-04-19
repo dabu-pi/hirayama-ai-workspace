@@ -15,6 +15,7 @@ import {
 import type {
   DayPreview,
   ExercisePreview,
+  MethodologyType,
   ProgramCatalogItem,
   ProgramDataSource,
   ProgramLevel,
@@ -38,6 +39,7 @@ type ProgramRow = {
   source_fidelity: string | null;
   source_notes: string | null;
   is_public: boolean;
+  methodology: string | null;
 };
 
 type ProgramTagRow = {
@@ -224,6 +226,11 @@ async function listProgramTagsByProgramId(
   }
 }
 
+function normalizeMethodology(value: string | null): MethodologyType {
+  if (value === "linear" || value === "generic") return value;
+  return "gzcl";
+}
+
 function mapProgramRow(row: ProgramRow, tags: ProgramTag[]): ProgramCatalogItem {
   const levelKey = normalizeProgramLevel(row.level);
   const sourceFidelity = normalizeProgramSourceFidelity(row.source_fidelity);
@@ -241,7 +248,8 @@ function mapProgramRow(row: ProgramRow, tags: ProgramTag[]): ProgramCatalogItem 
     sourceFidelity,
     sourceNotes: row.source_notes,
     tags,
-    overview: buildOverview(row.description, row.title)
+    overview: buildOverview(row.description, row.title),
+    methodology: normalizeMethodology(row.methodology)
   };
 }
 
@@ -250,7 +258,7 @@ async function listProgramsFromSupabase(): Promise<ProgramCatalogItem[]> {
   const { data, error } = await client
     .from("programs")
     .select(
-      "id, slug, title, description, duration_weeks, days_per_week, level, source_program_name, source_fidelity, source_notes, is_public"
+      "id, slug, title, description, duration_weeks, days_per_week, level, source_program_name, source_fidelity, source_notes, is_public, methodology"
     )
     .eq("is_public", true)
     .order("created_at", { ascending: false });
