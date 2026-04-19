@@ -1,5 +1,46 @@
 # PROJECT_STATUS
 
+## 2026-04-19 C-12 — previousDisplay T1/T2/T3 isolation fix
+
+### STATUS: CLOSED (2026-04-19)
+
+### ROOT_CAUSE
+
+`buildPreviousDisplayMap` in `lib/workout/train-session.ts` used `exerciseId:setNumber` as the lookup key.
+This caused T1/T2/T3 sessions for the same exercise_id to share previous-set data —
+e.g. Squat done as T2 in a past session would surface as the "Previous" column when Squat is T1 today.
+
+### CHANGES
+
+`lib/workout/train-session.ts` — 3 lines:
+1. `historicalExerciseMap` value: added `exerciseType: item.exercise_type`
+2. `previousCandidateMap` key: `exerciseId:exerciseType:setNumber` (was `exerciseId:setNumber`)
+3. `buildExerciseBlocks` lookup key: `exerciseId:exerciseType:setNumber` (was `exerciseId:setNumber`)
+
+### DISPLAY_RULE (confirmed post-fix)
+
+| Lookup key | Matches |
+|---|---|
+| `exerciseId:exerciseType:setNumber` | Same exercise, same T1/T2/T3 slot, same set index |
+
+- Each set row shows its own per-set previous result (set1→prev set1, set2→prev set2, …)
+- T1 Squat and T2 Squat have independent histories
+- "Previous" = most recent completed session where same exercise + same type + same set_number exists
+- "-" when no prior data for that combination
+
+### REQUIREMENTS_CHECK
+
+| # | Requirement | Before | After |
+|---|---|---|---|
+| 1 | 前回同一スロットの実績 | ✗ type混在 | ✅ type分離 |
+| 2 | T1/T2/T3 混在しない | ✗ | ✅ |
+| 3 | 各セットごとに表示 | ✅ (set_number per row) | ✅ |
+| 4 | set1〜set5 対応表示 | ✅ | ✅ |
+| 5 | 途中重量変更もそのまま表示 | ✅ | ✅ |
+| 6 | UI は per-set 表示 | ✅ (WorkoutScreen:1438) | ✅ |
+
+---
+
 ## 2026-04-19 S-12 — Go to Train navigation fix
 
 ### STATUS: CLOSED (2026-04-19, DB fix applied)

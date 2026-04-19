@@ -420,6 +420,7 @@ async function buildPreviousDisplayMap(
       item.id,
       {
         exerciseId: item.exercise_id,
+        exerciseType: item.exercise_type,
         startedAt: sessionStartedAtMap.get(item.workout_session_id) ?? ""
       }
     ])
@@ -442,7 +443,7 @@ async function buildPreviousDisplayMap(
       return;
     }
 
-    const key = `${historicalExercise.exerciseId}:${set.set_number}`;
+    const key = `${historicalExercise.exerciseId}:${historicalExercise.exerciseType}:${set.set_number}`;
     const nextCandidate: PreviousCandidate = {
       startedAt: historicalExercise.startedAt,
       weightKg: toNullableNumber(set.weight_kg),
@@ -483,7 +484,7 @@ function buildExerciseBlocks(
     const exercise = exerciseMap.get(sessionExercise.exercise_id);
     const visibleSets = (setsByExercise.get(sessionExercise.id) ?? []).map(
       (set, index) => {
-        const previousKey = `${sessionExercise.exercise_id}:${set.set_number}`;
+        const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${set.set_number}`;
 
         return {
           id: set.id,
