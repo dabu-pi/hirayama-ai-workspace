@@ -1,5 +1,80 @@
 # PROJECT_STATUS
 
+## 2026-04-19 Phase 1 Sync Guard — verification (client-side safety check)
+
+### STATUS: CLOSED (2026-04-19)
+
+### PURPOSE
+
+Confirm that the `session_completed` → `session_not_in_progress` error code rename
+does not break client-side error handling, and audit 409 behavior for cancelled sessions.
+
+### PROD_CHECK (migration 000016)
+
+Migration 000016 must be applied manually via Supabase SQL Editor.
+Run to verify the column exists after applying:
+
+```sql
+select column_name, data_type, column_default, is_nullable
+from information_schema.columns
+where table_schema = 'public'
+  and table_name   = 'workout_sessions'
+  and column_name  = 'updated_at';
+```
+
+Expected result: 1 row — `updated_at | timestamp with time zone | now() | NO`
+
+Also verify trigger was created:
+```sql
+select trigger_name, event_manipulation, action_timing
+from information_schema.triggers
+where event_object_table = 'workout_sessions'
+  and trigger_name = 'trg_workout_sessions_updated_at';
+```
+
+### CLIENT_CHECK (error_code rename safety)
+
+**`session_completed` string dependency in client code:** NONE
+- grep across all .ts/.tsx files returned zero matches
+- The old code was server-side only (route handlers); client never referenced it by name
+
+**409 handling pattern across all mutation functions:**
+All functions use `!response.ok` — 409 is `!ok`, so the guard triggers.
+Error message comes from `payload.error.message` (server-sent string).
+No function matches on `error.code` string.
+
+| Function | Pattern | Shows error |
+|---|---|---|
+| `postSetAction` (delete/complete/unlock) | `!response.ok` → throw Error(message) | `setErrorMessage` → status banner |
+| `patchWorkoutSet` | `!response.ok` → throw Error(message) | `setErrorMessage` → status banner |
+| `postAddSet` | `!response.ok` → throw Error(message) | `setErrorMessage` → status banner |
+| `postAddExercise` | `!response.ok` → throw Error(message) | `setAddExerciseError` → modal banner |
+| `postSwapExercise` | `!response.ok` → throw Error(message) | `setAddExerciseError` → modal banner |
+
+### LIVE_BEHAVIOR (race condition scenario)
+
+Normal flow (no race): `isSessionEnded = isSessionCompleted || isSessionCancelled`.
+All buttons/inputs are `disabled={isSessionEnded}` and all handlers guard `if (isSessionEnded) return`.
+Client never reaches the API under normal conditions when session is cancelled.
+
+Race condition (stale client, server already cancelled):
+1. Server returns HTTP 409 `{ error: { code: "session_not_in_progress", message: "Only in-progress sessions can be edited." } }`
+2. `!response.ok` → `throw new Error("Only in-progress sessions can be edited.")`
+3. Catch block → `setErrorMessage("Only in-progress sessions can be edited.")`
+4. UI renders `<section role="alert">` banner ✅
+
+No code changes required. Client-side handling is safe and complete.
+
+### CHANGES
+
+No code changes. Documentation only.
+
+### PERFORMANCE_IMPACT
+
+None — audit only.
+
+---
+
 ## 2026-04-19 Phase 1 Sync Guard — cancelled session protection across all mutation routes
 
 ### STATUS: CLOSED (2026-04-19)
