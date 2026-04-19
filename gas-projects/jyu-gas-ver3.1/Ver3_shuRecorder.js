@@ -859,15 +859,19 @@ function srInsertHyomenData_(docId, patient, caseData, initExam) {
   rep('施術回数1',       caseData.count1);
   rep('転帰1',           srFormatHyomenTenki_(hasCase1, caseData.tenki1, 1));
 
-  // ── 負傷名一覧 部位2（部位2なし患者は全て空文字）─────────
-  rep('負傷名2',         caseData.d2);
-  rep('負傷年月日2',     caseData.inj2);
-  rep('初検年月日2',     caseData.start2);
+  // ── 負傷名一覧 部位2（データあり→置換 / なし→行ごと削除）────
   var hasCase2 = !!(caseData.d2 || caseData.inj2 || caseData.start2);
-  rep('施術終了年月日2', srFormatHyomenEndDate_(hasCase2, caseData.tenki2, caseData.end2, 2));
-  rep('日数2',           caseData.nissuu2);
-  rep('施術回数2',       caseData.count2);
-  rep('転帰2',           srFormatHyomenTenki_(hasCase2, caseData.tenki2, 2));
+  if (hasCase2) {
+    rep('負傷名2',         caseData.d2);
+    rep('負傷年月日2',     caseData.inj2);
+    rep('初検年月日2',     caseData.start2);
+    rep('施術終了年月日2', srFormatHyomenEndDate_(true, caseData.tenki2, caseData.end2, 2));
+    rep('日数2',           caseData.nissuu2);
+    rep('施術回数2',       caseData.count2);
+    rep('転帰2',           srFormatHyomenTenki_(true, caseData.tenki2, 2));
+  } else {
+    srRemoveHyomenPartRow_(body, '負傷名2');
+  }
 
   // ── 負傷記録（初検情報履歴）────────────────────────────
   rep('負傷日時', initExam.injuryDatetime);
@@ -1399,6 +1403,32 @@ function srSetCell_(row, cellIdx, text) {
     return;
   }
   row.getCell(cellIdx).setText(String(text || ''));
+}
+
+/**
+ * 表面ドキュメント上のテーブルから、指定プレースホルダーを含む行を削除する。
+ * 部位2データがない患者の空行を出さないために使用。
+ * body.replaceText より先に呼ぶこと（プレースホルダーが置換される前に探す）。
+ * @param {Body}   body        - DocumentApp の Body
+ * @param {string} sentinelKey - 例: '負傷名2' → '{{負傷名2}}' で行を探す
+ * @return {boolean} 行を削除できたら true
+ */
+function srRemoveHyomenPartRow_(body, sentinelKey) {
+  var sentinel = '{{' + sentinelKey + '}}';
+  for (var i = 0; i < body.getNumChildren(); i++) {
+    var child = body.getChild(i);
+    if (child.getType() !== DocumentApp.ElementType.TABLE) continue;
+    var table = child.asTable();
+    for (var r = 0; r < table.getNumRows(); r++) {
+      if (table.getRow(r).getText().indexOf(sentinel) >= 0) {
+        table.removeRow(r);
+        Logger.log('[INFO] srRemoveHyomenPartRow_: 部位2行削除 sentinel=' + sentinel + ' row=' + r);
+        return true;
+      }
+    }
+  }
+  Logger.log('[WARN] srRemoveHyomenPartRow_: "' + sentinel + '" が見つかりません（テンプレに行なし）');
+  return false;
 }
 
 function srFormatHyomenTenki_(hasCase, tenkiValue, caseNo) {
