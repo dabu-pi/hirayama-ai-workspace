@@ -185,9 +185,9 @@ All 4 migrations applied and verified via Supabase REST API:
 | 000011 | exercise_swap_groups / exercise_swap_group_members | ✅ applied (4 groups, 17 members) |
 | 000012 | program_day_exercises.swap_group_slug / workout_session_exercises.swap_group_slug | ✅ applied |
 | 000013 | program_enrollments.archived_at / workout_sessions.archived_at | ✅ applied |
-| 000014 | t1_progression_states | ✅ applied (empty — first session not finished yet) |
+| 000014 | t1_progression_states | ✅ applied (1 row after full-flow simulation) |
 
-### SMOKE_TEST (2026-04-19 — DB-layer verification)
+### SMOKE_TEST (2026-04-19 — DB-layer + full-flow simulation)
 
 | check | result |
 |---|---|
@@ -197,19 +197,39 @@ All 4 migrations applied and verified via Supabase REST API:
 | program_day_exercises (incl. swap_group_slug) | ✅ 5 exercises, 2 with swap groups |
 | Active enrollments (archived_at=null) | ✅ 3 enrollments |
 | Recent sessions (archived_at=null) | ✅ 5 completed sessions |
-| t1_progression_states | ✅ empty (correct — bootstrap on first finish) |
 | swap_group RLS (anon read) | ✅ 4 groups readable |
 | finish route (countIncompleteSets silent) | ✅ verified in code |
-| updateT1ProgressionAfterSession bootstrap logic | ✅ verified in code |
 
-### PENDING_MANUAL_VERIFICATION
+### FULL_FLOW_SIMULATION (2026-04-19 — DB direct via service role)
 
-The following require a live browser session (cannot be automated):
-1. `/train` → StartSessionScreen loads (S-12 fix verification)
-2. Record T1 sets → Finish → verify `t1_progression_states` row:
-   `phase='5x3'`, `current_weight_kg = first_set_weight + 2.5`
-3. Open `/train` next session → T1 card shows orange hint bar
-4. AMRAP fail → `phase='6x2'`, weight unchanged
+Simulated: Session d68b5180 (gzclp-base-v2 W1D1, enrollment 17fcd538)
+
+| step | operation | result |
+|---|---|---|
+| session create | in_progress, enrollment+day linked | ✅ |
+| T1 Squat add | workout_session_exercises (T1, order=1) | ✅ |
+| 5 sets record | 80kg × 5 sets, set5 AMRAP target=3+ reps=5 | ✅ |
+| AMRAP判定 | reps_done(5) ≥ minReps(3) → **success** | ✅ |
+| bootstrap | inferPhaseFromSetCount(5) → "5x3" | ✅ |
+| computeNextState | weight 80 + 2.5 = **82.5**, phase stays 5x3 | ✅ |
+| finish session | status=completed, finished_at set | ✅ |
+| t1_progression_states | phase=5x3, current_weight_kg=82.5, last_result=success | ✅ |
+| enrollment advance | current_program_day_id → Week1/Day2 | ✅ |
+| next session Day2 | T1=Overhead Press (初回 → hint なし / 正常) | ✅ |
+
+Expected hint bar for next Squat session:
+```
+[ Next: 82.5kg · 5×3+ ]
+```
+
+### PENDING_BROWSER_VERIFICATION
+
+UI rendering requires a live browser (cannot be automated):
+1. `/train` → StartSessionScreen が表示されることを目視確認
+2. WorkoutScreen で T1 Squat カードにオレンジ hint bar が表示されること
+   - 文言: "Next: 82.5kg · 5×3+"
+   - T2/T3 カードには表示されないこと
+3. 次セッション Finish 後に weight が 82.5 + 2.5 = 85.0kg に進むこと
 
 ### OPEN_POINTS
 
