@@ -2,7 +2,7 @@
 
 ## 2026-04-19 S-12 — Go to Train navigation fix
 
-### STATUS: fixed round-2 (2026-04-19, commit b17022f)
+### STATUS: CLOSED (2026-04-19, DB fix applied)
 
 ### ROOT_CAUSE (Round 1 — commit 5c0b430)
 
@@ -45,13 +45,41 @@ Two additional issues remained after Round 1:
 - Added `start_missing_slug` `RedirectCause` for log correlation.
 - Added `/train?debug=train` in-browser diagnostic overlay.
 
+### ROOT_CAUSE (Round 3 — DB data corruption, 2026-04-19)
+
+All 3 active `program_enrollments` had `archived_at` set (2026-04-18T07:05:10-27, within 17 seconds).
+`selectActiveEnrollments` filters `.is("archived_at", null)` → all enrollments excluded → `views=[]` →
+`primaryView=null` → `redirectCause="no_selected_program"` → `redirect("/programs")`.
+
+This was NOT an RLS failure or `is_public` issue — `programs` table was clean (all `is_public=true`).
+Root cause: enrollment archive route (`/api/enrollments/[enrollmentId]/archive`) was called
+on all 3 active enrollments during testing, leaving them soft-archived but status=active.
+
+**DB Fix (2026-04-19):**
+```sql
+UPDATE program_enrollments SET archived_at = NULL
+WHERE status = 'active' AND archived_at IS NOT NULL;
+-- 3 rows updated: gzclp-base-v2, dumbbell-full-body-base, gzclp-base
+```
+Applied via Supabase REST API (service role). Verified: 3 rows now `archived_at=null`.
+
+### CLOSED_STATE
+
+Post-fix DB state:
+| enrollment_id | program | current_program_day_id | archived_at |
+|---|---|---|---|
+| 17fcd538 | gzclp-base-v2 | cfcce85e (set) | null |
+| d8ed99da | dumbbell-full-body-base | 3e8d65fe (set) | null |
+| f76d85df | gzclp-base | null | null |
+
+Expected `/train` behavior: `primaryView = gzclp-base-v2`, `actionType="start"` → `StartSessionScreen`.
+
 ### MANUAL_CHECK
 
-1. `/programs` → "続ける →" → verify WorkoutScreen loads (existing in-progress session)
-2. `/programs` → "Go to Train" → verify StartSessionScreen or WorkoutScreen (not redirect to /programs)
+1. `/train` → verify StartSessionScreen loads (not redirect to /programs)
+2. `/programs` → "Go to Train" → verify StartSessionScreen or WorkoutScreen
 3. Finish a session → from Summary → "Go to Train" → verify StartSessionScreen for next day
 4. No active enrollment → "Go to Train" → redirect to /programs is still expected
-5. Use `/train?debug=train` to inspect resolved state if still failing — check `redirectCause` and `primaryViewProgramSlug`
 
 ---
 
