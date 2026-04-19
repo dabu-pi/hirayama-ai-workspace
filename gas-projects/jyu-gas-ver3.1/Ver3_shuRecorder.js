@@ -137,40 +137,54 @@ function srShowDialog() {
  * 既存 srShowDialog と同一UIで、呼び先だけ srGenerateDocumentCombo_ に変える。
  */
 function srShowDialogCombo() {
-  var SR_CANCEL_SENTINEL = 'キャンセル';
   var html = HtmlService.createHtmlOutput(
     '<style>' +
     'body{font-family:"Noto Sans JP",sans-serif;padding:16px;font-size:13px;}' +
     'p{margin:4px 0 2px;}' +
     'input{width:100%;box-sizing:border-box;padding:6px;margin-bottom:8px;border:1px solid #ccc;border-radius:3px;}' +
     'button{padding:8px 20px;background:#0b7b3e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;}' +
+    'button:disabled{background:#999;cursor:not-allowed;}' +
     '#msg{margin-top:10px;font-size:12px;white-space:pre-wrap;}' +
     '</style>' +
     '<p><b>患者ID</b></p>' +
     '<input id="pid" placeholder="例: P001"/>' +
     '<p><b>対象年月（YYYY-MM）</b></p>' +
     '<input id="ym" placeholder="例: 2026-04"/>' +
-    '<button onclick="run()">施術録＋転記データを出力</button>' +
+    '<button id="btn" onclick="run()">施術録＋転記データを出力</button>' +
     '<p id="msg"></p>' +
     '<script>' +
     'function run(){' +
+    '  console.log("[combo] submit clicked");' +
     '  var pid = document.getElementById("pid").value.trim();' +
     '  var ym  = document.getElementById("ym").value.trim();' +
     '  var msg = document.getElementById("msg");' +
+    '  var btn = document.getElementById("btn");' +
+    '  console.log("[combo] pid=" + pid + " ym=" + ym);' +
     '  if(!pid || !ym){msg.style.color="red";msg.textContent="入力してください";return;}' +
+    '  btn.disabled = true;' +
     '  msg.style.color="#555";msg.textContent="処理中（施術録 → 転記データ）...";' +
+    '  console.log("[combo] calling srGenerateDocumentCombo");' +
     '  google.script.run' +
-    '    .withSuccessHandler(function(r){msg.style.color="green";msg.textContent=r;})' +
-    '    .withFailureHandler(function(e){msg.style.color="red";msg.textContent="エラー: "+e.message;})' +
-    '    .srGenerateDocumentCombo_(pid, ym);' +
+    '    .withSuccessHandler(function(r){' +
+    '      console.log("[combo] success: " + r);' +
+    '      btn.disabled = false;' +
+    '      msg.style.color="green";msg.textContent=r;' +
+    '    })' +
+    '    .withFailureHandler(function(e){' +
+    '      console.log("[combo] failure: " + e.message);' +
+    '      btn.disabled = false;' +
+    '      msg.style.color="red";msg.textContent="エラー: "+e.message;' +
+    '    })' +
+    '    .srGenerateDocumentCombo(pid, ym);' +  // ← trailing _ を除去（GAS private 規則対応）
     '}' +
     '</script>'
-  ).setWidth(360).setHeight(300).setTitle('施術録＋転記データを出力');
+  ).setWidth(360).setHeight(320).setTitle('施術録＋転記データを出力');
   SpreadsheetApp.getUi().showModalDialog(html, '施術録＋転記データを出力');
 }
 
 /**
  * 施術録生成 → 転記データ準備を順に実行するコンボ処理。
+ * ※ google.script.run から呼び出すため末尾アンダースコアなし（GAS private 関数規則）。
  *
  * 実行順:
  *   1. srGenerateDocument(patientId, yearMonth)  — 施術録出力（既存）
@@ -186,11 +200,11 @@ function srShowDialogCombo() {
  * @param {string} yearMonth  YYYY-MM
  * @return {string} ダイアログに表示するメッセージ
  */
-function srGenerateDocumentCombo_(patientId, yearMonth) {
+function srGenerateDocumentCombo(patientId, yearMonth) {
   // ---- ステップ1: 施術録出力 ----
   var srResult = srGenerateDocument(patientId, yearMonth);
   // srGenerateDocument はキャンセル時に文字列を返す（throwしない）
-  // 現行キャンセル戻り値: '施術録の出力をキャンセルしました。' (Ver3_shuRecorder.js L189)
+  // 現行キャンセル戻り値: '施術録の出力をキャンセルしました。' (Ver3_shuRecorder.js)
   if (srResult && srResult.indexOf('キャンセル') >= 0) {
     return srResult;  // 転記データはスキップ
   }
@@ -201,7 +215,7 @@ function srGenerateDocumentCombo_(patientId, yearMonth) {
     V3TR_buildTransferDataForMonth_(ss, patientId, yearMonth);
   } catch (e) {
     // 施術録は保存済みなので partial failure として文字列で返す（throwしない）
-    Logger.log('[srGenerateDocumentCombo_] 転記データ失敗: ' + e.message);
+    Logger.log('[srGenerateDocumentCombo] 転記データ失敗: ' + e.message);
     return srResult +
       '\n\n⚠️ 転記データ準備に失敗しました。\n' +
       '施術録は上記のとおり保存済みです。\n' +

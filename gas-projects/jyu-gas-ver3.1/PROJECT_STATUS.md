@@ -49,7 +49,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 追加関数 | `srShowDialogCombo()` / `srGenerateDocumentCombo_()` — Ver3_shuRecorder.js |
+| 追加関数 | `srShowDialogCombo()` / `srGenerateDocumentCombo()` — Ver3_shuRecorder.js |
 | メニュー追加 | 日常操作 → 「施術録＋転記データを出力」（`srShowDialogCombo`） |
 | 実行順 | ① `srGenerateDocument(pid, ym)` → ② `V3TR_buildTransferDataForMonth_(ss, pid, ym)` |
 | キャンセル判定 | SR戻り値に `'キャンセル'` を含む場合はステップ②をスキップ |
@@ -66,6 +66,16 @@
 | G-3 | 既存患者（上書き確認 NO） | 同じ患者ID・年月で再実行 → 「上書き確認」ダイアログで「いいえ」を選択 | 「施術録の出力をキャンセルしました。」のみ表示。転記データシートに変化なし | ⬜ 未確認 | — | — |
 
 > G-1〜G-3 がすべて ✅ になったら Task G を **✅ Phase1 クローズ** に更新すること。
+
+**バグ修正記録（2026-04-19）— 処理中から戻らない問題:**
+
+| 項目 | 内容 |
+|---|---|
+| 症状 | 実行ボタン押下後、Apps Script 実行履歴に `srGenerateDocumentCombo_` が出ず処理中のまま戻らない |
+| 原因 | GAS の private 関数規則: **末尾 `_` の関数は `google.script.run` から呼び出せない**。`srGenerateDocumentCombo_` が到達不可だった |
+| 修正 | `srGenerateDocumentCombo_` → `srGenerateDocumentCombo`（アンダースコア除去）。HTML の呼び先も同様に修正 |
+| 追加改善 | ボタンの二重押し防止（`disabled`）/ `console.log` 5点追加（submit / values / before-run / success / failure）|
+| commit | 下記参照 |
 
 **既知リスク:**
 - キャンセル判定は `srGenerateDocument` の戻り値文字列 `'施術録の出力をキャンセルしました。'`（L189）に依存。変更時は合わせて修正が必要
