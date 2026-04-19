@@ -39,7 +39,7 @@
 |---|---|---|---|
 | A | `archiveJbizV1Sheet_V3` 実行（旧 v1 シートを archive へ rename） | 院長（手動・1回限り） | **⏳ 要確認（下記参照）** |
 | B | KPI逆算 C5/C6/C9 の v2 参照式への切替 | 院長（手動・1回限り）| **✅ 実行成功確認済み（2026-04-18）** |
-| C | `verifyJbizV2Switch_V3` / `diagnoseEvalMiss_V3` 残置関数の削除検討 | Claude Code | **⏳ 運用安定後** |
+| C | 移行専用一時関数の削除（`verifyJbizV2Switch_V3` / `diagnoseEvalMiss_V3` / `diagnoseKpiFormulas_V3` / `diagnoseNG01Candidates_V3` / `diagnoseNG02Candidates_V3` / `checkJbizMigrationStatus_V3` など計9関数 + 孤立ヘッダ） | Claude Code | **✅ 完了（2026-04-18） clasp push OK** |
 | D | **T-SR-10v2**: 施術録出力 実機テスト（NG-01〜NG-06 全確認） | 院長（手動）| **✅ 全項目完了（2026-04-18）** |
 | E | **T-SR-11**: TESTCASES.md への施術録テスト結果記録 | Claude Code | **✅ 完了（2026-04-18）** |
 
