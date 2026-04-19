@@ -4606,8 +4606,9 @@ function auditLegacyMenuIds_V3() {
   var selfPrefixCount   = {};  // SELF_*
   var selfpayPrefixCount = {}; // SELFPAY_*
   var otherCount = { 空白: 0, M001系: 0, 未知: 0 };
+  var insOptionCount = {};     // INS_OPTION_* 系（保険オプション）
   var initialEvalRows = [];    // SELF_INITIAL_EVAL ダンプ用
-  var unknownRows = [];        // 未知 menu_id ダンプ用
+  var unknownRows = [];        // 未知 menu_id ダンプ用（INS_OPTION_* 除く）
   var nameMismatchPairs = [];  // menu_id と メニュー名 の不一致
   var selfOldestDate = null;
   var selfNewestDate = null;
@@ -4653,6 +4654,8 @@ function auditLegacyMenuIds_V3() {
       }
     } else if (/^M\d{3,}$/.test(menuId)) {
       otherCount.M001系++;
+    } else if (menuId.indexOf("INS_OPTION_") === 0) {
+      insOptionCount[menuId] = (insOptionCount[menuId] || 0) + 1;
     } else {
       otherCount.未知++;
       unknownRows.push({
@@ -4715,22 +4718,25 @@ function auditLegacyMenuIds_V3() {
     selfpayKeys.forEach(function(k){ Logger.log("  " + k + " : " + selfpayPrefixCount[k] + " 件"); });
   }
 
-  // --- d) その他 ---
+  // --- d) 保険オプション系（INS_OPTION_*）---
   Logger.log("");
-  Logger.log("--- d) その他（空白 / M001 / 未知） ---");
+  Logger.log("--- d) 保険オプション系（INS_OPTION_*）---");
+  var insOptionKeys = Object.keys(insOptionCount).sort();
+  if (insOptionKeys.length === 0) {
+    Logger.log("  （該当なし）");
+  } else {
+    insOptionKeys.forEach(function(k) { Logger.log("  " + k + " : " + insOptionCount[k] + " 件"); });
+  }
+
+  // --- d2) その他（空白 / M001 / 未知）---
+  Logger.log("");
+  Logger.log("--- d2) その他（空白 / M001 / 未知）---");
   Logger.log("  空白: " + otherCount.空白 + " 件");
   Logger.log("  M001系: " + otherCount.M001系 + " 件");
-  Logger.log("  未知: " + otherCount.未知 + " 件");
-
-  // --- d2) 未知 menu_id 行ダンプ ---
-  Logger.log("");
-  Logger.log("--- d2) 未知 menu_id 行ダンプ ---");
-  if (unknownRows.length === 0) {
-    Logger.log("  （未知 menu_id なし）");
-  } else {
-    Logger.log("  件数: " + unknownRows.length);
+  Logger.log("  未知（要確認）: " + otherCount.未知 + " 件");
+  if (unknownRows.length > 0) {
     unknownRows.forEach(function(row) {
-      Logger.log("    Row " + row.行番号 + " | menu_id=[" + row.menu_id + "]"
+      Logger.log("    ⚠ Row " + row.行番号 + " | menu_id=[" + row.menu_id + "]"
         + " | " + row.施術日 + " | 患者ID=" + row.患者ID
         + " | " + row.メニュー名 + " | ¥" + row.単価);
     });
@@ -4779,9 +4785,12 @@ function auditLegacyMenuIds_V3() {
   Logger.log("  総データ行数: " + (data.length - 1));
   var selfTotal = 0; selfKeys.forEach(function(k){ selfTotal += selfPrefixCount[k]; });
   var selfpayTotal = 0; selfpayKeys.forEach(function(k){ selfpayTotal += selfpayPrefixCount[k]; });
+  var insOptionTotal = 0; insOptionKeys.forEach(function(k){ insOptionTotal += insOptionCount[k]; });
   Logger.log("  SELF_* 系合計: " + selfTotal);
   Logger.log("  SELFPAY_* 系合計: " + selfpayTotal);
-  Logger.log("  その他合計: " + (otherCount.空白 + otherCount.M001系 + otherCount.未知));
+  Logger.log("  INS_OPTION_* 系合計: " + insOptionTotal + " （保険オプション・正常）");
+  Logger.log("  その他（空白/M001/未知）: " + (otherCount.空白 + otherCount.M001系 + otherCount.未知)
+    + (otherCount.未知 > 0 ? " ← 要確認 " + otherCount.未知 + "件あり" : " ← 要確認なし ✅"));
   Logger.log("  処理時間: " + (Date.now() - startMs) + " ms");
   Logger.log("[INFO] read-only 監査完了。書き込みは一切行っていません。");
 }

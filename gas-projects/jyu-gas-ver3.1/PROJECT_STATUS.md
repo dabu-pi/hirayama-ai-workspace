@@ -42,6 +42,12 @@
 | C | 移行専用一時関数の削除（`verifyJbizV2Switch_V3` / `diagnoseEvalMiss_V3` / `diagnoseKpiFormulas_V3` / `diagnoseNG01Candidates_V3` / `diagnoseNG02Candidates_V3` / `checkJbizMigrationStatus_V3` など計9関数 + 孤立ヘッダ） | Claude Code | **✅ 完了（2026-04-18） clasp push OK** |
 | D | **T-SR-10v2**: 施術録出力 実機テスト（NG-01〜NG-06 全確認） | 院長（手動）| **✅ 全項目完了（2026-04-18）** |
 | E | **T-SR-11**: TESTCASES.md への施術録テスト結果記録 | Claude Code | **✅ 完了（2026-04-18）** |
+| F | **自費明細 legacy menu_id 監査 + 未知2件の正体確認** | 院長＋Claude Code | **✅ クローズ（2026-04-19）修正不要** |
+
+**自費明細 legacy menu_id 監査 クローズ記録（2026-04-19）:**
+- 総データ9行: SELFPAY_* 7件 / INS_OPTION_* 2件 / 未知0件
+- 「未知2件」= `INS_OPTION_ELECTRO15`（電療追加(干渉波延長) ¥880）— 既知の保険オプション系メニューであり異常なし
+- データ修正不要。`auditLegacyMenuIds_V3` に `INS_OPTION_*` 独立カテゴリを追加し表示を改善（commit `eac284f`→`HEAD`）
 
 **次の最小アクション（院長）:**
 
