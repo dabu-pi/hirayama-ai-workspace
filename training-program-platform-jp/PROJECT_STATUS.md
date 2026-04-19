@@ -1,5 +1,127 @@
 # PROJECT_STATUS
 
+## 2026-04-19 C-13 Verification — methodology live check + multi-device sync design
+
+### STATUS: CLOSED (2026-04-19)
+
+### PROD_CHECK: migration 000015 applied (manual via Supabase SQL Editor)
+
+programs.methodology column verified in production DB:
+
+| slug                     | methodology |
+|---|---|
+| gzclp-base               | gzcl        |
+| gzclp-base-v2            | gzcl        |
+| upper-lower-base         | gzcl        |
+| starting-strength-base   | linear      |
+| dumbbell-full-body-base  | generic     |
+
+### LIVE_CHECK: exerciseRoleLabel resolution verified via real session data
+
+Real session traces confirmed end-to-end path resolution:
+
+| session     | program               | methodology | exercise_type | exerciseRoleLabel |
+|---|---|---|---|---|
+| b454ceb6    | dumbbell-full-body    | generic     | T1/T1/T2      | (hidden all)       |
+| 90e796f6    | gzclp-base-v2         | gzcl        | T1/T2/T3      | T1/T2/T3           |
+
+METHODOLOGY_RESULT:
+- gzcl   → T1→"T1",      T2→"T2",         T3→"T3"          ✅ unchanged
+- linear → T1→"Primary", T2→"Secondary",   T3→"Accessory"   ✅ correct
+- generic→ T1→"",        T2→"",            T3→""  (badge hidden) ✅ correct
+
+No live Starting Strength session in DB at verification time (no real user on that program).
+Logic confirmed correct via simulation with real program data.
+
+---
+
+### SYNC RISK DESIGN — multi-device / concurrent session safety
+
+#### 現行の並行制御 (コードレビューより)
+
+| route | guard |
+|---|---|
+| finish | `.eq("status","in_progress")` — 0 rows affected if already finished → 409 |
+| cancel | 同上（コメント明記済み） |
+| set/patch (weight/reps) | `session.status === "completed"` → 409 (cancelled は通過) |
+| set/complete | `is_completed` idempotency check |
+| set/delete | `deleted_at` guard |
+| S-4 re-finish | `advanceEnrollment` は再呼び出しても idempotent |
+
+#### SYNC_RISK_POINTS（壊れやすい箇所）
+
+1. workout_sets に updated_at / version なし
+   → 重量/回数の並行 PATCH は last-write-wins、競合検知なし
+2. workout_sessions に updated_at なし
+   → クライアントは別デバイスの状態変化を HTTP でしか知れない
+3. set/patch は session.status=cancelled を拒否しない
+   → キャンセル後も重量更新 API が通る（DB は書き換わるが UI には出ない）
+4. WorkoutScreen に リアルタイム同期なし
+   → PCでfinishしてもスマホ側は stale state のまま操作継続可能
+
+#### CONFLICT_CASES（具体的競合シナリオ）
+
+| シナリオ | 現行挙動 | リスク |
+|---|---|---|
+| PC で Finish → スマホで重量変更 | スマホ: 409 session_completed → エラー表示 | 低（409で止まる）|
+| PC で Cancel → スマホで Complete | スマホ: set/complete は session.status を確認しない → is_completed=true が書かれる | 中（cancelled session に完了データが残る）|
+| PC と スマホで同じセットを同時 PATCH | last-write-wins | 低（トレーニング中の誤差範囲内）|
+| PC で Finish → スマホで別セットを Add | スマホ: session_completed チェックなし → exercises が追加される | 中（completed session にデータが増える）|
+| ネットワーク遅延で Finish が2回送信 | S-4 recovery: idempotent ✅ | なし |
+
+#### MINIMUM_SAFE_GUARD（最小安全策）
+
+優先度順:
+1. **set/complete に session status チェック追加** (Small / 30分)
+   → `in_progress` 以外は 409 を返す（cancel 後の誤記録を防ぐ）
+2. **workout_sessions.updated_at カラム追加** (Small / migration 1本)
+   → session reload 判断の基準を持てる（即時の競合検知には使わないが基盤になる）
+3. **WorkoutScreen 上の session status polling** (Small / ~2時間)
+   → 30秒ごとに GET /api/workout-sessions/:id で status を確認
+   → completed / cancelled なら自動リダイレクト
+4. **Supabase Realtime 購読** (Medium / 半日)
+   → workout_sessions テーブルの status 変化をリアルタイム受信
+   → 別デバイスの Finish / Cancel を即時検知してリダイレクト
+
+#### SYNC_OPTIONS
+
+| 方式 | 仕組み | Supabase対応 | 体感改善 |
+|---|---|---|---|
+| **Polling (30s)** | setInterval → GET session status | ✅ 追加設定不要 | 中（最大30秒遅延）|
+| **Realtime subscription** | WebSocket → DB変化をpush | ✅ 組み込み機能 | 高（即時）|
+| **ETag / If-Match** | PATCH時に updated_at を送信、stale なら 409 | ✅ workout_sets.updated_at 追加で対応 | 高（PATCH競合検知）|
+| **Optimistic UI + rollback** | クライアント状態管理 + 失敗時ロールバック | ✅ クライアントのみ | 高（体感速度）|
+| **session lock flag** | is_locked カラムをセッション単位で | ✅ migration追加 | 高（強制排他）|
+
+#### IMPLEMENTATION_SIZE
+
+| タスク | Size | 破壊リスク | 工数目安 |
+|---|---|---|---|
+| set/complete に session status チェック追加 | S | LOW | 30分 |
+| workout_sessions.updated_at migration | S | LOW | 15分 |
+| workout_sets.updated_at migration | S | LOW | 15分 |
+| WorkoutScreen 30s status polling | S | LOW | 2時間 |
+| Supabase Realtime subscription on session | M | LOW | 半日 |
+| ETag/If-Match on workout_sets PATCH | M | LOW | 半日 |
+| Optimistic UI + rollback (全セット) | L | MEDIUM | 2日 |
+| Full real-time collaborative session | L | HIGH | 1週間 |
+
+#### RECOMMENDED_NEXT_STEP（段階的導入案）
+
+Phase 1（今すぐ / Low risk）:
+  S1: set/complete に `.neq("status","cancelled")` guard 追加
+  S2: workout_sessions.updated_at migration
+
+Phase 2（必要になったら / Medium）:
+  M1: WorkoutScreen 30s polling → Finish/Cancel を別デバイスで検知
+  M2: Supabase Realtime → finish/cancel を瞬時に伝播
+
+Phase 3（ユーザーが増えたら / High value）:
+  L1: ETag on PATCH + optimistic UI rollback
+  L2: Full real-time set sync
+
+---
+
 ## 2026-04-19 C-13 Step 2 — exerciseRoleLabel in WorkoutScreen
 
 ### STATUS: CLOSED (2026-04-19)
