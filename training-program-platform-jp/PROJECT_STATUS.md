@@ -2,9 +2,9 @@
 
 ## 2026-04-19 S-12 — Go to Train navigation fix
 
-### STATUS: fixed (2026-04-19)
+### STATUS: fixed round-2 (2026-04-19, commit b17022f)
 
-### ROOT_CAUSE
+### ROOT_CAUSE (Round 1 — commit 5c0b430)
 
 Naked `/train` (no `programDayId`) falls through to `getCurrentWorkoutSessionView()`, then `getActiveProgramView()`.
 Train page only handled `actionType === "start"` explicitly; `actionType === "resume"` fell through to `redirect("/programs")`.
@@ -12,13 +12,38 @@ Train page only handled `actionType === "start"` explicitly; `actionType === "re
 Additionally, `selectCurrentInProgressSession` and `selectSessionByDayId` in `train-session.ts` lacked `.is("archived_at", null)`,
 allowing C-10-archived in-progress sessions to surface incorrectly when using the naked `/train` path.
 
+### ROOT_CAUSE (Round 2 — commit b17022f)
+
+Two additional issues remained after Round 1:
+
+1. **`programSlug = ""` silently blocks `actionType === "start"`**: `selectProgramsBatch` (used inside
+   `getActiveProgramView`) returns `[]` when RLS fails (`is_public = false` or query error), making
+   `programSlug = program?.slug ?? ""` an empty string. The `start` condition had `primaryView.programSlug`
+   as a truthy guard → empty string → condition fails → redirect to `/programs`.
+   Fix: removed `programSlug` from the condition. `StartSessionScreen` still works with empty slug;
+   only the "Back to Program" link degrades (links to `/programs` generically).
+
+2. **Infinite redirect loop when `programSlug = ""` + `actionType === "resume"`**: Round 1's
+   `redirect(primaryView.continueUrl)` builds `continueUrl = "/train?program=&programDayId=uuid"`.
+   `getTrainProgramSelection("")` → empty string → `null` → `state: "none"` → naked path →
+   `getCurrentWorkoutSessionView()` may return null → `getActiveProgramView()` → `resume` again → loop.
+   Fix: added `primaryView.programSlug` guard before `redirect(continueUrl)` — falls through to
+   `redirect("/programs")` instead of looping.
+
+3. **Debug overlay**: Added `/train?debug=train` for authenticated users to see resolved state
+   in-browser without Vercel log access.
+
 ### CHANGES
 
-- `app/train/page.tsx`: Added explicit `actionType === "resume"` handler after the "start" block.
-  When `getCurrentWorkoutSessionView()` returns null but `getActiveProgramView()` reports a resume session,
-  redirect to `primaryView.continueUrl` (which carries `programDayId` → `resolveTrainingEntry` finds the session).
-- `lib/workout/train-session.ts`: Added `.is("archived_at", null)` to both `selectCurrentInProgressSession`
-  and `selectSessionByDayId` — consistent with C-10 intent and all other session queries.
+**Round 1** (`lib/workout/train-session.ts`, `app/train/page.tsx`):
+- `train-session.ts`: Added `.is("archived_at", null)` to `selectCurrentInProgressSession` and `selectSessionByDayId`.
+- `train/page.tsx`: Added `actionType === "resume"` → `redirect(continueUrl)` handler.
+
+**Round 2** (`app/train/page.tsx`):
+- `actionType === "start"`: removed `primaryView.programSlug` truthy guard.
+- `actionType === "resume"`: added `primaryView.programSlug` guard before redirect (loop prevention).
+- Added `start_missing_slug` `RedirectCause` for log correlation.
+- Added `/train?debug=train` in-browser diagnostic overlay.
 
 ### MANUAL_CHECK
 
@@ -26,6 +51,7 @@ allowing C-10-archived in-progress sessions to surface incorrectly when using th
 2. `/programs` → "Go to Train" → verify StartSessionScreen or WorkoutScreen (not redirect to /programs)
 3. Finish a session → from Summary → "Go to Train" → verify StartSessionScreen for next day
 4. No active enrollment → "Go to Train" → redirect to /programs is still expected
+5. Use `/train?debug=train` to inspect resolved state if still failing — check `redirectCause` and `primaryViewProgramSlug`
 
 ---
 
