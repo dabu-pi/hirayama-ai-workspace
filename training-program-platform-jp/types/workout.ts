@@ -397,6 +397,30 @@ export type ActiveProgramView = {
   activeSessionId: string | null;
 };
 
+/**
+ * S-12 diagnostic: raw enrollment/program/day resolution data.
+ * Populated only on the success path (enrollments.length > 0).
+ * Used by /train?debug=train overlay and Vercel log correlation.
+ */
+export type ActiveProgramResolutionSnapshot = {
+  enrollmentCount: number;
+  enrollment: {
+    id: string;
+    program_id: string;
+    current_program_day_id: string | null;
+    status: string;
+  } | null;
+  programsCount: number;
+  programs: { id: string; slug: string; title: string }[];
+  programDaysCount: number;
+  currentProgramDayId: string | null;
+  primaryViewInput: {
+    programId: string;
+    programFound: boolean;
+    currentDayFound: boolean;
+  } | null;
+};
+
 export type ActiveProgramResult = {
   /**
    * All active enrollments for the current user, ordered by most-recently-updated first.
@@ -406,6 +430,8 @@ export type ActiveProgramResult = {
   /** true = user is signed in but has no active enrollment */
   isAuthenticated: boolean;
   errorMessage: string | null;
+  /** S-12 diagnostic: raw resolution data for debug overlay. null on error/no-enrollment paths. */
+  resolutionSnapshot?: ActiveProgramResolutionSnapshot | null;
 };
 
 export type WorkoutSessionFinishResponse = {

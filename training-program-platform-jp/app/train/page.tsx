@@ -150,7 +150,7 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     return <WorkoutScreen selectedProgram={selectedProgram} session={session} />;
   }
 
-  const { views, isAuthenticated } = await getActiveProgramView();
+  const { views, isAuthenticated, resolutionSnapshot } = await getActiveProgramView();
   const primaryView = views[0] ?? null;
 
   console.info(`${PAGE}:active_program`, {
@@ -265,7 +265,8 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
       primaryViewProgramSlug: primaryView?.programSlug ?? null,
       primaryViewContinueUrl: primaryView?.continueUrl ?? null,
       primaryViewActiveSessionId: primaryView?.activeSessionId ?? null,
-      redirectCause
+      redirectCause,
+      resolutionSnapshot: resolutionSnapshot ?? null
     };
     console.warn(`${PAGE}:debug_overlay`, debugPayload);
     return (

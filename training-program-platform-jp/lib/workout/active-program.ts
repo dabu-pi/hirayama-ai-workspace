@@ -11,6 +11,7 @@ import {
   isLikelyUuid
 } from "@/lib/workout/session-access";
 import type {
+  ActiveProgramResolutionSnapshot,
   ActiveProgramResult,
   ActiveProgramSession,
   ActiveProgramView,
@@ -199,6 +200,13 @@ async function selectProgramsBatch(
 ): Promise<ProgramRow[]> {
   if (programIds.length === 0) return [];
 
+  console.info("active-program-query:start", {
+    queryName: "selectProgramsBatch",
+    table: "programs",
+    programIdCount: programIds.length,
+    programIds
+  });
+
   const { data, error } = await client
     .from("programs")
     .select("id, slug, title, level, days_per_week, duration_weeks")
@@ -219,7 +227,15 @@ async function selectProgramsBatch(
     });
     return [];
   }
-  return (data ?? []) as ProgramRow[];
+
+  const rows = (data ?? []) as ProgramRow[];
+  console.info("active-program-query:ok", {
+    queryName: "selectProgramsBatch",
+    programsCount: rows.length,
+    slugs: rows.map((p) => p.slug),
+    programIds
+  });
+  return rows;
 }
 
 async function selectProgramDaysBatch(
@@ -892,6 +908,35 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       selectInProgressSessionsForEnrollments(serverClient, enrollmentIds)
     ]);
 
+    // S-12 diagnostic: consolidated resolution snapshot after batch 1
+    const primaryEnrollment = enrollments[0] ?? null;
+    const resolutionSnapshot: ActiveProgramResolutionSnapshot = {
+      enrollmentCount: enrollments.length,
+      enrollment: primaryEnrollment
+        ? {
+            id: primaryEnrollment.id,
+            program_id: primaryEnrollment.program_id,
+            current_program_day_id: primaryEnrollment.current_program_day_id,
+            status: primaryEnrollment.status
+          }
+        : null,
+      programsCount: programs.length,
+      programs: programs.map((p) => ({ id: p.id, slug: p.slug, title: p.title })),
+      programDaysCount: currentDays.length,
+      currentProgramDayId: primaryEnrollment?.current_program_day_id ?? null,
+      primaryViewInput: primaryEnrollment
+        ? {
+            programId: primaryEnrollment.program_id,
+            programFound: programs.some((p) => p.id === primaryEnrollment.program_id),
+            currentDayFound: currentDays.some(
+              (d) => d.id === primaryEnrollment.current_program_day_id
+            )
+          }
+        : null
+    };
+
+    console.info("active-program:resolution_snapshot", resolutionSnapshot);
+
     // Collect IDs needed for batch 2
     const currentDayWeekIds = [...new Set(currentDays.map((d) => d.program_week_id))];
     const allWeekIds = allWeeks.map((w) => w.id);
@@ -1048,6 +1093,17 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
           ? "start"
           : "none";
 
+      console.info("active-program:view_build_input", {
+        enrollmentId: enrollment.id,
+        programId: enrollment.program_id,
+        programFound: Boolean(program),
+        programSlug: programSlug || "(empty)",
+        currentProgramDayId: enrollment.current_program_day_id,
+        currentDayFound: Boolean(currentDay),
+        actionType,
+        activeSessionId
+      });
+
       return {
         enrollmentId: enrollment.id,
         programId: enrollment.program_id,
@@ -1075,7 +1131,7 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       };
     });
 
-    return { views, isAuthenticated: true, errorMessage: null };
+    return { views, isAuthenticated: true, errorMessage: null, resolutionSnapshot };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     // Classify the failure so Vercel logs show a stable cause bucket.
