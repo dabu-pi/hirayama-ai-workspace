@@ -38,9 +38,13 @@ async function countIncompleteSets(
     .eq("workout_session_id", workoutSessionId);
 
   if (sessionExercisesError) {
-    throw new Error(
-      `Failed to load session exercises for finish: ${sessionExercisesError.message}`
-    );
+    // Non-blocking: log and treat as 0 incomplete sets so the route can proceed.
+    // Finish must not hard-fail because of a count query error.
+    console.warn("workout-session-finish:incomplete_count_exercises_error", {
+      sessionId: workoutSessionId,
+      error: sessionExercisesError.message
+    });
+    return 0;
   }
 
   const sessionExerciseIds = ((sessionExercises ?? []) as WorkoutSessionExerciseRow[]).map(
@@ -59,9 +63,11 @@ async function countIncompleteSets(
     .eq("is_completed", false);
 
   if (incompleteCountError) {
-    throw new Error(
-      `Failed to count incomplete sets for finish: ${incompleteCountError.message}`
-    );
+    console.warn("workout-session-finish:incomplete_count_sets_error", {
+      sessionId: workoutSessionId,
+      error: incompleteCountError.message
+    });
+    return 0;
   }
 
   return count ?? 0;

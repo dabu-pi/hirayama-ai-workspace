@@ -2,7 +2,25 @@
 
 ## 2026-04-18 C-11 — GZCLP T1 Progression (Phase 1): state management + live hint
 
-### STATUS: implementation complete — pending live migration + manual smoke test
+### STATUS: implementation complete — Finish bug fixed (2026-04-18) — pending live migration + manual smoke test
+
+### FINISH_BUG_FIX (2026-04-18)
+
+**症状**: C-11 デプロイ後、/train の Finish ボタンが失敗。Cancel は成功。
+
+**根本原因**: `countIncompleteSets` が Supabase クエリエラー時に `throw new Error(...)` していた。
+これがフィニッシュルートの外側 try-catch に伝播し 500 を返していた可能性が高い。
+- Cancel は `countIncompleteSets` を呼ばないため成功
+- `updateT1ProgressionAfterSession` は内部 try-catch でサイレント処理済みだが、
+  `countIncompleteSets` のみ非サイレント (throw) 設計だった
+- C-11 デプロイ後に migration 未適用の状態でクエリが失敗すると、この throw が露出した
+
+**修正**: `countIncompleteSets` のエラー時挙動を throw → `return 0` + console.warn に変更。
+  - `sessionExercisesError` → warn + return 0
+  - `incompleteCountError` → warn + return 0
+  - フィニッシュルート全体の「エラーはサイレント処理、リクエストを止めない」方針に統一
+
+**変更ファイル**: `app/api/workout-sessions/[id]/finish/route.ts`
 
 ### DESIGN_DECISION
 
