@@ -100,10 +100,23 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
       );
     }
 
-    // For 'resume', 'start', and 'invalid' — proceed with the existing
-    // session lookup. findWorkoutSessionByDayId returns the in-progress
-    // session for this day (resume) or null (start), so the conditional
-    // below handles both correctly.
+    // mode==="start": resolveTrainingEntry already confirmed no in-progress session exists.
+    // Skip the loadSessionView query chain (~700ms) and show StartSessionScreen immediately.
+    if (entry.mode === "start") {
+      const programDayLabel = await getProgramDayLabel(selectedProgram.programDayId);
+      console.info(`${PAGE}:branch`, { branch: "start_session_screen_fast", programDayId: selectedProgram.programDayId });
+      return (
+        <StartSessionScreen
+          programDayId={selectedProgram.programDayId}
+          programDayLabel={programDayLabel}
+          programSlug={selectedProgram.programSlug}
+          programTitle={selectedProgram.programTitle}
+        />
+      );
+    }
+
+    // mode==="resume" or "invalid" — look up the in-progress session.
+    // "invalid" falls through here for graceful degradation.
     const [existingSession, programDayLabel] = await Promise.all([
       findWorkoutSessionByDayId(selectedProgram.programDayId),
       getProgramDayLabel(selectedProgram.programDayId)

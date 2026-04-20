@@ -146,9 +146,16 @@ export async function getSessionHistoryView(): Promise<SessionHistoryResult> {
     }
 
     const sessionIds = sessions.map((s) => s.id);
+    const programDayIds = Array.from(
+      new Set(sessions.map((s) => s.program_day_id).filter((id): id is string => id !== null))
+    );
 
-    // Batch-load exercise counts (all in one query)
-    const exerciseRows = await selectSessionExercises(serverClient, sessionIds);
+    // Exercise counts and program days are both independent of each other — run in parallel.
+    const [exerciseRows, programDays] = await Promise.all([
+      selectSessionExercises(serverClient, sessionIds),
+      selectProgramDays(serverClient, programDayIds)
+    ]);
+
     const exerciseCountMap = new Map<string, number>();
     exerciseRows.forEach((row) => {
       exerciseCountMap.set(
@@ -156,16 +163,6 @@ export async function getSessionHistoryView(): Promise<SessionHistoryResult> {
         (exerciseCountMap.get(row.workout_session_id) ?? 0) + 1
       );
     });
-
-    // Batch-load program hierarchy
-    const programDayIds = Array.from(
-      new Set(
-        sessions
-          .map((s) => s.program_day_id)
-          .filter((id): id is string => id !== null)
-      )
-    );
-    const programDays = await selectProgramDays(serverClient, programDayIds);
     const programDayMap = new Map(programDays.map((d) => [d.id, d]));
 
     const programWeekIds = Array.from(new Set(programDays.map((d) => d.program_week_id)));

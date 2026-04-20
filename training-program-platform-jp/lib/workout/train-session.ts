@@ -315,12 +315,17 @@ async function selectHistoricalSessions(
   userId: string,
   currentWorkoutSessionId: string
 ) {
+  // Limit to 20 most recent completed sessions. Cancelled/in-progress sessions
+  // are useless for "previous display" and inflating the IN clauses of Q8/Q9.
   const { data, error } = await client
     .from("workout_sessions")
     .select("id, started_at")
     .eq("user_id", userId)
+    .eq("status", "completed")
+    .is("archived_at", null)
     .neq("id", currentWorkoutSessionId)
-    .order("started_at", { ascending: false });
+    .order("started_at", { ascending: false })
+    .limit(20);
 
   if (error) {
     throw new Error(
