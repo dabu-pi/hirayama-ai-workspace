@@ -3345,12 +3345,87 @@ ORDER は `exercise_id:order_index` マップで保証。
 週3回トレーニングで約7週分。T1 種目（毎セッション出現）は実質影響なし。
 T3 種目（週1出現）でも20回前まで参照可能。実運用上は許容範囲。
 
-### NEXT_BOTTLENECK
+### NEXT_BOTTLENECK (R3 時点)
 
 | 残余 | 想定時間 | 対処方針 |
 |---|---|---|
 | `resolveTrainingEntry` 内部 Q1+Q2（day→week join） | 1 round-trip | PostgREST nested embed で 2→1 query（~200ms 節約。並列化後は critical path から外れるため優先度低） |
-| `buildPreviousDisplayMap` Q2+Q3（exercise→set join） | 1 round-trip | PostgREST 埋め込みフィルタ（実装複雑。現在 LIMIT 20 で十分軽量） |
+| `buildPreviousDisplayMap` Q1+Q2（session→exercise join） | 1 round-trip | **→ R4 で対処済み** |
 | Vercel cold start | 1–2s | コード変更で解消不可 |
 | tab switch Router Cache 消去（router.refresh 後） | 0.5–1s/tab | force-dynamic 方針は維持。改善するなら Suspense streaming 検討 |
+
+---
+
+## 2026-04-20 Performance Round 4 — buildPreviousDisplayMap 3 sequential → 2 sequential
+
+### STATUS: CLOSED (2026-04-20)
+
+### ROOT_CAUSE
+
+R3 後の critical path（resume flow）:
+```
+Promise.all([resolveTrainingEntry, findWorkoutSessionByDayId, getProgramDayLabel])
+  └─ findWorkoutSessionByDayId + loadSessionView が支配 (~1200ms)
+       └─ Round 3 (parallel): program || buildPreviousDisplayMap || t1Hints
+            └─ buildPreviousDisplayMap が支配 (~600ms, 3 sequential queries)
+                 Q1: selectHistoricalSessions          ~200ms
+                 Q2: selectHistoricalWorkoutSessionExercises  ~200ms  ← Q1 依存
+                 Q3: selectHistoricalCompletedWorkoutSets     ~200ms  ← Q2 依存
+```
+
+`resolveTrainingEntry`（~800ms）は `findWorkoutSessionByDayId`（~1200ms）より先に完了するため critical path 外。
+`buildPreviousDisplayMap` の Q1+Q2 が主犯。
+
+### FIX
+
+Q1+Q2 を PostgREST 埋め込みクエリ（`workout_sessions!inner(started_at)`）で 1 round-trip に統合。
+
+```typescript
+// before (2 sequential: Q1 sessions → Q2 exercises)
+const sessions = await selectHistoricalSessions(client, userId, currentSessionId);  // ~200ms
+const exercises = await selectHistoricalWorkoutSessionExercises(client, sessions.map(s=>s.id), exerciseIds); // ~200ms
+
+// after (1 embedded query: exercises + session.started_at in one round-trip)
+const historicalExercises = await selectHistoricalExercisesWithSession(client, userId, exerciseIds); // ~200ms
+// workout_sessions!inner(started_at) → status=completed, archived_at IS NULL, limit 400
+```
+
+`status=completed` フィルタが currentSession（always in_progress）を自動除外 → `.neq("id", currentSessionId)` 不要。
+`limit(400)` = 20 sessions × 20 exercises の余裕値（R2 の LIMIT 20 sessions に相当する実質的なカバレッジ）。
+
+### BEFORE_AFTER
+
+| path | before R4 | after R4 | delta |
+|---|---|---|---|
+| resume (既存 session あり) | ~1200ms server | ~1000ms server | -200ms |
+| start / blocked | 影響なし（buildPreviousDisplayMap は existingSession ありの場合のみ実行） | — | — |
+
+### CORRECTNESS
+
+- `!inner` join: session が存在しない exercise row は返らない（元の inner join 相当）
+- `status=completed` + `archived_at IS NULL`: 元の `selectHistoricalSessions` フィルタと同等
+- `workout_sessions?.started_at ?? ""`: null ガード→ 空文字列 → 既存の `!historicalExercise.startedAt` ガードで skip → 安全
+- `previousCandidateMap` の most-recent-wins ロジック: `startedAt` 比較は変更なし → 結果同一
+- ORDER BY 削除: コード側で最大値を選択するため不要（影響なし）
+
+### SIDE_EFFECTS
+
+- `selectHistoricalSessions` / `selectHistoricalWorkoutSessionExercises` を削除（`buildPreviousDisplayMap` 専用、他から未参照）
+- `HistoricalSessionRow` 型を `HistoricalExerciseWithSessionRow` に置換
+- ff96ee8 Fix 1 (bulk INSERT) との干渉: buildPreviousDisplayMap は READ 専用、影響なし
+
+### LIMIT(20) vs LIMIT(400) UX IMPACT
+
+R2 で追加した LIMIT 20（セッション数）は、より多くの履歴を参照できる limit(400)（exercise 行数）に実質的に緩和された。
+T3 種目（週 1 出現、1 行/session）なら最大 400 セッション分参照可能。
+previousDisplay の "-" が増えるリスクは R4 でむしろ減少する方向。
+
+### NEXT_BOTTLENECK (R4 以降)
+
+| 残余 | 想定時間 | 対処方針 |
+|---|---|---|
+| `resolveTrainingEntry` 内部 Q1+Q2（day→week join） | ~200ms 節約 | parallel 化後は critical path 外。優先度低 |
+| `buildPreviousDisplayMap` Q2+Q3（exercise→set join） | ~200ms 節約 | 2 level embed or 残存 sequential の 1 本。R4 後の次候補 |
+| Vercel cold start | 1–2s | コード変更で解消不可 |
+| tab switch Router Cache 消去 | 0.5–1s/tab | force-dynamic 方針は維持 |
 

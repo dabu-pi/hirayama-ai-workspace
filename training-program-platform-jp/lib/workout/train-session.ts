@@ -83,9 +83,13 @@ type WorkoutSetRow = {
   deleted_at: string | null;
 };
 
-type HistoricalSessionRow = {
+// R4: merged type — carries session started_at alongside exercise row.
+type HistoricalExerciseWithSessionRow = {
   id: string;
-  started_at: string;
+  workout_session_id: string;
+  exercise_id: string;
+  exercise_type: ExerciseType;
+  workout_sessions: { started_at: string } | null;
 };
 
 type PreviousCandidate = {
@@ -310,56 +314,31 @@ async function selectVisibleWorkoutSets(
   return (data ?? []) as WorkoutSetRow[];
 }
 
-async function selectHistoricalSessions(
+// R4: merged Q1+Q2 — fetches historical exercise rows with session started_at embedded.
+// Replaces the previous two-step flow (selectHistoricalSessions + selectHistoricalWorkoutSessionExercises).
+// Current session is always in_progress, so status=completed excludes it without a neq guard.
+// limit(400) ≈ 20 sessions × 20 exercises — generous enough for any typical user history.
+async function selectHistoricalExercisesWithSession(
   client: DatabaseClient,
   userId: string,
-  currentWorkoutSessionId: string
+  uniqueExerciseIds: string[]
 ) {
-  // Limit to 20 most recent completed sessions. Cancelled/in-progress sessions
-  // are useless for "previous display" and inflating the IN clauses of Q8/Q9.
-  const { data, error } = await client
-    .from("workout_sessions")
-    .select("id, started_at")
-    .eq("user_id", userId)
-    .eq("status", "completed")
-    .is("archived_at", null)
-    .neq("id", currentWorkoutSessionId)
-    .order("started_at", { ascending: false })
-    .limit(20);
-
-  if (error) {
-    throw new Error(
-      `Failed to load historical workout sessions: ${error.message}`
-    );
-  }
-
-  return (data ?? []) as HistoricalSessionRow[];
-}
-
-async function selectHistoricalWorkoutSessionExercises(
-  client: DatabaseClient,
-  workoutSessionIds: string[],
-  exerciseIds: string[]
-) {
-  if (workoutSessionIds.length === 0 || exerciseIds.length === 0) {
-    return [] as WorkoutSessionExerciseRow[];
-  }
+  if (uniqueExerciseIds.length === 0) return [] as HistoricalExerciseWithSessionRow[];
 
   const { data, error } = await client
     .from("workout_session_exercises")
-    .select(
-      "id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped, was_added, swap_group_slug"
-    )
-    .in("workout_session_id", workoutSessionIds)
-    .in("exercise_id", exerciseIds);
+    .select("id, workout_session_id, exercise_id, exercise_type, workout_sessions!inner(started_at)")
+    .in("exercise_id", uniqueExerciseIds)
+    .eq("workout_sessions.user_id", userId)
+    .eq("workout_sessions.status", "completed")
+    .is("workout_sessions.archived_at", null)
+    .limit(400);
 
   if (error) {
-    throw new Error(
-      `Failed to load historical workout session exercises: ${error.message}`
-    );
+    throw new Error(`Failed to load historical exercises: ${error.message}`);
   }
 
-  return (data ?? []) as WorkoutSessionExerciseRow[];
+  return (data ?? []) as unknown as HistoricalExerciseWithSessionRow[];
 }
 
 async function selectHistoricalCompletedWorkoutSets(
@@ -407,41 +386,26 @@ async function buildPreviousDisplayMap(
     return new Map<string, string>();
   }
 
-  const historicalSessions = await selectHistoricalSessions(
+  // R4: single embedded query replaces two sequential round-trips (Q1 sessions + Q2 exercises).
+  const historicalExercises = await selectHistoricalExercisesWithSession(
     client,
     currentSession.user_id,
-    currentSession.id
-  );
-  const historicalSessionIds = historicalSessions.map((item) => item.id);
-
-  if (historicalSessionIds.length === 0) {
-    return new Map<string, string>();
-  }
-
-  const sessionStartedAtMap = new Map(
-    historicalSessions.map((item) => [item.id, item.started_at])
-  );
-
-  const historicalSessionExercises = await selectHistoricalWorkoutSessionExercises(
-    client,
-    historicalSessionIds,
     uniqueExerciseIds
   );
-  const historicalWorkoutSessionExerciseIds = historicalSessionExercises.map(
-    (item) => item.id
-  );
 
-  if (historicalWorkoutSessionExerciseIds.length === 0) {
+  if (historicalExercises.length === 0) {
     return new Map<string, string>();
   }
 
+  const historicalWorkoutSessionExerciseIds = historicalExercises.map((item) => item.id);
+
   const historicalExerciseMap = new Map(
-    historicalSessionExercises.map((item) => [
+    historicalExercises.map((item) => [
       item.id,
       {
         exerciseId: item.exercise_id,
         exerciseType: item.exercise_type,
-        startedAt: sessionStartedAtMap.get(item.workout_session_id) ?? ""
+        startedAt: item.workout_sessions?.started_at ?? ""
       }
     ])
   );
