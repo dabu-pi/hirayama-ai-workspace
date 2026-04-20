@@ -350,16 +350,18 @@ async function selectHistoricalCompletedWorkoutSets(
     return [] as WorkoutSetRow[];
   }
 
-  // set_number フィルタは使わない。過去セッションでセット追加/削除があると
-  // 現在セッションの set_number と一致しなくなるため、全セットを取得して
-  // position ベースで再インデックスする。
+  // is_completed フィルタを使わない。
+  // finish ルートはセッション全体を completed にするだけで、個々のセットの
+  // is_completed フラグは更新しない。force-finish / 未押下セットが is_completed=false
+  // のまま歴史データに残り、前回表示が set 1 のみになる原因となっていた。
+  // weight_kg/reps_done が両方 null のセットは formatPreviousDisplay が "-" を返すので
+  // フィルタ不要。set_number フィルタも使わない（位置ベース再インデックスのため）。
   const { data, error } = await client
     .from("workout_sets")
     .select(
       "id, workout_session_exercise_id, set_number, target_reps_text, weight_kg, reps_done, is_completed, is_locked, completed_at, is_auto_filled, note, deleted_at"
     )
     .in("workout_session_exercise_id", workoutSessionExerciseIds)
-    .eq("is_completed", true)
     .is("deleted_at", null)
     .order("workout_session_exercise_id", { ascending: true })
     .order("set_number", { ascending: true });
@@ -394,6 +396,7 @@ async function buildPreviousDisplayMap(
   // R4: single embedded query replaces two sequential round-trips (Q1 sessions + Q2 exercises).
   // Graceful degradation: if the embedded filter fails (PostgREST version / schema issue),
   // return empty map so WorkoutScreen still renders (previousDisplay shows "-" instead of crashing).
+  const tPrev0 = Date.now();
   let historicalExercises: HistoricalExerciseWithSessionRow[];
   try {
     historicalExercises = await selectHistoricalExercisesWithSession(
@@ -405,6 +408,7 @@ async function buildPreviousDisplayMap(
     console.warn("buildPreviousDisplayMap: embedded query failed, skipping previousDisplay.", err);
     return empty;
   }
+  console.log(`[PERF] buildPreviousDisplayMap Q1 (historicalExercises): ${Date.now() - tPrev0}ms | found=${historicalExercises.length}`);
 
   if (historicalExercises.length === 0) {
     return empty;
@@ -423,10 +427,12 @@ async function buildPreviousDisplayMap(
     ])
   );
 
+  const tPrev1 = Date.now();
   const historicalCompletedSets = await selectHistoricalCompletedWorkoutSets(
     client,
     historicalWorkoutSessionExerciseIds
   );
+  console.log(`[PERF] buildPreviousDisplayMap Q2 (historicalSets): ${Date.now() - tPrev1}ms | found=${historicalCompletedSets.length} hseIds=${historicalWorkoutSessionExerciseIds.length}`);
 
   // keyed exerciseId:set_number — exercise_type excluded so type changes between sessions don't cause misses
   const previousCandidateMap = new Map<string, PreviousCandidate>();
@@ -591,22 +597,29 @@ async function loadSessionView(
   queryClient: DatabaseClient,
   session: WorkoutSessionRow
 ): Promise<WorkoutSessionView> {
+  const t0 = Date.now();
+
   // Round 1: program_day metadata and session exercises are independent — run in parallel.
   const [programDay, workoutSessionExercises] = await Promise.all([
     selectProgramDay(queryClient, session.program_day_id),
     selectWorkoutSessionExercises(queryClient, session.id)
   ]);
+  console.log(`[PERF] loadSessionView round1 (programDay+exercises): ${Date.now() - t0}ms`);
 
   // Round 2: program_week (depends on programDay), exercises + sets (depend on workoutSessionExercises)
   // — all three are independent of each other so run in parallel.
+  const t1 = Date.now();
   const [programWeek, exercises, workoutSets] = await Promise.all([
     selectProgramWeek(queryClient, programDay?.program_week_id ?? null),
     selectExercises(queryClient, workoutSessionExercises.map((item) => item.exercise_id)),
     selectVisibleWorkoutSets(queryClient, workoutSessionExercises.map((item) => item.id))
   ]);
+  console.log(`[PERF] loadSessionView round2 (programWeek+exercises+sets): ${Date.now() - t1}ms`);
 
   // Round 3: program (depends on programWeek), previousDisplayMap + t1Hints (depend on
   // workoutSessionExercises + workoutSets) — all independent of each other, run in parallel.
+  // buildPreviousDisplayMap itself has 2 sequential DB calls inside (historical exercises → historical sets).
+  const t2 = Date.now();
   const t1ExerciseIds = workoutSessionExercises
     .filter((e) => e.exercise_type === "T1")
     .map((e) => e.exercise_id);
@@ -618,6 +631,8 @@ async function loadSessionView(
       ? selectT1ProgressionHints(queryClient, session.program_enrollment_id, t1ExerciseIds)
       : Promise.resolve(new Map<string, T1ProgressionHint>())
   ]);
+  console.log(`[PERF] loadSessionView round3 (program+prevMap+t1hints): ${Date.now() - t2}ms`);
+  console.log(`[PERF] loadSessionView TOTAL: ${Date.now() - t0}ms | exerciseCount=${workoutSessionExercises.length} setCount=${workoutSets.length}`);
 
   return {
     id: session.id,
