@@ -71,13 +71,23 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     selectedProgram.programSlug &&
     selectedProgram.programTitle
   ) {
-    // S-3: Resolve entry mode before attempting to start/resume.
-    // - 'blocked'  → same enrollment has a different day in progress; show warning.
-    // - 'resume'   → in-progress session exists for this exact day; load it.
-    // - 'start'    → no in-progress session; show start confirmation.
-    // - 'invalid'  → resolver failed (unauthenticated / env missing); fall through
-    //               to existing session lookup for graceful degradation.
-    const entry = await resolveTrainingEntry(selectedProgram.programDayId);
+    // S-3 speculative parallel: resolveTrainingEntry and findWorkoutSessionByDayId have
+    // no data dependency on each other — run all three concurrently.
+    //
+    // resume path benefit: resolveTrainingEntry's 4-query sequential chain (~800ms at
+    // 200ms/rtt) previously blocked loadSessionView (~1200ms). Running in parallel
+    // reduces server render time from ~2000ms to ~1200ms (saves ~800ms).
+    //
+    // blocked path: existingSession result is simply discarded (findWorkoutSessionByDayId
+    // returns null for a different-day blocking session, so the wasted work is minimal).
+    // start path: findWorkoutSessionByDayId returns null after 1 cheap query; no
+    // loadSessionView is invoked, so the overhead is ~1 extra round-trip within the
+    // parallel window — no net latency cost.
+    const [entry, existingSession, programDayLabel] = await Promise.all([
+      resolveTrainingEntry(selectedProgram.programDayId),
+      findWorkoutSessionByDayId(selectedProgram.programDayId),
+      getProgramDayLabel(selectedProgram.programDayId)
+    ]);
 
     console.info(`${PAGE}:train_entry`, {
       userId,
@@ -99,28 +109,6 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
         />
       );
     }
-
-    // mode==="start": resolveTrainingEntry already confirmed no in-progress session exists.
-    // Skip the loadSessionView query chain (~700ms) and show StartSessionScreen immediately.
-    if (entry.mode === "start") {
-      const programDayLabel = await getProgramDayLabel(selectedProgram.programDayId);
-      console.info(`${PAGE}:branch`, { branch: "start_session_screen_fast", programDayId: selectedProgram.programDayId });
-      return (
-        <StartSessionScreen
-          programDayId={selectedProgram.programDayId}
-          programDayLabel={programDayLabel}
-          programSlug={selectedProgram.programSlug}
-          programTitle={selectedProgram.programTitle}
-        />
-      );
-    }
-
-    // mode==="resume" or "invalid" — look up the in-progress session.
-    // "invalid" falls through here for graceful degradation.
-    const [existingSession, programDayLabel] = await Promise.all([
-      findWorkoutSessionByDayId(selectedProgram.programDayId),
-      getProgramDayLabel(selectedProgram.programDayId)
-    ]);
 
     console.info(`${PAGE}:existing_session`, {
       userId,

@@ -3269,3 +3269,88 @@ if (enrollment.current_program_day_id !== session.program_day_id) {
   - Server Component から Supabase を呼ぶとき Next.js が fetch 結果をキャッシュしていた
   - API Route は影響を受けないが Server Component（page.tsx）は同じ fetch URL をキャッシュする
   - `force-dynamic` はページのキャッシュを無効化するが fetch キャッシュは別途対処が必要
+
+---
+
+## 2026-04-20 Performance Round 1–3 — /train ロード速度改善
+
+### STATUS: CLOSED (2026-04-20)
+
+### BOTTLENECK_HISTORY
+
+| Round | 主犯 | commit | 節約量（推定 200ms/rtt） |
+|---|---|---|---|
+| R1 (4fc9330) | `loadSessionView` 10 sequential queries | `lib/workout/train-session.ts` | ~1000ms → ~600ms |
+| R2 (ff96ee8) | `startSessionForDay` N×2 sequential INSERT loop | `lib/workout/start-session.ts` | ~1600ms → ~400ms (start flow) |
+| R2 (ff96ee8) | `selectHistoricalSessions` LIMIT なし | `lib/workout/train-session.ts` | Q8/Q9 データ削減 |
+| R2 (ff96ee8) | train page: start mode でも loadSessionView 実行 | `app/train/page.tsx` | ~700ms skip |
+| R2 (ff96ee8) | `getSessionHistoryView` 5 sequential queries | `lib/workout/session-list.ts` | ~200ms |
+| R3 (本 commit) | `resolveTrainingEntry` が `findWorkoutSessionByDayId` を直列ブロック | `app/train/page.tsx` | ~800ms (resume flow) |
+
+### R3 ROOT_CAUSE
+
+resume flow の `/train?program=X&programDayId=Y` ロード時：
+- `resolveTrainingEntry(programDayId)` が 4 sequential queries (~800ms) を直列実行
+- その後に `findWorkoutSessionByDayId(programDayId)` + `loadSessionView` (~1200ms) が実行
+- 合計: ~2000ms（server render のみ）
+
+`resolveTrainingEntry` と `findWorkoutSessionByDayId` にデータ依存なし。
+blocked 判定は speculative の結果を後から参照すれば十分。
+
+### R3 FIX
+
+```typescript
+// before (sequential)
+const entry = await resolveTrainingEntry(dayId);   // 800ms
+if (entry.mode === "start") { ... fast path }
+const [session, label] = await Promise.all([findWorkoutSessionByDayId(dayId), getProgramDayLabel(dayId)]);
+// total: 800 + 1200 = 2000ms
+
+// after (speculative parallel)
+const [entry, session, label] = await Promise.all([
+  resolveTrainingEntry(dayId),          // 800ms ┐
+  findWorkoutSessionByDayId(dayId),     // 1200ms┤ max = 1200ms
+  getProgramDayLabel(dayId)             // 200ms ┘
+]);
+// total: max(800, 1200, 200) = 1200ms → 800ms 節約
+```
+
+### BEFORE_AFTER
+
+| path | before R3 | after R3 | delta |
+|---|---|---|---|
+| resume (既存 session あり) | ~2000ms server | ~1200ms server | -800ms |
+| start (session なし) | ~900ms server | ~800ms server | -100ms |
+| blocked | ~800ms server | ~1200ms server | +400ms (wasted work, rare case) |
+
+blocked path は `findWorkoutSessionByDayId` が null を返す 1 query のみで実質オーバーヘッドは 1 rtt 分の増加（許容）。
+
+### CORRECTNESS
+
+- blocked: `findWorkoutSessionByDayId(dayId)` は blocking session が別 day のため null を返す → 正常
+- start: `findWorkoutSessionByDayId(dayId)` は 1 query で null → loadSessionView 未実行 → 正常
+- resume: session 取得済み → WorkoutScreen 表示 → 正常
+- 整合性修正（enrollment advance, idempotency guard, cancel/finish RLS）に変更なし
+
+### SIDE_EFFECT_CHECK (ff96ee8 Fix 1)
+
+`startSessionForDay` の bulk INSERT は session 作成フロー専用。
+resume flow は既存 session を READ するだけなので影響なし。
+ORDER は `exercise_id:order_index` マップで保証。
+
+### LIMIT(20) UX IMPACT
+
+`selectHistoricalSessions` を completed 限定 LIMIT 20 に変更したことで、
+20 セッション以上前のデータは `previousDisplay` が"-"になる可能性がある。
+週3回トレーニングで約7週分。T1 種目（毎セッション出現）は実質影響なし。
+T3 種目（週1出現）でも20回前まで参照可能。実運用上は許容範囲。
+
+### NEXT_BOTTLENECK
+
+| 残余 | 想定時間 | 対処方針 |
+|---|---|---|
+| `resolveTrainingEntry` 内部 Q1+Q2（day→week join） | 1 round-trip | PostgREST nested embed で 2→1 query（~200ms 節約。並列化後は critical path から外れるため優先度低） |
+| `buildPreviousDisplayMap` Q2+Q3（exercise→set join） | 1 round-trip | PostgREST 埋め込みフィルタ（実装複雑。現在 LIMIT 20 で十分軽量） |
+| Vercel cold start | 1–2s | コード変更で解消不可 |
+| tab switch Router Cache 消去（router.refresh 後） | 0.5–1s/tab | force-dynamic 方針は維持。改善するなら Suspense streaming 検討 |
+
