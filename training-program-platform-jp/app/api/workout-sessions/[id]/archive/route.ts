@@ -99,6 +99,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     revalidatePath("/session-history");
     revalidatePath("/");
+    revalidatePath("/train"); // archived in-progress session no longer blocks train entry
 
     return NextResponse.json({ id: params.id, archived: true, noOp: false });
   } catch (error) {

@@ -106,8 +106,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
     }
 
     // Home active-program card reads enrollments with status='active';
-    // revalidate so the new enrollment appears immediately.
+    // revalidate so the new enrollment appears immediately on all pages.
     revalidatePath("/");
+    revalidatePath("/train");    // train page shows W1D1 start screen
+    revalidatePath("/programs"); // programs page shows new active enrollment
 
     const body: RestartProgramResponse = {
       enrollmentId: result.enrollmentId,

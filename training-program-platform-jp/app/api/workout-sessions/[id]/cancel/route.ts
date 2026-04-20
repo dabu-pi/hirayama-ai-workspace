@@ -289,6 +289,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     revalidatePath("/train");
     revalidatePath("/"); // Home CTA transitions from "Resume" → "Start next workout"
+    revalidatePath("/programs"); // Programs enrollment card → no longer shows active session
 
     return NextResponse.json({ id: updatedSession.id, status: updatedSession.status });
   } catch (error) {
