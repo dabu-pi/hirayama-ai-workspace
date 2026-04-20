@@ -177,7 +177,12 @@ export async function resolveStartProgramDayId(
  * Given a completed program_day_id, returns the UUID of the next day:
  *   - same week, day_number + 1  (if exists)
  *   - next week, day_number = 1  (if exists)
- *   - null                       (program completed)
+ *   - null                       (program completed — next day genuinely absent)
+ *
+ * IMPORTANT: throws on DB query errors. Callers MUST NOT treat a throw as
+ * "program complete" — it means the result is indeterminate. The most common
+ * caller, advanceEnrollmentAfterSessionComplete, handles this by leaving the
+ * enrollment unchanged rather than incorrectly marking it as completed.
  */
 export async function findNextProgramDayId(
   currentProgramDayId: string
@@ -194,7 +199,8 @@ export async function findNextProgramDayId(
       .eq("id", currentProgramDayId)
       .maybeSingle<ProgramDayRow>();
 
-    if (currentDayError || !currentDay) return null;
+    if (currentDayError) throw new Error(`program_days lookup failed: ${currentDayError.message}`);
+    if (!currentDay) return null; // day not in program structure — treat as structural end
 
     // Load current week
     const { data: currentWeek, error: currentWeekError } = await client
@@ -203,7 +209,8 @@ export async function findNextProgramDayId(
       .eq("id", currentDay.program_week_id)
       .maybeSingle<ProgramWeekRow>();
 
-    if (currentWeekError || !currentWeek) return null;
+    if (currentWeekError) throw new Error(`program_weeks lookup failed: ${currentWeekError.message}`);
+    if (!currentWeek) return null; // week not found — structural end
 
     // Try next day in the same week
     const { data: nextDay } = await client
@@ -320,8 +327,22 @@ export async function advanceEnrollmentAfterSessionComplete(
       return;
     }
 
-    // 4. Find next day
-    const nextDayId = await findNextProgramDayId(session.program_day_id);
+    // 4. Find next day.
+    // findNextProgramDayId throws on DB errors. Catch here to avoid treating
+    // a query failure as program completion (which would incorrectly set status='completed').
+    // On failure, leave enrollment unchanged — the S-4 idempotent re-finish path
+    // in the finish route will retry on next session complete.
+    let nextDayId: string | null;
+    try {
+      nextDayId = await findNextProgramDayId(session.program_day_id);
+    } catch (nextDayError) {
+      console.error("enrollment: findNextProgramDayId failed — leaving enrollment unchanged", {
+        enrollmentId: enrollment.id,
+        programDayId: session.program_day_id,
+        error: nextDayError instanceof Error ? nextDayError.message : String(nextDayError)
+      });
+      return;
+    }
 
     if (nextDayId) {
       // Advance to next day
