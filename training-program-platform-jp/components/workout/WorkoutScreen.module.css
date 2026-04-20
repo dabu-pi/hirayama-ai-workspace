@@ -477,6 +477,38 @@
   gap: var(--space-2);
 }
 
+/* Previous session summary block — shown per exercise card */
+.previousSummary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px var(--space-2);
+  margin-bottom: var(--space-2);
+  background: rgba(148, 163, 184, 0.07);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.previousSummaryLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.previousSummaryValues {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.previousSummarySep {
+  color: var(--text-muted);
+}
+
 .swipeHint {
   margin-bottom: var(--space-3);
   color: var(--text-muted);

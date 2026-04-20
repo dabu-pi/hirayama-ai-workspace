@@ -11,6 +11,7 @@ import {
 import { selectT1ProgressionHints } from "@/lib/workout/t1-progression";
 import type {
   ExerciseType,
+  PreviousSet,
   T1ProgressionHint,
   WorkoutExerciseBlock,
   WorkoutSessionStatus,
@@ -343,20 +344,21 @@ async function selectHistoricalExercisesWithSession(
 
 async function selectHistoricalCompletedWorkoutSets(
   client: DatabaseClient,
-  workoutSessionExerciseIds: string[],
-  setNumbers: number[]
+  workoutSessionExerciseIds: string[]
 ) {
-  if (workoutSessionExerciseIds.length === 0 || setNumbers.length === 0) {
+  if (workoutSessionExerciseIds.length === 0) {
     return [] as WorkoutSetRow[];
   }
 
+  // set_number フィルタは使わない。過去セッションでセット追加/削除があると
+  // 現在セッションの set_number と一致しなくなるため、全セットを取得して
+  // position ベースで再インデックスする。
   const { data, error } = await client
     .from("workout_sets")
     .select(
       "id, workout_session_exercise_id, set_number, target_reps_text, weight_kg, reps_done, is_completed, is_locked, completed_at, is_auto_filled, note, deleted_at"
     )
     .in("workout_session_exercise_id", workoutSessionExerciseIds)
-    .in("set_number", setNumbers)
     .eq("is_completed", true)
     .is("deleted_at", null);
 
@@ -372,18 +374,19 @@ async function buildPreviousDisplayMap(
   currentSession: WorkoutSessionRow,
   workoutSessionExercises: WorkoutSessionExerciseRow[],
   workoutSets: WorkoutSetRow[]
-) {
+): Promise<{ displayMap: Map<string, string>; previousSetsMap: Map<string, PreviousSet[]> }> {
+  const empty = { displayMap: new Map<string, string>(), previousSetsMap: new Map<string, PreviousSet[]>() };
+
   const uniqueExerciseIds = Array.from(
     new Set(workoutSessionExercises.map((item) => item.exercise_id))
   );
-  const uniqueSetNumbers = Array.from(new Set(workoutSets.map((item) => item.set_number)));
 
-  if (uniqueExerciseIds.length === 0 || uniqueSetNumbers.length === 0) {
-    return new Map<string, string>();
+  if (uniqueExerciseIds.length === 0 || workoutSets.length === 0) {
+    return empty;
   }
 
   if (!currentSession.user_id) {
-    return new Map<string, string>();
+    return empty;
   }
 
   // R4: single embedded query replaces two sequential round-trips (Q1 sessions + Q2 exercises).
@@ -398,11 +401,11 @@ async function buildPreviousDisplayMap(
     );
   } catch (err) {
     console.warn("buildPreviousDisplayMap: embedded query failed, skipping previousDisplay.", err);
-    return new Map<string, string>();
+    return empty;
   }
 
   if (historicalExercises.length === 0) {
-    return new Map<string, string>();
+    return empty;
   }
 
   const historicalWorkoutSessionExerciseIds = historicalExercises.map((item) => item.id);
@@ -420,8 +423,7 @@ async function buildPreviousDisplayMap(
 
   const historicalCompletedSets = await selectHistoricalCompletedWorkoutSets(
     client,
-    historicalWorkoutSessionExerciseIds,
-    uniqueSetNumbers
+    historicalWorkoutSessionExerciseIds
   );
 
   const previousCandidateMap = new Map<string, PreviousCandidate>();
@@ -467,20 +469,25 @@ async function buildPreviousDisplayMap(
     list.push([setNumber, candidate]);
     byExercise.set(exerciseKey, list);
   }
-  const resultMap = new Map<string, string>();
+  const displayMap = new Map<string, string>();
+  const previousSetsMap = new Map<string, PreviousSet[]>();
   for (const [exerciseKey, sets] of byExercise.entries()) {
     sets.sort(([a], [b]) => a - b);
+    const exercisePreviousSets: PreviousSet[] = [];
     sets.forEach(([, candidate], idx) => {
-      resultMap.set(
-        `${exerciseKey}:${idx + 1}`,
+      const pos = idx + 1;
+      displayMap.set(
+        `${exerciseKey}:${pos}`,
         formatPreviousDisplay(candidate.weightKg, candidate.repsDone)
       );
+      exercisePreviousSets.push({ setNumber: pos, weightKg: candidate.weightKg, repsDone: candidate.repsDone });
     });
+    previousSetsMap.set(exerciseKey, exercisePreviousSets);
   }
 
-  // DEBUG-PREV: log final resultMap keys
-  console.log("[PREV-DBG] resultMap keys:", Array.from(resultMap.keys()));
-  return resultMap;
+  // DEBUG-PREV: log final displayMap keys
+  console.log("[PREV-DBG] displayMap keys:", Array.from(displayMap.keys()));
+  return { displayMap, previousSetsMap };
 }
 
 function buildExerciseBlocks(
@@ -488,6 +495,7 @@ function buildExerciseBlocks(
   exercises: ExerciseRow[],
   workoutSets: WorkoutSetRow[],
   previousDisplayMap: Map<string, string>,
+  previousSetsMap: Map<string, PreviousSet[]>,
   t1ProgressionHints: Map<string, T1ProgressionHint>,
   methodology: string | null
 ) {
@@ -534,7 +542,7 @@ function buildExerciseBlocks(
       exerciseNameEn: exercise?.name_en ?? "Exercise",
       exerciseType: sessionExercise.exercise_type,
       orderIndex: sessionExercise.order_index,
-      previousSets: [],
+      previousSets: previousSetsMap.get(`${sessionExercise.exercise_id}:${sessionExercise.exercise_type}`) ?? [],
       sets: visibleSets,
       wasAdded: sessionExercise.was_added,
       wasSwapped: sessionExercise.was_swapped,
@@ -577,7 +585,7 @@ async function loadSessionView(
     .filter((e) => e.exercise_type === "T1")
     .map((e) => e.exercise_id);
 
-  const [program, previousDisplayMap, t1ProgressionHints] = await Promise.all([
+  const [program, { displayMap: previousDisplayMap, previousSetsMap }, t1ProgressionHints] = await Promise.all([
     selectProgram(queryClient, programWeek?.program_id ?? null),
     buildPreviousDisplayMap(queryClient, session, workoutSessionExercises, workoutSets),
     session.program_enrollment_id && t1ExerciseIds.length > 0
@@ -609,6 +617,7 @@ async function loadSessionView(
       exercises,
       workoutSets,
       previousDisplayMap,
+      previousSetsMap,
       t1ProgressionHints,
       program?.methodology ?? null
     )

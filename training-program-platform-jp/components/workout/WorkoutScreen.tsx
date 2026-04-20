@@ -1399,6 +1399,26 @@ export function WorkoutScreen({
               </div>
             )}
 
+            {exercise.previousSets.length > 0 && (
+              <div className={styles.previousSummary}>
+                <span className={styles.previousSummaryLabel}>前回</span>
+                <span className={styles.previousSummaryValues}>
+                  {exercise.previousSets.map((s, i) => {
+                    const label =
+                      s.weightKg !== null && s.repsDone !== null ? `${s.weightKg}kg × ${s.repsDone}` :
+                      s.weightKg !== null ? `${s.weightKg}kg` :
+                      s.repsDone !== null ? `× ${s.repsDone}` : "-";
+                    return (
+                      <span key={s.setNumber}>
+                        {i > 0 && <span className={styles.previousSummarySep}> · </span>}
+                        {label}
+                      </span>
+                    );
+                  })}
+                </span>
+              </div>
+            )}
+
             <div className={styles.swipeHint}>
               左スワイプで Delete ・ 完了後も Kg / Reps はそのまま編集できます
             </div>
