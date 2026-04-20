@@ -74,33 +74,36 @@ Cloud Run ログに `[CLINIC_INFO]` と `[D5-WRITE]` が記録される。
 
 ---
 
-## 🗓 2026-04-20 TC-B06 施術証明欄 日付自動入力 — 暫定運用実装
+## 🗓 2026-04-20 TC-B06 施術証明欄 日付自動入力 — 不具合修正・再デプロイ
 
-### 概要
+### 根本原因
 
-施術証明欄の日付（E56）に申請対象月の当月末日を自動入力。  
-公式根拠（国保連記載要領・告示）での明示ルール未確認のため、暫定運用として実装・記録。
+前セッション終了時点で D6 コードが「調査中」状態でデプロイ未完了だった。
+実機確認が未デプロイのコードに対して行われたため「日付未入力」と判定された。
+
+### セル再確認結果
+
+openpyxl でテンプレート全行スキャン + top-left 確認 + ローカル write テスト PASS:
+
+- **書込セル: E56**（E56:AC56 マージ, cols 5-29, row 56）
+- ユーザー表示「54行目」= xlsx row 56（L58=所在地がユーザー行56=xlsx行58 → +2オフセット）
+- 年・月・日は E56:AC56 の単一マージセルに一括書込（分割セル構造なし）
 
 ### 実装内容
 
 | ファイル | 変更内容 |
 |---|---|
-| `write_application.py` | `import calendar` 追加 |
-| `write_application.py` | `batch_write_from_string` の `clinic_info` dict に `"month"` 追加 |
-| `write_application.py` | `write_application()` D6 ブロック追加（`calendar.monthrange` + `to_wareki()` → `put("E56", ...)`) |
-
-### 書込先
-
-- セル: E56（E56:AC56 マージセル、単一書込）
-- 書込値: `令和{w_year}年{mo}月{last_day}日`（例: `令和8年4月30日`）
+| `write_application.py` | D6 ブロック: `ws["E56"] = date_str` (直接書込に変更) |
+| `write_application.py` | `[D6-DATE] DONE: E56=...` / `[D6-DATE] SKIP: ...` ログ追加 |
 
 ### デプロイ
 
-- Cloud Run revision: `00001-54g`（2026-04-20）
+- Cloud Run revision: `00002-blm`（2026-04-20）
 
 ### 院長実機確認
 
-- [ ] B案実行 → xlsx E56 に当月末日が入ることを確認
+- [ ] B案実行 → xlsx E56（ユーザー表示54行目）に `令和X年Y月Z日` が入ることを確認
+- [ ] 日付が入らない場合: Cloud Run ログで `[D6-DATE]` 行を確認
 
 ---
 
