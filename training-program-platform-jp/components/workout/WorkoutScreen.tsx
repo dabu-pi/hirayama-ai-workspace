@@ -391,6 +391,17 @@ export function WorkoutScreen({
   selectedProgram
 }: WorkoutScreenProps) {
   const router = useRouter();
+  // CLIENT-DBG: verify previousDisplay and previousSets per exercise on mount
+  if (typeof window !== "undefined") {
+    console.log("[PREV-CLIENT] session exercises:", session.exercises.map((e) => ({
+      name: e.exerciseNameEn,
+      type: e.exerciseType,
+      previousSetsCount: e.previousSets.length,
+      setsTotal: e.sets.length,
+      setsWithPrev: e.sets.filter((s) => s.previousDisplay !== "-").length,
+      perRowPrev: e.sets.map((s) => `#${s.setNumber}:${s.previousDisplay}`)
+    })));
+  }
   const swipeRef = useRef<SwipeState | null>(null);
   const kgInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [exercises, setExercises] = useState<WorkoutExerciseBlock[]>(() =>

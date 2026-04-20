@@ -360,7 +360,9 @@ async function selectHistoricalCompletedWorkoutSets(
     )
     .in("workout_session_exercise_id", workoutSessionExerciseIds)
     .eq("is_completed", true)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .order("workout_session_exercise_id", { ascending: true })
+    .order("set_number", { ascending: true });
 
   if (error) {
     throw new Error(`Failed to load historical completed sets: ${error.message}`);
@@ -426,24 +428,30 @@ async function buildPreviousDisplayMap(
     historicalWorkoutSessionExerciseIds
   );
 
+  // keyed exerciseId:set_number — exercise_type excluded so type changes between sessions don't cause misses
   const previousCandidateMap = new Map<string, PreviousCandidate>();
 
-  // DEBUG-PREV: trace how many historical sets came back and what set_numbers they have
-  console.log("[PREV-DBG] historicalCompletedSets count:", historicalCompletedSets.length);
-  console.log("[PREV-DBG] historicalCompletedSets set_numbers:", historicalCompletedSets.map((s) => s.set_number));
+  console.log("[PREV-DBG] historicalCompletedSets count:", historicalCompletedSets.length,
+    "| by exercise:", Object.fromEntries(
+      Object.entries(
+        historicalCompletedSets.reduce<Record<string, number>>((acc, s) => {
+          const ex = historicalExerciseMap.get(s.workout_session_exercise_id);
+          if (ex) acc[ex.exerciseId] = (acc[ex.exerciseId] ?? 0) + 1;
+          return acc;
+        }, {})
+      )
+    )
+  );
 
   historicalCompletedSets.forEach((set) => {
     const historicalExercise = historicalExerciseMap.get(
       set.workout_session_exercise_id
     );
-
-    // Bug fix: do NOT skip sets where startedAt is empty string.
-    // PostgREST sometimes returns workout_sessions: null (embedded filter issue),
-    // causing startedAt to be "". Skipping these hid sets 2+ when the only history
-    // had null workout_sessions. Empty startedAt is treated as "oldest" in comparisons.
     if (!historicalExercise) return;
 
-    const key = `${historicalExercise.exerciseId}:${historicalExercise.exerciseType}:${set.set_number}`;
+    // Key: exerciseId:set_number only. exerciseType excluded so that type changes
+    // between sessions (T2→T1 etc.) don't cause lookup misses for sets 2+.
+    const key = `${historicalExercise.exerciseId}:${set.set_number}`;
     const nextCandidate: PreviousCandidate = {
       startedAt: historicalExercise.startedAt,
       weightKg: toNullableNumber(set.weight_kg),
@@ -456,63 +464,55 @@ async function buildPreviousDisplayMap(
     }
   });
 
-  console.log("[PREV-DBG] previousCandidateMap keys:", Array.from(previousCandidateMap.keys()));
+  console.log("[PREV-DBG] previousCandidateMap size:", previousCandidateMap.size,
+    "| keys:", Array.from(previousCandidateMap.keys()));
 
-  // ── displayMap: keyed exerciseId:exerciseType:position (per-row 前回 column) ──
-  // Preserves type-specific lookup so T1/T2 sets show history from the same role.
-  const byExerciseType = new Map<string, Array<[number, PreviousCandidate]>>();
+  // ── Two-pass: pick only sets from the most recent session per exercise ────────
+  // Pass 1: find the latest startedAt per exerciseId (no iteration-order dependency)
+  const latestStartedAt = new Map<string, string>();
   for (const [key, candidate] of previousCandidateMap.entries()) {
-    const lastColon = key.lastIndexOf(":");
-    const exerciseKey = key.slice(0, lastColon);          // exerciseId:exerciseType
-    const setNumber = parseInt(key.slice(lastColon + 1), 10);
-    const list = byExerciseType.get(exerciseKey) ?? [];
-    list.push([setNumber, candidate]);
-    byExerciseType.set(exerciseKey, list);
+    const exerciseId = key.slice(0, key.indexOf(":"));
+    const current = latestStartedAt.get(exerciseId);
+    if (!current || candidate.startedAt > current) {
+      latestStartedAt.set(exerciseId, candidate.startedAt);
+    }
   }
+
+  // Pass 2: collect all sets whose startedAt matches the latest for their exercise
+  const latestSetsByExercise = new Map<string, Array<[number, PreviousCandidate]>>();
+  for (const [key, candidate] of previousCandidateMap.entries()) {
+    const colonIdx = key.indexOf(":");
+    const exerciseId = key.slice(0, colonIdx);
+    const setNumber = parseInt(key.slice(colonIdx + 1), 10);
+
+    if (candidate.startedAt === latestStartedAt.get(exerciseId)) {
+      const list = latestSetsByExercise.get(exerciseId) ?? [];
+      list.push([setNumber, candidate]);
+      latestSetsByExercise.set(exerciseId, list);
+    }
+  }
+
+  // ── Build displayMap (per-row 前回 column) keyed exerciseId:position ─────────
+  // ── Build previousSetsMap (summary bar) keyed exerciseId — same data source ──
+  // Both use position-based (not set_number-based) keys to handle add/delete sets.
   const displayMap = new Map<string, string>();
-  for (const [exerciseKey, sets] of byExerciseType.entries()) {
+  const previousSetsMap = new Map<string, PreviousSet[]>();
+
+  for (const [exerciseId, sets] of latestSetsByExercise.entries()) {
     sets.sort(([a], [b]) => a - b);
-    sets.forEach(([, candidate], idx) => {
-      displayMap.set(
-        `${exerciseKey}:${idx + 1}`,
-        formatPreviousDisplay(candidate.weightKg, candidate.repsDone)
-      );
+    const mappedSets: PreviousSet[] = sets.map(([, candidate], idx) => ({
+      setNumber: idx + 1,
+      weightKg: candidate.weightKg,
+      repsDone: candidate.repsDone
+    }));
+    previousSetsMap.set(exerciseId, mappedSets);
+    mappedSets.forEach((s) => {
+      displayMap.set(`${exerciseId}:${s.setNumber}`, formatPreviousDisplay(s.weightKg, s.repsDone));
     });
   }
 
-  // ── previousSetsMap: keyed exerciseId only (summary bar) ──────────────────
-  // Uses the most recent session for this exercise regardless of T1/T2/T3 role.
-  // Fixes: exercise type changes between sessions caused lookup misses.
-  // Fixes: empty startedAt (PostgREST null embed) now treated as "oldest" rather than skipped.
-  const latestByExercise = new Map<string, { startedAt: string; sets: Array<[number, PreviousCandidate]> }>();
-  for (const [key, candidate] of previousCandidateMap.entries()) {
-    const firstColon = key.indexOf(":");
-    const secondColon = key.indexOf(":", firstColon + 1);
-    const exerciseId = key.slice(0, firstColon);
-    const setNumber = parseInt(key.slice(secondColon + 1), 10);
-
-    const current = latestByExercise.get(exerciseId);
-    if (!current || candidate.startedAt > current.startedAt) {
-      latestByExercise.set(exerciseId, { startedAt: candidate.startedAt, sets: [[setNumber, candidate]] });
-    } else if (candidate.startedAt === current.startedAt) {
-      current.sets.push([setNumber, candidate]);
-    }
-  }
-  const previousSetsMap = new Map<string, PreviousSet[]>();
-  for (const [exerciseId, { sets }] of latestByExercise.entries()) {
-    sets.sort(([a], [b]) => a - b);
-    previousSetsMap.set(
-      exerciseId,
-      sets.map(([, candidate], idx) => ({
-        setNumber: idx + 1,
-        weightKg: candidate.weightKg,
-        repsDone: candidate.repsDone
-      }))
-    );
-  }
-
-  console.log("[PREV-DBG] displayMap keys:", Array.from(displayMap.keys()));
-  console.log("[PREV-DBG] previousSetsMap keys:", Array.from(previousSetsMap.keys()), "counts:", Array.from(previousSetsMap.entries()).map(([k, v]) => `${k}:${v.length}sets`));
+  console.log("[PREV-DBG] displayMap size:", displayMap.size, "| keys:", Array.from(displayMap.keys()));
+  console.log("[PREV-DBG] previousSetsMap:", Array.from(previousSetsMap.entries()).map(([k, v]) => `${k}:${v.length}sets`));
   return { displayMap, previousSetsMap };
 }
 
@@ -538,8 +538,8 @@ function buildExerciseBlocks(
     const exercise = exerciseMap.get(sessionExercise.exercise_id);
     const visibleSets = (setsByExercise.get(sessionExercise.id) ?? []).map(
       (set, index) => {
-        const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${index + 1}`;
-        // DEBUG-PREV: log lookup key and whether it hits
+        // Key: exerciseId:position only (no exerciseType) — matches displayMap key strategy
+        const previousKey = `${sessionExercise.exercise_id}:${index + 1}`;
         console.log("[PREV-DBG] lookup key:", previousKey, "hit:", previousDisplayMap.has(previousKey));
 
         return {
