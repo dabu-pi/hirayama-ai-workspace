@@ -1264,7 +1264,7 @@ export function WorkoutScreen({
               onClick={handleCancel}
               type="button"
             >
-              {isCancelling ? "..." : "Cancel"}
+              {isCancelling ? "..." : "キャンセル"}
             </button>
           )}
           <button
@@ -1287,12 +1287,12 @@ export function WorkoutScreen({
             type="button"
           >
             {isSessionCompleted
-              ? "Completed"
+              ? "完了済"
               : isSessionCancelled
-              ? "Cancelled"
+              ? "キャンセル済"
               : isFinishing
-              ? "Finishing..."
-              : "Finish"}
+              ? "完了処理中..."
+              : "完了"}
           </button>
         </div>
       </div>
@@ -1304,7 +1304,7 @@ export function WorkoutScreen({
         <p className={styles.programNote}>{session.notes}</p>
         {selectedProgram.state === "selected" ? (
           <div className={styles.selectionBanner}>
-            <span className={styles.selectionLabel}>Selected Program</span>
+            <span className={styles.selectionLabel}>選択中プログラム</span>
             <strong className={styles.selectionValue}>
               {selectedProgram.programTitle}
             </strong>
@@ -1315,7 +1315,7 @@ export function WorkoutScreen({
         ) : null}
         {selectedProgram.state === "invalid" ? (
           <div className={styles.selectionWarning} role="status">
-            <strong>Invalid selection</strong>
+            <strong>無効な選択</strong>
             <span>{selectedProgram.message}</span>
             <span>
               requested: {selectedProgram.requestedSlug} / fallback: current session
@@ -1348,10 +1348,10 @@ export function WorkoutScreen({
           {showCancelRecoveryActions ? (
             <div className={styles.statusActions}>
               <a className={styles.statusActionPrimary} href="/">
-                Leave to Home
+                ホームへ戻る
               </a>
               <a className={styles.statusActionSecondary} href="/session-history">
-                Session History
+                セッション履歴
               </a>
               <button
                 className={styles.statusActionRetry}
@@ -1359,7 +1359,7 @@ export function WorkoutScreen({
                 onClick={handleCancel}
                 type="button"
               >
-                Retry Cancel
+                キャンセル再試行
               </button>
             </div>
           ) : null}
@@ -1382,7 +1382,7 @@ export function WorkoutScreen({
                 <span aria-hidden="true">→</span>
               </Link>
               {exercise.wasSwapped ? (
-                <span className={styles.swappedBadge}>Swapped</span>
+                <span className={styles.swappedBadge}>置換済</span>
               ) : (
                 <span className={styles.headerHint}>履歴へ</span>
               )}
@@ -1390,7 +1390,7 @@ export function WorkoutScreen({
 
             {exercise.exerciseType === "T1" && exercise.t1ProgressionHint && (
               <div className={styles.t1ProgressionHintBar}>
-                <span className={styles.t1ProgressionLabel}>Next:</span>
+                <span className={styles.t1ProgressionLabel}>次:</span>
                 <span className={styles.t1ProgressionValue}>
                   {exercise.t1ProgressionHint.nextWeightKg}kg
                   {" · "}
@@ -1406,11 +1406,11 @@ export function WorkoutScreen({
             <div className={styles.setTable}>
               <div className={styles.setHeader}>
                 <span>#</span>
-                <span>Previous</span>
-                <span>Target</span>
+                <span>前回</span>
+                <span>目標</span>
                 <span>Kg</span>
                 <span>Reps</span>
-                <span>Done</span>
+                <span>完</span>
               </div>
 
               {exercise.sets.map((set) => {
@@ -1434,8 +1434,8 @@ export function WorkoutScreen({
                         type="button"
                       >
                         {isMutating && pendingMutation?.kind === "delete"
-                          ? "Deleting..."
-                          : "Delete"}
+                          ? "削除中..."
+                          : "削除"}
                       </button>
                     </div>
 
@@ -1529,7 +1529,7 @@ export function WorkoutScreen({
                 onClick={() => handleAddSet(exercise.id)}
                 type="button"
               >
-                {pendingAddExerciseId === exercise.id ? "Adding..." : "+ Add Set"}
+                {pendingAddExerciseId === exercise.id ? "追加中..." : "＋ セット追加"}
               </button>
               <button
                 className={styles.subtleButton}
@@ -1537,7 +1537,7 @@ export function WorkoutScreen({
                 onClick={() => openSwapModal(exercise.id, exercise.swapGroupSlug)}
                 type="button"
               >
-                Swap
+                種目変更
               </button>
               <button className={styles.subtleButton} disabled={isSessionEnded} type="button">
                 ...
@@ -1554,12 +1554,12 @@ export function WorkoutScreen({
           onClick={openAddExerciseModal}
           type="button"
         >
-          + Add Exercise
+          ＋ 種目追加
         </button>
       </div>
 
       {isRefreshing ? (
-        <div className={styles.refreshState}>Refreshing train data...</div>
+        <div className={styles.refreshState}>トレーニングデータを更新中...</div>
       ) : null}
 
       {isAddExerciseModalOpen ? (
@@ -1569,10 +1569,10 @@ export function WorkoutScreen({
             if (e.target === e.currentTarget) closeAddExerciseModal();
           }}
         >
-          <div className={styles.modal} role="dialog" aria-modal="true" aria-label="Add Exercise">
+          <div className={styles.modal} role="dialog" aria-modal="true" aria-label="種目追加">
             <div className={styles.modalHeader}>
               <h2 className={styles.modalTitle}>
-                {exerciseModalMode === "add" ? "Add Exercise" : "Swap Exercise"}
+                {exerciseModalMode === "add" ? "種目追加" : "種目変更"}
               </h2>
               <button
                 className={styles.modalCloseButton}
@@ -1591,7 +1591,7 @@ export function WorkoutScreen({
                     ?.exerciseNameEn ?? ""}
                 </strong>
                 {swapGroupSlug ? (
-                  <span className={styles.swapGroupHint}> — recommended alternatives</span>
+                  <span className={styles.swapGroupHint}> — 推奨代替種目</span>
                 ) : null}
               </div>
             ) : null}

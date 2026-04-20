@@ -17,26 +17,32 @@ function typeClassName(exerciseType: "T1" | "T2" | "T3") {
   return `${styles.typeBadge} ${styles.typeT3}`;
 }
 
+const EXERCISE_TYPE_BADGE: Record<"T1" | "T2" | "T3", string> = {
+  T1: "T1（メイン種目）",
+  T2: "T2（補助種目）",
+  T3: "T3（ボリューム）"
+};
+
 function formatDateTime(value: string | null) {
-  if (!value) return "Not recorded";
+  if (!value) return "記録なし";
 
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    return "Not recorded";
+    return "記録なし";
   }
 
   return parsed.toLocaleString("ja-JP");
 }
 
 function resolveStateTitle(state: WorkoutSummaryState, isProgramCompleted: boolean) {
-  if (state === "loading") return "Loading workout summary";
-  if (state === "unauthenticated") return "Sign in required";
-  if (state === "not_found") return "Workout summary not found";
-  if (state === "not_completed") return "Workout still in progress";
-  if (state === "cancelled") return "Workout cancelled";
-  if (state === "error") return "Workout summary unavailable";
-  if (isProgramCompleted) return "Program complete";
-  return "Workout complete";
+  if (state === "loading") return "読み込み中...";
+  if (state === "unauthenticated") return "ログインが必要です";
+  if (state === "not_found") return "サマリーが見つかりません";
+  if (state === "not_completed") return "ワークアウトはまだ進行中です";
+  if (state === "cancelled") return "ワークアウトがキャンセルされました";
+  if (state === "error") return "サマリーを表示できません";
+  if (isProgramCompleted) return "プログラム完了！";
+  return "ワークアウト完了！";
 }
 
 function resolveStateBody(
@@ -44,18 +50,18 @@ function resolveStateBody(
   errorMessage: string | null | undefined
 ) {
   if (errorMessage) return errorMessage;
-  if (state === "loading") return "Loading the latest session data...";
+  if (state === "loading") return "最新セッションデータを読み込み中...";
   if (state === "not_completed") {
-    return "Finish the workout on Train to unlock the completion summary.";
+    return "トレーニング画面でワークアウトを完了するとサマリーが表示されます。";
   }
   if (state === "unauthenticated") {
-    return "Open this page after signing in with the training account.";
+    return "トレーニングアカウントでログイン後、このページを開いてください。";
   }
   if (state === "not_found") {
-    return "Only sessions that belong to the signed-in user can be shown here.";
+    return "ログインユーザーのセッションのみ表示できます。";
   }
   if (state === "error") {
-    return "Please try again after refreshing the page.";
+    return "ページを更新してから再試行してください。";
   }
   // "cancelled" and "ready" return null — summary data renders instead
   return null;
@@ -95,7 +101,7 @@ export function WorkoutSummaryScreen({
 
   // Back link — Train for normal flow, Programs when program is complete
   const backHref = isProgramCompleted ? "/programs" : "/train";
-  const backLabel = isProgramCompleted ? "Back to Programs" : "Back to Train";
+  const backLabel = isProgramCompleted ? "プログラムへ戻る" : "トレーニングへ戻る";
 
   return (
     <main className={styles.page}>
@@ -117,12 +123,12 @@ export function WorkoutSummaryScreen({
       <section className={isCancelled ? styles.heroCancelled : isProgramCompleted ? styles.heroCompleted : styles.hero}>
         <span className={styles.eyebrow}>
           {isCancelled
-            ? "Workout Cancelled"
+            ? "キャンセル済み"
             : isReady
               ? isProgramCompleted
-                ? "Program Complete"
-                : "Workout Complete"
-              : "Workout Summary"}
+                ? "プログラム完了"
+                : "ワークアウト完了"
+              : "ワークアウトまとめ"}
         </span>
         <h1 className={styles.title}>{resolveStateTitle(state, isProgramCompleted)}</h1>
         {showMetadata ? (
@@ -132,19 +138,19 @@ export function WorkoutSummaryScreen({
             </p>
             <p className={styles.subtle}>
               {isCancelled
-                ? `Started at ${formatDateTime(summary.startedAt)}`
-                : `Finished at ${formatDateTime(summary.finishedAt)}`}
+                ? `開始: ${formatDateTime(summary.startedAt)}`
+                : `完了: ${formatDateTime(summary.finishedAt)}`}
             </p>
             {isReady && nextProgramDayLabel && (
               <div className={styles.nextUpCard}>
-                <span className={styles.nextUpLabel}>Up Next</span>
+                <span className={styles.nextUpLabel}>次のワークアウト</span>
                 <span className={styles.nextUpValue}>{nextProgramDayLabel}</span>
               </div>
             )}
             {isReady && isProgramCompleted && (
               <div className={styles.completedCard}>
-                You finished all {summary.programTitle} sessions.{" "}
-                {hasRestartCta ? "Restart from Week 1 or choose a new program." : "Choose your next program from the library."}
+                {summary.programTitle}のすべてのセッションが完了しました。{" "}
+                {hasRestartCta ? "Week 1から再スタートするか、新しいプログラムを選んでください。" : "ライブラリから次のプログラムを選んでください。"}
               </div>
             )}
           </>
@@ -156,24 +162,24 @@ export function WorkoutSummaryScreen({
       {showMetadata ? (
         <section className={styles.statsGrid}>
           <article className={styles.statCard}>
-            <span className={styles.statLabel}>{isCancelled ? "Started At" : "Completed At"}</span>
+            <span className={styles.statLabel}>{isCancelled ? "開始時刻" : "完了時刻"}</span>
             <strong className={styles.statValue}>
               {formatDateTime(isCancelled ? summary.startedAt : summary.finishedAt)}
             </strong>
           </article>
           <article className={styles.statCard}>
-            <span className={styles.statLabel}>Exercises</span>
+            <span className={styles.statLabel}>種目数</span>
             <strong className={styles.statValue}>{summary.exercises.length}</strong>
           </article>
           <article className={styles.statCard}>
-            <span className={styles.statLabel}>Completed Sets</span>
+            <span className={styles.statLabel}>完了セット</span>
             <strong className={styles.statValue}>
               {summary.totalCompletedSets} / {summary.totalVisibleSets}
             </strong>
           </article>
           {summary.sessionVolume !== null && (
             <article className={styles.statCard}>
-              <span className={styles.statLabel}>Session Volume</span>
+              <span className={styles.statLabel}>総ボリューム</span>
               <strong className={styles.statValue}>
                 {summary.sessionVolume.toLocaleString()} kg
               </strong>
@@ -188,7 +194,7 @@ export function WorkoutSummaryScreen({
         </section>
       ) : summary.exercises.length === 0 ? (
         <section className={styles.statusCard}>
-          <p>No visible exercises were recorded for this session.</p>
+          <p>このセッションには記録された種目がありません。</p>
         </section>
       ) : (
         <section className={styles.exerciseList}>
@@ -196,7 +202,7 @@ export function WorkoutSummaryScreen({
             <article className={styles.exerciseCard} key={exercise.id}>
               <div className={styles.exerciseHeader}>
                 <span className={typeClassName(exercise.exerciseType)}>
-                  {exercise.exerciseType}
+                  {EXERCISE_TYPE_BADGE[exercise.exerciseType]}
                 </span>
                 <div className={styles.exerciseTitleWrap}>
                   <strong className={styles.exerciseName}>
@@ -204,7 +210,7 @@ export function WorkoutSummaryScreen({
                   </strong>
                   <span className={styles.exerciseSub}>{exercise.exerciseNameJa}</span>
                   {exercise.wasSwapped && (
-                    <span className={styles.swappedBadge}>Swapped this session</span>
+                    <span className={styles.swappedBadge}>このセッションで置換</span>
                   )}
                 </div>
                 <span className={styles.countPill}>
@@ -221,10 +227,10 @@ export function WorkoutSummaryScreen({
         {isCancelled ? (
           <>
             <Link className={styles.primaryAction} href="/train">
-              Back to Train
+              トレーニングへ戻る
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
-              View all sessions
+              全セッション
             </Link>
           </>
         ) : isProgramCompleted ? (
@@ -235,50 +241,50 @@ export function WorkoutSummaryScreen({
                 className={styles.primaryAction}
                 programId={programId}
               >
-                Restart Program
+                プログラムを最初から
               </RestartProgramButton>
             ) : restartFallbackUrl ? (
               /* Fallback for older payloads without programId — link-based flow via /train */
               <Link className={styles.primaryAction} href={restartFallbackUrl}>
-                Restart Program
+                プログラムを最初から
               </Link>
             ) : (
               <Link className={styles.primaryAction} href="/programs">
-                Browse Programs
+                プログラム一覧
               </Link>
             )}
             <Link className={styles.secondaryAction} href="/train">
-              Back to Train
+              トレーニングへ戻る
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
-              View all sessions
+              全セッション
             </Link>
             <Link className={styles.secondaryAction} href="/programs">
-              Choose Another Program
+              別のプログラムを選ぶ
             </Link>
           </>
         ) : nextTrainUrl ? (
           <>
             <Link className={styles.primaryAction} href={nextTrainUrl}>
-              Go to Next Day
+              次のワークアウトへ
             </Link>
             <Link className={styles.secondaryAction} href="/train">
-              Back to Train
+              トレーニングへ戻る
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
-              View all sessions
+              全セッション
             </Link>
           </>
         ) : (
           <>
             <Link className={styles.primaryAction} href="/train">
-              Back to Train
+              トレーニングへ戻る
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
-              View all sessions
+              全セッション
             </Link>
             <Link className={styles.secondaryAction} href="/programs">
-              Browse Programs
+              プログラム一覧
             </Link>
           </>
         )}

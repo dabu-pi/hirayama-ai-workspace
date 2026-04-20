@@ -236,9 +236,9 @@ async function selectProgram(client: DatabaseClient, programId: string | null) {
 }
 
 const EXERCISE_ROLE_LABELS: Record<string, Record<ExerciseType, string>> = {
-  gzcl:    { T1: "T1",        T2: "T2",         T3: "T3" },
-  linear:  { T1: "Primary",   T2: "Secondary",   T3: "Accessory" },
-  generic: { T1: "",          T2: "",            T3: "" }
+  gzcl:    { T1: "T1（メイン種目）", T2: "T2（補助種目）", T3: "T3（ボリューム）" },
+  linear:  { T1: "メイン",           T2: "補助",           T3: "アクセサリー" },
+  generic: { T1: "",                 T2: "",               T3: "" }
 };
 
 function resolveExerciseRoleLabel(

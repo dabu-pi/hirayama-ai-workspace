@@ -9,11 +9,17 @@ type SessionDetailScreenProps = {
   errorMessage: string | null;
 };
 
+const EXERCISE_TYPE_BADGE: Record<"T1" | "T2" | "T3", string> = {
+  T1: "T1（メイン種目）",
+  T2: "T2（補助種目）",
+  T3: "T3（ボリューム）"
+};
+
 function formatDateTime(value: string | null) {
-  if (!value) return "Not recorded";
+  if (!value) return "記録なし";
 
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Not recorded";
+  if (Number.isNaN(parsed.getTime())) return "記録なし";
 
   return parsed.toLocaleString("ja-JP");
 }
@@ -30,9 +36,9 @@ function formatDate(value: string) {
 }
 
 function statusLabel(status: string) {
-  if (status === "completed") return "Completed";
-  if (status === "in_progress") return "In Progress";
-  return "Cancelled";
+  if (status === "completed") return "完了";
+  if (status === "in_progress") return "進行中";
+  return "キャンセル";
 }
 
 function statusClass(status: string, styles: Record<string, string>) {
@@ -61,11 +67,11 @@ export function SessionDetailScreen({
         <header className={styles.header}>
           <Link className={styles.backLink} href="/session-history">
             <span aria-hidden="true">&larr;</span>
-            <span>Session History</span>
+            <span>セッション履歴</span>
           </Link>
         </header>
         <section className={styles.statusCard}>
-          <p>{errorMessage ?? "Session not found."}</p>
+          <p>{errorMessage ?? "セッションが見つかりません。"}</p>
         </section>
       </main>
     );
@@ -86,12 +92,12 @@ export function SessionDetailScreen({
       <header className={styles.header}>
         <Link className={styles.backLink} href="/session-history">
           <span aria-hidden="true">&larr;</span>
-          <span>Session History</span>
+          <span>セッション履歴</span>
         </Link>
       </header>
 
       <section className={styles.hero}>
-        <span className={styles.eyebrow}>Session Detail</span>
+        <span className={styles.eyebrow}>セッション詳細</span>
         <h1 className={styles.title}>{formatDate(detail.startedAt)}</h1>
         {detail.programWeekDayLabel && (
           <p className={styles.meta}>{detail.programWeekDayLabel}</p>
@@ -105,15 +111,15 @@ export function SessionDetailScreen({
 
       <section className={styles.statsGrid}>
         <article className={styles.statCard}>
-          <span className={styles.statLabel}>Started</span>
+          <span className={styles.statLabel}>開始</span>
           <strong className={styles.statValue}>{formatDateTime(detail.startedAt)}</strong>
         </article>
         <article className={styles.statCard}>
-          <span className={styles.statLabel}>Finished</span>
+          <span className={styles.statLabel}>終了</span>
           <strong className={styles.statValue}>{formatDateTime(detail.finishedAt)}</strong>
         </article>
         <article className={styles.statCard}>
-          <span className={styles.statLabel}>Sets Done</span>
+          <span className={styles.statLabel}>完了セット</span>
           <strong className={styles.statValue}>
             {completedSets} / {totalSets}
           </strong>
@@ -122,7 +128,7 @@ export function SessionDetailScreen({
 
       {detail.exercises.length === 0 ? (
         <section className={styles.statusCard}>
-          <p>No exercises were recorded for this session.</p>
+          <p>このセッションには記録された種目がありません。</p>
         </section>
       ) : (
         <section className={styles.exerciseList}>
@@ -130,7 +136,7 @@ export function SessionDetailScreen({
             <article className={styles.exerciseCard} key={exercise.id}>
               <div className={styles.exerciseHeader}>
                 <span className={`${styles.typeBadge} ${styles[`type${exercise.exerciseType}`]}`}>
-                  {exercise.exerciseType}
+                  {EXERCISE_TYPE_BADGE[exercise.exerciseType as "T1" | "T2" | "T3"] ?? exercise.exerciseType}
                 </span>
                 <div className={styles.exerciseTitleWrap}>
                   <strong className={styles.exerciseName}>
@@ -138,16 +144,16 @@ export function SessionDetailScreen({
                   </strong>
                   <span className={styles.exerciseSub}>{exercise.exerciseNameJa}</span>
                   {exercise.wasSwapped && (
-                    <span className={styles.swappedBadge}>Swapped</span>
+                    <span className={styles.swappedBadge}>置換済</span>
                   )}
                   {exercise.wasAdded && (
-                    <span className={styles.addedBadge}>Added</span>
+                    <span className={styles.addedBadge}>追加済</span>
                   )}
                 </div>
               </div>
 
               {exercise.sets.length === 0 ? (
-                <p className={styles.noSets}>No sets recorded.</p>
+                <p className={styles.noSets}>セットが記録されていません。</p>
               ) : (
                 <table className={styles.setTable}>
                   <thead>
@@ -155,9 +161,9 @@ export function SessionDetailScreen({
                       <th className={styles.colSet}>#</th>
                       <th className={styles.colKg}>Kg</th>
                       <th className={styles.colReps}>Reps</th>
-                      <th className={styles.colDone}>Done</th>
+                      <th className={styles.colDone}>完</th>
                       {exercise.sets.some((set) => set.note) && (
-                        <th className={styles.colNote}>Note</th>
+                        <th className={styles.colNote}>メモ</th>
                       )}
                     </tr>
                   </thead>
@@ -192,7 +198,7 @@ export function SessionDetailScreen({
 
       <div className={styles.actions}>
         <Link className={styles.secondaryAction} href="/session-history">
-          Back to History
+          履歴へ戻る
         </Link>
       </div>
     </main>

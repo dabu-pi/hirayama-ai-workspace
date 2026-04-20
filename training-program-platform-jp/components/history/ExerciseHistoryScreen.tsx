@@ -16,6 +16,12 @@ function typeClassName(exerciseType: "T1" | "T2" | "T3") {
   return `${styles.typeBadge} ${styles.typeT3}`;
 }
 
+const EXERCISE_TYPE_BADGE: Record<"T1" | "T2" | "T3", string> = {
+  T1: "T1（メイン種目）",
+  T2: "T2（補助種目）",
+  T3: "T3（ボリューム）"
+};
+
 export function ExerciseHistoryScreen({
   history,
   errorMessage = null,
@@ -28,24 +34,24 @@ export function ExerciseHistoryScreen({
       <header className={styles.header}>
         <Link className={styles.backLink} href="/train">
           <span aria-hidden="true">←</span>
-          <span>Back</span>
+          <span>戻る</span>
         </Link>
         <div className={styles.titleWrap}>
           <div className={styles.titleLine}>
             <span className={typeClassName(history.exerciseType)}>
-              {history.exerciseType}
+              {EXERCISE_TYPE_BADGE[history.exerciseType]}
             </span>
             <h1 className={styles.title}>{history.exerciseNameEn}</h1>
           </div>
           <p className={styles.subtitle}>
-            Completed sets for this exercise are shown newest first.
+            完了セットを新しい順に表示しています。
           </p>
         </div>
       </header>
 
       {latestSession ? (
         <section className={styles.summaryCard}>
-          <div className={styles.summaryLabel}>Latest Session</div>
+          <div className={styles.summaryLabel}>最新セッション</div>
           <div className={styles.summaryValue}>
             {latestSession.sessionDate} / {latestSession.programLabel}
           </div>
@@ -58,7 +64,7 @@ export function ExerciseHistoryScreen({
           aria-live="polite"
           className={`${styles.emptyCard} ${styles.statusCard}`}
         >
-          <p>Loading exercise history...</p>
+          <p>読み込み中...</p>
         </section>
       ) : errorMessage ? (
         <section
@@ -69,10 +75,9 @@ export function ExerciseHistoryScreen({
         </section>
       ) : history.sessions.length === 0 ? (
         <section className={styles.emptyCard}>
-          <p>No completed sessions for this exercise yet.</p>
+          <p>この種目の完了セッションがまだありません。</p>
           <p>
-            Once completed sets are recorded, they will appear here in reverse
-            chronological order.
+            完了セットが記録されると、ここに新しい順で表示されます。
           </p>
         </section>
       ) : (
@@ -91,7 +96,7 @@ export function ExerciseHistoryScreen({
                   <span>#</span>
                   <span>Kg</span>
                   <span>Reps</span>
-                  <span>Note</span>
+                  <span>メモ</span>
                 </div>
                 {session.sets.map((set) => (
                   <div
