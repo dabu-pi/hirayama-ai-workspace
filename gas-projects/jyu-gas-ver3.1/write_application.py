@@ -852,7 +852,6 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         clinic_name = str(clinic_info.get("clinicName") or "").strip()
         clinic_addr = str(clinic_info.get("clinicAddr") or "").strip()
         clinic_practitioner = str(clinic_info.get("clinicPractitioner") or "").strip()
-        print(f"[D5-WRITE] name={clinic_name!r}  addr={clinic_addr!r}  pract={clinic_practitioner!r}", flush=True)
         if clinic_name:
             put("L59", clinic_name)
         if clinic_addr:
@@ -870,10 +869,9 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
                 _code, w_year = to_wareki(date(yr, mo, last_day))
                 date_str = f"令和{w_year}年{mo}月{last_day}日"
                 ws["E56"] = date_str
-                print(f"[D6-DATE] DONE: E56={date_str!r}", flush=True)
                 count += 1
             except Exception as e:
-                print(f"[D6-DATE] SKIP: {e}", flush=True)
+                pass
 
     wb.save(output_path)
     print(f"書込完了: {output_path} ({count}セル)")
@@ -1661,9 +1659,6 @@ def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
         "clinicPractitioner": str(meta.get("clinicPractitioner") or ""),
         "month":              str(meta.get("month") or ""),
     }
-    # [DIAG] clinic_info の受信値を Cloud Run ログに出力（診断用）
-    print(f"[CLINIC_INFO] name={clinic_info['clinicName']!r}  addr={clinic_info['clinicAddr']!r}  pract={clinic_info['clinicPractitioner']!r}", flush=True)
-
     results = []
 
     for p in batch["patients"]:
