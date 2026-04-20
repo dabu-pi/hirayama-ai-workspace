@@ -386,10 +386,12 @@ async function buildPreviousDisplayMap(
   );
 
   if (uniqueExerciseIds.length === 0 || workoutSets.length === 0) {
+    console.warn("[PREV-DBG] early-return: uniqueExerciseIds.length=", uniqueExerciseIds.length, "workoutSets.length=", workoutSets.length);
     return empty;
   }
 
   if (!currentSession.user_id) {
+    console.warn("[PREV-DBG] early-return: no user_id");
     return empty;
   }
 
@@ -411,6 +413,7 @@ async function buildPreviousDisplayMap(
   console.log(`[PERF] buildPreviousDisplayMap Q1 (historicalExercises): ${Date.now() - tPrev0}ms | found=${historicalExercises.length}`);
 
   if (historicalExercises.length === 0) {
+    console.warn("[PREV-DBG] early-return: historicalExercises.length=0 | userId=", currentSession.user_id, "| uniqueExerciseIds=", uniqueExerciseIds);
     return empty;
   }
 
@@ -519,6 +522,7 @@ async function buildPreviousDisplayMap(
 
   console.log("[PREV-DBG] displayMap size:", displayMap.size, "| keys:", Array.from(displayMap.keys()));
   console.log("[PREV-DBG] previousSetsMap:", Array.from(previousSetsMap.entries()).map(([k, v]) => `${k}:${v.length}sets`));
+  console.log("[PREV-DBG] uniqueExerciseIds (session lookup keys):", uniqueExerciseIds);
   return { displayMap, previousSetsMap };
 }
 

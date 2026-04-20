@@ -1457,6 +1457,14 @@ export function WorkoutScreen({
                 // previousSets はサーバー側で exerciseId-only キー + 最新セッション基準で構築済み。
                 // set.previousDisplay はサーバー側 displayMap に依存するため、
                 // index ズレが起きやすい。ここでは exercise.previousSets[setIndex] を直接参照する。
+                if (setIndex === 0) {
+                  console.log("[EXERCISE-FULL]", exercise.exerciseNameEn, {
+                    exerciseId: exercise.exerciseId,
+                    previousSetsLen: exercise.previousSets.length,
+                    previousSets: exercise.previousSets,
+                    setsLen: exercise.sets.length,
+                  });
+                }
                 const prevSet = exercise.previousSets[setIndex] ?? null;
                 const prevDisplay = formatPrevDisplay(prevSet);
                 console.log("[ROW-PREV]", exercise.exerciseNameEn, "idx:", setIndex, "prev:", prevDisplay);
