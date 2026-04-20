@@ -38,6 +38,24 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
       "GZCLP's original four-day rotating structure (A1/B1/A2/B2) with 5×3+ T1 work, 3×10 T2 practice, and three T3 accessories per session: a fixed pull slot plus T1-support and T2-support movements."
   },
   {
+    id: "program-gzclp-v2-4day",
+    slug: "gzclp-base-v2-4day",
+    title: "GZCLP 5-Exercise 4-Day",
+    level: "Beginner",
+    levelKey: "beginner",
+    goal: "週4トレーニングで完全なA1/B1/A2/B2サイクルを毎週こなし、筋力と筋量を効率よく積み上げる。",
+    frequencyLabel: "4 days / week",
+    durationLabel: "4 weeks",
+    sourceProgramName: "GZCLP",
+    sourceFidelity: "adapted",
+    sourceNotes:
+      "gzclp-base-v2 をベースに週4版へ拡張。毎週 A1/B1/A2/B2 の完全サイクルを実施。T3候補は動作パターン別（スクワット系/ベンチ系/OHP系/デッドリフト系）に各3種から選択可能。",
+    tags: [],
+    methodology: "gzcl",
+    overview:
+      "完全な A1/B1/A2/B2 サイクルを毎週繰り返す週4版 GZCLP。各セッション: T1 メイン 5×3+、T2 練習 3×10、T3アクセサリー3種（固定プル種目 + 動作系統別の選択T3×2）。T3は主種目の動作パターン（スクワット/ベンチ/OHP/デッドリフト）に応じた3候補から交換可能。"
+  },
+  {
     id: "program-starting-strength-phase2",
     slug: "starting-strength-base",
     title: "Starting Strength Phase 2 Base",
