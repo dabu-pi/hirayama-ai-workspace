@@ -2581,8 +2581,11 @@ function V3TR_generateApplicationBCore_(patientIds, ym) {
     generatedAt: genAt,
     month: ym,
     patientCount: patientIds.length,
-    prefectureNo: clinicInfoB.prefectureNo,
-    torokuKigoNo: clinicInfoB.torokuKigoNo,
+    prefectureNo:       clinicInfoB.prefectureNo,
+    torokuKigoNo:       clinicInfoB.torokuKigoNo,
+    clinicName:         clinicInfoB.clinicName,
+    clinicAddr:         clinicInfoB.clinicAddr,
+    clinicPractitioner: clinicInfoB.clinicPractitioner,
   });
   var ndjsonLines = [metaLine];
 

@@ -291,8 +291,14 @@
 ## TC-B05: 施術証明欄・委任欄の出力確認
 
 > 対象差分: D5（施術証明欄・委任欄の自動/手書き分離）
-> **実装完了: 2026-04-20** — デプロイ済み（Cloud Run revision 00021-svr）
+> **不具合修正完了: 2026-04-20 round-2** — デプロイ済み（Cloud Run revision 00023-vxn）
 > 確認方法: 実装後に施術証明欄が自動入力されることをスプレッドシート上の B案実行で目視確認する。
+
+### 根本原因（2026-04-20 round-2 修正）
+
+B案実行関数 `V3TR_generateApplicationBCore_` の NDJSON metaLine に
+`clinicName`/`clinicAddr`/`clinicPractitioner` の追記が漏れていた。
+Python 側のセル書込（L58/L59/L62）は正確で、ローカルテスト PASS 確認済み。
 
 ### 入力条件
 
@@ -310,17 +316,23 @@
 
 ### 実装内容（2026-04-20）
 
+**round-1（commit 5d7d92b）:**
 - `Ver3_transferData.js`: `V3TR.CONFIG.setKeys` に `clinicName`/`clinicAddr`/`clinicPractitioner` 追加
 - `Ver3_transferData.js`: `V3TR_loadClinicInfo_()` の返り値に3項目追加
-- `Ver3_transferData.js`: NDJSON `_meta` に3項目追加
+- `Ver3_transferData.js`: `V3TR_menuBatchExportJson` の NDJSON `_meta` に3項目追加（★漏れ箇所ではない）
 - `write_application.py`: `batch_write_from_string` の `clinic_info` dict に3項目追加
 - `write_application.py`: `write_application()` の `if clinic_info:` ブロックに D5 書込処理追加（L58/L59/L62）
 
+**round-2（今回）:**
+- `Ver3_transferData.js`: `V3TR_generateApplicationBCore_` の metaLine に3項目追加 ← **B案の実関数**
+- `write_application.py`: `[CLINIC_INFO]`/`[D5-WRITE]` 診断ログ追加（Cloud Run ログで確認可能）
+
 ### 実機確認（院長実施）
 
-- [ ] 設定シートに「施術者氏名」行を追加（値: 施術者氏名を記入）
+- [ ] 設定シートに「施術者氏名」行を確認（なければ追加）
 - [ ] B案実行 → xlsx を開いて L58/L59/L62 に値が入ることを確認
 - [ ] 委任欄が空欄のままであることを確認
+- [ ] Cloud Run ログで `[CLINIC_INFO]` / `[D5-WRITE]` に実値が入っていることを確認（診断用）
 
 ---
 

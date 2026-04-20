@@ -1,6 +1,39 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-20（**TC-B05 施術証明欄自動入力 実装・デプロイ完了**）
+最終更新: 2026-04-20（**TC-B05 不具合修正 — B案 metaLine 追記漏れを修正・再デプロイ**）
+
+---
+
+## 🗓 2026-04-20 TC-B05 不具合修正（round-2）
+
+### 根本原因
+
+B案の実装関数 `V3TR_generateApplicationBCore_`（`Ver3_transferData.js:2554`）の NDJSON metaLine に
+`clinicName`/`clinicAddr`/`clinicPractitioner` の追記が**漏れていた**。
+
+- 初回実装（commit `5d7d92b`）では `V3TR_menuBatchExportJson`（一括JSON出力メニュー）の metaLine は正しく更新していた
+- **しかし B案（申請書生成）が呼ぶのは別関数 `V3TR_generateApplicationBCore_`**
+- 同関数の metaLine は `prefectureNo`/`torokuKigoNo` の2フィールドのみのままだった
+- Python 側の写込セル（L58/L59/L62）は正確 ← ローカルテスト PASS 確認済み
+
+### 修正内容
+
+| ファイル | 箇所 | 変更内容 |
+|---|---|---|
+| `Ver3_transferData.js` | `V3TR_generateApplicationBCore_` の metaLine | `clinicName`/`clinicAddr`/`clinicPractitioner` 3フィールド追加 |
+| `write_application.py` | `batch_write_from_string` の meta 取出直後 | `[CLINIC_INFO]` 診断ログ追加 |
+| `write_application.py` | `write_application()` D5 ブロック直前 | `[D5-WRITE]` 診断ログ追加 |
+
+### デプロイ
+
+- clasp push: ✅ 完了（Ver3_transferData.js）
+- Cloud Run: ✅ revision `00023-vxn` デプロイ済み
+
+### 補足：診断ログについて
+
+Cloud Run ログに `[CLINIC_INFO]` と `[D5-WRITE]` が記録される。
+次回 B案実行後にログを確認して値が入っていれば正常。
+確認後に不要なら診断ログは削除してよい。
 
 ---
 

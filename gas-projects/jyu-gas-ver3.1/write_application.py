@@ -842,6 +842,7 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         clinic_name = str(clinic_info.get("clinicName") or "").strip()
         clinic_addr = str(clinic_info.get("clinicAddr") or "").strip()
         clinic_practitioner = str(clinic_info.get("clinicPractitioner") or "").strip()
+        print(f"[D5-WRITE] name={clinic_name!r}  addr={clinic_addr!r}  pract={clinic_practitioner!r}", flush=True)
         if clinic_name:
             put("L59", clinic_name)
         if clinic_addr:
@@ -1634,6 +1635,8 @@ def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
         "clinicAddr":         str(meta.get("clinicAddr") or ""),
         "clinicPractitioner": str(meta.get("clinicPractitioner") or ""),
     }
+    # [DIAG] clinic_info の受信値を Cloud Run ログに出力（診断用）
+    print(f"[CLINIC_INFO] name={clinic_info['clinicName']!r}  addr={clinic_info['clinicAddr']!r}  pract={clinic_info['clinicPractitioner']!r}", flush=True)
 
     results = []
 
