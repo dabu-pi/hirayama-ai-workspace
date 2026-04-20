@@ -767,20 +767,29 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         count += 1
 
     # ===== D4 負傷の原因（BR21: 分離後のコンテンツ行）=====
-    # 出力条件: row2の部位1に金額あり = 申請書3部位目が存在
-    #           = 「3部位目を100分の60で算定することとなる場合」
+    # 出力条件: 申請書に記載された部位の合計が 3以上のとき
     # 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
     # セル構造: _apply_selection_splits() により
     #   BR20:DV20 = ラベル行「負傷の原因」（固定）
     #   BR21:DV24 = コンテンツ行（ここに書込む）
-    # ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定
-    # ソース: 「負傷の日時」「負傷の場所」「負傷の状況」（初検情報履歴シート由来）
-    part3_has_data = (
-        row2 is not None and (
-            (safe_num(row2.get("部位1_計")) or 0) > 0 or
-            (safe_num(row2.get("部位1_後療料_金額")) or 0) > 0
+    # 部位スロット対応:
+    #   スロット1=row1.部位1 / スロット2=row1.部位2 / スロット3=row2.部位1 / スロット4=row2.部位2
+    # 修正理由: 旧条件「row2["部位1_計"]>0」は case1(1部位)+case2(1部位)=2部位でも
+    #           row2が存在するだけでトリガーしていた（2026-04-20 修正）
+    def _slot_filled(r, n):
+        if r is None:
+            return False
+        return (
+            (safe_num(r.get(f"部位{n}_計")) or 0) > 0 or
+            (safe_num(r.get(f"部位{n}_後療料_金額")) or 0) > 0
         )
-    )
+    total_parts = sum([
+        _slot_filled(row1, 1),
+        _slot_filled(row1, 2),
+        _slot_filled(row2, 1),
+        _slot_filled(row2, 2),
+    ])
+    part3_has_data = total_parts >= 3
     if part3_has_data:
         def _build_injury_text(row):
             segs = []

@@ -1845,14 +1845,16 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   }
 
   // ===== D4 負傷原因 行20 BR20 =====
-  // 出力条件: case2の部位1に金額あり = 申請書3部位目が存在 = 「3部位目を100分の60で算定することとなる場合」
+  // 出力条件: 申請書記載部位の合計が3以上のとき
   // 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
-  // ★ 暫定ルール: 3部位目の存在を「row2["部位1_計"] > 0」で判定。docs §4 D4 参照
-  // ソース: 初検情報履歴シート由来の「負傷の日時」「負傷の場所」「負傷の状況」（transferCols登録済み）
-  var part3HasData = (row2 != null) && (
-    Number(row2["部位1_計"] || 0) > 0 ||
-    Number(row2["部位1_後療料_金額"] || 0) > 0
-  );
+  // 部位スロット: スロット1=row1.部位1/スロット2=row1.部位2/スロット3=row2.部位1/スロット4=row2.部位2
+  // 修正理由: 旧条件「row2["部位1_計"]>0」は case1(1部位)+case2(1部位)=2部位でもトリガーしていた（2026-04-20 修正）
+  var _s1 = Number(row1["部位1_計"] || 0) > 0 || Number(row1["部位1_後療料_金額"] || 0) > 0;
+  var _s2 = Number(row1["部位2_計"] || 0) > 0 || Number(row1["部位2_後療料_金額"] || 0) > 0;
+  var _s3 = (row2 != null) && (Number(row2["部位1_計"] || 0) > 0 || Number(row2["部位1_後療料_金額"] || 0) > 0);
+  var _s4 = (row2 != null) && (Number(row2["部位2_計"] || 0) > 0 || Number(row2["部位2_後療料_金額"] || 0) > 0);
+  var _totalParts = (_s1 ? 1 : 0) + (_s2 ? 1 : 0) + (_s3 ? 1 : 0) + (_s4 ? 1 : 0);
+  var part3HasData = _totalParts >= 3;
   if (part3HasData) {
     var d4Parts = [];
     function V3TR_buildInjuryText_(r) {
