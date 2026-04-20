@@ -25,6 +25,7 @@ import sys
 import os
 import glob as glob_mod
 import copy
+import calendar
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
@@ -859,6 +860,18 @@ def write_application(template_path: str, json_data: dict, output_path: str, cli
         if clinic_practitioner:
             put("L62", clinic_practitioner)
 
+        # D6: 施術証明欄 日付（暫定運用: 申請対象月の当月最終日）
+        # E56:AC56 = 日付ラベルセル（単一マージ）→ '令和X年Y月Z日' で上書き
+        month_str = str(clinic_info.get("month") or "").strip()
+        if month_str:
+            try:
+                yr, mo = map(int, month_str.split("-"))
+                last_day = calendar.monthrange(yr, mo)[1]
+                _code, w_year = to_wareki(date(yr, mo, last_day))
+                put("E56", f"令和{w_year}年{mo}月{last_day}日")
+            except Exception as e:
+                print(f"[D6-DATE] skip: {e}", flush=True)
+
     wb.save(output_path)
     print(f"書込完了: {output_path} ({count}セル)")
     return count
@@ -1643,6 +1656,7 @@ def batch_write_from_string(ndjson_str: str, template_path: str = None) -> list:
         "clinicName":         str(meta.get("clinicName") or ""),
         "clinicAddr":         str(meta.get("clinicAddr") or ""),
         "clinicPractitioner": str(meta.get("clinicPractitioner") or ""),
+        "month":              str(meta.get("month") or ""),
     }
     # [DIAG] clinic_info の受信値を Cloud Run ログに出力（診断用）
     print(f"[CLINIC_INFO] name={clinic_info['clinicName']!r}  addr={clinic_info['clinicAddr']!r}  pract={clinic_info['clinicPractitioner']!r}", flush=True)
