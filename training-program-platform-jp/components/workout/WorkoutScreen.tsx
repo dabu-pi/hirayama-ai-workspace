@@ -985,6 +985,10 @@ export function WorkoutScreen({
 
       applyFinishedState(payload);
       setRevealedSetId(null);
+      // Flush the client-side router cache so Train/Programs/History see the
+      // updated enrollment state (W1D2, new session in history) on next navigation.
+      // router.refresh() is fire-and-forget; router.push navigates immediately.
+      router.refresh();
       router.push(payload.summaryPath);
     } catch (error) {
       console.error("Failed to finish workout session.", error);

@@ -273,7 +273,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     await updateT1ProgressionAfterSession(params.id, userId, dbClient);
 
     revalidatePath("/train");
-    revalidatePath("/"); // Ensure Home progress / CTA reflects new enrollment state
+    revalidatePath("/");
+    revalidatePath("/programs");       // Programs enrollment banner → shows W1D2
+    revalidatePath("/session-history"); // History → shows completed session immediately
 
     return NextResponse.json({
       id: updatedSession.id,
