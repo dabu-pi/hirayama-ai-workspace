@@ -426,12 +426,17 @@ async function buildPreviousDisplayMap(
 
   const previousCandidateMap = new Map<string, PreviousCandidate>();
 
+  // DEBUG-PREV: trace how many historical sets came back and what set_numbers they have
+  console.log("[PREV-DBG] historicalCompletedSets count:", historicalCompletedSets.length);
+  console.log("[PREV-DBG] historicalCompletedSets set_numbers:", historicalCompletedSets.map((s) => s.set_number));
+
   historicalCompletedSets.forEach((set) => {
     const historicalExercise = historicalExerciseMap.get(
       set.workout_session_exercise_id
     );
 
     if (!historicalExercise || !historicalExercise.startedAt) {
+      console.log("[PREV-DBG] SKIPPED set", set.set_number, "wse_id:", set.workout_session_exercise_id, "startedAt:", historicalExercise?.startedAt);
       return;
     }
 
@@ -447,6 +452,9 @@ async function buildPreviousDisplayMap(
       previousCandidateMap.set(key, nextCandidate);
     }
   });
+
+  // DEBUG-PREV: log all keys in candidateMap
+  console.log("[PREV-DBG] previousCandidateMap keys:", Array.from(previousCandidateMap.keys()));
 
   // Re-key by sorted position (idx+1) so lookup is position-based, not set_number-based.
   // This handles gaps in set_number caused by add/delete operations.
@@ -469,6 +477,9 @@ async function buildPreviousDisplayMap(
       );
     });
   }
+
+  // DEBUG-PREV: log final resultMap keys
+  console.log("[PREV-DBG] resultMap keys:", Array.from(resultMap.keys()));
   return resultMap;
 }
 
@@ -494,6 +505,8 @@ function buildExerciseBlocks(
     const visibleSets = (setsByExercise.get(sessionExercise.id) ?? []).map(
       (set, index) => {
         const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${index + 1}`;
+        // DEBUG-PREV: log lookup key and whether it hits
+        console.log("[PREV-DBG] lookup key:", previousKey, "hit:", previousDisplayMap.has(previousKey));
 
         return {
           id: set.id,
