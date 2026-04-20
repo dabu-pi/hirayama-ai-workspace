@@ -448,12 +448,28 @@ async function buildPreviousDisplayMap(
     }
   });
 
-  return new Map(
-    Array.from(previousCandidateMap.entries()).map(([key, value]) => [
-      key,
-      formatPreviousDisplay(value.weightKg, value.repsDone)
-    ])
-  );
+  // Re-key by sorted position (idx+1) so lookup is position-based, not set_number-based.
+  // This handles gaps in set_number caused by add/delete operations.
+  const byExercise = new Map<string, Array<[number, PreviousCandidate]>>();
+  for (const [key, candidate] of previousCandidateMap.entries()) {
+    const lastColon = key.lastIndexOf(":");
+    const exerciseKey = key.slice(0, lastColon);
+    const setNumber = parseInt(key.slice(lastColon + 1), 10);
+    const list = byExercise.get(exerciseKey) ?? [];
+    list.push([setNumber, candidate]);
+    byExercise.set(exerciseKey, list);
+  }
+  const resultMap = new Map<string, string>();
+  for (const [exerciseKey, sets] of byExercise.entries()) {
+    sets.sort(([a], [b]) => a - b);
+    sets.forEach(([, candidate], idx) => {
+      resultMap.set(
+        `${exerciseKey}:${idx + 1}`,
+        formatPreviousDisplay(candidate.weightKg, candidate.repsDone)
+      );
+    });
+  }
+  return resultMap;
 }
 
 function buildExerciseBlocks(
@@ -477,7 +493,7 @@ function buildExerciseBlocks(
     const exercise = exerciseMap.get(sessionExercise.exercise_id);
     const visibleSets = (setsByExercise.get(sessionExercise.id) ?? []).map(
       (set, index) => {
-        const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${set.set_number}`;
+        const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${index + 1}`;
 
         return {
           id: set.id,
