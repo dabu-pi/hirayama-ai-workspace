@@ -346,3 +346,92 @@ export async function advanceEnrollmentAfterSessionComplete(
     console.error("enrollment: failed to advance enrollment after session complete.", error);
   }
 }
+
+// ---------------------------------------------------------------------------
+// getTrainFallbackView
+// ---------------------------------------------------------------------------
+
+type TrainFallbackEnrollmentRow = {
+  id: string;
+  program_id: string;
+  current_program_day_id: string | null;
+};
+
+type TrainFallbackProgramRow = {
+  slug: string;
+};
+
+type TrainFallbackSessionRow = {
+  program_day_id: string | null;
+};
+
+export type TrainFallbackView = {
+  programSlug: string;
+  programDayId: string;
+};
+
+/**
+ * Lightweight fallback for the naked /train path when getActiveProgramView
+ * returns no views or when the primary view has actionType="none".
+ *
+ * Fetches the most recently updated active enrollment directly (bypassing
+ * the full 12-query getActiveProgramView pipeline), then resolves the next
+ * actionable day via:
+ *   1. enrollment.current_program_day_id  (if set)
+ *   2. findNextProgramDayId(lastSession.program_day_id)  (if step 1 is null)
+ *
+ * Returns null when there is no active enrollment, no slug, or no actionable day.
+ * Never throws — all errors return null silently.
+ */
+export async function getTrainFallbackView(userId: string): Promise<TrainFallbackView | null> {
+  if (!hasSupabasePublicEnv()) return null;
+
+  try {
+    const client = createQueryClient();
+
+    const { data: enrollment, error: enrollmentError } = await client
+      .from("program_enrollments")
+      .select("id, program_id, current_program_day_id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .is("archived_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<TrainFallbackEnrollmentRow>();
+
+    if (enrollmentError || !enrollment) return null;
+
+    const { data: program, error: programError } = await client
+      .from("programs")
+      .select("slug")
+      .eq("id", enrollment.program_id)
+      .maybeSingle<TrainFallbackProgramRow>();
+
+    if (programError || !program?.slug) return null;
+
+    const programSlug = program.slug;
+    let programDayId: string | null = enrollment.current_program_day_id;
+
+    if (!programDayId) {
+      // No current day set — derive from the most recent completed/cancelled session
+      const { data: lastSession } = await client
+        .from("workout_sessions")
+        .select("program_day_id")
+        .eq("program_enrollment_id", enrollment.id)
+        .in("status", ["completed", "cancelled"])
+        .is("archived_at", null)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<TrainFallbackSessionRow>();
+
+      if (lastSession?.program_day_id) {
+        programDayId = await findNextProgramDayId(lastSession.program_day_id);
+      }
+    }
+
+    if (!programDayId) return null;
+    return { programSlug, programDayId };
+  } catch {
+    return null;
+  }
+}

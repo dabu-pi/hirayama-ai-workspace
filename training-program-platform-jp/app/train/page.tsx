@@ -8,6 +8,7 @@ import { getActiveProgramView } from "@/lib/workout/active-program";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
 import { resolveTrainingEntry } from "@/lib/workout/train-entry";
 import { getAuthenticatedWorkoutUserId } from "@/lib/workout/session-access";
+import { getTrainFallbackView } from "@/lib/workout/enrollment";
 import { getTrainProgramSelection } from "@/lib/workout/train-selection";
 import {
   findWorkoutSessionByDayId,
@@ -26,7 +27,7 @@ type TrainPageProps = {
 
 /** Cause categories emitted to Vercel runtime log for redirect diagnosis. */
 type RedirectCause =
-  | "no_selected_program"
+  | "no_active_enrollment"
   | "no_program_day"
   | "no_actionable_enrollment"
   | "no_current_session"
@@ -217,9 +218,27 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     redirect(primaryView.continueUrl);
   }
 
+  // Fallback: getActiveProgramView returned no views (query failure or no enrollment
+  // found) OR the primary view has actionType="none" (current_program_day_id is null).
+  // Attempt a lightweight direct enrollment lookup to recover training context.
+  // Only runs when no other branch already redirected or returned a screen.
+  if (isAuthenticated && (!primaryView || primaryView.actionType === "none")) {
+    const fallback = await getTrainFallbackView(userId);
+    if (fallback) {
+      console.info(`${PAGE}:branch`, {
+        branch: "fallback_redirect_via_enrollment",
+        programSlug: fallback.programSlug,
+        programDayId: fallback.programDayId,
+        hadPrimaryView: Boolean(primaryView),
+        primaryViewActionType: primaryView?.actionType ?? null
+      });
+      redirect(`/train?program=${fallback.programSlug}&programDayId=${fallback.programDayId}`);
+    }
+  }
+
   // Determine redirect cause for log correlation
   const redirectCause: RedirectCause = (() => {
-    if (selectedProgram.state === "none") return "no_selected_program";
+    if (selectedProgram.state === "none") return "no_active_enrollment";
     if (selectedProgram.state === "selected" && !selectedProgram.programDayId) {
       return "no_program_day";
     }
