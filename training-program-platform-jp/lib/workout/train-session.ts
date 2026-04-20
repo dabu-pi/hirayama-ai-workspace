@@ -387,11 +387,19 @@ async function buildPreviousDisplayMap(
   }
 
   // R4: single embedded query replaces two sequential round-trips (Q1 sessions + Q2 exercises).
-  const historicalExercises = await selectHistoricalExercisesWithSession(
-    client,
-    currentSession.user_id,
-    uniqueExerciseIds
-  );
+  // Graceful degradation: if the embedded filter fails (PostgREST version / schema issue),
+  // return empty map so WorkoutScreen still renders (previousDisplay shows "-" instead of crashing).
+  let historicalExercises: HistoricalExerciseWithSessionRow[];
+  try {
+    historicalExercises = await selectHistoricalExercisesWithSession(
+      client,
+      currentSession.user_id,
+      uniqueExerciseIds
+    );
+  } catch (err) {
+    console.warn("buildPreviousDisplayMap: embedded query failed, skipping previousDisplay.", err);
+    return new Map<string, string>();
+  }
 
   if (historicalExercises.length === 0) {
     return new Map<string, string>();
