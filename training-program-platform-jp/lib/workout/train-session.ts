@@ -551,41 +551,33 @@ async function loadSessionView(
   queryClient: DatabaseClient,
   session: WorkoutSessionRow
 ): Promise<WorkoutSessionView> {
-  const programDay = await selectProgramDay(queryClient, session.program_day_id);
-  const programWeek = await selectProgramWeek(
-    queryClient,
-    programDay?.program_week_id ?? null
-  );
-  const program = await selectProgram(queryClient, programWeek?.program_id ?? null);
+  // Round 1: program_day metadata and session exercises are independent — run in parallel.
+  const [programDay, workoutSessionExercises] = await Promise.all([
+    selectProgramDay(queryClient, session.program_day_id),
+    selectWorkoutSessionExercises(queryClient, session.id)
+  ]);
 
-  const workoutSessionExercises = await selectWorkoutSessionExercises(
-    queryClient,
-    session.id
-  );
-  const exercises = await selectExercises(
-    queryClient,
-    workoutSessionExercises.map((item) => item.exercise_id)
-  );
-  const workoutSets = await selectVisibleWorkoutSets(
-    queryClient,
-    workoutSessionExercises.map((item) => item.id)
-  );
-  const previousDisplayMap = await buildPreviousDisplayMap(
-    queryClient,
-    session,
-    workoutSessionExercises,
-    workoutSets
-  );
+  // Round 2: program_week (depends on programDay), exercises + sets (depend on workoutSessionExercises)
+  // — all three are independent of each other so run in parallel.
+  const [programWeek, exercises, workoutSets] = await Promise.all([
+    selectProgramWeek(queryClient, programDay?.program_week_id ?? null),
+    selectExercises(queryClient, workoutSessionExercises.map((item) => item.exercise_id)),
+    selectVisibleWorkoutSets(queryClient, workoutSessionExercises.map((item) => item.id))
+  ]);
 
-  // Load T1 progression hints (non-blocking — returns empty map on error or no state)
+  // Round 3: program (depends on programWeek), previousDisplayMap + t1Hints (depend on
+  // workoutSessionExercises + workoutSets) — all independent of each other, run in parallel.
   const t1ExerciseIds = workoutSessionExercises
     .filter((e) => e.exercise_type === "T1")
     .map((e) => e.exercise_id);
 
-  const t1ProgressionHints =
+  const [program, previousDisplayMap, t1ProgressionHints] = await Promise.all([
+    selectProgram(queryClient, programWeek?.program_id ?? null),
+    buildPreviousDisplayMap(queryClient, session, workoutSessionExercises, workoutSets),
     session.program_enrollment_id && t1ExerciseIds.length > 0
-      ? await selectT1ProgressionHints(queryClient, session.program_enrollment_id, t1ExerciseIds)
-      : new Map<string, T1ProgressionHint>();
+      ? selectT1ProgressionHints(queryClient, session.program_enrollment_id, t1ExerciseIds)
+      : Promise.resolve(new Map<string, T1ProgressionHint>())
+  ]);
 
   return {
     id: session.id,

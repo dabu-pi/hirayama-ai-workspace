@@ -651,16 +651,22 @@ export function WorkoutScreen({
       return nextDrafts;
     });
 
-    setExercises((current) =>
-      updateExerciseState(current, exerciseId, (exerciseItem) => ({
-        ...exerciseItem,
-        sets: exerciseItem.sets.map((set) => {
-          if (set.id === setId) return { ...set, isAutoFilled: false };
-          if (reflectedSetIds.includes(set.id)) return { ...set, isAutoFilled: true };
-          return set;
-        })
-      }))
-    );
+    // Skip exercises state update when nothing would actually change:
+    // - setId's isAutoFilled is already false (most keystrokes on Set 2+)
+    // - no sets are being newly reflected
+    const needsAutoFilledUpdate = targetSet.isAutoFilled || reflectedSetIds.length > 0;
+    if (needsAutoFilledUpdate) {
+      setExercises((current) =>
+        updateExerciseState(current, exerciseId, (exerciseItem) => ({
+          ...exerciseItem,
+          sets: exerciseItem.sets.map((set) => {
+            if (set.id === setId) return { ...set, isAutoFilled: false };
+            if (reflectedSetIds.includes(set.id)) return { ...set, isAutoFilled: true };
+            return set;
+          })
+        }))
+      );
+    }
   };
 
   const handleInputSave = async (exerciseId: string, setId: string) => {
