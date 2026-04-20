@@ -76,6 +76,15 @@ type AddSetResponse = {
   deletedAt: string | null;
 };
 
+/** Client-side equivalent of server formatPreviousDisplay — uses same format string. */
+function formatPrevDisplay(prev: { weightKg: number | null; repsDone: number | null } | null | undefined): string {
+  if (!prev) return "-";
+  if (prev.weightKg !== null && prev.repsDone !== null) return `${prev.weightKg}kg x ${prev.repsDone}`;
+  if (prev.weightKg !== null) return `${prev.weightKg}kg`;
+  if (prev.repsDone !== null) return `x ${prev.repsDone}`;
+  return "-";
+}
+
 function typeClassName(exerciseType: "T1" | "T2" | "T3") {
   if (exerciseType === "T1") return `${styles.typeBadge} ${styles.typeT1}`;
   if (exerciseType === "T2") return `${styles.typeBadge} ${styles.typeT2}`;
@@ -1444,7 +1453,14 @@ export function WorkoutScreen({
                 <span>完</span>
               </div>
 
-              {exercise.sets.map((set) => {
+              {exercise.sets.map((set, setIndex) => {
+                // previousSets はサーバー側で exerciseId-only キー + 最新セッション基準で構築済み。
+                // set.previousDisplay はサーバー側 displayMap に依存するため、
+                // index ズレが起きやすい。ここでは exercise.previousSets[setIndex] を直接参照する。
+                const prevSet = exercise.previousSets[setIndex] ?? null;
+                const prevDisplay = formatPrevDisplay(prevSet);
+                console.log("[ROW-PREV]", exercise.exerciseNameEn, "idx:", setIndex, "prev:", prevDisplay);
+
                 const draft = getSetDraft(draftInputs, set);
                 const isSaving = savingSetIds.includes(set.id);
                 const isMutating = pendingMutation?.setId === set.id;
@@ -1479,8 +1495,8 @@ export function WorkoutScreen({
                     >
                       <div className={`${styles.setRow} ${set.isCompleted ? styles.completedRow : ""}`}>
                         <span className={styles.mono}>{set.displaySetNumber}</span>
-                        <span className={`${styles.previous} ${set.previousDisplay === "-" ? styles.previousEmpty : ""}`}>
-                          {set.previousDisplay}
+                        <span className={`${styles.previous} ${prevDisplay === "-" ? styles.previousEmpty : ""}`}>
+                          {prevDisplay}
                         </span>
                         <button
                           className={`${styles.target}${!isSessionEnded ? ` ${styles.targetClickable}` : ""}`}
