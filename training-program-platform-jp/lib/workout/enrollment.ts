@@ -374,13 +374,23 @@ export type TrainFallbackView = {
  * Lightweight fallback for the naked /train path when getActiveProgramView
  * returns no views or when the primary view has actionType="none".
  *
- * Fetches the most recently updated active enrollment directly (bypassing
- * the full 12-query getActiveProgramView pipeline), then resolves the next
- * actionable day via:
- *   1. enrollment.current_program_day_id  (if set)
- *   2. findNextProgramDayId(lastSession.program_day_id)  (if step 1 is null)
+ * Two strategies, tried in order:
  *
- * Returns null when there is no active enrollment, no slug, or no actionable day.
+ * Strategy 1 — enrollment-based:
+ *   Queries program_enrollments with status IN ('active','paused') to tolerate
+ *   cases where advancement incorrectly marks the enrollment as non-active.
+ *   Resolves the actionable day via:
+ *     (a) enrollment.current_program_day_id  (if set)
+ *     (b) findNextProgramDayId(lastSession.program_day_id)  (if a is null)
+ *
+ * Strategy 2 — session-based:
+ *   Bypasses enrollment entirely. Finds the most recent completed/cancelled
+ *   session for the user and resolves the target day:
+ *     cancelled → retry the same day (program_day_id)
+ *     completed → advance via findNextProgramDayId
+ *   Resolves program slug via day → week → program chain (no RLS risk).
+ *
+ * Returns null when no actionable day can be resolved.
  * Never throws — all errors return null silently.
  */
 export async function getTrainFallbackView(userId: string): Promise<TrainFallbackView | null> {
@@ -389,48 +399,96 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
   try {
     const client = createQueryClient();
 
-    const { data: enrollment, error: enrollmentError } = await client
+    // ── Strategy 1: enrollment-based ─────────────────────────────────────────
+    // Include 'paused' to tolerate enrollment status drift after advancement.
+    const { data: enrollment } = await client
       .from("program_enrollments")
       .select("id, program_id, current_program_day_id")
       .eq("user_id", userId)
-      .eq("status", "active")
+      .in("status", ["active", "paused"])
       .is("archived_at", null)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle<TrainFallbackEnrollmentRow>();
 
-    if (enrollmentError || !enrollment) return null;
+    if (enrollment) {
+      const { data: program } = await client
+        .from("programs")
+        .select("slug")
+        .eq("id", enrollment.program_id)
+        .maybeSingle<TrainFallbackProgramRow>();
 
-    const { data: program, error: programError } = await client
-      .from("programs")
-      .select("slug")
-      .eq("id", enrollment.program_id)
-      .maybeSingle<TrainFallbackProgramRow>();
+      if (program?.slug) {
+        let programDayId: string | null = enrollment.current_program_day_id;
 
-    if (programError || !program?.slug) return null;
+        if (!programDayId) {
+          const { data: lastEnrollmentSession } = await client
+            .from("workout_sessions")
+            .select("program_day_id")
+            .eq("program_enrollment_id", enrollment.id)
+            .in("status", ["completed", "cancelled"])
+            .is("archived_at", null)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle<TrainFallbackSessionRow>();
 
-    const programSlug = program.slug;
-    let programDayId: string | null = enrollment.current_program_day_id;
+          if (lastEnrollmentSession?.program_day_id) {
+            programDayId = await findNextProgramDayId(lastEnrollmentSession.program_day_id);
+          }
+        }
 
-    if (!programDayId) {
-      // No current day set — derive from the most recent completed/cancelled session
-      const { data: lastSession } = await client
-        .from("workout_sessions")
-        .select("program_day_id")
-        .eq("program_enrollment_id", enrollment.id)
-        .in("status", ["completed", "cancelled"])
-        .is("archived_at", null)
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle<TrainFallbackSessionRow>();
-
-      if (lastSession?.program_day_id) {
-        programDayId = await findNextProgramDayId(lastSession.program_day_id);
+        if (programDayId) return { programSlug: program.slug, programDayId };
       }
     }
 
-    if (!programDayId) return null;
-    return { programSlug, programDayId };
+    // ── Strategy 2: session-based (bypasses enrollment entirely) ─────────────
+    // Used when enrollment is absent, archived, or in an unrecoverable status.
+    const { data: lastSession } = await client
+      .from("workout_sessions")
+      .select("program_day_id, status")
+      .eq("user_id", userId)
+      .in("status", ["completed", "cancelled"])
+      .is("archived_at", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ program_day_id: string | null; status: string }>();
+
+    if (!lastSession?.program_day_id) return null;
+
+    // cancelled → retry same day; completed → advance to next day
+    const targetDayId: string | null =
+      lastSession.status === "completed"
+        ? await findNextProgramDayId(lastSession.program_day_id)
+        : lastSession.program_day_id;
+
+    if (!targetDayId) return null;
+
+    // Resolve slug via program_days → program_weeks → programs
+    // All three tables are readable by everyone (anon + authenticated) — no RLS risk.
+    const { data: dayRow } = await client
+      .from("program_days")
+      .select("program_week_id")
+      .eq("id", targetDayId)
+      .maybeSingle<{ program_week_id: string }>();
+
+    if (!dayRow) return null;
+
+    const { data: weekRow } = await client
+      .from("program_weeks")
+      .select("program_id")
+      .eq("id", dayRow.program_week_id)
+      .maybeSingle<{ program_id: string }>();
+
+    if (!weekRow) return null;
+
+    const { data: programRow } = await client
+      .from("programs")
+      .select("slug")
+      .eq("id", weekRow.program_id)
+      .maybeSingle<TrainFallbackProgramRow>();
+
+    if (!programRow?.slug) return null;
+    return { programSlug: programRow.slug, programDayId: targetDayId };
   } catch {
     return null;
   }
