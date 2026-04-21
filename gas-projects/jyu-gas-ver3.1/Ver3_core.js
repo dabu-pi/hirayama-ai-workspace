@@ -3844,6 +3844,118 @@ function ensureSettingsRows_V3() {
   SpreadsheetApp.getUi().alert(msg);
 }
 
+// ─── 保険者情報→患者マスタ転記 補助関数 ──────────────────────────────────
+
+/**
+ * 保険者情報シートのラベル文字列を正規化する。
+ * 例: "確認日 :" → "確認日" / "保険者名：" → "保険者名"
+ */
+function normalizeInsurerLabel_(label) {
+  return String(label || "")
+    .trim()
+    .replace(/[\s　]*[：:]\s*$/, "")
+    .trim();
+}
+
+/**
+ * 患者マスタのヘッダー行から {列名: 1-based列番号} を返す。
+ * 先頭出現を優先し、重複は無視する。
+ */
+function getMasterHeaderMap_(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return {};
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var map = {};
+  headers.forEach(function(raw, i) {
+    var name = String(raw || "").trim();
+    if (name && !map[name]) map[name] = i + 1;
+  });
+  return map;
+}
+
+/**
+ * 保険者情報シートの1患者分ブロックを {正規化ラベル: 値} 辞書で返す。
+ * 重複ラベルは先頭の出現を優先する（氏名・性別の配偶者行など）。
+ *
+ * @param {Sheet} sheet - 保険者情報シート
+ * @param {number} blockStartCol - ラベル列の1-based列番号（値列は blockStartCol+1）
+ */
+function buildInsurerRecordByLabel_(sheet, blockStartCol) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 1) return {};
+  var col  = blockStartCol || 1;
+  var data = sheet.getRange(1, col, lastRow, 2).getValues();
+  var record = {};
+  data.forEach(function(row) {
+    var label = normalizeInsurerLabel_(row[0]);
+    if (!label) return;
+    if (!record.hasOwnProperty(label)) record[label] = row[1];
+  });
+  return record;
+}
+
+/**
+ * 保険者情報辞書から患者マスタの指定行へ転記する。
+ * 転記スコープ: insurerRecord のキーと headerMap の列名が完全一致するすべての項目。
+ * 「照会番号」（患者ID取得用ラベル）は転記対象外。
+ *
+ * Logger 出力:
+ *   - 転記した項目一覧
+ *   - 転記元にあるが患者マスタに列がない項目
+ *   - 転記対象なのに値が空の項目
+ *   - 必須フィールドが保険者情報シートに存在しない場合の警告
+ *
+ * @param {Sheet} masterSheet
+ * @param {number} rowIndex - 1-based 行番号
+ * @param {Object} headerMap - {列名: 列番号}
+ * @param {Object} insurerRecord - {正規化ラベル: 値}
+ * @returns {{written: string[], noMasterCol: string[], emptyValue: string[]}}
+ */
+function copyInsurerFieldsToMasterRow_(masterSheet, rowIndex, headerMap, insurerRecord) {
+  var REQUIRED_FIELDS = [
+    "氏名", "フリガナ", "生年月日", "性別", "区分", "負担割合",
+    "保険者番号", "保険者名", "記号", "番号", "枝番",
+    "本人・家族の別", "被保険者氏名", "有効開始日", "資格取得年月日",
+    "確認日", "要配慮情報（備考）"
+  ];
+
+  var written     = [];
+  var noMasterCol = [];
+  var emptyValue  = [];
+
+  Object.keys(insurerRecord).forEach(function(label) {
+    if (label === "照会番号") return;
+    var masterCol = headerMap[label];
+    if (!masterCol) {
+      noMasterCol.push(label);
+      return;
+    }
+    var val     = insurerRecord[label];
+    var isEmpty = val === "" || val === null || val === undefined ||
+                  (typeof val === "string" && val.trim() === "");
+    if (isEmpty) emptyValue.push(label);
+    masterSheet.getRange(rowIndex, masterCol).setValue(val);
+    written.push(label);
+  });
+
+  // 必須フィールドが保険者情報シートに存在しない場合は警告ログ
+  REQUIRED_FIELDS.forEach(function(f) {
+    if (!insurerRecord.hasOwnProperty(f)) {
+      Logger.log("[copyInsurer] 必須フィールドが保険者情報シートに見つからない: " + f);
+    }
+  });
+
+  Logger.log("[copyInsurer] 転記した項目: " + written.join(", "));
+  if (noMasterCol.length > 0) {
+    Logger.log("[copyInsurer] 転記元にあるが患者マスタに列なし: " + noMasterCol.join(", "));
+  }
+  if (emptyValue.length > 0) {
+    Logger.log("[copyInsurer] 転記対象なのに値が空: " + emptyValue.join(", "));
+  }
+
+  return { written: written, noMasterCol: noMasterCol, emptyValue: emptyValue };
+}
+
 /** ===== 保険者情報 → 患者マスタへ転記 ===== */
 /**
  * 保険者情報シート（縦型：A列=項目名、B列=値）から
@@ -3853,61 +3965,45 @@ function ensureSettingsRows_V3() {
  *   A1「照会番号」、B1 = 患者ID の値
  *   以降: A列に項目名、B列に値が並ぶ縦型形式（マイナンバー取得データ）
  *
- * 氏名・性別は最初の出現のみ転記（配偶者情報を除外）。
+ * 転記はセル番地固定ではなくラベル名と患者マスタ列名の一致で行う。
+ * 重複ラベル（氏名・性別の配偶者行など）は最初の出現のみ転記。
  */
 function copyInsurerToMaster_V3() {
-  var ss = SpreadsheetApp.getActive();
+  var ss        = SpreadsheetApp.getActive();
   var insurerSh = ss.getSheetByName(SHEETS.insurer);
   var masterSh  = ss.getSheetByName(SHEETS.master);
   if (!insurerSh) { SpreadsheetApp.getUi().alert("「保険者情報」シートが見つかりません。"); return; }
   if (!masterSh)  { SpreadsheetApp.getUi().alert("「患者マスタ」シートが見つかりません。"); return; }
 
-  // B1 から患者IDを取得（A1ラベル「照会番号」の隣）
-  var patientId = String(insurerSh.getRange(1, 2).getValue() || "").trim();
+  // 1. 保険者情報を {ラベル: 値} 辞書化（A列=ラベル, B列=値）
+  var insurerRecord = buildInsurerRecordByLabel_(insurerSh, 1);
+
+  // 2. 患者IDをラベル「照会番号」から取得
+  var patientId = String(insurerRecord["照会番号"] || "").trim();
   if (!patientId) {
-    SpreadsheetApp.getUi().alert("患者IDが入力されていません。\nB1セル（照会番号の隣）に患者IDを入力してください。");
+    SpreadsheetApp.getUi().alert("患者IDが入力されていません。\nA1ラベル「照会番号」の隣（B1）に患者IDを入力してください。");
     return;
   }
 
-  // 保険者情報A列の項目名 → 患者マスタのヘッダー列名 マッピング
-  var FIELD_MAP = {
-    "確認日":             "確認日",
-    "保険者番号":         "保険者番号",
-    "保険者名":           "保険者名",
-    "番号":               "番号",
-    "フリガナ":           "フリガナ",
-    "氏名":               "氏名",
-    "生年月日":           "生年月日",
-    "性別":               "性別",
-    "区分":               "区分",
-    "有効開始日":         "有効開始日",
-    "資格取得年月日":     "資格取得年月日",
-    "負担割合":           "負担割合",
-    "要配慮情報（備考）": "要配慮情報（備考）"
-  };
-
-  // 氏名・性別は最初の出現のみ（2回目以降=配偶者情報を除外）
-  var seenOnce = { "氏名": false, "性別": false };
-
-  // 患者マスタのヘッダーマップ（列名 → 1-based 列番号）
-  var masterMap = buildHeaderColMap_(masterSh);
-  if (!masterMap["患者ID"]) {
+  // 3. 患者マスタのヘッダーマップ構築
+  var headerMap = getMasterHeaderMap_(masterSh);
+  if (!headerMap["患者ID"]) {
     SpreadsheetApp.getUi().alert("患者マスタに「患者ID」列が見つかりません。");
     return;
   }
 
-  // 患者マスタから患者IDで行を検索
+  // 4. 患者IDで対象行を特定
   var masterLastRow = masterSh.getLastRow();
   if (masterLastRow < 2) {
     SpreadsheetApp.getUi().alert("患者マスタにデータがありません。");
     return;
   }
+  var pidColIdx  = headerMap["患者ID"] - 1;
   var masterData = masterSh.getRange(2, 1, masterLastRow - 1, masterSh.getLastColumn()).getValues();
-  var mPidCol0 = masterMap["患者ID"] - 1;
   var masterRowNum = -1;
   for (var mi = 0; mi < masterData.length; mi++) {
-    if (String(masterData[mi][mPidCol0] || "").trim() === patientId) {
-      masterRowNum = mi + 2; // 1-based（ヘッダー行分 +1、0-based +1）
+    if (String(masterData[mi][pidColIdx] || "").trim() === patientId) {
+      masterRowNum = mi + 2;
       break;
     }
   }
@@ -3916,49 +4012,17 @@ function copyInsurerToMaster_V3() {
     return;
   }
 
-  // 保険者情報シートの全行を読み込み（A列=項目名、B列=値）
-  var insurerLastRow = insurerSh.getLastRow();
-  if (insurerLastRow < 2) {
-    SpreadsheetApp.getUi().alert("保険者情報シートにデータが不足しています。");
-    return;
-  }
-  var insurerData = insurerSh.getRange(1, 1, insurerLastRow, 2).getValues();
+  // 5. 転記実行
+  var result = copyInsurerFieldsToMasterRow_(masterSh, masterRowNum, headerMap, insurerRecord);
 
-  // 各行を走査して転記
-  var updatedFields = [];
-  var skippedFields = [];
-
-  for (var ii = 0; ii < insurerData.length; ii++) {
-    var fieldName = String(insurerData[ii][0] || "").trim();
-    var fieldVal  = insurerData[ii][1]; // 日付等を保持するため生のまま
-
-    if (!fieldName || !FIELD_MAP.hasOwnProperty(fieldName)) continue;
-
-    // 氏名・性別は最初の出現のみ転記
-    if (seenOnce.hasOwnProperty(fieldName)) {
-      if (seenOnce[fieldName]) {
-        skippedFields.push(fieldName + "（配偶者、スキップ）");
-        continue;
-      }
-      seenOnce[fieldName] = true;
-    }
-
-    var masterColName = FIELD_MAP[fieldName];
-    var masterCol = masterMap[masterColName];
-    if (!masterCol) {
-      skippedFields.push(fieldName + "（患者マスタに列なし）");
-      continue;
-    }
-
-    masterSh.getRange(masterRowNum, masterCol).setValue(fieldVal);
-    updatedFields.push(fieldName);
-  }
-
-  // 結果報告
+  // 6. 結果ダイアログ
   var msg = "患者ID「" + patientId + "」の患者マスタを更新しました。\n\n";
-  msg += "【転記した項目（" + updatedFields.length + "件）】\n" + updatedFields.join("、");
-  if (skippedFields.length > 0) {
-    msg += "\n\n【スキップした項目】\n" + skippedFields.join("、");
+  msg += "【転記した項目（" + result.written.length + "件）】\n" + result.written.join("、");
+  if (result.noMasterCol.length > 0) {
+    msg += "\n\n【患者マスタに列なし（スキップ）】\n" + result.noMasterCol.join("、");
+  }
+  if (result.emptyValue.length > 0) {
+    msg += "\n\n【転記対象だが値が空】\n" + result.emptyValue.join("、");
   }
   SpreadsheetApp.getUi().alert(msg);
 }
