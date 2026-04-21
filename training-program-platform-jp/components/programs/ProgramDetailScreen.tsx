@@ -133,7 +133,7 @@ export function ProgramDetailScreen({
       <header className={styles.header}>
         <Link className={styles.backLink} href="/programs">
           <span aria-hidden="true">&larr;</span>
-          <span>Back to Programs</span>
+          <span>プログラムへ戻る</span>
         </Link>
       </header>
 
@@ -144,7 +144,7 @@ export function ProgramDetailScreen({
         <div className={styles.heroMeta}>
           <span>Source: {formatSourceLabel(view.source)}</span>
           <Link className={styles.trainLink} href={trainHref}>
-            Go to Train
+            トレーニングへ
           </Link>
         </div>
       </section>

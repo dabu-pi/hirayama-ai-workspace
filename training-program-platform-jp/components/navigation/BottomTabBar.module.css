@@ -29,12 +29,19 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, opacity 0.2s ease, transform 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .tab:hover {
   color: var(--text-secondary);
+}
+
+/* Instant tap feedback — overrides transition so press is immediate */
+.tab:active {
+  opacity: 0.55;
+  transform: scale(0.93);
+  transition: opacity 0s, transform 0s;
 }
 
 .tabActive {

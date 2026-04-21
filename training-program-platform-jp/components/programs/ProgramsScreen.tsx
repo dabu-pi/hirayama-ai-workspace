@@ -167,7 +167,7 @@ export function ProgramsScreen({
               onClick={handleArchiveEnrollment}
               type="button"
             >
-              {archivingEnrollment ? "…" : "Archive"}
+              {archivingEnrollment ? "…" : "終了"}
             </button>
           </div>
         </div>
@@ -180,7 +180,7 @@ export function ProgramsScreen({
         <div className={styles.heroMeta}>
           <span>Source: {formatSourceLabel(view.source)}</span>
           <Link className={styles.trainLink} href="/train">
-            Go to Train
+            トレーニングへ
           </Link>
         </div>
         <div className={styles.customWorkoutRow}>

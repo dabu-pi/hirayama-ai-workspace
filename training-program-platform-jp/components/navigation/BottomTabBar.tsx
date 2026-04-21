@@ -5,11 +5,13 @@ import { usePathname } from "next/navigation";
 
 import styles from "./BottomTabBar.module.css";
 
+type IconType = "programs" | "train" | "history" | "gym";
+
 type Tab = {
   href: string;
   label: string;
   matchPrefixes: string[];
-  icon: React.ReactNode;
+  iconType: IconType;
 };
 
 function IconPrograms({ active }: { active: boolean }) {
@@ -187,27 +189,27 @@ function IconHistory({ active }: { active: boolean }) {
 const TABS: Tab[] = [
   {
     href: "/programs",
-    label: "Programs",
+    label: "プログラム",
     matchPrefixes: ["/programs"],
-    icon: null // filled below
+    iconType: "programs"
   },
   {
     href: "/train",
-    label: "Train",
+    label: "トレーニング",
     matchPrefixes: ["/train"],
-    icon: null
+    iconType: "train"
   },
   {
     href: "/session-history",
-    label: "History",
+    label: "履歴",
     matchPrefixes: ["/session-history", "/workout-summary"],
-    icon: null
+    iconType: "history"
   },
   {
     href: "/gym",
-    label: "Gym",
+    label: "ジム",
     matchPrefixes: ["/gym"],
-    icon: null
+    iconType: "gym"
   }
 ];
 
@@ -223,17 +225,17 @@ export function BottomTabBar() {
 
   return (
     <nav className={styles.tabBar} aria-label="Main navigation">
-      {TABS.map(({ href, label, matchPrefixes }) => {
+      {TABS.map(({ href, label, matchPrefixes, iconType }) => {
         const active = matchPrefixes.some((p) => pathname.startsWith(p));
         const cls = `${styles.tab}${active ? ` ${styles.tabActive}` : ""}`;
 
         const iconProps = { active };
         const icon =
-          label === "Programs" ? (
+          iconType === "programs" ? (
             <IconPrograms {...iconProps} />
-          ) : label === "Train" ? (
+          ) : iconType === "train" ? (
             <IconTrain {...iconProps} />
-          ) : label === "Gym" ? (
+          ) : iconType === "gym" ? (
             <IconGym {...iconProps} />
           ) : (
             <IconHistory {...iconProps} />
