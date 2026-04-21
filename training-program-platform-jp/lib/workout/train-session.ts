@@ -92,13 +92,21 @@ type WorkoutSetRow = {
   deleted_at: string | null;
 };
 
-// R4: merged type — carries session started_at alongside exercise row.
-type HistoricalExerciseWithSessionRow = {
+type HistoricalSetEmbeddedRow = {
+  set_number: number;
+  weight_kg: number | string | null;
+  reps_done: number | null;
+  deleted_at: string | null;
+};
+
+// R5: merged type — carries session started_at + embedded sets in a single query.
+type HistoricalExerciseWithSetsRow = {
   id: string;
   workout_session_id: string;
   exercise_id: string;
   exercise_type: ExerciseType;
   workout_sessions: { started_at: string } | null;
+  workout_sets: HistoricalSetEmbeddedRow[] | null;
 };
 
 
@@ -338,20 +346,23 @@ async function selectVisibleWorkoutSets(
   return (data ?? []) as WorkoutSetRow[];
 }
 
-// R4: merged Q1+Q2 — fetches historical exercise rows with session started_at embedded.
-// Replaces the previous two-step flow (selectHistoricalSessions + selectHistoricalWorkoutSessionExercises).
-// Current session is always in_progress, so status=completed excludes it without a neq guard.
-// limit(400) ≈ 20 sessions × 20 exercises — generous enough for any typical user history.
-async function selectHistoricalExercisesWithSession(
+// R5: merged Q1+Q2 — fetches historical exercise rows with session started_at and embedded sets
+// in a single query. Replaces the previous two-step flow (Q1 exercises → Q2 sets via IN clause).
+// deleted_at filtering for embedded sets is done in memory; PostgREST doesn't cleanly filter
+// embedded child rows without also filtering the parent row.
+// limit(400) ≈ 20 sessions × 20 exercises — generous for typical user history.
+async function selectHistoricalExercisesWithSets(
   client: DatabaseClient,
   userId: string,
   uniqueExerciseIds: string[]
 ) {
-  if (uniqueExerciseIds.length === 0) return [] as HistoricalExerciseWithSessionRow[];
+  if (uniqueExerciseIds.length === 0) return [] as HistoricalExerciseWithSetsRow[];
 
   const { data, error } = await client
     .from("workout_session_exercises")
-    .select("id, workout_session_id, exercise_id, exercise_type, workout_sessions!inner(started_at)")
+    .select(
+      "id, workout_session_id, exercise_id, exercise_type, workout_sessions!inner(started_at), workout_sets(set_number, weight_kg, reps_done, deleted_at)"
+    )
     .in("exercise_id", uniqueExerciseIds)
     .eq("workout_sessions.user_id", userId)
     .eq("workout_sessions.status", "completed")
@@ -359,41 +370,10 @@ async function selectHistoricalExercisesWithSession(
     .limit(400);
 
   if (error) {
-    throw new Error(`Failed to load historical exercises: ${error.message}`);
+    throw new Error(`Failed to load historical exercises with sets: ${error.message}`);
   }
 
-  return (data ?? []) as unknown as HistoricalExerciseWithSessionRow[];
-}
-
-async function selectHistoricalCompletedWorkoutSets(
-  client: DatabaseClient,
-  workoutSessionExerciseIds: string[]
-) {
-  if (workoutSessionExerciseIds.length === 0) {
-    return [] as WorkoutSetRow[];
-  }
-
-  // is_completed フィルタを使わない。
-  // finish ルートはセッション全体を completed にするだけで、個々のセットの
-  // is_completed フラグは更新しない。force-finish / 未押下セットが is_completed=false
-  // のまま歴史データに残り、前回表示が set 1 のみになる原因となっていた。
-  // weight_kg/reps_done が両方 null のセットは formatPreviousDisplay が "-" を返すので
-  // フィルタ不要。set_number フィルタも使わない（位置ベース再インデックスのため）。
-  const { data, error } = await client
-    .from("workout_sets")
-    .select(
-      "id, workout_session_exercise_id, set_number, target_reps_text, weight_kg, reps_done, is_completed, is_locked, completed_at, is_auto_filled, note, deleted_at"
-    )
-    .in("workout_session_exercise_id", workoutSessionExerciseIds)
-    .is("deleted_at", null)
-    .order("workout_session_exercise_id", { ascending: true })
-    .order("set_number", { ascending: true });
-
-  if (error) {
-    throw new Error(`Failed to load historical completed sets: ${error.message}`);
-  }
-
-  return (data ?? []) as WorkoutSetRow[];
+  return (data ?? []) as unknown as HistoricalExerciseWithSetsRow[];
 }
 
 async function buildPreviousDisplayMap(
@@ -416,13 +396,13 @@ async function buildPreviousDisplayMap(
     return empty;
   }
 
-  // R4: single embedded query replaces two sequential round-trips (Q1 sessions + Q2 exercises).
-  // Graceful degradation: if the embedded filter fails (PostgREST version / schema issue),
-  // return empty map so WorkoutScreen still renders (previousDisplay shows "-" instead of crashing).
-  const tPrev0 = Date.now();
-  let historicalExercises: HistoricalExerciseWithSessionRow[];
+  // R5: merged Q1+Q2 — single query fetches historical exercises with embedded sets.
+  // Graceful degradation: if the embedded filter fails, return empty map so WorkoutScreen
+  // still renders with previousDisplay showing "-" instead of crashing.
+  const tPrev = Date.now();
+  let historicalExercisesWithSets: HistoricalExerciseWithSetsRow[];
   try {
-    historicalExercises = await selectHistoricalExercisesWithSession(
+    historicalExercisesWithSets = await selectHistoricalExercisesWithSets(
       client,
       currentSession.user_id,
       uniqueExerciseIds
@@ -431,39 +411,19 @@ async function buildPreviousDisplayMap(
     console.warn("buildPreviousDisplayMap: embedded query failed, skipping previousDisplay.", err);
     return empty;
   }
-  console.log(`[PERF] buildPreviousDisplayMap Q1 (historicalExercises): ${Date.now() - tPrev0}ms | found=${historicalExercises.length}`);
+  console.log(`[PERF] buildPreviousDisplayMap Q1+Q2 merged: ${Date.now() - tPrev}ms | found=${historicalExercisesWithSets.length}`);
 
-  if (historicalExercises.length === 0) {
+  if (historicalExercisesWithSets.length === 0) {
     return empty;
   }
-
-  const historicalWorkoutSessionExerciseIds = historicalExercises.map((item) => item.id);
-
-  const historicalExerciseMap = new Map(
-    historicalExercises.map((item) => [
-      item.id,
-      {
-        exerciseId: item.exercise_id,
-        exerciseType: item.exercise_type,
-        sessionId: item.workout_session_id,
-        startedAt: item.workout_sessions?.started_at ?? ""
-      }
-    ])
-  );
-
-  const tPrev1 = Date.now();
-  const historicalCompletedSets = await selectHistoricalCompletedWorkoutSets(
-    client,
-    historicalWorkoutSessionExerciseIds
-  );
-  console.log(`[PERF] buildPreviousDisplayMap Q2 (historicalSets): ${Date.now() - tPrev1}ms | found=${historicalCompletedSets.length} hseIds=${historicalWorkoutSessionExerciseIds.length}`);
 
   // ── Group sets by (exerciseId:exerciseType → sessionId → sets[]) ────────────
   // Outer key includes exerciseType so T1 Bench and T2 Bench are tracked
   // separately. GZCL T1/T2/T3 carry different weight/rep meanings, so mixing
   // tiers as "same exercise" would return the wrong previous values.
   // Within each (exercise, type) bucket, sessions remain isolated to prevent
-  // cross-session set_number mixing (the previous cross-session mixing fix).
+  // cross-session set_number mixing.
+  // deleted_at filtering is done in memory (PostgREST can't filter embedded child rows cleanly).
   type SessionSetEntry = {
     setNumber: number;
     weightKg: number | null;
@@ -472,37 +432,35 @@ async function buildPreviousDisplayMap(
   };
   const setsByExerciseTypeSession = new Map<string, Map<string, SessionSetEntry[]>>();
 
-  historicalCompletedSets.forEach((set) => {
-    const historicalExercise = historicalExerciseMap.get(set.workout_session_exercise_id);
-    if (!historicalExercise) return;
-
-    const { exerciseId, exerciseType, sessionId, startedAt } = historicalExercise;
-    const outerKey = `${exerciseId}:${exerciseType}`;
+  for (const ex of historicalExercisesWithSets) {
+    const startedAt = ex.workout_sessions?.started_at ?? "";
+    const outerKey = `${ex.exercise_id}:${ex.exercise_type}`;
 
     if (!setsByExerciseTypeSession.has(outerKey)) {
       setsByExerciseTypeSession.set(outerKey, new Map());
     }
     const sessionMap = setsByExerciseTypeSession.get(outerKey)!;
-    if (!sessionMap.has(sessionId)) {
-      sessionMap.set(sessionId, []);
+    if (!sessionMap.has(ex.workout_session_id)) {
+      sessionMap.set(ex.workout_session_id, []);
     }
-    sessionMap.get(sessionId)!.push({
-      setNumber: set.set_number,
-      weightKg: toNullableNumber(set.weight_kg),
-      repsDone: set.reps_done,
-      startedAt
-    });
-  });
+    const sessionSets = sessionMap.get(ex.workout_session_id)!;
+
+    for (const set of (ex.workout_sets ?? [])) {
+      if (set.deleted_at !== null) continue;
+      sessionSets.push({
+        setNumber: set.set_number,
+        weightKg: toNullableNumber(set.weight_kg),
+        repsDone: set.reps_done,
+        startedAt
+      });
+    }
+  }
 
   // ── For each (exercise, type), pick the session with the latest startedAt ──
   const displayMap = new Map<string, string>();
   const previousSetsMap = new Map<string, PreviousSet[]>();
 
   for (const [outerKey, sessionMap] of setsByExerciseTypeSession.entries()) {
-    const colonIdx = outerKey.indexOf(":");
-    const exerciseId = outerKey.substring(0, colonIdx);
-    const exerciseType = outerKey.substring(colonIdx + 1) as ExerciseType;
-
     let latestStartedAt = "";
     let latestSessionId = "";
     for (const [sessionId, sets] of sessionMap.entries()) {
