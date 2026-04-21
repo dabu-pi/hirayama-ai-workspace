@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import styles from "./StartSessionScreen.module.css";
 
@@ -19,15 +18,11 @@ export function StartSessionScreen({
   programDayId,
   programDayLabel
 }: StartSessionScreenProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requiresLogin, setRequiresLogin] = useState(false);
 
   async function handleStart() {
-    // Show loading immediately on click — isPending only becomes true after
-    // router.push fires, leaving the button unresponsive during the fetch.
     setIsStarting(true);
     setError(null);
     setRequiresLogin(false);
@@ -51,13 +46,11 @@ export function StartSessionScreen({
         return;
       }
 
-      // Navigate with programDayId so /train enters the direct-lookup branch
-      // (findWorkoutSessionByDayId) instead of the slower getCurrentWorkoutSessionView path.
-      startTransition(() => {
-        router.push(
-          `/train?program=${encodeURIComponent(programSlug)}&programDayId=${encodeURIComponent(programDayId)}`
-        );
-      });
+      // Hard navigation bypasses the Next.js Router Cache entirely.
+      // router.push to the same URL (/train?...&programDayId=...) can serve a stale
+      // RSC payload (StartSessionScreen) from the client-side router cache, which causes
+      // the transition to appear frozen. window.location.href always fetches fresh from server.
+      window.location.href = `/train?program=${encodeURIComponent(programSlug)}&programDayId=${encodeURIComponent(programDayId)}`;
     } catch {
       setIsStarting(false);
       setError("Network error. Please check your connection and try again.");
@@ -97,11 +90,11 @@ export function StartSessionScreen({
       <div className={styles.actions}>
         <button
           className={styles.startButton}
-          disabled={isStarting || isPending}
+          disabled={isStarting}
           onClick={handleStart}
           type="button"
         >
-          {isStarting ? "開始中…" : isPending ? "読込中…" : "Start Workout"}
+          {isStarting ? "開始中…" : "Start Workout"}
         </button>
         <Link
           className={styles.cancelLink}

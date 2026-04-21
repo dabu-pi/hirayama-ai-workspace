@@ -36,18 +36,23 @@ type RedirectCause =
 
 export default async function TrainPage({ searchParams }: TrainPageProps) {
   const PAGE = "train-page";
+  const tPage = Date.now();
 
   // Auth gate: unauthenticated users get a login prompt regardless of URL params.
+  const tAuth = Date.now();
   const userId = await getAuthenticatedWorkoutUserId();
+  console.info(`${PAGE}:perf`, { step: "auth", ms: Date.now() - tAuth, userId: Boolean(userId) });
   if (!userId) {
     console.info(`${PAGE}:branch`, { branch: "unauthenticated" });
     return <TrainAuthRequired />;
   }
 
+  const tSelection = Date.now();
   const selectedProgram = await getTrainProgramSelection(
     searchParams?.program,
     searchParams?.programDayId
   );
+  console.info(`${PAGE}:perf`, { step: "programSelection", ms: Date.now() - tSelection, state: selectedProgram.state });
 
   console.info(`${PAGE}:selected_program`, {
     userId,
@@ -83,11 +88,19 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     // start path: findWorkoutSessionByDayId returns null after 1 cheap query; no
     // loadSessionView is invoked, so the overhead is ~1 extra round-trip within the
     // parallel window — no net latency cost.
+    const tParallel = Date.now();
     const [entry, existingSession, programDayLabel] = await Promise.all([
       resolveTrainingEntry(selectedProgram.programDayId),
       findWorkoutSessionByDayId(selectedProgram.programDayId),
       getProgramDayLabel(selectedProgram.programDayId)
     ]);
+    console.info(`${PAGE}:perf`, {
+      step: "Promise.all(entry+session+label)",
+      ms: Date.now() - tParallel,
+      entryMode: entry.mode,
+      sessionFound: Boolean(existingSession),
+      programDayId: selectedProgram.programDayId
+    });
 
     console.info(`${PAGE}:train_entry`, {
       userId,
@@ -137,7 +150,9 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
   }
 
   // programDayId なし（クエリなし / invalid）: 従来どおり現在セッションを表示
+  const tCurrentSession = Date.now();
   const session = await getCurrentWorkoutSessionView();
+  console.info(`${PAGE}:perf`, { step: "getCurrentWorkoutSessionView", ms: Date.now() - tCurrentSession, found: Boolean(session) });
 
   console.info(`${PAGE}:current_session`, {
     userId,
@@ -304,6 +319,7 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     );
   }
 
+  console.info(`${PAGE}:perf`, { step: "TOTAL_to_redirect", ms: Date.now() - tPage });
   // Authenticated but no active session and no enrollment with an actionable day.
   // Previously this rendered a mock WorkoutSession (id = "session-demo-20260411").
   // That id is not a UUID, so pressing Cancel/Finish hit PostgREST with a 400
