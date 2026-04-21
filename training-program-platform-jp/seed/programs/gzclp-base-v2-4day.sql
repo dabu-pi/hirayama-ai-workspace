@@ -20,9 +20,9 @@
 --   5: T3 T2-support (swap)   (3×15+)
 --
 -- Workout A1: Squat        / Bench Press / Lat Pulldown / Leg Press     / Chest Press
--- Workout B1: OHP          / Deadlift    / DB Row       / Lateral Raise / Hip Thrust
+-- Workout B1: OHP          / Deadlift    / Seated Row   / Lateral Raise / Hip Thrust
 -- Workout A2: Bench Press  / Squat       / Lat Pulldown / Dumbbell Press/ Hack Squat
--- Workout B2: Deadlift     / OHP         / DB Row       / Good Morning  / Rear Delt Fly
+-- Workout B2: Deadlift     / OHP         / Seated Row   / Good Morning  / Rear Delt Fly
 --
 -- T3 swap groups (4-day specific — 3 candidates each):
 --   gzcl4-squat-t3    → Leg Press / Bulgarian Split Squat / Hack Squat
@@ -41,7 +41,7 @@ declare
   ex_press          uuid;
   ex_deadlift       uuid;
   ex_lat_pulldown   uuid;
-  ex_db_row         uuid;
+  ex_seated_row     uuid;
   ex_leg_press      uuid;
   ex_chest_press    uuid;
   ex_lateral_raise  uuid;
@@ -65,11 +65,12 @@ declare
 begin
   -- ----------------------------------------------------------------
   -- Upsert new exercises not in gzclp-base-v2
-  -- (dumbbell-press = flat DB bench; upright-row added in swap-groups file)
+  -- (dumbbell-press = flat DB bench; arnold-press added in swap-groups file)
   -- ----------------------------------------------------------------
   insert into public.exercises (slug, name_ja, name_en, category)
   values
-    ('dumbbell-press', U&'\30C0\30F3\30D9\30EB\30D7\30EC\30B9', 'Dumbbell Press', 'chest')
+    ('dumbbell-press', U&'\30C0\30F3\30D9\30EB\30D7\30EC\30B9', 'Dumbbell Press', 'chest'),
+    ('seated-row',     U&'\30B7\30FC\30C6\30C3\30C9\30ED\30A6',   'Seated Row',     'back')
   on conflict (slug) do nothing;
 
   -- ----------------------------------------------------------------
@@ -80,7 +81,7 @@ begin
   select id into ex_press         from public.exercises where slug = 'overhead-press';
   select id into ex_deadlift      from public.exercises where slug = 'deadlift';
   select id into ex_lat_pulldown  from public.exercises where slug = 'lat-pulldown';
-  select id into ex_db_row        from public.exercises where slug = 'dumbbell-row';
+  select id into ex_seated_row    from public.exercises where slug = 'seated-row';
   select id into ex_leg_press     from public.exercises where slug = 'leg-press';
   select id into ex_chest_press   from public.exercises where slug = 'chest-press';
   select id into ex_lateral_raise from public.exercises where slug = 'lateral-raise';
@@ -95,7 +96,7 @@ begin
   if ex_press         is null then raise exception 'Exercise not found: overhead-press'; end if;
   if ex_deadlift      is null then raise exception 'Exercise not found: deadlift'; end if;
   if ex_lat_pulldown  is null then raise exception 'Exercise not found: lat-pulldown'; end if;
-  if ex_db_row        is null then raise exception 'Exercise not found: dumbbell-row'; end if;
+  if ex_seated_row    is null then raise exception 'Exercise not found: seated-row'; end if;
   if ex_leg_press     is null then raise exception 'Exercise not found: leg-press'; end if;
   if ex_chest_press   is null then raise exception 'Exercise not found: chest-press'; end if;
   if ex_lateral_raise is null then raise exception 'Exercise not found: lateral-raise'; end if;
@@ -156,52 +157,52 @@ begin
      'A1: T1 Squat 5×3+, T2 Bench Press 3×10, T3 Lat Pulldown / Leg Press / Chest Press 3×15+'),
     (w1, 2,
      'B1 — T1 Press: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Deadlift: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 DB Row / Lateral Raise / Hip Thrust 3×15+'),
+     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 Seated Row / Lateral Raise / Hip Thrust 3×15+'),
     (w1, 3,
      'A2 — T1 Bench: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Squat: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w1, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 DB Row / Good Morning / Rear Delt Fly 3×15+'),
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+'),
     -- Week 2 (same rotation)
     (w2, 1,
      'A1 — T1 Squat: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Bench: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
      'A1: T1 Squat 5×3+, T2 Bench Press 3×10, T3 Lat Pulldown / Leg Press / Chest Press 3×15+'),
     (w2, 2,
      'B1 — T1 Press: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Deadlift: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 DB Row / Lateral Raise / Hip Thrust 3×15+'),
+     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 Seated Row / Lateral Raise / Hip Thrust 3×15+'),
     (w2, 3,
      'A2 — T1 Bench: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Squat: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w2, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 DB Row / Good Morning / Rear Delt Fly 3×15+'),
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+'),
     -- Week 3 (same rotation)
     (w3, 1,
      'A1 — T1 Squat: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Bench: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
      'A1: T1 Squat 5×3+, T2 Bench Press 3×10, T3 Lat Pulldown / Leg Press / Chest Press 3×15+'),
     (w3, 2,
      'B1 — T1 Press: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Deadlift: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 DB Row / Lateral Raise / Hip Thrust 3×15+'),
+     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 Seated Row / Lateral Raise / Hip Thrust 3×15+'),
     (w3, 3,
      'A2 — T1 Bench: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Squat: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w3, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 DB Row / Good Morning / Rear Delt Fly 3×15+'),
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+'),
     -- Week 4 (same rotation)
     (w4, 1,
      'A1 — T1 Squat: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Bench: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
      'A1: T1 Squat 5×3+, T2 Bench Press 3×10, T3 Lat Pulldown / Leg Press / Chest Press 3×15+'),
     (w4, 2,
      'B1 — T1 Press: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Deadlift: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 DB Row / Lateral Raise / Hip Thrust 3×15+'),
+     'B1: T1 Overhead Press 5×3+, T2 Deadlift 3×10, T3 Seated Row / Lateral Raise / Hip Thrust 3×15+'),
     (w4, 3,
      'A2 — T1 Bench: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Squat: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w4, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 DB Row / Good Morning / Rear Delt Fly 3×15+');
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+');
 
   select id into w1d1 from public.program_days where program_week_id = w1 and day_number = 1;
   select id into w1d2 from public.program_days where program_week_id = w1 and day_number = 2;
@@ -243,7 +244,7 @@ begin
     -- W1D2 = B1
     (w1d2, ex_press,          'T1', 5, '3+',  1),
     (w1d2, ex_deadlift,       'T2', 3, '10',  2),
-    (w1d2, ex_db_row,         'T3', 3, '15+', 3),
+    (w1d2, ex_seated_row,         'T3', 3, '15+', 3),
     (w1d2, ex_lateral_raise,  'T3', 3, '15+', 4),
     (w1d2, ex_hip_thrust,     'T3', 3, '15+', 5),
     -- W1D3 = A2
@@ -255,7 +256,7 @@ begin
     -- W1D4 = B2
     (w1d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w1d4, ex_press,          'T2', 3, '10',  2),
-    (w1d4, ex_db_row,         'T3', 3, '15+', 3),
+    (w1d4, ex_seated_row,         'T3', 3, '15+', 3),
     (w1d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w1d4, ex_rear_delt_fly,  'T3', 3, '15+', 5),
     -- W2D1 = A1
@@ -267,7 +268,7 @@ begin
     -- W2D2 = B1
     (w2d2, ex_press,          'T1', 5, '3+',  1),
     (w2d2, ex_deadlift,       'T2', 3, '10',  2),
-    (w2d2, ex_db_row,         'T3', 3, '15+', 3),
+    (w2d2, ex_seated_row,         'T3', 3, '15+', 3),
     (w2d2, ex_lateral_raise,  'T3', 3, '15+', 4),
     (w2d2, ex_hip_thrust,     'T3', 3, '15+', 5),
     -- W2D3 = A2
@@ -279,7 +280,7 @@ begin
     -- W2D4 = B2
     (w2d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w2d4, ex_press,          'T2', 3, '10',  2),
-    (w2d4, ex_db_row,         'T3', 3, '15+', 3),
+    (w2d4, ex_seated_row,         'T3', 3, '15+', 3),
     (w2d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w2d4, ex_rear_delt_fly,  'T3', 3, '15+', 5),
     -- W3D1 = A1
@@ -291,7 +292,7 @@ begin
     -- W3D2 = B1
     (w3d2, ex_press,          'T1', 5, '3+',  1),
     (w3d2, ex_deadlift,       'T2', 3, '10',  2),
-    (w3d2, ex_db_row,         'T3', 3, '15+', 3),
+    (w3d2, ex_seated_row,         'T3', 3, '15+', 3),
     (w3d2, ex_lateral_raise,  'T3', 3, '15+', 4),
     (w3d2, ex_hip_thrust,     'T3', 3, '15+', 5),
     -- W3D3 = A2
@@ -303,7 +304,7 @@ begin
     -- W3D4 = B2
     (w3d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w3d4, ex_press,          'T2', 3, '10',  2),
-    (w3d4, ex_db_row,         'T3', 3, '15+', 3),
+    (w3d4, ex_seated_row,         'T3', 3, '15+', 3),
     (w3d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w3d4, ex_rear_delt_fly,  'T3', 3, '15+', 5),
     -- W4D1 = A1
@@ -315,7 +316,7 @@ begin
     -- W4D2 = B1
     (w4d2, ex_press,          'T1', 5, '3+',  1),
     (w4d2, ex_deadlift,       'T2', 3, '10',  2),
-    (w4d2, ex_db_row,         'T3', 3, '15+', 3),
+    (w4d2, ex_seated_row,         'T3', 3, '15+', 3),
     (w4d2, ex_lateral_raise,  'T3', 3, '15+', 4),
     (w4d2, ex_hip_thrust,     'T3', 3, '15+', 5),
     -- W4D3 = A2
@@ -327,7 +328,7 @@ begin
     -- W4D4 = B2
     (w4d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w4d4, ex_press,          'T2', 3, '10',  2),
-    (w4d4, ex_db_row,         'T3', 3, '15+', 3),
+    (w4d4, ex_seated_row,         'T3', 3, '15+', 3),
     (w4d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w4d4, ex_rear_delt_fly,  'T3', 3, '15+', 5);
 

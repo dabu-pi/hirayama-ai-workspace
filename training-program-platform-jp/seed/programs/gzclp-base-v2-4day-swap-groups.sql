@@ -5,13 +5,13 @@
 --                                               dumbbell-row / leg-press / chest-press /
 --                                               lateral-raise / hip-thrust / hack-squat /
 --                                               good-morning / rear-delt-fly)
---   2. gzclp-base-v2-4day.sql       (exercises: dumbbell-press; program structure)
+--   2. gzclp-base-v2-4day.sql       (exercises: dumbbell-press / seated-row; program structure)
 --   3. gzclp-base-v2-swap-groups.sql (exercises: bulgarian-split-squat / dips / leg-curl)
 --   4. migration 20260418_000011_exercise_swap_groups.sql
 --   5. migration 20260418_000012_swap_group_slug_columns.sql
 --
 -- What this does:
---   - Upserts 1 new exercise: upright-row (アップライトロウ)
+--   - Upserts 1 new exercise: arnold-press (アーノルドプレス)
 --   - Creates 4 new swap groups specific to gzclp-base-v2-4day:
 --       gzcl4-squat-t3    / gzcl4-bench-t3 / gzcl4-ohp-t3 / gzcl4-deadlift-t3
 --   - Populates each group with exactly 3 candidates per user spec
@@ -20,7 +20,7 @@
 -- T3 candidate mapping:
 --   gzcl4-squat-t3    → Leg Press / Bulgarian Split Squat / Hack Squat
 --   gzcl4-bench-t3    → Chest Press / Dumbbell Press / Dips
---   gzcl4-ohp-t3      → Lateral Raise / Rear Delt Fly / Upright Row
+--   gzcl4-ohp-t3      → Lateral Raise / Rear Delt Fly / Arnold Press
 --   gzcl4-deadlift-t3 → Hip Thrust / Good Morning / Leg Curl
 --
 -- Swap assignment:
@@ -38,7 +38,7 @@
 do $$
 declare
   -- New exercise
-  ex_upright_row      uuid;
+  ex_arnold_press     uuid;
 
   -- Already-seeded exercises (from earlier seeds)
   ex_leg_press        uuid;
@@ -60,12 +60,12 @@ begin
 
   insert into public.exercises (slug, name_ja, name_en, category)
   values
-    ('upright-row', U&'\30A2\30C3\30D7\30E9\30A4\30C8\30ED\30A6', 'Upright Row', 'shoulders')
+    ('arnold-press', U&'\30A2\30FC\30CE\30EB\30C9\30D7\30EC\30B9', 'Arnold Press', 'shoulders')
   on conflict (slug) do nothing;
 
   -- ── 2. Resolve all exercise UUIDs ──────────────────────────────────────────
 
-  select id into ex_upright_row    from public.exercises where slug = 'upright-row';
+  select id into ex_arnold_press   from public.exercises where slug = 'arnold-press';
   select id into ex_leg_press      from public.exercises where slug = 'leg-press';
   select id into ex_bulgarian_split from public.exercises where slug = 'bulgarian-split-squat';
   select id into ex_hack_squat     from public.exercises where slug = 'hack-squat';
@@ -78,7 +78,7 @@ begin
   select id into ex_good_morning   from public.exercises where slug = 'good-morning';
   select id into ex_leg_curl       from public.exercises where slug = 'leg-curl';
 
-  if ex_upright_row    is null then raise exception 'Exercise not found: upright-row'; end if;
+  if ex_arnold_press   is null then raise exception 'Exercise not found: arnold-press'; end if;
   if ex_leg_press      is null then raise exception 'Exercise not found: leg-press'; end if;
   if ex_bulgarian_split is null then raise exception 'Exercise not found: bulgarian-split-squat'; end if;
   if ex_hack_squat     is null then raise exception 'Exercise not found: hack-squat'; end if;
@@ -120,12 +120,12 @@ begin
     ('gzcl4-bench-t3', ex_dips)
   on conflict do nothing;
 
-  -- gzcl4-ohp-t3: Lateral Raise / Rear Delt Fly / Upright Row
+  -- gzcl4-ohp-t3: Lateral Raise / Rear Delt Fly / Arnold Press
   insert into public.exercise_swap_group_members (group_slug, exercise_id)
   values
     ('gzcl4-ohp-t3', ex_lateral_raise),
     ('gzcl4-ohp-t3', ex_rear_delt_fly),
-    ('gzcl4-ohp-t3', ex_upright_row)
+    ('gzcl4-ohp-t3', ex_arnold_press)
   on conflict do nothing;
 
   -- gzcl4-deadlift-t3: Hip Thrust / Good Morning / Leg Curl
@@ -223,6 +223,7 @@ $$;
 
 -- Verification query — run after the seed to confirm assignments.
 -- Expected: 32 rows (16 days × order_index 4 and 5), each with non-null swap_group_slug.
+-- Note: gzcl4-ohp-t3 now contains arnold-press instead of upright-row.
 --
 -- select
 --   pw.week_number,
