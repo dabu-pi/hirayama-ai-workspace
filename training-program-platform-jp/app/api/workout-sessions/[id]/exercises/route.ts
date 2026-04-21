@@ -6,6 +6,8 @@ import {
   getAuthenticatedWorkoutContext,
   isLikelyUuid
 } from "@/lib/workout/session-access";
+import { fetchPreviousSetsForExerciseAny } from "@/lib/workout/fetch-previous-sets";
+import type { PreviousSet } from "@/types/workout";
 
 type RouteContext = {
   params: {
@@ -51,10 +53,17 @@ type InsertedWorkoutSetRow = {
   deleted_at: string | null;
 };
 
+function formatPrevDisplay(prev: PreviousSet | undefined): string {
+  if (!prev) return "-";
+  if (prev.weightKg !== null && prev.repsDone !== null) return `${prev.weightKg}kg x ${prev.repsDone}`;
+  if (prev.weightKg !== null) return `${prev.weightKg}kg`;
+  if (prev.repsDone !== null) return `x ${prev.repsDone}`;
+  return "-";
+}
+
 export async function POST(request: Request, { params }: RouteContext) {
   const routeName = "workout-session-add-exercise";
 
-  // Hard guard: non-UUID session ids never reach PostgREST.
   if (!isLikelyUuid(params.id)) {
     console.warn(`${routeName}:invalid_session_id_format`, {
       sessionId: params.id,
@@ -198,12 +207,22 @@ export async function POST(request: Request, { params }: RouteContext) {
       ((existingExercises ?? []) as OrderIndexRow[])[0]?.order_index ?? 0;
     const newOrderIndex = maxOrderIndex + 1;
 
+    const isCustomSession = session.program_day_id === null;
+
+    // For custom sessions, look up previous sets across all exercise types.
+    // For program sessions, exercise_type drives tier tracking — always insert as T3 (was_added).
+    const previousSets: PreviousSet[] = isCustomSession
+      ? await fetchPreviousSetsForExerciseAny(supabase, userId, exerciseId)
+      : [];
+
+    const exerciseType = isCustomSession ? "T1" : "T3";
+
     const { data: insertedExercise, error: insertExerciseError } = await supabase
       .from("workout_session_exercises")
       .insert({
         workout_session_id: session.id,
         exercise_id: exerciseId,
-        exercise_type: "T3",
+        exercise_type: exerciseType,
         order_index: newOrderIndex,
         was_added: true,
         was_swapped: false
@@ -225,25 +244,30 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const { data: insertedSet, error: insertSetError } = await supabase
+    // For custom sessions: create as many sets as the previous session had (min 1).
+    // For program sessions: always create 1 set (user adds more via Add Set).
+    const setCount = isCustomSession ? Math.max(1, previousSets.length) : 1;
+
+    const setRows = Array.from({ length: setCount }, (_, i) => ({
+      workout_session_exercise_id: insertedExercise.id,
+      set_number: i + 1,
+      target_reps_text: null,
+      weight_kg: null,
+      reps_done: null,
+      is_completed: false,
+      is_locked: false,
+      is_auto_filled: false,
+      deleted_at: null
+    }));
+
+    const { data: insertedSets, error: insertSetError } = await supabase
       .from("workout_sets")
-      .insert({
-        workout_session_exercise_id: insertedExercise.id,
-        set_number: 1,
-        target_reps_text: null,
-        weight_kg: null,
-        reps_done: null,
-        is_completed: false,
-        is_locked: false,
-        is_auto_filled: false,
-        deleted_at: null
-      })
+      .insert(setRows)
       .select(
         "id, workout_session_exercise_id, set_number, target_reps_text, weight_kg, reps_done, is_completed, is_locked, completed_at, is_auto_filled, deleted_at"
-      )
-      .single<InsertedWorkoutSetRow>();
+      );
 
-    if (insertSetError || !insertedSet) {
+    if (insertSetError || !insertedSets || insertedSets.length === 0) {
       return NextResponse.json(
         {
           error: {
@@ -257,6 +281,8 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     revalidatePath("/train");
 
+    const typedSets = insertedSets as InsertedWorkoutSetRow[];
+
     return NextResponse.json({
       sessionExercise: {
         id: insertedExercise.id,
@@ -268,20 +294,21 @@ export async function POST(request: Request, { params }: RouteContext) {
         orderIndex: insertedExercise.order_index,
         wasAdded: insertedExercise.was_added
       },
-      initialSet: {
-        id: insertedSet.id,
-        workoutSessionExerciseId: insertedSet.workout_session_exercise_id,
-        setNumber: insertedSet.set_number,
-        targetRepsText: insertedSet.target_reps_text,
-        weightKg: insertedSet.weight_kg,
-        repsDone: insertedSet.reps_done,
-        isCompleted: insertedSet.is_completed,
-        isLocked: insertedSet.is_locked,
-        completedAt: insertedSet.completed_at,
-        isAutoFilled: insertedSet.is_auto_filled,
-        previousDisplay: "-",
-        deletedAt: insertedSet.deleted_at
-      }
+      sets: typedSets.map((s, i) => ({
+        id: s.id,
+        workoutSessionExerciseId: s.workout_session_exercise_id,
+        setNumber: s.set_number,
+        targetRepsText: s.target_reps_text,
+        weightKg: s.weight_kg,
+        repsDone: s.reps_done,
+        isCompleted: s.is_completed,
+        isLocked: s.is_locked,
+        completedAt: s.completed_at,
+        isAutoFilled: s.is_auto_filled,
+        previousDisplay: formatPrevDisplay(previousSets[i]),
+        deletedAt: s.deleted_at
+      })),
+      previousSets
     });
   } catch (error) {
     console.error("Failed to add exercise to workout session.", error);

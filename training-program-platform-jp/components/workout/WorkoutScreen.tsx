@@ -344,6 +344,7 @@ async function postAddExercise(sessionId: string, exerciseId: string) {
   return payload as AddExerciseResponse;
 }
 
+
 async function postSwapExercise(
   sessionId: string,
   sessionExerciseId: string,
@@ -1084,9 +1085,14 @@ export function WorkoutScreen({
     setAddExerciseError(null);
     setFailedAction(null);
     try {
-      const url = groupSlug
-        ? `/api/exercises?swap_group=${encodeURIComponent(groupSlug)}`
-        : "/api/exercises";
+      let url: string;
+      if (groupSlug) {
+        url = `/api/exercises?swap_group=${encodeURIComponent(groupSlug)}`;
+      } else if (isCustomSession) {
+        url = "/api/exercises?include_history=true";
+      } else {
+        url = "/api/exercises";
+      }
       const response = await fetch(url);
       const payload = (await response.json().catch(() => null)) as
         | { exercises: ExerciseListItem[] }
@@ -1139,6 +1145,8 @@ export function WorkoutScreen({
     setSwapGroupSlug(null);
   };
 
+  const isCustomSession = session.programDayId === null;
+
   const handleAddExercise = async (exerciseId: string) => {
     if (isAddingExerciseId) return;
     setIsAddingExerciseId(exerciseId);
@@ -1146,7 +1154,7 @@ export function WorkoutScreen({
 
     try {
       const result = await postAddExercise(sessionMeta.id, exerciseId);
-      const { sessionExercise, initialSet } = result;
+      const { sessionExercise, sets, previousSets } = result;
 
       const newBlock: WorkoutExerciseBlock = {
         id: sessionExercise.id,
@@ -1155,38 +1163,36 @@ export function WorkoutScreen({
         exerciseNameJa: sessionExercise.exerciseNameJa,
         exerciseNameEn: sessionExercise.exerciseNameEn,
         exerciseType: sessionExercise.exerciseType,
-        exerciseRoleLabel: sessionExercise.exerciseType,
+        exerciseRoleLabel: isCustomSession ? "" : sessionExercise.exerciseType,
         orderIndex: sessionExercise.orderIndex,
-        previousSets: [],
+        previousSets: previousSets ?? [],
         wasAdded: sessionExercise.wasAdded,
         wasSwapped: false,
-        sets: [
-          {
-            id: initialSet.id,
-            setNumber: initialSet.setNumber,
-            displaySetNumber: 1,
-            targetRepsText: initialSet.targetRepsText,
-            weightKg: initialSet.weightKg,
-            repsDone: initialSet.repsDone,
-            isCompleted: initialSet.isCompleted,
-            isLocked: initialSet.isLocked,
-            completedAt: initialSet.completedAt,
-            isAutoFilled: initialSet.isAutoFilled,
-            note: "",
-            previousDisplay: initialSet.previousDisplay,
-            deletedAt: initialSet.deletedAt
-          }
-        ]
+        sets: sets.map((s, idx) => ({
+          id: s.id,
+          setNumber: s.setNumber,
+          displaySetNumber: idx + 1,
+          targetRepsText: s.targetRepsText,
+          weightKg: s.weightKg,
+          repsDone: s.repsDone,
+          isCompleted: s.isCompleted,
+          isLocked: s.isLocked,
+          completedAt: s.completedAt,
+          isAutoFilled: s.isAutoFilled,
+          note: "",
+          previousDisplay: s.previousDisplay,
+          deletedAt: s.deletedAt
+        }))
       };
 
       setExercises((current) =>
         withDisplaySetNumbers([...current, newBlock])
       );
-      setDraftInputs((current) => ({
-        ...current,
-        [initialSet.id]: { weightKg: "", repsDone: "" }
-      }));
-      updateIncompleteSetCount(1);
+      const newDrafts = Object.fromEntries(
+        sets.map((s) => [s.id, { weightKg: "", repsDone: "" }])
+      );
+      setDraftInputs((current) => ({ ...current, ...newDrafts }));
+      updateIncompleteSetCount(sets.length);
       setScrollToExerciseId(sessionExercise.id);
       closeAddExerciseModal();
     } catch (error) {
@@ -1698,6 +1704,11 @@ export function WorkoutScreen({
                       <span className={styles.modalListItemSub}>
                         {item.nameEn}
                         {item.category ? ` · ${item.category}` : ""}
+                        {isCustomSession && exerciseModalMode === "add" && item.lastWeightKg !== undefined
+                          ? item.lastWeightKg !== null
+                            ? ` · 前回: ${item.lastWeightKg}kg${item.lastRepsDone !== null ? ` × ${item.lastRepsDone}` : ""}${item.lastDate ? ` (${item.lastDate})` : ""}`
+                            : " · 履歴なし"
+                          : ""}
                         {isAddingExerciseId === item.id
                           ? exerciseModalMode === "add"
                             ? " — 追加中..."

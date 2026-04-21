@@ -11,6 +11,7 @@ import type {
   ProgramTag,
   ProgramTagAxis
 } from "@/types/programs";
+import { CustomWorkoutButton } from "@/components/workout/CustomWorkoutButton";
 
 import styles from "./ProgramsScreen.module.css";
 
@@ -181,6 +182,10 @@ export function ProgramsScreen({
           <Link className={styles.trainLink} href="/train">
             Go to Train
           </Link>
+        </div>
+        <div className={styles.customWorkoutRow}>
+          <span className={styles.customWorkoutDivider}>または</span>
+          <CustomWorkoutButton />
         </div>
       </header>
 

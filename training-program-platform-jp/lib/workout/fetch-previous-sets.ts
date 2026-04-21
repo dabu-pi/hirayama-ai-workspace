@@ -23,6 +23,53 @@ function toNullableNumber(value: number | string | null): number | null {
 }
 
 /**
+ * Returns the previous sets for a single exerciseId regardless of exercise_type.
+ * Used for custom (program-independent) sessions where T1/T2/T3 is hidden.
+ */
+export async function fetchPreviousSetsForExerciseAny(
+  client: SupabaseClient,
+  userId: string,
+  exerciseId: string
+): Promise<PreviousSet[]> {
+  const { data: historicalExercises, error: exError } = await client
+    .from("workout_session_exercises")
+    .select("id, workout_session_id, workout_sessions!inner(started_at)")
+    .eq("exercise_id", exerciseId)
+    .eq("workout_sessions.user_id", userId)
+    .eq("workout_sessions.status", "completed")
+    .is("workout_sessions.archived_at", null)
+    .limit(100);
+
+  if (exError || !historicalExercises || historicalExercises.length === 0) {
+    return [];
+  }
+
+  const typed = historicalExercises as unknown as HistoricalExerciseRow[];
+
+  const latest = typed.reduce((best, cur) => {
+    const curAt = cur.workout_sessions?.started_at ?? "";
+    const bestAt = best.workout_sessions?.started_at ?? "";
+    return curAt > bestAt ? cur : best;
+  });
+
+  const { data: sets, error: setsError } = await client
+    .from("workout_sets")
+    .select("set_number, weight_kg, reps_done")
+    .eq("workout_session_exercise_id", latest.id)
+    .is("deleted_at", null)
+    .order("set_number", { ascending: true });
+
+  if (setsError || !sets) return [];
+
+  const typedSets = sets as WorkoutSetRow[];
+  return typedSets.map((s, idx) => ({
+    setNumber: idx + 1,
+    weightKg: toNullableNumber(s.weight_kg),
+    repsDone: s.reps_done
+  }));
+}
+
+/**
  * Returns the previous sets for a single (exerciseId, exerciseType) pair,
  * taken from the most recent completed session for the authenticated user.
  *

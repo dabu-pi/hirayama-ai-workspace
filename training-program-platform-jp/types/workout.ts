@@ -95,6 +95,25 @@ export type ExerciseListItem = {
   nameJa: string;
   nameEn: string;
   category: string | null;
+  /** Populated when fetched with include_history=true (custom session mode). */
+  lastWeightKg?: number | null;
+  lastRepsDone?: number | null;
+  lastDate?: string | null;
+};
+
+export type AddExerciseSetItem = {
+  id: string;
+  workoutSessionExerciseId: string;
+  setNumber: number;
+  targetRepsText: string | null;
+  weightKg: number | null;
+  repsDone: number | null;
+  isCompleted: boolean;
+  isLocked: boolean;
+  completedAt: string | null;
+  isAutoFilled: boolean;
+  previousDisplay: string;
+  deletedAt: string | null;
 };
 
 export type AddExerciseResponse = {
@@ -108,20 +127,10 @@ export type AddExerciseResponse = {
     orderIndex: number;
     wasAdded: boolean;
   };
-  initialSet: {
-    id: string;
-    workoutSessionExerciseId: string;
-    setNumber: number;
-    targetRepsText: string | null;
-    weightKg: number | null;
-    repsDone: number | null;
-    isCompleted: boolean;
-    isLocked: boolean;
-    completedAt: string | null;
-    isAutoFilled: boolean;
-    previousDisplay: string;
-    deletedAt: string | null;
-  };
+  /** All sets created for this exercise (1 for program sessions; previous-count or 1 for custom). */
+  sets: AddExerciseSetItem[];
+  /** Previous completed sets for this exercise. Non-empty for custom sessions when history exists. */
+  previousSets: PreviousSet[];
 };
 
 export type SwapExerciseResponse = {

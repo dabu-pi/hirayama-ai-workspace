@@ -238,7 +238,8 @@ async function selectProgram(client: DatabaseClient, programId: string | null) {
 const EXERCISE_ROLE_LABELS: Record<string, Record<ExerciseType, string>> = {
   gzcl:    { T1: "T1（メイン種目）", T2: "T2（補助種目）", T3: "T3（ボリューム）" },
   linear:  { T1: "メイン",           T2: "補助",           T3: "アクセサリー" },
-  generic: { T1: "",                 T2: "",               T3: "" }
+  generic: { T1: "",                 T2: "",               T3: "" },
+  custom:  { T1: "",                 T2: "",               T3: "" }
 };
 
 function resolveExerciseRoleLabel(
@@ -638,12 +639,16 @@ async function loadSessionView(
     userId: session.user_id,
     programEnrollmentId: session.program_enrollment_id,
     programDayId: session.program_day_id,
-    programTitle: program?.title ?? "Current Program",
-    programWeekLabel: buildProgramWeekLabel(
-      programWeek?.week_number ?? null,
-      programWeek?.label ?? null,
-      programDay?.day_number ?? null
-    ),
+    programTitle: session.program_day_id === null
+      ? "自由作成ワークアウト"
+      : (program?.title ?? "Current Program"),
+    programWeekLabel: session.program_day_id === null
+      ? ""
+      : buildProgramWeekLabel(
+          programWeek?.week_number ?? null,
+          programWeek?.label ?? null,
+          programDay?.day_number ?? null
+        ),
     progressionGuide:
       programDay?.progression_guide ?? "Progression guide is not set yet.",
     notes:
@@ -659,7 +664,7 @@ async function loadSessionView(
       previousDisplayMap,
       previousSetsMap,
       t1ProgressionHints,
-      program?.methodology ?? null
+      session.program_day_id === null ? "custom" : (program?.methodology ?? null)
     )
   };
 }
