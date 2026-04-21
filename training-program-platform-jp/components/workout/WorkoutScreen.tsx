@@ -1058,10 +1058,11 @@ export function WorkoutScreen({
       restEndTimeRef.current = null;
       clearRestDoneTimeout();
       setRestSecondsLeft(null);
-      // replace() instead of push() so back-navigation doesn't return to the
-      // cancelled session. Home redirects to /train only when a session is
-      // resumable (actionType="resume"); after cancel it routes to /programs.
-      router.replace("/");
+      // Hard navigation clears the Next.js client-side Router Cache.
+      // router.replace("/") leaves a stale /train RSC payload in the cache, causing
+      // the "トレーニング" tab to re-show the cancelled session without a reload.
+      // window.location.href bypasses the cache; "/" then server-redirects to /programs.
+      window.location.href = "/";
     } catch (error) {
       console.error("Failed to cancel workout session.", error);
       setRevealedSetId(null);
