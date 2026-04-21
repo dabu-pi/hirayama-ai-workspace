@@ -448,6 +448,8 @@ export type ActiveProgramResult = {
   errorMessage: string | null;
   /** S-12 diagnostic: raw resolution data for debug overlay. null on error/no-enrollment paths. */
   resolutionSnapshot?: ActiveProgramResolutionSnapshot | null;
+  /** true = user has an in-progress custom (program-free) session with no active enrollment */
+  hasCustomInProgressSession?: boolean;
 };
 
 export type WorkoutSessionFinishResponse = {

@@ -881,7 +881,21 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
     const enrollments = await selectActiveEnrollments(serverClient, userId);
 
     if (enrollments.length === 0) {
-      return { views: [], isAuthenticated: true, errorMessage: null };
+      const { data: customSession } = await serverClient
+        .from("workout_sessions")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "in_progress")
+        .is("program_enrollment_id", null)
+        .is("archived_at", null)
+        .limit(1)
+        .maybeSingle<{ id: string }>();
+      return {
+        views: [],
+        isAuthenticated: true,
+        errorMessage: null,
+        hasCustomInProgressSession: customSession !== null
+      };
     }
 
     const programIds = [...new Set(enrollments.map((e) => e.program_id))];

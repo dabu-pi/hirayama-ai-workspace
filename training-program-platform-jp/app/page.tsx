@@ -18,7 +18,7 @@ import { getActiveProgramView } from "@/lib/workout/active-program";
  * "start" and they land on /programs where they can choose to re-start.
  */
 export default async function HomePage() {
-  const { views, isAuthenticated } = await getActiveProgramView();
+  const { views, isAuthenticated, hasCustomInProgressSession } = await getActiveProgramView();
 
   if (!isAuthenticated) {
     redirect("/login");
@@ -26,7 +26,10 @@ export default async function HomePage() {
 
   // Only redirect to /train when there is an in-progress session to resume.
   // actionType="start" or "none" lands on /programs — avoids the cancel loop.
-  const hasResumableSession = views.some((v) => v.actionType === "resume");
+  // Also redirect when a custom (program-free) in-progress session exists.
+  const hasResumableSession =
+    views.some((v) => v.actionType === "resume") ||
+    hasCustomInProgressSession === true;
   if (hasResumableSession) {
     redirect("/train");
   }
