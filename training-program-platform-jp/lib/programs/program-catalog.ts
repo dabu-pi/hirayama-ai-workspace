@@ -65,17 +65,17 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     title: "BIG3 2-Day",
     level: "Beginner",
     levelKey: "beginner",
-    goal: "スクワット・ベンチプレス・デッドリフトの3種目で構成する週2日プログラム。",
+    goal: "スクワット・ベンチプレス・デッドリフトの3種目で構成するローテーション型の週2日プログラム。",
     frequencyLabel: "2 days / week",
     durationLabel: "4 weeks",
     sourceProgramName: null,
     sourceFidelity: "custom",
     sourceNotes:
-      "BIG3のみの週2日構成。Day1はT1スクワット中心、Day2はT1デッドリフト中心。",
+      "BIG3のみのA/B/C 3サイクルローテーション。各種目がT1/T2/T3を順番に担当する。",
     tags: [],
     methodology: "gzcl",
     overview:
-      "スクワット・ベンチプレス・デッドリフトのみ使用する週2日プログラム。Day1: T1スクワット/T2ベンチ/T3デッドリフト、Day2: T1デッドリフト/T2スクワット/T3ベンチ。T1は5×3+、T2は3×10、T3は3×15+。"
+      "スクワット・ベンチプレス・デッドリフトのみ使用する週2日プログラム。A（T1スクワット）/B（T1ベンチ）/C（T1デッドリフト）の3サイクルを順番に回し、各種目がT1・T2・T3を均等に担当する。T1は5×3+、T2は3×10、T3は3×15+。"
   }
 ];
 
