@@ -22,12 +22,14 @@
 -- Workout A1: Squat        / Bench Press / Lat Pulldown / Leg Press     / Chest Press
 -- Workout B1: OHP          / Deadlift    / Seated Row   / Lateral Raise / Hip Thrust
 -- Workout A2: Bench Press  / Squat       / Lat Pulldown / Dumbbell Press/ Hack Squat
--- Workout B2: Deadlift     / OHP         / Seated Row   / Good Morning  / Rear Delt Fly
+-- Workout B2: Deadlift     / OHP         / Barbell Row  / Good Morning  / Rear Delt Fly
+--
+-- Pull system: 縦引き=Lat Pulldown(A日), 横引き=Seated Row(B1)/Barbell Row(B2)
 --
 -- T3 swap groups (4-day specific — 3 candidates each):
 --   gzcl4-squat-t3    → Leg Press / Bulgarian Split Squat / Hack Squat
 --   gzcl4-bench-t3    → Chest Press / Dumbbell Press / Dips
---   gzcl4-ohp-t3      → Lateral Raise / Rear Delt Fly / Upright Row
+--   gzcl4-ohp-t3      → Lateral Raise / Rear Delt Fly / Arnold Press
 --   gzcl4-deadlift-t3 → Hip Thrust / Good Morning / Leg Curl
 --
 -- Run AFTER: gzclp-base-v2.sql (exercises must exist)
@@ -42,6 +44,7 @@ declare
   ex_deadlift       uuid;
   ex_lat_pulldown   uuid;
   ex_seated_row     uuid;
+  ex_barbell_row    uuid;
   ex_leg_press      uuid;
   ex_chest_press    uuid;
   ex_lateral_raise  uuid;
@@ -70,7 +73,8 @@ begin
   insert into public.exercises (slug, name_ja, name_en, category)
   values
     ('dumbbell-press', U&'\30C0\30F3\30D9\30EB\30D7\30EC\30B9', 'Dumbbell Press', 'chest'),
-    ('seated-row',     U&'\30B7\30FC\30C6\30C3\30C9\30ED\30A6',   'Seated Row',     'back')
+    ('seated-row',     U&'\30B7\30FC\30C6\30C3\30C9\30ED\30A6',   'Seated Row',     'back'),
+    ('barbell-row',    U&'\30D0\30FC\30D9\30EB\30ED\30A6',         'Barbell Row',    'back')
   on conflict (slug) do nothing;
 
   -- ----------------------------------------------------------------
@@ -82,6 +86,7 @@ begin
   select id into ex_deadlift      from public.exercises where slug = 'deadlift';
   select id into ex_lat_pulldown  from public.exercises where slug = 'lat-pulldown';
   select id into ex_seated_row    from public.exercises where slug = 'seated-row';
+  select id into ex_barbell_row   from public.exercises where slug = 'barbell-row';
   select id into ex_leg_press     from public.exercises where slug = 'leg-press';
   select id into ex_chest_press   from public.exercises where slug = 'chest-press';
   select id into ex_lateral_raise from public.exercises where slug = 'lateral-raise';
@@ -97,6 +102,7 @@ begin
   if ex_deadlift      is null then raise exception 'Exercise not found: deadlift'; end if;
   if ex_lat_pulldown  is null then raise exception 'Exercise not found: lat-pulldown'; end if;
   if ex_seated_row    is null then raise exception 'Exercise not found: seated-row'; end if;
+  if ex_barbell_row   is null then raise exception 'Exercise not found: barbell-row'; end if;
   if ex_leg_press     is null then raise exception 'Exercise not found: leg-press'; end if;
   if ex_chest_press   is null then raise exception 'Exercise not found: chest-press'; end if;
   if ex_lateral_raise is null then raise exception 'Exercise not found: lateral-raise'; end if;
@@ -163,7 +169,7 @@ begin
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w1, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+'),
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Barbell Row / Good Morning / Rear Delt Fly 3×15+'),
     -- Week 2 (same rotation)
     (w2, 1,
      'A1 — T1 Squat: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Bench: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
@@ -176,7 +182,7 @@ begin
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w2, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+'),
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Barbell Row / Good Morning / Rear Delt Fly 3×15+'),
     -- Week 3 (same rotation)
     (w3, 1,
      'A1 — T1 Squat: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Bench: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
@@ -189,7 +195,7 @@ begin
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w3, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+'),
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Barbell Row / Good Morning / Rear Delt Fly 3×15+'),
     -- Week 4 (same rotation)
     (w4, 1,
      'A1 — T1 Squat: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Bench: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
@@ -202,7 +208,7 @@ begin
      'A2: T1 Bench Press 5×3+, T2 Squat 3×10, T3 Lat Pulldown / Dumbbell Press / Hack Squat 3×15+'),
     (w4, 4,
      'B2 — T1 Deadlift: 5×3+ → 6×2+ → 10×1+, retest 5RM and restart at 85%. T2 Press: 3×10 → 3×8 → 3×6. T3: add weight when final set reaches 25 reps.',
-     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Seated Row / Good Morning / Rear Delt Fly 3×15+');
+     'B2: T1 Deadlift 5×3+, T2 Overhead Press 3×10, T3 Barbell Row / Good Morning / Rear Delt Fly 3×15+');
 
   select id into w1d1 from public.program_days where program_week_id = w1 and day_number = 1;
   select id into w1d2 from public.program_days where program_week_id = w1 and day_number = 2;
@@ -226,7 +232,12 @@ begin
   -- order 1: T1 main | order 2: T2 practice
   -- order 3: T3 pull (fixed) | order 4: T3 T1-support | order 5: T3 T2-support
   --
-  -- Default T3 per workout type (swap candidates in gzclp-base-v2-4day-swap-groups.sql):
+  -- pos3 pull exercises (fixed, no swap):
+  --   A1/A2: lat-pulldown (縦引き)
+  --   B1:    seated-row   (横引き・ケーブル)
+  --   B2:    barbell-row  (横引き・バーベル)
+  --
+  -- Default T3 pos4/5 (swap candidates in gzclp-base-v2-4day-swap-groups.sql):
   --   A1: pos4=leg-press (squat-t3)    pos5=chest-press (bench-t3)
   --   B1: pos4=lateral-raise (ohp-t3)  pos5=hip-thrust (deadlift-t3)
   --   A2: pos4=dumbbell-press (bench-t3) pos5=hack-squat (squat-t3)
@@ -256,7 +267,7 @@ begin
     -- W1D4 = B2
     (w1d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w1d4, ex_press,          'T2', 3, '10',  2),
-    (w1d4, ex_seated_row,         'T3', 3, '15+', 3),
+    (w1d4, ex_barbell_row,    'T3', 3, '15+', 3),
     (w1d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w1d4, ex_rear_delt_fly,  'T3', 3, '15+', 5),
     -- W2D1 = A1
@@ -280,7 +291,7 @@ begin
     -- W2D4 = B2
     (w2d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w2d4, ex_press,          'T2', 3, '10',  2),
-    (w2d4, ex_seated_row,         'T3', 3, '15+', 3),
+    (w2d4, ex_barbell_row,    'T3', 3, '15+', 3),
     (w2d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w2d4, ex_rear_delt_fly,  'T3', 3, '15+', 5),
     -- W3D1 = A1
@@ -304,7 +315,7 @@ begin
     -- W3D4 = B2
     (w3d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w3d4, ex_press,          'T2', 3, '10',  2),
-    (w3d4, ex_seated_row,         'T3', 3, '15+', 3),
+    (w3d4, ex_barbell_row,    'T3', 3, '15+', 3),
     (w3d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w3d4, ex_rear_delt_fly,  'T3', 3, '15+', 5),
     -- W4D1 = A1
@@ -328,7 +339,7 @@ begin
     -- W4D4 = B2
     (w4d4, ex_deadlift,       'T1', 5, '3+',  1),
     (w4d4, ex_press,          'T2', 3, '10',  2),
-    (w4d4, ex_seated_row,         'T3', 3, '15+', 3),
+    (w4d4, ex_barbell_row,    'T3', 3, '15+', 3),
     (w4d4, ex_good_morning,   'T3', 3, '15+', 4),
     (w4d4, ex_rear_delt_fly,  'T3', 3, '15+', 5);
 
