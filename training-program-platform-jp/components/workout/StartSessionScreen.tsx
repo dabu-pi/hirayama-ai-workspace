@@ -19,22 +19,42 @@ export function StartSessionScreen({
   programDayLabel
 }: StartSessionScreenProps) {
   const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [requiresLogin, setRequiresLogin] = useState(false);
 
-  function handleStart() {
+  async function handleStart() {
     if (isStarting) return;
     setIsStarting(true);
+    setError(null);
+    setRequiresLogin(false);
 
-    // Fire-and-forget: keepalive ensures POST completes even after page navigation.
-    // /train renders in ~1-2s, POST completes in < 1s → session exists by the time
-    // /train queries it. Error cases (401, 409, block) are handled by /train itself.
-    fetch("/api/workout-sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ program_day_id: programDayId }),
-      keepalive: true
-    }).catch(() => {});
+    try {
+      const response = await fetch("/api/workout-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ program_day_id: programDayId })
+      });
 
-    window.location.href = `/train?program=${encodeURIComponent(programSlug)}&programDayId=${encodeURIComponent(programDayId)}`;
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as {
+          error?: { message?: string };
+        };
+        if (response.status === 401) {
+          setRequiresLogin(true);
+        }
+        setIsStarting(false);
+        setError(body.error?.message ?? "セッションを開始できませんでした。もう一度お試しください。");
+        return;
+      }
+
+      // Hard navigation after confirmed session creation.
+      // window.location.href bypasses the Next.js Router Cache that would serve
+      // a stale StartSessionScreen RSC payload for the same URL.
+      window.location.href = `/train?program=${encodeURIComponent(programSlug)}&programDayId=${encodeURIComponent(programDayId)}`;
+    } catch {
+      setIsStarting(false);
+      setError("ネットワークエラーが発生しました。接続を確認してもう一度お試しください。");
+    }
   }
 
   return (
@@ -54,6 +74,18 @@ export function StartSessionScreen({
         <h1 className={styles.title}>{programTitle}</h1>
         <p className={styles.dayLabel}>{programDayLabel}</p>
       </section>
+
+      {error && (
+        <section className={styles.errorCard}>
+          <p>{error}</p>
+          {requiresLogin && (
+            <p>
+              <Link href="/login">ログイン</Link>
+              {" "}してワークアウトを開始し、進捗をアカウントに保存しましょう。
+            </p>
+          )}
+        </section>
+      )}
 
       <div className={styles.actions}>
         <button
