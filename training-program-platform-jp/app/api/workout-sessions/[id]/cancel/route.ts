@@ -32,9 +32,11 @@ type RouteContext = {
  *   - not found / auth   → 404 / 401
  *
  * Data policy:
- *   Sets and exercises are NOT deleted. status='cancelled' is the only mutation.
- *   Cancelled sessions are excluded from Home trend / e1RM / volume queries
- *   (those already filter on status='completed' only).
+ *   Sets and exercises are NOT deleted.
+ *   Sets status='cancelled' and archived_at=now() so the session is
+ *   immediately excluded from all user-facing history / display queries
+ *   without requiring a manual archive step.
+ *   Trend / e1RM / volume queries already filter on status='completed' only.
  */
 export async function POST(_request: Request, { params }: RouteContext) {
   const routeName = "workout-session-cancel";
@@ -208,7 +210,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       queryName: "cancelUpdate",
       table: "workout_sessions",
       op: "update.select.maybeSingle",
-      set: { status: "cancelled" },
+      set: { status: "cancelled", archived_at: "<now>" },
       filters: cancelUpdateFilters,
       sessionIdIsUuid,
       authSource,
@@ -217,7 +219,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     const { data: updatedSession, error: updateError } = await dbClient
       .from("workout_sessions")
-      .update({ status: "cancelled" })
+      .update({ status: "cancelled", archived_at: new Date().toISOString() })
       .eq("id", params.id)
       .eq("user_id", userId)
       .eq("status", "in_progress")

@@ -159,6 +159,8 @@ async function selectRecentUserSessions(client: DatabaseClient, userId: string) 
     .from("workout_sessions")
     .select("id, started_at, program_day_id")
     .eq("user_id", userId)
+    .eq("status", "completed")
+    .is("archived_at", null)
     .order("started_at", { ascending: false })
     .limit(HISTORY_SESSION_SCAN_LIMIT);
 

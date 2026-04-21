@@ -375,6 +375,7 @@ async function selectRecentSessionsForEnrollments(
     .select("id, started_at, status, program_day_id, program_enrollment_id")
     .eq("user_id", userId)
     .in("program_enrollment_id", enrollmentIds)
+    .neq("status", "cancelled")
     .is("archived_at", null)
     .order("started_at", { ascending: false })
     .limit(enrollmentIds.length * RECENT_SESSION_LIMIT);
