@@ -1,6 +1,6 @@
 import type { ProgramCatalogItem, ProgramListItem } from "@/types/programs";
 
-// Active program library (4 programs).
+// Active program library (5 programs).
 // Non-public programs (gzclp-base-v2, starting-strength-base, upper-lower-base,
 // dumbbell-full-body-base, full-body-foundation) are hidden via is_public=false
 // in the DB and excluded from this mock fallback.
@@ -76,6 +76,24 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     methodology: "gzcl",
     overview:
       "スクワット・ベンチプレス・デッドリフトのみ使用する週2日プログラム。A（T1スクワット）/B（T1ベンチ）/C（T1デッドリフト）の3サイクルを順番に回し、各種目がT1・T2・T3を均等に担当する。T1は5×3+、T2は3×10、T3は3×15+。"
+  },
+  {
+    id: "program-big3-2day-6week",
+    slug: "big3-2day-6week",
+    title: "BIG3 2-Day 6-Week",
+    level: "Beginner",
+    levelKey: "beginner",
+    goal: "6週間でスクワット・ベンチプレス・デッドリフトの全種目がT1/T2/T3を均等に担当する、完全対称ローテーション型の週2日プログラム。",
+    frequencyLabel: "2 days / week",
+    durationLabel: "6 weeks",
+    sourceProgramName: null,
+    sourceFidelity: "custom",
+    sourceNotes:
+      "BIG3の6通りの順列（A〜F）を2周し、各種目がT1/T2/T3をそれぞれ4回担当する完全対称設計。",
+    tags: [],
+    methodology: "gzcl",
+    overview:
+      "スクワット・ベンチプレス・デッドリフトの6通りの順列（A〜F）を週2日×6週で2周するプログラム。各種目がT1・T2・T3をそれぞれ4回ずつ均等に担当する完全対称設計。T1は5×3+、T2は3×10、T3は3×15+。週1・4=A/B、週2・5=C/D、週3・6=E/F で固定サイクル。"
   }
 ];
 
