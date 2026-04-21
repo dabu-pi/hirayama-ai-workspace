@@ -28,6 +28,7 @@ export function CustomWorkoutButton() {
         return;
       }
 
+      router.refresh();
       router.push("/train");
     } catch {
       setErrorMessage("ネットワークエラーが発生しました。");
