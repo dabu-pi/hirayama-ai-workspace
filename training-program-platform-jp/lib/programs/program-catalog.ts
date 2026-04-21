@@ -1,6 +1,6 @@
 import type { ProgramCatalogItem, ProgramListItem } from "@/types/programs";
 
-// Active program library (3 programs).
+// Active program library (4 programs).
 // Non-public programs (gzclp-base-v2, starting-strength-base, upper-lower-base,
 // dumbbell-full-body-base, full-body-foundation) are hidden via is_public=false
 // in the DB and excluded from this mock fallback.
@@ -58,6 +58,24 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     methodology: "gzcl",
     overview:
       "スクワット・ベンチプレス・デッドリフトの3種目のみ使用する週3日プログラム。D1/D2/D3のローテーションで各種目が毎週T1・T2・T3を1回ずつ担当する。T1は5×3+、T2は3×10、T3は3×15+。"
+  },
+  {
+    id: "program-big3-2day",
+    slug: "big3-2day",
+    title: "BIG3 2-Day",
+    level: "Beginner",
+    levelKey: "beginner",
+    goal: "スクワット・ベンチプレス・デッドリフトの3種目で構成する週2日プログラム。",
+    frequencyLabel: "2 days / week",
+    durationLabel: "4 weeks",
+    sourceProgramName: null,
+    sourceFidelity: "custom",
+    sourceNotes:
+      "BIG3のみの週2日構成。Day1はT1スクワット中心、Day2はT1デッドリフト中心。",
+    tags: [],
+    methodology: "gzcl",
+    overview:
+      "スクワット・ベンチプレス・デッドリフトのみ使用する週2日プログラム。Day1: T1スクワット/T2ベンチ/T3デッドリフト、Day2: T1デッドリフト/T2スクワット/T3ベンチ。T1は5×3+、T2は3×10、T3は3×15+。"
   }
 ];
 
