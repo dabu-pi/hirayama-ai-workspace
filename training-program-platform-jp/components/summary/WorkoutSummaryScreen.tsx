@@ -85,6 +85,7 @@ export function WorkoutSummaryScreen({
   const programSlug = summary?.programSlug ?? null;
   const firstProgramDayId = summary?.firstProgramDayId ?? null;
   const programId = summary?.programId ?? null;
+  const isCustomSession = summary !== null && summary.programSlug === null;
   const nextTrainUrl =
     !isProgramCompleted && nextProgramDayId && programSlug
       ? `/train?program=${programSlug}&programDayId=${nextProgramDayId}`
@@ -99,9 +100,9 @@ export function WorkoutSummaryScreen({
       : null;
   const hasRestartCta = canRestartViaApi || restartFallbackUrl !== null;
 
-  // Back link — Train for normal flow, Programs when program is complete
-  const backHref = isProgramCompleted ? "/programs" : "/train";
-  const backLabel = isProgramCompleted ? "プログラムへ戻る" : "トレーニングへ戻る";
+  // Back link — custom session → Home, program complete → Programs, otherwise Train
+  const backHref = isCustomSession ? "/" : isProgramCompleted ? "/programs" : "/train";
+  const backLabel = isCustomSession ? "ホームへ戻る" : isProgramCompleted ? "プログラムへ戻る" : "トレーニングへ戻る";
 
   return (
     <main className={styles.page}>
@@ -133,9 +134,11 @@ export function WorkoutSummaryScreen({
         <h1 className={styles.title}>{resolveStateTitle(state, isProgramCompleted)}</h1>
         {showMetadata ? (
           <>
-            <p className={styles.meta}>
-              {summary.programTitle} / {summary.programWeekLabel}
-            </p>
+            {!isCustomSession && (
+              <p className={styles.meta}>
+                {summary.programTitle} / {summary.programWeekLabel}
+              </p>
+            )}
             <p className={styles.subtle}>
               {isCancelled
                 ? `開始: ${formatDateTime(summary.startedAt)}`
@@ -223,11 +226,35 @@ export function WorkoutSummaryScreen({
       )}
 
       <div className={styles.actions}>
-        {/* S-6: Cancelled — primary CTA is always Back to Home */}
-        {isCancelled ? (
+        {isCancelled && isCustomSession ? (
+          <>
+            <Link className={styles.primaryAction} href="/">
+              ホームへ戻る
+            </Link>
+            <Link className={styles.secondaryAction} href="/programs">
+              プログラムを始める
+            </Link>
+            <Link className={styles.secondaryAction} href="/session-history">
+              全セッション
+            </Link>
+          </>
+        ) : isCancelled ? (
+          /* S-6: Cancelled program session — primary CTA back to Train */
           <>
             <Link className={styles.primaryAction} href="/train">
               トレーニングへ戻る
+            </Link>
+            <Link className={styles.secondaryAction} href="/session-history">
+              全セッション
+            </Link>
+          </>
+        ) : isCustomSession ? (
+          <>
+            <Link className={styles.primaryAction} href="/">
+              ホームへ戻る
+            </Link>
+            <Link className={styles.secondaryAction} href="/programs">
+              プログラムを始める
             </Link>
             <Link className={styles.secondaryAction} href="/session-history">
               全セッション

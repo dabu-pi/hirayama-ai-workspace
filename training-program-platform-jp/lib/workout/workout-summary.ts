@@ -82,7 +82,7 @@ function buildProgramWeekLabel(
 ) {
   const weekPart =
     weekLabel?.trim() ||
-    (weekNumber ? `Week ${weekNumber}` : "Current Workout");
+    (weekNumber ? `Week ${weekNumber}` : "");
 
   return dayNumber ? `${weekPart} / Day ${dayNumber}` : weekPart;
 }
@@ -316,7 +316,7 @@ function buildSummaryView(
     sessionId: session.id,
     userId: session.user_id,
     status: session.status,
-    programTitle: programTitle ?? "Current Program",
+    programTitle: programTitle ?? "カスタムワークアウト",
     programWeekLabel,
     startedAt: session.started_at,
     finishedAt: session.finished_at,
