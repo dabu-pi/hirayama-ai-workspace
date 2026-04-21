@@ -1212,7 +1212,7 @@ export function WorkoutScreen({
       );
 
       if (!result.noOp) {
-        const { sessionExercise } = result;
+        const { sessionExercise, previousSets } = result;
         setExercises((current) =>
           withDisplaySetNumbers(
             current.map((block) =>
@@ -1224,7 +1224,8 @@ export function WorkoutScreen({
                     exerciseNameJa: sessionExercise.exerciseNameJa,
                     exerciseNameEn: sessionExercise.exerciseNameEn,
                     exerciseType: sessionExercise.exerciseType,
-                    wasSwapped: sessionExercise.wasSwapped
+                    wasSwapped: sessionExercise.wasSwapped,
+                    previousSets: previousSets ?? []
                   }
                 : block
             )

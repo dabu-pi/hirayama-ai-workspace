@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
+import { fetchPreviousSetsForExercise } from "@/lib/workout/fetch-previous-sets";
 import {
   findOwnedWorkoutSession,
   getAuthenticatedWorkoutContext,
@@ -273,6 +274,15 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     revalidatePath("/train");
 
+    // Fetch previous sets for the new exercise (always T3 after swap) so the
+    // client can update previousSets without a full reload.
+    const previousSets = await fetchPreviousSetsForExercise(
+      supabase,
+      userId,
+      newExercise.id,
+      "T3"
+    ).catch(() => []);
+
     return NextResponse.json({
       noOp: false,
       sessionExercise: {
@@ -283,7 +293,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         exerciseNameEn: newExercise.name_en,
         exerciseType: "T3",
         wasSwapped: true
-      }
+      },
+      previousSets
     });
   } catch (error) {
     console.error("Failed to swap exercise in workout session.", error);

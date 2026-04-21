@@ -135,6 +135,7 @@ export type SwapExerciseResponse = {
     exerciseType: ExerciseType;
     wasSwapped: boolean;
   };
+  previousSets?: PreviousSet[];
 };
 
 export type ExerciseHistorySet = {
