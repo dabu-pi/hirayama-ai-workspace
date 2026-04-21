@@ -10,6 +10,7 @@ import {
   classifySupabaseQueryError,
   isLikelyUuid
 } from "@/lib/workout/session-access";
+import { jstDateSlice } from "@/lib/utils/date-jst";
 import type {
   ActiveProgramResolutionSnapshot,
   ActiveProgramResult,
@@ -835,9 +836,7 @@ function buildWeekDayLabel(
 }
 
 function formatSessionDate(startedAt: string): string {
-  if (/^\d{4}-\d{2}-\d{2}/.test(startedAt)) return startedAt.slice(0, 10);
-  const parsed = new Date(startedAt);
-  return Number.isNaN(parsed.getTime()) ? startedAt : parsed.toISOString().slice(0, 10);
+  return jstDateSlice(startedAt);
 }
 
 // ---------------------------------------------------------------------------

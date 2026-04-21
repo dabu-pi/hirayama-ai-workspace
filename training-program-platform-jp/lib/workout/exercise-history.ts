@@ -6,6 +6,7 @@ import {
   createSupabaseServerClient,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
+import { jstDateSlice } from "@/lib/utils/date-jst";
 import type { ExerciseHistoryView, ExerciseType } from "@/types/workout";
 
 const HISTORY_LIMIT = 10;
@@ -93,16 +94,7 @@ function toNullableNumber(value: number | string | null) {
 }
 
 function formatSessionDate(startedAt: string) {
-  if (/^\d{4}-\d{2}-\d{2}/.test(startedAt)) {
-    return startedAt.slice(0, 10);
-  }
-
-  const parsed = new Date(startedAt);
-  if (Number.isNaN(parsed.getTime())) {
-    return startedAt;
-  }
-
-  return parsed.toISOString().slice(0, 10);
+  return jstDateSlice(startedAt);
 }
 
 function buildProgramLabel(

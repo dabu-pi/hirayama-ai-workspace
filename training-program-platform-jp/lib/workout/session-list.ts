@@ -6,6 +6,7 @@ import {
   createSupabaseServerClient,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
+import { jstDateSlice } from "@/lib/utils/date-jst";
 import type {
   SessionHistoryResult,
   WorkoutSessionListItem,
@@ -51,9 +52,7 @@ type ProgramRow = {
 // ---------------------------------------------------------------------------
 
 function formatDate(isoString: string) {
-  if (/^\d{4}-\d{2}-\d{2}/.test(isoString)) return isoString.slice(0, 10);
-  const parsed = new Date(isoString);
-  return Number.isNaN(parsed.getTime()) ? isoString : parsed.toISOString().slice(0, 10);
+  return jstDateSlice(isoString);
 }
 
 // ---------------------------------------------------------------------------

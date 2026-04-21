@@ -17,6 +17,7 @@ import type {
   WorkoutSessionView
 } from "@/types/workout";
 
+import { formatJstDateTime } from "@/lib/utils/date-jst";
 import styles from "./WorkoutScreen.module.css";
 
 type WorkoutScreenProps = {
@@ -386,9 +387,9 @@ function getSetDraft(draftInputs: SetDraftMap, set: WorkoutSet): SetDraft {
 
 function formatFinishedAt(value: string | null) {
   if (!value) return "完了日時は未記録";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "完了日時は未記録";
-  return `完了日時: ${parsed.toLocaleString("ja-JP")}`;
+  const formatted = formatJstDateTime(value);
+  if (formatted === "記録なし") return "完了日時は未記録";
+  return `完了日時: ${formatted}`;
 }
 
 function formatProgramSourceLabel(source: TrainProgramSelection["source"]) {

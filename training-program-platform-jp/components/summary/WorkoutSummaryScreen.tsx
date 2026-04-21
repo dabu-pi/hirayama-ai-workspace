@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { formatJstDateTime } from "@/lib/utils/date-jst";
 import type { WorkoutSummaryState, WorkoutSummaryView } from "@/types/workout";
 
 import { RestartProgramButton } from "./RestartProgramButton";
@@ -23,16 +24,7 @@ const EXERCISE_TYPE_BADGE: Record<"T1" | "T2" | "T3", string> = {
   T3: "T3（ボリューム）"
 };
 
-function formatDateTime(value: string | null) {
-  if (!value) return "記録なし";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "記録なし";
-  }
-
-  return parsed.toLocaleString("ja-JP");
-}
+const formatDateTime = formatJstDateTime;
 
 function resolveStateTitle(state: WorkoutSummaryState, isProgramCompleted: boolean) {
   if (state === "loading") return "読み込み中...";

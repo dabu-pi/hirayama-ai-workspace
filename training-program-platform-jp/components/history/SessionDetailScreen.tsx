@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { formatJstDate, formatJstDateTime } from "@/lib/utils/date-jst";
 import type { WorkoutSessionDetailView } from "@/types/workout";
 
 import styles from "./SessionDetailScreen.module.css";
@@ -15,25 +16,8 @@ const EXERCISE_TYPE_BADGE: Record<"T1" | "T2" | "T3", string> = {
   T3: "T3（ボリューム）"
 };
 
-function formatDateTime(value: string | null) {
-  if (!value) return "記録なし";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "記録なし";
-
-  return parsed.toLocaleString("ja-JP");
-}
-
-function formatDate(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value.slice(0, 10);
-
-  return parsed.toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  });
-}
+const formatDateTime = formatJstDateTime;
+const formatDate = formatJstDate;
 
 function statusLabel(status: string) {
   if (status === "completed") return "完了";
