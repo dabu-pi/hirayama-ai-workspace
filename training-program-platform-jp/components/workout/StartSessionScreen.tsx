@@ -21,10 +21,14 @@ export function StartSessionScreen({
 }: StartSessionScreenProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requiresLogin, setRequiresLogin] = useState(false);
 
   async function handleStart() {
+    // Show loading immediately on click — isPending only becomes true after
+    // router.push fires, leaving the button unresponsive during the fetch.
+    setIsStarting(true);
     setError(null);
     setRequiresLogin(false);
 
@@ -42,15 +46,20 @@ export function StartSessionScreen({
         if (response.status === 401) {
           setRequiresLogin(true);
         }
+        setIsStarting(false);
         setError(body.error?.message ?? "Failed to start session. Please try again.");
         return;
       }
 
-      // Navigate to /train without programDayId so WorkoutScreen picks up the new session
+      // Navigate with programDayId so /train enters the direct-lookup branch
+      // (findWorkoutSessionByDayId) instead of the slower getCurrentWorkoutSessionView path.
       startTransition(() => {
-        router.push(`/train?program=${encodeURIComponent(programSlug)}`);
+        router.push(
+          `/train?program=${encodeURIComponent(programSlug)}&programDayId=${encodeURIComponent(programDayId)}`
+        );
       });
     } catch {
+      setIsStarting(false);
       setError("Network error. Please check your connection and try again.");
     }
   }
@@ -88,11 +97,11 @@ export function StartSessionScreen({
       <div className={styles.actions}>
         <button
           className={styles.startButton}
-          disabled={isPending}
+          disabled={isStarting || isPending}
           onClick={handleStart}
           type="button"
         >
-          {isPending ? "Starting…" : "Start Workout"}
+          {isStarting ? "開始中…" : isPending ? "読込中…" : "Start Workout"}
         </button>
         <Link
           className={styles.cancelLink}

@@ -54,6 +54,13 @@ type ProgramWeekRow = {
   program_id: string;
 };
 
+// Embedded join type for program_days → program_weeks in a single query
+type ProgramDayWithWeekJoinRow = {
+  id: string;
+  program_week_id: string;
+  program_weeks: { program_id: string } | null;
+};
+
 type ProgramDayLabelRow = {
   day_number: number;
   program_weeks: {
@@ -137,6 +144,8 @@ export async function startSessionForDay(
     return { ok: false, reason: "supabase_unavailable" };
   }
 
+  const t0 = Date.now();
+
   // Always use server client so that RLS policies apply correctly.
   // Admin client (service role) bypasses RLS and must not be used for
   // user-scoped queries.
@@ -144,62 +153,78 @@ export async function startSessionForDay(
   const scopedUser = await client.auth.getUser();
   const userId = scopedUser.data.user?.id ?? null;
 
+  console.log(`[PERF] startSessionForDay auth: ${Date.now() - t0}ms`);
+
   if (!userId) {
     return { ok: false, reason: "unauthenticated" };
   }
 
-  // 0. Guard: check for any existing in_progress session for this user.
-  //    - Same program_day_id → reuse (idempotent resume).
-  //    - Different session (custom or different day) → block.
-  //    User-scope check ensures a custom (program_day_id=null) session cannot
-  //    silently coexist with a program-based session.
-  {
-    const { data: anyInProgress, error: existingError } = await client
+  // Parallel batch: guard check + exercise load + program ID resolution.
+  // Previously these ran as 4 sequential round trips (guard, exercises,
+  // program_days, program_weeks). Now 1 parallel round trip saves ~3×RTT.
+  // program_days uses an embedded join to resolve program_id in one query.
+  // If guard fails, exercises/programId results are discarded (minimal waste).
+  const t1 = Date.now();
+  const [guardResult, exercisesResult, dayWithWeekResult] = await Promise.all([
+    client
       .from("workout_sessions")
       .select("id, program_day_id")
       .eq("user_id", userId)
       .eq("status", "in_progress")
       .is("archived_at", null)
       .limit(1)
-      .maybeSingle<ExistingSessionRow>();
+      .maybeSingle<ExistingSessionRow>(),
+    client
+      .from("program_day_exercises")
+      .select("id, exercise_id, exercise_type, set_count, target_reps_text, order_index, swap_group_slug")
+      .eq("program_day_id", programDayId)
+      .order("order_index", { ascending: true }),
+    client
+      .from("program_days")
+      .select("id, program_week_id, program_weeks(program_id)")
+      .eq("id", programDayId)
+      .maybeSingle<ProgramDayWithWeekJoinRow>()
+  ]);
+  console.log(`[PERF] startSessionForDay parallel(guard+exercises+programId): ${Date.now() - t1}ms`);
 
-    if (existingError) {
-      console.error("start-session: failed to check for existing session.", existingError);
-      return { ok: false, reason: "insert_failed" };
+  // 0. Guard: existing in_progress session
+  //    - Same program_day_id → reuse (idempotent resume).
+  //    - Different session → block.
+  if (guardResult.error) {
+    console.error("start-session: failed to check for existing session.", guardResult.error);
+    return { ok: false, reason: "insert_failed" };
+  }
+  const anyInProgress = guardResult.data;
+  if (anyInProgress) {
+    if (anyInProgress.program_day_id === programDayId) {
+      return { ok: true, sessionId: anyInProgress.id, reused: true };
     }
-
-    if (anyInProgress) {
-      if (anyInProgress.program_day_id === programDayId) {
-        return { ok: true, sessionId: anyInProgress.id, reused: true };
-      }
-      console.warn("start-session: blocked by existing in_progress session.", {
-        existingSessionId: anyInProgress.id,
-        existingProgramDayId: anyInProgress.program_day_id,
-        requestedProgramDayId: programDayId
-      });
-      return { ok: false, reason: "session_already_in_progress" };
-    }
+    console.warn("start-session: blocked by existing in_progress session.", {
+      existingSessionId: anyInProgress.id,
+      existingProgramDayId: anyInProgress.program_day_id,
+      requestedProgramDayId: programDayId
+    });
+    return { ok: false, reason: "session_already_in_progress" };
   }
 
-  // 1. Load program_day_exercises
-  const { data: dayExercises, error: dayExercisesError } = await client
-    .from("program_day_exercises")
-    .select("id, exercise_id, exercise_type, set_count, target_reps_text, order_index, swap_group_slug")
-    .eq("program_day_id", programDayId)
-    .order("order_index", { ascending: true });
-
-  if (dayExercisesError) {
-    console.error("start-session: failed to load program_day_exercises.", dayExercisesError);
+  // 1. Exercises (from parallel result)
+  if (exercisesResult.error) {
+    console.error("start-session: failed to load program_day_exercises.", exercisesResult.error);
     return { ok: false, reason: "day_not_found" };
   }
 
   // 2. Find-or-create enrollment
-  const programId = await resolveProgramIdFromDayId(programDayId, client);
-  let enrollmentId: string | null = null;
+  // program_id resolved from embedded join (program_days → program_weeks) in the parallel batch.
+  const programWeeksJoin = dayWithWeekResult.data?.program_weeks;
+  const programId: string | null =
+    (programWeeksJoin as { program_id: string } | null)?.program_id ?? null;
 
+  let enrollmentId: string | null = null;
   if (programId) {
+    const t2 = Date.now();
     const enrollment = await findOrCreateEnrollment(programId, programDayId, userId);
     enrollmentId = enrollment?.id ?? null;
+    console.log(`[PERF] startSessionForDay enrollment: ${Date.now() - t2}ms`);
   }
 
   // 3. Insert workout_session (linked to enrollment if available)
@@ -212,11 +237,13 @@ export async function startSessionForDay(
     insertSessionPayload.program_enrollment_id = enrollmentId;
   }
 
+  const t3 = Date.now();
   const { data: sessionRow, error: sessionInsertError } = await client
     .from("workout_sessions")
     .insert(insertSessionPayload)
     .select("id")
     .single<InsertedSessionRow>();
+  console.log(`[PERF] startSessionForDay insert_session: ${Date.now() - t3}ms`);
 
   if (sessionInsertError || !sessionRow) {
     console.error("start-session: failed to insert workout_session.", sessionInsertError);
@@ -227,7 +254,7 @@ export async function startSessionForDay(
 
   // 4. Seed exercises + sets — batch insert instead of N serial round-trips.
   // Before: 2 queries per exercise (N×2 sequential). After: 2 queries total.
-  const exercises = (dayExercises ?? []) as ProgramDayExerciseRow[];
+  const exercises = (exercisesResult.data ?? []) as ProgramDayExerciseRow[];
 
   if (exercises.length > 0) {
     const exercisesInsertPayload = exercises.map((exercise) => ({
@@ -242,10 +269,12 @@ export async function startSessionForDay(
         : {})
     }));
 
+    const t4 = Date.now();
     const { data: sessionExerciseRows, error: exerciseBatchError } = await client
       .from("workout_session_exercises")
       .insert(exercisesInsertPayload)
       .select("id, exercise_id, order_index");
+    console.log(`[PERF] startSessionForDay insert_exercises: ${Date.now() - t4}ms`);
 
     if (exerciseBatchError || !sessionExerciseRows) {
       console.error("start-session: failed to batch insert session exercises.", exerciseBatchError);
@@ -282,12 +311,15 @@ export async function startSessionForDay(
     });
 
     if (setsInsertPayload.length > 0) {
+      const t5 = Date.now();
       const { error: setsError } = await client.from("workout_sets").insert(setsInsertPayload);
+      console.log(`[PERF] startSessionForDay insert_sets: ${Date.now() - t5}ms`);
       if (setsError) {
         console.error("start-session: failed to batch insert sets.", setsError);
       }
     }
   }
 
+  console.log(`[PERF] startSessionForDay TOTAL: ${Date.now() - t0}ms | programDayId=${programDayId}`);
   return { ok: true, sessionId, reused: false };
 }

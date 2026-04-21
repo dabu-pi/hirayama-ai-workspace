@@ -36,7 +36,9 @@ export async function POST(request: Request) {
       );
     }
 
+    const tApi = Date.now();
     const result = await startSessionForDay(programDayId);
+    console.log(`[PERF] POST /api/workout-sessions startSessionForDay: ${Date.now() - tApi}ms | ok=${result.ok}`);
 
     if (!result.ok) {
       if (result.reason === "session_already_in_progress") {
