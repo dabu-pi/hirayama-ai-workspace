@@ -154,11 +154,18 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const { data: exercise, error: exerciseError } = await supabase
-      .from("exercises")
-      .select("id, slug, name_ja, name_en")
-      .eq("id", exerciseId)
-      .maybeSingle<ExerciseRow>();
+    const isCustomSession = session.program_day_id === null;
+
+    // Fetch exercise metadata, current max order_index, and previous sets in parallel.
+    const [
+      { data: exercise, error: exerciseError },
+      { data: existingExercises, error: existingError },
+      previousSets
+    ] = await Promise.all([
+      supabase.from("exercises").select("id, slug, name_ja, name_en").eq("id", exerciseId).maybeSingle<ExerciseRow>(),
+      supabase.from("workout_session_exercises").select("order_index").eq("workout_session_id", session.id).order("order_index", { ascending: false }).limit(1),
+      isCustomSession ? fetchPreviousSetsForExerciseAny(supabase, userId, exerciseId) : Promise.resolve([] as PreviousSet[])
+    ]);
 
     if (exerciseError) {
       return NextResponse.json(
@@ -184,13 +191,6 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const { data: existingExercises, error: existingError } = await supabase
-      .from("workout_session_exercises")
-      .select("order_index")
-      .eq("workout_session_id", session.id)
-      .order("order_index", { ascending: false })
-      .limit(1);
-
     if (existingError) {
       return NextResponse.json(
         {
@@ -206,14 +206,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     const maxOrderIndex =
       ((existingExercises ?? []) as OrderIndexRow[])[0]?.order_index ?? 0;
     const newOrderIndex = maxOrderIndex + 1;
-
-    const isCustomSession = session.program_day_id === null;
-
-    // For custom sessions, look up previous sets across all exercise types.
-    // For program sessions, exercise_type drives tier tracking — always insert as T3 (was_added).
-    const previousSets: PreviousSet[] = isCustomSession
-      ? await fetchPreviousSetsForExerciseAny(supabase, userId, exerciseId)
-      : [];
 
     const exerciseType = isCustomSession ? "T1" : "T3";
 

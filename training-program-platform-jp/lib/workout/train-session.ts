@@ -382,12 +382,10 @@ async function buildPreviousDisplayMap(
   );
 
   if (uniqueExerciseIds.length === 0 || workoutSets.length === 0) {
-    console.warn("[PREV-DBG] early-return: uniqueExerciseIds.length=", uniqueExerciseIds.length, "workoutSets.length=", workoutSets.length);
     return empty;
   }
 
   if (!currentSession.user_id) {
-    console.warn("[PREV-DBG] early-return: no user_id");
     return empty;
   }
 
@@ -409,7 +407,6 @@ async function buildPreviousDisplayMap(
   console.log(`[PERF] buildPreviousDisplayMap Q1 (historicalExercises): ${Date.now() - tPrev0}ms | found=${historicalExercises.length}`);
 
   if (historicalExercises.length === 0) {
-    console.warn("[PREV-DBG] early-return: historicalExercises.length=0 | userId=", currentSession.user_id, "| uniqueExerciseIds=", uniqueExerciseIds);
     return empty;
   }
 
@@ -505,19 +502,8 @@ async function buildPreviousDisplayMap(
       displayMap.set(`${outerKey}:${s.setNumber}`, formatPreviousDisplay(s.weightKg, s.repsDone));
     });
 
-    console.log("[PREV-DBG-ADOPT]", {
-      exerciseId,
-      exerciseType,
-      adoptedSessionId: latestSessionId,
-      adoptedStartedAt: latestStartedAt,
-      setsFound: mappedSets.length,
-      otherSessions: Array.from(sessionMap.entries())
-        .filter(([sid]) => sid !== latestSessionId)
-        .map(([sid, sets]) => ({ sessionId: sid, startedAt: sets[0]?.startedAt ?? "", setCount: sets.length }))
-    });
   }
 
-  console.log("[PREV-DBG] displayMap size:", displayMap.size, "| previousSetsMap:", Array.from(previousSetsMap.entries()).map(([k, v]) => `${k}:${v.length}sets`));
   return { displayMap, previousSetsMap };
 }
 
@@ -546,7 +532,6 @@ function buildExerciseBlocks(
         // Key: exerciseId:exerciseType:position — matches displayMap key strategy.
         // exerciseType ensures T1 and T2 of the same exercise get separate previous values.
         const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${index + 1}`;
-        console.log("[PREV-DBG] lookup key:", previousKey, "hit:", previousDisplayMap.has(previousKey));
 
         return {
           id: set.id,
