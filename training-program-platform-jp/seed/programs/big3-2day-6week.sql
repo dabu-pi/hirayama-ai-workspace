@@ -73,7 +73,7 @@ declare
   notes_e text;
   notes_f text;
 begin
-  -- ── 1. Resolve exercise UUIDs ─────────────────────────────────────────────
+  -- 1. Resolve exercise UUIDs
   select id into ex_squat    from public.exercises where slug = 'squat';
   select id into ex_bench    from public.exercises where slug = 'bench-press';
   select id into ex_deadlift from public.exercises where slug = 'deadlift';
@@ -82,90 +82,48 @@ begin
   if ex_bench    is null then raise exception 'Exercise not found: bench-press'; end if;
   if ex_deadlift is null then raise exception 'Exercise not found: deadlift'; end if;
 
-  -- ── 2. Guard: skip if already seeded ──────────────────────────────────────
+  -- 2. Guard: skip if already seeded
   if exists (select 1 from public.programs where slug = 'big3-2day-6week') then
     raise notice 'big3-2day-6week already exists -- skipping.';
     return;
   end if;
 
-  -- ── 3. Progression guide text per pattern ────────────────────────────────
-  guide_a :=
-    U&'Cycle A \2014 T1 \30B9\30AF\30EF\30C3\30C8 5\00D73+: '
-    U&'\6BCE\56DE5kg\5897\3092\76EE\6A19\3002'
-    U&'T2 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D710: 10\56DE\3067\6B21\56DE2.5kg\5897\3002'
-    U&'T3 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D715+: 15\56DE\5230\9054\3067\6B21\56DE\91CD\91CF\5897\3002';
-  notes_a :=
-    U&'Cycle A: T1 \30B9\30AF\30EF\30C3\30C8 5\00D73+, '
-    U&'T2 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D710, '
-    U&'T3 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D715+';
+  -- 3. Progression guide text per pattern (plain UTF-8)
+  guide_a := 'Cycle A: T1 スクワット 5x3+: 毎回5kg増を目標。T2 ベンチプレス 3x10: 10回で次回2.5kg増。T3 デッドリフト 3x15+: 15回到達で次回重量増。';
+  notes_a := 'Cycle A: T1 スクワット 5x3+, T2 ベンチプレス 3x10, T3 デッドリフト 3x15+';
 
-  guide_b :=
-    U&'Cycle B \2014 T1 \30D9\30F3\30C1\30D7\30EC\30B9 5\00D73+: '
-    U&'\6BCE\56DE2.5kg\5897\3092\76EE\6A19\3002'
-    U&'T2 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D710: 10\56DE\3067\6B21\56DE5kg\5897\3002'
-    U&'T3 \30B9\30AF\30EF\30C3\30C8 3\00D715+: 15\56DE\5230\9054\3067\6B21\56DE\91CD\91CF\5897\3002';
-  notes_b :=
-    U&'Cycle B: T1 \30D9\30F3\30C1\30D7\30EC\30B9 5\00D73+, '
-    U&'T2 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D710, '
-    U&'T3 \30B9\30AF\30EF\30C3\30C8 3\00D715+';
+  guide_b := 'Cycle B: T1 ベンチプレス 5x3+: 毎回2.5kg増を目標。T2 デッドリフト 3x10: 10回で次回5kg増。T3 スクワット 3x15+: 15回到達で次回重量増。';
+  notes_b := 'Cycle B: T1 ベンチプレス 5x3+, T2 デッドリフト 3x10, T3 スクワット 3x15+';
 
-  guide_c :=
-    U&'Cycle C \2014 T1 \30C7\30C3\30C9\30EA\30D5\30C8 5\00D73+: '
-    U&'\6BCE\56DE5kg\5897\3092\76EE\6A19\3002'
-    U&'T2 \30B9\30AF\30EF\30C3\30C8 3\00D710: 10\56DE\3067\6B21\56DE5kg\5897\3002'
-    U&'T3 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D715+: 15\56DE\5230\9054\3067\6B21\56DE\91CD\91CF\5897\3002';
-  notes_c :=
-    U&'Cycle C: T1 \30C7\30C3\30C9\30EA\30D5\30C8 5\00D73+, '
-    U&'T2 \30B9\30AF\30EF\30C3\30C8 3\00D710, '
-    U&'T3 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D715+';
+  guide_c := 'Cycle C: T1 デッドリフト 5x3+: 毎回5kg増を目標。T2 スクワット 3x10: 10回で次回5kg増。T3 ベンチプレス 3x15+: 15回到達で次回重量増。';
+  notes_c := 'Cycle C: T1 デッドリフト 5x3+, T2 スクワット 3x10, T3 ベンチプレス 3x15+';
 
-  guide_d :=
-    U&'Cycle D \2014 T1 \30B9\30AF\30EF\30C3\30C8 5\00D73+: '
-    U&'\6BCE\56DE5kg\5897\3092\76EE\6A19\3002'
-    U&'T2 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D710: 10\56DE\3067\6B21\56DE5kg\5897\3002'
-    U&'T3 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D715+: 15\56DE\5230\9054\3067\6B21\56DE\91CD\91CF\5897\3002';
-  notes_d :=
-    U&'Cycle D: T1 \30B9\30AF\30EF\30C3\30C8 5\00D73+, '
-    U&'T2 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D710, '
-    U&'T3 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D715+';
+  guide_d := 'Cycle D: T1 スクワット 5x3+: 毎回5kg増を目標。T2 デッドリフト 3x10: 10回で次回5kg増。T3 ベンチプレス 3x15+: 15回到達で次回重量増。';
+  notes_d := 'Cycle D: T1 スクワット 5x3+, T2 デッドリフト 3x10, T3 ベンチプレス 3x15+';
 
-  guide_e :=
-    U&'Cycle E \2014 T1 \30D9\30F3\30C1\30D7\30EC\30B9 5\00D73+: '
-    U&'\6BCE\56DE2.5kg\5897\3092\76EE\6A19\3002'
-    U&'T2 \30B9\30AF\30EF\30C3\30C8 3\00D710: 10\56DE\3067\6B21\56DE5kg\5897\3002'
-    U&'T3 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D715+: 15\56DE\5230\9054\3067\6B21\56DE\91CD\91CF\5897\3002';
-  notes_e :=
-    U&'Cycle E: T1 \30D9\30F3\30C1\30D7\30EC\30B9 5\00D73+, '
-    U&'T2 \30B9\30AF\30EF\30C3\30C8 3\00D710, '
-    U&'T3 \30C7\30C3\30C9\30EA\30D5\30C8 3\00D715+';
+  guide_e := 'Cycle E: T1 ベンチプレス 5x3+: 毎回2.5kg増を目標。T2 スクワット 3x10: 10回で次回5kg増。T3 デッドリフト 3x15+: 15回到達で次回重量増。';
+  notes_e := 'Cycle E: T1 ベンチプレス 5x3+, T2 スクワット 3x10, T3 デッドリフト 3x15+';
 
-  guide_f :=
-    U&'Cycle F \2014 T1 \30C7\30C3\30C9\30EA\30D5\30C8 5\00D73+: '
-    U&'\6BCE\56DE5kg\5897\3092\76EE\6A19\3002'
-    U&'T2 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D710: 10\56DE\3067\6B21\56DE2.5kg\5897\3002'
-    U&'T3 \30B9\30AF\30EF\30C3\30C8 3\00D715+: 15\56DE\5230\9054\3067\6B21\56DE\91CD\91CF\5897\3002';
-  notes_f :=
-    U&'Cycle F: T1 \30C7\30C3\30C9\30EA\30D5\30C8 5\00D73+, '
-    U&'T2 \30D9\30F3\30C1\30D7\30EC\30B9 3\00D710, '
-    U&'T3 \30B9\30AF\30EF\30C3\30C8 3\00D715+';
+  guide_f := 'Cycle F: T1 デッドリフト 5x3+: 毎回5kg増を目標。T2 ベンチプレス 3x10: 10回で次回2.5kg増。T3 スクワット 3x15+: 15回到達で次回重量増。';
+  notes_f := 'Cycle F: T1 デッドリフト 5x3+, T2 ベンチプレス 3x10, T3 スクワット 3x15+';
 
-  -- ── 4. Program ────────────────────────────────────────────────────────────
+  -- 4. Program
   insert into public.programs
     (slug, title, description, duration_weeks, days_per_week, level,
      source_program_name, source_fidelity, source_notes, is_public, methodology)
   values (
     'big3-2day-6week',
-    U&'BIG3 2-Day 6\9031',
-    U&'BIG3\306E3\7A2E\76EE\30A2\30EC\30F3\30B8\306E\5168\6392\5217\28A\301EF\306E6\30D1\30BF\30FC\30F3\29\3092\FF12\56DE\305A\3064\4F7F\7528\3059\308B\9031\FF12\65E5\30FB6\9031\30D7\30ED\30B0\30E9\30E0\3002\5404\7A2E\76EE\304C T1/T2/T3 \3092\5B8C\5168\5747\7B49\306B\62C5\5F53\3059\308B\30FB\30FB\30FB\5404\7A2E\76EE T1\00D74\30FB T2\00D74\30FB T3\00D74\30FB',
+    'BIG3 2-Day 6週',
+    'BIG3の3種目の全6パターン（A〜F）を2周する週2日・6週プログラム。各種目がT1/T2/T3を完全均等に担当する（各種目 T1x4 / T2x4 / T3x4）。',
     6, 2, 'beginner',
     null, 'custom',
-    U&'BIG3\306E3\7A2E\76EE\30A2\30EC\30F3\30B8\306E6\30D1\30BF\30FC\30F3\30A2\30EC\30F3\30B8\306E\5B8C\5168\30ED\30FC\30C6\30FC\30B7\30E7\30F3\3002\5404\7A2E\76EE T1\00D74\30FB T2\00D74\30FB T3\00D74\3067\30011\30BB\30C3\30B7\30E7\30F3\5185\306B\540C\4E00\7A2E\76EE\306E\91CD\8907\306A\3057\3002',
+    'BIG3の3種目の全6通りのT1/T2/T3割り当て（A〜F）を完全ローテーション。各種目 T1x4 / T2x4 / T3x4 で完全対称。1セッション内に同一種目の重複なし。',
     true,
     'gzcl'
   )
   returning id into prog_id;
 
-  -- ── 5. Weeks (6 weeks) ────────────────────────────────────────────────────
+  -- 5. Weeks (6 weeks)
   insert into public.program_weeks (program_id, week_number, label)
   values
     (prog_id, 1, 'Week 1'),
@@ -182,7 +140,7 @@ begin
   select id into w5 from public.program_weeks where program_id = prog_id and week_number = 5;
   select id into w6 from public.program_weeks where program_id = prog_id and week_number = 6;
 
-  -- ── 6. Days (12 days) ────────────────────────────────────────────────────
+  -- 6. Days (12 days)
   -- Weeks 1-3: patterns A,B / C,D / E,F
   -- Weeks 4-6: repeat A,B / C,D / E,F
   insert into public.program_days (program_week_id, day_number, progression_guide, notes)
@@ -213,7 +171,7 @@ begin
   select id into w6d1 from public.program_days where program_week_id = w6 and day_number = 1;
   select id into w6d2 from public.program_days where program_week_id = w6 and day_number = 2;
 
-  -- ── 7. Exercises per day (3 per day x 12 days = 36 rows) ─────────────────
+  -- 7. Exercises per day (3 per day x 12 days = 36 rows)
   -- order_index 1: T1 main    (5 sets x 3+)
   -- order_index 2: T2 practice (3 sets x 10)
   -- order_index 3: T3 finish  (3 sets x 15+)
@@ -280,7 +238,7 @@ begin
     (w6d2, ex_bench,    'T2', 3, '10',  2),
     (w6d2, ex_squat,    'T3', 3, '15+', 3);
 
-  -- ── 8. Tag assignments (soft -- skipped if tags not yet seeded) ───────────
+  -- 8. Tag assignments (soft -- skipped if tags not yet seeded)
   select id into tag_strength   from public.program_tags where slug = 'strength';
   select id into tag_barbell    from public.program_tags where slug = 'barbell';
   select id into tag_full_body  from public.program_tags where slug = 'full-body';
@@ -300,7 +258,7 @@ begin
 end;
 $$;
 
--- Verification query: expected 36 rows with full A-F rotation visible
+-- Verification query: expected 36 rows
 -- select
 --   pw.week_number,
 --   pd.day_number,
@@ -323,11 +281,10 @@ $$;
 --   pde.exercise_type,
 --   count(*) as appearances
 -- from public.program_day_exercises pde
--- join public.programs p      on p.id = (
---   select pw2.program_id from public.program_weeks pw2
---   join public.program_days pd2 on pd2.program_week_id = pw2.id
---   where pd2.id = pde.program_day_id limit 1)
--- join public.exercises e     on e.id = pde.exercise_id
+-- join public.program_days pd    on pd.id = pde.program_day_id
+-- join public.program_weeks pw   on pw.id = pd.program_week_id
+-- join public.programs p         on p.id  = pw.program_id
+-- join public.exercises e        on e.id  = pde.exercise_id
 -- where p.slug = 'big3-2day-6week'
 -- group by e.name_en, pde.exercise_type
 -- order by e.name_en, pde.exercise_type;
