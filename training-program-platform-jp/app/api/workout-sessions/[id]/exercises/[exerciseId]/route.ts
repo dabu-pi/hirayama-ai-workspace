@@ -35,9 +35,20 @@ type ExerciseRow = {
   name_en: string;
 };
 
-type BlockingSetRow = {
+type SetCheckRow = {
   id: string;
+  weight_kg: number | string | null;
+  reps_done: number | null;
+  target_reps_text: string | null;
+  is_completed: boolean;
+  is_locked: boolean;
 };
+
+function parseFirstInt(text: string | null | undefined): number | null {
+  if (!text) return null;
+  const m = text.match(/^(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   const routeName = "workout-session-swap-exercise";
@@ -216,15 +227,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    const { data: blockingSets, error: blockingSetsError } = await supabase
+    const { data: setsForCheck, error: blockingSetsError } = await supabase
       .from("workout_sets")
-      .select("id")
+      .select("id, weight_kg, reps_done, target_reps_text, is_completed, is_locked")
       .eq("workout_session_exercise_id", sessionExercise.id)
-      .is("deleted_at", null)
-      .or(
-        "is_completed.eq.true,is_locked.eq.true,weight_kg.not.is.null,reps_done.not.is.null"
-      )
-      .limit(1);
+      .is("deleted_at", null);
 
     if (blockingSetsError) {
       return NextResponse.json(
@@ -238,7 +245,21 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    if (((blockingSets ?? []) as BlockingSetRow[]).length > 0) {
+    // A set is considered "has user input" when:
+    //   - completed or locked, OR
+    //   - weight_kg is set (non-null, non-zero), OR
+    //   - reps_done is set AND differs from the target reps parsed from target_reps_text.
+    //     Rationale: GZCL sets auto-populate reps_done from target (e.g. 15+ → 15).
+    //     That default should not block swap; only explicit user edits should.
+    const hasBlockingSet = ((setsForCheck ?? []) as SetCheckRow[]).some((set) => {
+      if (set.is_completed || set.is_locked) return true;
+      const weightKg = set.weight_kg === null ? null : Number(set.weight_kg);
+      if (weightKg !== null && weightKg !== 0) return true;
+      if (set.reps_done !== null && set.reps_done !== parseFirstInt(set.target_reps_text)) return true;
+      return false;
+    });
+
+    if (hasBlockingSet) {
       return NextResponse.json(
         {
           error: {
