@@ -2,10 +2,8 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  createSupabaseServerClient,
-  hasSupabasePublicEnv
-} from "@/lib/supabase/server";
+import { hasSupabasePublicEnv } from "@/lib/supabase/server";
+import { getAuthenticatedWorkoutContext } from "@/lib/workout/session-access";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
 import type { TrainEntryResolution } from "@/types/workout";
 
@@ -106,9 +104,7 @@ export async function resolveTrainingEntry(
     return invalidResolution(programDayId, "supabase_unavailable");
   }
 
-  const client = createSupabaseServerClient();
-  const { data: userData } = await client.auth.getUser();
-  const userId = userData?.user?.id ?? null;
+  const { client, userId } = await getAuthenticatedWorkoutContext();
 
   if (!userId) {
     return invalidResolution(programDayId, "unauthenticated");

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -123,7 +125,7 @@ export function createWorkoutQueryClient(): DatabaseClient {
   return createSupabaseServerClient();
 }
 
-export async function getAuthenticatedWorkoutContext(): Promise<AuthenticatedWorkoutContext> {
+export const getAuthenticatedWorkoutContext = cache(async (): Promise<AuthenticatedWorkoutContext> => {
   // cookieClient is used only for auth.getUser() — it reads the session from cookies.
   const cookieClient = createWorkoutQueryClient();
   const { data, error } = await cookieClient.auth.getUser();
@@ -158,7 +160,7 @@ export async function getAuthenticatedWorkoutContext(): Promise<AuthenticatedWor
     userId: data.user.id,
     authSource: hasAccessToken ? "token" : "cookie"
   };
-}
+});
 
 export async function getAuthenticatedWorkoutUserId() {
   const { userId } = await getAuthenticatedWorkoutContext();

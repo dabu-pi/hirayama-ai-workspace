@@ -45,6 +45,14 @@ type ProgramWeekRow = {
   label: string | null;
 };
 
+type ProgramDayWithWeekRow = {
+  id: string;
+  day_number: number;
+  progression_guide: string | null;
+  notes: string | null;
+  program_weeks: ProgramWeekRow | null;
+};
+
 type ProgramRow = {
   id: string;
   title: string;
@@ -107,7 +115,7 @@ function buildProgramWeekLabel(
 ) {
   const weekPart =
     weekLabel?.trim() ||
-    (weekNumber ? `Week ${weekNumber}` : "Current Workout");
+    (weekNumber ? `Week ${weekNumber}` : "");
 
   return dayNumber ? `${weekPart} / Day ${dayNumber}` : weekPart;
 }
@@ -195,6 +203,25 @@ async function selectProgramDay(
 
   if (error) {
     throw new Error(`Failed to load program day: ${error.message}`);
+  }
+
+  return data;
+}
+
+async function selectProgramDayWithWeek(
+  client: DatabaseClient,
+  programDayId: string | null
+) {
+  if (!programDayId) return null;
+
+  const { data, error } = await client
+    .from("program_days")
+    .select("id, day_number, progression_guide, notes, program_weeks(id, program_id, week_number, label)")
+    .eq("id", programDayId)
+    .maybeSingle<ProgramDayWithWeekRow>();
+
+  if (error) {
+    throw new Error(`Failed to load program day with week: ${error.message}`);
   }
 
   return data;
@@ -584,22 +611,23 @@ async function loadSessionView(
 ): Promise<WorkoutSessionView> {
   const t0 = Date.now();
 
-  // Round 1: program_day metadata and session exercises are independent — run in parallel.
-  const [programDay, workoutSessionExercises] = await Promise.all([
-    selectProgramDay(queryClient, session.program_day_id),
+  // Round 1: program_day+program_week (embedded join, one round trip) and session exercises
+  // are independent — run in parallel.
+  const [programDayWithWeek, workoutSessionExercises] = await Promise.all([
+    selectProgramDayWithWeek(queryClient, session.program_day_id),
     selectWorkoutSessionExercises(queryClient, session.id)
   ]);
-  console.log(`[PERF] loadSessionView round1 (programDay+exercises): ${Date.now() - t0}ms`);
+  const programWeek = programDayWithWeek?.program_weeks ?? null;
+  console.log(`[PERF] loadSessionView round1 (programDayWithWeek+exercises): ${Date.now() - t0}ms`);
 
-  // Round 2: program_week (depends on programDay), exercises + sets (depend on workoutSessionExercises)
-  // — all three are independent of each other so run in parallel.
+  // Round 2: exercises + sets (both depend on workoutSessionExercises from R1).
+  // program_week is now available from the R1 embedded join — no extra round trip needed.
   const t1 = Date.now();
-  const [programWeek, exercises, workoutSets] = await Promise.all([
-    selectProgramWeek(queryClient, programDay?.program_week_id ?? null),
+  const [exercises, workoutSets] = await Promise.all([
     selectExercises(queryClient, workoutSessionExercises.map((item) => item.exercise_id)),
     selectVisibleWorkoutSets(queryClient, workoutSessionExercises.map((item) => item.id))
   ]);
-  console.log(`[PERF] loadSessionView round2 (programWeek+exercises+sets): ${Date.now() - t1}ms`);
+  console.log(`[PERF] loadSessionView round2 (exercises+sets): ${Date.now() - t1}ms`);
 
   // Round 3: program (depends on programWeek), previousDisplayMap + t1Hints (depend on
   // workoutSessionExercises + workoutSets) — all independent of each other, run in parallel.
@@ -632,12 +660,12 @@ async function loadSessionView(
       : buildProgramWeekLabel(
           programWeek?.week_number ?? null,
           programWeek?.label ?? null,
-          programDay?.day_number ?? null
+          programDayWithWeek?.day_number ?? null
         ),
     progressionGuide:
-      programDay?.progression_guide ?? "Progression guide is not set yet.",
+      programDayWithWeek?.progression_guide ?? "Progression guide is not set yet.",
     notes:
-      programDay?.notes ?? "Train screen is reading active sets from Supabase.",
+      programDayWithWeek?.notes ?? "Train screen is reading active sets from Supabase.",
     startedAt: session.started_at,
     finishedAt: session.finished_at,
     status: session.status,
