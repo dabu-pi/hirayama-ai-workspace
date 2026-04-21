@@ -433,28 +433,31 @@ async function buildPreviousDisplayMap(
   );
   console.log(`[PERF] buildPreviousDisplayMap Q2 (historicalSets): ${Date.now() - tPrev1}ms | found=${historicalCompletedSets.length} hseIds=${historicalWorkoutSessionExerciseIds.length}`);
 
-  // ── Group sets by (exerciseId → sessionId → sets[]) ─────────────────────────
-  // Prevents mixing set_numbers from different sessions for the same exercise.
-  // Root cause of "only set 1 shows": exerciseId:set_number key allowed a newer
-  // session's set_1 to overwrite an older session's set_1, making latestStartedAt
-  // point to the newer session which had no set_2 or set_3.
+  // ── Group sets by (exerciseId:exerciseType → sessionId → sets[]) ────────────
+  // Outer key includes exerciseType so T1 Bench and T2 Bench are tracked
+  // separately. GZCL T1/T2/T3 carry different weight/rep meanings, so mixing
+  // tiers as "same exercise" would return the wrong previous values.
+  // Within each (exercise, type) bucket, sessions remain isolated to prevent
+  // cross-session set_number mixing (the previous cross-session mixing fix).
   type SessionSetEntry = {
     setNumber: number;
     weightKg: number | null;
     repsDone: number | null;
     startedAt: string;
   };
-  const setsByExerciseSession = new Map<string, Map<string, SessionSetEntry[]>>();
+  const setsByExerciseTypeSession = new Map<string, Map<string, SessionSetEntry[]>>();
 
   historicalCompletedSets.forEach((set) => {
     const historicalExercise = historicalExerciseMap.get(set.workout_session_exercise_id);
     if (!historicalExercise) return;
 
-    const { exerciseId, sessionId, startedAt } = historicalExercise;
-    if (!setsByExerciseSession.has(exerciseId)) {
-      setsByExerciseSession.set(exerciseId, new Map());
+    const { exerciseId, exerciseType, sessionId, startedAt } = historicalExercise;
+    const outerKey = `${exerciseId}:${exerciseType}`;
+
+    if (!setsByExerciseTypeSession.has(outerKey)) {
+      setsByExerciseTypeSession.set(outerKey, new Map());
     }
-    const sessionMap = setsByExerciseSession.get(exerciseId)!;
+    const sessionMap = setsByExerciseTypeSession.get(outerKey)!;
     if (!sessionMap.has(sessionId)) {
       sessionMap.set(sessionId, []);
     }
@@ -466,11 +469,15 @@ async function buildPreviousDisplayMap(
     });
   });
 
-  // ── For each exercise, pick the session with the latest startedAt ─────────
+  // ── For each (exercise, type), pick the session with the latest startedAt ──
   const displayMap = new Map<string, string>();
   const previousSetsMap = new Map<string, PreviousSet[]>();
 
-  for (const [exerciseId, sessionMap] of setsByExerciseSession.entries()) {
+  for (const [outerKey, sessionMap] of setsByExerciseTypeSession.entries()) {
+    const colonIdx = outerKey.indexOf(":");
+    const exerciseId = outerKey.substring(0, colonIdx);
+    const exerciseType = outerKey.substring(colonIdx + 1) as ExerciseType;
+
     let latestStartedAt = "";
     let latestSessionId = "";
     for (const [sessionId, sets] of sessionMap.entries()) {
@@ -491,13 +498,15 @@ async function buildPreviousDisplayMap(
       repsDone: s.repsDone
     }));
 
-    previousSetsMap.set(exerciseId, mappedSets);
+    // Keys include exerciseType so buildExerciseBlocks can look up per-tier.
+    previousSetsMap.set(outerKey, mappedSets);
     mappedSets.forEach((s) => {
-      displayMap.set(`${exerciseId}:${s.setNumber}`, formatPreviousDisplay(s.weightKg, s.repsDone));
+      displayMap.set(`${outerKey}:${s.setNumber}`, formatPreviousDisplay(s.weightKg, s.repsDone));
     });
 
     console.log("[PREV-DBG-ADOPT]", {
       exerciseId,
+      exerciseType,
       adoptedSessionId: latestSessionId,
       adoptedStartedAt: latestStartedAt,
       setsFound: mappedSets.length,
@@ -533,8 +542,9 @@ function buildExerciseBlocks(
     const exercise = exerciseMap.get(sessionExercise.exercise_id);
     const visibleSets = (setsByExercise.get(sessionExercise.id) ?? []).map(
       (set, index) => {
-        // Key: exerciseId:position only (no exerciseType) — matches displayMap key strategy
-        const previousKey = `${sessionExercise.exercise_id}:${index + 1}`;
+        // Key: exerciseId:exerciseType:position — matches displayMap key strategy.
+        // exerciseType ensures T1 and T2 of the same exercise get separate previous values.
+        const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${index + 1}`;
         console.log("[PREV-DBG] lookup key:", previousKey, "hit:", previousDisplayMap.has(previousKey));
 
         return {
@@ -563,7 +573,7 @@ function buildExerciseBlocks(
       exerciseNameEn: exercise?.name_en ?? "Exercise",
       exerciseType: sessionExercise.exercise_type,
       orderIndex: sessionExercise.order_index,
-      previousSets: previousSetsMap.get(sessionExercise.exercise_id) ?? [],
+      previousSets: previousSetsMap.get(`${sessionExercise.exercise_id}:${sessionExercise.exercise_type}`) ?? [],
       sets: visibleSets,
       wasAdded: sessionExercise.was_added,
       wasSwapped: sessionExercise.was_swapped,
