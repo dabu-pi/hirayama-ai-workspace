@@ -528,16 +528,20 @@ export function WorkoutScreen({
     };
   }, []);
 
-  const handleRestTimer = () => {
+  const startRestTimer = () => {
     clearRestDoneTimeout();
+    restEndTimeRef.current = Date.now() + REST_DEFAULT_SEC * 1000;
+    setRestSecondsLeft(REST_DEFAULT_SEC);
+  };
+
+  const handleRestTimer = () => {
     if (restEndTimeRef.current !== null) {
+      clearRestDoneTimeout();
       restEndTimeRef.current = null;
       setRestSecondsLeft(null);
       return;
     }
-
-    restEndTimeRef.current = Date.now() + REST_DEFAULT_SEC * 1000;
-    setRestSecondsLeft(REST_DEFAULT_SEC);
+    startRestTimer();
   };
 
   const isSessionCompleted = sessionMeta.status === "completed";
@@ -870,6 +874,7 @@ export function WorkoutScreen({
     updateIncompleteSetCount(-1);
     setPendingMutation({ setId, kind: "complete" });
     clearTransientError();
+    startRestTimer();
 
     try {
       // Input save and complete are independent — run in parallel.
