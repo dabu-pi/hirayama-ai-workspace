@@ -1,39 +1,35 @@
--- Seed: BIG3 2-Day 6-Week (Full Rotation)
+-- Seed: BIG3 2-Day 6-Week (Cyclic Rotation)
 -- Run in Supabase Dashboard > SQL Editor
 --
 -- Prerequisites:
---   - gzclp-base-v2.sql already executed
---     (exercises: squat / bench-press / deadlift must exist)
+--   - exercises: squat / bench-press / deadlift must exist
 --
--- Design: all 6 permutations of 3 exercises into T1/T2/T3, used twice.
+-- Design: 3-pattern cyclic rotation (A, B, C) using all valid week pairings.
 --
 --   Pattern A: T1 Squat  / T2 Bench  / T3 Dead
 --   Pattern B: T1 Bench  / T2 Dead   / T3 Squat
 --   Pattern C: T1 Dead   / T2 Squat  / T3 Bench
---   Pattern D: T1 Squat  / T2 Dead   / T3 Bench
---   Pattern E: T1 Bench  / T2 Squat  / T3 Dead
---   Pattern F: T1 Dead   / T2 Bench  / T3 Squat
 --
--- Session schedule (12 sessions):
---   W1D1=A  W1D2=B
---   W2D1=C  W2D2=D
---   W3D1=E  W3D2=F
---   W4D1=A  W4D2=B  (repeat)
---   W5D1=C  W5D2=D  (repeat)
---   W6D1=E  W6D2=F  (repeat)
+-- Week schedule:
+--   W1: A + B      W2: C + A      W3: B + C
+--   W4: A + B      W5: C + A      W6: B + C   (repeat)
 --
--- Tier frequency per exercise (perfect balance):
---   Squat:  T1x4 (A,D x2) / T2x4 (C,E x2) / T3x4 (B,F x2)
---   Bench:  T1x4 (B,E x2) / T2x4 (A,F x2) / T3x4 (C,D x2)
---   Dead:   T1x4 (C,F x2) / T2x4 (B,D x2) / T3x4 (A,E x2)
+-- Within-week tier check (no same-tier for same exercise in same week):
+--   W1(A+B): Squat T1/T3  Bench T2/T1  Dead T3/T2  (all different)
+--   W2(C+A): Squat T2/T1  Bench T3/T2  Dead T1/T3  (all different)
+--   W3(B+C): Squat T3/T2  Bench T1/T3  Dead T2/T1  (all different)
 --
--- Within-week T1 variety: each week has 2 different T1 exercises.
--- Consecutive sessions always have different T1 exercises.
+-- T1 sequence across sessions: Sq, Bn, Dl, Sq, Bn, Dl (cyclic)
+--
+-- Tier frequency per exercise (12 sessions total):
+--   Squat: T1x4 (A) / T2x4 (C) / T3x4 (B)
+--   Bench: T1x4 (B) / T2x4 (A) / T3x4 (C)
+--   Dead:  T1x4 (C) / T2x4 (B) / T3x4 (A)
 --
 -- Per-session layout (3 exercises, order_index 1-3):
---   1: T1 main lift   (5 sets x 3+)
---   2: T2 practice    (3 sets x 10)
---   3: T3 finish      (3 sets x 15+)
+--   1: T1 main lift    (5 sets x 3+)
+--   2: T2 practice     (3 sets x 10)
+--   3: T3 finish       (3 sets x 15+)
 --
 -- Total rows in program_day_exercises: 3 x 12 = 36
 --
@@ -59,19 +55,12 @@ declare
   tag_barbell   uuid;
   tag_full_body uuid;
 
-  -- Shared progression guide fragments (reused per pattern)
   guide_a text;
   guide_b text;
   guide_c text;
-  guide_d text;
-  guide_e text;
-  guide_f text;
   notes_a text;
   notes_b text;
   notes_c text;
-  notes_d text;
-  notes_e text;
-  notes_f text;
 begin
   -- 1. Resolve exercise UUIDs
   select id into ex_squat    from public.exercises where slug = 'squat';
@@ -88,24 +77,15 @@ begin
     return;
   end if;
 
-  -- 3. Progression guide text per pattern (plain UTF-8)
-  guide_a := 'Cycle A: T1 スクワット 5x3+: 毎回5kg増を目標。T2 ベンチプレス 3x10: 10回で次回2.5kg増。T3 デッドリフト 3x15+: 15回到達で次回重量増。';
-  notes_a := 'Cycle A: T1 スクワット 5x3+, T2 ベンチプレス 3x10, T3 デッドリフト 3x15+';
+  -- 3. Progression guide text (3 patterns, plain UTF-8)
+  guide_a := 'Pattern A: T1 スクワット 5x3+: 毎回5kg増を目標。T2 ベンチプレス 3x10: 10回で次回2.5kg増。T3 デッドリフト 3x15+: 15回到達で次回重量増。';
+  notes_a := 'Pattern A: T1 スクワット 5x3+, T2 ベンチプレス 3x10, T3 デッドリフト 3x15+';
 
-  guide_b := 'Cycle B: T1 ベンチプレス 5x3+: 毎回2.5kg増を目標。T2 デッドリフト 3x10: 10回で次回5kg増。T3 スクワット 3x15+: 15回到達で次回重量増。';
-  notes_b := 'Cycle B: T1 ベンチプレス 5x3+, T2 デッドリフト 3x10, T3 スクワット 3x15+';
+  guide_b := 'Pattern B: T1 ベンチプレス 5x3+: 毎回2.5kg増を目標。T2 デッドリフト 3x10: 10回で次回5kg増。T3 スクワット 3x15+: 15回到達で次回重量増。';
+  notes_b := 'Pattern B: T1 ベンチプレス 5x3+, T2 デッドリフト 3x10, T3 スクワット 3x15+';
 
-  guide_c := 'Cycle C: T1 デッドリフト 5x3+: 毎回5kg増を目標。T2 スクワット 3x10: 10回で次回5kg増。T3 ベンチプレス 3x15+: 15回到達で次回重量増。';
-  notes_c := 'Cycle C: T1 デッドリフト 5x3+, T2 スクワット 3x10, T3 ベンチプレス 3x15+';
-
-  guide_d := 'Cycle D: T1 スクワット 5x3+: 毎回5kg増を目標。T2 デッドリフト 3x10: 10回で次回5kg増。T3 ベンチプレス 3x15+: 15回到達で次回重量増。';
-  notes_d := 'Cycle D: T1 スクワット 5x3+, T2 デッドリフト 3x10, T3 ベンチプレス 3x15+';
-
-  guide_e := 'Cycle E: T1 ベンチプレス 5x3+: 毎回2.5kg増を目標。T2 スクワット 3x10: 10回で次回5kg増。T3 デッドリフト 3x15+: 15回到達で次回重量増。';
-  notes_e := 'Cycle E: T1 ベンチプレス 5x3+, T2 スクワット 3x10, T3 デッドリフト 3x15+';
-
-  guide_f := 'Cycle F: T1 デッドリフト 5x3+: 毎回5kg増を目標。T2 ベンチプレス 3x10: 10回で次回2.5kg増。T3 スクワット 3x15+: 15回到達で次回重量増。';
-  notes_f := 'Cycle F: T1 デッドリフト 5x3+, T2 ベンチプレス 3x10, T3 スクワット 3x15+';
+  guide_c := 'Pattern C: T1 デッドリフト 5x3+: 毎回5kg増を目標。T2 スクワット 3x10: 10回で次回5kg増。T3 ベンチプレス 3x15+: 15回到達で次回重量増。';
+  notes_c := 'Pattern C: T1 デッドリフト 5x3+, T2 スクワット 3x10, T3 ベンチプレス 3x15+';
 
   -- 4. Program
   insert into public.programs
@@ -114,10 +94,10 @@ begin
   values (
     'big3-2day-6week',
     'BIG3 2-Day 6週',
-    'BIG3の3種目の全6パターン（A〜F）を2周する週2日・6週プログラム。各種目がT1/T2/T3を完全均等に担当する（各種目 T1x4 / T2x4 / T3x4）。',
+    'BIG3の3種目をA/B/Cの3パターンで週2日・6週間ローテーション。各種目がT1/T2/T3を完全均等に担当し（各 T1x4 / T2x4 / T3x4）、同一週内でTierが重複しない設計。',
     6, 2, 'beginner',
     null, 'custom',
-    'BIG3の3種目の全6通りのT1/T2/T3割り当て（A〜F）を完全ローテーション。各種目 T1x4 / T2x4 / T3x4 で完全対称。1セッション内に同一種目の重複なし。',
+    '3パターン（A: T1スクワット, B: T1ベンチ, C: T1デッドリフト）の全ペア組合せをローテーション。週ペア: W1/W4=A+B, W2/W5=C+A, W3/W6=B+C。各種目 T1x4/T2x4/T3x4の完全対称。同一週内でTier重複なし。',
     true,
     'gzcl'
   )
@@ -141,22 +121,22 @@ begin
   select id into w6 from public.program_weeks where program_id = prog_id and week_number = 6;
 
   -- 6. Days (12 days)
-  -- Weeks 1-3: patterns A,B / C,D / E,F
-  -- Weeks 4-6: repeat A,B / C,D / E,F
+  -- W1: A+B  W2: C+A  W3: B+C
+  -- W4: A+B  W5: C+A  W6: B+C  (repeat)
   insert into public.program_days (program_week_id, day_number, progression_guide, notes)
   values
-    (w1, 1, guide_a, notes_a),   -- W1D1 = Cycle A
-    (w1, 2, guide_b, notes_b),   -- W1D2 = Cycle B
-    (w2, 1, guide_c, notes_c),   -- W2D1 = Cycle C
-    (w2, 2, guide_d, notes_d),   -- W2D2 = Cycle D
-    (w3, 1, guide_e, notes_e),   -- W3D1 = Cycle E
-    (w3, 2, guide_f, notes_f),   -- W3D2 = Cycle F
-    (w4, 1, guide_a, notes_a),   -- W4D1 = Cycle A (repeat)
-    (w4, 2, guide_b, notes_b),   -- W4D2 = Cycle B (repeat)
-    (w5, 1, guide_c, notes_c),   -- W5D1 = Cycle C (repeat)
-    (w5, 2, guide_d, notes_d),   -- W5D2 = Cycle D (repeat)
-    (w6, 1, guide_e, notes_e),   -- W6D1 = Cycle E (repeat)
-    (w6, 2, guide_f, notes_f);   -- W6D2 = Cycle F (repeat)
+    (w1, 1, guide_a, notes_a),   -- W1D1 = Pattern A
+    (w1, 2, guide_b, notes_b),   -- W1D2 = Pattern B
+    (w2, 1, guide_c, notes_c),   -- W2D1 = Pattern C
+    (w2, 2, guide_a, notes_a),   -- W2D2 = Pattern A
+    (w3, 1, guide_b, notes_b),   -- W3D1 = Pattern B
+    (w3, 2, guide_c, notes_c),   -- W3D2 = Pattern C
+    (w4, 1, guide_a, notes_a),   -- W4D1 = Pattern A (repeat)
+    (w4, 2, guide_b, notes_b),   -- W4D2 = Pattern B (repeat)
+    (w5, 1, guide_c, notes_c),   -- W5D1 = Pattern C (repeat)
+    (w5, 2, guide_a, notes_a),   -- W5D2 = Pattern A (repeat)
+    (w6, 1, guide_b, notes_b),   -- W6D1 = Pattern B (repeat)
+    (w6, 2, guide_c, notes_c);   -- W6D2 = Pattern C (repeat)
 
   select id into w1d1 from public.program_days where program_week_id = w1 and day_number = 1;
   select id into w1d2 from public.program_days where program_week_id = w1 and day_number = 2;
@@ -172,71 +152,71 @@ begin
   select id into w6d2 from public.program_days where program_week_id = w6 and day_number = 2;
 
   -- 7. Exercises per day (3 per day x 12 days = 36 rows)
-  -- order_index 1: T1 main    (5 sets x 3+)
-  -- order_index 2: T2 practice (3 sets x 10)
-  -- order_index 3: T3 finish  (3 sets x 15+)
+  -- order_index 1: T1 main lift  (5 sets x 3+)
+  -- order_index 2: T2 practice   (3 sets x 10)
+  -- order_index 3: T3 finish     (3 sets x 15+)
   insert into public.program_day_exercises
     (program_day_id, exercise_id, exercise_type, set_count, target_reps_text, order_index)
   values
-    -- W1D1 = Cycle A: T1 Squat / T2 Bench / T3 Dead
+    -- W1D1 = Pattern A: T1 Squat / T2 Bench / T3 Dead
     (w1d1, ex_squat,    'T1', 5, '3+',  1),
     (w1d1, ex_bench,    'T2', 3, '10',  2),
     (w1d1, ex_deadlift, 'T3', 3, '15+', 3),
 
-    -- W1D2 = Cycle B: T1 Bench / T2 Dead / T3 Squat
+    -- W1D2 = Pattern B: T1 Bench / T2 Dead / T3 Squat
     (w1d2, ex_bench,    'T1', 5, '3+',  1),
     (w1d2, ex_deadlift, 'T2', 3, '10',  2),
     (w1d2, ex_squat,    'T3', 3, '15+', 3),
 
-    -- W2D1 = Cycle C: T1 Dead / T2 Squat / T3 Bench
+    -- W2D1 = Pattern C: T1 Dead / T2 Squat / T3 Bench
     (w2d1, ex_deadlift, 'T1', 5, '3+',  1),
     (w2d1, ex_squat,    'T2', 3, '10',  2),
     (w2d1, ex_bench,    'T3', 3, '15+', 3),
 
-    -- W2D2 = Cycle D: T1 Squat / T2 Dead / T3 Bench
+    -- W2D2 = Pattern A: T1 Squat / T2 Bench / T3 Dead
     (w2d2, ex_squat,    'T1', 5, '3+',  1),
-    (w2d2, ex_deadlift, 'T2', 3, '10',  2),
-    (w2d2, ex_bench,    'T3', 3, '15+', 3),
+    (w2d2, ex_bench,    'T2', 3, '10',  2),
+    (w2d2, ex_deadlift, 'T3', 3, '15+', 3),
 
-    -- W3D1 = Cycle E: T1 Bench / T2 Squat / T3 Dead
+    -- W3D1 = Pattern B: T1 Bench / T2 Dead / T3 Squat
     (w3d1, ex_bench,    'T1', 5, '3+',  1),
-    (w3d1, ex_squat,    'T2', 3, '10',  2),
-    (w3d1, ex_deadlift, 'T3', 3, '15+', 3),
+    (w3d1, ex_deadlift, 'T2', 3, '10',  2),
+    (w3d1, ex_squat,    'T3', 3, '15+', 3),
 
-    -- W3D2 = Cycle F: T1 Dead / T2 Bench / T3 Squat
+    -- W3D2 = Pattern C: T1 Dead / T2 Squat / T3 Bench
     (w3d2, ex_deadlift, 'T1', 5, '3+',  1),
-    (w3d2, ex_bench,    'T2', 3, '10',  2),
-    (w3d2, ex_squat,    'T3', 3, '15+', 3),
+    (w3d2, ex_squat,    'T2', 3, '10',  2),
+    (w3d2, ex_bench,    'T3', 3, '15+', 3),
 
-    -- W4D1 = Cycle A (repeat): T1 Squat / T2 Bench / T3 Dead
+    -- W4D1 = Pattern A (repeat): T1 Squat / T2 Bench / T3 Dead
     (w4d1, ex_squat,    'T1', 5, '3+',  1),
     (w4d1, ex_bench,    'T2', 3, '10',  2),
     (w4d1, ex_deadlift, 'T3', 3, '15+', 3),
 
-    -- W4D2 = Cycle B (repeat): T1 Bench / T2 Dead / T3 Squat
+    -- W4D2 = Pattern B (repeat): T1 Bench / T2 Dead / T3 Squat
     (w4d2, ex_bench,    'T1', 5, '3+',  1),
     (w4d2, ex_deadlift, 'T2', 3, '10',  2),
     (w4d2, ex_squat,    'T3', 3, '15+', 3),
 
-    -- W5D1 = Cycle C (repeat): T1 Dead / T2 Squat / T3 Bench
+    -- W5D1 = Pattern C (repeat): T1 Dead / T2 Squat / T3 Bench
     (w5d1, ex_deadlift, 'T1', 5, '3+',  1),
     (w5d1, ex_squat,    'T2', 3, '10',  2),
     (w5d1, ex_bench,    'T3', 3, '15+', 3),
 
-    -- W5D2 = Cycle D (repeat): T1 Squat / T2 Dead / T3 Bench
+    -- W5D2 = Pattern A (repeat): T1 Squat / T2 Bench / T3 Dead
     (w5d2, ex_squat,    'T1', 5, '3+',  1),
-    (w5d2, ex_deadlift, 'T2', 3, '10',  2),
-    (w5d2, ex_bench,    'T3', 3, '15+', 3),
+    (w5d2, ex_bench,    'T2', 3, '10',  2),
+    (w5d2, ex_deadlift, 'T3', 3, '15+', 3),
 
-    -- W6D1 = Cycle E (repeat): T1 Bench / T2 Squat / T3 Dead
+    -- W6D1 = Pattern B (repeat): T1 Bench / T2 Dead / T3 Squat
     (w6d1, ex_bench,    'T1', 5, '3+',  1),
-    (w6d1, ex_squat,    'T2', 3, '10',  2),
-    (w6d1, ex_deadlift, 'T3', 3, '15+', 3),
+    (w6d1, ex_deadlift, 'T2', 3, '10',  2),
+    (w6d1, ex_squat,    'T3', 3, '15+', 3),
 
-    -- W6D2 = Cycle F (repeat): T1 Dead / T2 Bench / T3 Squat
+    -- W6D2 = Pattern C (repeat): T1 Dead / T2 Squat / T3 Bench
     (w6d2, ex_deadlift, 'T1', 5, '3+',  1),
-    (w6d2, ex_bench,    'T2', 3, '10',  2),
-    (w6d2, ex_squat,    'T3', 3, '15+', 3);
+    (w6d2, ex_squat,    'T2', 3, '10',  2),
+    (w6d2, ex_bench,    'T3', 3, '15+', 3);
 
   -- 8. Tag assignments (soft -- skipped if tags not yet seeded)
   select id into tag_strength   from public.program_tags where slug = 'strength';
