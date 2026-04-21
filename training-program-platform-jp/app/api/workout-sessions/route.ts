@@ -39,6 +39,18 @@ export async function POST(request: Request) {
     const result = await startSessionForDay(programDayId);
 
     if (!result.ok) {
+      if (result.reason === "session_already_in_progress") {
+        return NextResponse.json(
+          {
+            error: {
+              code: "session_already_in_progress",
+              message: "別のワークアウトセッションが進行中です。先にそのセッションを終了またはキャンセルしてください。"
+            }
+          },
+          { status: 409 }
+        );
+      }
+
       if (result.reason === "supabase_unavailable") {
         return NextResponse.json(
           {

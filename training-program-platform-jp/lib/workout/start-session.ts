@@ -16,11 +16,13 @@ export type StartSessionResult =
         | "supabase_unavailable"
         | "unauthenticated"
         | "day_not_found"
-        | "insert_failed";
+        | "insert_failed"
+        | "session_already_in_progress";
     };
 
 type ExistingSessionRow = {
   id: string;
+  program_day_id: string | null;
 };
 
 type ProgramDayExerciseRow = {
@@ -146,27 +148,36 @@ export async function startSessionForDay(
     return { ok: false, reason: "unauthenticated" };
   }
 
-  // 0. Guard: check for an existing in_progress session for this day
+  // 0. Guard: check for any existing in_progress session for this user.
+  //    - Same program_day_id → reuse (idempotent resume).
+  //    - Different session (custom or different day) → block.
+  //    User-scope check ensures a custom (program_day_id=null) session cannot
+  //    silently coexist with a program-based session.
   {
-    let existingQuery = client
+    const { data: anyInProgress, error: existingError } = await client
       .from("workout_sessions")
-      .select("id")
-      .eq("program_day_id", programDayId)
+      .select("id, program_day_id")
+      .eq("user_id", userId)
       .eq("status", "in_progress")
-      .limit(1);
-
-    existingQuery = existingQuery.eq("user_id", userId);
-
-    const { data: existing, error: existingError } =
-      await existingQuery.maybeSingle<ExistingSessionRow>();
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle<ExistingSessionRow>();
 
     if (existingError) {
       console.error("start-session: failed to check for existing session.", existingError);
       return { ok: false, reason: "insert_failed" };
     }
 
-    if (existing) {
-      return { ok: true, sessionId: existing.id, reused: true };
+    if (anyInProgress) {
+      if (anyInProgress.program_day_id === programDayId) {
+        return { ok: true, sessionId: anyInProgress.id, reused: true };
+      }
+      console.warn("start-session: blocked by existing in_progress session.", {
+        existingSessionId: anyInProgress.id,
+        existingProgramDayId: anyInProgress.program_day_id,
+        requestedProgramDayId: programDayId
+      });
+      return { ok: false, reason: "session_already_in_progress" };
     }
   }
 
