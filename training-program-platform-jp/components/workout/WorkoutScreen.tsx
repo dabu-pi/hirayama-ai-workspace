@@ -855,6 +855,9 @@ export function WorkoutScreen({
       return;
     }
 
+    // Flush pending draft inputs before marking complete so weight/reps are persisted.
+    await handleInputSave(exerciseId, setId);
+
     const prevSet = exercises
       .find((exercise) => exercise.id === exerciseId)
       ?.sets.find((set) => set.id === setId);
