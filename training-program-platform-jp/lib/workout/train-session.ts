@@ -93,11 +93,6 @@ type HistoricalExerciseWithSessionRow = {
   workout_sessions: { started_at: string } | null;
 };
 
-type PreviousCandidate = {
-  startedAt: string;
-  weightKg: number | null;
-  repsDone: number | null;
-};
 
 function toNullableNumber(value: number | string | null): number | null {
   if (value === null || value === undefined) return null;
@@ -425,6 +420,7 @@ async function buildPreviousDisplayMap(
       {
         exerciseId: item.exercise_id,
         exerciseType: item.exercise_type,
+        sessionId: item.workout_session_id,
         startedAt: item.workout_sessions?.started_at ?? ""
       }
     ])
@@ -437,92 +433,81 @@ async function buildPreviousDisplayMap(
   );
   console.log(`[PERF] buildPreviousDisplayMap Q2 (historicalSets): ${Date.now() - tPrev1}ms | found=${historicalCompletedSets.length} hseIds=${historicalWorkoutSessionExerciseIds.length}`);
 
-  // keyed exerciseId:set_number — exercise_type excluded so type changes between sessions don't cause misses
-  const previousCandidateMap = new Map<string, PreviousCandidate>();
-
-  console.log("[PREV-DBG] historicalCompletedSets count:", historicalCompletedSets.length,
-    "| by exercise:", Object.fromEntries(
-      Object.entries(
-        historicalCompletedSets.reduce<Record<string, number>>((acc, s) => {
-          const ex = historicalExerciseMap.get(s.workout_session_exercise_id);
-          if (ex) acc[ex.exerciseId] = (acc[ex.exerciseId] ?? 0) + 1;
-          return acc;
-        }, {})
-      )
-    )
-  );
+  // ── Group sets by (exerciseId → sessionId → sets[]) ─────────────────────────
+  // Prevents mixing set_numbers from different sessions for the same exercise.
+  // Root cause of "only set 1 shows": exerciseId:set_number key allowed a newer
+  // session's set_1 to overwrite an older session's set_1, making latestStartedAt
+  // point to the newer session which had no set_2 or set_3.
+  type SessionSetEntry = {
+    setNumber: number;
+    weightKg: number | null;
+    repsDone: number | null;
+    startedAt: string;
+  };
+  const setsByExerciseSession = new Map<string, Map<string, SessionSetEntry[]>>();
 
   historicalCompletedSets.forEach((set) => {
-    const historicalExercise = historicalExerciseMap.get(
-      set.workout_session_exercise_id
-    );
+    const historicalExercise = historicalExerciseMap.get(set.workout_session_exercise_id);
     if (!historicalExercise) return;
 
-    // Key: exerciseId:set_number only. exerciseType excluded so that type changes
-    // between sessions (T2→T1 etc.) don't cause lookup misses for sets 2+.
-    const key = `${historicalExercise.exerciseId}:${set.set_number}`;
-    const nextCandidate: PreviousCandidate = {
-      startedAt: historicalExercise.startedAt,
-      weightKg: toNullableNumber(set.weight_kg),
-      repsDone: set.reps_done
-    };
-    const currentCandidate = previousCandidateMap.get(key);
-
-    if (!currentCandidate || nextCandidate.startedAt > currentCandidate.startedAt) {
-      previousCandidateMap.set(key, nextCandidate);
+    const { exerciseId, sessionId, startedAt } = historicalExercise;
+    if (!setsByExerciseSession.has(exerciseId)) {
+      setsByExerciseSession.set(exerciseId, new Map());
     }
+    const sessionMap = setsByExerciseSession.get(exerciseId)!;
+    if (!sessionMap.has(sessionId)) {
+      sessionMap.set(sessionId, []);
+    }
+    sessionMap.get(sessionId)!.push({
+      setNumber: set.set_number,
+      weightKg: toNullableNumber(set.weight_kg),
+      repsDone: set.reps_done,
+      startedAt
+    });
   });
 
-  console.log("[PREV-DBG] previousCandidateMap size:", previousCandidateMap.size,
-    "| keys:", Array.from(previousCandidateMap.keys()));
-
-  // ── Two-pass: pick only sets from the most recent session per exercise ────────
-  // Pass 1: find the latest startedAt per exerciseId (no iteration-order dependency)
-  const latestStartedAt = new Map<string, string>();
-  for (const [key, candidate] of previousCandidateMap.entries()) {
-    const exerciseId = key.slice(0, key.indexOf(":"));
-    const current = latestStartedAt.get(exerciseId);
-    if (!current || candidate.startedAt > current) {
-      latestStartedAt.set(exerciseId, candidate.startedAt);
-    }
-  }
-
-  // Pass 2: collect all sets whose startedAt matches the latest for their exercise
-  const latestSetsByExercise = new Map<string, Array<[number, PreviousCandidate]>>();
-  for (const [key, candidate] of previousCandidateMap.entries()) {
-    const colonIdx = key.indexOf(":");
-    const exerciseId = key.slice(0, colonIdx);
-    const setNumber = parseInt(key.slice(colonIdx + 1), 10);
-
-    if (candidate.startedAt === latestStartedAt.get(exerciseId)) {
-      const list = latestSetsByExercise.get(exerciseId) ?? [];
-      list.push([setNumber, candidate]);
-      latestSetsByExercise.set(exerciseId, list);
-    }
-  }
-
-  // ── Build displayMap (per-row 前回 column) keyed exerciseId:position ─────────
-  // ── Build previousSetsMap (summary bar) keyed exerciseId — same data source ──
-  // Both use position-based (not set_number-based) keys to handle add/delete sets.
+  // ── For each exercise, pick the session with the latest startedAt ─────────
   const displayMap = new Map<string, string>();
   const previousSetsMap = new Map<string, PreviousSet[]>();
 
-  for (const [exerciseId, sets] of latestSetsByExercise.entries()) {
-    sets.sort(([a], [b]) => a - b);
-    const mappedSets: PreviousSet[] = sets.map(([, candidate], idx) => ({
+  for (const [exerciseId, sessionMap] of setsByExerciseSession.entries()) {
+    let latestStartedAt = "";
+    let latestSessionId = "";
+    for (const [sessionId, sets] of sessionMap.entries()) {
+      const startedAt = sets[0]?.startedAt ?? "";
+      if (startedAt > latestStartedAt) {
+        latestStartedAt = startedAt;
+        latestSessionId = sessionId;
+      }
+    }
+
+    const adoptedSets = (sessionMap.get(latestSessionId) ?? [])
+      .slice()
+      .sort((a, b) => a.setNumber - b.setNumber);
+
+    const mappedSets: PreviousSet[] = adoptedSets.map((s, idx) => ({
       setNumber: idx + 1,
-      weightKg: candidate.weightKg,
-      repsDone: candidate.repsDone
+      weightKg: s.weightKg,
+      repsDone: s.repsDone
     }));
+
     previousSetsMap.set(exerciseId, mappedSets);
     mappedSets.forEach((s) => {
       displayMap.set(`${exerciseId}:${s.setNumber}`, formatPreviousDisplay(s.weightKg, s.repsDone));
     });
+
+    console.log("[PREV-DBG-ADOPT]", {
+      exerciseId,
+      adoptedSessionId: latestSessionId,
+      adoptedStartedAt: latestStartedAt,
+      setsFound: mappedSets.length,
+      otherSessions: Array.from(sessionMap.entries())
+        .filter(([sid]) => sid !== latestSessionId)
+        .map(([sid, sets]) => ({ sessionId: sid, startedAt: sets[0]?.startedAt ?? "", setCount: sets.length }))
+    });
   }
 
-  console.log("[PREV-DBG] displayMap size:", displayMap.size, "| keys:", Array.from(displayMap.keys()));
-  console.log("[PREV-DBG] previousSetsMap:", Array.from(previousSetsMap.entries()).map(([k, v]) => `${k}:${v.length}sets`));
-  console.log("[PREV-DBG] uniqueExerciseIds (session lookup keys):", uniqueExerciseIds);
+  console.log("[PREV-DBG] displayMap size:", displayMap.size, "| previousSetsMap:", Array.from(previousSetsMap.entries()).map(([k, v]) => `${k}:${v.length}sets`));
   return { displayMap, previousSetsMap };
 }
 
