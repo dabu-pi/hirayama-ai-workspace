@@ -128,9 +128,10 @@ function defaultRepsDraft(
 
 function buildDraftInputs(exercises: WorkoutExerciseBlock[]) {
   return exercises.reduce<SetDraftMap>((accumulator, exercise) => {
-    exercise.sets.forEach((set) => {
+    exercise.sets.forEach((set, setIndex) => {
+      const prevWeight = exercise.previousSets[setIndex]?.weightKg ?? null;
       accumulator[set.id] = {
-        weightKg: stringifyNumber(set.weightKg),
+        weightKg: set.weightKg !== null ? stringifyNumber(set.weightKg) : stringifyNumber(prevWeight),
         repsDone: defaultRepsDraft(set.repsDone, set.targetRepsText)
       };
     });
@@ -138,9 +139,9 @@ function buildDraftInputs(exercises: WorkoutExerciseBlock[]) {
   }, {});
 }
 
-/** Formats rest-timer seconds as M:SS. 0 returns "Done!". */
+/** Formats rest-timer seconds as M:SS. 0 returns "完了!". */
 function formatRestTime(seconds: number): string {
-  if (seconds === 0) return "Done!";
+  if (seconds === 0) return "完了!";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
@@ -1042,8 +1043,8 @@ export function WorkoutScreen({
 
     const message =
       completedSetCount > 0
-        ? `Discard this workout? ${completedSetCount} completed set${completedSetCount !== 1 ? "s" : ""} will be kept in history but this session will be marked as cancelled.`
-        : "Discard this workout? No completed sets will be lost.";
+        ? `このワークアウトを中断しますか？完了済み${completedSetCount}セットは履歴に残りますが、セッションはキャンセルされます。`
+        : "このワークアウトを中断しますか？完了済みセットはありません。";
 
     const confirmed = window.confirm(message);
     if (!confirmed) return;
@@ -1261,17 +1262,17 @@ export function WorkoutScreen({
           title={restSecondsLeft !== null ? "タップでキャンセル" : "レスト開始 (1:30)"}
           type="button"
         >
-          <span className={styles.toolButtonLabel}>Rest</span>
+          <span className={styles.toolButtonLabel}>休憩</span>
           <span className={styles.toolButtonValue}>
             {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : "1:30"}
           </span>
         </button>
         <button className={`${styles.iconButton} ${styles.toolButton}`} type="button">
-          <span className={styles.toolButtonLabel}>Calc</span>
+          <span className={styles.toolButtonLabel}>計算</span>
           <span className={styles.toolButtonHint}>1RM</span>
         </button>
         <div className={styles.timerPanel}>
-          <span className={styles.timerLabel}>Session</span>
+          <span className={styles.timerLabel}>経過</span>
           <div className={styles.timer}>{formatElapsed(elapsedSeconds)}</div>
         </div>
         <div className={styles.topBarActions}>
@@ -1346,7 +1347,7 @@ export function WorkoutScreen({
           </div>
         ) : null}
         <div className={styles.hint}>
-          <span>Reps はターゲット値を初期入力。Kg / Reps は onBlur で保存</span>
+          <span>回数はターゲット値を初期表示。重量/回数はフォーカスを外すと保存されます</span>
         </div>
       </section>
 
@@ -1443,7 +1444,7 @@ export function WorkoutScreen({
             )}
 
             <div className={styles.swipeHint}>
-              左スワイプで Delete ・ 完了後も Kg / Reps はそのまま編集できます
+              左スワイプで削除・完了後も重量/回数は編集できます
             </div>
 
             <div className={styles.setTable}>
@@ -1451,8 +1452,8 @@ export function WorkoutScreen({
                 <span>#</span>
                 <span>前回</span>
                 <span>目標</span>
-                <span>Kg</span>
-                <span>Reps</span>
+                <span>kg</span>
+                <span>回数</span>
                 <span>完</span>
               </div>
 
@@ -1460,17 +1461,8 @@ export function WorkoutScreen({
                 // previousSets はサーバー側で exerciseId-only キー + 最新セッション基準で構築済み。
                 // set.previousDisplay はサーバー側 displayMap に依存するため、
                 // index ズレが起きやすい。ここでは exercise.previousSets[setIndex] を直接参照する。
-                if (setIndex === 0) {
-                  console.log("[EXERCISE-FULL]", exercise.exerciseNameEn, {
-                    exerciseId: exercise.exerciseId,
-                    previousSetsLen: exercise.previousSets.length,
-                    previousSets: exercise.previousSets,
-                    setsLen: exercise.sets.length,
-                  });
-                }
                 const prevSet = exercise.previousSets[setIndex] ?? null;
                 const prevDisplay = formatPrevDisplay(prevSet);
-                console.log("[ROW-PREV]", exercise.exerciseNameEn, "idx:", setIndex, "prev:", prevDisplay);
 
                 const draft = getSetDraft(draftInputs, set);
                 const isSaving = savingSetIds.includes(set.id);
@@ -1513,13 +1505,13 @@ export function WorkoutScreen({
                           className={`${styles.target}${!isSessionEnded ? ` ${styles.targetClickable}` : ""}`}
                           disabled={isSessionEnded}
                           onClick={() => handleFillFromTarget(exercise.id, set.id, set.targetRepsText)}
-                          title="クリックでRepsに反映"
+                          title="タップで回数に反映"
                           type="button"
                         >
                           {set.targetRepsText ?? "-"}
                         </button>
                         <input
-                          aria-label={`${exercise.exerciseNameEn} set ${set.displaySetNumber} kg`}
+                          aria-label={`${exercise.exerciseNameEn} セット${set.displaySetNumber} 重量`}
                           className={`${styles.input} ${isSaving ? styles.inputSaving : ""} ${set.isAutoFilled ? styles.inputAutoFilled : ""}`}
                           disabled={isSaving || isSessionEnded}
                           inputMode="decimal"
@@ -1538,7 +1530,7 @@ export function WorkoutScreen({
                           value={draft.weightKg}
                         />
                         <input
-                          aria-label={`${exercise.exerciseNameEn} set ${set.displaySetNumber} reps`}
+                          aria-label={`${exercise.exerciseNameEn} セット${set.displaySetNumber} 回数`}
                           className={`${styles.input} ${isSaving ? styles.inputSaving : ""}`}
                           disabled={isSaving || isSessionEnded}
                           inputMode="numeric"
@@ -1554,7 +1546,7 @@ export function WorkoutScreen({
                           value={draft.repsDone}
                         />
                         <button
-                          aria-label={set.isCompleted ? "mark incomplete" : "mark complete"}
+                          aria-label={set.isCompleted ? "完了を取り消す" : "完了にする"}
                           aria-pressed={set.isCompleted}
                           className={`${styles.actionButton} ${styles.check} ${set.isCompleted ? styles.checkDone : ""}`}
                           data-completed={set.isCompleted ? "true" : "false"}
