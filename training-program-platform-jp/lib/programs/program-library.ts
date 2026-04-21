@@ -1,10 +1,11 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
 
 import {
   createSupabaseAdminClient,
-  createSupabaseServerClient,
+  createSupabaseAnonClient,
   hasSupabasePublicEnv,
   hasSupabaseServiceRoleEnv
 } from "@/lib/supabase/server";
@@ -70,10 +71,13 @@ const PROGRAM_LEVEL_DISPLAY: Record<ProgramLevel, string> = {
 
 const PROGRAM_TAG_AXES: ProgramTagAxis[] = ["goal", "equipment", "split", "focus"];
 
+// Programs are public data — use admin client (bypasses RLS) when available,
+// anon client otherwise. Neither uses request cookies, so both are safe
+// inside unstable_cache.
 function createProgramsReadClient(): DatabaseClient {
   return hasSupabaseServiceRoleEnv()
     ? createSupabaseAdminClient()
-    : createSupabaseServerClient();
+    : createSupabaseAnonClient();
 }
 
 function isProgramTagAxis(value: string): value is ProgramTagAxis {
@@ -280,6 +284,15 @@ function listProgramsFromMock(): ProgramCatalogItem[] {
   return listProgramCatalogItems();
 }
 
+// Cross-request cache for the program library (1 hour TTL).
+// Programs change only on deployment, so staleness is acceptable.
+// createProgramsReadClient uses admin/anon client (no cookies) → safe here.
+const listProgramsFromSupabaseCached = unstable_cache(
+  listProgramsFromSupabase,
+  ["program-library"],
+  { revalidate: 3600 }
+);
+
 export async function getProgramLibrary(): Promise<ProgramLibraryResult> {
   if (!hasSupabasePublicEnv()) {
     return {
@@ -290,7 +303,7 @@ export async function getProgramLibrary(): Promise<ProgramLibraryResult> {
 
   try {
     return {
-      items: await listProgramsFromSupabase(),
+      items: await listProgramsFromSupabaseCached(),
       source: "supabase"
     };
   } catch (error) {

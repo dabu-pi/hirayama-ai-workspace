@@ -95,6 +95,26 @@ export function createSupabaseTokenClient(accessToken: string) {
   });
 }
 
+/**
+ * Creates a Supabase client using the anon key without cookie-based session.
+ * Use for public data reads (e.g. program library) that don't require user auth.
+ * Safe to call inside unstable_cache — no dependency on request cookies.
+ */
+export function createSupabaseAnonClient() {
+  const { url, anonKey } = getSupabaseServerEnv();
+  return createClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      fetch: (input: FetchInput, init?: FetchInit) =>
+        fetch(input, { ...init, cache: "no-store" })
+    }
+  });
+}
+
 export function createSupabaseAdminClient() {
   const { url } = getSupabaseServerEnv();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
