@@ -104,22 +104,34 @@ export async function findOrCreateEnrollment(
   try {
     const client = createQueryClient();
 
-    // Do NOT filter by status='active' here. An enrollment with status='paused'
-    // or 'completed' still has a unique (user_id, program_id) row, so an INSERT
-    // would fail with a duplicate-key error. We only need the id for linking the
-    // session; the caller doesn't require the enrollment to be active.
-    const { data: existing } = await client
+    // Fetch ALL enrollments for (user_id, program_id) regardless of archived_at or status.
+    // Rationale: the unique index is partial (WHERE status='active'), so a row with
+    // status='active' and archived_at IS NOT NULL still blocks INSERT with a duplicate-key
+    // error even though .is("archived_at", null) would miss it. By scanning all rows we
+    // can detect any conflicting row before attempting INSERT.
+    //
+    // Priority for which row to return:
+    //   ① status='active' && archived_at IS NULL  (ideal active enrollment)
+    //   ② status='active'                          (archived but still blocks INSERT)
+    //   ③ any other row                            (paused/completed — safe fallback id)
+    const { data: candidates } = await client
       .from("program_enrollments")
       .select(
-        "id, user_id, program_id, current_program_day_id, status, started_at, updated_at"
+        "id, user_id, program_id, current_program_day_id, status, started_at, updated_at, archived_at"
       )
       .eq("user_id", userId)
       .eq("program_id", programId)
-      .is("archived_at", null)
-      .limit(1)
-      .maybeSingle<EnrollmentRow>();
+      .order("started_at", { ascending: false })
+      .limit(10);
 
-    if (existing) return existing;
+    if (candidates && candidates.length > 0) {
+      const rows = candidates as (EnrollmentRow & { archived_at: string | null })[];
+      const best =
+        rows.find((r) => r.status === "active" && r.archived_at === null) ??
+        rows.find((r) => r.status === "active") ??
+        rows[0];
+      return best;
+    }
 
     const { data, error } = await client
       .from("program_enrollments")
