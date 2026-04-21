@@ -729,9 +729,6 @@ export function WorkoutScreen({
                   weightKg: payload.weightKg ?? null,
                   repsDone: payload.repsDone ?? null,
                   isAutoFilled: payload.isAutoFilled ?? set.isAutoFilled,
-                  isCompleted: payload.isCompleted ?? set.isCompleted,
-                  isLocked: payload.isLocked ?? set.isLocked,
-                  completedAt: payload.completedAt ?? set.completedAt,
                   deletedAt: payload.deletedAt ?? set.deletedAt
                 }
               : set
