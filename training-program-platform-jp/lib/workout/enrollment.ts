@@ -104,7 +104,21 @@ export async function findOrCreateEnrollment(
   try {
     const client = createQueryClient();
 
-    const existing = await findActiveEnrollment(programId, userId);
+    // Do NOT filter by status='active' here. An enrollment with status='paused'
+    // or 'completed' still has a unique (user_id, program_id) row, so an INSERT
+    // would fail with a duplicate-key error. We only need the id for linking the
+    // session; the caller doesn't require the enrollment to be active.
+    const { data: existing } = await client
+      .from("program_enrollments")
+      .select(
+        "id, user_id, program_id, current_program_day_id, status, started_at, updated_at"
+      )
+      .eq("user_id", userId)
+      .eq("program_id", programId)
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle<EnrollmentRow>();
+
     if (existing) return existing;
 
     const { data, error } = await client
