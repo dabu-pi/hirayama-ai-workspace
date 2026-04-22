@@ -1313,12 +1313,20 @@ export function WorkoutScreen({
     }
   };
 
-  const MUSCLE_CHIPS = ["胸", "背中", "肩", "腕", "脚", "お尻", "体幹"];
+  const MUSCLE_CHIPS: { label: string; value: string }[] = [
+    { label: "胸", value: "chest" },
+    { label: "背中", value: "back" },
+    { label: "肩", value: "shoulders" },
+    { label: "腕", value: "arms" },
+    { label: "脚", value: "legs" },
+    { label: "お尻", value: "glutes" },
+    { label: "体幹", value: "core" },
+  ];
 
   const filteredExercises = exerciseList.filter((item) => {
     const q = exerciseSearchQuery.trim().toLowerCase();
     const matchesSearch = !q || item.nameJa.toLowerCase().includes(q) || item.nameEn.toLowerCase().includes(q);
-    const matchesMuscle = !selectedMuscle || item.category === selectedMuscle;
+    const matchesMuscle = !selectedMuscle || item.category === selectedMuscle; // selectedMuscle stores the English DB value
     return matchesSearch && matchesMuscle;
   });
 
@@ -1767,12 +1775,12 @@ export function WorkoutScreen({
               <div className={styles.muscleChipRow}>
                 {MUSCLE_CHIPS.map((muscle) => (
                   <button
-                    className={`${styles.muscleChip} ${selectedMuscle === muscle ? styles.muscleChipActive : ""}`}
-                    key={muscle}
-                    onClick={() => setSelectedMuscle(selectedMuscle === muscle ? null : muscle)}
+                    className={`${styles.muscleChip} ${selectedMuscle === muscle.value ? styles.muscleChipActive : ""}`}
+                    key={muscle.value}
+                    onClick={() => setSelectedMuscle(selectedMuscle === muscle.value ? null : muscle.value)}
                     type="button"
                   >
-                    {muscle}
+                    {muscle.label}
                   </button>
                 ))}
               </div>
