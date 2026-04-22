@@ -1,6 +1,24 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**Web UI Phase 2 完了 — 患者選択でシート B2/B4 を反映。`setPatientAndDate_V3` 実装・HTML クリック選択対応**）
+最終更新: 2026-04-22（**Web UI Phase 2 候補行非表示バグ修正 — `show()` の `display:""` バグを `showEl()` で修正。テーブル→カードリストに変更**）
+
+---
+
+## 🗓 2026-04-22 Web UI Phase 2 候補行非表示バグ修正
+
+**COMMIT:** （本コミット）  
+**変更ファイル:** `patientSearch.html` / `docs/JREC-01_phase2_webui_bugfix_2026-04-22.md`
+
+### 原因
+
+`show()` 関数が `style.display = ""` を使っており、CSS の `#results { display: none }` を上書きできなかった。  
+検索件数は status に表示されるが、候補行コンテナが非表示のままになっていた。
+
+### 修正
+
+- `show()` / `hide()` を廃止し `showEl(id, visible)` に統一（`visible=true` 時は `"block"` を明示）
+- `<table id="results">` → `<div id="resultList">` のカードリストに変更（テーブルの display 値問題を根本回避）
+- カード表示: 1行目=氏名（太字）/ 2行目=患者ID・フリガナ・生年月日
 
 ---
 

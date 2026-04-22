@@ -9,7 +9,7 @@
     body {
       font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
       background: #f5f6fa;
-      color: #333;
+      color: #222;
       padding: 16px;
     }
     h1 {
@@ -21,7 +21,7 @@
     .search-row {
       display: flex;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     #keyword {
       flex: 1;
@@ -30,9 +30,10 @@
       border: 1px solid #ccc;
       border-radius: 6px;
       outline: none;
+      color: #222;
     }
     #keyword:focus { border-color: #3498db; }
-    button#searchBtn {
+    #searchBtn {
       padding: 10px 18px;
       font-size: 15px;
       background: #3498db;
@@ -42,71 +43,70 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    button#searchBtn:hover { background: #2980b9; }
-    button#searchBtn:disabled { background: #aaa; cursor: default; }
+    #searchBtn:hover    { background: #2980b9; }
+    #searchBtn:disabled { background: #aaa; cursor: default; }
 
     #status {
       font-size: 13px;
-      color: #777;
+      color: #555;
       margin-bottom: 10px;
       min-height: 18px;
     }
 
-    /* 結果テーブル */
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    /* カード一覧 */
+    #resultList {
+      display: none;   /* JS で "block" に切り替える */
+    }
+    .card {
       background: #fff;
+      border: 1px solid #ddd;
       border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,.1);
-    }
-    thead th {
-      background: #2c3e50;
-      color: #fff;
-      padding: 10px 12px;
-      text-align: left;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    tbody tr {
-      border-bottom: 1px solid #eee;
+      padding: 14px 16px;
+      margin-bottom: 8px;
       cursor: pointer;
-      transition: background .1s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background .12s, border-color .12s;
     }
-    tbody tr:last-child { border-bottom: none; }
-    tbody td {
-      padding: 12px 12px;
-      font-size: 14px;
-      vertical-align: middle;
+    .card:hover        { background: #e8f4fd; border-color: #3498db; }
+    .card:active       { background: #d0eaf9; }
+    .card.selected     { background: #d4edda; border-color: #27ae60; }
+    .card.selecting    { opacity: .55; pointer-events: none; }
+    .card-body         { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #222;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    tbody tr:hover  { background: #e8f4fd; }
-    tbody tr:active { background: #d0eaf9; }
-    tbody tr.selected { background: #c8e6fa; }
-    tbody tr.selecting { opacity: .6; pointer-events: none; }
-
-    .pid  { color: #888; font-size: 12px; }
-    .name { font-weight: 600; font-size: 15px; }
-    .furi { color: #666; font-size: 12px; margin-top: 2px; }
-    .dob  { color: #555; font-size: 13px; }
-    .arrow {
-      text-align: center;
-      font-size: 18px;
+    .card-sub {
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .card-sub span { white-space: nowrap; }
+    .card-arrow {
+      font-size: 20px;
       color: #bbb;
-      width: 28px;
+      flex-shrink: 0;
     }
-    tbody tr:hover .arrow { color: #3498db; }
+    .card:hover .card-arrow { color: #3498db; }
 
     #emptyMsg {
-      display: none;
+      display: none;   /* JS で "block" に切り替える */
       text-align: center;
       padding: 32px 0;
       color: #999;
       font-size: 15px;
     }
-    #results { display: none; }
 
-    /* 選択完了トースト */
+    /* トースト */
     #toast {
       display: none;
       position: fixed;
@@ -135,25 +135,13 @@
   </div>
 
   <div id="status"></div>
-
   <div id="emptyMsg">該当する患者が見つかりませんでした。</div>
-
-  <table id="results">
-    <thead>
-      <tr>
-        <th>患者ID / 氏名</th>
-        <th>生年月日</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
-
+  <div id="resultList"></div>
   <div id="toast"></div>
 
   <script>
-    var _searching  = false;
-    var _selecting  = false;
+    var _searching = false;
+    var _selecting = false;
 
     document.getElementById("keyword").addEventListener("keydown", function(e) {
       if (e.key === "Enter") doSearch();
@@ -168,9 +156,9 @@
       _searching = true;
       document.getElementById("searchBtn").disabled = true;
       setStatus("検索中…");
-      hide("results");
-      hide("emptyMsg");
-      document.getElementById("tbody").innerHTML = "";
+      showEl("resultList", false);
+      showEl("emptyMsg",   false);
+      document.getElementById("resultList").innerHTML = "";
 
       google.script.run
         .withSuccessHandler(onSearchSuccess)
@@ -184,32 +172,35 @@
 
       if (!rows || rows.length === 0) {
         setStatus("");
-        show("emptyMsg");
+        showEl("emptyMsg", true);
         return;
       }
 
       var hint = rows.length === 20 ? "（最大20件）" : "";
       setStatus(rows.length + " 件ヒット" + hint + " — 行をタップして選択");
 
-      var tbody = document.getElementById("tbody");
+      var list = document.getElementById("resultList");
       rows.forEach(function(p) {
-        var tr = document.createElement("tr");
-        tr.dataset.pid = p.patientId;
-        tr.innerHTML =
-          "<td>" +
-            "<div class='pid'>" + esc(p.patientId) + "</div>" +
-            "<div class='name'>" + esc(p.name) + "</div>" +
-            "<div class='furi'>" + esc(p.furi) + "</div>" +
-          "</td>" +
-          "<td class='dob'>" + esc(p.birthday) + "</td>" +
-          "<td class='arrow'>›</td>";
+        var card = document.createElement("div");
+        card.className = "card";
 
-        tr.addEventListener("click", function() {
-          selectPatient(this, p.patientId, p.name);
+        var sub = esc(p.patientId);
+        if (p.furi)     sub += "　" + esc(p.furi);
+        if (p.birthday) sub += "　" + esc(p.birthday);
+
+        card.innerHTML =
+          "<div class='card-body'>" +
+            "<div class='card-name'>" + esc(p.name || p.patientId) + "</div>" +
+            "<div class='card-sub'><span>" + sub + "</span></div>" +
+          "</div>" +
+          "<div class='card-arrow'>›</div>";
+
+        card.addEventListener("click", function() {
+          selectPatient(card, p.patientId, p.name);
         });
-        tbody.appendChild(tr);
+        list.appendChild(card);
       });
-      show("results");
+      showEl("resultList", true);
     }
 
     function onSearchError(err) {
@@ -219,25 +210,23 @@
     }
 
     /* ===== 患者選択 ===== */
-    function selectPatient(tr, patientId, name) {
+    function selectPatient(card, patientId, name) {
       if (_selecting) return;
       _selecting = true;
-
-      // 選択中の視覚フィードバック
-      tr.classList.add("selecting");
+      card.classList.add("selecting");
       setStatus("選択中…");
 
       google.script.run
-        .withSuccessHandler(function(res) {
+        .withSuccessHandler(function() {
           _selecting = false;
-          tr.classList.remove("selecting");
-          tr.classList.add("selected");
-          showToast("✓ " + esc(name) + " を選択しました", false);
+          card.classList.remove("selecting");
+          card.classList.add("selected");
+          showToast("✓ " + esc(name || patientId) + " を選択しました", false);
           setStatus("選択完了: " + esc(patientId));
         })
         .withFailureHandler(function(err) {
           _selecting = false;
-          tr.classList.remove("selecting");
+          card.classList.remove("selecting");
           showToast("エラー: " + (err.message || err), true);
           setStatus("選択失敗");
         })
@@ -248,19 +237,27 @@
     function showToast(msg, isError) {
       var el = document.getElementById("toast");
       el.textContent = msg;
-      el.className = isError ? "error" : "";
+      el.className   = isError ? "error" : "";
       el.style.display = "block";
       setTimeout(function() { el.style.display = "none"; }, 3000);
     }
 
     /* ===== ユーティリティ ===== */
     function setStatus(msg) { document.getElementById("status").textContent = msg; }
-    function show(id) { document.getElementById(id).style.display = ""; }
-    function hide(id) { document.getElementById(id).style.display = "none"; }
+
+    /**
+     * 要素の表示を切り替える。
+     * visible=true のとき display:"block" を明示セット（CSS の display:none を上書き）。
+     * show() で display:"" を使うと CSS ルールが残り再非表示になるバグを回避。
+     */
+    function showEl(id, visible) {
+      document.getElementById(id).style.display = visible ? "block" : "none";
+    }
+
     function esc(s) {
       return String(s || "")
-        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;");
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   </script>
 </body>
