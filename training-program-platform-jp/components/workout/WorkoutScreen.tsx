@@ -107,7 +107,7 @@ function getExerciseSuggestion(
 
   if (!anyComparable) return null;
   if (anyDecline) return { text: "まずは同じ重量で安定させましょう", positive: false };
-  if (anyProgress) return { text: "フォームを崩さずできていれば、次回は +2.5kg もおすすめです", positive: true };
+  if (anyProgress) return { text: "フォームが安定していれば、次回は +2.5kg もおすすめです", positive: true };
   return null;
 }
 
