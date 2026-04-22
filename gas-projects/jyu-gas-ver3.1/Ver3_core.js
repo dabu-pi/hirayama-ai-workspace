@@ -5433,8 +5433,25 @@ function searchPatients_V3(keyword) {
   return results;
 }
 
-/** Web App エントリポイント — 患者検索ページを返す */
+/**
+ * Web App エントリポイント。page パラメータでページを分岐する。
+ *   page=search (default) → patientSearch.html
+ *   page=selfpay&visitKey=xxx  → selfPayWeb.html（テンプレートで visitKey を埋め込み）
+ */
 function doGet(e) {
+  var page = (e && e.parameter && e.parameter.page) || "search";
+
+  if (page === "selfpay") {
+    var vk = String((e && e.parameter && e.parameter.visitKey) || "").trim();
+    // 形式チェック: patientId_YYYY-MM-DD
+    if (!/^.+_\d{4}-\d{2}-\d{2}$/.test(vk)) vk = "";
+    var tmpl = HtmlService.createTemplateFromFile("selfPayWeb");
+    tmpl.visitKey = vk;
+    return tmpl.evaluate()
+      .setTitle("自費明細入力 — JREC-01")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   return HtmlService.createHtmlOutputFromFile("patientSearch")
     .setTitle("患者検索 — JREC-01")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -5487,7 +5504,68 @@ function setPatientAndDate_V3(patientId) {
   return { ok: true, patientId: pid, displayStr: displayStr };
 }
 
-// ===== Web UI Phase 1/2 ここまで =====
+/**
+ * Web UI Phase 3: 自費明細ページの初期化データを返す。
+ * selfPayWeb.html が google.script.run でコール。
+ * getCurrentVisitKey_V3() の Web 対応版 — visitKey を引数で受け取り、シートから生成しない。
+ *
+ * @param {string} visitKey  "patientId_YYYY-MM-DD" 形式
+ * @returns {{visitKey, patientId, treatDate, accountingType, chronicFlag,
+ *             nextReservation, isGymMember, existItems, error?}}
+ */
+function getSelfPayDataByVisitKey_V3(visitKey) {
+  try {
+    var vk = String(visitKey || "").trim();
+    var m  = vk.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+    if (!m) return { error: "visitKey の形式が不正です: " + vk, existItems: [] };
+
+    var patientId    = m[1];
+    var treatDateStr = m[2];
+
+    var ss       = SpreadsheetApp.getActiveSpreadsheet();
+    var detailSh = ensureSelfPayDetailSheetInternal_(ss);
+    var existRows = readSelfPayDetailsForVisit_V3_(detailSh, vk);
+
+    // JSON-safe 化（Date 型を除外）
+    var existItems = existRows.map(function(row) {
+      return {
+        menuId:    String(row.menuId    || ""),
+        menuName:  String(row.menuName  || ""),
+        unitPrice: Number(row.unitPrice) || 0,
+        qty:       Number(row.qty)       || 1,
+      };
+    });
+
+    // UI シートから文脈情報を best-effort で読む（選択中患者と一致しない場合でも空文字で続行）
+    var acctType = "", chronic = false, nextResv = false, isGymMember = false;
+    var uiSh = ss.getSheetByName(SHEETS.ui);
+    if (uiSh) {
+      try {
+        isGymMember = uiSh.getRange(UI.gymMember).getValue() === true;          // B5
+        acctType    = String(uiSh.getRange(UI.selfPay_accountingType).getValue() || "").trim(); // B7
+        chronic     = uiSh.getRange(UI.selfPay_chronicFlag).getValue() === true; // B8
+        nextResv    = uiSh.getRange(UI.selfPay_nextReserv).getValue()  === true; // D8
+      } catch (_) {}
+    }
+
+    Logger.log("[getSelfPayDataByVisitKey] visitKey=" + vk + " existItems=" + existItems.length);
+    return {
+      visitKey:        vk,
+      patientId:       patientId,
+      treatDate:       treatDateStr,
+      accountingType:  acctType,
+      chronicFlag:     chronic,
+      nextReservation: nextResv,
+      isGymMember:     isGymMember,
+      existItems:      existItems,
+    };
+  } catch (e) {
+    Logger.log("[getSelfPayDataByVisitKey] エラー: " + e.message);
+    return { error: e.message, existItems: [] };
+  }
+}
+
+// ===== Web UI Phase 1/2/3 ここまで =====
 
 /**
  * 保険算定なし（自費のみ）の場合に使用するゼロ金額オブジェクトを返す。

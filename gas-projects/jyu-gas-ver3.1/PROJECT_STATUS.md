@@ -1,6 +1,36 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**自費明細 Web UI 化設計着手 — 現行構成棚卸し完了・最小実装方針確定**）
+最終更新: 2026-04-22（**自費明細 Web UI Step 1 実装完了 — `getSelfPayDataByVisitKey_V3` 追加・`doGet` 分岐・`selfPayWeb.html` 新規作成**）
+
+---
+
+## 🗓 2026-04-22 自費明細 Web UI — Step 1 実装完了
+
+**COMMIT:** （本コミット）  
+**変更ファイル:** `Ver3_core.js` / `selfPayWeb.html` / `docs/JREC-01_selfpay_webui_step1_2026-04-22.md`
+
+### 実装サマリ
+
+| 実装 | 内容 |
+|---|---|
+| `getSelfPayDataByVisitKey_V3(visitKey)` | visitKey を引数で受け取り、既存明細 + 文脈情報を返す（getCurrentVisitKey_V3 の Web 対応版） |
+| `doGet(e)` 改修 | `?page=selfpay&visitKey=xxx` でページ分岐。visitKey は正規表現チェック後テンプレートに埋め込み |
+| `selfPayWeb.html` | 新規作成。selfPayDialog.html の Web App 対応版（host.close → 成功パネル表示） |
+
+### Web アクセス URL
+
+```
+https://<WebAppURL>?page=selfpay&visitKey=<patientId>_<YYYY-MM-DD>
+```
+
+### 既存ダイアログとの関係
+
+- `selfPayDialog.html` は変更なし。既存メニューから引き続き利用可能
+- 保存関数 `saveSelfPayDetailsFromDialog_V3` は両方から共用
+
+### Dashboard / Run_Log
+
+不要（コードのみ変更）。
 
 ---
 
