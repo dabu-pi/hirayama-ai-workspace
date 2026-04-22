@@ -598,11 +598,35 @@
   font-size: 10px;
   color: var(--text-secondary);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.previousText {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .previousEmpty {
+  color: var(--text-muted);
+}
+
+.diffLine {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.diffPositive {
+  font-size: 9px;
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.diffNegative {
+  font-size: 9px;
   color: var(--text-muted);
 }
 

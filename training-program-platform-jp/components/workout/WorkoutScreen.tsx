@@ -86,6 +86,26 @@ function formatPrevDisplay(prev: { weightKg: number | null; repsDone: number | n
   return "-";
 }
 
+/** Calculates per-set diff between current draft inputs and previous session values. */
+function calcSetDiff(
+  draft: { weightKg: string; repsDone: string },
+  prevSet: { weightKg: number | null; repsDone: number | null } | null
+): { weightDiff: number | null; repsDiff: number | null } {
+  if (!prevSet) return { weightDiff: null, repsDiff: null };
+  const currentWeight = draft.weightKg !== "" ? parseFloat(draft.weightKg) : null;
+  const currentReps = draft.repsDone !== "" ? parseInt(draft.repsDone, 10) : null;
+  return {
+    weightDiff:
+      currentWeight !== null && !isNaN(currentWeight) && prevSet.weightKg !== null
+        ? Math.round((currentWeight - prevSet.weightKg) * 10) / 10
+        : null,
+    repsDiff:
+      currentReps !== null && !isNaN(currentReps) && prevSet.repsDone !== null
+        ? currentReps - prevSet.repsDone
+        : null
+  };
+}
+
 function typeClassName(exerciseType: "T1" | "T2" | "T3") {
   if (exerciseType === "T1") return `${styles.typeBadge} ${styles.typeT1}`;
   if (exerciseType === "T2") return `${styles.typeBadge} ${styles.typeT2}`;
@@ -1467,6 +1487,7 @@ export function WorkoutScreen({
                 const prevDisplay = formatPrevDisplay(prevSet);
 
                 const draft = getSetDraft(draftInputs, set);
+                const { weightDiff, repsDiff } = calcSetDiff(draft, prevSet);
                 const isSaving = savingSetIds.includes(set.id);
                 const isMutating = pendingMutation?.setId === set.id;
                 const isBusy = isSaving || isMutating;
@@ -1501,7 +1522,21 @@ export function WorkoutScreen({
                       <div className={`${styles.setRow} ${set.isCompleted ? styles.completedRow : ""}`}>
                         <span className={styles.mono}>{set.displaySetNumber}</span>
                         <span className={`${styles.previous} ${prevDisplay === "-" ? styles.previousEmpty : ""}`}>
-                          {prevDisplay}
+                          <span className={styles.previousText}>{prevDisplay}</span>
+                          {((weightDiff !== null && weightDiff !== 0) || (repsDiff !== null && repsDiff !== 0)) && (
+                            <span className={styles.diffLine}>
+                              {weightDiff !== null && weightDiff !== 0 && (
+                                <span className={weightDiff > 0 ? styles.diffPositive : styles.diffNegative}>
+                                  {weightDiff > 0 ? "+" : ""}{weightDiff}kg
+                                </span>
+                              )}
+                              {repsDiff !== null && repsDiff !== 0 && (
+                                <span className={repsDiff > 0 ? styles.diffPositive : styles.diffNegative}>
+                                  {repsDiff > 0 ? "+" : ""}{repsDiff}
+                                </span>
+                              )}
+                            </span>
+                          )}
                         </span>
                         <button
                           className={`${styles.target}${!isSessionEnded ? ` ${styles.targetClickable}` : ""}`}
