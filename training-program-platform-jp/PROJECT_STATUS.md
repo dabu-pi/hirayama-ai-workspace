@@ -1,5 +1,44 @@
 # PROJECT_STATUS
 
+## 2026-04-22 /admin/members live check — email display required
+
+### STATUS: CLOSED (2026-04-22)
+
+### PURPOSE
+
+Live verification of the Phase 4 / 4.1 admin member management UI,
+and identification of a usability gap that needs to be addressed next.
+
+### LIVE_CHECK
+
+| Item | Result |
+|---|---|
+| admin access to `/admin/members` | ✅ confirmed |
+| Member list display | ✅ confirmed |
+| Self-update disabled (`自分自身は変更できません`) | ✅ confirmed |
+| Name search + status filter | ✅ confirmed |
+| `display_name` unset → shows `（未設定）` | ⚠️ user identity unclear |
+
+### FINDING
+
+When `display_name` is not set, the member row shows `（未設定）` with no other
+identifier. With multiple unset users, it is impossible to determine who is who.
+In practice, **email address is the only reliable identifier** available in
+`auth.users` and is required for the management UI to be operationally usable.
+
+### CHANGES
+
+No code changes. Observation log only.
+
+### NEXT_ACTION
+
+Add email column to `/admin/members`:
+- Fetch `email` alongside existing columns (requires `auth.users` access via service role or admin client).
+- Display email in the member list row.
+- Include email as a search target in the client-side name filter.
+
+---
+
 ## 2026-04-22 Membership status control — Phase 1–3 complete
 
 ### STATUS: CLOSED (2026-04-22)
