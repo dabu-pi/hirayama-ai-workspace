@@ -1638,7 +1638,7 @@ export function WorkoutScreen({
 
             {exerciseSuggestion && (
               <p className={exerciseSuggestion.positive ? styles.suggestionPositive : styles.suggestionNegative}>
-                {exerciseSuggestion.text}
+                {exerciseSuggestion.positive ? "↑ " : "→ "}{exerciseSuggestion.text}
               </p>
             )}
 

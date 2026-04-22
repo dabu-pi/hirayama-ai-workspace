@@ -633,16 +633,23 @@
 .suggestionPositive {
   font-size: 11px;
   color: #4ade80;
+  background: rgba(74, 222, 128, 0.07);
+  border-left: 2px solid rgba(74, 222, 128, 0.4);
+  border-radius: 0 6px 6px 0;
   margin: var(--space-2) 0 0;
-  line-height: 1.5;
-  opacity: 0.85;
+  padding: 6px 10px;
+  line-height: 1.6;
 }
 
 .suggestionNegative {
   font-size: 11px;
   color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.07);
+  border-left: 2px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0 6px 6px 0;
   margin: var(--space-2) 0 0;
-  line-height: 1.5;
+  padding: 6px 10px;
+  line-height: 1.6;
 }
 
 .target {
