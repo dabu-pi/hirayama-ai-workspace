@@ -49,7 +49,7 @@ begin
     ('hack-squat',         U&'\30CF\30C3\30AF\30B9\30AF\30EF\30C3\30C8',                                     'Hack Squat',                  'legs'),
     ('bulgarian-split-squat', U&'\30D6\30EB\30AC\30EA\30A2\30F3\30B9\30D7\30EA\30C3\30C8\30B9\30AF\30EF\30C3\30C8', 'Bulgarian Split Squat',  'legs'),
     ('good-morning',       U&'\30B0\30C3\30C9\30E2\30FC\30CB\30F3\30B0',                                     'Good Morning',                'back'),
-    ('hip-thrust',         U&'\30D2\30C3\30D7\30B9\30E9\30B9\30C8',                                         'Hip Thrust',                  'legs'),
+    ('hip-thrust',         U&'\30D2\30C3\30D7\30B9\30E9\30B9\30C8',                                         'Hip Thrust',                  'glutes'),
     ('rear-delt-fly',      U&'\30EA\30A2\30C7\30EB\30C8\30D5\30E9\30A4',                                     'Rear Delt Fly',               'shoulders')
   on conflict (slug) do nothing;
 
