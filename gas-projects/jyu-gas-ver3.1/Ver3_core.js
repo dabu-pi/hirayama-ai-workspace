@@ -1520,6 +1520,7 @@ function appendHeaderRow_V3_(headSh, headMap, obj) {
   }
 
   headSh.getRange(headSh.getLastRow() + 1, 1, 1, headSh.getLastColumn()).setValues([rowArr]);
+  Logger.log("[appendHeader] 書き込み: visitKey=" + obj.visitKey + " patientId=" + obj.patientId + " kubun=" + obj.kubun + " 来院合計=" + obj.visitTotal);
 }
 
 
@@ -1634,7 +1635,10 @@ function upsertOneCase_(uiSh, caseSh, caseMap, base) {
   var keikaNow = String(getMergedValue_(uiSh, keikaRange) || "").trim();
 
   var hasAny = line1.hasCore || line2.hasCore || !!shoken || !!keikaNow || !!line1.endVal || !!line2.endVal;
-  if (!hasAny) return;
+  if (!hasAny) {
+    Logger.log("[upsertCase] スキップ: visitKey=" + visitKey + " caseNo=" + caseNo + " データなし");
+    return;
+  }
 
   var injuryFixed = minDate_(line1.injuryDate, line2.injuryDate);
   // caseKey = エピソードID（初検日ベース）
@@ -1675,6 +1679,7 @@ function upsertOneCase_(uiSh, caseSh, caseMap, base) {
     setByName_(rowArr, caseMap, CASE_COLS.createdAt, now);
 
     caseSh.appendRow(rowArr);
+    Logger.log("[upsertCase] 新規: visitKey=" + visitKey + " caseNo=" + caseNo + " caseKey=" + caseKey + " kubun=" + kubun);
   } else {
     var lastCol = caseSh.getLastColumn();
     var rowArr2 = caseSh.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
@@ -1714,6 +1719,7 @@ function upsertOneCase_(uiSh, caseSh, caseMap, base) {
     if (keikaNow) setByName_(rowArr2, caseMap, CASE_COLS.keikaNow, keikaNow);
 
     caseSh.getRange(rowIndex, 1, 1, lastCol).setValues([rowArr2]);
+    Logger.log("[upsertCase] 更新: visitKey=" + visitKey + " caseNo=" + caseNo + " caseKey=" + caseKey + " kubun=" + kubun + " row=" + rowIndex);
   }
   return { kubun: kubun, caseKey: caseKey };
 }
@@ -2659,6 +2665,7 @@ function exportHeaderFromCases_V3() {
 
   var out = [];
   var now = new Date();
+  var skipCount = 0;
 
   for (var i = 0; i < n; i++) {
     var visitKey = String(visitKeyVals[i] || "").trim();
@@ -2669,10 +2676,10 @@ function exportHeaderFromCases_V3() {
     var caseKey = String(caseKeyVals[i] || "").trim();
     var caseIndex = Number(caseNoVals[i] || 0);
 
-    if (!visitKey || !patientId || !(treatDate instanceof Date) || !caseKey || !caseIndex) continue;
+    if (!visitKey || !patientId || !(treatDate instanceof Date) || !caseKey || !caseIndex) { skipCount++; continue; }
 
     // 重複チェックは visitKey 単位（来院ヘッダは1来院日1行）
-    if (existed.has(visitKey)) continue;
+    if (existed.has(visitKey)) { skipCount++; continue; }
 
     var rowArr = new Array(headSh.getLastColumn()).fill("");
 
@@ -2725,6 +2732,8 @@ function exportHeaderFromCases_V3() {
     existed.add(visitKey);
   }
 
+  Logger.log("[exportHeader] 対象ケース行数=" + n + " 出力=" + out.length + " スキップ=" + skipCount);
+
   if (!out.length) {
     SpreadsheetApp.getUi().alert("出力対象がありません（すでに出力済み or データ不足）");
     return;
@@ -2732,6 +2741,7 @@ function exportHeaderFromCases_V3() {
 
   headSh.getRange(headSh.getLastRow() + 1, 1, out.length, headSh.getLastColumn()).setValues(out);
   SpreadsheetApp.getUi().alert("来院ヘッダへ出力しました：" + out.length + " 行");
+  Logger.log("[exportHeader] 完了: 出力=" + out.length + " 行");
 }
 
 function buildExistingHeaderKeySet_(headSh, headMap) {

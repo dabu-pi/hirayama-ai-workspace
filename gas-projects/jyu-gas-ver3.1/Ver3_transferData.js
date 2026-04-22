@@ -847,7 +847,7 @@ function V3TR_loadMasterRow_(shMaster, patientId) {
     var addr2 = String(get(C.masterCols.address2) || "").trim();
     var address = (addr1 + " " + addr2).trim();
 
-    return {
+    const result = {
       name: get(C.masterCols.name),
       birthday: (get(C.masterCols.birthday) instanceof Date) ? get(C.masterCols.birthday) : "",
       gender: String(get(C.masterCols.gender) || "").trim(),  // "男" or "女"
@@ -863,6 +863,8 @@ function V3TR_loadMasterRow_(shMaster, patientId) {
       insurerName: String(get(C.masterCols.insurerName) || "").trim(),
       insuranceType: String(get(C.masterCols.insuranceType) || "").trim(),
     };
+    Logger.log("[loadMaster] 取得: patientId=" + patientId + " name=" + result.name + " insuranceType=" + result.insuranceType);
+    return result;
   }
   throw new Error(`患者マスタに患者ID=${patientId}が見つかりません。`);
 }
@@ -882,13 +884,16 @@ function V3TR_loadInsurerRow_(shInsurer, patientId) {
       const c = map[colName];
       return (c === undefined) ? "" : v[r][c];
     };
-    return {
+    const result = {
       insurerNo: String(get(C.insurerCols.insurerNo) || "").trim(),
       symbol: String(get(C.insurerCols.symbol) || "").trim(),
       number: String(get(C.insurerCols.number) || "").trim(),
       insurerName: String(get(C.insurerCols.insurerName) || "").trim(),
     };
+    Logger.log("[loadInsurer] 取得: patientId=" + patientId + " insurerNo=" + result.insurerNo + " insurerName=" + result.insurerName);
+    return result;
   }
+  Logger.log("[loadInsurer] 該当なし: patientId=" + patientId);
   return {};
 }
 

@@ -1,6 +1,27 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**P1実装完了 — 自費明細3関数（appendSelfPayDetailRow_V3_ 等）を buildHeaderColMap_ + 定数ベースに変換。位置固定 appendRow を廃止**）
+最終更新: 2026-04-22（**P2完了 — 主要5関数に Logger 追加。upsertOneCase_ / appendHeaderRow_V3_ / exportHeaderFromCases_V3 / V3TR_loadMasterRow_ / V3TR_loadInsurerRow_**）
+
+---
+
+## 🗓 2026-04-22 P2: 主要5関数 Logger整備
+
+**COMMIT:** (このエントリ後に記録)  
+**変更ファイル:** `Ver3_core.js` / `Ver3_transferData.js` / `docs/JREC-01_logger_p2_2026-04-22.md`
+
+### 追加 Logger サマリ
+
+| 関数 | Logger内容 |
+|---|---|
+| `upsertOneCase_` | 新規/更新/スキップ + visitKey / caseNo / caseKey / kubun |
+| `appendHeaderRow_V3_` | 書き込み完了 + visitKey / patientId / kubun / 来院合計 |
+| `exportHeaderFromCases_V3` | 対象行数 / 出力件数 / スキップ件数（完了前） + 完了（完了後） |
+| `V3TR_loadMasterRow_` | 取得成功 + patientId / name / insuranceType |
+| `V3TR_loadInsurerRow_` | 取得成功 + patientId / insurerNo / insurerName / 該当なし |
+
+### Dashboard / Run_Log
+
+不要。コード変更のみ。
 
 ---
 
