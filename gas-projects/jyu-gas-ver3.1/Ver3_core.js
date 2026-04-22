@@ -5436,23 +5436,33 @@ function searchPatients_V3(keyword) {
 /**
  * Web App エントリポイント。page パラメータでページを分岐する。
  *   page=search (default) → patientSearch.html
- *   page=selfpay&visitKey=xxx  → selfPayWeb.html（テンプレートで visitKey を埋め込み）
+ *   page=selfpay&visitKey=xxx  → selfPayWeb.html
+ *
+ * 両ページとも createTemplateFromFile を使い、appBaseUrl（/exec URL）を
+ * サーバー側から埋め込む。クライアント側で window.location を使わない。
  */
 function doGet(e) {
   var page = (e && e.parameter && e.parameter.page) || "search";
+  // /exec URL を取得（クライアントへの URL 生成に使用）
+  var appBaseUrl = ScriptApp.getService().getUrl();
+  Logger.log("[doGet] page=" + page + " appBaseUrl=" + appBaseUrl);
 
   if (page === "selfpay") {
     var vk = String((e && e.parameter && e.parameter.visitKey) || "").trim();
-    // 形式チェック: patientId_YYYY-MM-DD
     if (!/^.+_\d{4}-\d{2}-\d{2}$/.test(vk)) vk = "";
+    Logger.log("[doGet] selfpay visitKey=" + vk);
     var tmpl = HtmlService.createTemplateFromFile("selfPayWeb");
-    tmpl.visitKey = vk;
+    tmpl.visitKey    = vk;
+    tmpl.appBaseUrl  = appBaseUrl;
     return tmpl.evaluate()
       .setTitle("自費明細入力 — JREC-01")
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  return HtmlService.createHtmlOutputFromFile("patientSearch")
+  // デフォルト: 患者検索ページ
+  var tmpl2 = HtmlService.createTemplateFromFile("patientSearch");
+  tmpl2.appBaseUrl = appBaseUrl;
+  return tmpl2.evaluate()
     .setTitle("患者検索 — JREC-01")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

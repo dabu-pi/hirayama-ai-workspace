@@ -183,6 +183,9 @@
   <div id="toast"></div>
 
   <script>
+    // GAS テンプレートで Web App の /exec URL を埋め込む（サーバー側で確定）
+    var APP_BASE_URL = "<?= appBaseUrl ?>";
+
     var _searching = false;
     var _selecting = false;
 
@@ -289,8 +292,9 @@
     /* ===== 選択後パネル ===== */
     function showSelectedPanel(patientId, name) {
       var visitKey    = patientId + "_" + todayYMD();
-      var baseUrl     = window.location.href.split("?")[0];
-      var selfpayUrl  = baseUrl + "?page=selfpay&visitKey=" + encodeURIComponent(visitKey);
+      // APP_BASE_URL はサーバー側テンプレートで埋め込んだ /exec URL を使う
+      // window.location.href は userCodeAppPanel の内部URL になるため使わない
+      var selfpayUrl  = APP_BASE_URL + "?page=selfpay&visitKey=" + encodeURIComponent(visitKey);
       document.getElementById("sel-name").textContent = (name || patientId) + "（" + patientId + "）";
       document.getElementById("selfpay-link").href    = selfpayUrl;
       showEl("selected-panel", true);

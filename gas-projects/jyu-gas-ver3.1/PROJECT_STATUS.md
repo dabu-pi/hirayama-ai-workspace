@@ -1,6 +1,29 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**Web UI Phase 3 完了 — 患者検索 → 自費明細 導線追加。選択後パネルに「自費明細入力 →」ボタン表示**）
+最終更新: 2026-04-22（**Web UI Phase 3 遷移バグ修正 — `window.location.href` を `ScriptApp.getService().getUrl()` テンプレート埋め込みに変更**）
+
+---
+
+## 🗓 2026-04-22 Web UI Phase 3 遷移バグ修正
+
+**COMMIT:** （本コミット）  
+**変更ファイル:** `Ver3_core.js` / `patientSearch.html` / `docs/JREC-01_phase3_webui_nav_bugfix_2026-04-22.md`
+
+### 原因
+
+`window.location.href` が GAS 内部フレーム URL（`userCodeAppPanel`）を返すため、
+`?page=selfpay&visitKey=xxx` が `/exec` ではなく `googleusercontent.com` 側に付加されて真っ白になっていた。
+
+### 修正
+
+- `doGet`: `ScriptApp.getService().getUrl()` で `/exec` URL を取得 → テンプレート変数 `appBaseUrl` で埋め込み
+- `patientSearch.html`: `APP_BASE_URL = "<?= appBaseUrl ?>"` で受け取り、`window.location.href` を完全除去
+- `patientSearch.html` の配信を `createHtmlOutputFromFile` → `createTemplateFromFile` に変更
+
+### 再発防止ルール
+
+GAS Web App 内で `href` によるページ遷移 URL を組み立てる際は、
+必ずサーバー側の `ScriptApp.getService().getUrl()` をテンプレート埋め込みで使う。
 
 ---
 
