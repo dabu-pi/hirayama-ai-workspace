@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>("sign_in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,9 +80,16 @@ export default function LoginPage() {
         return;
       }
 
+      const trimmedName = displayName.trim();
+      if (!trimmedName) {
+        setErrorMessage("お名前を入力してください");
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: { data: { display_name: trimmedName } }
       });
 
       if (error) {
@@ -128,7 +136,7 @@ export default function LoginPage() {
             className={`${styles.toggleButton} ${
               mode === "sign_in" ? styles.toggleButtonActive : ""
             }`}
-            onClick={() => setMode("sign_in")}
+            onClick={() => { setMode("sign_in"); setDisplayName(""); setErrorMessage(null); }}
             type="button"
           >
             Sign In
@@ -137,7 +145,7 @@ export default function LoginPage() {
             className={`${styles.toggleButton} ${
               mode === "sign_up" ? styles.toggleButtonActive : ""
             }`}
-            onClick={() => setMode("sign_up")}
+            onClick={() => { setMode("sign_up"); setErrorMessage(null); }}
             type="button"
           >
             Sign Up
@@ -145,6 +153,22 @@ export default function LoginPage() {
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
+          {mode === "sign_up" && (
+            <label className={styles.field}>
+              <span className={styles.label}>お名前</span>
+              <input
+                autoComplete="name"
+                className={styles.input}
+                maxLength={50}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="山田 太郎"
+                required
+                type="text"
+                value={displayName}
+              />
+            </label>
+          )}
+
           <label className={styles.field}>
             <span className={styles.label}>Email</span>
             <input
