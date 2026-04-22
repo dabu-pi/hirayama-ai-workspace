@@ -6,7 +6,7 @@
 
 ## 🗓 2026-04-22 P1実装: 自費明細3関数 列名ベース化
 
-**COMMIT:** (このエントリ作成後に記録)  
+**COMMIT:** `4ded2c6`  
 **変更ファイル:** `Ver3_core.js` / `docs/JREC-01_selfPay_label_based_2026-04-22.md`
 
 ### 変更サマリ
