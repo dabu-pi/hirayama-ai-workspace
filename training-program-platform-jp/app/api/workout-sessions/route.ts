@@ -41,6 +41,18 @@ export async function POST(request: Request) {
     console.log(`[PERF] POST /api/workout-sessions startSessionForDay: ${Date.now() - tApi}ms | ok=${result.ok}`);
 
     if (!result.ok) {
+      if (result.reason === "membership_inactive") {
+        return NextResponse.json(
+          {
+            error: {
+              code: "membership_inactive",
+              message: "現在、このアカウントではワークアウトを開始できません。"
+            }
+          },
+          { status: 403 }
+        );
+      }
+
       if (result.reason === "session_already_in_progress") {
         return NextResponse.json(
           {

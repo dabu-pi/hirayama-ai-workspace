@@ -15,6 +15,7 @@ export type StartSessionResult =
       reason:
         | "supabase_unavailable"
         | "unauthenticated"
+        | "membership_inactive"
         | "day_not_found"
         | "insert_failed"
         | "session_already_in_progress";
@@ -43,6 +44,8 @@ type ProgramDayRow = {
 type ProgramWeekRow = {
   program_id: string;
 };
+
+type MembershipRow = { membership_status: string };
 
 // Embedded join type for program_days → program_weeks in a single query
 type ProgramDayWithWeekJoinRow = {
@@ -157,7 +160,12 @@ export async function startSessionForDay(
   // program_days uses an embedded join to resolve program_id in one query.
   // If guard fails, exercises/programId results are discarded (minimal waste).
   const t1 = Date.now();
-  const [guardResult, exercisesResult, dayWithWeekResult] = await Promise.all([
+  const [membershipResult, guardResult, exercisesResult, dayWithWeekResult] = await Promise.all([
+    client
+      .from("users")
+      .select("membership_status")
+      .eq("id", userId)
+      .maybeSingle<MembershipRow>(),
     client
       .from("workout_sessions")
       .select("id, program_day_id")
@@ -177,11 +185,26 @@ export async function startSessionForDay(
       .eq("id", programDayId)
       .maybeSingle<ProgramDayWithWeekJoinRow>()
   ]);
-  console.log(`[PERF] startSessionForDay parallel(guard+exercises+programId): ${Date.now() - t1}ms`);
+  console.log(`[PERF] startSessionForDay parallel(membership+guard+exercises+programId): ${Date.now() - t1}ms`);
 
-  // 0. Guard: existing in_progress session
-  //    - Same program_day_id → reuse (idempotent resume).
-  //    - Different session → block.
+  // 0a. Membership check: fail-open on DB error, fail-closed on explicit inactive status.
+  //     Consistent with Phase 2 UI gate — transient DB issues do not block active users.
+  if (!membershipResult.error) {
+    const membershipStatus = membershipResult.data?.membership_status ?? null;
+    if (membershipStatus !== null && membershipStatus !== "active") {
+      console.warn("start-session: blocked by membership_status.", { userId, membershipStatus });
+      return { ok: false, reason: "membership_inactive" };
+    }
+  } else {
+    console.warn("start-session: membership query failed — failing open.", {
+      userId,
+      errorMessage: membershipResult.error.message
+    });
+  }
+
+  // 0b. Guard: existing in_progress session
+  //     - Same program_day_id → reuse (idempotent resume).
+  //     - Different session → block.
   if (guardResult.error) {
     console.error("start-session: failed to check for existing session.", guardResult.error);
     return { ok: false, reason: "insert_failed" };
