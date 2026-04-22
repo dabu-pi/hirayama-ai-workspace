@@ -5377,6 +5377,71 @@ function checkAccountingTypeCrossWarning_V3_(uiSh, acctType) {
   return true;
 }
 
+// ===== Web UI — Phase 1: 患者検索 =====
+
+/**
+ * 患者マスタを全件読み込み、keyword に部分一致する患者を最大 20 件返す。
+ * 照合列: 患者ID / 氏名 / フリガナ / 検索用
+ * @param {string} keyword
+ * @returns {{patientId:string, name:string, furi:string, birthday:string}[]}
+ */
+function searchPatients_V3(keyword) {
+  var kw = String(keyword || "").trim().toLowerCase();
+  if (!kw) return [];
+
+  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var masterSh = ss.getSheetByName(SHEETS.master);
+  if (!masterSh || masterSh.getLastRow() < 2) return [];
+
+  var data    = masterSh.getDataRange().getValues();
+  var headers = data[0];
+
+  // 0-based index map
+  var idxMap = {};
+  for (var h = 0; h < headers.length; h++) {
+    idxMap[String(headers[h] || "").trim()] = h;
+  }
+
+  var COL_PID  = idxMap["患者ID"];
+  var COL_NAME = idxMap["氏名"];
+  var COL_FURI = idxMap["フリガナ"];
+  var COL_DOB  = idxMap["生年月日"];
+  var COL_DISP = idxMap["検索用"];
+
+  var results = [];
+  for (var r = 1; r < data.length && results.length < 20; r++) {
+    var row    = data[r];
+    var pid    = String(row[COL_PID]  || "").trim();
+    var name   = String(row[COL_NAME] || "").trim();
+    var furi   = String(row[COL_FURI] || "").trim();
+    var disp   = COL_DISP !== undefined ? String(row[COL_DISP] || "").trim() : "";
+
+    if (!pid) continue;
+
+    var haystack = (pid + " " + name + " " + furi + " " + disp).toLowerCase();
+    if (haystack.indexOf(kw) < 0) continue;
+
+    var dob = "";
+    if (COL_DOB !== undefined && row[COL_DOB]) {
+      try { dob = Utilities.formatDate(new Date(row[COL_DOB]), "Asia/Tokyo", "yyyy-MM-dd"); }
+      catch (_) { dob = String(row[COL_DOB]); }
+    }
+    results.push({ patientId: pid, name: name, furi: furi, birthday: dob });
+  }
+
+  Logger.log("[searchPatients] keyword=\"" + keyword + "\" ヒット=" + results.length + "件");
+  return results;
+}
+
+/** Web App エントリポイント — 患者検索ページを返す */
+function doGet(e) {
+  return HtmlService.createHtmlOutputFromFile("patientSearch")
+    .setTitle("患者検索 — JREC-01")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ===== Web UI Phase 1 ここまで =====
+
 /**
  * 保険算定なし（自費のみ）の場合に使用するゼロ金額オブジェクトを返す。
  * appendHeaderRow_V3_ および writeAmountsToUI_V3_ のパラメータ互換。

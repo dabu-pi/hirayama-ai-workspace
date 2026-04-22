@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>患者検索 — JREC-01</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: #f5f6fa;
+      color: #333;
+      padding: 16px;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 16px;
+    }
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    #keyword {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+    }
+    #keyword:focus { border-color: #3498db; }
+    button#searchBtn {
+      padding: 10px 18px;
+      font-size: 15px;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button#searchBtn:hover { background: #2980b9; }
+    button#searchBtn:disabled { background: #aaa; cursor: default; }
+
+    #status {
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 10px;
+      min-height: 18px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    }
+    thead th {
+      background: #2c3e50;
+      color: #fff;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    tbody tr { border-bottom: 1px solid #eee; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td {
+      padding: 10px 12px;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    tbody tr:hover { background: #f0f7ff; }
+
+    .pid  { color: #888; font-size: 12px; }
+    .name { font-weight: 600; }
+    .furi { color: #666; font-size: 12px; }
+    .dob  { color: #555; font-size: 13px; }
+
+    #emptyMsg {
+      display: none;
+      text-align: center;
+      padding: 32px 0;
+      color: #999;
+      font-size: 15px;
+    }
+    #results { display: none; }
+  </style>
+</head>
+<body>
+  <h1>患者検索</h1>
+
+  <div class="search-row">
+    <input type="text" id="keyword" placeholder="患者ID・氏名・フリガナで検索" autofocus>
+    <button id="searchBtn" onclick="doSearch()">検索</button>
+  </div>
+
+  <div id="status"></div>
+
+  <div id="emptyMsg">該当する患者が見つかりませんでした。</div>
+
+  <table id="results">
+    <thead>
+      <tr>
+        <th>患者ID</th>
+        <th>氏名 / フリガナ</th>
+        <th>生年月日</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    var _searching = false;
+
+    document.getElementById("keyword").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") doSearch();
+    });
+
+    function doSearch() {
+      if (_searching) return;
+      var kw = document.getElementById("keyword").value.trim();
+      if (!kw) { setStatus("キーワードを入力してください。"); return; }
+
+      _searching = true;
+      document.getElementById("searchBtn").disabled = true;
+      setStatus("検索中…");
+      hide("results");
+      hide("emptyMsg");
+      document.getElementById("tbody").innerHTML = "";
+
+      google.script.run
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onError)
+        .searchPatients_V3(kw);
+    }
+
+    function onSuccess(rows) {
+      _searching = false;
+      document.getElementById("searchBtn").disabled = false;
+
+      if (!rows || rows.length === 0) {
+        setStatus("");
+        show("emptyMsg");
+        return;
+      }
+
+      var hint = rows.length === 20 ? "（最大20件表示）" : "";
+      setStatus(rows.length + " 件ヒット" + hint);
+
+      var tbody = document.getElementById("tbody");
+      rows.forEach(function(p) {
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td class='pid'>" + esc(p.patientId) + "</td>" +
+          "<td><div class='name'>" + esc(p.name) + "</div>" +
+          "<div class='furi'>" + esc(p.furi) + "</div></td>" +
+          "<td class='dob'>" + esc(p.birthday) + "</td>";
+        tbody.appendChild(tr);
+      });
+      show("results");
+    }
+
+    function onError(err) {
+      _searching = false;
+      document.getElementById("searchBtn").disabled = false;
+      setStatus("エラー: " + (err.message || err));
+    }
+
+    function setStatus(msg) { document.getElementById("status").textContent = msg; }
+    function show(id) { document.getElementById(id).style.display = ""; }
+    function hide(id) { document.getElementById(id).style.display = "none"; }
+    function esc(s) {
+      return String(s || "")
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+    }
+  </script>
+</body>
+</html>
