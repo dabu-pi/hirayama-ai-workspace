@@ -342,10 +342,13 @@ async function selectVisibleWorkoutSets(
 // Replaces the previous two-step flow (selectHistoricalSessions + selectHistoricalWorkoutSessionExercises).
 // Current session is always in_progress, so status=completed excludes it without a neq guard.
 // limit(400) ≈ 20 sessions × 20 exercises — generous enough for any typical user history.
+// cutoffIso: only sessions started after this ISO timestamp are included (default: 90 days ago).
+//   Increase to 180 days if users report missing previousDisplay after long breaks.
 async function selectHistoricalExercisesWithSession(
   client: DatabaseClient,
   userId: string,
-  uniqueExerciseIds: string[]
+  uniqueExerciseIds: string[],
+  cutoffIso: string
 ) {
   if (uniqueExerciseIds.length === 0) return [] as HistoricalExerciseWithSessionRow[];
 
@@ -356,6 +359,7 @@ async function selectHistoricalExercisesWithSession(
     .eq("workout_sessions.user_id", userId)
     .eq("workout_sessions.status", "completed")
     .is("workout_sessions.archived_at", null)
+    .gte("workout_sessions.started_at", cutoffIso)
     .limit(400);
 
   if (error) {
@@ -419,13 +423,20 @@ async function buildPreviousDisplayMap(
   // R4: single embedded query replaces two sequential round-trips (Q1 sessions + Q2 exercises).
   // Graceful degradation: if the embedded filter fails (PostgREST version / schema issue),
   // return empty map so WorkoutScreen still renders (previousDisplay shows "-" instead of crashing).
+  // cutoff: 90 days — sessions older than this are unlikely to be useful as previousDisplay.
+  //   Adjust to 180 days in selectHistoricalExercisesWithSession if needed.
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 90);
+  const cutoffIso = cutoff.toISOString();
+
   const tPrev0 = Date.now();
   let historicalExercises: HistoricalExerciseWithSessionRow[];
   try {
     historicalExercises = await selectHistoricalExercisesWithSession(
       client,
       currentSession.user_id,
-      uniqueExerciseIds
+      uniqueExerciseIds,
+      cutoffIso
     );
   } catch (err) {
     console.warn("buildPreviousDisplayMap: embedded query failed, skipping previousDisplay.", err);
