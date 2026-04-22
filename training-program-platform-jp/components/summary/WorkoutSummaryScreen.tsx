@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { formatJstDateTime } from "@/lib/utils/date-jst";
+import { formatWeekDay } from "@/lib/workout/format-labels";
 import type { WorkoutSummaryState, WorkoutSummaryView } from "@/types/workout";
 
 import { RestartProgramButton } from "./RestartProgramButton";
@@ -126,10 +127,13 @@ export function WorkoutSummaryScreen({
         <h1 className={styles.title}>{resolveStateTitle(state, isProgramCompleted)}</h1>
         {showMetadata ? (
           <>
+            {!isCustomSession && summary.programWeekLabel && (
+              <span className={styles.weekDayBadge}>
+                {formatWeekDay(summary.programWeekLabel)}
+              </span>
+            )}
             {!isCustomSession && (
-              <p className={styles.meta}>
-                {summary.programTitle} / {summary.programWeekLabel}
-              </p>
+              <p className={styles.meta}>{summary.programTitle}</p>
             )}
             <p className={styles.subtle}>
               {isCancelled
