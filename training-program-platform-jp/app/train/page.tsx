@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 
 import { BlockedSessionScreen } from "@/components/train/BlockedSessionScreen";
+import { MembershipRequiredScreen } from "@/components/train/MembershipRequiredScreen";
 import { TrainAuthRequired } from "@/components/train/TrainAuthRequired";
 import { StartSessionScreen } from "@/components/workout/StartSessionScreen";
 import { WorkoutScreen } from "@/components/workout/WorkoutScreen";
 import { getActiveProgramView } from "@/lib/workout/active-program";
+import { getMembershipStatus } from "@/lib/workout/membership";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
 import { resolveTrainingEntry } from "@/lib/workout/train-entry";
 import { getAuthenticatedWorkoutUserId } from "@/lib/workout/session-access";
@@ -45,6 +47,16 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
   if (!userId) {
     console.info(`${PAGE}:branch`, { branch: "unauthenticated" });
     return <TrainAuthRequired />;
+  }
+
+  // Membership gate: non-active users see a holding screen.
+  // Fails open (null) on DB error to avoid blocking legitimate users.
+  const tMembership = Date.now();
+  const membershipStatus = await getMembershipStatus(userId);
+  console.info(`${PAGE}:perf`, { step: "membership", ms: Date.now() - tMembership, status: membershipStatus });
+  if (membershipStatus !== null && membershipStatus !== "active") {
+    console.info(`${PAGE}:branch`, { branch: "membership_required", status: membershipStatus });
+    return <MembershipRequiredScreen />;
   }
 
   const tSelection = Date.now();
