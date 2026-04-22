@@ -1,5 +1,34 @@
 # PROJECT_STATUS
 
+## 2026-04-22 DB integrity check — migration 000017 / 000018 live confirmation
+
+### STATUS: CLOSED (2026-04-22)
+
+### PURPOSE
+
+Confirm that migration 000017 and 000018 were applied to the production DB.
+Both were added to the repo on 2026-04-22 but had no corresponding confirmation log,
+which led to an incorrect "未適用" assessment.
+
+### PROD_CHECK
+
+| Migration | Content | Result |
+|---|---|---|
+| 000017 | `create_workout_session_for_day` RPC | ✅ exists — `has_body = true` confirmed via `information_schema.routines` |
+| 000018 | `hip-thrust` category `legs → glutes` | ✅ `category = 'glutes'` confirmed via `public.exercises` |
+
+Both were already applied. No re-application required.
+
+### CHANGES
+
+No code changes. Confirmation log only.
+
+### PERFORMANCE_IMPACT
+
+None — audit only.
+
+---
+
 ## 2026-04-19 Phase 1 Sync Guard — verification (client-side safety check)
 
 ### STATUS: CLOSED (2026-04-19)
