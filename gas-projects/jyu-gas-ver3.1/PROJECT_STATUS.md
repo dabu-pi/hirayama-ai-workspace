@@ -1,6 +1,29 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**患者マスタ ヘッダ設計 v1 確定 — 氏名カナ=フリガナ統一・資格情報(該当保険)追加不要で全論点クローズ。ヘッダ変更・コード変更なし**）
+最終更新: 2026-04-22（**横展開計画策定 — 自費明細3関数（appendSelfPayDetailRow_V3_等）を P1 として選定。次回実装プロンプト作成済み**）
+
+---
+
+## 🗓 2026-04-22 項目名ベース転記 横展開計画策定
+
+**ドキュメント:** `docs/JREC-01_横展開計画_label_based_2026-04-22.md`
+
+### 評価サマリ
+
+| 評価 | 関数 / 対象 | 備考 |
+|---|---|---|
+| ✅ ラベル完了 | `saveCaseRow_V3_`、`appendHeaderRow_V3_`、`exportHeaderFromCases_V3` | `setByName_` + 定数。Logger 追加候補 |
+| ✅ ラベル完了 | `V3TR_loadMasterRow_`、`V3TR_loadInsurerRow_` | `V3TR_buildHeaderMap_` 使用 |
+| ✅ 今回実装 | `copyInsurerToMaster_V3` | 基準実装。Logger3種 |
+| 対応不要 | `readRowNewUI_`、`autofillFromPreviousVisit_V3`、`reloadVisitToUI_V3` | UIフォーム = レイアウト固定が正しい |
+| 対応不要 | `V3TR_writeToApplication_` | 申請書テンプレ = 固定レイアウトが正しい |
+| ⚠️ **P1 要対応** | `appendSelfPayDetailRow_V3_`（line 4240） | 位置固定 appendRow。列追加で壊れる |
+| ⚠️ P1 要対応 | `readSelfPayDetailsForVisit_V3_`（line 4303）、`deleteSelfPayDetailRows_V3_`（line 4219） | 自前 indexOf。P1 と同時修正 |
+
+### 次の作業
+
+**P1（次回実装）:** `appendSelfPayDetailRow_V3_` 等 自費明細3関数を `buildHeaderColMap_` + `setByName_` に変換  
+実装プロンプトは `docs/JREC-01_横展開計画_label_based_2026-04-22.md` の「次回実装プロンプト（P1用）」参照
 
 ---
 
