@@ -15,11 +15,16 @@ export type MemberRow = {
   created_at: string;
 };
 
+export type CurrentUserContext = {
+  userId: string;
+  role: string;
+};
+
 /**
- * Returns the role of the currently authenticated user using their own RLS-scoped row.
+ * Returns the authenticated user's ID and role using their own RLS-scoped row.
  * Returns null when unauthenticated or when the public.users row is missing.
  */
-export async function getCurrentUserRole(): Promise<string | null> {
+export async function getCurrentUserRole(): Promise<CurrentUserContext | null> {
   const client = createSupabaseServerClient();
   const {
     data: { user }
@@ -32,7 +37,8 @@ export async function getCurrentUserRole(): Promise<string | null> {
     .eq("id", user.id)
     .maybeSingle<{ role: string }>();
 
-  return data?.role ?? null;
+  if (!data) return null;
+  return { userId: user.id, role: data.role };
 }
 
 /**

@@ -36,6 +36,12 @@ export async function updateMembershipStatus(
     return { ok: false, error: "forbidden" };
   }
 
+  // Self-update guard — prevents an admin from locking themselves out.
+  if (adminUserId === targetUserId) {
+    console.warn("updateMembershipStatus: rejected — self-update.", { adminUserId });
+    return { ok: false, error: "self_update_forbidden" };
+  }
+
   if (!VALID_STATUSES.includes(newStatus)) {
     return { ok: false, error: "invalid_status" };
   }

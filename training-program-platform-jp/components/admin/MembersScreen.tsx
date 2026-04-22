@@ -9,9 +9,10 @@ import styles from "./MembersScreen.module.css";
 
 type MembersScreenProps = {
   members: MemberRow[];
+  currentUserId: string;
 };
 
-export function MembersScreen({ members }: MembersScreenProps) {
+export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
@@ -31,7 +32,11 @@ export function MembersScreen({ members }: MembersScreenProps) {
           </thead>
           <tbody>
             {members.map((member) => (
-              <MemberRowItem key={member.id} member={member} />
+              <MemberRowItem
+                key={member.id}
+                isSelf={member.id === currentUserId}
+                member={member}
+              />
             ))}
           </tbody>
         </table>
@@ -42,9 +47,10 @@ export function MembersScreen({ members }: MembersScreenProps) {
 
 type MemberRowItemProps = {
   member: MemberRow;
+  isSelf: boolean;
 };
 
-function MemberRowItem({ member }: MemberRowItemProps) {
+function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
   const [selected, setSelected] = useState<MembershipStatus>(
     member.membership_status
   );
@@ -96,38 +102,42 @@ function MemberRowItem({ member }: MemberRowItemProps) {
         </span>
       </td>
       <td className={styles.td}>
-        <div className={styles.statusCell}>
-          <select
-            className={styles.statusSelect}
-            disabled={isPending}
-            value={selected}
-            onChange={(e) =>
-              setSelected(e.target.value as MembershipStatus)
-            }
-          >
-            <option value="active">active</option>
-            <option value="paused">paused</option>
-            <option value="cancelled">cancelled</option>
-          </select>
-          <button
-            className={styles.saveButton}
-            disabled={!isDirty || isPending}
-            type="button"
-            onClick={handleSave}
-          >
-            {isPending ? "保存中…" : "保存"}
-          </button>
-          {feedback && (
-            <span
-              className={`${styles.feedback} ${
-                feedback.ok ? styles.feedbackOk : styles.feedbackError
-              }`}
+        {isSelf ? (
+          <span className={styles.selfNote}>自分自身は変更できません</span>
+        ) : (
+          <div className={styles.statusCell}>
+            <select
+              className={styles.statusSelect}
+              disabled={isPending}
+              value={selected}
+              onChange={(e) =>
+                setSelected(e.target.value as MembershipStatus)
+              }
             >
-              {feedback.ok ? "✓ " : "✗ "}
-              {feedback.message}
-            </span>
-          )}
-        </div>
+              <option value="active">active</option>
+              <option value="paused">paused</option>
+              <option value="cancelled">cancelled</option>
+            </select>
+            <button
+              className={styles.saveButton}
+              disabled={!isDirty || isPending}
+              type="button"
+              onClick={handleSave}
+            >
+              {isPending ? "保存中…" : "保存"}
+            </button>
+            {feedback && (
+              <span
+                className={`${styles.feedback} ${
+                  feedback.ok ? styles.feedbackOk : styles.feedbackError
+                }`}
+              >
+                {feedback.ok ? "✓ " : "✗ "}
+                {feedback.message}
+              </span>
+            )}
+          </div>
+        )}
       </td>
       <td className={styles.td}>{createdDate}</td>
     </tr>

@@ -6,12 +6,12 @@ import { getAllMembers, getCurrentUserRole } from "@/lib/admin/members";
 export const dynamic = "force-dynamic";
 
 export default async function AdminMembersPage() {
-  const role = await getCurrentUserRole();
+  const userContext = await getCurrentUserRole();
 
-  if (!role) redirect("/login");
-  if (role !== "admin") redirect("/");
+  if (!userContext) redirect("/login");
+  if (userContext.role !== "admin") redirect("/");
 
   const members = await getAllMembers();
 
-  return <MembersScreen members={members} />;
+  return <MembersScreen currentUserId={userContext.userId} members={members} />;
 }
