@@ -1,6 +1,30 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**横展開計画策定 — 自費明細3関数（appendSelfPayDetailRow_V3_等）を P1 として選定。次回実装プロンプト作成済み**）
+最終更新: 2026-04-22（**P1実装完了 — 自費明細3関数（appendSelfPayDetailRow_V3_ 等）を buildHeaderColMap_ + 定数ベースに変換。位置固定 appendRow を廃止**）
+
+---
+
+## 🗓 2026-04-22 P1実装: 自費明細3関数 列名ベース化
+
+**COMMIT:** (このエントリ作成後に記録)  
+**変更ファイル:** `Ver3_core.js` / `docs/JREC-01_selfPay_label_based_2026-04-22.md`
+
+### 変更サマリ
+
+| 変更 | 内容 |
+|---|---|
+| `SELF_DETAIL_COLS` 定数追加 | 14列のシートヘッダ名を定数化（`MASTER_COLS` 直後） |
+| `appendSelfPayDetailRow_V3_` | 14要素固定 `appendRow` → `buildHeaderColMap_` + `put_` ヘルパー + Logger |
+| `readSelfPayDetailsForVisit_V3_` | `colIdx["名前"] \|\| 位置番号` フォールバック廃止 → `SELF_DETAIL_COLS.*` 定数 + Logger |
+| `deleteSelfPayDetailRows_V3_` | `indexOf("visitKey")` 文字列直打ち → `SELF_DETAIL_COLS.visitKey` 定数 + Logger |
+
+**既存データ互換:** ヘッダ変更なし・データ値書き換えなし・返却オブジェクトのキー変更なし
+
+**clasp push:** 完了（10ファイル）
+
+### Dashboard / Run_Log
+
+不要。コード変更のみ。
 
 ---
 

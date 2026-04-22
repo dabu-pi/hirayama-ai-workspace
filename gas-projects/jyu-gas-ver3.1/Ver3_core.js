@@ -372,6 +372,24 @@ const MASTER_COLS = {
   burden: "負担割合",
 };
 
+/** ===== 自費明細シート列名 ===== */
+const SELF_DETAIL_COLS = {
+  detailId:        "明細ID",
+  visitKey:        "visitKey",
+  lineNo:          "行番号",
+  treatDate:       "施術日",
+  patientId:       "患者ID",
+  accountingType:  "会計区分",
+  menuId:          "menu_id",
+  menuName:        "メニュー名",
+  unitPrice:       "単価",
+  qty:             "数量",
+  subtotal:        "小計",
+  chronicFlag:     "慢性候補フラグ",
+  nextReservation: "次回予約あり",
+  createdAt:       "作成日時",
+};
+
 
 
 /** ===== メニュー ===== */
@@ -4220,14 +4238,24 @@ function deleteSelfPayDetailRows_V3_(detailSh, visitKey) {
   if (detailSh.getLastRow() < 2) return;
   var data    = detailSh.getDataRange().getValues();
   var headRow = data[0];
-  var vkCol   = headRow.indexOf("visitKey");  // 0-based
-  if (vkCol < 0) return;
 
+  var vkCol = -1;
+  for (var h = 0; h < headRow.length; h++) {
+    if (String(headRow[h] || "").trim() === SELF_DETAIL_COLS.visitKey) { vkCol = h; break; }
+  }
+  if (vkCol < 0) {
+    Logger.log("[deleteSelfPay] WARN ヘッダに列なし: " + SELF_DETAIL_COLS.visitKey);
+    return;
+  }
+
+  var count = 0;
   for (var r = data.length - 1; r >= 1; r--) {
     if (String(data[r][vkCol] || "") === visitKey) {
       detailSh.deleteRow(r + 1);  // Sheet は 1-based
+      count++;
     }
   }
+  Logger.log("[deleteSelfPay] visitKey=" + visitKey + " 削除件数=" + count);
 }
 
 /**
@@ -4238,22 +4266,41 @@ function deleteSelfPayDetailRows_V3_(detailSh, visitKey) {
  *                           chronicFlag, nextReservation, createdAt}
  */
 function appendSelfPayDetailRow_V3_(detailSh, rowObj) {
-  detailSh.appendRow([
-    rowObj.selfPayDetailId,
-    rowObj.visitKey,
-    rowObj.lineNo,
-    rowObj.treatDate,
-    rowObj.patientId,
-    rowObj.accountingType  || "",
-    rowObj.menuId          || "",
-    rowObj.menuName        || "",
-    rowObj.unitPrice,
-    rowObj.qty,
-    rowObj.subtotal,
-    rowObj.chronicFlag       ? true : false,
-    rowObj.nextReservation   ? true : false,
-    rowObj.createdAt,
-  ]);
+  var lastCol = detailSh.getLastColumn();
+  if (lastCol < 1) {
+    Logger.log("[appendSelfPay] ERROR シートに列がありません");
+    return;
+  }
+  var detailMap = buildHeaderColMap_(detailSh);
+  var rowArr    = new Array(lastCol).fill("");
+
+  var missing = [];
+  function put_(colName, val) {
+    var c = detailMap[colName];
+    if (!c) { missing.push(colName); return; }
+    rowArr[c - 1] = val;
+  }
+
+  put_(SELF_DETAIL_COLS.detailId,        rowObj.selfPayDetailId);
+  put_(SELF_DETAIL_COLS.visitKey,         rowObj.visitKey);
+  put_(SELF_DETAIL_COLS.lineNo,           rowObj.lineNo);
+  put_(SELF_DETAIL_COLS.treatDate,        rowObj.treatDate);
+  put_(SELF_DETAIL_COLS.patientId,        rowObj.patientId);
+  put_(SELF_DETAIL_COLS.accountingType,   rowObj.accountingType  || "");
+  put_(SELF_DETAIL_COLS.menuId,           rowObj.menuId          || "");
+  put_(SELF_DETAIL_COLS.menuName,         rowObj.menuName        || "");
+  put_(SELF_DETAIL_COLS.unitPrice,        rowObj.unitPrice);
+  put_(SELF_DETAIL_COLS.qty,              rowObj.qty);
+  put_(SELF_DETAIL_COLS.subtotal,         rowObj.subtotal);
+  put_(SELF_DETAIL_COLS.chronicFlag,      rowObj.chronicFlag      ? true : false);
+  put_(SELF_DETAIL_COLS.nextReservation,  rowObj.nextReservation  ? true : false);
+  put_(SELF_DETAIL_COLS.createdAt,        rowObj.createdAt);
+
+  if (missing.length > 0) {
+    Logger.log("[appendSelfPay] WARN 列なし: " + missing.join(", ") + " visitKey=" + rowObj.visitKey);
+  }
+  detailSh.appendRow(rowArr);
+  Logger.log("[appendSelfPay] 書き込み: visitKey=" + rowObj.visitKey + " lineNo=" + rowObj.lineNo);
 }
 
 /**
@@ -4304,33 +4351,54 @@ function readSelfPayDetailsForVisit_V3_(detailSh, visitKey) {
   if (!detailSh || detailSh.getLastRow() < 2) return [];
   var data    = detailSh.getDataRange().getValues();
   var headRow = data[0];
-  var vkCol   = headRow.indexOf("visitKey");
-  if (vkCol < 0) return [];
 
+  // ヘッダ名 → 0-based インデックス
   var colIdx = {};
-  headRow.forEach(function(name, i) { colIdx[name] = i; });
+  headRow.forEach(function(name, i) {
+    var n = String(name || "").trim();
+    if (n) colIdx[n] = i;
+  });
+
+  var vkCol = colIdx[SELF_DETAIL_COLS.visitKey];
+  if (vkCol === undefined) {
+    Logger.log("[readSelfPay] WARN ヘッダに列なし: " + SELF_DETAIL_COLS.visitKey);
+    return [];
+  }
+
+  // 必須列の存在チェック
+  var required = [SELF_DETAIL_COLS.detailId, SELF_DETAIL_COLS.menuId, SELF_DETAIL_COLS.menuName,
+                  SELF_DETAIL_COLS.unitPrice, SELF_DETAIL_COLS.qty, SELF_DETAIL_COLS.subtotal];
+  required.forEach(function(col) {
+    if (colIdx[col] === undefined) Logger.log("[readSelfPay] WARN 列なし: " + col);
+  });
+
+  function get_(row, colName) {
+    var idx = colIdx[colName];
+    return (idx !== undefined) ? row[idx] : undefined;
+  }
 
   var result = [];
   for (var r = 1; r < data.length; r++) {
     if (String(data[r][vkCol] || "") !== visitKey) continue;
-    var rawMenuId = data[r][colIdx["menu_id"] || 6] || "";
+    var rawMenuId = get_(data[r], SELF_DETAIL_COLS.menuId) || "";
     result.push({
-      selfPayDetailId: data[r][colIdx["明細ID"]       || 0] || "",
+      selfPayDetailId: get_(data[r], SELF_DETAIL_COLS.detailId)        || "",
       visitKey:        visitKey,
-      lineNo:          data[r][colIdx["行番号"]        || 2] || r,
-      treatDate:       data[r][colIdx["施術日"]        || 3] || "",
-      patientId:       data[r][colIdx["患者ID"]        || 4] || "",
-      accountingType:  data[r][colIdx["会計区分"]      || 5] || "",
+      lineNo:          get_(data[r], SELF_DETAIL_COLS.lineNo)           || r,
+      treatDate:       get_(data[r], SELF_DETAIL_COLS.treatDate)        || "",
+      patientId:       get_(data[r], SELF_DETAIL_COLS.patientId)        || "",
+      accountingType:  get_(data[r], SELF_DETAIL_COLS.accountingType)   || "",
       menuId:          normalizeMenuId_(rawMenuId),
-      menuName:        data[r][colIdx["メニュー名"]    || 7] || "",
-      unitPrice:       data[r][colIdx["単価"]          || 8] || 0,
-      qty:             data[r][colIdx["数量"]          || 9] || 1,
-      subtotal:        data[r][colIdx["小計"]          || 10] || 0,
-      chronicFlag:     data[r][colIdx["慢性候補フラグ"]|| 11] === true,
-      nextReservation: data[r][colIdx["次回予約あり"]  || 12] === true,
-      createdAt:       data[r][colIdx["作成日時"]      || 13] || "",
+      menuName:        get_(data[r], SELF_DETAIL_COLS.menuName)         || "",
+      unitPrice:       get_(data[r], SELF_DETAIL_COLS.unitPrice)        || 0,
+      qty:             get_(data[r], SELF_DETAIL_COLS.qty)              || 1,
+      subtotal:        get_(data[r], SELF_DETAIL_COLS.subtotal)         || 0,
+      chronicFlag:     get_(data[r], SELF_DETAIL_COLS.chronicFlag)      === true,
+      nextReservation: get_(data[r], SELF_DETAIL_COLS.nextReservation)  === true,
+      createdAt:       get_(data[r], SELF_DETAIL_COLS.createdAt)        || "",
     });
   }
+  Logger.log("[readSelfPay] visitKey=" + visitKey + " 件数=" + result.length);
   return result;
 }
 
