@@ -1,5 +1,65 @@
 # PROJECT_STATUS
 
+## 2026-04-22 Membership status control — Phase 1–3 complete
+
+### STATUS: CLOSED (2026-04-22)
+
+### PURPOSE
+
+Introduce a `membership_status` column to gate feature access for non-active users,
+without disrupting existing active users. Implemented in three phases to allow
+incremental rollout and verification at each step.
+
+### CHANGES
+
+**Phase 1 — DB foundation (migration 000019)**
+
+- `ALTER TABLE public.users ADD COLUMN membership_status text NOT NULL DEFAULT 'active'`
+- `CHECK (membership_status IN ('active', 'paused', 'cancelled'))`
+- All existing users received `'active'` automatically via the column default.
+- `handle_new_user` trigger unchanged — new users also default to `'active'`.
+- Live DB confirmed: column exists, all rows `= 'active'`.
+
+**Phase 2 — UI gate (`/train`)**
+
+- New: `lib/workout/membership.ts` — `getMembershipStatus(userId)` using authenticated client (RLS: own row only).
+- New: `components/train/MembershipRequiredScreen.tsx` — holding screen for non-active users (reuses `TrainAuthRequired` styles).
+- Modified: `app/train/page.tsx` — membership check inserted after auth gate.
+- Fail-open on DB error (`null` passes through) to avoid blocking users on transient failures.
+- Explicitly `paused` or `cancelled` → `MembershipRequiredScreen`.
+
+**Phase 3 — API gate (`POST /api/workout-sessions`)**
+
+- `StartSessionResult` reason union: added `'membership_inactive'`.
+- `startSessionForDay`: membership query added to the existing `Promise.all` batch — zero additional latency.
+- Fail-open on DB error, fail-closed on explicit `paused` / `cancelled` status.
+- Route handler: `membership_inactive` → HTTP 403 `{ code: "membership_inactive", message: "現在、このアカウントではワークアウトを開始できません。" }`.
+- Frontend unchanged — `StartSessionScreen` already surfaces `body.error.message` on `!response.ok`.
+
+### DESIGN NOTES
+
+UI + API double guard: `/train` page blocks first; even if bypassed via direct API call,
+`POST /api/workout-sessions` rejects with 403.
+
+Active users: no behavioural change at any layer.
+Status control: update `public.users.membership_status` via Supabase Dashboard SQL Editor.
+
+```sql
+-- Suspend a user
+UPDATE public.users SET membership_status = 'paused' WHERE id = '<uuid>';
+
+-- Restore
+UPDATE public.users SET membership_status = 'active' WHERE id = '<uuid>';
+```
+
+### PERFORMANCE_IMPACT
+
+Phase 1: none.
+Phase 2: +1 DB query on `/train` render (authenticated server client, own-row select).
+Phase 3: +0 latency — membership query runs within the existing `Promise.all` in `startSessionForDay`.
+
+---
+
 ## 2026-04-22 DB integrity check — migration 000017 / 000018 live confirmation
 
 ### STATUS: CLOSED (2026-04-22)
