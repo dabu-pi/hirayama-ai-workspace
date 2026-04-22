@@ -176,16 +176,33 @@ export function ProgramsScreen({
       <header className={styles.hero}>
         <span className={styles.eyebrow}>Program Library</span>
         <h1 className={styles.title}>{resolveTitle(state)}</h1>
-        <p className={styles.lead}>{bodyText}</p>
+
+        {isReady ? (
+          <div className={styles.modeGrid}>
+            <div className={styles.modeCard}>
+              <strong className={styles.modeTitle}>プログラムで進める</strong>
+              <p className={styles.modeDesc}>
+                用意されたプログラムに沿って、一定期間トレーニングを進めます
+              </p>
+              <span className={styles.modeHint}>↓ 下のリストから選んでください</span>
+            </div>
+            <div className={styles.modeCard}>
+              <strong className={styles.modeTitle}>その日だけ自由に</strong>
+              <p className={styles.modeDesc}>
+                その日の内容を自分で選んで、自由に記録できます
+              </p>
+              <CustomWorkoutButton />
+            </div>
+          </div>
+        ) : (
+          <p className={styles.lead}>{bodyText}</p>
+        )}
+
         <div className={styles.heroMeta}>
           <span>Source: {formatSourceLabel(view.source)}</span>
           <Link className={styles.trainLink} href="/train">
             トレーニングへ
           </Link>
-        </div>
-        <div className={styles.customWorkoutRow}>
-          <span className={styles.customWorkoutDivider}>または</span>
-          <CustomWorkoutButton />
         </div>
       </header>
 
