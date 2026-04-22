@@ -505,6 +505,7 @@ export function WorkoutScreen({
   const [swapTargetBlockId, setSwapTargetBlockId] = useState<string | null>(null);
   const [swapGroupSlug, setSwapGroupSlug] = useState<string | null>(null);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
+  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [exerciseList, setExerciseList] = useState<ExerciseListItem[]>([]);
   const [isLoadingExercises, setIsLoadingExercises] = useState(false);
   const [isAddingExerciseId, setIsAddingExerciseId] = useState<string | null>(null);
@@ -1183,6 +1184,7 @@ export function WorkoutScreen({
     setSwapGroupSlug(null);
     setIsAddExerciseModalOpen(true);
     setExerciseSearchQuery("");
+    setSelectedMuscle(null);
     await loadExercises(null);
   };
 
@@ -1193,12 +1195,14 @@ export function WorkoutScreen({
     setSwapGroupSlug(groupSlug ?? null);
     setIsAddExerciseModalOpen(true);
     setExerciseSearchQuery("");
+    setSelectedMuscle(null);
     await loadExercises(groupSlug);
   };
 
   const closeAddExerciseModal = () => {
     setIsAddExerciseModalOpen(false);
     setExerciseSearchQuery("");
+    setSelectedMuscle(null);
     setAddExerciseError(null);
     setSwapTargetBlockId(null);
     setSwapGroupSlug(null);
@@ -1309,13 +1313,13 @@ export function WorkoutScreen({
     }
   };
 
+  const MUSCLE_CHIPS = ["胸", "背中", "肩", "腕", "脚", "お尻", "体幹"];
+
   const filteredExercises = exerciseList.filter((item) => {
     const q = exerciseSearchQuery.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      item.nameJa.toLowerCase().includes(q) ||
-      item.nameEn.toLowerCase().includes(q)
-    );
+    const matchesSearch = !q || item.nameJa.toLowerCase().includes(q) || item.nameEn.toLowerCase().includes(q);
+    const matchesMuscle = !selectedMuscle || item.category === selectedMuscle;
+    return matchesSearch && matchesMuscle;
   });
 
   return (
@@ -1756,6 +1760,22 @@ export function WorkoutScreen({
                 type="search"
                 value={exerciseSearchQuery}
               />
+            </div>
+
+            <div className={styles.muscleFilter}>
+              <span className={styles.muscleFilterLabel}>どこを鍛えますか？</span>
+              <div className={styles.muscleChipRow}>
+                {MUSCLE_CHIPS.map((muscle) => (
+                  <button
+                    className={`${styles.muscleChip} ${selectedMuscle === muscle ? styles.muscleChipActive : ""}`}
+                    key={muscle}
+                    onClick={() => setSelectedMuscle(selectedMuscle === muscle ? null : muscle)}
+                    type="button"
+                  >
+                    {muscle}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {addExerciseError ? (
