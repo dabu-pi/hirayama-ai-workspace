@@ -52,6 +52,7 @@
       min-height: 18px;
     }
 
+    /* 結果テーブル */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -68,19 +69,33 @@
       font-size: 13px;
       font-weight: 600;
     }
-    tbody tr { border-bottom: 1px solid #eee; }
+    tbody tr {
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background .1s;
+    }
     tbody tr:last-child { border-bottom: none; }
     tbody td {
-      padding: 10px 12px;
+      padding: 12px 12px;
       font-size: 14px;
       vertical-align: middle;
     }
-    tbody tr:hover { background: #f0f7ff; }
+    tbody tr:hover  { background: #e8f4fd; }
+    tbody tr:active { background: #d0eaf9; }
+    tbody tr.selected { background: #c8e6fa; }
+    tbody tr.selecting { opacity: .6; pointer-events: none; }
 
     .pid  { color: #888; font-size: 12px; }
-    .name { font-weight: 600; }
-    .furi { color: #666; font-size: 12px; }
+    .name { font-weight: 600; font-size: 15px; }
+    .furi { color: #666; font-size: 12px; margin-top: 2px; }
     .dob  { color: #555; font-size: 13px; }
+    .arrow {
+      text-align: center;
+      font-size: 18px;
+      color: #bbb;
+      width: 28px;
+    }
+    tbody tr:hover .arrow { color: #3498db; }
 
     #emptyMsg {
       display: none;
@@ -90,6 +105,25 @@
       font-size: 15px;
     }
     #results { display: none; }
+
+    /* 選択完了トースト */
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #27ae60;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+      z-index: 100;
+      white-space: nowrap;
+    }
+    #toast.error { background: #e74c3c; }
   </style>
 </head>
 <body>
@@ -107,21 +141,25 @@
   <table id="results">
     <thead>
       <tr>
-        <th>患者ID</th>
-        <th>氏名 / フリガナ</th>
+        <th>患者ID / 氏名</th>
         <th>生年月日</th>
+        <th></th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
   </table>
 
+  <div id="toast"></div>
+
   <script>
-    var _searching = false;
+    var _searching  = false;
+    var _selecting  = false;
 
     document.getElementById("keyword").addEventListener("keydown", function(e) {
       if (e.key === "Enter") doSearch();
     });
 
+    /* ===== 検索 ===== */
     function doSearch() {
       if (_searching) return;
       var kw = document.getElementById("keyword").value.trim();
@@ -135,12 +173,12 @@
       document.getElementById("tbody").innerHTML = "";
 
       google.script.run
-        .withSuccessHandler(onSuccess)
-        .withFailureHandler(onError)
+        .withSuccessHandler(onSearchSuccess)
+        .withFailureHandler(onSearchError)
         .searchPatients_V3(kw);
     }
 
-    function onSuccess(rows) {
+    function onSearchSuccess(rows) {
       _searching = false;
       document.getElementById("searchBtn").disabled = false;
 
@@ -150,28 +188,72 @@
         return;
       }
 
-      var hint = rows.length === 20 ? "（最大20件表示）" : "";
-      setStatus(rows.length + " 件ヒット" + hint);
+      var hint = rows.length === 20 ? "（最大20件）" : "";
+      setStatus(rows.length + " 件ヒット" + hint + " — 行をタップして選択");
 
       var tbody = document.getElementById("tbody");
       rows.forEach(function(p) {
         var tr = document.createElement("tr");
+        tr.dataset.pid = p.patientId;
         tr.innerHTML =
-          "<td class='pid'>" + esc(p.patientId) + "</td>" +
-          "<td><div class='name'>" + esc(p.name) + "</div>" +
-          "<div class='furi'>" + esc(p.furi) + "</div></td>" +
-          "<td class='dob'>" + esc(p.birthday) + "</td>";
+          "<td>" +
+            "<div class='pid'>" + esc(p.patientId) + "</div>" +
+            "<div class='name'>" + esc(p.name) + "</div>" +
+            "<div class='furi'>" + esc(p.furi) + "</div>" +
+          "</td>" +
+          "<td class='dob'>" + esc(p.birthday) + "</td>" +
+          "<td class='arrow'>›</td>";
+
+        tr.addEventListener("click", function() {
+          selectPatient(this, p.patientId, p.name);
+        });
         tbody.appendChild(tr);
       });
       show("results");
     }
 
-    function onError(err) {
+    function onSearchError(err) {
       _searching = false;
       document.getElementById("searchBtn").disabled = false;
-      setStatus("エラー: " + (err.message || err));
+      setStatus("検索エラー: " + (err.message || err));
     }
 
+    /* ===== 患者選択 ===== */
+    function selectPatient(tr, patientId, name) {
+      if (_selecting) return;
+      _selecting = true;
+
+      // 選択中の視覚フィードバック
+      tr.classList.add("selecting");
+      setStatus("選択中…");
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          _selecting = false;
+          tr.classList.remove("selecting");
+          tr.classList.add("selected");
+          showToast("✓ " + esc(name) + " を選択しました", false);
+          setStatus("選択完了: " + esc(patientId));
+        })
+        .withFailureHandler(function(err) {
+          _selecting = false;
+          tr.classList.remove("selecting");
+          showToast("エラー: " + (err.message || err), true);
+          setStatus("選択失敗");
+        })
+        .setPatientAndDate_V3(patientId);
+    }
+
+    /* ===== トースト ===== */
+    function showToast(msg, isError) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = isError ? "error" : "";
+      el.style.display = "block";
+      setTimeout(function() { el.style.display = "none"; }, 3000);
+    }
+
+    /* ===== ユーティリティ ===== */
     function setStatus(msg) { document.getElementById("status").textContent = msg; }
     function show(id) { document.getElementById(id).style.display = ""; }
     function hide(id) { document.getElementById(id).style.display = "none"; }

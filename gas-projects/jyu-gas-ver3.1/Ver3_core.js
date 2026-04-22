@@ -5440,7 +5440,54 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-// ===== Web UI Phase 1 ここまで =====
+/**
+ * Web UI Phase 2: 患者選択をシートに反映する。
+ * B2（患者表示文字列）と B4（来院日 = 当日）を書き込む。
+ * C2 は既存の LEFT 数式が自動抽出するため触らない。
+ * @param {string} patientId
+ * @returns {{ok:boolean, patientId:string, displayStr:string}}
+ */
+function setPatientAndDate_V3(patientId) {
+  var pid = String(patientId || "").trim();
+  if (!pid) throw new Error("患者IDが空です");
+
+  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var masterSh = ss.getSheetByName(SHEETS.master);
+  var uiSh     = ss.getSheetByName(SHEETS.ui);
+  if (!masterSh) throw new Error(SHEETS.master + " シートが見つかりません");
+  if (!uiSh)     throw new Error(SHEETS.ui     + " シートが見つかりません");
+
+  // 患者マスタから「検索用」列の表示文字列を取得
+  var displayStr = "";
+  var displayColIdx = PatientPicker_findDisplayCol_(masterSh);
+  if (displayColIdx > 0 && masterSh.getLastRow() >= 2) {
+    var headers = masterSh.getRange(1, 1, 1, masterSh.getLastColumn()).getValues()[0];
+    var pidColIdx = -1;
+    for (var h = 0; h < headers.length; h++) {
+      if (String(headers[h] || "").trim() === "患者ID") { pidColIdx = h; break; }
+    }
+    if (pidColIdx >= 0) {
+      var data = masterSh.getRange(2, 1, masterSh.getLastRow() - 1, masterSh.getLastColumn()).getValues();
+      for (var r = 0; r < data.length; r++) {
+        if (String(data[r][pidColIdx] || "").trim() === pid) {
+          displayStr = String(data[r][displayColIdx - 1] || "").trim();
+          break;
+        }
+      }
+    }
+  }
+
+  // 「検索用」列が未セットアップ or 値が空の場合は患者IDをそのまま使う
+  if (!displayStr) displayStr = pid;
+
+  uiSh.getRange(UI.patientDisplay).setValue(displayStr);  // B2
+  uiSh.getRange(UI.treatDate).setValue(new Date());       // B4
+
+  Logger.log("[setPatientAndDate] patientId=" + pid + " displayStr=" + displayStr);
+  return { ok: true, patientId: pid, displayStr: displayStr };
+}
+
+// ===== Web UI Phase 1/2 ここまで =====
 
 /**
  * 保険算定なし（自費のみ）の場合に使用するゼロ金額オブジェクトを返す。

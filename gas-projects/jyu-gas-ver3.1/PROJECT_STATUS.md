@@ -1,6 +1,42 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**Web UI 段階移行設計着手 — 患者検索 Web UI を第1候補に選定。Phase 1〜3 の移行方針を策定**）
+最終更新: 2026-04-22（**Web UI Phase 2 完了 — 患者選択でシート B2/B4 を反映。`setPatientAndDate_V3` 実装・HTML クリック選択対応**）
+
+---
+
+## 🗓 2026-04-22 Web UI Phase 1 / Phase 2 実装
+
+**Phase 1 COMMIT:** `ab7a524`  
+**Phase 2 COMMIT:** （本コミット）  
+**変更ファイル:** `Ver3_core.js` / `patientSearch.html` / `appsscript.json` / `docs/JREC-01_phase1_webui_2026-04-22.md` / `docs/JREC-01_phase2_webui_2026-04-22.md`
+
+### Phase 1 サマリ（検索UI）
+
+| 実装 | 内容 |
+|---|---|
+| `searchPatients_V3(keyword)` | 患者マスタを部分一致検索（患者ID/氏名/フリガナ/検索用、最大20件） |
+| `doGet(e)` | Web App エントリポイント。`patientSearch.html` を返す |
+| `patientSearch.html` | 検索入力・候補テーブル表示・ローディング/0件/エラー状態 |
+| `appsscript.json` | `webapp` セクション追加（executeAs: USER_ACCESSING, access: MYSELF） |
+
+### Phase 2 サマリ（選択 → シート反映）
+
+| 実装 | 内容 |
+|---|---|
+| `setPatientAndDate_V3(patientId)` | 患者マスタの `検索用` 表示文字列を B2 にセット / B4 に当日日付をセット |
+| `patientSearch.html` 改訂 | 行クリックで `setPatientAndDate_V3` 呼び出し / 成功トースト表示 |
+
+### B2/B4 書き込み仕様
+
+| セル | 書き込み内容 |
+|---|---|
+| B2（UI.patientDisplay） | `P0001｜平山 克｜ヒラヤマ カツ｜1950-01-01` 形式の表示文字列 |
+| B4（UI.treatDate） | `new Date()`（当日） |
+| C2 | 変更なし — 既存 `=IFERROR(TRIM(LEFT(B2,...)))` 数式が自動抽出 |
+
+### デプロイ手順（再確認必須）
+
+コード変更後は GAS エディタで「デプロイを管理 → 既存デプロイを編集 → 新しいバージョン」で再デプロイすること。
 
 ---
 
