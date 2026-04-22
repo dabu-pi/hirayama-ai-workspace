@@ -630,6 +630,30 @@
   color: var(--text-muted);
 }
 
+/* Per-set evaluation label — shown below the set row inside swipeTrack */
+.setEvalPositive,
+.setEvalNeutral,
+.setEvalNegative {
+  font-size: 10px;
+  text-align: right;
+  padding: 2px 8px 4px;
+  line-height: 1;
+}
+
+.setEvalPositive {
+  color: rgba(74, 222, 128, 0.7);
+}
+
+.setEvalNeutral {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.setEvalNegative {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
 .suggestionPositive {
   font-size: 11px;
   color: #4ade80;

@@ -131,6 +131,24 @@ function calcSetDiff(
   };
 }
 
+type SetEvalVariant = "positive" | "neutral" | "negative";
+type SetEvalLabel = { text: string; variant: SetEvalVariant };
+
+/** Returns a per-set evaluation label based on diff vs previous session. */
+function getSetEvalLabel(
+  weightDiff: number | null,
+  repsDiff: number | null,
+  hasPrev: boolean
+): SetEvalLabel | null {
+  if (!hasPrev) return null;
+  if (weightDiff === null && repsDiff === null) return null;
+  const isNegative = (weightDiff !== null && weightDiff < 0) || (repsDiff !== null && repsDiff < 0);
+  const isPositive = !isNegative && ((weightDiff !== null && weightDiff > 0) || (repsDiff !== null && repsDiff > 0));
+  if (isPositive) return { text: "前回より良い", variant: "positive" };
+  if (isNegative) return { text: "少し下がっています", variant: "negative" };
+  return { text: "同じくらい", variant: "neutral" };
+}
+
 function typeClassName(exerciseType: "T1" | "T2" | "T3") {
   if (exerciseType === "T1") return `${styles.typeBadge} ${styles.typeT1}`;
   if (exerciseType === "T2") return `${styles.typeBadge} ${styles.typeT2}`;
@@ -1515,6 +1533,7 @@ export function WorkoutScreen({
 
                 const draft = getSetDraft(draftInputs, set);
                 const { weightDiff, repsDiff } = calcSetDiff(draft, prevSet);
+                const setEvalLabel = getSetEvalLabel(weightDiff, repsDiff, prevSet !== null);
                 const isSaving = savingSetIds.includes(set.id);
                 const isMutating = pendingMutation?.setId === set.id;
                 const isBusy = isSaving || isMutating;
@@ -1630,6 +1649,17 @@ export function WorkoutScreen({
                           </span>
                         </button>
                       </div>
+                      {setEvalLabel && (
+                        <div className={
+                          setEvalLabel.variant === "positive"
+                            ? styles.setEvalPositive
+                            : setEvalLabel.variant === "negative"
+                              ? styles.setEvalNegative
+                              : styles.setEvalNeutral
+                        }>
+                          {setEvalLabel.text}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
