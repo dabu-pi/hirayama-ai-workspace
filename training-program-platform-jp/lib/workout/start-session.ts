@@ -35,16 +35,6 @@ type ProgramDayExerciseRow = {
   swap_group_slug: string | null;
 };
 
-type InsertedSessionRow = {
-  id: string;
-};
-
-type InsertedSessionExerciseRow = {
-  id: string;
-  exercise_id: string;
-  order_index: number;
-};
-
 type ProgramDayRow = {
   id: string;
   program_week_id: string;
@@ -227,99 +217,37 @@ export async function startSessionForDay(
     console.log(`[PERF] startSessionForDay enrollment: ${Date.now() - t2}ms`);
   }
 
-  // 3. Insert workout_session (linked to enrollment if available)
-  const insertSessionPayload: Record<string, unknown> = {
-    program_day_id: programDayId,
-    user_id: userId,
-    status: "in_progress"
-  };
-  if (enrollmentId) {
-    insertSessionPayload.program_enrollment_id = enrollmentId;
-  }
+  // 3. RPC: create session + exercises + sets in one DB function call (1 RT).
+  // Previously 3 sequential INSERT round-trips; now collapsed into a single
+  // PostgreSQL function that runs all INSERTs within one transaction.
+  // FK and RLS checks on exercises/sets succeed because the session row is
+  // visible within the same transaction before it commits.
+  const exercises = (exercisesResult.data ?? []) as ProgramDayExerciseRow[];
+  const exercisesJson = exercises.map((e) => ({
+    exercise_id: e.exercise_id,
+    exercise_type: e.exercise_type,
+    set_count: e.set_count,
+    target_reps_text: e.target_reps_text ?? null,
+    order_index: e.order_index,
+    swap_group_slug: e.swap_group_slug ?? null
+  }));
 
-  const t3 = Date.now();
-  const { data: sessionRow, error: sessionInsertError } = await client
-    .from("workout_sessions")
-    .insert(insertSessionPayload)
-    .select("id")
-    .single<InsertedSessionRow>();
-  console.log(`[PERF] startSessionForDay insert_session: ${Date.now() - t3}ms`);
+  const tRpc = Date.now();
+  const { data: sessionId, error: rpcError } = await client.rpc(
+    "create_workout_session_for_day",
+    {
+      p_program_day_id: programDayId,
+      p_enrollment_id: enrollmentId ?? null,
+      p_exercises: exercisesJson
+    }
+  );
+  console.log(`[PERF] startSessionForDay rpc_create: ${Date.now() - tRpc}ms`);
 
-  if (sessionInsertError || !sessionRow) {
-    console.error("start-session: failed to insert workout_session.", sessionInsertError);
+  if (rpcError || !sessionId) {
+    console.error("start-session: rpc create_workout_session_for_day failed.", rpcError);
     return { ok: false, reason: "insert_failed" };
   }
 
-  const sessionId = sessionRow.id;
-
-  // 4. Seed exercises + sets — batch insert instead of N serial round-trips.
-  // Before: 2 queries per exercise (N×2 sequential). After: 2 queries total.
-  const exercises = (exercisesResult.data ?? []) as ProgramDayExerciseRow[];
-
-  if (exercises.length > 0) {
-    const exercisesInsertPayload = exercises.map((exercise) => ({
-      workout_session_id: sessionId,
-      exercise_id: exercise.exercise_id,
-      exercise_type: exercise.exercise_type,
-      order_index: exercise.order_index,
-      was_added: false,
-      was_swapped: false,
-      ...(exercise.swap_group_slug != null
-        ? { swap_group_slug: exercise.swap_group_slug }
-        : {})
-    }));
-
-    const t4 = Date.now();
-    const { data: sessionExerciseRows, error: exerciseBatchError } = await client
-      .from("workout_session_exercises")
-      .insert(exercisesInsertPayload)
-      .select("id, exercise_id, order_index");
-    console.log(`[PERF] startSessionForDay insert_exercises: ${Date.now() - t4}ms`);
-
-    if (exerciseBatchError || !sessionExerciseRows) {
-      console.error("start-session: failed to batch insert session exercises.", exerciseBatchError);
-      // Session was created — return it even though exercises/sets are missing.
-      return { ok: true, sessionId, reused: false };
-    }
-
-    // Map returned rows back to source exercises by exercise_id + order_index.
-    // PostgreSQL returns RETURNING rows in insertion order, but use a map for safety.
-    const exerciseRowMap = new Map(
-      (sessionExerciseRows as InsertedSessionExerciseRow[]).map((row) => [
-        `${row.exercise_id}:${row.order_index}`,
-        row.id
-      ])
-    );
-
-    const setsInsertPayload = exercises.flatMap((exercise) => {
-      const sessionExerciseId = exerciseRowMap.get(
-        `${exercise.exercise_id}:${exercise.order_index}`
-      );
-      if (!sessionExerciseId) return [];
-      const setCount = Math.max(1, exercise.set_count);
-      return Array.from({ length: setCount }, (_, i) => ({
-        workout_session_exercise_id: sessionExerciseId,
-        set_number: i + 1,
-        target_reps_text: exercise.target_reps_text,
-        weight_kg: null,
-        reps_done: null,
-        is_completed: false,
-        is_locked: false,
-        is_auto_filled: false,
-        deleted_at: null
-      }));
-    });
-
-    if (setsInsertPayload.length > 0) {
-      const t5 = Date.now();
-      const { error: setsError } = await client.from("workout_sets").insert(setsInsertPayload);
-      console.log(`[PERF] startSessionForDay insert_sets: ${Date.now() - t5}ms`);
-      if (setsError) {
-        console.error("start-session: failed to batch insert sets.", setsError);
-      }
-    }
-  }
-
   console.log(`[PERF] startSessionForDay TOTAL: ${Date.now() - t0}ms | programDayId=${programDayId}`);
-  return { ok: true, sessionId, reused: false };
+  return { ok: true, sessionId: sessionId as string, reused: false };
 }
