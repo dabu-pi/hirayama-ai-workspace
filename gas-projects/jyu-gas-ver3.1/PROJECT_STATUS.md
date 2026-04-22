@@ -1,6 +1,46 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**Web UI Phase 2 候補行非表示バグ修正 — `show()` の `display:""` バグを `showEl()` で修正。テーブル→カードリストに変更**）
+最終更新: 2026-04-22（**自費明細 Web UI 化設計着手 — 現行構成棚卸し完了・最小実装方針確定**）
+
+---
+
+## 🗓 2026-04-22 自費明細 Web UI 化設計着手
+
+**ステータス:** 設計完了 / 実装未着手  
+**COMMIT:** （本コミット）  
+**ドキュメント:** `docs/JREC-01_selfpay_webui_design_2026-04-22.md`
+
+### 現行ダイアログ構成サマリ
+
+| 関数 | 役割 |
+|---|---|
+| `openSelfPayDialog_V3()` | メニューエントリ。B2/B4 から visitKey 生成、モーダルダイアログ表示 |
+| `getCurrentVisitKey_V3()` | ダイアログ初期化ブリッジ。アクティブシートから文脈情報・既存明細を返す |
+| `getSelfPayMenuMaster_V3()` | JBIZ スプレッドシートからメニューマスタ取得（フォールバックあり） |
+| `saveSelfPayDetailsFromDialog_V3()` | ダイアログからの保存エントリ。JSON 受け取り → 内部処理委譲 |
+| `saveSelfPayDetails_V3_()` | 削除 → 追記 → D7/F7/H8 更新の一連保存ロジック |
+
+### 再利用できる主要資産
+
+- `getSelfPayMenuMaster_V3` / `saveSelfPayDetailsFromDialog_V3` → **変更なしで流用可能**
+- `selfPayDialog.html` の JS ロジック（addRow / doSave / updateTotal）→ **概ね流用可能**
+- 保存・削除・読み込みの全内部関数 → **変更なし**
+
+### Web 化の最小範囲（確定）
+
+1. `getSelfPayDataByVisitKey_V3(visitKey)` — visitKey を引数で受け取る版を追加（`getCurrentVisitKey_V3` のWeb対応切り出し）
+2. `doGet(e)` に `page=selfpay` 分岐追加（visitKey をテンプレート変数で埋め込み）
+3. `selfPayWeb.html` — `selfPayDialog.html` の Web App 対応版（`host.close()` を成功状態 div に置き換え）
+4. `patientSearch.html` — 患者選択後に `?page=selfpay&visitKey=xxx` へ遷移するリンク追加
+
+### 次に実装する最小単位
+
+**Step 1: `getSelfPayDataByVisitKey_V3(visitKey)` 追加 → `doGet` 分岐 → `selfPayWeb.html` 骨格**  
+selfPayDialog.html は一切変更しない。既存ダイアログは維持。
+
+### Dashboard / Run_Log 反映
+
+**不要（設計文書のみ）。** 実装 Step 着手時に `de -ProjectId JREC-01` で反映する。
 
 ---
 
