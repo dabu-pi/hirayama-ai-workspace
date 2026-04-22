@@ -1,6 +1,7 @@
 # JREC-01 自費明細 Web UI — Step 1 実装記録
 
 実装日: 2026-04-22  
+実機確認: **PASS（2026-04-22）**  
 対象ブランチ: `feature/auto-dev-phase3-loop`
 
 ---

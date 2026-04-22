@@ -1,6 +1,7 @@
 # JREC-01 Phase 1 Web UI — 患者検索試作
 
 実装日: 2026-04-22  
+実機確認: **PASS（2026-04-22）**  
 対象ブランチ: `feature/auto-dev-phase3-loop`
 
 ---

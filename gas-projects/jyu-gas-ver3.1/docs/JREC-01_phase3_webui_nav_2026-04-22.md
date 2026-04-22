@@ -1,6 +1,7 @@
 # JREC-01 Web UI Phase 3 — 患者検索 → 自費明細 導線追加
 
 実装日: 2026-04-22  
+実機確認: **PASS（2026-04-22）— `/exec?page=selfpay&visitKey=...` で正常遷移確認**  
 対象ブランチ: `feature/auto-dev-phase3-loop`
 
 ---

@@ -1,6 +1,7 @@
 # JREC-01 Phase 2 Web UI — 患者選択 → シート反映
 
 実装日: 2026-04-22  
+実機確認: **PASS（2026-04-22）**  
 対象ブランチ: `feature/auto-dev-phase3-loop`
 
 ---
