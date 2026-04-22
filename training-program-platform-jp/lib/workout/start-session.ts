@@ -140,7 +140,9 @@ export async function startSessionForDay(
   // Admin client (service role) bypasses RLS and must not be used for
   // user-scoped queries.
   const client = createSupabaseServerClient();
+  const tGetUser = Date.now();
   const scopedUser = await client.auth.getUser();
+  console.log(`[PERF] startSessionForDay auth.getUser: ${Date.now() - tGetUser}ms | error=${String(scopedUser.error?.message ?? "none")}`);
   const userId = scopedUser.data.user?.id ?? null;
 
   console.log(`[PERF] startSessionForDay auth: ${Date.now() - t0}ms`);
