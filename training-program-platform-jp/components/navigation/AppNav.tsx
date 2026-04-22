@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { BottomTabBar } from "./BottomTabBar";
 
 /** Paths where the bottom tab bar (and its scroll spacer) are hidden. */
-const HIDE_PREFIXES = ["/login"];
+const HIDE_PREFIXES = ["/login", "/admin"];
 
 /**
  * Client wrapper that renders the persistent bottom tab bar plus a scroll
