@@ -5,6 +5,10 @@ import { useState } from "react";
 
 import styles from "./StartSessionScreen.module.css";
 
+function formatWeekDay(raw: string): string {
+  return raw.replace(" / ", " · ");
+}
+
 type StartSessionScreenProps = {
   programSlug: string;
   programTitle: string;
@@ -70,9 +74,8 @@ export function StartSessionScreen({
       </header>
 
       <section className={styles.hero}>
-        <span className={styles.eyebrow}>Start Workout</span>
+        <span className={styles.eyebrow}>{formatWeekDay(programDayLabel)}</span>
         <h1 className={styles.title}>{programTitle}</h1>
-        <p className={styles.dayLabel}>{programDayLabel}</p>
       </section>
 
       {error && (
@@ -94,7 +97,7 @@ export function StartSessionScreen({
           onClick={handleStart}
           type="button"
         >
-          {isStarting ? "開始中…" : "Start Workout"}
+          {isStarting ? "開始中…" : `Start ${formatWeekDay(programDayLabel)}`}
         </button>
         <Link
           className={styles.cancelLink}
