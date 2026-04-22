@@ -86,6 +86,31 @@ function formatPrevDisplay(prev: { weightKg: number | null; repsDone: number | n
   return "-";
 }
 
+/** Returns a single-line suggestion based on how all sets trend vs previous session. */
+function getExerciseSuggestion(
+  exercise: WorkoutExerciseBlock,
+  draftInputs: SetDraftMap
+): { text: string; positive: boolean } | null {
+  let anyDecline = false;
+  let anyProgress = false;
+  let anyComparable = false;
+
+  exercise.sets.forEach((set, i) => {
+    const prevSet = exercise.previousSets[i] ?? null;
+    const draft = getSetDraft(draftInputs, set);
+    const { weightDiff, repsDiff } = calcSetDiff(draft, prevSet);
+    if (weightDiff === null && repsDiff === null) return;
+    anyComparable = true;
+    if ((weightDiff !== null && weightDiff < 0) || (repsDiff !== null && repsDiff < 0)) anyDecline = true;
+    if ((weightDiff !== null && weightDiff > 0) || (repsDiff !== null && repsDiff > 0)) anyProgress = true;
+  });
+
+  if (!anyComparable) return null;
+  if (anyDecline) return { text: "まずは同じ重量で安定させましょう", positive: false };
+  if (anyProgress) return { text: "フォームを崩さずできていれば、次回は +2.5kg もおすすめです", positive: true };
+  return null;
+}
+
 /** Calculates per-set diff between current draft inputs and previous session values. */
 function calcSetDiff(
   draft: { weightKg: string; repsDone: string },
@@ -1413,7 +1438,9 @@ export function WorkoutScreen({
       ) : null}
 
       <section className={styles.exerciseList}>
-        {exercises.map((exercise) => (
+        {exercises.map((exercise) => {
+          const exerciseSuggestion = getExerciseSuggestion(exercise, draftInputs);
+          return (
           <article
             className={styles.exerciseCard}
             key={exercise.id}
@@ -1609,6 +1636,12 @@ export function WorkoutScreen({
               })}
             </div>
 
+            {exerciseSuggestion && (
+              <p className={exerciseSuggestion.positive ? styles.suggestionPositive : styles.suggestionNegative}>
+                {exerciseSuggestion.text}
+              </p>
+            )}
+
             <div className={styles.exerciseActions}>
               <button
                 className={styles.primaryGhostButton}
@@ -1631,7 +1664,8 @@ export function WorkoutScreen({
               </button>
             </div>
           </article>
-        ))}
+          );
+        })}
       </section>
 
       <div className={styles.footerAction}>

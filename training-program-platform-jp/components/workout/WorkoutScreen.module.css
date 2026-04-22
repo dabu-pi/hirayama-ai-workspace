@@ -630,6 +630,21 @@
   color: var(--text-muted);
 }
 
+.suggestionPositive {
+  font-size: 11px;
+  color: #4ade80;
+  margin: var(--space-2) 0 0;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.suggestionNegative {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: var(--space-2) 0 0;
+  line-height: 1.5;
+}
+
 .target {
   /* Shared styles for both the span and button variants of the Target cell */
   color: #fdba74;
