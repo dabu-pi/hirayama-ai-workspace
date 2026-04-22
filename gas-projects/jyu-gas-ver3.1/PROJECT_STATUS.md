@@ -1,6 +1,30 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**P2完了 — 主要5関数に Logger 追加。upsertOneCase_ / appendHeaderRow_V3_ / exportHeaderFromCases_V3 / V3TR_loadMasterRow_ / V3TR_loadInsurerRow_**）
+最終更新: 2026-04-22（**copyInsurerToMaster_V3 — 転記後に患者検索プルダウン自動更新を連携追加**）
+
+---
+
+## 🗓 2026-04-22 copyInsurerToMaster_V3 — 患者検索プルダウン連携
+
+**COMMIT:** (このエントリ後に記録)  
+**変更ファイル:** `Ver3_core.js` / `docs/JREC-01_copyInsurer_picker_sync_2026-04-22.md`
+
+### 変更サマリ
+
+転記成功後（`result.written.length > 0`）に患者検索プルダウンを自動更新。  
+`PatientPicker_findDisplayCol_` → `PatientPicker_refreshDisplayCol_` → `PatientPicker_applyValidation_` を順に呼び出す。  
+`refreshPatientPicker_V3` を直接呼ばない理由: 完了 alert が2連になるため。
+
+| 条件 | 動作 |
+|---|---|
+| 転記1件以上 | 患者検索プルダウン更新 |
+| 転記0件 | スキップ（Logger記録） |
+| 「検索用」列なし | スキップ（Logger記録・例外なし） |
+| 更新中例外 | catch でキャッチし Logger記録。転記結果は影響なし |
+
+### Dashboard / Run_Log
+
+不要。コード変更のみ。
 
 ---
 

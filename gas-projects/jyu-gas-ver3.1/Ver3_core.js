@@ -4042,6 +4042,7 @@ function copyInsurerToMaster_V3() {
 
   // 5. 転記実行
   var result = copyInsurerFieldsToMasterRow_(masterSh, masterRowNum, headerMap, insurerRecord);
+  Logger.log("[copyInsurer] 転記完了: patientId=" + patientId + " 転記=" + result.written.length + "件 列なし=" + result.noMasterCol.length + " 値空=" + result.emptyValue.length);
 
   // 6. 結果ダイアログ
   var msg = "患者ID「" + patientId + "」の患者マスタを更新しました。\n\n";
@@ -4053,6 +4054,26 @@ function copyInsurerToMaster_V3() {
     msg += "\n\n【転記対象だが値が空】\n" + result.emptyValue.join("、");
   }
   SpreadsheetApp.getUi().alert(msg);
+
+  // 7. 患者検索プルダウン更新（転記1件以上の場合のみ）
+  if (result.written.length > 0) {
+    Logger.log("[copyInsurer] プルダウン更新開始: patientId=" + patientId);
+    try {
+      var displayColIdx = PatientPicker_findDisplayCol_(masterSh);
+      if (displayColIdx < 1) {
+        Logger.log("[copyInsurer] プルダウン更新スキップ: 「" + PP_.displayCol + "」列なし（先にセットアップを実行してください）");
+      } else {
+        PatientPicker_refreshDisplayCol_(masterSh, displayColIdx);
+        var uiSh_ = ss.getSheetByName(PP_.uiSheet);
+        if (uiSh_) PatientPicker_applyValidation_(masterSh, uiSh_, displayColIdx);
+        Logger.log("[copyInsurer] プルダウン更新完了: patientId=" + patientId);
+      }
+    } catch (pickerErr) {
+      Logger.log("[copyInsurer] プルダウン更新失敗: " + pickerErr.message);
+    }
+  } else {
+    Logger.log("[copyInsurer] プルダウン更新スキップ: 転記件数=0");
+  }
 }
 
 /** ===== 施術明細ヘッダー自動セットアップ ===== */
