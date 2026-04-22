@@ -184,7 +184,7 @@ export function ProgramsScreen({
               <p className={styles.modeDesc}>
                 用意されたプログラムに沿って、一定期間トレーニングを進めます
               </p>
-              <span className={styles.modeHint}>↓ 下のリストから選んでください</span>
+              <a className={styles.modeHint} href="#program-list">↓ 下のリストから選んでください</a>
             </div>
             <div className={styles.modeCard}>
               <strong className={styles.modeTitle}>その日だけ自由に</strong>
@@ -200,6 +200,8 @@ export function ProgramsScreen({
 
         <div className={styles.heroMeta}>
           <span>Source: {formatSourceLabel(view.source)}</span>
+        </div>
+        <div className={styles.heroTrainRow}>
           <Link className={styles.trainLink} href="/train">
             トレーニングへ
           </Link>
@@ -262,7 +264,7 @@ export function ProgramsScreen({
           </p>
         </section>
       ) : (
-        <section className={styles.grid}>
+        <section className={styles.grid} id="program-list">
           {filteredItems.map((program) => {
             const requiredTags = getRequiredTags(program.tags);
             const focusTag = getOptionalFocusTag(program.tags);

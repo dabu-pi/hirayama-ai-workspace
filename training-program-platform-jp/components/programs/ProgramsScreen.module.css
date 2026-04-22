@@ -118,17 +118,26 @@
   font-size: var(--text-xs);
 }
 
+.heroTrainRow {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
 .trainLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 var(--space-3);
-  border-radius: 12px;
-  border: 1px solid rgba(249, 115, 22, 0.18);
+  width: 100%;
+  max-width: 320px;
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  border-radius: 14px;
+  border: 1px solid rgba(249, 115, 22, 0.35);
   background: var(--accent-dim);
   color: #fdba74;
   font-weight: 700;
+  font-size: var(--text-sm);
 }
 
 .statusCard {
@@ -380,7 +389,7 @@
   margin-top: var(--space-4);
 }
 
-@media (min-width: 480px) {
+@media (min-width: 360px) {
   .modeGrid {
     grid-template-columns: 1fr 1fr;
   }
@@ -411,9 +420,12 @@
 
 .modeHint {
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: #fdba74;
   text-align: center;
   padding: 6px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.8;
 }
 
 .customWorkoutRow {
