@@ -61,6 +61,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
     );
   }
 
+  const t0 = Date.now();
+
   try {
     // Auth check via server client (cookie-based auth.getUser())
     const {
@@ -68,6 +70,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       userId,
       authSource
     } = await getAuthenticatedWorkoutContext();
+    console.log(`[PERF] cancel auth: ${Date.now() - t0}ms | authSource=${authSource ?? "unauthenticated"}`);
 
     if (!userId) {
       console.warn(`${routeName}:cause`, {
@@ -117,6 +120,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     }
 
     let session;
+    const tLookup = Date.now();
     try {
       session = await findOwnedWorkoutSession(dbClient, params.id, userId, {
         queryName: "findOwnedWorkoutSessionForCancel",
@@ -152,6 +156,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
         { status: 500 }
       );
     }
+    console.log(`[PERF] cancel lookup: ${Date.now() - tLookup}ms | found=${Boolean(session)}`);
     console.info(`${routeName}:lookup`, {
       sessionId: params.id,
       userId,
@@ -217,6 +222,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       dbClientType
     });
 
+    const tUpdate = Date.now();
     const { data: updatedSession, error: updateError } = await dbClient
       .from("workout_sessions")
       .update({ status: "cancelled", archived_at: new Date().toISOString() })
@@ -225,6 +231,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       .eq("status", "in_progress")
       .select("id, status")
       .maybeSingle<{ id: string; status: "cancelled" }>();
+    console.log(`[PERF] cancel update: ${Date.now() - tUpdate}ms | error=${String(updateError?.message ?? "none")}`);
 
     if (updateError) {
       const pgErr = updateError as unknown as Record<string, unknown>;
@@ -293,6 +300,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     revalidatePath("/"); // Home CTA transitions from "Resume" → "Start next workout"
     revalidatePath("/programs"); // Programs enrollment card → no longer shows active session
 
+    console.log(`[PERF] cancel TOTAL: ${Date.now() - t0}ms | sessionId=${params.id}`);
     return NextResponse.json({ id: updatedSession.id, status: updatedSession.status });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
