@@ -6,7 +6,7 @@
 
 ## 🗓 2026-04-22 P2: 主要5関数 Logger整備
 
-**COMMIT:** (このエントリ後に記録)  
+**COMMIT:** `6bdfb91`  
 **変更ファイル:** `Ver3_core.js` / `Ver3_transferData.js` / `docs/JREC-01_logger_p2_2026-04-22.md`
 
 ### 追加 Logger サマリ
