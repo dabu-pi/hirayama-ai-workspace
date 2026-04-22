@@ -106,6 +106,42 @@
       font-size: 15px;
     }
 
+    /* 選択後パネル */
+    #selected-panel {
+      display: none;
+      background: #d4edda;
+      border: 1px solid #27ae60;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 12px;
+    }
+    .sel-label {
+      font-size: 12px;
+      color: #155724;
+      margin-bottom: 4px;
+    }
+    .sel-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #155724;
+      margin-bottom: 12px;
+    }
+    .btn-selfpay {
+      display: block;
+      background: #27ae60;
+      color: #fff;
+      border: none;
+      padding: 12px 0;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      width: 100%;
+    }
+    .btn-selfpay:hover { background: #229954; }
+
     /* トースト */
     #toast {
       display: none;
@@ -137,6 +173,13 @@
   <div id="status"></div>
   <div id="emptyMsg">該当する患者が見つかりませんでした。</div>
   <div id="resultList"></div>
+
+  <div id="selected-panel">
+    <div class="sel-label">選択済み患者</div>
+    <div class="sel-name" id="sel-name"></div>
+    <a id="selfpay-link" class="btn-selfpay">自費明細入力 →</a>
+  </div>
+
   <div id="toast"></div>
 
   <script>
@@ -223,6 +266,7 @@
           card.classList.add("selected");
           showToast("✓ " + esc(name || patientId) + " を選択しました", false);
           setStatus("選択完了: " + esc(patientId));
+          showSelectedPanel(patientId, name);
         })
         .withFailureHandler(function(err) {
           _selecting = false;
@@ -240,6 +284,24 @@
       el.className   = isError ? "error" : "";
       el.style.display = "block";
       setTimeout(function() { el.style.display = "none"; }, 3000);
+    }
+
+    /* ===== 選択後パネル ===== */
+    function showSelectedPanel(patientId, name) {
+      var visitKey    = patientId + "_" + todayYMD();
+      var baseUrl     = window.location.href.split("?")[0];
+      var selfpayUrl  = baseUrl + "?page=selfpay&visitKey=" + encodeURIComponent(visitKey);
+      document.getElementById("sel-name").textContent = (name || patientId) + "（" + patientId + "）";
+      document.getElementById("selfpay-link").href    = selfpayUrl;
+      showEl("selected-panel", true);
+    }
+
+    /** 今日の日付を YYYY-MM-DD で返す（ブラウザのローカル時刻） */
+    function todayYMD() {
+      var d  = new Date();
+      var mm = d.getMonth() + 1;
+      var dd = d.getDate();
+      return d.getFullYear() + "-" + (mm < 10 ? "0" : "") + mm + "-" + (dd < 10 ? "0" : "") + dd;
     }
 
     /* ===== ユーティリティ ===== */

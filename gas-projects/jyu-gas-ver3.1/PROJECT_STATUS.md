@@ -1,6 +1,27 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-22（**自費明細 Web UI Step 1 実装完了 — `getSelfPayDataByVisitKey_V3` 追加・`doGet` 分岐・`selfPayWeb.html` 新規作成**）
+最終更新: 2026-04-22（**Web UI Phase 3 完了 — 患者検索 → 自費明細 導線追加。選択後パネルに「自費明細入力 →」ボタン表示**）
+
+---
+
+## 🗓 2026-04-22 Web UI Phase 3 — 患者検索 → 自費明細 導線追加
+
+**COMMIT:** （本コミット）  
+**変更ファイル:** `patientSearch.html` / `docs/JREC-01_phase3_webui_nav_2026-04-22.md`
+
+### 実装サマリ
+
+患者カードタップ → シート書き込み成功 → 選択パネル表示 → 「自費明細入力 →」ボタンクリック → selfPayWeb へ遷移。
+
+| 項目 | 内容 |
+|---|---|
+| visitKey 生成 | `patientId + "_" + todayYMD()`（クライアント側 JS で生成） |
+| 遷移 URL | `baseUrl + "?page=selfpay&visitKey=" + encodeURIComponent(visitKey)` |
+| 既存ロジックへの影響 | なし（成功ハンドラに `showSelectedPanel()` 1行追加のみ） |
+
+### Dashboard / Run_Log
+
+不要（HTML のみ変更）。
 
 ---
 
