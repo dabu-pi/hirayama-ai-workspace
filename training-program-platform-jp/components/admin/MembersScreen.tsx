@@ -7,18 +7,52 @@ import type { MemberRow, MembershipStatus } from "@/lib/admin/members";
 
 import styles from "./MembersScreen.module.css";
 
+type StatusFilter = "all" | MembershipStatus;
+
 type MembersScreenProps = {
   members: MemberRow[];
   currentUserId: string;
 };
 
 export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const filteredMembers = members.filter((m) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      (m.display_name ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || m.membership_status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>会員管理</h1>
         <span className={styles.adminBadge}>Admin</span>
       </header>
+
+      <div className={styles.filterBar}>
+        <input
+          className={styles.searchInput}
+          placeholder="名前で検索"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <select
+          className={styles.filterSelect}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+        >
+          <option value="all">すべて</option>
+          <option value="active">active</option>
+          <option value="paused">paused</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+      </div>
 
       <div className={styles.card}>
         <table className={styles.table}>
@@ -31,13 +65,21 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
             </tr>
           </thead>
           <tbody>
-            {members.map((member) => (
-              <MemberRowItem
-                key={member.id}
-                isSelf={member.id === currentUserId}
-                member={member}
-              />
-            ))}
+            {filteredMembers.length > 0 ? (
+              filteredMembers.map((member) => (
+                <MemberRowItem
+                  key={member.id}
+                  isSelf={member.id === currentUserId}
+                  member={member}
+                />
+              ))
+            ) : (
+              <tr>
+                <td className={styles.emptyNote} colSpan={4}>
+                  該当する会員が見つかりません
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
