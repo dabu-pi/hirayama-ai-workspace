@@ -1,5 +1,101 @@
 # PROJECT_STATUS
 
+## 2026-04-23 display_name 自動保存 — コードレビュー完了
+
+### STATUS: CLOSED (2026-04-23)
+
+### PURPOSE
+
+`display_name` の自動保存フロー（signUp → `raw_user_meta_data` → trigger → `public.users`）について、
+コードレビューで実装の正当性を確認し、実機確認が必要な範囲を切り分ける。
+
+### CODE_REVIEW_RESULT
+
+| 確認項目 | 結果 | 根拠ファイル |
+|---|---|---|
+| `public.users.display_name` 列の存在 | ✅ 初期スキーマから存在 | `000001_initial_schema.sql:6` |
+| signUp で `options.data.display_name` が渡されているか | ✅ 正しく渡されている | `app/login/page.tsx:89-93` |
+| trigger が `raw_user_meta_data->>'display_name'` を参照しているか | ✅ キー名一致 | `000020_handle_new_user_display_name.sql:16` |
+| 空文字列 → NULL 変換の正確性 | ✅ `nullif(trim(coalesce(...,'')),'')` で正しい | `000020:16` |
+| `on conflict (id) do nothing` の影響 | ✅ 新規ユーザーには競合なし。想定通り | `000020:18` |
+| trigger 本体の再登録要否 | ✅ 不要。`create or replace function` で関数を差し替えるだけで trigger は自動的に新実装を使う | `000005:19-24` vs `000020:6` |
+| `getAllMembers()` が `display_name` を取得しているか | ✅ `.select("id, display_name, ...")` に含まれている | `lib/admin/members.ts:54` |
+| `/admin/members` の表示 fallback | ✅ `display_name` が null の場合 `（未設定）` を表示 | `MembersScreen.tsx:219` |
+| admin の inline edit (`updateDisplayName`) | ✅ `public.users.display_name` を直接 UPDATE し、空→null 変換済み | `app/admin/members/actions.ts:80-85` |
+
+**コード上に問題なし。実装は正しい。**
+
+### SCOPE_SEPARATION
+
+**SQL だけで確認できる部分（Supabase SQL Editor で実行可）:**
+
+```sql
+-- 1. display_name 列の存在確認
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'display_name';
+
+-- 2. trigger の存在確認
+SELECT tgname, tgenabled
+FROM pg_trigger
+WHERE tgrelid = 'auth.users'::regclass AND tgname = 'on_auth_user_created';
+
+-- 3. 現行の trigger 関数ボディ確認
+SELECT prosrc
+FROM pg_proc
+WHERE proname = 'handle_new_user' AND pronamespace = 'public'::regnamespace;
+
+-- 4. 既存ユーザーの display_name 状況確認
+SELECT id, display_name FROM public.users ORDER BY created_at;
+
+-- 5. auth.users の raw_user_meta_data 確認（service role が必要）
+SELECT id, raw_user_meta_data FROM auth.users ORDER BY created_at DESC LIMIT 10;
+```
+
+**新規登録でしか確認できない部分（実機確認が必要）:**
+
+- signUp 後に `auth.users.raw_user_meta_data` に `display_name` が実際に入るか（Supabase ランタイムの動作）
+- trigger が発火して `public.users.display_name` に値が書き込まれるか
+- `/admin/members` に即時反映されるか（ページリロード後に表示されるか）
+
+**UI でしか確認できない部分:**
+
+- `/admin/members` の表示確認
+- inline edit の操作感・保存後の feedback 表示
+
+### EXISTING_USERS_BEHAVIOR
+
+既存ユーザー（`000020` 適用前に登録済み）の `display_name` が `null` のままなのは**仕様上正常**。
+
+- trigger は `auth.users` への INSERT 時のみ発火する（`AFTER INSERT`）
+- 既存ユーザーは `000005` の backfill で `id` のみ挿入されたため `display_name = null`
+- `000020` を適用しても既存行には遡及しない
+- 対処: admin の inline edit で手動設定するか、必要なら一括 UPDATE SQL を実行する
+
+```sql
+-- 既存ユーザーに raw_user_meta_data から遡及反映する場合
+UPDATE public.users u
+SET display_name = nullif(trim(coalesce(au.raw_user_meta_data->>'display_name', '')), '')
+FROM auth.users au
+WHERE u.id = au.id
+  AND u.display_name IS NULL
+  AND nullif(trim(coalesce(au.raw_user_meta_data->>'display_name', '')), '') IS NOT NULL;
+```
+
+※上記 SQL はオプション。実行する場合は Supabase SQL Editor で手動確認後に実施すること。
+
+### CHANGES
+
+コード変更なし。調査・記録のみ。
+
+### NEXT_ACTION
+
+1. 新規登録テストで実機確認（メール確認不要な開発環境推奨）
+2. 上記 SQL を Supabase SQL Editor で実行して現状を確認
+3. 問題なければこのフローは完了とし、次フェーズ（ユーザー自身によるプロフィール編集等）へ進む
+
+---
+
 ## 2026-04-22 /admin/members live check — email display required
 
 ### STATUS: CLOSED (2026-04-22)
