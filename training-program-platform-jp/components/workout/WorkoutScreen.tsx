@@ -18,6 +18,7 @@ import type {
 } from "@/types/workout";
 
 import { formatJstDateTime } from "@/lib/utils/date-jst";
+import { formatWeekDay } from "@/lib/workout/format-labels";
 import styles from "./WorkoutScreen.module.css";
 
 type WorkoutScreenProps = {
@@ -1399,8 +1400,11 @@ export function WorkoutScreen({
       </div>
 
       <section className={styles.programCard}>
+        {session.programWeekLabel ? (
+          <span className={styles.weekDayBadge}>{formatWeekDay(session.programWeekLabel)}</span>
+        ) : null}
         <h1 className={styles.programTitle}>今日のワークアウト</h1>
-        <p className={styles.programMeta}>{session.programTitle} / {session.programWeekLabel}</p>
+        <p className={styles.programMeta}>{session.programTitle}</p>
         <p className={styles.programNote}>{session.progressionGuide}</p>
         <p className={styles.programNote}>{session.notes}</p>
         {selectedProgram.state === "selected" ? (

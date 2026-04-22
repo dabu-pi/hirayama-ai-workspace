@@ -3,11 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import styles from "./StartSessionScreen.module.css";
+import { formatWeekDay } from "@/lib/workout/format-labels";
 
-function formatWeekDay(raw: string): string {
-  return raw.replace(" / ", " · ");
-}
+import styles from "./StartSessionScreen.module.css";
 
 type StartSessionScreenProps = {
   programSlug: string;
