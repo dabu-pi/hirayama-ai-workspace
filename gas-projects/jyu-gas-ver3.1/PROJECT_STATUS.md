@@ -6,7 +6,7 @@
 
 ## 🗓 2026-04-22 copyInsurerToMaster_V3 — 患者検索プルダウン連携
 
-**COMMIT:** (このエントリ後に記録)  
+**COMMIT:** `6987b51`  
 **変更ファイル:** `Ver3_core.js` / `docs/JREC-01_copyInsurer_picker_sync_2026-04-22.md`
 
 ### 変更サマリ
