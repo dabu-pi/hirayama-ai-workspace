@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 
-import { updateMembershipStatus } from "@/app/admin/members/actions";
+import { updateDisplayName, updateMembershipStatus } from "@/app/admin/members/actions";
 import type { MemberRow, MembershipStatus } from "@/lib/admin/members";
 
 import styles from "./MembersScreen.module.css";
@@ -19,9 +19,11 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const filteredMembers = members.filter((m) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      searchQuery === "" ||
-      (m.display_name ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+      q === "" ||
+      (m.display_name ?? "").toLowerCase().includes(q) ||
+      (m.email ?? "").toLowerCase().includes(q);
     const matchesStatus =
       statusFilter === "all" || m.membership_status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -37,7 +39,7 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
       <div className={styles.filterBar}>
         <input
           className={styles.searchInput}
-          placeholder="名前で検索"
+          placeholder="名前・メールで検索"
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -93,6 +95,7 @@ type MemberRowItemProps = {
 };
 
 function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
+  // Status state
   const [selected, setSelected] = useState<MembershipStatus>(
     member.membership_status
   );
@@ -110,10 +113,47 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
       const result = await updateMembershipStatus(member.id, selected);
       if (result.ok) {
         setFeedback({ ok: true, message: "保存済み" });
-        // Clear feedback after 2 s
         setTimeout(() => setFeedback(null), 2000);
       } else {
         setFeedback({ ok: false, message: result.error ?? "エラー" });
+      }
+    });
+  }
+
+  // Display name edit state
+  const [currentDisplayName, setCurrentDisplayName] = useState<string | null>(
+    member.display_name
+  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const [nameFeedback, setNameFeedback] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+  const [isNamePending, startNameTransition] = useTransition();
+
+  function handleEditOpen() {
+    setEditValue(currentDisplayName ?? "");
+    setNameFeedback(null);
+    setIsEditing(true);
+  }
+
+  function handleEditCancel() {
+    setIsEditing(false);
+    setNameFeedback(null);
+  }
+
+  function handleNameSave() {
+    setNameFeedback(null);
+    startNameTransition(async () => {
+      const result = await updateDisplayName(member.id, editValue);
+      if (result.ok) {
+        setCurrentDisplayName(editValue.trim() || null);
+        setIsEditing(false);
+        setNameFeedback({ ok: true, message: "保存済み" });
+        setTimeout(() => setNameFeedback(null), 2000);
+      } else {
+        setNameFeedback({ ok: false, message: result.error ?? "エラー" });
       }
     });
   }
@@ -128,10 +168,77 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
   return (
     <tr className={styles.tr}>
       <td className={styles.td}>
-        {member.display_name ? (
-          <span className={styles.displayName}>{member.display_name}</span>
+        {isEditing ? (
+          <div className={styles.editRow}>
+            <input
+              autoFocus
+              className={styles.editInput}
+              disabled={isNamePending}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleNameSave();
+                if (e.key === "Escape") handleEditCancel();
+              }}
+            />
+            <div className={styles.editActions}>
+              <button
+                className={styles.editSaveButton}
+                disabled={isNamePending}
+                type="button"
+                onClick={handleNameSave}
+              >
+                {isNamePending ? "保存中…" : "保存"}
+              </button>
+              <button
+                className={styles.editCancelButton}
+                disabled={isNamePending}
+                type="button"
+                onClick={handleEditCancel}
+              >
+                キャンセル
+              </button>
+              {nameFeedback && (
+                <span
+                  className={`${styles.nameFeedback} ${
+                    nameFeedback.ok ? styles.feedbackOk : styles.feedbackError
+                  }`}
+                >
+                  {nameFeedback.ok ? "✓ " : "✗ "}
+                  {nameFeedback.message}
+                </span>
+              )}
+            </div>
+          </div>
         ) : (
-          <span className={styles.noName}>（未設定）</span>
+          <div className={styles.nameBlock}>
+            {currentDisplayName ? (
+              <span className={styles.displayName}>{currentDisplayName}</span>
+            ) : (
+              <span className={styles.noName}>（未設定）</span>
+            )}
+            {member.email && (
+              <span className={styles.email}>{member.email}</span>
+            )}
+            {nameFeedback && (
+              <span
+                className={`${styles.nameFeedback} ${
+                  nameFeedback.ok ? styles.feedbackOk : styles.feedbackError
+                }`}
+              >
+                {nameFeedback.ok ? "✓ " : "✗ "}
+                {nameFeedback.message}
+              </span>
+            )}
+            <button
+              className={styles.editButton}
+              type="button"
+              onClick={handleEditOpen}
+            >
+              編集
+            </button>
+          </div>
         )}
       </td>
       <td className={styles.td}>
