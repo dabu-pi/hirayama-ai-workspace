@@ -179,7 +179,9 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     return <WorkoutScreen selectedProgram={selectedProgram} session={session} />;
   }
 
+  const tActiveProgram = Date.now();
   const { views, isAuthenticated, resolutionSnapshot } = await getActiveProgramView();
+  console.info(`${PAGE}:perf`, { step: "getActiveProgramView", ms: Date.now() - tActiveProgram, viewCount: views.length });
   const primaryView = views[0] ?? null;
 
   console.info(`${PAGE}:active_program`, {

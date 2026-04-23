@@ -3,11 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
-  createSupabaseServerClient,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
 import {
   classifySupabaseQueryError,
+  getAuthenticatedWorkoutContext,
   isLikelyUuid
 } from "@/lib/workout/session-access";
 import { jstDateSlice } from "@/lib/utils/date-jst";
@@ -867,9 +867,9 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
   let authConfirmed = false;
 
   try {
-    const serverClient = createSupabaseServerClient();
-    const scopedUser = await serverClient.auth.getUser();
-    const userId = scopedUser.data.user?.id ?? null;
+    // Reuse the request-scoped cached context (cache() in session-access.ts)
+    // to avoid a duplicate auth.getUser() network call on every /train render.
+    const { client: serverClient, userId } = await getAuthenticatedWorkoutContext();
 
     if (!userId) {
       return { views: [], isAuthenticated: false, errorMessage: null };
