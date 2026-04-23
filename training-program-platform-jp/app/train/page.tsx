@@ -49,22 +49,25 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     return <TrainAuthRequired />;
   }
 
-  // Membership gate: non-active users see a holding screen.
+  // Membership gate + program selection run in parallel:
+  // getTrainProgramSelection depends only on searchParams (no userId, no membership).
   // Fails open (null) on DB error to avoid blocking legitimate users.
-  const tMembership = Date.now();
-  const membershipStatus = await getMembershipStatus(userId);
-  console.info(`${PAGE}:perf`, { step: "membership", ms: Date.now() - tMembership, status: membershipStatus });
+  const tMembershipAndSelection = Date.now();
+  const [membershipStatus, selectedProgram] = await Promise.all([
+    getMembershipStatus(userId),
+    getTrainProgramSelection(searchParams?.program, searchParams?.programDayId)
+  ]);
+  console.info(`${PAGE}:perf`, {
+    step: "membership+programSelection",
+    ms: Date.now() - tMembershipAndSelection,
+    membershipStatus,
+    selectedProgramState: selectedProgram.state
+  });
+
   if (membershipStatus !== null && membershipStatus !== "active") {
     console.info(`${PAGE}:branch`, { branch: "membership_required", status: membershipStatus });
     return <MembershipRequiredScreen />;
   }
-
-  const tSelection = Date.now();
-  const selectedProgram = await getTrainProgramSelection(
-    searchParams?.program,
-    searchParams?.programDayId
-  );
-  console.info(`${PAGE}:perf`, { step: "programSelection", ms: Date.now() - tSelection, state: selectedProgram.state });
 
   console.info(`${PAGE}:selected_program`, {
     userId,
