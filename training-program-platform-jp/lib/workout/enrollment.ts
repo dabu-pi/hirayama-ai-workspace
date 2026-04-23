@@ -379,6 +379,11 @@ export async function advanceEnrollmentAfterSessionComplete(
           updated_at: new Date().toISOString()
         })
         .eq("id", enrollment.id);
+      console.info("enrollment:advanced", {
+        enrollmentId: enrollment.id,
+        fromDayId: session.program_day_id,
+        toDayId: nextDayId
+      });
     } else {
       // Program completed — mark as completed, keep last day for reference
       await client
@@ -388,6 +393,13 @@ export async function advanceEnrollmentAfterSessionComplete(
           updated_at: new Date().toISOString()
         })
         .eq("id", enrollment.id);
+      // Warn so Vercel logs surface unexpected completions (e.g. last-day misdetection).
+      console.warn("enrollment:marked_completed", {
+        enrollmentId: enrollment.id,
+        lastDayId: session.program_day_id,
+        sessionId: session.id,
+        note: "findNextProgramDayId returned null — verify program has no remaining days"
+      });
     }
   } catch (error) {
     console.error("enrollment: failed to advance enrollment after session complete.", error);
@@ -458,6 +470,13 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
       .limit(1)
       .maybeSingle<TrainFallbackEnrollmentRow>();
 
+    console.info("train-fallback:strategy1", {
+      userId,
+      enrollmentFound: Boolean(enrollment),
+      enrollmentId: enrollment?.id ?? null,
+      currentProgramDayId: enrollment?.current_program_day_id ?? null
+    });
+
     if (enrollment) {
       const { data: program } = await client
         .from("programs")
@@ -484,7 +503,18 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
           }
         }
 
+        console.info("train-fallback:strategy1_resolved", {
+          enrollmentId: enrollment.id,
+          programSlug: program.slug,
+          programDayId: programDayId ?? null
+        });
+
         if (programDayId) return { programSlug: program.slug, programDayId };
+      } else {
+        console.warn("train-fallback:strategy1_no_slug", {
+          enrollmentId: enrollment.id,
+          programId: enrollment.program_id
+        });
       }
     }
 
@@ -503,6 +533,12 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
       .limit(1)
       .maybeSingle<{ program_day_id: string | null; status: string }>();
 
+    console.info("train-fallback:strategy2", {
+      userId,
+      lastSessionProgramDayId: lastSession?.program_day_id ?? null,
+      lastSessionStatus: lastSession?.status ?? null
+    });
+
     if (!lastSession?.program_day_id) return null;
 
     // cancelled → retry same day; completed → advance to next day
@@ -511,7 +547,13 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
         ? await findNextProgramDayId(lastSession.program_day_id)
         : lastSession.program_day_id;
 
-    if (!targetDayId) return null;
+    if (!targetDayId) {
+      console.warn("train-fallback:strategy2_no_next_day", {
+        lastSessionProgramDayId: lastSession.program_day_id,
+        note: "findNextProgramDayId returned null — program may be at final day or data issue"
+      });
+      return null;
+    }
 
     // Resolve slug via program_days → program_weeks → programs
     // All three tables are readable by everyone (anon + authenticated) — no RLS risk.
