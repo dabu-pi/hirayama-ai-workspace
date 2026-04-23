@@ -40,6 +40,17 @@
 
 - `npm run typecheck`: エラーなし
 
+### LIVE_CHECK (2026-04-24)
+
+| 確認項目 | 結果 |
+|---|---|
+| migration 000022 適用 | ✅ 適用済み |
+| /admin/members がエラーなく開く | ✅ |
+| 会員氏名列が表示される | ✅ |
+| 会員氏名 inline 編集・保存 | ✅ 既存会員2名で確認済み |
+| member_name と display_name が別列で管理される | ✅ |
+| email / membership_status への影響 | ✅ なし |
+
 ---
 
 ## 2026-04-24 enrollment 制約強化 安定確認 + verbose ログ削除
