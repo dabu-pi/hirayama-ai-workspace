@@ -180,7 +180,7 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
   }
 
   const tActiveProgram = Date.now();
-  const { views, isAuthenticated, resolutionSnapshot } = await getActiveProgramView();
+  const { views, isAuthenticated, resolutionSnapshot } = await getActiveProgramView({ forTrain: true });
   console.info(`${PAGE}:perf`, { step: "getActiveProgramView", ms: Date.now() - tActiveProgram, viewCount: views.length });
   const primaryView = views[0] ?? null;
 

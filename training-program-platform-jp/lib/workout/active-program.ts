@@ -852,7 +852,9 @@ function formatSessionDate(startedAt: string): string {
  *   7–10.  parallel: currentWeeks, allDays, sessionDays, trendExercises
  *   11–12. parallel: sessionWeeks, trendSets
  */
-export async function getActiveProgramView(): Promise<ActiveProgramResult> {
+export async function getActiveProgramView(
+  options?: { forTrain?: boolean }
+): Promise<ActiveProgramResult> {
   if (!hasSupabasePublicEnv()) {
     return {
       views: [],
@@ -876,6 +878,8 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
     }
 
     authConfirmed = true;
+
+    const forTrain = options?.forTrain === true;
 
     const enrollments = await selectActiveEnrollments(serverClient, userId);
 
@@ -905,7 +909,12 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
       .filter((id): id is string => Boolean(id));
 
     // ── Batch 1: all independent ──────────────────────────────────────────
-    // S-2 adds selectInProgressSessionsForEnrollments → total queries: 13 (fixed)
+    // Normal mode: 6 parallel queries (13 total across all batches).
+    // forTrain mode: skips allWeeks/recentSessions/trendSessions (3 queries).
+    // Downstream ID arrays derived from those three become [] automatically,
+    // so Batch 2/3 decoration queries cascade to no-op via their length===0
+    // guards — no additional conditional logic required.
+    // forTrain total: enrollment(1) + batch1(3) + batch2(1 currentWeeks) = 5 queries.
     const [
       programs,
       currentDays,
@@ -916,9 +925,9 @@ export async function getActiveProgramView(): Promise<ActiveProgramResult> {
     ] = await Promise.all([
       selectProgramsBatch(serverClient, programIds),
       selectProgramDaysBatch(serverClient, currentDayIds),
-      selectAllProgramWeeksByProgramIds(serverClient, programIds),
-      selectRecentSessionsForEnrollments(serverClient, userId, enrollmentIds),
-      selectTrendSessions(serverClient, userId, enrollmentIds),
+      forTrain ? Promise.resolve([] as ProgramWeekWithProgramId[]) : selectAllProgramWeeksByProgramIds(serverClient, programIds),
+      forTrain ? Promise.resolve([] as SessionRow[]) : selectRecentSessionsForEnrollments(serverClient, userId, enrollmentIds),
+      forTrain ? Promise.resolve([] as TrendSessionRow[]) : selectTrendSessions(serverClient, userId, enrollmentIds),
       selectInProgressSessionsForEnrollments(serverClient, enrollmentIds)
     ]);
 
