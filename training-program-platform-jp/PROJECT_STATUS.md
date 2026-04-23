@@ -1,5 +1,48 @@
 # PROJECT_STATUS
 
+## 2026-04-24 enrollment 制約強化 安定確認 + verbose ログ削除
+
+### STATUS: CLOSED (2026-04-24)
+
+### PURPOSE
+
+accca38（enrollment 一人 active 1件制約）の安定確認と、
+PROJECT_STATUS に「次の安定確認後に削除」と記録されていた
+verbose info ログ 3件を削除する。
+
+### CHECKED
+
+| 確認項目 | 結果 |
+|---|---|
+| migration 000021: CTE UPDATE（最新 active 以外を paused に）| ✅ 安全。非破壊的 UPDATE のみ |
+| migration 000021: DROP old index `idx_program_enrollments_active_user_program` | ✅ 旧制約を削除。問題なし |
+| migration 000021: CREATE UNIQUE `idx_program_enrollments_one_active_per_user` (user_id) WHERE active | ✅ 正しい制約。DB レベルのハードストップ |
+| `findOrCreateEnrollment`: 別プログラムへの切替時 pause ガード | ✅ INSERT 前に otherActive を pause。DB 制約違反を防ぐ設計 |
+| `findOrCreateEnrollment`: 同一プログラムの既存 enrollment 検出 | ✅ archived_at を含む全 status を検索し、active 優先で返す |
+| `getActiveProgramView`: 単一 enrollment 前提での安全性 | ✅ `views[0] ?? null` 参照。0 or 1 件で正常動作 |
+| custom session → /programs 誤リダイレクト修正への影響 | ✅ 影響なし（strategy2 の `.not("program_day_id","is",null)` は変更なし）|
+| `getTrainFallbackView` strategy1: `status IN ('active','paused')` 参照 | ✅ プログラム切替後も paused enrollment を拾えるため正常 |
+| membership_status / admin members / display_name | ✅ 変更なし |
+
+### CHANGES
+
+- `lib/workout/enrollment.ts`: verbose info ログ 3件を削除
+  - `train-fallback:strategy1`（fallback 呼び出しごとに出力されノイジー）
+  - `train-fallback:strategy1_resolved`（同上）
+  - `train-fallback:strategy2`（同上）
+- 残留ログ（意図的）:
+  - `train-fallback:strategy1_no_slug` (warn) — DB 異常検知
+  - `train-fallback:strategy2_no_next_day` (warn) — プログラム構造問題の検知
+  - `enrollment:advanced` (info) — 日進行の追跡
+  - `enrollment:marked_completed` (warn) — 誤完了の検知
+  - `enrollment:paused_for_program_switch` (info) — プログラム切替追跡（accca38 追加）
+
+### TEST
+
+- `npm run typecheck`: エラーなし
+
+---
+
 ## 2026-04-23 /train: custom session 完了後の復帰不具合 — 修正・動作確認完了
 
 ### STATUS: CLOSED (2026-04-23)

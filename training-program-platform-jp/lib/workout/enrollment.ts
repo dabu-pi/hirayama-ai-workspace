@@ -495,13 +495,6 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
       .limit(1)
       .maybeSingle<TrainFallbackEnrollmentRow>();
 
-    console.info("train-fallback:strategy1", {
-      userId,
-      enrollmentFound: Boolean(enrollment),
-      enrollmentId: enrollment?.id ?? null,
-      currentProgramDayId: enrollment?.current_program_day_id ?? null
-    });
-
     if (enrollment) {
       const { data: program } = await client
         .from("programs")
@@ -528,12 +521,6 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
           }
         }
 
-        console.info("train-fallback:strategy1_resolved", {
-          enrollmentId: enrollment.id,
-          programSlug: program.slug,
-          programDayId: programDayId ?? null
-        });
-
         if (programDayId) return { programSlug: program.slug, programDayId };
       } else {
         console.warn("train-fallback:strategy1_no_slug", {
@@ -557,12 +544,6 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle<{ program_day_id: string | null; status: string }>();
-
-    console.info("train-fallback:strategy2", {
-      userId,
-      lastSessionProgramDayId: lastSession?.program_day_id ?? null,
-      lastSessionStatus: lastSession?.status ?? null
-    });
 
     if (!lastSession?.program_day_id) return null;
 
