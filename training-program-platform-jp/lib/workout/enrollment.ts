@@ -133,6 +133,31 @@ export async function findOrCreateEnrollment(
       return best;
     }
 
+    // No enrollment exists for this program yet.
+    // Pause any active enrollment for a DIFFERENT program to maintain the
+    // one-active-enrollment-per-user invariant (DB: idx_program_enrollments_one_active_per_user).
+    const { data: otherActive } = await client
+      .from("program_enrollments")
+      .select("id")
+      .eq("user_id", userId)
+      .neq("program_id", programId)
+      .eq("status", "active")
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+
+    if (otherActive) {
+      await client
+        .from("program_enrollments")
+        .update({ status: "paused", updated_at: new Date().toISOString() })
+        .eq("id", otherActive.id);
+      console.info("enrollment:paused_for_program_switch", {
+        pausedEnrollmentId: otherActive.id,
+        newProgramId: programId,
+        userId
+      });
+    }
+
     const { data, error } = await client
       .from("program_enrollments")
       .insert({
