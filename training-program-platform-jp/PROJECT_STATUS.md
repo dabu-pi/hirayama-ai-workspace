@@ -1,5 +1,58 @@
 # PROJECT_STATUS
 
+## 2026-04-23 /train: custom session 完了後の復帰不具合 — 修正・動作確認完了
+
+### STATUS: CLOSED (2026-04-23)
+
+### PURPOSE
+
+フリーセッション（custom session）完了後に `/train` へ遷移すると
+`/programs` にリダイレクトされる不具合を調査・修正。
+
+### ROOT_CAUSE
+
+`getTrainFallbackView` Strategy 2 が、最新の completed session として
+custom session（`program_day_id = null`）を拾い `null` を返していた。
+Strategy 1 が何らかの理由で失敗した際（enrollment が見つからない等）に
+この経路に落ち、`redirect("/programs")` が発生。
+
+### FIX
+
+`lib/workout/enrollment.ts` Strategy 2 クエリに
+`.not("program_day_id", "is", null)` を追加。
+custom session を除外し、直近のプログラムセッションを参照するよう修正。
+
+### LIVE_CHECK
+
+| 確認項目 | 結果 |
+|---|---|
+| フリーセッション完了後に `/train` へ遷移 | ✅ GZCL プログラム側に正常復帰 |
+| `/programs` への誤リダイレクト | ✅ 解消 |
+
+### DIAGNOSTIC_LOGS（残留分）
+
+今回の調査で追加したログの残留方針：
+
+| ログキー | レベル | 判断 |
+|---|---|---|
+| `enrollment:advanced` | info | **残す** — 日進行の追跡に有用 |
+| `enrollment:marked_completed` | warn | **残す** — 誤完了の検知に有用 |
+| `train-fallback:strategy1_no_slug` | warn | **残す** — DB 異常の検知 |
+| `train-fallback:strategy2_no_next_day` | warn | **残す** — プログラム構造問題の検知 |
+| `train-fallback:strategy1` | info | **後で削除** — fallback 呼び出しごとに出力されノイジー |
+| `train-fallback:strategy1_resolved` | info | **後で削除** — 同上 |
+| `train-fallback:strategy2` | info | **後で削除** — 同上 |
+
+verbose な info ログ 3 件は次の安定確認後に `lib/workout/enrollment.ts` から削除する。
+
+### CHANGES
+
+- `lib/workout/enrollment.ts`: Strategy 2 に `.not("program_day_id", "is", null")` 追加
+- `lib/workout/enrollment.ts`: 診断ログ追加（warn 4 件 / info 3 件）
+- Commits: `563a268` (fix), `83f7bab` (diag logs)
+
+---
+
 ## 2026-04-23 display_name 自動保存フロー — 実機確認完了・仕様確定
 
 ### STATUS: CLOSED (2026-04-23)
