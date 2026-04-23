@@ -490,10 +490,13 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
 
     // ── Strategy 2: session-based (bypasses enrollment entirely) ─────────────
     // Used when enrollment is absent, archived, or in an unrecoverable status.
+    // program_day_id IS NOT NULL excludes custom sessions (free sessions have
+    // program_day_id=null and must not be mistaken for the last program session).
     const { data: lastSession } = await client
       .from("workout_sessions")
       .select("program_day_id, status")
       .eq("user_id", userId)
+      .not("program_day_id", "is", null)
       .in("status", ["completed", "cancelled"])
       .is("archived_at", null)
       .order("started_at", { ascending: false })
