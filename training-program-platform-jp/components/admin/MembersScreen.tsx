@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 
-import { updateDisplayName, updateMembershipStatus } from "@/app/admin/members/actions";
+import { updateDisplayName, updateMemberName, updateMembershipStatus } from "@/app/admin/members/actions";
 import type { MemberRow, MembershipStatus } from "@/lib/admin/members";
 
 import styles from "./MembersScreen.module.css";
@@ -22,6 +22,7 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       q === "" ||
+      (m.member_name ?? "").toLowerCase().includes(q) ||
       (m.display_name ?? "").toLowerCase().includes(q) ||
       (m.email ?? "").toLowerCase().includes(q);
     const matchesStatus =
@@ -39,7 +40,7 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
       <div className={styles.filterBar}>
         <input
           className={styles.searchInput}
-          placeholder="名前・メールで検索"
+          placeholder="氏名・表示名・メールで検索"
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -60,6 +61,7 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
         <table className={styles.table}>
           <thead className={styles.thead}>
             <tr>
+              <th>会員氏名</th>
               <th>表示名</th>
               <th>ロール</th>
               <th>ステータス変更</th>
@@ -77,7 +79,7 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
               ))
             ) : (
               <tr>
-                <td className={styles.emptyNote} colSpan={4}>
+                <td className={styles.emptyNote} colSpan={5}>
                   該当する会員が見つかりません
                 </td>
               </tr>
@@ -120,6 +122,18 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
     });
   }
 
+  // Member name (admin-managed) edit state
+  const [currentMemberName, setCurrentMemberName] = useState<string | null>(
+    member.member_name
+  );
+  const [isMemberEditing, setIsMemberEditing] = useState(false);
+  const [memberEditValue, setMemberEditValue] = useState("");
+  const [memberFeedback, setMemberFeedback] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+  const [isMemberPending, startMemberTransition] = useTransition();
+
   // Display name edit state
   const [currentDisplayName, setCurrentDisplayName] = useState<string | null>(
     member.display_name
@@ -131,6 +145,32 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
     message: string;
   } | null>(null);
   const [isNamePending, startNameTransition] = useTransition();
+
+  function handleMemberEditOpen() {
+    setMemberEditValue(currentMemberName ?? "");
+    setMemberFeedback(null);
+    setIsMemberEditing(true);
+  }
+
+  function handleMemberEditCancel() {
+    setIsMemberEditing(false);
+    setMemberFeedback(null);
+  }
+
+  function handleMemberNameSave() {
+    setMemberFeedback(null);
+    startMemberTransition(async () => {
+      const result = await updateMemberName(member.id, memberEditValue);
+      if (result.ok) {
+        setCurrentMemberName(memberEditValue.trim() || null);
+        setIsMemberEditing(false);
+        setMemberFeedback({ ok: true, message: "保存済み" });
+        setTimeout(() => setMemberFeedback(null), 2000);
+      } else {
+        setMemberFeedback({ ok: false, message: result.error ?? "エラー" });
+      }
+    });
+  }
 
   function handleEditOpen() {
     setEditValue(currentDisplayName ?? "");
@@ -167,6 +207,77 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
 
   return (
     <tr className={styles.tr}>
+      <td className={styles.td}>
+        {isMemberEditing ? (
+          <div className={styles.editRow}>
+            <input
+              autoFocus
+              className={styles.editInput}
+              disabled={isMemberPending}
+              type="text"
+              value={memberEditValue}
+              onChange={(e) => setMemberEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleMemberNameSave();
+                if (e.key === "Escape") handleMemberEditCancel();
+              }}
+            />
+            <div className={styles.editActions}>
+              <button
+                className={styles.editSaveButton}
+                disabled={isMemberPending}
+                type="button"
+                onClick={handleMemberNameSave}
+              >
+                {isMemberPending ? "保存中…" : "保存"}
+              </button>
+              <button
+                className={styles.editCancelButton}
+                disabled={isMemberPending}
+                type="button"
+                onClick={handleMemberEditCancel}
+              >
+                キャンセル
+              </button>
+              {memberFeedback && (
+                <span
+                  className={`${styles.nameFeedback} ${
+                    memberFeedback.ok ? styles.feedbackOk : styles.feedbackError
+                  }`}
+                >
+                  {memberFeedback.ok ? "✓ " : "✗ "}
+                  {memberFeedback.message}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.nameBlock}>
+            {currentMemberName ? (
+              <span className={styles.displayName}>{currentMemberName}</span>
+            ) : (
+              <span className={styles.noName}>（未設定）</span>
+            )}
+            {memberFeedback && (
+              <span
+                className={`${styles.nameFeedback} ${
+                  memberFeedback.ok ? styles.feedbackOk : styles.feedbackError
+                }`}
+              >
+                {memberFeedback.ok ? "✓ " : "✗ "}
+                {memberFeedback.message}
+              </span>
+            )}
+            <button
+              className={styles.editButton}
+              type="button"
+              onClick={handleMemberEditOpen}
+            >
+              編集
+            </button>
+          </div>
+        )}
+      </td>
       <td className={styles.td}>
         {isEditing ? (
           <div className={styles.editRow}>

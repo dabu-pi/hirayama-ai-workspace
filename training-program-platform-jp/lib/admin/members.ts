@@ -9,6 +9,7 @@ export type MembershipStatus = "active" | "paused" | "cancelled";
 
 export type MemberRow = {
   id: string;
+  member_name: string | null;
   display_name: string | null;
   email: string | null;
   role: string;
@@ -53,7 +54,7 @@ export async function getAllMembers(): Promise<MemberRow[]> {
   const [usersResult, authResult] = await Promise.all([
     admin
       .from("users")
-      .select("id, display_name, role, membership_status, created_at")
+      .select("id, member_name, display_name, role, membership_status, created_at")
       .order("created_at", { ascending: true }),
     admin.auth.admin.listUsers({ perPage: 1000 })
   ]);

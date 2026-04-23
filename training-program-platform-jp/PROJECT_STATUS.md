@@ -1,5 +1,47 @@
 # PROJECT_STATUS
 
+## 2026-04-24 member_name: 管理者用会員識別フィールド追加
+
+### STATUS: CLOSED (2026-04-24)
+
+### PURPOSE
+
+`display_name` はユーザーが自由に変更できる表示名として設計されている（将来的にユーザー本人編集を許可予定）。
+ニックネームや略称を設定された場合、退会・停止・問い合わせ対応時に「誰のアカウントか」が分からなくなる恐れがある。
+
+`member_name`（会員氏名）を管理者専用フィールドとして追加し、本人識別の正本とする。
+
+### ROLE_SEPARATION
+
+| フィールド | 管理主体 | 用途 | 将来変更可否 |
+|---|---|---|---|
+| `display_name` | 管理者（現状）→ 将来ユーザー本人 | アプリ上の表示名・ニックネーム | ユーザー本人が変更可能にする予定 |
+| `member_name` | 管理者のみ | 退会・停止・本人確認の正本 | ユーザーは変更不可（管理者専用） |
+| `email` | auth.users が管理 | ログイン識別子 | — |
+
+`display_name` が変更されても `member_name` は独立しているため、運営側の本人識別は常に正確に保たれる。
+
+### CHANGES
+
+- `supabase/migrations/20260424_000022_users_member_name.sql`: `public.users` に `member_name text` 追加（既存行は NULL、DEFAULT なし）
+- `lib/admin/members.ts`: `MemberRow` 型に `member_name: string | null` 追加、SELECT に `member_name` 追加
+- `app/admin/members/actions.ts`: `updateMemberName` Server Action 追加（管理者のみ実行可能、pattern は `updateDisplayName` と同一）
+- `components/admin/MembersScreen.tsx`: 会員氏名列（inline 編集付き）を表示名列の前に追加、検索対象に `member_name` を含める
+- `components/admin/MembersScreen.module.css`: ページ最大幅 720px → 960px（5列対応）
+
+### SECURITY
+
+- `updateMemberName` は `requireAdminUserId()` で管理者チェック済み
+- DB 操作は `createSupabaseAdminClient()`（service role）— RLS をバイパスするが管理者検証後のみ実行
+- `public.users` の RLS は `auth.uid() = id`（自己行のみ）— 一般ユーザーは他ユーザーの `member_name` を読めない
+- 一般ユーザー画面（`/train` 等）には `member_name` を渡していない
+
+### TEST
+
+- `npm run typecheck`: エラーなし
+
+---
+
 ## 2026-04-24 enrollment 制約強化 安定確認 + verbose ログ削除
 
 ### STATUS: CLOSED (2026-04-24)

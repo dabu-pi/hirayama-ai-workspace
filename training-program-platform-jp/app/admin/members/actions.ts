@@ -93,3 +93,31 @@ export async function updateDisplayName(
   console.info("updateDisplayName: success.", { adminUserId, targetUserId, trimmed });
   return { ok: true };
 }
+
+export async function updateMemberName(
+  targetUserId: string,
+  newMemberName: string
+): Promise<{ ok: boolean; error?: string }> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) {
+    console.warn("updateMemberName: rejected — not admin.", { targetUserId });
+    return { ok: false, error: "forbidden" };
+  }
+
+  // Store trimmed value; empty string → null so "（未設定）" is shown again.
+  const trimmed = newMemberName.trim() || null;
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("users")
+    .update({ member_name: trimmed })
+    .eq("id", targetUserId);
+
+  if (error) {
+    console.error("updateMemberName: update failed.", { adminUserId, targetUserId, errorMessage: error.message });
+    return { ok: false, error: error.message };
+  }
+
+  console.info("updateMemberName: success.", { adminUserId, targetUserId, trimmed });
+  return { ok: true };
+}
