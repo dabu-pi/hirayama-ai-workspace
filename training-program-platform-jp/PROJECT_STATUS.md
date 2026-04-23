@@ -1,5 +1,46 @@
 # PROJECT_STATUS
 
+## 2026-04-23 display_name 自動保存フロー — 実機確認完了・仕様確定
+
+### STATUS: CLOSED (2026-04-23)
+
+### PURPOSE
+
+2026-04-23 のコードレビューに続き、実際の新規登録フローで
+display_name が正しく保存・反映されることを実機確認し、本タスクをクローズする。
+
+### LIVE_CHECK
+
+| 確認項目 | 結果 |
+|---|---|
+| STEP 0: trigger `on_auth_user_created` 存在・有効 | ✅ `tgenabled = 't'` |
+| STEP 0: 関数ボディに `raw_user_meta_data->>'display_name'` が含まれる | ✅ |
+| STEP 2: `auth.users.raw_user_meta_data` に `display_name` が保存される | ✅ |
+| STEP 3: `public.users.display_name` に trigger 経由で反映される | ✅ |
+| STEP 4: `/admin/members` にリロード後即時表示される | ✅ |
+| STEP 5: `display_name = null` ユーザーの fallback 表示 `（未設定）` | ✅ |
+| テストユーザー削除後 auth.users / public.users ともにクリーン | ✅ |
+
+### CONFIRMED_DESIGN
+
+以下を本プロジェクトの確定仕様とする。
+
+| 項目 | 仕様 |
+|---|---|
+| 登録経路 | `supabase.auth.signUp({ options: { data: { display_name } } })` |
+| metadata 格納先 | `auth.users.raw_user_meta_data->>'display_name'` |
+| public への反映 | `on_auth_user_created` trigger → `handle_new_user()` が INSERT 時に同時書き込み |
+| NULL 変換 | 空文字・空白のみの値は `nullif(trim(...), '')` で NULL に変換される |
+| 既存ユーザー | trigger は `AFTER INSERT` のみ発火するため遡及しない。`display_name = null` は仕様上正常 |
+| 既存ユーザーへの対処 | admin inline edit（`/admin/members`）で手動設定、または UPDATE SQL で一括反映 |
+| admin 表示 | `getAllMembers()` が `display_name` を SELECT。null の場合 `（未設定）` を表示 |
+
+### CHANGES
+
+コード変更なし。実機確認・仕様確定の記録のみ。
+
+---
+
 ## 2026-04-23 display_name 自動保存 — コードレビュー完了
 
 ### STATUS: CLOSED (2026-04-23)
