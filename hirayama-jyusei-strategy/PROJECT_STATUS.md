@@ -20,6 +20,10 @@
   - SELFPAY_CHRONIC50 → 特別対応/保留 / ELECTRO_AM_UNLIMITED → 廃止/保留/将来検討
   - TRAINING_4PASS → 確定状況: 保留（価格見直し必須）
 - **税別ルール確定:** 価格設定_v2 の全価格は税別（列追加なし。本ファイルおよび pricing-v2-update-2026-04-25.md に明記）
+- **手技メニュー一本化完了（2026-04-25d）:**
+  - SELFPAY_MANUAL3（Row 29）に一本化。軟膏塗布含む説明に更新済み
+  - SELFPAY_MANUAL5（Row 22）→ 廃止/保留/将来検討 / 有効FALSE / KPI集計FALSE
+  - スクリプト: `scripts/apply-jbiz04-pricing-v2-manual-unify.mjs`
 - **ジム優待価格 完全撤去完了（2026-04-25c）:**
   - J列全行スキャン実施 → 残存14行を確認・全行空欄化
   - GYM_MONTHLY_REF(Row18) 月会費7,480円 維持確認

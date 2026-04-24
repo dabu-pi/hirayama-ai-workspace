@@ -8,6 +8,36 @@
 
 ---
 
+## 手技メニュー一本化（2026-04-25d）
+
+スクリプト: `scripts/apply-jbiz04-pricing-v2-manual-unify.mjs`
+
+### 院長判断
+
+> **手技パーツは SELFPAY_MANUAL3（約3分・自費個別パーツ）に一本化。**
+> SELFPAY_MANUAL5 は削除せず廃止/保留へ変更。軟膏塗布は SELFPAY_MANUAL3 に含める。
+
+### SELFPAY_MANUAL5（Row 22）の変更内容
+
+| 列 | 変更前 | 変更後 |
+|---|---|---|
+| B 大区分 | 主力自費メニュー | 廃止/保留/将来検討 |
+| C 中区分 | 手技主力 | 廃止 |
+| G 内容 | 短時間の手技療法 | SELFPAY_MANUAL3 に統合済み。現在は使用しない |
+| N KPI集計対象 | TRUE | FALSE |
+| O 確定状況 | 確定 | 廃止 |
+| P 有効フラグ | TRUE | **FALSE** |
+| Q 備考 | （空欄）| 統合経緯を記録 |
+
+### SELFPAY_MANUAL3（Row 29）の変更内容
+
+| 列 | 変更前 | 変更後 |
+|---|---|---|
+| G 内容 | 短時間手技 | 短時間手技。必要に応じて軟膏塗布を含む |
+| Q 備考 | 旧誤記（MANUAL5存在しない） | 手技パーツ単品。軟膏塗布込み対応可。SELFPAY_MANUAL5に代わり一本化（2026-04-25） |
+
+---
+
 ## ジム優待価格 完全撤去（2026-04-25c）
 
 スクリプト: `scripts/apply-jbiz04-pricing-v2-clear-gym-price.mjs`
