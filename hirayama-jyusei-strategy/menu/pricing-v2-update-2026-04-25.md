@@ -8,6 +8,20 @@
 
 ---
 
+## 保険施術オプション3行 追加非表示（2026-04-25f）
+
+院長判断: 主力自費導線をシンプルにするため、保険施術オプション3行をいったん非表示にする。
+
+| Row | menu_id | 変更 |
+|---|---|---|
+| 12 | INS_OPTION_EXTEND10（手技延長）| hiddenByUser=true |
+| 13 | INS_OPTION_STRETCH20（ストレッチ）| hiddenByUser=true |
+| 14 | INS_OPTION_ELECTRO15（電療追加）| hiddenByUser=true |
+
+行削除なし。価格・menu_id・有効フラグは変更なし。
+
+---
+
 ## 表示整理（2026-04-25e）
 
 スクリプト: `scripts/apply-jbiz04-pricing-v2-hide-rows.mjs`
