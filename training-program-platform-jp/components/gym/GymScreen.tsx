@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import styles from "./GymScreen.module.css";
 
 export function GymScreen() {
@@ -29,6 +31,14 @@ export function GymScreen() {
             <p className={styles.sponsorTagline}>トレーニング用品・サプリメント</p>
           </div>
         </div>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>アカウント</h2>
+        <Link href="/profile" className={styles.profileLink}>
+          <span>プロフィール設定</span>
+          <span className={styles.profileLinkArrow}>›</span>
+        </Link>
       </section>
 
       <p className={styles.stubNotice}>

@@ -1,5 +1,58 @@
 # PROJECT_STATUS
 
+## 2026-04-24 display_name ユーザー本人編集機能 追加
+
+### STATUS: CLOSED (2026-04-24)
+
+### PURPOSE
+
+ユーザー本人がアプリ上の表示名（display_name）を変更できるようにする。
+管理者専用の会員識別フィールド member_name は変更されない。
+
+### ROLE_SEPARATION（再確認）
+
+| フィールド | 編集主体 | 用途 |
+|---|---|---|
+| `display_name` | ユーザー本人（/profile）+ 管理者（/admin/members） | アプリ上の表示名 |
+| `member_name` | 管理者のみ（/admin/members） | 退会・停止・本人確認の正本。ユーザー編集不可 |
+| `email` | 変更不可（Supabase auth が管理） | ログイン識別子 |
+| `membership_status` | 管理者のみ | 利用可否制御 |
+
+### SECURITY
+
+- `updateOwnDisplayName` Server Action:
+  - `auth.getUser()` でユーザー ID を JWT 検証済みで取得（ユーザー入力からは取らない）
+  - `createSupabaseAdminClient()` で UPDATE。ただし更新カラムは `display_name` のみ
+  - WHERE `id = user.id` でスコープを自分の行に限定
+  - `member_name` / `membership_status` / `email` / `role` には触れない
+- `/profile` ページ:
+  - 未ログイン → `/login` リダイレクト
+  - `public.users.display_name` は RLS "Users can read own profile" で server client から取得
+
+### CHANGES
+
+- `app/profile/actions.ts`（新規）: `updateOwnDisplayName` Server Action
+- `app/profile/page.tsx`（新規）: プロフィールページ（Server Component）
+- `components/profile/ProfileScreen.tsx`（新規）: フォーム UI（Client Component）
+- `components/profile/ProfileScreen.module.css`（新規）: スタイル
+- `components/gym/GymScreen.tsx`: アカウントセクションに /profile リンク追加
+- `components/gym/GymScreen.module.css`: profileLink スタイル追加
+
+### DB_CHANGE
+
+なし。migration 不要。RLS UPDATE policy の追加も不要（Server Action が admin client で書き込む）。
+
+### TEST
+
+- `npm run typecheck`: エラーなし
+- 実機確認: 未（ユーザーが /gym → プロフィール設定 → 表示名を変更 → /admin/members で反映確認）
+
+### NEXT
+
+実機確認を行い、LIVE_CHECK セクションを追記する。
+
+---
+
 ## 2026-04-24 member_name: 管理者用会員識別フィールド追加
 
 ### STATUS: CLOSED (2026-04-24)
