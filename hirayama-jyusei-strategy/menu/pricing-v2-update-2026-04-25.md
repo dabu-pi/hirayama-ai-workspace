@@ -8,6 +8,55 @@
 
 ---
 
+## ジム優待価格 完全撤去（2026-04-25c）
+
+スクリプト: `scripts/apply-jbiz04-pricing-v2-clear-gym-price.mjs`
+
+### J列スキャン結果・空欄化対象（14行）
+
+| Row | menu_id | 旧J値 | 区分 |
+|---|---|---|---|
+| 5 | SELFPAY_EVAL_LOWBACK30 | 2,800円 | 症状別初回評価 |
+| 6 | SELFPAY_EVAL_NECKSHOULDER30 | 2,800円 | 症状別初回評価 |
+| 7 | SELFPAY_EVAL_KNEE30 | 2,800円 | 症状別初回評価 |
+| 11 | SELFPAY_CHRONIC50 | 4,700円 | 特別対応/保留 |
+| 12 | INS_OPTION_EXTEND10 | 950円 | 保険施術オプション |
+| 13 | INS_OPTION_STRETCH20 | 2,000円 | 保険施術オプション |
+| 14 | INS_OPTION_ELECTRO15 | 750円 | 保険施術オプション |
+| 15 | ELECTRO_AM_UNLIMITED | 4,700円 | 廃止/保留/将来検討 |
+| 16 | SELFPAY_PT60 | 4,700円 | 再発予防・運動再教育 |
+| 17 | TRAINING_4PASS | 13,200円 | 再発予防・運動再教育（保留）|
+| 19 | FUTURE_DEEP_COND | 3,800円 | 廃止/保留/将来検討（無効）|
+| 20 | FUTURE_ELECTRO1 | 1,000円 | 廃止/保留/将来検討（無効）|
+| 21 | FUTURE_CHRONIC_8PASS | 49,300円 | 廃止/保留/将来検討（無効）|
+| **22** | **SELFPAY_MANUAL5** | **500円** | **⚠️ 後述** |
+
+### ⚠️ SELFPAY_MANUAL5（Row 22）の発見
+
+前回作業（2026-04-25）で「SELFPAY_MANUAL5 は価格設定_v2 に存在しない」と誤記したが、Row 22 に実在していた。
+- 大区分: 主力自費メニュー / 有効フラグ: TRUE
+- J列（ジム会員料金）500円 → 今回空欄化済み
+- SELFPAY_MANUAL3（Row 29）と共存している状態
+- **今後の対応が必要:** SELFPAY_MANUAL5 の位置づけ（活用 or 廃止/保留）を整理する
+
+### 変更しなかった行
+
+| Row | menu_id | 理由 |
+|---|---|---|
+| 4 | INS_BASIC | J列元から空欄 |
+| 8〜10 | MICROCURRENT/HIGHVOLTAGE/ULTRASOUND | 前回処理済み |
+| 18 | GYM_MONTHLY_REF | ジム月会費（J元から空欄。I列7,480円は維持）|
+| 24〜29 | 主力3メニュー・新規個別パーツ | 前回処理済み |
+| 30 | SELFPAY_OINTMENT | 元から空欄 |
+
+### 最終確認結果
+
+- **J列残存ゼロを確認**（全行スキャン済み）
+- **GYM_MONTHLY_REF 月会費 7,480円 維持確認**
+- **通常価格（I列）変更なし**
+
+---
+
 ## 院長判断による修正（2026-04-25 追加）
 
 ### 軟膏塗布（SELFPAY_OINTMENT）の扱い
