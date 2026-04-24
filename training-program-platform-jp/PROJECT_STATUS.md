@@ -45,11 +45,21 @@
 ### TEST
 
 - `npm run typecheck`: エラーなし
-- 実機確認: 未（ユーザーが /gym → プロフィール設定 → 表示名を変更 → /admin/members で反映確認）
+- 実機確認: **未実施（後日確認）**
 
-### NEXT
+### LIVE_CHECK — 保留中
 
-実機確認を行い、LIVE_CHECK セクションを追記する。
+実機確認は実施していない。後日、以下の項目を確認すること。
+
+| 確認項目 | 結果 |
+|---|---|
+| /gym から /profile へ遷移できるか | 未確認 |
+| display_name を保存できるか | 未確認 |
+| 保存後に /admin/members の表示名へ反映されるか | 未確認 |
+| 保存後に member_name が変更されないか | 未確認 |
+| 保存後に email / role / membership_status が変更されないか | 未確認 |
+
+確認完了後、この表を更新して STATUS を CLOSED に変更すること。
 
 ---
 
