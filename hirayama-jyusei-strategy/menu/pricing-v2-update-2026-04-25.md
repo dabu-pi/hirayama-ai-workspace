@@ -8,6 +8,70 @@
 
 ---
 
+## 表示整理（2026-04-25e）
+
+スクリプト: `scripts/apply-jbiz04-pricing-v2-hide-rows.mjs`
+
+### 方針
+
+- 行は削除しない。データ・有効フラグ・廃止区分・備考はすべて維持する。
+- Google Sheets の `hiddenByUser=true`（行の非表示）で視覚的に隠すのみ。
+- GAS の `getValues()` / `VLOOKUP` / `FILTER` は非表示行も読む → GAS・数式への影響なし。
+- 再表示が必要な場合は Google Sheets メニュー「行の再表示」で即座に戻せる。
+- 価格はすべて税別のまま維持。
+
+### 表示メニュー一覧（16行）
+
+| Row | menu_id | メニュー名 | 区分 |
+|---|---|---|---|
+| 4 | INS_BASIC | 保険施術 | 保険施術 |
+| 8 | SELFPAY_MICROCURRENT | マイクロカレント | 自費個別パーツ |
+| 9 | SELFPAY_HIGHVOLTAGE | ハイボルテージ | 自費個別パーツ |
+| 10 | SELFPAY_ULTRASOUND | 超音波 | 自費個別パーツ |
+| 12 | INS_OPTION_EXTEND10 | 手技延長 | 保険施術オプション |
+| 13 | INS_OPTION_STRETCH20 | ストレッチ | 保険施術オプション |
+| 14 | INS_OPTION_ELECTRO15 | 電療追加 | 保険施術オプション |
+| 18 | GYM_MONTHLY_REF | ジム月会員 | ジム接続メニュー |
+| 24 | SELFPAY_INITIAL_FULL | 初回標準施術 5,000円税別 | 主力自費メニュー |
+| 25 | SELFPAY_CONTINUE20 | 継続標準施術 3,500円税別（主力）| 主力自費メニュー |
+| 26 | SELFPAY_MAINT15 | メンテナンス施術 2,500円税別 | 主力自費メニュー |
+| 27 | SELFPAY_FIRST_FEE15 | 初診料 | 自費個別パーツ |
+| 28 | SELFPAY_IFC10 | 干渉波 | 自費個別パーツ |
+| 29 | SELFPAY_MANUAL3 | 手技（軟膏塗布込み対応可）| 自費個別パーツ |
+
+### 非表示メニュー一覧（13行）
+
+| Row | menu_id | 非表示理由 |
+|---|---|---|
+| 5 | SELFPAY_EVAL_LOWBACK30 | ⚠️ 要確認（後述）|
+| 6 | SELFPAY_EVAL_NECKSHOULDER30 | ⚠️ 要確認（後述）|
+| 7 | SELFPAY_EVAL_KNEE30 | ⚠️ 要確認（後述）|
+| 11 | SELFPAY_CHRONIC50 | 特別対応/保留 |
+| 15 | ELECTRO_AM_UNLIMITED | 廃止/保留/将来検討 |
+| 16 | SELFPAY_PT60 | ⚠️ 要確認（後述）|
+| 17 | TRAINING_4PASS | 保留（価格見直し必須）|
+| 19 | FUTURE_DEEP_COND | 廃止/保留/将来検討 |
+| 20 | FUTURE_ELECTRO1 | 廃止/保留/将来検討 |
+| 21 | FUTURE_CHRONIC_8PASS | 廃止/保留/将来検討 |
+| 22 | SELFPAY_MANUAL5 | 廃止（SELFPAY_MANUAL3に統合）|
+| 23 | （空行）| 視覚ノイズ |
+| 30 | SELFPAY_OINTMENT | 有効FALSE（手技3分に含む）|
+
+### ⚠️ 要確認: 症状別初回評価（Row 5-7）・パーソナルトレーニング（Row 16）
+
+現在受付・広告・患者説明で使用されているか不明のため、非表示候補として処理したが要確認。
+
+| menu_id | 状態 | 確認事項 |
+|---|---|---|
+| SELFPAY_EVAL_LOWBACK30 | 非表示中 | 現在受付や広告で使っている場合は再表示が必要 |
+| SELFPAY_EVAL_NECKSHOULDER30 | 非表示中 | 同上 |
+| SELFPAY_EVAL_KNEE30 | 非表示中 | 同上 |
+| SELFPAY_PT60 | 非表示中 | 現在実運用している場合は再表示が必要 |
+
+> **院長への確認依頼:** 上記4メニューを現在患者さんへの案内・受付で使っているかどうか確認してください。使っている場合は「行の再表示」で戻せます。
+
+---
+
 ## 手技メニュー一本化（2026-04-25d）
 
 スクリプト: `scripts/apply-jbiz04-pricing-v2-manual-unify.mjs`

@@ -20,6 +20,12 @@
   - SELFPAY_CHRONIC50 → 特別対応/保留 / ELECTRO_AM_UNLIMITED → 廃止/保留/将来検討
   - TRAINING_4PASS → 確定状況: 保留（価格見直し必須）
 - **税別ルール確定:** 価格設定_v2 の全価格は税別（列追加なし。本ファイルおよび pricing-v2-update-2026-04-25.md に明記）
+- **価格設定_v2 表示整理完了（2026-04-25e）:**
+  - 廃止・保留・将来検討の13行を非表示化（行削除なし・データ維持）
+  - 実運用14メニューのみが表示状態
+  - ⚠️ 要確認4件: SELFPAY_EVAL_LOWBACK30/NECKSHOULDER30/KNEE30/PT60
+    - 受付・広告・患者説明で現在使用中ならば「行の再表示」で戻すこと
+  - スクリプト: `scripts/apply-jbiz04-pricing-v2-hide-rows.mjs`
 - **手技メニュー一本化完了（2026-04-25d）:**
   - SELFPAY_MANUAL3（Row 29）に一本化。軟膏塗布含む説明に更新済み
   - SELFPAY_MANUAL5（Row 22）→ 廃止/保留/将来検討 / 有効FALSE / KPI集計FALSE
