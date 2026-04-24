@@ -157,11 +157,22 @@
 
 ---
 
-## 実行手順
+## 実行記録（2026-04-25）
+
+| 項目 | 内容 |
+|---|---|
+| dry-run 実行 | 全13件 正常表示 |
+| --write 実行 | 全13件 OK |
+| シート読み戻し確認 | 全行の値を API で再読み込み・一致確認済み |
+| Run_Log | JBIZ04-20260425-001 / Row 111 |
+| Projects | JBIZ-04 行 次アクション・最終更新日 更新済み |
+| Task_Queue | 3件追加（Row 12〜14） |
+
+## 実行手順（再実行が必要な場合）
 
 ```powershell
 # 前提: AIOS_SERVICE_ACCOUNT_PATH が設定されていること
-$env:AIOS_SERVICE_ACCOUNT_PATH='C:\hirayama-ai-workspace\workspace\secrets\credentials.json'
+$env:AIOS_SERVICE_ACCOUNT_PATH='C:\hirayama-ai-workspace\workspace\secrets\service_account.json'
 
 # dry-run で確認
 node .\scripts\apply-jbiz04-pricing-v2-update-2026-04-25.mjs
