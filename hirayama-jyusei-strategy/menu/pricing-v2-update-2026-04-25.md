@@ -2,7 +2,45 @@
 
 対象シート: 平山接骨院 慢性疼痛強化プロジェクト 管理表 > `価格設定_v2`
 スプレッドシートID: `1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc`
-更新スクリプト: `scripts/apply-jbiz04-pricing-v2-update-2026-04-25.mjs`
+更新スクリプト:
+- `scripts/apply-jbiz04-pricing-v2-update-2026-04-25.mjs`（v2バージョンアップ本体）
+- `scripts/apply-jbiz04-pricing-v2-fix-20260425b.mjs`（ジム割引廃止・軟膏塗布判断 修正）
+
+---
+
+## 院長判断による修正（2026-04-25 追加）
+
+### 軟膏塗布（SELFPAY_OINTMENT）の扱い
+
+> **院長判断: 手技3分（SELFPAY_MANUAL3）に含める。個別メニューとして有効化しない。**
+
+- Row 30 SELFPAY_OINTMENT: 有効フラグ = FALSE のまま維持
+- ジム会員料金も設定しない
+- Q列（備考）に院長判断を記録済み
+- Task_Queue JBIZ04-TQ-20260425-01 → 完了
+
+### ジム優待割引の廃止
+
+> **院長判断: ジム優待割引を廃止。「通常価格のみ」で運用する。**
+
+- J列（ジム会員料金）の処理: **空欄** で統一
+  - 空欄でよい理由: 価格設定_v2 の J 列に対してアクティブなGAS・KPI逆算の数式参照が存在しないことを確認済み
+  - 将来 GAS や集計が J 列を参照する場合は、別途対応すること
+- 対象行と変更内容:
+
+| Row | menu_id | 旧J（ジム会員） | 新J |
+|---|---|---|---|
+| 8 | SELFPAY_MICROCURRENT | 850円 | 空欄 |
+| 9 | SELFPAY_HIGHVOLTAGE | 500円 | 空欄 |
+| 10 | SELFPAY_ULTRASOUND | 350円 | 空欄 |
+| 24 | SELFPAY_INITIAL_FULL | 4,700円 | 空欄 |
+| 25 | SELFPAY_CONTINUE20 | 3,000円 | 空欄 |
+| 26 | SELFPAY_MAINT15 | 2,200円 | 空欄 |
+| 27 | SELFPAY_FIRST_FEE15 | 1,500円 | 空欄 |
+| 28 | SELFPAY_IFC10 | 1,000円 | 空欄 |
+| 29 | SELFPAY_MANUAL3 | 500円 | 空欄 |
+
+- Task_Queue JBIZ04-TQ-20260425-02 → 完了
 
 ---
 
