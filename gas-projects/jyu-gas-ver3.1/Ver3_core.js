@@ -5621,6 +5621,29 @@ function loadPrevSelfPayToDialog_V3() {
     var detailSh     = ensureSelfPayDetailSheetInternal_(ss);
     var prevRows     = readSelfPayDetailsForVisit_V3_(detailSh, prevVisitKey);
 
+    // フォールバック: 来院ヘッダ経由の visitKey に自費明細がない場合、
+    // 自費明細シートを直接検索して前回 visitKey を逆引きする。
+    // 読み取り専用。来院ヘッダ・CASES・保険算定・申請書には一切触れない。
+    if (prevRows.length === 0) {
+      var todayStr = fmt_(treatDate, "yyyy-MM-dd");
+      var fbKey = findLatestSelfPayVisitKeyBeforeDate_(detailSh, patientId, todayStr);
+      if (fbKey && fbKey !== prevVisitKey) {
+        var fbRows = readSelfPayDetailsForVisit_V3_(detailSh, fbKey);
+        if (fbRows.length > 0) {
+          Logger.log("[SC1 FALLBACK] fallback used. prevVisitKey=" + prevVisitKey + " fbKey=" + fbKey + " items=" + fbRows.length);
+          prevVisitKey = fbKey;
+          prevRows     = fbRows;
+          // prevDate は表示用に fbKey の日付部分から再構築する
+          var fbDateM = fbKey.match(/_(\d{4})-(\d{2})-(\d{2})$/);
+          if (fbDateM) {
+            prevDate = new Date(
+              parseInt(fbDateM[1]), parseInt(fbDateM[2]) - 1, parseInt(fbDateM[3])
+            );
+          }
+        }
+      }
+    }
+
     if (prevRows.length === 0) {
       SpreadsheetApp.getUi().alert(
         "前回来院（" + fmt_(prevDate, "MM/dd") + "）に自費明細がありません。\n通常の自費明細入力を開きます。"
@@ -5665,6 +5688,52 @@ function loadPrevSelfPayToDialog_V3() {
     SpreadsheetApp.getUi().alert("エラーが発生しました。通常の自費明細入力を開きます。\n" + e.message);
     openSelfPayDialog_V3();
   }
+}
+
+/**
+ * 自費明細シートから patientId が一致し treatDateStr より前の最新 visitKey を返す。
+ * 来院ヘッダとは独立した読み取り専用検索。書き込みなし・副作用なし。
+ *
+ * 日付比較は visitKey の "YYYY-MM-DD" 文字列で行う（Date 変換不使用・JST/UTC ずれ回避）。
+ *
+ * @param {Sheet}  detailSh       自費明細シート
+ * @param {string} patientId      対象患者 ID
+ * @param {string} treatDateStr   今日の日付 "YYYY-MM-DD"（fmt_(treatDate,"yyyy-MM-dd") で生成）
+ * @returns {string|null}         最新の visitKey または null
+ */
+function findLatestSelfPayVisitKeyBeforeDate_(detailSh, patientId, treatDateStr) {
+  if (!detailSh || detailSh.getLastRow() < 2) return null;
+  var data = detailSh.getDataRange().getValues();
+  var headRow = data[0];
+
+  var vkColIdx = -1;
+  for (var h = 0; h < headRow.length; h++) {
+    if (String(headRow[h] || "").trim() === SELF_DETAIL_COLS.visitKey) { vkColIdx = h; break; }
+  }
+  if (vkColIdx < 0) return null;
+
+  var bestDateStr = null;
+  var bestVisitKey = null;
+  var prefix = patientId + "_";
+
+  for (var r = 1; r < data.length; r++) {
+    var vk = String(data[r][vkColIdx] || "").trim();
+    if (!vk) continue;
+    // prefix チェック（他患者を排除）
+    if (vk.indexOf(prefix) !== 0) continue;
+    // 末尾が YYYY-MM-DD であること
+    var m = vk.match(/_(\d{4}-\d{2}-\d{2})$/);
+    if (!m) continue;
+    var dateStr = m[1];
+    // 今日以降（当日・未来）を除外
+    if (dateStr >= treatDateStr) continue;
+    // 最新日付を更新
+    if (!bestDateStr || dateStr > bestDateStr) {
+      bestDateStr  = dateStr;
+      bestVisitKey = vk;
+    }
+  }
+  return bestVisitKey;
 }
 
 /**
