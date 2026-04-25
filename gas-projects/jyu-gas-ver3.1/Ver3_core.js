@@ -400,6 +400,7 @@ var JUSEI_TOOL_MENU_SECTIONS = [
       { label: "保存（来院登録）",   functionName: "saveVisit_V3" },
       { label: "自動引継ぎ",         functionName: "autofillFromPreviousVisit_V3" },
       { label: "自費明細入力",       functionName: "openSelfPayDialog_V3" },
+      { label: "自費明細（前回引継ぎ）", functionName: "loadPrevSelfPayToDialog_V3" },
       { label: "経過履歴更新",       functionName: "refreshKeikaHistoryUI_V3" },
       { label: "画面クリア",         functionName: "clearEntryUI_V3" }
     ]
@@ -5572,6 +5573,120 @@ function getSelfPayDataByVisitKey_V3(visitKey) {
   } catch (e) {
     Logger.log("[getSelfPayDataByVisitKey] エラー: " + e.message);
     return { error: e.message, existItems: [] };
+  }
+}
+
+// ===== Phase A-1: 前回自費明細再読込 =====
+
+/**
+ * 前回来院の自費明細を PropertiesService 一時スロットに書き込み、
+ * openSelfPayDialog_V3 を呼ぶ。メニュー「自費明細（前回引継ぎ）」から呼ぶ。
+ */
+function loadPrevSelfPayToDialog_V3() {
+  try {
+    var ss   = SpreadsheetApp.getActive();
+    var uiSh = ss.getSheetByName(SHEETS.ui);
+    if (!uiSh) {
+      SpreadsheetApp.getUi().alert("患者画面シートが見つかりません。");
+      return;
+    }
+
+    var patientId = String(uiSh.getRange(UI.patientId).getValue() || "").trim();
+    var treatDate = uiSh.getRange(UI.treatDate).getValue();
+
+    if (!patientId) {
+      SpreadsheetApp.getUi().alert("患者を選択してください（B2 で検索→選択）。");
+      return;
+    }
+    if (!(treatDate instanceof Date)) {
+      SpreadsheetApp.getUi().alert("来院日（B4）が日付になっていません。");
+      return;
+    }
+
+    var headSh = ss.getSheetByName(SHEETS.header);
+    if (!headSh) {
+      SpreadsheetApp.getUi().alert("来院ヘッダシートが見つかりません。");
+      return;
+    }
+    var headMap  = buildHeaderColMap_(headSh);
+    var prevDate = findLastVisitDateInHeader_(headSh, headMap, patientId, treatDate);
+
+    if (!(prevDate instanceof Date)) {
+      SpreadsheetApp.getUi().alert("前回の来院記録が見つかりません。通常の自費明細入力を開きます。");
+      openSelfPayDialog_V3();
+      return;
+    }
+
+    var prevVisitKey = buildVisitKey_(patientId, prevDate);
+    var detailSh     = ensureSelfPayDetailSheetInternal_(ss);
+    var prevRows     = readSelfPayDetailsForVisit_V3_(detailSh, prevVisitKey);
+
+    if (prevRows.length === 0) {
+      SpreadsheetApp.getUi().alert(
+        "前回来院（" + fmt_(prevDate, "MM/dd") + "）に自費明細がありません。\n通常の自費明細入力を開きます。"
+      );
+      openSelfPayDialog_V3();
+      return;
+    }
+
+    // 今回の明細に既存データがあれば上書き確認
+    var visitKey  = buildVisitKey_(patientId, treatDate);
+    var existRows = readSelfPayDetailsForVisit_V3_(detailSh, visitKey);
+    if (existRows.length > 0) {
+      var ui   = SpreadsheetApp.getUi();
+      var resp = ui.alert(
+        "上書き確認",
+        "今回の自費明細に既に " + existRows.length + " 件の入力があります。\n" +
+        "前回来院（" + fmt_(prevDate, "MM/dd") + "）の明細で上書きしますか？",
+        ui.ButtonSet.OK_CANCEL
+      );
+      if (resp !== ui.Button.OK) return;
+    }
+
+    // menuId / menuName / qty のみ引き継ぐ（unitPrice はマスタから取り直す）
+    var prevItems = prevRows.map(function(row) {
+      return {
+        menuId:   String(row.menuId   || ""),
+        menuName: String(row.menuName || ""),
+        qty:      Number(row.qty)     || 1,
+      };
+    });
+
+    PropertiesService.getScriptProperties().setProperty(
+      "_prevSelfPay_temp",
+      JSON.stringify({ items: prevItems, expiry: Date.now() + 300000 })
+    );
+    Logger.log("[loadPrevSelfPayToDialog_V3] prevVisitKey=" + prevVisitKey + " items=" + prevItems.length);
+
+    openSelfPayDialog_V3();
+
+  } catch(e) {
+    Logger.log("[loadPrevSelfPayToDialog_V3] ERROR: " + e.message);
+    SpreadsheetApp.getUi().alert("エラーが発生しました。通常の自費明細入力を開きます。\n" + e.message);
+    openSelfPayDialog_V3();
+  }
+}
+
+/**
+ * ダイアログ側から google.script.run で呼ぶブリッジ。
+ * PropertiesService の一時スロットを読んで返し、即座にクリアする。
+ * @returns {Array<{menuId:string, menuName:string, qty:number}>}
+ */
+function getAndClearPrevSelfPayItems_V3() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var raw   = props.getProperty("_prevSelfPay_temp");
+    props.deleteProperty("_prevSelfPay_temp");
+    if (!raw) return [];
+    var data = JSON.parse(raw);
+    if (data.expiry && Date.now() > data.expiry) {
+      Logger.log("[getAndClearPrevSelfPayItems_V3] スロット期限切れ");
+      return [];
+    }
+    return Array.isArray(data.items) ? data.items : [];
+  } catch(e) {
+    Logger.log("[getAndClearPrevSelfPayItems_V3] ERROR: " + e.message);
+    return [];
   }
 }
 

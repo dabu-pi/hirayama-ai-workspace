@@ -122,6 +122,16 @@
       min-height: 16px;
     }
     #loading { color: #666; font-size: 12px; }
+    #prev-reload-notice {
+      display: none;
+      background: #e6f4ea;
+      color: #137333;
+      border: 1px solid #34a853;
+      border-radius: 4px;
+      font-size: 11px;
+      padding: 3px 8px;
+      margin-bottom: 6px;
+    }
     #gymMemberBadge {
       display: none;
       background: #e6f4ea;
@@ -156,6 +166,7 @@
     </table>
     <button id="add-row-btn" onclick="addRow()">+ 行追加</button>
     <div id="total-area">合計: ¥ <span id="total-value">0</span></div>
+    <div id="prev-reload-notice"></div>
     <div id="status-msg"></div>
     <div class="footer-btns">
       <button class="btn-cancel" onclick="google.script.host.close()">キャンセル</button>
@@ -195,17 +206,41 @@
       google.script.run
         .withSuccessHandler(function(master) {
           menuMaster = master || [];
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('main-content').style.display = 'block';
-          // 既存データがあれば復元、なければ空行1件
-          if (visitKeyInfo && visitKeyInfo.existItems && visitKeyInfo.existItems.length > 0) {
-            visitKeyInfo.existItems.forEach(function(item) {
-              addRow(item.menuId, item.menuName, item.unitPrice, item.qty);
-            });
-          } else {
-            addRow();
-          }
-          updateTotal();
+          // 前回明細スロットを確認してからUIを構築
+          google.script.run
+            .withSuccessHandler(function(prevItems) {
+              document.getElementById('loading').style.display = 'none';
+              document.getElementById('main-content').style.display = 'block';
+              if (prevItems && prevItems.length > 0) {
+                prevItems.forEach(function(item) {
+                  addRow(item.menuId, item.menuName, undefined, item.qty);
+                });
+                var notice = document.getElementById('prev-reload-notice');
+                notice.textContent = '前回来院の自費明細 ' + prevItems.length + ' 件を引き継ぎました。内容を確認してください。';
+                notice.style.display = 'block';
+              } else if (visitKeyInfo && visitKeyInfo.existItems && visitKeyInfo.existItems.length > 0) {
+                visitKeyInfo.existItems.forEach(function(item) {
+                  addRow(item.menuId, item.menuName, item.unitPrice, item.qty);
+                });
+              } else {
+                addRow();
+              }
+              updateTotal();
+            })
+            .withFailureHandler(function() {
+              // 前回明細取得失敗時は従来通り動作
+              document.getElementById('loading').style.display = 'none';
+              document.getElementById('main-content').style.display = 'block';
+              if (visitKeyInfo && visitKeyInfo.existItems && visitKeyInfo.existItems.length > 0) {
+                visitKeyInfo.existItems.forEach(function(item) {
+                  addRow(item.menuId, item.menuName, item.unitPrice, item.qty);
+                });
+              } else {
+                addRow();
+              }
+              updateTotal();
+            })
+            .getAndClearPrevSelfPayItems_V3();
         })
         .withFailureHandler(function(e) {
           document.getElementById('loading').textContent = 'マスタ読み込みエラー: ' + e.message;
