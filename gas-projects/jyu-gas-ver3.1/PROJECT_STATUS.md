@@ -1,11 +1,12 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-23（**前回施術再読込 最小安全仕様 設計メモ作成完了**）
+最終更新: 2026-04-25（**前回施術再読込 実装前調査完了 / 実装方針確定**）
 
 ---
 
-## 📋 2026-04-23 前回施術再読込 — 設計フェーズ
+## 📋 2026-04-25 前回施術再読込 — 実装方針確定
 
+調査結果: `docs/JREC-01_prev_selfpay_reload_investigation_2026-04-25.md`  
 設計メモ: `docs/JREC-01_prev_selfpay_reload_design_2026-04-23.md`
 
 ### 背景
@@ -27,16 +28,29 @@ Phase A 実運用テスト中に「前回の施術内容を再読み込みして
 - 上書き事故防止: 今回の明細に既存データがある場合は確認ダイアログ
 - 保存は自動実行しない（ダイアログを開くだけ。人間が確認後に保存）
 
-### 未解決論点（実装前に解消する）
+### 未解決論点 → 解消済み（2026-04-25）
 
-1. `openSelfPayDialog_V3` に初期値（prevItems）を渡す方法の確認
-2. menuId が廃止・変更されていた場合の扱い
+| 論点 | 結論 |
+|---|---|
+| ① `openSelfPayDialog_V3` への初期値渡し | **PropertiesService 一時スロット方式**で解消。`openSelfPayDialog_V3` 変更なし |
+| ② 廃止・変更 menuId の扱い | **既存の「(手入力)」フォールバック処理**（selfPayDialog.html:246-254）が流用可能。追加実装不要 |
+
+### 採用実装パターン: PropertiesService 一時スロット方式
+
+**変更ファイル（実装時）:**
+
+| ファイル | 変更内容 |
+|---|---|
+| `Ver3_core.js` | `loadPrevSelfPayToDialog_V3` 新規追加 / `getAndClearPrevSelfPayItems_V3` 新規追加 |
+| `selfPayDialog.html` | `loadMenuMaster()` 内に prevItems 取得・確認ダイアログ処理を追加（約15行） |
+| `openSelfPayDialog_V3` | **変更なし**（既存 P01/P04 動作に影響なし） |
 
 ### 次のアクション
 
-1. `openSelfPayDialog_V3` のシグネチャを確認（論点①解消）
-2. 解消後に `loadPrevSelfPayToDialog_V3` を実装
-3. 手動テスト後にメニュー登録
+1. **Phase A 完了後（目安: 2026-05-07）** に実装着手
+2. `loadPrevSelfPayToDialog_V3` / `getAndClearPrevSelfPayItems_V3` を Ver3_core.js に追加
+3. `selfPayDialog.html` に prevItems 処理を追加（約15行）
+4. 手動テスト（3シナリオ）後にメニュー登録
 
 ---
 
