@@ -240,7 +240,7 @@
     <div id="status-msg"></div>
 
     <div class="footer-btns">
-      <a class="btn-back" href="javascript:history.back()">← 戻る</a>
+      <a class="btn-back" href="<?= appBaseUrl ?>">← 戻る</a>
       <button class="btn-save" id="save-btn" onclick="doSave()">保存する</button>
     </div>
   </div>
@@ -248,7 +248,7 @@
   <div id="success-panel">
     <div class="check">✓</div>
     <p id="success-msg">自費明細を保存しました</p>
-    <a class="btn-back-link" href="javascript:history.back()">← 患者検索に戻る</a>
+    <a class="btn-back-link" href="<?= appBaseUrl ?>">← 患者検索に戻る</a>
   </div>
 
   <script>

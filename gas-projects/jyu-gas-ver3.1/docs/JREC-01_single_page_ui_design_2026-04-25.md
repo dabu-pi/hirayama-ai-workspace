@@ -1,0 +1,174 @@
+# JREC-01 1画面完結型 Web UI — 設計調査メモ
+
+作成日: 2026-04-25  
+ブランチ: `feature/auto-dev-phase3-loop`  
+ステータス: **調査・設計メモのみ（実装未着手）**
+
+---
+
+## 0. 作成背景
+
+現行の Web UI はページ遷移型（患者検索 → 自費明細入力 の2ページ構成）。
+「検索に戻る」不具合修正（`javascript:history.back()` → `<?= appBaseUrl ?>` に変更）を機に、
+将来的な1画面完結型 UI への移行可能性を調査した。
+
+---
+
+## 1. 現行構造の整理
+
+### ページ構成
+
+| ファイル | URL | 役割 |
+|---|---|---|
+| `patientSearch.html` | `/exec`（デフォルト） | 患者検索・選択。患者選択後に自費明細URLへのリンクを表示 |
+| `selfPayWeb.html` | `/exec?page=selfpay&visitKey=...` | 自費明細入力（Web App スタンドアロン版） |
+| `selfPayDialog.html` | Sheets のモーダルダイアログ | 自費明細入力（Sheets UI 用） |
+
+### ページ遷移フロー（現行）
+
+```
+ブラウザで /exec を開く
+  → patientSearch.html（患者検索）
+  → キーワード入力 → searchPatients_V3
+  → 患者カードをタップ → setPatientAndDate_V3（Sheets B2/B4 更新）
+  → 「自費明細入力 →」リンクをタップ
+  → ページ遷移: /exec?page=selfpay&visitKey=...
+  → selfPayWeb.html（自費明細入力）
+  → メニュー選択・保存
+  → 成功パネル表示 → 「検索に戻る」で /exec へ戻る
+```
+
+### 問題点（現行）
+
+| 問題 | 内容 |
+|---|---|
+| ページ遷移が発生 | 患者選択 → 自費明細へ移動時にフル再読み込み |
+| 「検索に戻る」不具合 | `javascript:history.back()` が GAS CSP または空 history で動作しない（2026-04-25 修正済み） |
+| 入力途中に「戻る」ができない | 自費明細入力中に患者を変えたい場合、ページ再読み込みが必要 |
+| URL直打ちアクセス時の問題 | selfpay URL を直接開いた場合、患者検索に戻れない（修正後は `appBaseUrl` で解決） |
+
+---
+
+## 2. 1画面完結型 UI の基本方針
+
+### コンセプト
+
+```
+/exec 単一ページ内でパネル切り替えにより全操作を完結させる。
+ページ遷移なし。ブラウザ履歴に依存しない。
+```
+
+### パネル構成（案）
+
+```
+┌──────────────────────────────────┐
+│  PANEL A: 患者検索               │  ← デフォルト表示
+│    キーワード入力 → 候補カード    │
+│    [患者を選択する]               │
+└──────────────────────────────────┘
+         ↓ 患者選択
+┌──────────────────────────────────┐
+│  PANEL B: 患者確認 + 自費明細    │  ← 患者選択後に切り替え
+│    選択患者名 / 来院日           │
+│    自費明細テーブル              │
+│    [← 患者を変える] [保存する]   │
+└──────────────────────────────────┘
+         ↓ 保存
+┌──────────────────────────────────┐
+│  PANEL C: 保存完了               │  ← 保存後に切り替え
+│    ✓ 保存完了メッセージ          │
+│    [続けて別の患者を入力]        │
+└──────────────────────────────────┘
+```
+
+---
+
+## 3. 実装時の変更スコープ
+
+### 変更が必要なファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `patientSearch.html` | Panel A（現行）+ Panel B + Panel C を1ファイルに統合 |
+| `selfPayWeb.html` | Panel B の自費明細部分として吸収。独立ファイルは廃止または保持 |
+| `doGet()` in `Ver3_core.js` | `page=selfpay` 分岐を削除または残存維持 |
+
+### 変更不要なファイル
+
+| ファイル | 理由 |
+|---|---|
+| `selfPayDialog.html` | Sheets モーダル用。変更しない |
+| `saveSelfPayDetailsFromDialog_V3` | 保存処理は変更しない |
+| `getSelfPayDataByVisitKey_V3` | データ取得処理は変更しない |
+| `searchPatients_V3` | 検索処理は変更しない |
+
+---
+
+## 4. 技術的な考慮点
+
+### 4-1 GAS テンプレート変数
+
+現行の `selfPayWeb.html` は `visitKey` と `appBaseUrl` をテンプレートで埋め込んでいる。  
+1画面化すると `visitKey` はサーバー側で事前に確定できないため、
+**JS側で動的に生成する方式**（`patientId + "_" + todayYMD()`）に変更する。
+
+この実装は `patientSearch.html:294-295` に既に存在する:
+```js
+var visitKey = patientId + "_" + todayYMD();
+```
+
+→ 追加実装不要。JS内でvisitKeyを生成してから `getSelfPayDataByVisitKey_V3` を呼べばよい。
+
+### 4-2 メニューマスタのキャッシュ
+
+現行は `selfPayWeb.html` が開くたびに `getSelfPayMenuMaster_V3()` を呼ぶ。  
+1画面化すると患者切り替えのたびに再取得になる。  
+→ JS変数 `menuMaster` に保持したまま Panel 切り替えで使い回せる。1回の取得で済む。
+
+### 4-3 「前回引継ぎ」機能との整合
+
+Phase A-1 で実装した `loadPrevSelfPayToDialog_V3` は Sheets メニューから呼ぶ GAS 関数。  
+1画面化 Web UI では、Panel B に「前回引継ぎ」ボタンを追加して
+`getAndClearPrevSelfPayItems_V3` と連携させることで同等の機能を持てる。  
+（`loadPrevSelfPayToDialog_V3` の PropertiesService 書き込みは不要になる）
+
+### 4-4 Sheets B2/B4 との連携
+
+現行: 患者選択時に `setPatientAndDate_V3(patientId)` でシートに反映。  
+1画面化しても この呼び出しは維持する。GAS側のロジックは変更しない。
+
+---
+
+## 5. 移行方針（案）
+
+### フェーズ分割案
+
+| フェーズ | 内容 | 前提 |
+|---|---|---|
+| **Phase B（現行計画）** | P05 会計確認ページ（読み取りのみ） | Phase A 完了後 |
+| **Phase B-1（追加候補）** | 1画面化 — Panel A+B 統合（患者検索 + 自費明細） | Phase A-1 安定後 |
+| Phase C | P02 来院入力フォーム（下書きのみ） | Phase B 完了後 |
+
+### 優先度の考え方
+
+- 現行の「検索に戻る」不具合は 2026-04-25 に修正済みのため、緊急度は低下
+- Phase B（会計確認ページ）を先に進めて実務価値を出す方が優先度が高い
+- 1画面化は Phase B 完了後の「使い勝手改善」として扱う
+
+---
+
+## 6. 現行の「戻る」系ボタン実装まとめ（修正後）
+
+| ファイル | ボタン | 修正前 | 修正後 |
+|---|---|---|---|
+| `selfPayWeb.html:243` | 入力中「← 戻る」 | `javascript:history.back()` | `<?= appBaseUrl ?>` |
+| `selfPayWeb.html:251` | 保存後「← 患者検索に戻る」 | `javascript:history.back()` | `<?= appBaseUrl ?>` |
+| `selfPayDialog.html:161` | ダイアログ「キャンセル」 | `google.script.host.close()` | 変更なし（正常動作） |
+
+---
+
+## 7. 次のアクション
+
+1. **今回の不具合修正（`javascript:history.back()` → `<?= appBaseUrl ?>`）を clasp push・commit**
+2. Phase B（会計確認ページ）を優先進行
+3. 1画面化は Phase B 完了後のタスクとして ROADMAP に追記（任意）
