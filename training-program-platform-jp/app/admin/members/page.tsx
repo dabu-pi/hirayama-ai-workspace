@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { MembersScreen } from "@/components/admin/MembersScreen";
-import { getAllMembers, getCurrentUserRole } from "@/lib/admin/members";
+import { getAllMembersData, getCurrentUserRole } from "@/lib/admin/members";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,13 @@ export default async function AdminMembersPage() {
   if (!userContext) redirect("/login");
   if (userContext.role !== "admin") redirect("/");
 
-  const members = await getAllMembers();
+  const { members, globalStats } = await getAllMembersData();
 
-  return <MembersScreen currentUserId={userContext.userId} members={members} />;
+  return (
+    <MembersScreen
+      currentUserId={userContext.userId}
+      globalStats={globalStats}
+      members={members}
+    />
+  );
 }

@@ -1,5 +1,62 @@
 # PROJECT_STATUS
 
+## 2026-04-26 /admin/members 利用状況集計 Phase 1
+
+### STATUS: CLOSED (2026-04-26)
+
+### PURPOSE
+
+管理者が会員ごとの利用状況を `/admin/members` で確認できるようにする。
+スマホでのテーブル横切れ問題も最小修正。
+
+### IMPLEMENTED
+
+**個別集計（MemberRow に追加）:**
+
+| フィールド | ソース | 内容 |
+|---|---|---|
+| `last_sign_in_at` | `auth.admin.listUsers()` の `User.last_sign_in_at` | 最終ログイン日時 |
+| `training_started_count` | `workout_sessions` COUNT per user | セッション開始回数 |
+| `training_completed_count` | `workout_sessions` WHERE status='completed' COUNT | セッション完了回数 |
+| `last_training_at` | `workout_sessions` MAX(started_at) per user | 最終トレーニング日 |
+| `has_active_enrollment` | `program_enrollments` WHERE status='active' | プログラム進行中の有無 |
+
+**全体集計カード（ページ上部に追加）:**
+
+- 登録会員数 / active / paused / cancelled
+- 直近30日の完了セッション数
+- 直近30日で未利用の active 会員数
+
+**スマホ修正:**
+
+- `.card { overflow-x: auto }` — テーブルが横スクロール可能に
+- `.table { min-width: 820px }` — テーブルが縮まずに表示される
+
+**日時表示:**
+
+- `last_sign_in_at` / `last_training_at` / `created_at` はすべて JST（`lib/utils/date-jst.ts` 使用）
+
+### UNCHANGED (Phase 2 候補)
+
+| 項目 | 理由 | 将来案 |
+|---|---|---|
+| ログイン回数 | `auth.audit_log_entries` の利用可否不明、確実な集計には新規ログが必要 | `public.user_login_events` テーブル + Auth Webhook |
+| DB view / RPC 化 | 会員数が少ない間はメモリ集計で十分 | 件数増加時に移行 |
+| スマホカードUI化 | 現状は overflow-x で操作可能になるため保留 | `@media (max-width: 639px)` でカード表示に切り替え |
+
+### CHANGED_FILES
+
+- `lib/admin/members.ts` — 型拡張（`MemberRow` / `AdminGlobalStats` / `AdminMembersData`）、`getAllMembersData()` に変更
+- `app/admin/members/page.tsx` — `getAllMembersData()` に切り替え、`globalStats` を `MembersScreen` へ渡す
+- `components/admin/MembersScreen.tsx` — サマリーカード追加、新列（最終ログイン / 開始・完了 / 最終T）追加
+- `components/admin/MembersScreen.module.css` — `overflow-x: auto` / `min-width` / サマリーカードスタイル追加
+
+### TYPECHECK
+
+pass（エラーなし）
+
+---
+
 ## 2026-04-24 display_name ユーザー本人編集機能 追加
 
 ### STATUS: CLOSED (2026-04-24)

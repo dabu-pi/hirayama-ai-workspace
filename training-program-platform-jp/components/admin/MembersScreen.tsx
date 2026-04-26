@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 
 import { updateDisplayName, updateMemberName, updateMembershipStatus } from "@/app/admin/members/actions";
-import type { MemberRow, MembershipStatus } from "@/lib/admin/members";
+import type { AdminGlobalStats, MemberRow, MembershipStatus } from "@/lib/admin/members";
+import { formatJstDate, formatJstDateTime } from "@/lib/utils/date-jst";
 
 import styles from "./MembersScreen.module.css";
 
@@ -12,9 +13,14 @@ type StatusFilter = "all" | MembershipStatus;
 type MembersScreenProps = {
   members: MemberRow[];
   currentUserId: string;
+  globalStats: AdminGlobalStats;
 };
 
-export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
+export function MembersScreen({
+  members,
+  currentUserId,
+  globalStats
+}: MembersScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
@@ -36,6 +42,20 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
         <h1 className={styles.title}>会員管理</h1>
         <span className={styles.adminBadge}>Admin</span>
       </header>
+
+      {/* Summary cards */}
+      <div className={styles.statsGrid}>
+        <StatCard label="登録会員" value={globalStats.total_members} />
+        <StatCard color="green" label="Active" value={globalStats.active_count} />
+        <StatCard color="yellow" label="Paused" value={globalStats.paused_count} />
+        <StatCard color="red" label="Cancelled" value={globalStats.cancelled_count} />
+        <StatCard label="直近30日 完了" value={globalStats.completed_sessions_last30d} />
+        <StatCard
+          color={globalStats.inactive_active_members_last30d > 0 ? "yellow" : undefined}
+          label="30日未利用(active)"
+          value={globalStats.inactive_active_members_last30d}
+        />
+      </div>
 
       <div className={styles.filterBar}>
         <input
@@ -65,6 +85,9 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
               <th>表示名</th>
               <th>ロール</th>
               <th>ステータス変更</th>
+              <th>最終ログイン</th>
+              <th>開始/完了</th>
+              <th>最終T</th>
               <th>登録日</th>
             </tr>
           </thead>
@@ -79,7 +102,7 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
               ))
             ) : (
               <tr>
-                <td className={styles.emptyNote} colSpan={5}>
+                <td className={styles.emptyNote} colSpan={8}>
                   該当する会員が見つかりません
                 </td>
               </tr>
@@ -88,6 +111,31 @@ export function MembersScreen({ members, currentUserId }: MembersScreenProps) {
         </table>
       </div>
     </main>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  color
+}: {
+  label: string;
+  value: number;
+  color?: "green" | "yellow" | "red";
+}) {
+  const colorClass =
+    color === "green"
+      ? styles.statGreen
+      : color === "yellow"
+        ? styles.statYellow
+        : color === "red"
+          ? styles.statRed
+          : "";
+  return (
+    <div className={`${styles.statCard} ${colorClass}`}>
+      <span className={styles.statValue}>{value}</span>
+      <span className={styles.statLabel}>{label}</span>
+    </div>
   );
 }
 
@@ -198,15 +246,17 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
     });
   }
 
-  const createdDate = new Date(member.created_at).toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: "Asia/Tokyo"
-  });
+  const createdDate = formatJstDate(member.created_at);
+  const lastSignIn = member.last_sign_in_at
+    ? formatJstDateTime(member.last_sign_in_at)
+    : "—";
+  const lastTraining = member.last_training_at
+    ? formatJstDate(member.last_training_at)
+    : "—";
 
   return (
     <tr className={styles.tr}>
+      {/* 会員氏名 */}
       <td className={styles.td}>
         {isMemberEditing ? (
           <div className={styles.editRow}>
@@ -278,6 +328,8 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
           </div>
         )}
       </td>
+
+      {/* 表示名 */}
       <td className={styles.td}>
         {isEditing ? (
           <div className={styles.editRow}>
@@ -352,6 +404,8 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
           </div>
         )}
       </td>
+
+      {/* ロール */}
       <td className={styles.td}>
         <span
           className={`${styles.roleBadge} ${
@@ -361,6 +415,8 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
           {member.role}
         </span>
       </td>
+
+      {/* ステータス変更 */}
       <td className={styles.td}>
         {isSelf ? (
           <span className={styles.selfNote}>自分自身は変更できません</span>
@@ -370,9 +426,7 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
               className={styles.statusSelect}
               disabled={isPending}
               value={selected}
-              onChange={(e) =>
-                setSelected(e.target.value as MembershipStatus)
-              }
+              onChange={(e) => setSelected(e.target.value as MembershipStatus)}
             >
               <option value="active">active</option>
               <option value="paused">paused</option>
@@ -399,7 +453,27 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
           </div>
         )}
       </td>
-      <td className={styles.td}>{createdDate}</td>
+
+      {/* 最終ログイン */}
+      <td className={`${styles.td} ${styles.statCell}`}>{lastSignIn}</td>
+
+      {/* 開始/完了 */}
+      <td className={`${styles.td} ${styles.statCell}`}>
+        <span className={styles.sessionCount}>
+          {member.training_started_count}
+          <span className={styles.sessionSep}>/</span>
+          {member.training_completed_count}
+        </span>
+        {member.has_active_enrollment && (
+          <span className={styles.enrollmentDot} title="プログラム進行中" />
+        )}
+      </td>
+
+      {/* 最終T */}
+      <td className={`${styles.td} ${styles.statCell}`}>{lastTraining}</td>
+
+      {/* 登録日 */}
+      <td className={`${styles.td} ${styles.statCell}`}>{createdDate}</td>
     </tr>
   );
 }
