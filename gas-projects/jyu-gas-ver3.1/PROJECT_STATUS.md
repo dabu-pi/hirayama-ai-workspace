@@ -1,6 +1,52 @@
 ﻿# PROJECT_STATUS.md — 柔整GAS Ver3.1
 
-最終更新: 2026-04-26（**初検時情報・所見・経過欄 運用整理メモ追加 / Phase B 改善候補を記録**）
+最終更新: 2026-04-26（**keikaNow / shoken / 経過履歴 / 施術録裏面 設計課題記録 — Phase B 見直し候補確定**）
+
+---
+
+## 📋 2026-04-26 keikaNow / shoken / 施術録裏面 設計課題記録
+
+設計課題メモ: `docs/JREC-01_keika_shoken_webui_design_notes_2026-04-26.md`
+
+### 問題の概要
+
+Phase A 実運用テスト中に、入力した経過が施術録裏面に出ない可能性を確認した。
+
+| 入力欄 | D23:G28（画面履歴） | 施術録裏面 notes |
+|---|---|---|
+| A16:B20（keikaNow） | ✅ 出る | ❌ 出ない（shoken があるため） |
+| A23:B28（shoken） | ❌ 出ない | ✅ 出る（優先） |
+
+### 根本原因
+
+1. 施術録裏面の notes は **shoken 優先** (`Ver3_shuRecorder.js:551`)
+2. `autofillFromPreviousVisit_V3` が毎回「エピソード開始日の shoken」を A23:B28 に書き戻す
+3. → shoken は常に非空 → keikaNow が施術録裏面に出ない
+4. → 施術録裏面に初検日の所見が毎日繰り返す可能性がある
+
+### Phase A 対応方針
+
+**コード変更なし。記録のみ。**  
+ラベル変更（A16:B20 → 「今回の経過（経過履歴用）」、A23:B28 → 「所見（施術録裏面）」）を候補として保留。
+
+### Phase B 見直し候補
+
+`Ver3_shuRecorder.js:551` の 1 行変更（**keikaNow 優先・shoken フォールバック**）:
+
+```javascript
+// 変更前: shoken 優先
+if (!notesMap[vk3] || sho) notesMap[vk3] = sho || kei;
+// 変更後: keikaNow 優先
+if (!notesMap[vk3] || kei) notesMap[vk3] = kei || sho;
+```
+
+- saveVisit_V3・申請書・保険算定・月次集計への影響なし
+- 既存データの施術録出力テストが必要（notes 内容が変わる）
+
+### Web UI 移行時
+
+入力欄を「初検時情報 / 本日の経過 / 本日の所見 / 経過履歴」に整理する候補あり。  
+詳細: `docs/JREC-01_keika_shoken_webui_design_notes_2026-04-26.md` §4
 
 ---
 
