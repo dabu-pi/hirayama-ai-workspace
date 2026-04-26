@@ -1,5 +1,46 @@
 # PROJECT_STATUS
 
+## 2026-04-26 G-1: ジムタブ基本ダッシュボード
+
+### STATUS: CLOSED (2026-04-26 / LIVE確認待ち)
+
+### PURPOSE
+
+`/gym` タブを会員向けのジム情報ホームとして刷新する。
+トレーニング統計・クイックリンク・お知らせ・スポンサー・通信スロットを一画面に集約。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | データソース |
+|---|---|---|
+| 今月のトレーニング回数 | completed session を今月分カウント（JST基準） | `workout_sessions`（RLSスコープ） |
+| 最終トレーニング日 | MAX(started_at) JST変換 | 同上 |
+| 未ログイン時の表示 | ログインリンク + ゼスト表示 | — |
+| クイックリンク | トレーニング開始/プログラム/履歴/プロフィール 2列グリッド | 静的 |
+| お知らせ | 3件（静的配列、G-2でDB化予定） | コード内配列 |
+| スポンサー・協力店 | 2件（静的配列、G-4でDB化予定） | コード内配列 |
+| アカウント | `/profile` リンク | 静的 |
+| 通信機能スロット | 「近日対応予定」dashed カード（G-5で差し替え） | — |
+
+### CHANGED_FILES
+
+- `lib/workout/gym-dashboard.ts`（新規）: `getGymDashboardData()` — JST月初→UTC変換、completed session 集計
+- `app/gym/page.tsx`（更新）: `force-dynamic`、auth取得後に stats を渡す
+- `components/gym/GymScreen.tsx`（全面刷新）: stats props 受け取り + 全セクション
+- `components/gym/GymScreen.module.css`（全面刷新）: 各セクション対応スタイル
+
+### DB_MIGRATION
+
+なし（`workout_sessions` への read only クエリのみ）
+
+### CHECK
+
+- typecheck: pass
+- build: pass
+- LIVE: ユーザーによるブラウザ確認待ち
+
+---
+
 ## 2026-04-26 PWA化 安全調査
 
 ### STATUS: 調査完了 / 実装は後回し
