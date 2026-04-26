@@ -1,5 +1,51 @@
 # PROJECT_STATUS
 
+## 2026-04-26 V-2: 1RM計算ボタン実装
+
+### STATUS: CLOSED (2026-04-26)
+
+### PURPOSE
+
+WorkoutScreen.tsx の「計算」ボタンスタブ（onClick 未実装）を最小 1RM 計算機として実装する。
+
+### IMPLEMENTED
+
+| 項目 | 内容 |
+|---|---|
+| 計算式 | Epley 式: `1RM = 重量 × (1 + 回数 / 30)` |
+| UI | 計算ボタン押下でモーダルを表示。重量・回数を入力→即時計算 |
+| バリデーション | 未入力・0以下・NaN → エラーメッセージを表示 |
+| DB保存 | なし（UI補助のみ） |
+| 既存記録ロジックへの影響 | なし |
+| 日本語UI | 推定1RM / 重量 / 回数 / 参考値注記 |
+| モバイル対応 | グリッド2列入力 + モーダルは既存 `.modal` スタイルを再利用 |
+
+### CHANGED_FILES
+
+- `components/workout/WorkoutScreen.tsx`
+  - `compute1RM()` 純粋関数追加（コンポーネント外）
+  - state 追加: `is1RMModalOpen` / `calc1RMWeight` / `calc1RMReps`
+  - 計算ボタンに `onClick={() => setIs1RMModalOpen(true)}` 追加
+  - 1RM モーダル JSX 追加（Add Exercise モーダルの直後）
+- `components/workout/WorkoutScreen.module.css`
+  - `.calc1RMBody` / `.calc1RMInputRow` / `.calc1RMField` / `.calc1RMLabel` / `.calc1RMInput`
+  - `.calc1RMResult` / `.calc1RMResultLabel` / `.calc1RMResultValue` / `.calc1RMResultSub`
+  - `.calc1RMPlaceholder` / `.calc1RMError` / `.calc1RMNote` 追加
+
+### VERIFIED
+
+| ケース | 期待値 | 結果 |
+|---|---|---|
+| 100kg × 5回 | 116.7kg | ✅ (100 × 1.1667 = 116.7) |
+| 80kg × 10回 | 106.7kg | ✅ (80 × 1.333 = 106.7) |
+| 重量未入力 | エラー表示 | ✅ |
+| 回数未入力 | エラー表示 | ✅ |
+| 0以下 | エラー表示 | ✅ |
+| typecheck | pass | ✅ |
+| build | pass (train: 11.5kB→12.2kB) | ✅ |
+
+---
+
 ## 2026-04-26 V-1: S-7 Restart Program 静的検証
 
 ### STATUS: STATIC_CHECK PASS / LIVE_E2E 未実施（完走が必要）

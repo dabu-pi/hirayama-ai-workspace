@@ -212,6 +212,26 @@ function formatRestTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/**
+ * Epley 式による推定 1RM 計算 (UI補助のみ。DB保存しない)。
+ * 1RM = 重量 × (1 + 回数 / 30)
+ */
+type Calc1RMResult =
+  | { ok: true; value: number }
+  | { ok: false; error: string };
+
+function compute1RM(weightStr: string, repsStr: string): Calc1RMResult {
+  const w = parseFloat(weightStr);
+  const r = parseInt(repsStr, 10);
+  if (!weightStr.trim() || !repsStr.trim() || isNaN(w) || isNaN(r)) {
+    return { ok: false, error: "重量と回数を入力してください。" };
+  }
+  if (w <= 0 || r <= 0) {
+    return { ok: false, error: "重量と回数は1以上の数値を入力してください。" };
+  }
+  return { ok: true, value: Math.round(w * (1 + r / 30) * 10) / 10 };
+}
+
 /** Formats elapsed seconds as MM:SS or H:MM:SS. */
 function formatElapsed(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -513,6 +533,11 @@ export function WorkoutScreen({
   const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
   const [scrollToExerciseId, setScrollToExerciseId] = useState<string | null>(null);
   const exerciseBlockRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  // 1RM calculator modal state
+  const [is1RMModalOpen, setIs1RMModalOpen] = useState(false);
+  const [calc1RMWeight, setCalc1RMWeight] = useState("");
+  const [calc1RMReps, setCalc1RMReps] = useState("");
 
   const clearRestDoneTimeout = () => {
     if (restDoneTimeoutRef.current !== null) {
@@ -1345,7 +1370,11 @@ export function WorkoutScreen({
             {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : "1:30"}
           </span>
         </button>
-        <button className={`${styles.iconButton} ${styles.toolButton}`} type="button">
+        <button
+          className={`${styles.iconButton} ${styles.toolButton}`}
+          type="button"
+          onClick={() => setIs1RMModalOpen(true)}
+        >
           <span className={styles.toolButtonLabel}>計算</span>
           <span className={styles.toolButtonHint}>1RM</span>
         </button>
@@ -1838,6 +1867,103 @@ export function WorkoutScreen({
                 ))
               )}
             </ul>
+          </div>
+        </div>
+      ) : null}
+
+      {/* 1RM calculator modal */}
+      {is1RMModalOpen ? (
+        <div
+          className={styles.modalBackdrop}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIs1RMModalOpen(false);
+          }}
+        >
+          <div
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-label="推定1RM計算"
+          >
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>推定1RM計算</h2>
+              <button
+                className={styles.modalCloseButton}
+                type="button"
+                aria-label="閉じる"
+                onClick={() => setIs1RMModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.calc1RMBody}>
+              <div className={styles.calc1RMInputRow}>
+                <div className={styles.calc1RMField}>
+                  <label className={styles.calc1RMLabel} htmlFor="calc-weight">
+                    重量 (kg)
+                  </label>
+                  <input
+                    autoFocus
+                    id="calc-weight"
+                    className={styles.calc1RMInput}
+                    inputMode="decimal"
+                    min="0"
+                    placeholder="例: 100"
+                    type="number"
+                    value={calc1RMWeight}
+                    onChange={(e) => setCalc1RMWeight(e.target.value)}
+                  />
+                </div>
+                <div className={styles.calc1RMField}>
+                  <label className={styles.calc1RMLabel} htmlFor="calc-reps">
+                    回数
+                  </label>
+                  <input
+                    id="calc-reps"
+                    className={styles.calc1RMInput}
+                    inputMode="numeric"
+                    min="1"
+                    placeholder="例: 5"
+                    type="number"
+                    value={calc1RMReps}
+                    onChange={(e) => setCalc1RMReps(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const rmResult = compute1RM(calc1RMWeight, calc1RMReps);
+                if (!rmResult.ok) {
+                  const bothTouched =
+                    calc1RMWeight.trim() !== "" || calc1RMReps.trim() !== "";
+                  return bothTouched ? (
+                    <p className={styles.calc1RMError} role="alert">
+                      {rmResult.error}
+                    </p>
+                  ) : (
+                    <div className={styles.calc1RMPlaceholder}>
+                      重量と回数を入力すると推定1RMが表示されます。
+                    </div>
+                  );
+                }
+                return (
+                  <div className={styles.calc1RMResult}>
+                    <span className={styles.calc1RMResultLabel}>推定1RM</span>
+                    <span className={styles.calc1RMResultValue}>
+                      {rmResult.value} kg
+                    </span>
+                    <span className={styles.calc1RMResultSub}>
+                      {calc1RMWeight}kg × {calc1RMReps}回 (Epley式)
+                    </span>
+                  </div>
+                );
+              })()}
+
+              <p className={styles.calc1RMNote}>
+                ※ Epley式による目安値です。実際の1RMは体調・フォームにより異なります。
+              </p>
+            </div>
           </div>
         </div>
       ) : null}
