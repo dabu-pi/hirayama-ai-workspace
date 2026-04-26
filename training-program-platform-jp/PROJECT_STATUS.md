@@ -2,7 +2,7 @@
 
 ## 2026-04-26 G-1: ジムタブ基本ダッシュボード
 
-### STATUS: CLOSED (2026-04-26 / LIVE確認待ち)
+### STATUS: CLOSED (2026-04-26)
 
 ### PURPOSE
 
@@ -50,8 +50,11 @@
 | スポンサー・協力店 | ✅ PASS |
 | アカウントリンク | ✅ PASS |
 | 通信機能スロット（近日対応予定） | ✅ PASS（将来用枠のみ、機能未実装） |
-| スマホ表示 | 未確認 |
-| BottomTabBar 重なり | 未確認 |
+| スマホ表示 | ✅ PASS |
+| BottomTabBar 重なりなし | ✅ PASS |
+| クイックリンクのタップ | ✅ PASS |
+| お知らせ・スポンサーの縦並び | ✅ PASS |
+| 通信機能 placeholder が隠れない | ✅ PASS |
 
 ### NEXT_PHASES（G-2 以降）
 
