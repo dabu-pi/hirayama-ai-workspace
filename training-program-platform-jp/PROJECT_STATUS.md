@@ -1,5 +1,63 @@
 # PROJECT_STATUS
 
+## 2026-04-26 C-8: 5本目プログラム seed 追加
+
+### STATUS: CLOSED (seed追加済み / 本番DB反映は手動SQL実行待ち)
+
+### PROGRAM_PROPOSAL
+
+| 項目 | 内容 |
+|---|---|
+| slug | `barbell-2day-base` |
+| title | `Barbell 2-Day Full Body Base` |
+| level | beginner |
+| days_per_week | 2（既存4本は全て3〜4日。週2ニーズを新規カバー） |
+| duration_weeks | 4 |
+| goal tag | strength |
+| equipment tag | barbell |
+| split tag | full-body |
+| concept | 5大バーベル種目を2パターン（スクワット日/デッドリフト日）で全身カバー |
+| target | 週2日のみ通えるジム初心者・再開者 |
+
+### STRUCTURE
+
+| Day | 種目 | Type | Sets × Reps |
+|---|---|---|---|
+| Day 1 | Squat | T1 | 4×5 |
+| Day 1 | Bench Press | T2 | 3×8 |
+| Day 1 | Barbell Row | T2 | 3×8 |
+| Day 2 | Deadlift | T1 | 1×5 |
+| Day 2 | Overhead Press | T2 | 3×8 |
+| Day 2 | Barbell Row | T2 | 3×8 |
+
+### IMPLEMENTED
+
+- seed ファイル: `seed/programs/barbell-2day-base.sql`
+- 新規 exercise なし（既存 squat/bench-press/barbell-row/deadlift/overhead-press を再利用）
+- ON CONFLICT (slug) DO NOTHING でべき等
+- 既存プログラム skip guard（既に存在する場合は早期 return）
+- tag 未存在時は graceful degradation（RAISE NOTICE のみ）
+- 確認クエリをコメント付きで付属
+
+### CHECK
+
+- typecheck: pass
+- build: pass
+- 既存プログラム影響: なし（既存 seed・enrollment・sessions に触れない）
+
+### DB_APPLY
+
+| 環境 | 状態 |
+|---|---|
+| local migration | seed SQL のみ（migration 不要） |
+| 本番 Supabase | **未実施** — Supabase Dashboard SQL Editor で以下を順番に実行 |
+
+**本番反映手順:**
+1. `seed/programs/program-metadata.sql` を実行（tags が未作成の場合のみ必要）
+2. `seed/programs/barbell-2day-base.sql` を実行
+
+---
+
 ## 2026-04-26 U-5: 休憩タイマー自動起動
 
 ### STATUS: CLOSED (2026-04-26)
