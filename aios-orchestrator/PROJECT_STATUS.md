@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — AIOS Dual-Agent Orchestrator
 
-最終更新: 2026-04-26（Phase 20 実装）
+最終更新: 2026-04-26（Phase 5〜20 / Task 1〜5 総括整理）
 
 ---
 
@@ -35,8 +35,8 @@
 | Phase 16 | real API 実データ artifact-export 運用 E2E 確認 | 2026-04-16 |
 | Phase 17 | real API 実データ collision 確認 E2E | 2026-04-16 |
 | Phase 18 | manifest diff（`manifest-diff` サブコマンド、88/88 PASS）| 2026-04-16 |
-| Phase 19 | export 差分レポート自動生成（`--report-output` / `--fail-on-diff`、CI 連携）| 2026-04-26 |
-| Phase 20 | artifact 内容 diff 比較（`content-diff` サブコマンド、15 テストケース）| 2026-04-26 |
+| Phase 19 | export 差分レポート自動生成（`--report-output` / `--fail-on-diff`、10/10 PASS）| 2026-04-26 |
+| Phase 20 | artifact 内容 diff 比較（`content-diff` サブコマンド、15/15 PASS）| 2026-04-26 |
 
 ---
 
@@ -107,12 +107,51 @@ python orchestrator.py content-diff \
 
 ---
 
+## テスト状況サマリ（2026-04-26 時点）
+
+| スイート | PASS | 備考 |
+|---|---|---|
+| test_phase18_manifest_diff.py | 88/88 | CLI テストに PYTHONIOENCODING=utf-8 追加済み |
+| test_phase19_export_diff_report.py | 10/10 | Windows encoding 修正込み |
+| test_phase20_artifact_content_diff.py | 15/15 | CLI tests 含む |
+| Phase 18〜20 合算 | **45/45** | |
+
+---
+
 ## 次フェーズ候補（未着手）
 
-| フェーズ候補 | 内容 | 優先度 |
+| フェーズ | 内容 | 推奨順 |
 |---|---|---|
-| Phase B | context 圧縮（古い messages を summary 化してトークン削減）| 低 |
-| Phase C | Google Sheets（Run_Log シート）への run_log 書き込み連携 | 低 |
+| Phase B | context 圧縮（古い messages を summary 化してトークン削減）| 1 |
+| Phase C | Google Sheets（Run_Log シート）への run_log 書き込み連携 | 2 |
+| Phase D | CI 統合（GitHub Actions で manifest-diff / content-diff を自動実行）| 3 |
+
+---
+
+## 運用ノート
+
+### テスト実行
+```bash
+cd dual-agent-poc/
+.venv_phase2/Scripts/python.exe -m pytest test_phase18_manifest_diff.py \
+    test_phase19_export_diff_report.py test_phase20_artifact_content_diff.py -v
+# → 45 passed
+```
+
+### Windows subprocess encoding
+CLI テストで日本語を含む出力を subprocess で読む場合は必ず `PYTHONIOENCODING=utf-8` を付与:
+```python
+subprocess.run([...], env={**os.environ, "PYTHONIOENCODING": "utf-8"}, ...)
+```
+
+### 自動開発タイムアウト
+`claude -p` のデフォルトタイムアウトは 600s（10分）。実装量が多い場合に timeout が起きうる。
+小さなフェーズ分割か、途中までの成果物を確認して人間が commit する運用が安全。
+
+### 禁止事項
+- `.env` / secrets / token / key / pem の中身表示
+- deploy / 外部 API 書き込み / 本番 DB 変更 / clasp push
+- delete / reset / force push
 
 ---
 
