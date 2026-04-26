@@ -1,5 +1,17 @@
 # PROJECT_STATUS
 
+## 2026-04-26 PWA化 安全調査
+
+### STATUS: 調査完了 / 実装は後回し
+
+調査結果は `docs/pwa-investigation.md` に記録済み。
+
+- Service Worker なし → `/train` / `/session-history` の古いキャッシュリスクはない
+- PWA Phase 1 は manifest + icon のみ（SW 追加なし）で低リスク実施可能
+- 実装は別タスク優先後に着手する
+
+---
+
 ## 2026-04-26 H-1: トレーニング履歴カレンダー表示
 
 ### STATUS: CLOSED (2026-04-26 / LIVE確認待ち)
