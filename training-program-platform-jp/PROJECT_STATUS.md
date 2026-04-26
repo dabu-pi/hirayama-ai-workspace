@@ -43,7 +43,23 @@
 
 - typecheck: pass
 - build: pass（session-history 1.19kB → 2.95kB）
-- LIVE: ユーザーによるブラウザ確認待ち
+
+### LIVE_CHECK — 2026-04-26 ブラウザ確認済み
+
+| 確認項目 | 結果 |
+|---|---|
+| `/session-history` 表示 | ✅ PASS |
+| カレンダーが既存一覧の上に配置される | ✅ PASS |
+| 日曜始まり | ✅ PASS |
+| 今月のトレーニング N回 表示 | ✅ PASS |
+| 実施日のマーク | ✅ PASS |
+| 複数回実施の件数表示 | ✅ PASS |
+| 今日のハイライト | ✅ PASS |
+| 日付タップで詳細表示 | ✅ PASS |
+| 前月/次月移動 | ✅ PASS |
+| 既存履歴一覧が残っている | ✅ PASS |
+| スマホ表示 | ✅ PASS |
+| Googleカレンダー連携 | 未実装（Phase 3 以降）|
 
 ---
 
