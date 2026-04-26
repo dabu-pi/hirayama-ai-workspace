@@ -2,7 +2,7 @@
 
 ## 2026-04-26 /profile display_name 編集機能 実機確認
 
-### STATUS: STATIC_CHECK PASS / LIVE_CHECK ユーザー確認待ち (2026-04-26)
+### STATUS: CLOSED (2026-04-26)
 
 ### PURPOSE
 
@@ -35,18 +35,37 @@
 | `/gym` → `/profile` 導線 | ✅ | `GymScreen.tsx:38` に `<Link href="/profile">` 実装済み |
 | typecheck | ✅ | pass（エラーなし） |
 
-### LIVE_CHECK — ユーザーによるブラウザ確認待ち
+### LIVE_CHECK — 2026-04-26 ブラウザ確認済み
+
+テストユーザーを新規作成し、一般ユーザー・管理者の両視点で確認。
 
 | 確認項目 | 結果 |
 |---|---|
-| `/profile` が正常表示される | 未確認 |
-| 現在の display_name がフォームに表示される | 未確認 |
-| display_name を変更・保存できる | 未確認 |
-| 保存後に成功フィードバックが表示される | 未確認 |
-| リロード後も変更後の display_name が維持される | 未確認 |
-| `/admin/members` 側に display_name が反映される | 未確認 |
-| member_name が変わっていない | 未確認 |
-| membership_status が変わっていない | 未確認 |
+| `/profile` が正常表示される | ✅ PASS |
+| 現在の display_name がフォームに表示される | ✅ PASS |
+| display_name を変更・保存できる | ✅ PASS |
+| 保存後に成功フィードバックが表示される | ✅ PASS |
+| リロード後も変更後の display_name が維持される | ✅ PASS |
+| `/admin/members` 側に display_name が反映される | ✅ PASS |
+| member_name が変わっていない | ✅ PASS |
+| membership_status が変わっていない | ✅ PASS |
+
+### 会員管理フェーズ完了まとめ（Phase 1）
+
+| 機能 | 実装コミット | 確認日 |
+|---|---|---|
+| member_name フィールド追加（管理者用識別名） | `63f6aed` | 2026-04-24 |
+| display_name ユーザー本人編集（/profile） | `d27d117` | 2026-04-26 |
+| /admin/members 利用状況集計 Phase 1 | `835a486` | 2026-04-26 |
+
+### PHASE_2 候補（持ち越し）
+
+| 項目 | 内容 |
+|---|---|
+| ログイン回数 | `public.user_login_events` テーブル + Auth Webhook で記録 |
+| スマホカードUI化 | `@media (max-width: 639px)` でカード表示に切り替え |
+| PC横スクロール改善 | 列幅最適化または重要度低い列の折りたたみ |
+| DB view / RPC 化 | 会員数増加時にメモリ集計から移行 |
 
 ---
 
