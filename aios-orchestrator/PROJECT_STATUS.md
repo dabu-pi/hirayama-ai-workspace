@@ -1,15 +1,14 @@
 # PROJECT_STATUS.md — AIOS Dual-Agent Orchestrator
 
-最終更新: 2026-04-26（Phase 19 実装）
+最終更新: 2026-04-26（Phase 20 実装）
 
 ---
 
 ## 現在地
 
-**Phase 19 CLOSED — export 差分レポート自動生成（CI 連携）が完成した状態**
+**Phase 20 CLOSED — artifact 内容 diff 比較（content-diff サブコマンド）が完成した状態**
 
-`dual-agent-poc/` 配下に Task 1〜5 および Phase 5〜19 がすべて実装・テスト済み。
-次フェーズ（Phase 20）は未着手。
+`dual-agent-poc/` 配下に Task 1〜5 および Phase 5〜20 がすべて実装・テスト済み。
 
 ---
 
@@ -37,6 +36,7 @@
 | Phase 17 | real API 実データ collision 確認 E2E | 2026-04-16 |
 | Phase 18 | manifest diff（`manifest-diff` サブコマンド、88/88 PASS）| 2026-04-16 |
 | Phase 19 | export 差分レポート自動生成（`--report-output` / `--fail-on-diff`、CI 連携）| 2026-04-26 |
+| Phase 20 | artifact 内容 diff 比較（`content-diff` サブコマンド、15 テストケース）| 2026-04-26 |
 
 ---
 
@@ -56,6 +56,7 @@
 | `artifact_diff.py` | ターン間 artifact 差分表示 |
 | `artifact_manifest_diff.py` | manifest 間 diff（added/removed/changed/unchanged）|
 | `export_diff_reporter.py` | manifest diff 結果をファイルに書き出す（CI 連携）|
+| `artifact_content_diff.py` | artifact 実ファイル内容の unified diff 比較（Phase 20）|
 | `dashboard_reporter.py` | 実行結果サマリを表示する |
 | `schema.sql` | DB スキーマ定義 |
 | `requirements.txt` | openai / anthropic / python-dotenv |
@@ -93,6 +94,15 @@ python orchestrator.py manifest-diff \
     [--verbose] [--json] \
     [--report-output ./reports/diff.txt] \
     [--fail-on-diff]
+
+# content-diff（Phase 20: artifact ファイル内容の diff 比較）
+python orchestrator.py content-diff \
+    --old-dir ./data/export_v1 \
+    --new-dir ./data/export_v2 \
+    [--context 3] \
+    [--verbose] [--no-diff] [--json] \
+    [--report-output ./reports/content_diff.txt] \
+    [--fail-on-diff]
 ```
 
 ---
@@ -101,7 +111,6 @@ python orchestrator.py manifest-diff \
 
 | フェーズ候補 | 内容 | 優先度 |
 |---|---|---|
-| Phase 20 | artifact 内容（コードテキスト）の diff 比較 | 低 |
 | Phase B | context 圧縮（古い messages を summary 化してトークン削減）| 低 |
 | Phase C | Google Sheets（Run_Log シート）への run_log 書き込み連携 | 低 |
 

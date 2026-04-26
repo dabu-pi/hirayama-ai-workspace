@@ -71,11 +71,17 @@ from artifact_diff import (
     compute_diff, diff_stat, consecutive_pairs,
     find_by_prefix, find_prev_in_group, find_next_in_group,
 )
-from artifact_exporter import export_artifacts, write_manifest
+from artifact_exporter import export_artifacts, write_manifest, MANIFEST_FILENAME
 from artifact_manifest_diff import (
     diff_manifests, print_diff_report, ManifestLoadError,
 )
 from export_diff_reporter import write_diff_report as _write_diff_report
+from artifact_content_diff import (
+    compare_export_dirs,
+    format_content_diff_report,
+    result_to_json_dict as _content_result_to_json,
+    write_content_diff_report,
+)
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -1439,6 +1445,85 @@ def command_manifest_diff(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_content_diff(args: argparse.Namespace) -> int:
+    """
+    2 つの export ディレクトリの artifact ファイル内容を比較する（Phase 20）。
+
+    --old-dir / --new-dir で指定した export ディレクトリ内の
+    artifact_export_manifest.json を読み込み、artifact_id で対応付けして
+    実ファイルの内容を unified diff で比較する。
+
+    --old-manifest / --new-manifest で manifest ファイルを明示指定することもできる。
+
+    出力オプション:
+      --verbose:       same（内容一致）エントリも表示する
+      --no-diff:       unified diff 本文を省略して統計のみ表示する
+      --json:          JSON 形式で出力する
+      --report-output: レポートをファイルに保存するパス
+      --fail-on-diff:  差分がある場合に exit 1 を返す（CI ゲート用）
+    """
+    import json as _json
+
+    old_dir        = Path(args.old_dir)
+    new_dir        = Path(args.new_dir)
+    context        = getattr(args, "context", 3)
+    verbose        = getattr(args, "verbose", False)
+    no_diff        = getattr(args, "no_diff", False)
+    as_json        = getattr(args, "json_output", False)
+    report_output  = getattr(args, "report_output", None)
+    fail_on_diff   = getattr(args, "fail_on_diff", False)
+
+    # manifest ファイルパスの決定（明示 or デフォルト）
+    old_manifest_path = Path(getattr(args, "old_manifest", None) or (old_dir / MANIFEST_FILENAME))
+    new_manifest_path = Path(getattr(args, "new_manifest", None) or (new_dir / MANIFEST_FILENAME))
+
+    # manifest 読み込み
+    for label, mp in [("old", old_manifest_path), ("new", new_manifest_path)]:
+        if not mp.exists():
+            print(f"[ERROR] {label} manifest が見つかりません: {mp}", file=sys.stderr)
+            return 1
+
+    try:
+        old_manifest = _json.loads(old_manifest_path.read_text(encoding="utf-8"))
+        new_manifest = _json.loads(new_manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"[ERROR] manifest 読み込みエラー: {exc}", file=sys.stderr)
+        return 1
+
+    # export ディレクトリ存在確認
+    for label, d in [("old", old_dir), ("new", new_dir)]:
+        if not d.exists():
+            print(f"[ERROR] {label} ディレクトリが見つかりません: {d}", file=sys.stderr)
+            return 1
+
+    # 内容比較
+    result = compare_export_dirs(old_dir, new_dir, old_manifest, new_manifest, context=context)
+
+    # 出力
+    show_diff = not no_diff
+    if as_json:
+        print(_json.dumps(_content_result_to_json(result), ensure_ascii=False, indent=2))
+    else:
+        print(format_content_diff_report(result, verbose=verbose, show_diff=show_diff))
+
+    # レポートファイル保存
+    if report_output:
+        fmt = "json" if as_json else "text"
+        try:
+            saved_path = write_content_diff_report(
+                result, report_output, fmt=fmt, verbose=verbose, show_diff=show_diff,
+            )
+            print(f"  [report] 保存: {saved_path}", file=sys.stderr)
+        except (OSError, ValueError) as exc:
+            print(f"  [WARN] レポートファイル書き込み失敗: {exc}", file=sys.stderr)
+
+    # CI ゲート
+    if fail_on_diff and result.has_diff:
+        return 1
+
+    return 0
+
+
 def _print_single_diff(left: dict, right: dict, context: int, indent: str = "") -> int:
     """
     2 つの artifact の diff を表示するヘルパー。
@@ -1549,6 +1634,30 @@ def _build_parser() -> argparse.ArgumentParser:
     p_mdiff.add_argument("--fail-on-diff", action="store_true", dest="fail_on_diff",
                          help="差分がある場合に exit 1 を返す（Phase 19: CI ゲート用）")
 
+    # content-diff (Phase 20)
+    p_cdiff = sub.add_parser("content-diff",
+                             help="2 つの export ディレクトリの artifact ファイル内容を比較する")
+    p_cdiff.add_argument("--old-dir",      required=True,  dest="old_dir",
+                         help="前回 export ディレクトリのパス")
+    p_cdiff.add_argument("--new-dir",      required=True,  dest="new_dir",
+                         help="今回 export ディレクトリのパス")
+    p_cdiff.add_argument("--old-manifest", default=None,   dest="old_manifest",
+                         help="前回 manifest JSON パス（省略時: --old-dir/artifact_export_manifest.json）")
+    p_cdiff.add_argument("--new-manifest", default=None,   dest="new_manifest",
+                         help="今回 manifest JSON パス（省略時: --new-dir/artifact_export_manifest.json）")
+    p_cdiff.add_argument("--context",      type=int, default=3, dest="context",
+                         help="unified diff のコンテキスト行数（デフォルト: 3）")
+    p_cdiff.add_argument("--verbose",      action="store_true",
+                         help="same（内容一致）エントリも表示する")
+    p_cdiff.add_argument("--no-diff",      action="store_true", dest="no_diff",
+                         help="unified diff 本文を省略して統計のみ表示する")
+    p_cdiff.add_argument("--json",         action="store_true", dest="json_output",
+                         help="JSON 形式で出力する")
+    p_cdiff.add_argument("--report-output", default=None, dest="report_output",
+                         help="レポートをファイルに保存するパス（Phase 20）")
+    p_cdiff.add_argument("--fail-on-diff", action="store_true", dest="fail_on_diff",
+                         help="差分がある場合に exit 1 を返す（CI ゲート用）")
+
     # artifact-diff
     p_diff = sub.add_parser("artifact-diff", help="artifact のターン間差分を表示する")
     p_diff.add_argument("--conv-id",      required=True, dest="conv_id",      help="conversation_id")
@@ -1580,6 +1689,7 @@ def main() -> int:
         "artifact-diff":   command_artifact_diff,
         "artifact-export": command_artifact_export,
         "manifest-diff":   command_manifest_diff,
+        "content-diff":    command_content_diff,
     }
 
     handler = dispatch.get(args.command)
