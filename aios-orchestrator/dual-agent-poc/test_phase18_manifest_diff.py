@@ -20,6 +20,7 @@ test_phase18_manifest_diff.py — Phase 18: manifest diff テスト
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -426,6 +427,7 @@ def test_cli_text_output():
              "--old-manifest", str(old_path),
              "--new-manifest", str(new_path)],
             capture_output=True, text=True, encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             cwd=str(Path(_ORCHESTRATOR).parent),
         )
         ok("終了コード 0", result.returncode == 0, got=result.returncode)
@@ -455,6 +457,7 @@ def test_cli_json_output():
              "--new-manifest", str(new_path),
              "--json"],
             capture_output=True, text=True, encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             cwd=str(Path(_ORCHESTRATOR).parent),
         )
         ok("終了コード 0", result.returncode == 0)
@@ -484,6 +487,7 @@ def test_cli_missing_file_error():
          "--old-manifest", "/nonexistent/old.json",
          "--new-manifest", "/nonexistent/new.json"],
         capture_output=True, text=True, encoding="utf-8",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
         cwd=str(Path(_ORCHESTRATOR).parent),
     )
     ok("終了コード 1", result.returncode == 1, got=result.returncode)

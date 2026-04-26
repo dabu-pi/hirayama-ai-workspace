@@ -75,6 +75,7 @@ from artifact_exporter import export_artifacts, write_manifest
 from artifact_manifest_diff import (
     diff_manifests, print_diff_report, ManifestLoadError,
 )
+from export_diff_reporter import write_diff_report as _write_diff_report
 
 # ─── デフォルト設定 ───────────────────────────────────────────────────────────
 _DEFAULT_DB   = str(Path(__file__).parent / "data" / "store.db")
@@ -1358,12 +1359,14 @@ def command_artifact_export(args: argparse.Namespace) -> int:
 
 def command_manifest_diff(args: argparse.Namespace) -> int:
     """
-    2 つの manifest JSON を比較して差分を表示する（Phase 18）。
+    2 つの manifest JSON を比較して差分を表示する（Phase 18 / Phase 19）。
 
-    --old-manifest: 比較元（前回 export）の manifest パス
-    --new-manifest: 比較先（今回 export）の manifest パス
-    --verbose:      unchanged エントリも表示する
-    --json:         差分を JSON 形式で出力する（デフォルトは人間可読テキスト）
+    --old-manifest:   比較元（前回 export）の manifest パス
+    --new-manifest:   比較先（今回 export）の manifest パス
+    --verbose:        unchanged エントリも表示する
+    --json:           差分を JSON 形式で出力する（デフォルトは人間可読テキスト）
+    --report-output:  レポートをファイルに保存するパス（Phase 19）
+    --fail-on-diff:   差分がある場合に exit 1 を返す（CI ゲート用, Phase 19）
 
     判定カテゴリ:
       added     今回の manifest にのみ存在する artifact
@@ -1375,10 +1378,12 @@ def command_manifest_diff(args: argparse.Namespace) -> int:
     """
     import json as _json  # 関数スコープで json を使う（モジュールレベルは import 済み）
 
-    old_path = args.old_manifest
-    new_path = args.new_manifest
-    verbose  = getattr(args, "verbose", False)
-    as_json  = getattr(args, "json_output", False)
+    old_path      = args.old_manifest
+    new_path      = args.new_manifest
+    verbose       = getattr(args, "verbose", False)
+    as_json       = getattr(args, "json_output", False)
+    report_output = getattr(args, "report_output", None)
+    fail_on_diff  = getattr(args, "fail_on_diff", False)
 
     try:
         result = diff_manifests(old_path, new_path)
@@ -1402,6 +1407,7 @@ def command_manifest_diff(args: argparse.Namespace) -> int:
             "conv_id":       result.new_conv_id,
             "old_timestamp": result.old_timestamp,
             "new_timestamp": result.new_timestamp,
+            "has_diff":      result.has_diff,
             "summary": {
                 "added":     len(result.added),
                 "removed":   len(result.removed),
@@ -1416,6 +1422,19 @@ def command_manifest_diff(args: argparse.Namespace) -> int:
         print(_json.dumps(out, ensure_ascii=False, indent=2))
     else:
         print_diff_report(result, verbose=verbose)
+
+    # Phase 19: レポートをファイルに保存
+    if report_output:
+        fmt = "json" if as_json else "text"
+        try:
+            saved_path = _write_diff_report(result, report_output, fmt=fmt, verbose=verbose)
+            print(f"  [report] 保存: {saved_path}", file=sys.stderr)
+        except (OSError, ValueError) as exc:
+            print(f"  [WARN] レポートファイル書き込み失敗: {exc}", file=sys.stderr)
+
+    # Phase 19: CI ゲート — 差分があれば exit 1
+    if fail_on_diff and result.has_diff:
+        return 1
 
     return 0
 
@@ -1525,6 +1544,10 @@ def _build_parser() -> argparse.ArgumentParser:
                          help="unchanged エントリも表示する")
     p_mdiff.add_argument("--json",         action="store_true", dest="json_output",
                          help="差分を JSON 形式で出力する")
+    p_mdiff.add_argument("--report-output", default=None, dest="report_output",
+                         help="レポートをファイルに保存するパス（Phase 19: CI 連携用）")
+    p_mdiff.add_argument("--fail-on-diff", action="store_true", dest="fail_on_diff",
+                         help="差分がある場合に exit 1 を返す（Phase 19: CI ゲート用）")
 
     # artifact-diff
     p_diff = sub.add_parser("artifact-diff", help="artifact のターン間差分を表示する")
