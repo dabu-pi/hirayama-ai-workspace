@@ -48,7 +48,7 @@
 | ID | タスク | 理由 | 影響範囲 | リスク |
 |---|---|---|---|---|
 | V-1 | S-7 Restart Program E2E確認 | 静的検証 PASS。LIVE E2E は完走 or Supabase 直接設定が必要 | Summary画面のみ | 低（コードは静的pass済み） |
-| V-2 | 計算ボタン機能化（基本1RM） | ✅ 完了（2026-04-26）Epley式モーダル実装。DB保存なし | WorkoutScreen上部ツールバー | — |
+| V-2 | 計算ボタン機能化（基本1RM） | ✅ 完了・LIVE確認済み（2026-04-26）Epley式モーダル。DB保存なし | WorkoutScreen上部ツールバー | — |
 
 ### 中優先
 
