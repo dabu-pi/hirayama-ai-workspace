@@ -82,18 +82,28 @@ select slug, is_public from public.programs
   order by slug;
 ```
 
-### LIVE_CHECK — ユーザーによるブラウザ確認待ち
+### DB_APPLY — 2026-04-26 本番反映済み
 
 | 確認項目 | 結果 |
 |---|---|
-| 本番 DB 反映（Step A〜C） | 未実施 |
-| `/programs` に5本目が表示される | 未確認 |
+| seed 実行 | ✅ PASS |
+| programs に barbell-2day-base 存在 | ✅ PASS |
+| program_weeks | ✅ 4件 |
+| program_days | ✅ 8件 |
+| program_day_exercises | ✅ 24件 |
+| 既存プログラム（本番 programs 合計 10件確認） | ✅ 消えていない |
+
+### LIVE_CHECK — 2026-04-26 ブラウザ確認
+
+| 確認項目 | 結果 |
+|---|---|
+| `/programs` に5本目が表示される | ✅ PASS |
+| カード表示（Beginner / Strength / Barbell / Full Body / 2 days / 4 weeks） | ✅ PASS |
 | プログラム詳細が表示される | 未確認 |
 | Start Program できる | 未確認 |
 | `/train` に進める | 未確認 |
 | Week / Day 表示が自然 | 未確認 |
-| 既存4プログラムが表示されている | 未確認 |
-| 既存ユーザーの active enrollment に影響なし | 未確認 |
+| 既存ユーザーの active enrollment に影響なし | ✅ 問題なし |
 
 ---
 

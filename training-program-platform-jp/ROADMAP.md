@@ -54,7 +54,7 @@
 
 | ID | タスク | 理由 | 影響範囲 | リスク |
 |---|---|---|---|---|
-| C-8 | 5本目プログラム seed 追加 | ✅ seed 追加済み（2026-04-26）barbell-2day-base / 本番DB反映は手動SQL実行待ち | seed SQL | — |
+| C-8 | 5本目プログラム seed 追加 | ✅ 本番反映済み（2026-04-26）barbell-2day-base 一覧表示 PASS / detail/start/train は未確認 | seed SQL | — |
 | U-5 | 休憩タイマー自動起動 | ✅ 完了（2026-04-26）既実装確認 + save失敗時キャンセル追加 | WorkoutScreen | — |
 | A-1 | Admin プログラム登録UI | 現状SQLのみで管理者が新プログラムを追加できない | /admin 配下に新ページ | 中 |
 
