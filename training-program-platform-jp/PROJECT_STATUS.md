@@ -52,9 +52,48 @@
 | local migration | seed SQL のみ（migration 不要） |
 | 本番 Supabase | **未実施** — Supabase Dashboard SQL Editor で以下を順番に実行 |
 
-**本番反映手順:**
-1. `seed/programs/program-metadata.sql` を実行（tags が未作成の場合のみ必要）
-2. `seed/programs/barbell-2day-base.sql` を実行
+**本番反映手順（Supabase Dashboard SQL Editor）:**
+
+Step A: tags 存在確認（3行返れば program-metadata.sql 不要）
+
+```sql
+select slug, label, axis from public.program_tags
+where slug in ('strength', 'barbell', 'full-body') order by axis, slug;
+```
+
+Step A で3行返らない場合 → `seed/programs/program-metadata.sql` を先に実行。
+
+Step B: `seed/programs/barbell-2day-base.sql` の内容を全コピーして実行。
+
+Step C: 反映確認（各クエリが weeks=4 / days=8 / exercises=24 であること）
+
+```sql
+select count(*) as weeks from public.program_weeks pw
+  join public.programs p on p.id = pw.program_id where p.slug = 'barbell-2day-base';
+select count(*) as days from public.program_days pd
+  join public.program_weeks pw on pw.id = pd.program_week_id
+  join public.programs p on p.id = pw.program_id where p.slug = 'barbell-2day-base';
+select count(*) as exercises from public.program_day_exercises pde
+  join public.program_days pd on pd.id = pde.program_day_id
+  join public.program_weeks pw on pw.id = pd.program_week_id
+  join public.programs p on p.id = pw.program_id where p.slug = 'barbell-2day-base';
+select slug, is_public from public.programs
+  where slug in ('gzclp-base','starting-strength-base','upper-lower-base','dumbbell-full-body-base')
+  order by slug;
+```
+
+### LIVE_CHECK — ユーザーによるブラウザ確認待ち
+
+| 確認項目 | 結果 |
+|---|---|
+| 本番 DB 反映（Step A〜C） | 未実施 |
+| `/programs` に5本目が表示される | 未確認 |
+| プログラム詳細が表示される | 未確認 |
+| Start Program できる | 未確認 |
+| `/train` に進める | 未確認 |
+| Week / Day 表示が自然 | 未確認 |
+| 既存4プログラムが表示されている | 未確認 |
+| 既存ユーザーの active enrollment に影響なし | 未確認 |
 
 ---
 
