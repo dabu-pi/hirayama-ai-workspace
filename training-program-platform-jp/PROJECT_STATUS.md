@@ -37,7 +37,30 @@
 
 - typecheck: pass
 - build: pass
-- LIVE: ユーザーによるブラウザ確認待ち
+
+### LIVE_CHECK — 2026-04-26 ブラウザ確認済み
+
+| 確認項目 | 結果 |
+|---|---|
+| `/gym` 表示 | ✅ PASS |
+| 今月のトレーニング回数 | ✅ PASS |
+| 最終トレーニング日 | ✅ PASS |
+| クイックリンク（4項目） | ✅ PASS |
+| お知らせ | ✅ PASS |
+| スポンサー・協力店 | ✅ PASS |
+| アカウントリンク | ✅ PASS |
+| 通信機能スロット（近日対応予定） | ✅ PASS（将来用枠のみ、機能未実装） |
+| スマホ表示 | 未確認 |
+| BottomTabBar 重なり | 未確認 |
+
+### NEXT_PHASES（G-2 以降）
+
+| フェーズ | 内容 |
+|---|---|
+| G-2 | `gym_announcements` テーブル + 管理者投稿 |
+| G-3 | お知らせ未読バッジ（`gym_announcement_reads` + BottomTabBar） |
+| G-4 | `gym_sponsors` テーブル + 管理者登録 |
+| G-5 | 通信機能（相談・パーソナル申込フォーム / `gym_contact_requests`） |
 
 ---
 
