@@ -1,5 +1,52 @@
 # PROJECT_STATUS
 
+## 2026-04-26 H-1: トレーニング履歴カレンダー表示
+
+### STATUS: CLOSED (2026-04-26 / LIVE確認待ち)
+
+### PURPOSE
+
+`/session-history` に月間カレンダーを追加し、「今月何回トレーニングしたか」「どの日に実施したか」を一目で分かるようにする。
+
+### IMPLEMENTED
+
+| 機能 | 内容 |
+|---|---|
+| 月間カレンダー | 日曜始まり・7列グリッド |
+| 月移動 | ‹ › ボタンで前月/次月移動 |
+| 今月実施回数 | ヘッダーに「今月のトレーニング: N回」 |
+| 実施日のマーク | `--accent-dim` 背景 + 数字色変更 |
+| 複数回実施 | dot に件数を小さく表示 |
+| 今日 | `--accent` 枠線で強調 |
+| 日付タップ | セッション詳細を下部に表示（詳細リンクあり） |
+| 既存履歴一覧 | そのまま残す（カレンダーの下） |
+| Googleカレンダー連携 | Phase 3 以降に持ち越し |
+
+### CHANGED_FILES
+
+- `components/history/TrainingCalendar.tsx`（新規 client component）
+- `components/history/TrainingCalendar.module.css`（新規）
+- `components/history/SessionHistoryScreen.tsx`（`<TrainingCalendar sessions={sessions} />` 追加）
+
+### DATA
+
+- `sessions` は既存の `getSessionHistoryView()` から取得済みデータを再利用（新規 DB クエリなし）
+- `status === 'completed'` のみカレンダーにマーク
+- `session.startedAt` は既に JST "YYYY-MM-DD" 形式（`jstDateSlice` 適用済み）
+
+### KNOWN_LIMITS
+
+- 直近 20 件のみ取得（`SESSION_LIST_LIMIT = 20`）→ 高頻度ユーザーでは月をさかのぼると未表示になる可能性
+- Phase 2 候補: カレンダー専用クエリで月単位全件取得
+
+### CHECK
+
+- typecheck: pass
+- build: pass（session-history 1.19kB → 2.95kB）
+- LIVE: ユーザーによるブラウザ確認待ち
+
+---
+
 ## 2026-04-26 C-8: 5本目プログラム seed 追加
 
 ### STATUS: CLOSED (seed追加済み / 本番DB反映は手動SQL実行待ち)

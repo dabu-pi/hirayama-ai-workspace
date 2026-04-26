@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { WorkoutSessionListItem } from "@/types/workout";
 
 import { ArchiveSessionButton } from "./ArchiveSessionButton";
+import { TrainingCalendar } from "./TrainingCalendar";
 import styles from "./SessionHistoryScreen.module.css";
 
 type SessionHistoryScreenProps = {
@@ -34,6 +35,8 @@ export function SessionHistoryScreen({
           <h1 className={styles.title}>Recent Sessions</h1>
         </div>
       </header>
+
+      <TrainingCalendar sessions={sessions} />
 
       {errorMessage ? (
         <section className={`${styles.statusCard} ${styles.errorCard}`}>
