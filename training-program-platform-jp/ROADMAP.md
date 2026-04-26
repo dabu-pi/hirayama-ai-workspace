@@ -47,7 +47,7 @@
 
 | ID | タスク | 理由 | 影響範囲 | リスク |
 |---|---|---|---|---|
-| V-1 | S-7 Restart Program E2E確認 | ユーザー完走後フローが未確認。実害が出る前に確認 | Summary画面のみ | 低（コードは静的pass済み） |
+| V-1 | S-7 Restart Program E2E確認 | 静的検証 PASS。LIVE E2E は完走 or Supabase 直接設定が必要 | Summary画面のみ | 低（コードは静的pass済み） |
 | V-2 | 計算ボタン機能化（基本1RM） | UIに「計算」ボタンが存在するのに押しても何も起きない | WorkoutScreen上部ツールバー | 低（UI追加のみ） |
 
 ### 中優先

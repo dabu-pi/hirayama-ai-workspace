@@ -1,5 +1,47 @@
 # PROJECT_STATUS
 
+## 2026-04-26 V-1: S-7 Restart Program 静的検証
+
+### STATUS: STATIC_CHECK PASS / LIVE_E2E 未実施（完走が必要）
+
+### PURPOSE
+
+プログラム完走後に「プログラムを最初から」ボタンが正しく動作するか確認する。
+
+### STATIC_CHECK (2026-04-26)
+
+| 確認項目 | 結果 | 根拠 |
+|---|---|---|
+| Restart ボタンの表示条件 | ✅ `isProgramCompleted && programId !== null` のみ | `WorkoutSummaryScreen.tsx:89` |
+| `isProgramCompleted` 判定 | ✅ `findNextProgramDayId` が null → 最終 day | `workout-summary.ts:402-414` |
+| 既存 completed enrollment の保持 | ✅ INSERT のみ。completed row には触れない | `restart-program.ts:155-168` |
+| 重複 INSERT 防止 | ✅ 同一 program の active 行があれば reused を返す | `restart-program.ts:145-153` |
+| 新 enrollment が Week1/Day1 を向く | ✅ `resolveFirstProgramDayId` (week_number=1, day_number=1) | `restart-program.ts:135` |
+| user_id スコープ | ✅ `auth.getUser()` でサーバー側取得、INSERT に明示 | `route.ts:29` |
+| DB unique constraint との整合 | ✅ completed 後は active row なし → INSERT 成功 | `migration 000021` |
+| 成功後キャッシュ無効化 | ✅ `/`, `/train`, `/programs` を revalidatePath | `route.ts:110-112` |
+| 成功後の画面遷移 | ✅ `redirectUrl: "/"` → Home でカード即時表示 | `RestartProgramButton.tsx:68-70` |
+| エラー表示 | ✅ `insert_failed` / `program_not_found` / `first_day_not_found` を適切に表示 | `RestartProgramButton.tsx:56-61` |
+
+### EDGE_CASE（実害なし）
+
+- active Program B を持つユーザーが completed Program A の Summary に直接遷移して Restart → DB unique constraint で `insert_failed` → graceful error 表示
+- 通常の導線では発生しない
+
+### LIVE_E2E の制約
+
+Restart ボタンは「最終 day のセッション完了後 Summary」でのみ表示される。
+最短の GZCLP (9 days) を実際に完走するか、Supabase ダッシュボードで enrollment を最終 day に直接セットして確認する必要がある。
+
+**Supabase 直接確認による最小手順（推奨）:**
+1. SQL Editor で enrollment の `current_program_day_id` を最終 day ID に更新
+2. その day の session を開始して Finish
+3. Summary で「プログラムを最初から」ボタンが表示されるか確認
+4. 押下後 Home で新しい enrollment カードが表示されるか確認
+5. 旧 completed enrollment が残っているか確認
+
+---
+
 ## 2026-04-26 ROADMAP棚卸し — 会員管理Phase 1完了時点
 
 ### 完了エリアサマリー（2026-04-26 時点）
