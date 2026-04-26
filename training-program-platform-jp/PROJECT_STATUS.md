@@ -1,5 +1,50 @@
 # PROJECT_STATUS
 
+## 2026-04-26 U-5: 休憩タイマー自動起動
+
+### STATUS: CLOSED (2026-04-26)
+
+### PURPOSE
+
+セット完了後に休憩タイマーを自動起動する。
+
+### FINDING
+
+`startRestTimer()` は実装時点（U-1〜U-4 フェーズ）からすでに `handleComplete` の optimistic update 直後（line 969）に実装済みだった。
+ROADMAP の「中優先・未実装」は prototype README の注記をもとにした誤記入だったため、今回訂正。
+
+### IMPLEMENTED (今回の追加修正)
+
+**save 失敗時のタイマーキャンセル（3行追加）:**
+
+`handleComplete` の catch ブロックで、optimistic に開始したタイマーをロールバックするよう修正。
+変更前: save 失敗時もタイマーが走り続ける
+変更後: save 失敗 → UI ロールバック + タイマーキャンセル
+
+```typescript
+// catch ブロックに追加
+restEndTimeRef.current = null;
+clearRestDoneTimeout();
+setRestSecondsLeft(null);
+```
+
+### 既存の自動起動動作（変更なし）
+
+| 条件 | タイマー動作 |
+|---|---|
+| セット完了タップ | 即時 auto-start（optimistic）|
+| save 成功 | タイマー継続 |
+| save 失敗 | タイマーキャンセル（今回追加） |
+| セッション完了済み / キャンセル済み | `handleComplete` が return → タイマー起動なし |
+| 手動タイマーボタン | 従来通り start / cancel |
+
+### CHECK
+
+- typecheck: pass
+- build: pass
+
+---
+
 ## 2026-04-26 V-2: 1RM計算ボタン実装
 
 ### STATUS: CLOSED / LIVE確認済み (2026-04-26)

@@ -1008,6 +1008,10 @@ export function WorkoutScreen({
       );
       updateIncompleteSetCount(1);
       setErrorMessage(error instanceof Error ? error.message : "セット完了に失敗しました。");
+      // Cancel the optimistically started rest timer — set was not actually saved.
+      restEndTimeRef.current = null;
+      clearRestDoneTimeout();
+      setRestSecondsLeft(null);
     } finally {
       setPendingMutation(null);
     }
