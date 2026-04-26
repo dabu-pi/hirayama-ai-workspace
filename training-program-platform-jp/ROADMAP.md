@@ -1,6 +1,105 @@
 # ROADMAP
 
-最終更新: 2026-04-16（U-1〜U-4: ワークアウト画面 UX 改善 — タイマー機能化 / Reps 初期値 / Target クリックで Reps 反映 / Unlock 楽観的更新）
+最終更新: 2026-04-26（会員管理 Phase 1 CLOSED / 棚卸し完了 / 次フェーズ候補整理）
+
+---
+
+## 現在地（2026-04-26）棚卸しサマリー
+
+### 完了済みエリア
+
+| エリア | 状態 |
+|---|---|
+| トレーニング基本フロー（Programs→Train→Summary） | ✅ live 確認済み |
+| セッション記録（重量・回数・完了チェック・ロック） | ✅ |
+| Add Set / Swap / Add Exercise | ✅ |
+| 休憩タイマー（手動起動 1:30 固定） | ✅ |
+| ワークアウト経過タイマー（U-1） | ✅ |
+| Reps 初期値（U-2）/ Target→Reps（U-3）/ Unlock楽観的更新（U-4） | ✅ |
+| Day progression・re-enroll・idempotency guard | ✅ |
+| Session History / Detail | ✅ |
+| Home dashboard（Progress / Volume / e1RM Trend） | ✅ |
+| IA redesign（BottomTabBar） | ✅ |
+| Programs 4本（GZCLP / SS / UL / Dumbbell） + metadata + filter | ✅ |
+| Auth（Email/Password + RLS + membership guard） | ✅ |
+| **会員管理 Phase 1**（member_name / display_name /profile / admin集計） | **✅ 2026-04-26** |
+| 限定公開（Vercel live） | ✅ |
+
+### スタブのみ・未動作
+
+| 項目 | 状態 | 場所 |
+|---|---|---|
+| 計算ボタン（1RM/Calc） | UIボタンあり・onClick未実装 | `WorkoutScreen.tsx:1348` |
+| 休憩タイマー自動起動（セット完了後） | 手動起動のみ | `WorkoutScreen.tsx` |
+
+### 確認待ち
+
+| 項目 | 状態 |
+|---|---|
+| S-7: Restart Program ユーザー E2E | 静的検証済み・実ユーザー E2E 未確認 |
+| B-6: sign up 429 | 外部レート制限（低優先） |
+
+---
+
+## 次フェーズ候補と優先度（2026-04-26 棚卸し）
+
+### 高優先
+
+| ID | タスク | 理由 | 影響範囲 | リスク |
+|---|---|---|---|---|
+| V-1 | S-7 Restart Program E2E確認 | ユーザー完走後フローが未確認。実害が出る前に確認 | Summary画面のみ | 低（コードは静的pass済み） |
+| V-2 | 計算ボタン機能化（基本1RM） | UIに「計算」ボタンが存在するのに押しても何も起きない | WorkoutScreen上部ツールバー | 低（UI追加のみ） |
+
+### 中優先
+
+| ID | タスク | 理由 | 影響範囲 | リスク |
+|---|---|---|---|---|
+| C-8 | 5本目プログラム seed 追加 | コンテンツ多様性。4本では選択肢が少ない | seed SQL + live反映 | 低 |
+| U-5 | 休憩タイマー自動起動オプション | Boostcamp準拠・セット完了後に自動開始したい | WorkoutScreen | 中（state管理追加） |
+| A-1 | Admin プログラム登録UI | 現状SQLのみで管理者が新プログラムを追加できない | /admin 配下に新ページ | 中 |
+
+### 低優先
+
+| ID | タスク | 理由 |
+|---|---|---|
+| M-2 | /admin/members スマホカードUI | Phase 2 持ち越し |
+| M-3 | ログイン回数（user_login_events） | Phase 2 持ち越し |
+| M-4 | PC横スクロール改善 | Phase 2 持ち越し |
+| M-5 | DB view / RPC 化 | 会員数増加時に検討 |
+| C-9 | Week preview 拡張 | T1/T2/T3折りたたみ |
+| P-1 | PWA 最適化 | 継続利用者増加後 |
+
+---
+
+## フェーズ構成提案（2026-04-26 版）
+
+### Phase 2: トレーニング実行UX 完成（推奨次フェーズ）
+
+- V-1: S-7 Restart E2E 確認
+- V-2: 計算ボタン 1RM 実装（最小：Epley 式 modal）
+- U-5: 休憩タイマー自動起動オプション
+- C-8: 5本目プログラム seed
+
+### Phase 3: コンテンツ・管理拡張
+
+- A-1: Admin プログラム登録UI（SQLレス化）
+- C-9: Week preview 拡張
+- Program recommendation UI（level/tag ベース推奨）
+
+### Phase 4: 会員管理強化
+
+- M-2: /admin/members スマホカードUI
+- M-3: ログイン回数（user_login_events + Auth Webhook）
+- M-4: PC横スクロール改善
+- M-5: DB view / RPC 化
+
+### Phase 5: 成長・PWA
+
+- PWA 最適化（オフライン耐性・起動速度）
+- Analytics 拡張
+- 一般ユーザー招待フロー
+
+---
 
 ## 2026-04-13 Program Source Audit
 
