@@ -1,5 +1,55 @@
 # PROJECT_STATUS
 
+## 2026-04-26 /profile display_name 編集機能 実機確認
+
+### STATUS: STATIC_CHECK PASS / LIVE_CHECK ユーザー確認待ち (2026-04-26)
+
+### PURPOSE
+
+ユーザー自身がアプリ上の表示名（display_name）を `/profile` から変更できる機能の確認。
+退会・停止判断の基準となる `member_name` は変更されないことを担保する。
+
+### ROLE_SEPARATION（確認済み）
+
+| フィールド | 編集主体 | 変更可否（/profile から） |
+|---|---|---|
+| `display_name` | ユーザー本人（/profile）+ 管理者（/admin/members） | ✅ 変更可 |
+| `member_name` | 管理者のみ | ❌ 変更不可（コード上 /profile から一切触れない） |
+| `membership_status` | 管理者のみ | ❌ 変更不可 |
+| `email` | 変更不可（Supabase auth 管理） | ❌ 変更不可 |
+| `role` | 変更不可 | ❌ 変更不可 |
+
+### STATIC_CHECK (2026-04-26)
+
+| 確認項目 | 結果 | 根拠 |
+|---|---|---|
+| 未ログインで `/profile` → `/login` リダイレクト | ✅ | `auth.getUser()` → null で `redirect("/login")` |
+| 他ユーザーの display_name を書き換えられない | ✅ | ID は JWT から取得・`WHERE id = user.id` スコープ |
+| `member_name` が変更されない | ✅ | `update({ display_name: trimmed })` のみ。member_name はコード上どこにも触れない |
+| `membership_status` が変更されない | ✅ | 同上 |
+| `email` / `role` が変更されない | ✅ | 同上 |
+| 空文字保存 → `null` 変換 | ✅ | `const trimmed = newDisplayName.trim() \|\| null` |
+| エラーログに email 含まれない | ✅ | `console.error` は `userId` と `errorMessage` のみ |
+| 文字数制限 | ✅ | `maxLength={50}` |
+| admin members への反映 | ✅ | `/admin/members` は `force-dynamic`、次回ロード時に反映される |
+| `/gym` → `/profile` 導線 | ✅ | `GymScreen.tsx:38` に `<Link href="/profile">` 実装済み |
+| typecheck | ✅ | pass（エラーなし） |
+
+### LIVE_CHECK — ユーザーによるブラウザ確認待ち
+
+| 確認項目 | 結果 |
+|---|---|
+| `/profile` が正常表示される | 未確認 |
+| 現在の display_name がフォームに表示される | 未確認 |
+| display_name を変更・保存できる | 未確認 |
+| 保存後に成功フィードバックが表示される | 未確認 |
+| リロード後も変更後の display_name が維持される | 未確認 |
+| `/admin/members` 側に display_name が反映される | 未確認 |
+| member_name が変わっていない | 未確認 |
+| membership_status が変わっていない | 未確認 |
+
+---
+
 ## 2026-04-26 /admin/members 利用状況集計 Phase 1
 
 ### STATUS: CLOSED (2026-04-26)
