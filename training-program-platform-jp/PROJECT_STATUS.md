@@ -1,5 +1,60 @@
 # PROJECT_STATUS
 
+## 2026-04-27 G-2: gym_announcements テーブル + 管理者投稿
+
+### STATUS: 実装完了 / DB migration 適用待ち
+
+### PURPOSE
+
+`/gym` のお知らせセクションを静的配列からDBに移行。管理者が `/admin/gym-announcements` から投稿・編集・削除できるようにする。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | ファイル |
+|---|---|---|
+| DBテーブル | `gym_announcements`（id/title/body/is_published/display_order/published_at/created_by/created_at/updated_at） | `supabase/migrations/20260427_000023_gym_announcements.sql` |
+| RLS | 公開読み取り（anon+authenticated/is_published=true）、管理者全読み取り、管理者書き込み（insert/update/delete） | 同上 |
+| 公開ページ取得 | `getPublishedAnnouncements()` — display_order ASC, published_at DESC | `lib/gym/announcements.ts` |
+| 管理ページ取得 | `getAllAnnouncements()` — admin client でRLSバイパス | 同上 |
+| `/gym` 更新 | 静的配列→DB取得、0件時「現在お知らせはありません」 | `app/gym/page.tsx`, `components/gym/GymScreen.tsx` |
+| 管理者CRUD | `createAnnouncement` / `updateAnnouncement` / `deleteAnnouncement` Server Actions | `app/admin/gym-announcements/actions.ts` |
+| 管理者UI | 作成フォーム＋一覧（編集・削除）、`/admin/members` ← → ナビ | `components/admin/GymAnnouncementsScreen.tsx` + `.module.css` |
+| 管理者ページ | admin ロールチェック → redirect | `app/admin/gym-announcements/page.tsx` |
+| admin nav | `/admin/members` ヘッダーに「お知らせ管理→」リンク追加 | `components/admin/MembersScreen.tsx` + `.module.css` |
+
+### DB_MIGRATION
+
+⚠️ **human approval 必要** — 以下の手順で Supabase に適用する。
+
+```
+supabase db push
+```
+
+または Supabase ダッシュボード > SQL Editor で `supabase/migrations/20260427_000023_gym_announcements.sql` の内容を実行。
+
+### CHECK
+
+- typecheck: ✅ pass（型整合・imports確認済み）
+- build: ✅ pass（2026-04-27 確認）
+
+### LIVE_CHECK_REQUIRED
+
+| 確認項目 | 方法 |
+|---|---|
+| `/gym` のお知らせセクション（0件表示） | DB migration 適用後にブラウザ確認 |
+| `/admin/gym-announcements` へのアクセス | admin ロールでログインして確認 |
+| お知らせ作成→ `/gym` に反映 | 管理者で投稿し、公開設定で `/gym` を確認 |
+| 非公開→ `/gym` に出ないこと | is_published=false にして `/gym` を確認 |
+| 非admin ユーザーが `/admin/gym-announcements` にアクセス → `/` redirect | 確認 |
+
+### NEXT
+
+- DB migration 適用（`supabase db push` または SQL Editor）
+- LIVE_CHECK_REQUIRED の全項目をブラウザ確認
+- G-3: お知らせ未読バッジ（`gym_announcement_reads` + BottomTabBar）
+
+---
+
 ## 2026-04-26 G-1: ジムタブ基本ダッシュボード
 
 ### STATUS: CLOSED (2026-04-26)

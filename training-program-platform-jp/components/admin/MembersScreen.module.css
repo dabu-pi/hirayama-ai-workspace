@@ -8,7 +8,21 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-3);
+}
+
+.adminNav {
+  margin-bottom: var(--space-4);
+}
+
+.navLink {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.navLink:hover {
+  text-decoration: underline;
 }
 
 .title {

@@ -1,17 +1,11 @@
 import Link from "next/link";
 
+import type { GymAnnouncement } from "@/lib/gym/announcements";
 import type { GymDashboardStats } from "@/lib/workout/gym-dashboard";
 
 import styles from "./GymScreen.module.css";
 
-// ── Static data (G-2/G-4 will move these to DB) ──────────────────────────────
-
-type Announcement = {
-  id: number;
-  title: string;
-  date: string;
-  body: string;
-};
+// ── Static data (G-4 will move sponsors to DB) ───────────────────────────────
 
 type Sponsor = {
   id: number;
@@ -19,27 +13,6 @@ type Sponsor = {
   name: string;
   tagline: string;
 };
-
-const ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 1,
-    title: "ゴールデンウィーク営業のご案内",
-    date: "2026-04-28",
-    body: "4月29日（火）〜5月6日（火）は通常営業です。お気軽にご来館ください。"
-  },
-  {
-    id: 2,
-    title: "新マシン導入のお知らせ",
-    date: "2026-04-20",
-    body: "レッグプレスマシンを新たに導入しました。ぜひご利用ください。"
-  },
-  {
-    id: 3,
-    title: "フォーム確認会のお知らせ",
-    date: "2026-04-15",
-    body: "5月3日（土）10:00〜12:00にスクワット・デッドリフトのフォーム確認会を行います。"
-  }
-];
 
 const SPONSORS: Sponsor[] = [
   {
@@ -69,9 +42,10 @@ const QUICK_LINKS = [
 
 type GymScreenProps = {
   stats: GymDashboardStats | null;
+  announcements: GymAnnouncement[];
 };
 
-export function GymScreen({ stats }: GymScreenProps) {
+export function GymScreen({ stats, announcements }: GymScreenProps) {
   const isLoggedIn = stats !== null;
 
   return (
@@ -129,13 +103,23 @@ export function GymScreen({ stats }: GymScreenProps) {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>お知らせ</h2>
         <div className={styles.cardList}>
-          {ANNOUNCEMENTS.map((item) => (
-            <div className={styles.card} key={item.id}>
-              <p className={styles.cardTitle}>{item.title}</p>
-              <p className={styles.cardDate}>{item.date}</p>
-              <p className={styles.cardBody}>{item.body}</p>
+          {announcements.length === 0 ? (
+            <div className={styles.card}>
+              <p className={styles.cardBody}>現在お知らせはありません。</p>
             </div>
-          ))}
+          ) : (
+            announcements.map((item) => (
+              <div className={styles.card} key={item.id}>
+                <p className={styles.cardTitle}>{item.title}</p>
+                {item.published_at && (
+                  <p className={styles.cardDate}>
+                    {item.published_at.slice(0, 10)}
+                  </p>
+                )}
+                <p className={styles.cardBody}>{item.body}</p>
+              </div>
+            ))
+          )}
         </div>
       </section>
 

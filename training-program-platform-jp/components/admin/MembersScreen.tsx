@@ -43,6 +43,10 @@ export function MembersScreen({
         <span className={styles.adminBadge}>Admin</span>
       </header>
 
+      <nav className={styles.adminNav}>
+        <a className={styles.navLink} href="/admin/gym-announcements">お知らせ管理 →</a>
+      </nav>
+
       {/* Summary cards */}
       <div className={styles.statsGrid}>
         <StatCard label="登録会員" value={globalStats.total_members} />
