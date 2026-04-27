@@ -43,6 +43,28 @@
 | `appsscript.json` | ✅ 作成済み | Apps Script マニフェスト（V8 / Asia/Tokyo）|
 | `.clasp.json` | ❌ 未作成 | clasp 管理は次フェーズで設定 |
 
+### clasp 設定（2026-04-27）
+
+| 項目 | 値 |
+|---|---|
+| scriptId | `1-1opRkAFbFQz96Uqlgy3sWjgAs_PKS_1Eg9Pz7_6geTFztHx_5APSj2G` |
+| Apps Script URL | https://script.google.com/d/1-1opRkAFbFQz96Uqlgy3sWjgAs_PKS_1Eg9Pz7_6geTFztHx_5APSj2G/edit |
+| clasp push | ✅ 実施済み（2ファイル: appsscript.json + JREC_SF01_Setup.gs）|
+| setupAll_ 実行 | ❌ 未実施（手動実行が必要）|
+
+**⚠️ 注意: スクリプトの紐づきについて**
+
+`clasp create --type sheets` は既存 SS への紐づけができず、**新規 Google Sheets（`13Sxfk1w3yU_XUjlah7C01cxaoIWQjWfTpXTKmNjjaRw`）が別途作成**された。
+コード内の `openById(SPREADSHEET_ID)` が正しい対象 SS（`15O2AIWv1...`）を直接参照するため、**setupAll_() は正しく動作する**。
+
+ただし対象 SS の「拡張機能 > Apps Script」メニューからはこのスクリプトにアクセスできない。
+実行は Apps Script エディタ（上記 URL）から行う。
+
+将来的に対象 SS へ container-bound で紐づけ直したい場合:
+1. 対象 SS を開く → 拡張機能 > Apps Script
+2. 生成された scriptId を確認（URL 中の `/d/SCRIPT_ID/`）
+3. `.clasp.json` の `scriptId` を更新して `clasp push` し直す
+
 ### JREC_SF01_Setup.gs でできること
 
 - `setupAll_()` を実行するだけで全10シートを一括セットアップ
@@ -127,3 +149,4 @@
 | 2026-04-27 | プロジェクト初期設計ドキュメントを作成。コード実装なし。 |
 | 2026-04-27 | `docs/SHEET_DESIGN_v1.md` 作成。MenuMaster初期データ・税設計・ID設計・全10シート列定義を確定。 |
 | 2026-04-27 | `JREC_SF01_Setup.gs` 作成。全10シート初期セットアップスクリプト。スプレッドシートID確定（15O2AIWv1...）。 |
+| 2026-04-27 | `.clasp.json` 作成・`clasp push` 実施。Apps Script に JREC_SF01_Setup.gs を反映済み。setupAll_() は未実行。 |
