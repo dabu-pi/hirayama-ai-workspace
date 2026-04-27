@@ -2,11 +2,134 @@
 
 ## 現在ステータス
 
-**Phase 3 保存成功確認済み・保存後遷移修正済み・再デプロイ待ち**（2026-04-28）
+**Phase 3 CLOSED・Phase 4「会計入力・領収書」着手前整理済み**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 3 CLOSED（2026-04-28）
+
+### 実機確認結果（最終・PASS）
+
+| 確認項目 | 結果 |
+|---|---|
+| 保存成功メッセージ表示 | ✅ PASS |
+| 「患者詳細へ戻る →」ボタン表示 | ✅ PASS |
+| 保存ボタン復帰（保存中 → 元に戻る）| ✅ PASS |
+| 患者詳細への遷移 | ✅ PASS |
+| 来院履歴タイムライン表示 | ✅ PASS |
+| 同日2件目採番（_002）| ✅ PASS |
+| 同日3件目採番（_003）| ✅ PASS |
+| visitKey 確認（3件）| ✅ SPV_20260428_P0001_001〜003 |
+
+### Phase 3 解決済み問題サマリー
+
+| 問題 | 原因 | 対応 |
+|---|---|---|
+| 保存ボタン押下後に「保存中」のまま停止 | alert() がブラウザブロック + session 8 修正が未デプロイ | alert 削除・showMsg DOM表示に統一・timeout追加 |
+| 保存成功後に患者詳細へ遷移しない | GAS 非同期コールバック内では user activation が失われており、window.top.location.href が iframe 制限でブロック | 自動遷移フォールバック付き navigate() + 手動「患者詳細へ戻る」ボタン表示 |
+
+**Phase 3 は全実機確認 PASS。CLOSED 扱い。**
+
+---
+
+## Phase 4 着手前整理（2026-04-28）
+
+### Phase 4 概要
+
+**目的:** 来院後の会計処理（メニュー選択・支払）と領収書発行を実装する。
+**設計参照:** `docs/UI_DESIGN_v1.md` S04〜S05 / `docs/UI_LAYOUT_v1.md` S05・S07 / `docs/SHEET_DESIGN_v1.md` §7〜9
+
+### Phase 4 フロー（設計確定）
+
+```
+患者詳細（未会計の来院）
+  ↓ 「会計入力」ボタン
+billing-form.html（S05）
+  ↓ MenuMaster からメニュー選択 / 数量 / 支払方法 / 入金状態
+  ↓ 保存 → SelfPayItems INSERT + Payments INSERT + SelfPayVisits.会計状態 UPDATE
+receipt.html（S07）
+  ↓ 領収書プレビュー表示
+  ↓ 「発行して患者詳細へ戻る」→ Receipts INSERT
+患者詳細（会計済に更新）
+```
+
+### Phase 4 MVP 実装単位（安全な分割）
+
+#### Step 1 — `JREC_SF01_Billing.gs`（GAS バックエンド）
+
+| 関数 | 役割 |
+|---|---|
+| `getActiveMenus()` | MenuMaster の有効フラグ=TRUE を表示順で返す |
+| `getVisitForBilling(visitKey)` | 請求対象 visit の情報 + 患者名を返す（billing-form 表示用）|
+| `savePaymentWithItems(payload)` | SelfPayItems + Payments を INSERT し、SelfPayVisits.会計状態 を更新 |
+| `issueReceipt(payload)` | Receipts に INSERT し receiptId を返す |
+| `getReceiptByVisit(visitKey)` | 発行済み領収書があれば返す（再発行・確認用）|
+| `generateItemId_(visitKey)` | `SPI_visitKey_001` 形式で採番 |
+| `generatePaymentId_(visitKey)` | `SPP_visitKey` を返す |
+| `generateReceiptNo_(year)` | `SPR_YYYY_0001` 形式で年次連番採番 |
+
+**二重保存防止:** `savePaymentWithItems` は既存 Payments.paymentId が存在する場合 `{ ok: false, error: "既に会計済みです" }` を返す。
+
+#### Step 2 — `JREC_SF01_Main.gs` 更新
+
+| 追加ルート | 画面 |
+|---|---|
+| `?page=billing&vk=SPV_...` | billing-form.html（会計入力）|
+| `?page=receipt&vk=SPV_...` | receipt.html（領収書プレビュー・発行）|
+
+#### Step 3 — `billing-form.html`（S05）
+
+| 要素 | 内容 |
+|---|---|
+| ヘッダー | 患者名 + visitKey + 来院日（getVisitForBilling から）|
+| 明細エリア | MenuMaster プルダウン + 数量 + 税別単価（自動）+ 税込小計（自動計算）|
+| 明細追加ボタン | 行を動的に追加（JS）|
+| 合計エリア | 税別合計 / 消費税 / 税込合計（リアルタイム再計算）|
+| 支払エリア | 支払方法（現金/カード/電子マネー/未収）/ 入金状態（入金済/未収）/ メモ |
+| 保存ボタン | `savePaymentWithItems` → receipt へ遷移 |
+| 税計算式 | `floor(単価(税別) × 数量 × 0.10)` で消費税。税込 = 税別 + 税 |
+
+#### Step 4 — `receipt.html`（S07）
+
+| 要素 | 内容 |
+|---|---|
+| 領収書プレビュー | 患者名 / 金額（税込）/ 内消費税 / 但し書き / 院名 |
+| 「印刷（新しいタブ）」| `window.print()` で印刷ダイアログ（CSS で印刷用レイアウト）|
+| 「発行して患者詳細へ戻る」| `issueReceipt` → Receipts INSERT → 患者詳細へ遷移 |
+| receiptNo 表示 | 発行後に表示。初回 = `SPR_YYYY_0001` 形式 |
+
+#### Step 5 — `patient-detail.html` 更新
+
+| 変更 | 内容 |
+|---|---|
+| タイムライン に「会計入力」ボタン追加 | 会計状態 = 未会計 の来院のみ表示。`?page=billing&vk=...` へ遷移 |
+| タイムライン に「領収書」リンク追加 | 会計状態 = 会計済 の来院に表示。`?page=receipt&vk=...` へ遷移 |
+| サマリーカードの累計支払 / 未収残高 | 現在は `—` 表示。Phase 4 実装後に実データ表示に切り替える |
+
+### Phase 4 スコープ外（後回し）
+
+| 項目 | 理由 | 対応フェーズ |
+|---|---|---|
+| DailySales 日次集計 | 複雑な集計ロジック。MVP 後回しで事故リスク低減 | Phase 5 |
+| 未収回収処理（支払状態の更新）| 安全のため会計確認後に設計 | Phase 4 後半 |
+| 領収書の再発行 | 初回発行が動いてから追加 | Phase 4 後半 |
+| 会計明細の編集・削除 | 不可逆操作リスクあり。設計後に判断 | Phase 5 以降 |
+| 患者一覧の未収額表示（実データ）| Payments との JOIN が必要。現在は `0円` 固定表示 | Phase 4 完了後 |
+
+### Phase 4 リスク
+
+| リスク | 対策 |
+|---|---|
+| 二重保存 | `savePaymentWithItems` の先頭で既存 Payments を確認し、重複なら return error |
+| receiptNo 重複 | `generateReceiptNo_` でシート最終行から採番（GAS は基本シングルスレッド）|
+| 金額計算ミス | GAS 側と JS 側で同じ式（`floor(税別 × 0.10)`）を使い、保存前に GAS で再計算して検証 |
+| visit の会計状態が不整合 | `savePaymentWithItems` が成功した場合のみ `SelfPayVisits.会計状態` を更新する |
+
+---
 
 ### 実機確認結果（2026-04-28 セッション10前）
 
@@ -529,11 +652,11 @@ patient-list.html / styles.html
 
 | Phase | 内容 | ステータス |
 |---|---|---|
-| Phase 0 | 初期設計ドキュメント作成 | **完了（2026-04-27）** |
-| Phase 1 | スプレッドシート設計・GASセットアップ | **完了（2026-04-27）** |
-| Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **実装完了（2026-04-27）/ デプロイ・実機確認待ち** |
-| Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | **実装完了（2026-04-27）/ 実機確認待ち** |
-| Phase 4 | GAS Webアプリ — 会計入力・領収書・未収管理 | UI設計完了 / 実装未着手 |
+| Phase 0 | 初期設計ドキュメント作成 | **✅ CLOSED（2026-04-27）** |
+| Phase 1 | スプレッドシート設計・GASセットアップ | **✅ CLOSED（2026-04-27）** |
+| Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **✅ CLOSED（2026-04-27 実機確認済）** |
+| Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | **✅ CLOSED（2026-04-28 実機確認済）** |
+| Phase 4 | GAS Webアプリ — 会計入力・領収書・未収管理 | **🔵 着手前整理完了・実装待ち** |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |
 | Phase 6 | Next.js / Supabase 化検討 | 未着手 |
 | Phase 7 | 外販モデル化 | 未着手 |
