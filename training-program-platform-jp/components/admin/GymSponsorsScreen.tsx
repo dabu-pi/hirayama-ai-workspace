@@ -3,44 +3,50 @@
 import { useState, useTransition } from "react";
 
 import {
-  createAnnouncement,
-  deleteAnnouncement,
-  updateAnnouncement
-} from "@/app/admin/gym-announcements/actions";
-import type { GymAnnouncement } from "@/lib/gym/announcements";
+  createSponsor,
+  deleteSponsor,
+  updateSponsor
+} from "@/app/admin/gym-sponsors/actions";
+import type { GymSponsor } from "@/lib/gym/sponsors";
 
-import styles from "./GymAnnouncementsScreen.module.css";
+import styles from "./GymSponsorsScreen.module.css";
 
 type FormState = {
-  title: string;
-  body: string;
+  name: string;
+  description: string;
+  url: string;
+  image_url: string;
   is_published: boolean;
   display_order: number;
 };
 
 const EMPTY_FORM: FormState = {
-  title: "",
-  body: "",
-  is_published: false,
+  name: "",
+  description: "",
+  url: "",
+  image_url: "",
+  is_published: true,
   display_order: 0
 };
 
-type GymAnnouncementsScreenProps = {
-  announcements: GymAnnouncement[];
+type GymSponsorsScreenProps = {
+  sponsors: GymSponsor[];
 };
 
-export function GymAnnouncementsScreen({ announcements: initial }: GymAnnouncementsScreenProps) {
-  const [items, setItems] = useState<GymAnnouncement[]>(initial);
+export function GymSponsorsScreen({ sponsors: initial }: GymSponsorsScreenProps) {
+  const [items, setItems] = useState<GymSponsor[]>(initial);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function startEdit(item: GymAnnouncement) {
+  function startEdit(item: GymSponsor) {
     setEditingId(item.id);
     setForm({
-      title: item.title,
-      body: item.body,
+      name: item.name,
+      description: item.description,
+      url: item.url ?? "",
+      image_url: item.image_url ?? "",
       is_published: item.is_published,
       display_order: item.display_order
     });
@@ -54,49 +60,49 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
   }
 
   function handleSave() {
-    if (!form.title.trim()) {
-      setErrorMsg("タイトルは必須です。");
+    if (!form.name.trim()) {
+      setErrorMsg("名称は必須です。");
       return;
     }
     setErrorMsg(null);
 
     startTransition(async () => {
       if (editingId) {
-        const result = await updateAnnouncement(editingId, form);
+        const result = await updateSponsor(editingId, form);
         if (!result.ok) {
           setErrorMsg(result.error ?? "更新に失敗しました。");
           return;
         }
         setItems((prev) =>
-          prev.map((a) =>
-            a.id === editingId
+          prev.map((s) =>
+            s.id === editingId
               ? {
-                  ...a,
-                  title: form.title.trim(),
-                  body: form.body.trim(),
+                  ...s,
+                  name: form.name.trim(),
+                  description: form.description.trim(),
+                  url: form.url.trim() || null,
+                  image_url: form.image_url.trim() || null,
                   is_published: form.is_published,
                   display_order: form.display_order
                 }
-              : a
+              : s
           )
         );
       } else {
-        const result = await createAnnouncement(form);
+        const result = await createSponsor(form);
         if (!result.ok) {
           setErrorMsg(result.error ?? "作成に失敗しました。");
           return;
         }
-        // Reload-free refresh: optimistic add without actual id/timestamps;
-        // the user can reload to get the real row.
         setItems((prev) => [
           {
             id: `temp-${Date.now()}`,
-            title: form.title.trim(),
-            body: form.body.trim(),
+            name: form.name.trim(),
+            description: form.description.trim(),
+            url: form.url.trim() || null,
+            image_url: form.image_url.trim() || null,
             is_published: form.is_published,
             display_order: form.display_order,
-            published_at: form.is_published ? new Date().toISOString() : null,
-            created_by: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           },
@@ -107,16 +113,16 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
     });
   }
 
-  function handleDelete(id: string, title: string) {
-    if (!window.confirm(`「${title}」を削除しますか？`)) return;
+  function handleDelete(id: string, name: string) {
+    if (!window.confirm(`「${name}」を削除しますか？`)) return;
 
     startTransition(async () => {
-      const result = await deleteAnnouncement(id);
+      const result = await deleteSponsor(id);
       if (!result.ok) {
         setErrorMsg(result.error ?? "削除に失敗しました。");
         return;
       }
-      setItems((prev) => prev.filter((a) => a.id !== id));
+      setItems((prev) => prev.filter((s) => s.id !== id));
     });
   }
 
@@ -125,14 +131,14 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>お知らせ管理</h1>
+        <h1 className={styles.title}>スポンサー管理</h1>
         <span className={styles.adminBadge}>Admin</span>
       </header>
 
       <nav className={styles.adminNav}>
         <a className={styles.navLink} href="/admin/members">← 会員管理</a>
         <span className={styles.navSep}>|</span>
-        <a className={styles.navLink} href="/admin/gym-sponsors">スポンサー管理 →</a>
+        <a className={styles.navLink} href="/admin/gym-announcements">お知らせ管理</a>
       </nav>
 
       {/* Form: create or edit */}
@@ -144,35 +150,49 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
         {errorMsg && <p className={styles.errorMsg}>{errorMsg}</p>}
 
         <div className={styles.formRow}>
-          <label className={styles.label} htmlFor="ann-title">タイトル</label>
+          <label className={styles.label} htmlFor="sp-name">名称</label>
           <input
             className={styles.input}
-            id="ann-title"
+            id="sp-name"
             maxLength={200}
-            placeholder="お知らせタイトル"
+            placeholder="スポンサー名・協力店名"
             type="text"
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
         </div>
 
         <div className={styles.formRow}>
-          <label className={styles.label} htmlFor="ann-body">本文</label>
-          <textarea
-            className={styles.textarea}
-            id="ann-body"
-            placeholder="お知らせ本文"
-            rows={4}
-            value={form.body}
-            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+          <label className={styles.label} htmlFor="sp-description">説明</label>
+          <input
+            className={styles.input}
+            id="sp-description"
+            maxLength={300}
+            placeholder="業種・サービス内容など"
+            type="text"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           />
         </div>
 
         <div className={styles.formRow}>
-          <label className={styles.label} htmlFor="ann-order">表示順（小さいほど上）</label>
+          <label className={styles.label} htmlFor="sp-url">URL（任意）</label>
+          <input
+            className={styles.input}
+            id="sp-url"
+            maxLength={500}
+            placeholder="https://example.com"
+            type="url"
+            value={form.url}
+            onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+          />
+        </div>
+
+        <div className={styles.formRow}>
+          <label className={styles.label} htmlFor="sp-order">表示順（小さいほど上）</label>
           <input
             className={styles.inputSmall}
-            id="ann-order"
+            id="sp-order"
             min={0}
             type="number"
             value={form.display_order}
@@ -219,7 +239,7 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
       <section className={styles.listSection}>
         <h2 className={styles.listTitle}>一覧（{items.length}件）</h2>
         {items.length === 0 ? (
-          <p className={styles.empty}>お知らせはまだありません。</p>
+          <p className={styles.empty}>スポンサー・協力店はまだありません。</p>
         ) : (
           <div className={styles.list}>
             {items.map((item) => (
@@ -235,13 +255,19 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
                   </span>
                   <span className={styles.listItemOrder}>順: {item.display_order}</span>
                 </div>
-                <p className={styles.listItemTitle}>{item.title}</p>
-                {item.body && (
-                  <p className={styles.listItemBody}>{item.body}</p>
+                <p className={styles.listItemTitle}>{item.name}</p>
+                {item.description && (
+                  <p className={styles.listItemBody}>{item.description}</p>
                 )}
-                {item.published_at && (
-                  <p className={styles.listItemDate}>
-                    公開日: {item.published_at.slice(0, 10)}
+                {item.url && (
+                  <p className={styles.listItemUrl}>
+                    <a
+                      href={item.url}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {item.url}
+                    </a>
                   </p>
                 )}
                 <div className={styles.listItemActions}>
@@ -257,7 +283,7 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
                     className={styles.btnDelete}
                     disabled={isPending}
                     type="button"
-                    onClick={() => handleDelete(item.id, item.title)}
+                    onClick={() => handleDelete(item.id, item.name)}
                   >
                     削除
                   </button>

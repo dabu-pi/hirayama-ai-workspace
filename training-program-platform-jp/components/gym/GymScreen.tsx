@@ -1,34 +1,11 @@
 import Link from "next/link";
 
 import type { GymAnnouncement } from "@/lib/gym/announcements";
+import type { GymSponsor } from "@/lib/gym/sponsors";
 import type { GymDashboardStats } from "@/lib/workout/gym-dashboard";
 import { GymAnnouncementSection } from "./GymAnnouncementSection";
 
 import styles from "./GymScreen.module.css";
-
-// ── Static data (G-4 will move sponsors to DB) ───────────────────────────────
-
-type Sponsor = {
-  id: number;
-  initial: string;
-  name: string;
-  tagline: string;
-};
-
-const SPONSORS: Sponsor[] = [
-  {
-    id: 1,
-    initial: "H",
-    name: "Hirayama Sports",
-    tagline: "トレーニング用品・サプリメント"
-  },
-  {
-    id: 2,
-    initial: "協",
-    name: "協力店 募集中",
-    tagline: "詳細はスタッフまでお問い合わせください"
-  }
-];
 
 // ── Quick links ───────────────────────────────────────────────────────────────
 
@@ -44,9 +21,10 @@ const QUICK_LINKS = [
 type GymScreenProps = {
   stats: GymDashboardStats | null;
   announcements: GymAnnouncement[];
+  sponsors: GymSponsor[];
 };
 
-export function GymScreen({ stats, announcements }: GymScreenProps) {
+export function GymScreen({ stats, announcements, sponsors }: GymScreenProps) {
   const isLoggedIn = stats !== null;
 
   return (
@@ -106,21 +84,38 @@ export function GymScreen({ stats, announcements }: GymScreenProps) {
         <GymAnnouncementSection announcements={announcements} />
       </section>
 
-      {/* Sponsors */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>スポンサー・協力店</h2>
-        <div className={styles.cardList}>
-          {SPONSORS.map((sp) => (
-            <div className={styles.sponsorCard} key={sp.id}>
-              <div className={styles.sponsorLogo}>{sp.initial}</div>
-              <div className={styles.sponsorInfo}>
-                <p className={styles.sponsorName}>{sp.name}</p>
-                <p className={styles.sponsorTagline}>{sp.tagline}</p>
+      {/* Sponsors — G-4: DB-backed */}
+      {sponsors.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>スポンサー・協力店</h2>
+          <div className={styles.cardList}>
+            {sponsors.map((sp) => (
+              <div className={styles.sponsorCard} key={sp.id}>
+                <div className={styles.sponsorLogo}>
+                  {sp.name.slice(0, 1).toUpperCase()}
+                </div>
+                <div className={styles.sponsorInfo}>
+                  {sp.url ? (
+                    <a
+                      className={styles.sponsorNameLink}
+                      href={sp.url}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {sp.name}
+                    </a>
+                  ) : (
+                    <p className={styles.sponsorName}>{sp.name}</p>
+                  )}
+                  {sp.description && (
+                    <p className={styles.sponsorTagline}>{sp.description}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Account */}
       <section className={styles.section}>

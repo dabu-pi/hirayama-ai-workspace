@@ -45,6 +45,8 @@ export function MembersScreen({
 
       <nav className={styles.adminNav}>
         <a className={styles.navLink} href="/admin/gym-announcements">お知らせ管理 →</a>
+        <span className={styles.navSep}>|</span>
+        <a className={styles.navLink} href="/admin/gym-sponsors">スポンサー管理 →</a>
       </nav>
 
       {/* Summary cards */}

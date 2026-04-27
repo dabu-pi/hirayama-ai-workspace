@@ -218,6 +218,19 @@
   margin: 0 0 2px;
 }
 
+.sponsorNameLink {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+  display: block;
+  margin: 0 0 2px;
+}
+
+.sponsorNameLink:hover {
+  text-decoration: underline;
+}
+
 .sponsorTagline {
   font-size: var(--text-xs);
   color: var(--text-muted);

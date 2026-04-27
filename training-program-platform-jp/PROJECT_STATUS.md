@@ -1,5 +1,58 @@
 # PROJECT_STATUS
 
+## 2026-04-27 G-4: スポンサー・協力店のDB化
+
+### STATUS: 実装完了 / DB migration 適用待ち
+
+### PURPOSE
+
+`/gym` のスポンサー・協力店セクションを静的配列からDBに移行。
+管理者が `/admin/gym-sponsors` から登録・編集・削除できるようにする。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | ファイル |
+|---|---|---|
+| DBテーブル | `gym_sponsors`（id/name/description/url/image_url/is_published/display_order/created_at/updated_at） | `supabase/migrations/20260427_000024_gym_sponsors.sql` |
+| RLS | 公開読み取り（anon+authenticated/is_published=true）、管理者全読み取り、管理者書き込み（insert/update/delete） | 同上 |
+| 公開ページ取得 | `getPublishedSponsors()` — display_order ASC, created_at ASC | `lib/gym/sponsors.ts` |
+| 管理ページ取得 | `getAllSponsors()` — admin client でRLSバイパス | 同上 |
+| `/gym` 更新 | 静的配列→DB取得、0件時セクション非表示、URL指定時にリンク化 | `app/gym/page.tsx`, `components/gym/GymScreen.tsx` |
+| 管理者CRUD | `createSponsor` / `updateSponsor` / `deleteSponsor` Server Actions | `app/admin/gym-sponsors/actions.ts` |
+| 管理者UI | 作成フォーム＋一覧（編集・削除・公開切替）、他 admin ページへのナビ | `components/admin/GymSponsorsScreen.tsx` + `.module.css` |
+| 管理者ページ | admin ロールチェック → redirect | `app/admin/gym-sponsors/page.tsx` |
+| admin nav | `/admin/members` と `/admin/gym-announcements` に「スポンサー管理 →」リンク追加 | 各 Screen.tsx / .module.css |
+
+### DB_MIGRATION
+
+⚠️ **human approval 必要** — 以下の手順で Supabase に適用する。
+
+Supabase ダッシュボード > SQL Editor で `supabase/migrations/20260427_000024_gym_sponsors.sql` の内容を実行。
+
+### CHECK
+
+- typecheck: ✅ pass（型整合・imports確認済み）
+- build: ✅ pass（2026-04-27 確認、/admin/gym-sponsors ルート正常ビルド）
+
+### LIVE_CHECK_REQUIRED
+
+| 確認項目 | 方法 |
+|---|---|
+| `/gym` の0件時スポンサーセクション非表示 | DB migration 適用後、スポンサー未登録状態でブラウザ確認 |
+| `/admin/gym-sponsors` へのアクセス | admin ロールでログインして確認 |
+| スポンサー作成→ `/gym` に反映 | 管理者で登録し、`/gym` を確認 |
+| 非公開→ `/gym` に出ないこと | is_published=false にして `/gym` を確認 |
+| URL 指定時のリンク表示 | url フィールドあり → アクセント色リンク表示 |
+| admin nav リンク | /admin/members → スポンサー管理リンク、/admin/gym-announcements → スポンサー管理リンク |
+
+### NEXT
+
+- DB migration 適用（Supabase SQL Editor）
+- LIVE_CHECK_REQUIRED の全項目をブラウザ確認
+- G-5: トレーナー相談・パーソナルトレーニング申込（coming soon スロットの実装）
+
+---
+
 ## 2026-04-27 G-3: お知らせ未読バッジ（localStorage 軽量版）
 
 ### STATUS: CLOSED (2026-04-27)
