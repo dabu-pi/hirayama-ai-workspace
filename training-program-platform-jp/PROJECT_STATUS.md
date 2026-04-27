@@ -1,5 +1,55 @@
 # PROJECT_STATUS
 
+## 2026-04-27 U-2: ユーザー種目管理画面（編集/アーカイブ）
+
+### STATUS: CLOSED (2026-04-27)
+
+### PURPOSE
+
+U-1 で作成したカスタム種目の一覧・編集・アーカイブを管理できる専用ページを追加。
+アーカイブしても過去の `workout_session_exercises` レコードは保持（`on delete restrict` により保護）。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | ファイル |
+|---|---|---|
+| PATCH API | 種目名・カテゴリ・is_archived を更新（ownership guard: user_id 照合） | `app/api/user-exercises/[id]/route.ts` |
+| 管理ページ | 認証guard + 全種目取得（archived含む）→ MyExercisesScreen | `app/my-exercises/page.tsx` |
+| 管理UI | 使用中/アーカイブ済み2セクション・インライン編集・アーカイブ/復元ボタン | `components/workout/MyExercisesScreen.tsx` + `.module.css` |
+| プロフィールリンク | `/profile` 下部に「マイ種目 →」リンク追加 | `components/profile/ProfileScreen.tsx` + `.module.css` |
+
+### DESIGN_NOTES
+
+- 実削除なし: アーカイブ（`is_archived=true`）のみ。`workout_session_exercises.user_exercise_id` の FK が `on delete restrict` のため物理削除は DB レベルでも防止
+- アーカイブした種目は `/my-exercises` のみ表示（使用中セクションには出ない）
+- 種目追加モーダルでもアーカイブ済み種目は除外（GET `/api/user-exercises` は `is_archived=false` のみ返す — U-1 実装済み）
+- DB migration なし（`is_archived` 列は U-1 migration 20260427_000026 で追加済み）
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（/my-exercises: 2.32kB 正常ビルド）
+
+### LIVE_CHECK_REQUIRED
+
+| 確認項目 | 方法 |
+|---|---|
+| `/profile` に「マイ種目」リンクが表示される | ログイン後 /profile を開く |
+| リンクタップ → `/my-exercises` に遷移 | リンク動作確認 |
+| カスタム種目がある場合 → 一覧表示 | U-1 で作成した種目が表示されること |
+| 種目がない場合 → empty state 表示 | 初回ユーザーで /my-exercises を開く |
+| 「編集」→ 種目名・カテゴリ変更 → 「保存」→ 反映 | 既存種目を編集して確認 |
+| 「アーカイブ」→ confirm → 使用中から消える | アーカイブ動作確認 |
+| 「アーカイブ済み」折りたたみ → 展開 → 「復元」| 復元動作確認 |
+| アーカイブ後に種目追加モーダルを開く → アーカイブ種目が出ないこと | U-1 の種目追加モーダルで確認 |
+
+### NEXT
+
+- U-3: 自由トレーニングテンプレート保存（将来フェーズ）
+- U-4: ユーザー種目の前回セット表示・統計（将来フェーズ）
+
+---
+
 ## 2026-04-27 U-1: 個人カスタム種目ライブラリ
 
 ### STATUS: CLOSED (2026-04-27) — DB migration 適用済み

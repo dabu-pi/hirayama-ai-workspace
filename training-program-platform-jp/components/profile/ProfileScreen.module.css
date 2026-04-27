@@ -102,3 +102,22 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.links {
+  margin-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-5);
+}
+
+.linkItem {
+  font-size: var(--text-sm);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.linkItem:hover {
+  text-decoration: underline;
+}

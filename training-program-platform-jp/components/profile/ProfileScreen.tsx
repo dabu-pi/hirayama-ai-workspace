@@ -80,6 +80,12 @@ export function ProfileScreen({ email, initialDisplayName }: ProfileScreenProps)
           {isPending ? "保存中…" : "保存する"}
         </button>
       </form>
+
+      <nav className={styles.links}>
+        <a className={styles.linkItem} href="/my-exercises">
+          マイ種目（カスタム種目の管理）→
+        </a>
+      </nav>
     </main>
   );
 }
