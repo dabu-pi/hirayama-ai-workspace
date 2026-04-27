@@ -10,22 +10,25 @@ function doGet(e) {
   try {
     var tmpl;
     switch (page) {
+
       case "newPatient":
         tmpl = HtmlService.createTemplateFromFile("patient-form");
         tmpl.mode = "new";
         break;
 
+      case "visitForm":
+        var pt = getPatientById(id);
+        if (!pt) return notFound_(id);
+        tmpl = HtmlService.createTemplateFromFile("visit-form");
+        tmpl.patient = pt;
+        break;
+
       case "detail":
         var pt = getPatientById(id);
-        if (!pt) {
-          return HtmlService.createHtmlOutput(
-            '<div style="padding:24px;font-family:sans-serif;">' +
-            '<p>患者 ' + id + ' が見つかりませんでした。</p>' +
-            '<a href="' + ScriptApp.getService().getUrl() + '">← 一覧に戻る</a></div>'
-          ).setTitle("JREC-SF01");
-        }
+        if (!pt) return notFound_(id);
         tmpl = HtmlService.createTemplateFromFile("patient-detail");
-        tmpl.patient = pt;
+        tmpl.patient  = pt;
+        tmpl.timeline = getVisitTimelineByPatient(id);
         break;
 
       default: // "list"
@@ -46,6 +49,14 @@ function doGet(e) {
       '<b>エラーが発生しました</b><br>' + err.message + '</div>'
     ).setTitle("JREC-SF01 エラー");
   }
+}
+
+function notFound_(id) {
+  return HtmlService.createHtmlOutput(
+    '<div style="padding:24px;font-family:sans-serif;">' +
+    '<p>患者 ' + id + ' が見つかりませんでした。</p>' +
+    '<a href="' + ScriptApp.getService().getUrl() + '">← 一覧に戻る</a></div>'
+  ).setTitle("JREC-SF01");
 }
 
 function include(filename) {

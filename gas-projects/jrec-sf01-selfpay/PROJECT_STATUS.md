@@ -2,7 +2,46 @@
 
 ## 現在ステータス
 
-**Phase 2 MVP 実装完了・Webアプリデプロイ待ち**（2026-04-27）
+**Phase 3 実装完了・実機確認待ち**（2026-04-27）
+
+---
+
+## 今回の作業内容（2026-04-27 セッション5）
+
+| 作業 | 内容 |
+|---|---|
+| Phase 3 実装 | 来院・カルテ入力（S03+S04 統合画面） |
+| clasp push | 11ファイルを Apps Script に反映済み |
+
+### Phase 3 実装内容
+
+| ファイル | 作成/更新 | 内容 |
+|---|---|---|
+| `JREC_SF01_Visit.gs` | 新規 | getVisitsByPatient / getChartsByVisitKeys / getVisitTimelineByPatient / createVisitWithChart / generateSelfPayVisitKey_ / getDefaultPractitioner_ |
+| `visit-form.html` | 新規 | S03+S04 統合入力画面。来院情報 + カルテ記録。施術内容・使用機器のプリセットボタン付き |
+| `JREC_SF01_Main.gs` | 更新 | visitForm ルーティング追加。detail ケースに timeline データを渡す |
+| `patient-detail.html` | 更新 | サマリーカードに来院回数・最終来院日を実データから表示。来院・カルテ履歴タイムライン表示（最新は展開、過去は折りたたみ）。「＋ 来院・カルテ入力」ボタン追加 |
+
+### Phase 3 設計決定事項
+
+| 項目 | 決定内容 |
+|---|---|
+| UI統合 | S03 来院入力 + S04 カルテ入力 → 1画面に統合（visit-form.html）|
+| 保存先分離 | 画面は1つ、保存先は SelfPayVisits + SelfPayChart の2シート |
+| 担当者 | Phase 3 では「院長」固定。Settings の default_practitioner を参照（なければ "院長" にフォールバック）|
+| selfPayVisitKey | SPV_YYYYMMDD_patientId_3桁連番（同日複数来院に対応）|
+| chartId | selfPayVisitKey の SPV_ を SPC_ に置換（1対1対応）|
+
+### 実機確認チェックリスト（ユーザー実施）
+
+- [ ] Apps Script を新しいバージョンで再デプロイ
+- [ ] 患者詳細から「＋ 来院・カルテ入力」ボタンで visit-form へ遷移
+- [ ] 来院日・主訴を入力して保存
+- [ ] SelfPayVisits に SPV_YYYYMMDD_P0001_001 が作成される
+- [ ] SelfPayChart に SPC_YYYYMMDD_P0001_001 が作成される
+- [ ] 患者詳細の来院履歴に表示される
+- [ ] 2件目来院 → SPV_YYYYMMDD_P0001_002 になる
+- [ ] 異なる日付の来院は別キーで採番される
 
 ---
 
@@ -191,7 +230,7 @@ patient-list.html / styles.html
 | Phase 0 | 初期設計ドキュメント作成 | **完了（2026-04-27）** |
 | Phase 1 | スプレッドシート設計・GASセットアップ | **完了（2026-04-27）** |
 | Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **実装完了（2026-04-27）/ デプロイ・実機確認待ち** |
-| Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | UI設計完了 / 実装未着手 |
+| Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | **実装完了（2026-04-27）/ 実機確認待ち** |
 | Phase 4 | GAS Webアプリ — 会計入力・領収書・未収管理 | UI設計完了 / 実装未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |
 | Phase 6 | Next.js / Supabase 化検討 | 未着手 |
@@ -280,3 +319,4 @@ patient-list.html / styles.html
 | 2026-04-27 | 別PC再開。`.clasp.json` 復元。`runSetupAll()` 実行・10シート確認をユーザーに依頼。 |
 | 2026-04-27 | `runSetupAll()` 実行確認・10シート作成確認済み。`docs/UI_LAYOUT_v1.md` 作成。UIレイアウト設計完了。 |
 | 2026-04-27 | Phase 2 MVP 実装。JREC_SF01_Main.gs / JREC_SF01_Patient.gs / 5 HTML + styles.html 作成。clasp push 完了（9ファイル）。 |
+| 2026-04-27 | Phase 3 実装。JREC_SF01_Visit.gs / visit-form.html 作成。patient-detail.html・JREC_SF01_Main.gs 更新。clasp push（11ファイル）。 |

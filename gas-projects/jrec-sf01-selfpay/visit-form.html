@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>来院・カルテ入力 — JREC-SF01</title>
+  <script>var APP_URL = "<?= getAppUrl_() ?>";</script>
+  <?!= include('styles') ?>
+  <style>
+    .preset-btns { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .preset-btn  { padding:3px 10px; font-size:12px; border:1px solid #dadce0;
+                   border-radius:14px; background:#fff; cursor:pointer; color:#3c4043; }
+    .preset-btn:hover { background:#e8f0fe; border-color:#1a73e8; color:#1a73e8; }
+    .vas-wrap { display:flex; align-items:center; gap:10px; }
+    .vas-wrap input { width:80px; }
+    .vas-wrap .vas-hint { font-size:12px; color:#9aa0a6; }
+  </style>
+</head>
+<body>
+
+<?!= include('index') ?>
+
+<div class="container">
+
+  <!-- 患者サマリー -->
+  <div class="card" style="padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div>
+        <span class="pid"><?= patient.patientId ?></span>
+        <span style="font-size:17px;font-weight:700;margin-left:10px;"><?= patient.name ?></span>
+        <? if (patient.kana) { ?><span class="muted" style="margin-left:8px;font-size:13px;"><?= patient.kana ?></span><? } ?>
+      </div>
+      <? if (patient.phone) { ?><span style="color:#5f6368;"><?= patient.phone ?></span><? } ?>
+      <a href="<?= getAppUrl_() ?>?page=detail&id=<?= patient.patientId ?>"
+         class="btn btn-secondary btn-sm" style="margin-left:auto;">← 患者詳細に戻る</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;">来院・カルテ入力</h2>
+    <p style="font-size:12px;color:#9aa0a6;margin-bottom:16px;">
+      SelfPayVisits（来院情報）と SelfPayChart（カルテ記録）に同時保存します
+    </p>
+    <div id="msg"></div>
+
+    <form id="visitForm" novalidate>
+
+      <!-- ── 来院情報 ── -->
+      <p class="form-section-title">来院情報</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="visitDate">来院日<span class="req">*</span></label>
+          <input class="form-control" id="visitDate" type="date" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="visitType">来院区分</label>
+          <select class="form-control" id="visitType">
+            <option value="再診">再診</option>
+            <option value="初診">初診</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">担当者</label>
+          <input class="form-control" value="院長" disabled style="background:#f8f9fa;color:#5f6368;">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex:2;">
+          <label class="form-label" for="chiefComplaint">主訴<span class="req">*</span></label>
+          <input class="form-control" id="chiefComplaint" type="text"
+                 placeholder="例: 腰部痛・右下肢しびれ" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="vas">VAS
+            <span class="hint">（0〜10、任意）</span>
+          </label>
+          <div class="vas-wrap">
+            <input class="form-control" id="vas" type="number"
+                   min="0" max="10" placeholder="0〜10">
+            <span class="vas-hint">0=痛みなし　10=最強</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="nextPlan">次回方針</label>
+        <input class="form-control" id="nextPlan" type="text"
+               placeholder="例: 1週間後。同様の施術方針" autocomplete="off">
+      </div>
+
+      <!-- ── カルテ記録 ── -->
+      <p class="form-section-title">カルテ記録</p>
+
+      <div class="form-group">
+        <label class="form-label" for="assessment">評価</label>
+        <textarea class="form-control" id="assessment" rows="2"
+                  placeholder="ROMテスト・筋力テスト・姿勢評価など"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="findings">所見</label>
+        <textarea class="form-control" id="findings" rows="2"
+                  placeholder="触診所見・筋緊張・圧痛部位など"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="treatment">施術内容</label>
+        <textarea class="form-control" id="treatment" rows="2"
+                  placeholder="実施した施術の詳細"></textarea>
+        <div class="preset-btns">
+          <button class="preset-btn" type="button" onclick="append('treatment','干渉波10分')">干渉波10分</button>
+          <button class="preset-btn" type="button" onclick="append('treatment','マイクロカレント10分')">マイクロカレント10分</button>
+          <button class="preset-btn" type="button" onclick="append('treatment','ハイボルテージ5分')">ハイボルテージ5分</button>
+          <button class="preset-btn" type="button" onclick="append('treatment','超音波5分')">超音波5分</button>
+          <button class="preset-btn" type="button" onclick="append('treatment','手技')">手技</button>
+          <button class="preset-btn" type="button" onclick="append('treatment','ストレッチ')">ストレッチ</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="equipment">使用機器</label>
+        <textarea class="form-control" id="equipment" rows="1"
+                  placeholder="使用した機器・器具"></textarea>
+        <div class="preset-btns">
+          <button class="preset-btn" type="button" onclick="append('equipment','干渉波')">干渉波</button>
+          <button class="preset-btn" type="button" onclick="append('equipment','マイクロカレント')">マイクロカレント</button>
+          <button class="preset-btn" type="button" onclick="append('equipment','ハイボルテージ')">ハイボルテージ</button>
+          <button class="preset-btn" type="button" onclick="append('equipment','超音波')">超音波</button>
+          <button class="preset-btn" type="button" onclick="append('equipment','EMS')">EMS</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="contraindication">禁忌確認</label>
+          <select class="form-control" id="contraindication">
+            <option value="">—</option>
+            <option value="確認済">確認済</option>
+            <option value="該当なし">該当なし</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:2;">
+          <label class="form-label" for="explanation">説明内容</label>
+          <input class="form-control" id="explanation" type="text"
+                 placeholder="患者への説明内容" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="lifestyle">生活指導</label>
+        <textarea class="form-control" id="lifestyle" rows="2"
+                  placeholder="例: 座位時間を減らす・腹圧トレーニング継続"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="nextAppointment">次回予定</label>
+        <input class="form-control" id="nextAppointment" type="text"
+               placeholder="例: 1週間後。同様の施術方針" autocomplete="off">
+      </div>
+
+      <div class="form-actions">
+        <a id="cancelBtn" href="#" class="btn btn-secondary">キャンセル</a>
+        <button class="btn btn-primary" id="saveBtn" type="submit">保存して患者詳細へ戻る</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+  var PATIENT_ID = "<?= patient.patientId ?>";
+  document.getElementById('cancelBtn').href = APP_URL + '?page=detail&id=' + PATIENT_ID;
+
+  // 来院日のデフォルトを今日に設定
+  var today = new Date();
+  var yyyy  = today.getFullYear();
+  var mm    = String(today.getMonth() + 1).padStart(2, '0');
+  var dd    = String(today.getDate()).padStart(2, '0');
+  document.getElementById('visitDate').value = yyyy + '-' + mm + '-' + dd;
+
+  document.getElementById('visitForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn  = document.getElementById('saveBtn');
+    var cc   = document.getElementById('chiefComplaint').value.trim();
+    var vd   = document.getElementById('visitDate').value;
+
+    if (!vd) { showMsg('error', '来院日は必須です。'); return; }
+    if (!cc) { showMsg('error', '主訴は必須です。'); document.getElementById('chiefComplaint').focus(); return; }
+
+    var vasVal = document.getElementById('vas').value;
+    if (vasVal !== '' && (isNaN(parseInt(vasVal)) || parseInt(vasVal) < 0 || parseInt(vasVal) > 10)) {
+      showMsg('error', 'VAS は 0〜10 の数値を入力してください。');
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = '保存中...';
+    clearMsg();
+
+    var payload = {
+      patientId:       PATIENT_ID,
+      visitDate:       vd,
+      visitType:       document.getElementById('visitType').value,
+      chiefComplaint:  cc,
+      vas:             vasVal,
+      nextPlan:        document.getElementById('nextPlan').value.trim(),
+      assessment:      document.getElementById('assessment').value.trim(),
+      findings:        document.getElementById('findings').value.trim(),
+      treatment:       document.getElementById('treatment').value.trim(),
+      equipment:       document.getElementById('equipment').value.trim(),
+      explanation:     document.getElementById('explanation').value.trim(),
+      contraindication:document.getElementById('contraindication').value,
+      lifestyle:       document.getElementById('lifestyle').value.trim(),
+      nextAppointment: document.getElementById('nextAppointment').value.trim()
+    };
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.ok) {
+          showMsg('success', '保存しました（' + res.selfPayVisitKey + '）。患者詳細に戻ります...');
+          setTimeout(function() {
+            window.top.location.href = APP_URL + '?page=detail&id=' + PATIENT_ID;
+          }, 1200);
+        } else {
+          showMsg('error', res.error || '保存に失敗しました。');
+          btn.disabled    = false;
+          btn.textContent = '保存して患者詳細へ戻る';
+        }
+      })
+      .withFailureHandler(function(err) {
+        showMsg('error', 'エラー: ' + err.message);
+        btn.disabled    = false;
+        btn.textContent = '保存して患者詳細へ戻る';
+      })
+      .createVisitWithChart(payload);
+  });
+
+  function showMsg(type, text) {
+    document.getElementById('msg').innerHTML =
+      '<div class="alert alert-' + type + '">' + text + '</div>';
+  }
+  function clearMsg() { document.getElementById('msg').innerHTML = ''; }
+})();
+
+function append(fieldId, text) {
+  var el  = document.getElementById(fieldId);
+  el.value = el.value ? el.value + '・' + text : text;
+  el.focus();
+}
+</script>
+</body>
+</html>
