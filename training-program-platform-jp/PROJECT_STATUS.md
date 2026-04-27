@@ -2,7 +2,7 @@
 
 ## 2026-04-27 U-1: 個人カスタム種目ライブラリ
 
-### STATUS: 実装完了 / DB migration 適用待ち
+### STATUS: CLOSED (2026-04-27) — DB migration 適用済み
 
 ### PURPOSE
 
