@@ -2,7 +2,56 @@
 
 ## 現在ステータス
 
-**Phase 3 visit-form 白画面バグ修正済み・実機再確認待ち**（2026-04-27）
+**Phase 3 visit-form 表示OK・保存処理停止中（調査待ち）**（2026-04-27）
+
+---
+
+## 本日終了状態（2026-04-27）
+
+### 実機確認結果サマリー
+
+| 項目 | 状態 |
+|---|---|
+| 患者一覧表示 | ✅ 確認済み |
+| 新規患者登録 | ✅ 確認済み（P0001形式採番）|
+| 患者詳細表示 | ✅ 確認済み |
+| 「＋ 来院・カルテ入力」遷移 | ✅ 確認済み（iframe問題修正後）|
+| visit-form 表示・入力 | ✅ 確認済み |
+| 保存ボタン押下後の動作 | ❌ **「保存中」のまま停止**（未解決）|
+| GAS保存エラー alert 表示 | ❌ 表示されない |
+| 15秒タイムアウト表示 | ❌ 表示されない |
+
+### 未解決: 保存処理が停止する問題
+
+**現象:**
+- 「保存して患者詳細へ戻る」を押すとボタンが「保存中...」になる
+- そのまま止まる
+- `alert('GAS保存エラー: ...')` が表示されない
+- 15秒タイムアウトも発火しない
+- 患者詳細へ戻らない
+
+**特記事項:**
+- alert も timeout も発火しないということは、`google.script.run.createVisitWithChart()` の呼び出し自体は実行されているが、`withSuccessHandler` / `withFailureHandler` のどちらも呼ばれていない可能性が高い
+- または、`google.script.run` が完全に silent に失敗している
+
+**次回調査項目:**
+
+| 確認項目 | 方法 |
+|---|---|
+| ①デプロイが最新バージョンか | Apps Script → デプロイを管理 → バージョン番号を確認 |
+| ②Apps Script 実行ログ | Apps Script エディタ → 実行数 / Stackdriver ログを確認 |
+| ③ブラウザ Console | F12 → Console タブ → `[visitForm] payload:` が出ているか確認 |
+| ④`google.script.run` が動いているか | `?page=ping` で doGet 疎通確認 |
+| ⑤スプレッドシートへの書き込み権限 | 新しい患者登録（患者登録は成功するか？）で権限確認 |
+| ⑥`createVisitWithChart` が存在するか | Apps Script エディタ → 関数一覧で `createVisitWithChart` が見えるか |
+
+**次回再開時の方針:**
+1. ブラウザ F12 Console を開いた状態で保存ボタンを押す
+2. `[visitForm] payload:` のログが出るかを確認する
+3. 出ない → JS の submit handler 自体が動いていない（HTML問題）
+4. 出る → `[visitForm] success:` or `failure:` が出るかを確認する
+5. 出ない → google.script.run の非同期処理が発火していない（デプロイ/権限問題）
+6. 15秒後にタイムアウトも出ない → setTimeout 自体が動いていない（JS実行環境の問題）
 
 ---
 
