@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>新規患者登録 — JREC-SF01</title>
-  <script>var APP_URL = "<?= getAppUrl_() ?>";</script>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
   <?!= include('styles') ?>
 </head>
 <body>
@@ -81,7 +81,8 @@
       </div>
 
       <div class="form-actions">
-        <a id="cancelBtn" href="#" class="btn btn-secondary">キャンセル</a>
+        <button type="button" class="btn btn-secondary"
+          onclick="window.top.location.href = APP_URL">キャンセル</button>
         <button class="btn btn-primary" id="saveBtn" type="submit">保存する</button>
       </div>
 
@@ -91,10 +92,6 @@
 
 <script>
 (function() {
-  // キャンセルボタン
-  document.getElementById('cancelBtn').href = APP_URL;
-
-  // フォーム送信
   document.getElementById('patientForm').addEventListener('submit', function(e) {
     e.preventDefault();
     var btn  = document.getElementById('saveBtn');
@@ -144,9 +141,7 @@
     document.getElementById('msg').innerHTML =
       '<div class="alert alert-' + type + '">' + text + '</div>';
   }
-  function clearMsg() {
-    document.getElementById('msg').innerHTML = '';
-  }
+  function clearMsg() { document.getElementById('msg').innerHTML = ''; }
 })();
 </script>
 

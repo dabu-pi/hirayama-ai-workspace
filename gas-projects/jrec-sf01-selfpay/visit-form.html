@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>来院・カルテ入力 — JREC-SF01</title>
-  <script>var APP_URL = "<?= getAppUrl_() ?>";</script>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
   <?!= include('styles') ?>
   <style>
     .preset-btns { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
@@ -31,8 +31,10 @@
         <? if (patient.kana) { ?><span class="muted" style="margin-left:8px;font-size:13px;"><?= patient.kana ?></span><? } ?>
       </div>
       <? if (patient.phone) { ?><span style="color:#5f6368;"><?= patient.phone ?></span><? } ?>
-      <a href="<?= getAppUrl_() + '?page=detail&id=' + patient.patientId ?>"
-         class="btn btn-secondary btn-sm" style="margin-left:auto;">← 患者詳細に戻る</a>
+      <button type="button" class="btn btn-secondary btn-sm" style="margin-left:auto;"
+        onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= patient.patientId ?>'">
+        ← 患者詳細に戻る
+      </button>
     </div>
   </div>
 
@@ -79,7 +81,7 @@
           <div class="vas-wrap">
             <input class="form-control" id="vas" type="number"
                    min="0" max="10" placeholder="0〜10">
-            <span class="vas-hint">0=痛みなし　10=最強</span>
+            <span class="vas-hint">0=痛みなし</span>
           </div>
         </div>
       </div>
@@ -110,12 +112,12 @@
         <textarea class="form-control" id="treatment" rows="2"
                   placeholder="実施した施術の詳細"></textarea>
         <div class="preset-btns">
-          <button class="preset-btn" type="button" onclick="append('treatment','干渉波10分')">干渉波10分</button>
-          <button class="preset-btn" type="button" onclick="append('treatment','マイクロカレント10分')">マイクロカレント10分</button>
-          <button class="preset-btn" type="button" onclick="append('treatment','ハイボルテージ5分')">ハイボルテージ5分</button>
-          <button class="preset-btn" type="button" onclick="append('treatment','超音波5分')">超音波5分</button>
-          <button class="preset-btn" type="button" onclick="append('treatment','手技')">手技</button>
-          <button class="preset-btn" type="button" onclick="append('treatment','ストレッチ')">ストレッチ</button>
+          <button class="preset-btn" type="button" onclick="appendField('treatment','干渉波10分')">干渉波10分</button>
+          <button class="preset-btn" type="button" onclick="appendField('treatment','マイクロカレント10分')">マイクロカレント10分</button>
+          <button class="preset-btn" type="button" onclick="appendField('treatment','ハイボルテージ5分')">ハイボルテージ5分</button>
+          <button class="preset-btn" type="button" onclick="appendField('treatment','超音波5分')">超音波5分</button>
+          <button class="preset-btn" type="button" onclick="appendField('treatment','手技')">手技</button>
+          <button class="preset-btn" type="button" onclick="appendField('treatment','ストレッチ')">ストレッチ</button>
         </div>
       </div>
 
@@ -124,11 +126,11 @@
         <textarea class="form-control" id="equipment" rows="1"
                   placeholder="使用した機器・器具"></textarea>
         <div class="preset-btns">
-          <button class="preset-btn" type="button" onclick="append('equipment','干渉波')">干渉波</button>
-          <button class="preset-btn" type="button" onclick="append('equipment','マイクロカレント')">マイクロカレント</button>
-          <button class="preset-btn" type="button" onclick="append('equipment','ハイボルテージ')">ハイボルテージ</button>
-          <button class="preset-btn" type="button" onclick="append('equipment','超音波')">超音波</button>
-          <button class="preset-btn" type="button" onclick="append('equipment','EMS')">EMS</button>
+          <button class="preset-btn" type="button" onclick="appendField('equipment','干渉波')">干渉波</button>
+          <button class="preset-btn" type="button" onclick="appendField('equipment','マイクロカレント')">マイクロカレント</button>
+          <button class="preset-btn" type="button" onclick="appendField('equipment','ハイボルテージ')">ハイボルテージ</button>
+          <button class="preset-btn" type="button" onclick="appendField('equipment','超音波')">超音波</button>
+          <button class="preset-btn" type="button" onclick="appendField('equipment','EMS')">EMS</button>
         </div>
       </div>
 
@@ -161,7 +163,10 @@
       </div>
 
       <div class="form-actions">
-        <a id="cancelBtn" href="#" class="btn btn-secondary">キャンセル</a>
+        <button type="button" class="btn btn-secondary"
+          onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= patient.patientId ?>'">
+          キャンセル
+        </button>
         <button class="btn btn-primary" id="saveBtn" type="submit">保存して患者詳細へ戻る</button>
       </div>
     </form>
@@ -169,10 +174,9 @@
 </div>
 
 <script>
-(function() {
-  var PATIENT_ID = "<?= patient.patientId ?>";
-  document.getElementById('cancelBtn').href = APP_URL + '?page=detail&id=' + PATIENT_ID;
+var PATIENT_ID = "<?= patient.patientId ?>";
 
+(function() {
   // 来院日のデフォルトを今日に設定
   var today = new Date();
   var yyyy  = today.getFullYear();
@@ -183,8 +187,8 @@
   document.getElementById('visitForm').addEventListener('submit', function(e) {
     e.preventDefault();
     var btn  = document.getElementById('saveBtn');
-    var cc   = document.getElementById('chiefComplaint').value.trim();
     var vd   = document.getElementById('visitDate').value;
+    var cc   = document.getElementById('chiefComplaint').value.trim();
 
     if (!vd) { showMsg('error', '来院日は必須です。'); return; }
     if (!cc) { showMsg('error', '主訴は必須です。'); document.getElementById('chiefComplaint').focus(); return; }
@@ -244,8 +248,8 @@
   function clearMsg() { document.getElementById('msg').innerHTML = ''; }
 })();
 
-function append(fieldId, text) {
-  var el  = document.getElementById(fieldId);
+function appendField(fieldId, text) {
+  var el = document.getElementById(fieldId);
   el.value = el.value ? el.value + '・' + text : text;
   el.focus();
 }

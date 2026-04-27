@@ -6,6 +6,37 @@
 
 ---
 
+## 今回の作業内容（2026-04-27 セッション7）
+
+### 白画面 根本修正 — iframe 遷移問題の解決
+
+| 原因 | 対応 |
+|---|---|
+| GAS Webアプリは Google の iframe 内で動作する。`<a href>` クリックや `<form>` submit がページ全体ではなく iframe 内だけで遷移 → 白画面になる | 全ページの画面遷移を `window.top.location.href` に統一 |
+| `<a href>` をそのまま使っていた | `<button type="button" onclick="window.top.location.href=...">` に変更 |
+| `<form method="get">` での検索 | `onsubmit` で prevent + `window.top.location.href` に変更 |
+| `getAppUrl_()` をテンプレート内から直接呼び出していた | doGet で `appUrl` を全テンプレートに渡し、JS変数 `APP_URL = "<?= appUrl ?>"` で参照 |
+
+**修正ファイル一覧:**
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Main.gs` | ping ルート追加。全テンプレートに `appUrl` を渡す。visitForm に Logger.log 追加 |
+| `index.html` | nav ボタンを `<a href>` → `<button onclick="window.top.location.href=...">` に変更。不要なIIFEスクリプト削除 |
+| `patient-list.html` | 検索フォームを onsubmit+window.top に。詳細ボタンを button onclick に |
+| `patient-detail.html` | 全アクションボタンを window.top 方式に |
+| `patient-form.html` | キャンセルボタンを window.top 方式に |
+| `visit-form.html` | 戻るボタン・キャンセルを window.top 方式に。`append` 関数を `appendField` に改名 |
+
+### 動作確認手順（修正後）
+
+1. WebアプリURL + `?page=ping` → **"JREC-SF01 ping OK"** が表示されることを確認
+2. 患者一覧 → 詳細ボタン → 患者詳細が表示される
+3. 患者詳細 → ＋ 来院・カルテ入力 → visit-form が表示される（白画面にならない）
+4. 来院・カルテを保存 → 患者詳細に戻り来院履歴が表示される
+
+---
+
 ## 今回の作業内容（2026-04-27 セッション6）
 
 ### Phase 3 visit-form 白画面バグ修正

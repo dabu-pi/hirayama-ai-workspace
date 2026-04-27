@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>患者一覧 — JREC-SF01</title>
-  <script>var APP_URL = "<?= getAppUrl_() ?>";</script>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
   <?!= include('styles') ?>
 </head>
 <body>
@@ -16,13 +16,13 @@
 
     <!-- 検索バー -->
     <div class="toolbar">
-      <form class="search-form" method="get" action="<?= getAppUrl_() ?>">
-        <input type="hidden" name="page" value="list">
-        <input type="text" name="q" value="<?= query ?>"
+      <form class="search-form" id="searchForm" onsubmit="return doSearch(event)">
+        <input type="text" id="searchQ" value="<?= query ?>"
                placeholder="氏名・フリガナ・患者ID・電話番号で検索">
         <button class="btn btn-secondary" type="submit">検索</button>
         <? if (query) { ?>
-          <a href="<?= getAppUrl_() ?>" class="btn btn-secondary">クリア</a>
+          <button class="btn btn-secondary" type="button"
+            onclick="window.top.location.href = APP_URL">クリア</button>
         <? } ?>
       </form>
     </div>
@@ -78,8 +78,10 @@
                 <? } ?>
               </td>
               <td>
-                <a href="<?= getAppUrl_() + '?page=detail&id=' + p.patientId ?>"
-                   class="btn btn-secondary btn-sm">詳細</a>
+                <button type="button" class="btn btn-secondary btn-sm"
+                  onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= p.patientId ?>'">
+                  詳細
+                </button>
               </td>
             </tr>
             <? }); ?>
@@ -89,6 +91,15 @@
     <? } ?>
   </div>
 </div>
+
+<script>
+function doSearch(e) {
+  if (e) e.preventDefault();
+  var q = document.getElementById('searchQ').value.trim();
+  window.top.location.href = APP_URL + (q ? '?page=list&q=' + encodeURIComponent(q) : '');
+  return false;
+}
+</script>
 
 </body>
 </html>

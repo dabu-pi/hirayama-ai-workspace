@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>患者詳細 — JREC-SF01</title>
-  <script>var APP_URL = "<?= getAppUrl_() ?>";</script>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
   <?!= include('styles') ?>
   <style>
     .timeline-entry { border-bottom:1px solid #e8eaed; padding:14px 0; }
@@ -16,7 +16,7 @@
     .tl-vas    { font-size:12px; color:#5f6368; }
     .tl-billing-todo { font-size:11px; background:#fff8e1; color:#e37400; padding:2px 7px; border-radius:10px; }
     .tl-billing-done { font-size:11px; background:#e6f4ea; color:#1e8e3e; padding:2px 7px; border-radius:10px; }
-    .tl-toggle { margin-left:auto; font-size:12px; color:#1a73e8; white-space:nowrap; }
+    .tl-toggle { margin-left:auto; font-size:12px; color:#1a73e8; white-space:nowrap; border:none; background:none; cursor:pointer; padding:0; }
     .tl-detail { margin-top:10px; padding:10px 12px; background:#f8f9fa; border-radius:6px; font-size:13px; }
     .tl-row    { display:flex; gap:8px; padding:3px 0; }
     .tl-lbl    { color:#9aa0a6; width:80px; flex-shrink:0; font-size:12px; }
@@ -43,9 +43,12 @@ var visitCount    = timeline.length;
         <? if (patient.kana) { ?><div class="muted" style="font-size:13px;margin-top:2px;"><?= patient.kana ?></div><? } ?>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
-        <a href="<?= getAppUrl_() ?>" class="btn btn-secondary btn-sm">← 一覧に戻る</a>
-        <a href="<?= getAppUrl_() + '?page=visitForm&id=' + patient.patientId ?>"
-           class="btn btn-primary btn-sm">＋ 来院・カルテ入力</a>
+        <button type="button" class="btn btn-secondary btn-sm"
+          onclick="window.top.location.href = APP_URL">← 一覧に戻る</button>
+        <button type="button" class="btn btn-primary btn-sm"
+          onclick="window.top.location.href = APP_URL + '?page=visitForm&id=<?= patient.patientId ?>'">
+          ＋ 来院・カルテ入力
+        </button>
       </div>
     </div>
 
@@ -108,7 +111,7 @@ var visitCount    = timeline.length;
             <span class="tl-cc"><?= v.chiefComplaint ?></span>
             <? if (v.vas !== '') { ?><span class="tl-vas">VAS <?= v.vas ?></span><? } ?>
             <span class="<?= billingClass ?>"><?= v.billingStatus ?></span>
-            <span class="tl-toggle" id="toggle-<?= idx ?>">▼ 詳細</span>
+            <button type="button" class="tl-toggle" id="toggle-<?= idx ?>">▼ 詳細</button>
           </div>
 
           <div class="tl-detail" id="detail-<?= idx ?>" style="display:<?= idx === 0 ? 'block' : 'none' ?>;">
@@ -143,8 +146,10 @@ var visitCount    = timeline.length;
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <h3 style="font-size:14px;font-weight:700;color:#5f6368;">基本情報</h3>
-      <a href="<?= getAppUrl_() ?>?page=editPatient&id=<?= patient.patientId ?>"
-         class="btn btn-secondary btn-sm">編集</a>
+      <button type="button" class="btn btn-secondary btn-sm"
+        onclick="window.top.location.href = APP_URL + '?page=editPatient&id=<?= patient.patientId ?>'">
+        編集
+      </button>
     </div>
     <table class="info-table" style="width:100%;">
       <tbody>
@@ -178,7 +183,6 @@ function toggleDetail(idx) {
     toggle.textContent   = '▼ 詳細';
   }
 }
-// 最初のエントリのトグルテキストを初期化
 (function() {
   var t = document.getElementById('toggle-0');
   if (t) t.textContent = '▲ 閉じる';
