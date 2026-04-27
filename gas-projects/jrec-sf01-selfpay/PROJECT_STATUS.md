@@ -142,6 +142,38 @@
 
 ---
 
+## 別PC再開状態（2026-04-27）
+
+| 項目 | 状態 |
+|---|---|
+| ブランチ | `feature/auto-dev-phase3-loop` ✅ |
+| git pull | 最新（Already up to date）✅ |
+| `.clasp.json` | 別PCで復元済み（scriptId: `1-1opRkAFbFQz96Uqlgy3sWjgAs_PKS_1Eg9Pz7_6geTFztHx_5APSj2G`）✅ |
+| `runSetupAll()` 実行 | **未確認** — ユーザーが Apps Script から実行する必要あり |
+| 10シート作成 | **未確認** |
+| MenuMaster 初期15件 | **未確認** |
+| Phase 2 着手 | setup確認後に着手可能 |
+
+### ユーザー確認依頼
+
+以下を実施してください。
+
+1. [Apps Script エディタ](https://script.google.com/d/1-1opRkAFbFQz96Uqlgy3sWjgAs_PKS_1Eg9Pz7_6geTFztHx_5APSj2G/edit) を開く
+2. 関数プルダウンで `runSetupAll` を選択して「実行」をクリック
+3. 権限承認が出たら許可する
+4. [自費専用スプレッドシート](https://docs.google.com/spreadsheets/d/15O2AIWv1OyZAXdCOWoz1-OxVukuFttHoZydsCDlYPX0/edit) を開く
+5. 以下を確認して結果を教えてください
+
+| 確認項目 | 期待値 |
+|---|---|
+| シート数 | 10枚（Settings / Patients / SelfPayVisits / SelfPayChart / SelfPayItems / Payments / Receipts / MenuMaster / DailySales / Run_Log）|
+| Settings シート | 税率10% / floor / 税別管理 など12件の初期値 |
+| MenuMaster | 15メニュー（主力3本・個別パーツ6種・評価入口3種・保留3本）|
+
+確認完了後、このファイルの以下チェックボックスを更新します。
+
+---
+
 ## 変更履歴
 
 | 日付 | 内容 |
@@ -152,3 +184,4 @@
 | 2026-04-27 | `.clasp.json` 作成・`clasp push` 実施。Apps Script に JREC_SF01_Setup.gs を反映済み。setupAll_() は未実行。 |
 | 2026-04-27 | `runSetupAll()` ラッパー追加・clasp push。Apps Script エディタの関数選択で `runSetupAll` を選んで実行可能になった。 |
 | 2026-04-27 | `docs/UI_DESIGN_v1.md` 作成。7画面・バックエンド関数一覧・Phase別ロードマップを定義。 |
+| 2026-04-27 | 別PC再開。`.clasp.json` 復元。`runSetupAll()` 実行・10シート確認をユーザーに依頼。 |
