@@ -130,7 +130,9 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
       </header>
 
       <nav className={styles.adminNav}>
-        <a className={styles.navLink} href="/admin/members">← 会員管理</a>
+        <a className={styles.navLink} href="/admin">← 管理トップ</a>
+        <span className={styles.navSep}>|</span>
+        <a className={styles.navLink} href="/admin/members">会員管理</a>
         <span className={styles.navSep}>|</span>
         <a className={styles.navLink} href="/admin/gym-sponsors">スポンサー管理 →</a>
         <span className={styles.navSep}>|</span>

@@ -86,6 +86,7 @@
 - G-3-DB: お知らせ未読バッジ DB-backed 版（`gym_announcement_reads` テーブル、サーバーサイド read tracking）— 将来フェーズ
 - **G-4: スポンサー・協力店のDB化** ✅ CLOSED (2026-04-27) DB migration 適用済み
 - **G-5: トレーナー相談・パーソナルトレーニング申込フォーム** ✅ CLOSED (2026-04-27) DB migration 適用済み
+- **Admin Hub: 管理トップページ `/admin`** ✅ CLOSED (2026-04-27) DB migration 不要
 - Googleカレンダー連携: Phase 3 以降
 
 ### Phase 3: コンテンツ・管理拡張

@@ -1,5 +1,49 @@
 # PROJECT_STATUS
 
+## 2026-04-27 Admin Hub: 管理トップページ追加
+
+### STATUS: CLOSED (2026-04-27)
+
+### PURPOSE
+
+G-2〜G-5 で増加した管理画面を管理者専用の入口 `/admin` から一覧できるようにする。
+URL 直打ちでも admin 以外は入れない guard を設置。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | ファイル |
+|---|---|---|
+| 管理トップ | admin guard + 4管理機能へのカードリスト | `app/admin/page.tsx` |
+| AdminHubScreen | 会員/お知らせ/スポンサー/相談申込の4カード | `components/admin/AdminHubScreen.tsx` + `.module.css` |
+| nav 統一 | 全4 admin 画面の nav 先頭に「← 管理トップ」追加 | MembersScreen / GymAnnouncementsScreen / GymSponsorsScreen / GymRequestsScreen |
+
+### AUTH_GUARD
+
+全画面同一パターン:
+```ts
+const userContext = await getCurrentUserRole();
+if (!userContext) redirect("/login");
+if (userContext.role !== "admin") redirect("/");
+```
+一般ユーザー → `/` へ redirect、未ログイン → `/login` へ redirect。
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（/admin: 361B、全 admin サブルート正常ビルド）
+
+### LIVE_CHECK_REQUIRED
+
+| 確認項目 | 方法 |
+|---|---|
+| `/admin` に admin でアクセス → 4カード表示 | admin でログインして確認 |
+| 非admin ユーザーが `/admin` → `/` redirect | 一般ユーザーで確認 |
+| 未ログインで `/admin` → `/login` redirect | ログアウト状態で確認 |
+| 各カードから各管理画面へ遷移 | カードタップ動作確認 |
+| 各管理画面の「← 管理トップ」リンク | 各画面から /admin 戻り確認 |
+
+---
+
 ## 2026-04-27 G-5: トレーナー相談・パーソナルトレーニング申込フォーム
 
 ### STATUS: CLOSED (2026-04-27) — DB migration 適用済み
