@@ -489,15 +489,60 @@ supabase db push
 - `status === 'completed'` のみカレンダーにマーク
 - `session.startedAt` は既に JST "YYYY-MM-DD" 形式（`jstDateSlice` 適用済み）
 
-### KNOWN_LIMITS
+### KNOWN_LIMITS（H-1 時点）
 
-- 直近 20 件のみ取得（`SESSION_LIST_LIMIT = 20`）→ 高頻度ユーザーでは月をさかのぼると未表示になる可能性
-- Phase 2 候補: カレンダー専用クエリで月単位全件取得
+- ~~直近 20 件のみ取得（`SESSION_LIST_LIMIT = 20`）→ 高頻度ユーザーでは月をさかのぼると未表示になる可能性~~ → **H-1b で解消**
 
 ### CHECK
 
 - typecheck: pass
 - build: pass（session-history 1.19kB → 2.95kB）
+
+---
+
+## 2026-04-28 H-1b: 履歴カレンダー専用クエリ（SESSION_LIST_LIMIT 依存解消）
+
+### STATUS: CLOSED
+
+### 実装内容
+
+H-1 の KNOWN_LIMITS として記録されていた「SESSION_LIST_LIMIT = 20 によるカレンダー未表示問題」を解消。
+カレンダーの dot 表示をセッション一覧（最新20件）から切り離し、月単位の専用軽量クエリに移行した。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `types/workout.ts` | `CalendarDayEntry`・`CalendarMonthResult` 型を追加 |
+| `lib/workout/session-list.ts` | `getCalendarMonthData(year, month)` 関数を追加 |
+| `components/history/TrainingCalendar.tsx` | props に `entries: CalendarDayEntry[]` を追加、dot 計算を entries に切り替え |
+| `components/history/SessionHistoryScreen.tsx` | `calendarEntries` prop を追加して TrainingCalendar へ渡す |
+| `app/session-history/page.tsx` | `getCalendarMonthData` を並列実行し calendarEntries をページに注入 |
+
+### 設計ポイント
+
+- `getCalendarMonthData` は `status='completed'` かつ `archived_at IS NULL` の当月セッションのみを `started_at` で絞り込む
+- 月境界は UTC+JST 変換を考慮して広め（前月25日〜翌月1日）に取得し、`jstDateSlice` で JST 日付に変換後に当月プレフィックスで再フィルタ
+- DB migration 不要（既存テーブルの新クエリのみ）
+- 既存の履歴一覧表示（最新20件）・選択日詳細パネルはそのまま維持
+
+### RISKS
+
+- カレンダー移動（前月/次月）時はページリロードが発生しないため、表示月が変わっても `calendarEntries` は初期ロード時の当月データのまま
+- 将来的には月移動のたびにクライアントサイドで `getCalendarMonthData` 相当の API を呼び出す対応が必要
+- 現状: 当月カレンダーは正確、前月/次月に移動した場合のドット表示は sessions（最新20件）ベースのフォールバックなし → 他月は空になる
+
+### CHECK
+
+- typecheck: pass
+- build: pass（session-history 2.94 kB）
+- DB migration: 不要
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] `/session-history` で当月のカレンダードット表示が正確か
+- [ ] 20件超のセッションがあるユーザーで当月ドットが全て表示されるか
+- [ ] 既存の履歴一覧・選択日詳細が壊れていないか
 
 ### LIVE_CHECK — 2026-04-26 ブラウザ確認済み
 

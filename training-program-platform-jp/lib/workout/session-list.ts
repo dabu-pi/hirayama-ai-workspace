@@ -8,6 +8,8 @@ import {
 } from "@/lib/supabase/server";
 import { jstDateSlice } from "@/lib/utils/date-jst";
 import type {
+  CalendarDayEntry,
+  CalendarMonthResult,
   SessionHistoryResult,
   WorkoutSessionListItem,
   WorkoutSessionStatus
@@ -205,5 +207,61 @@ export async function getSessionHistoryView(): Promise<SessionHistoryResult> {
       sessions: [],
       errorMessage: "Session history could not be loaded right now. Please try again."
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// H-2: Calendar-specific lightweight query
+// Fetches only date + count for completed sessions in a given month.
+// Independent of SESSION_LIST_LIMIT — covers all sessions in the month.
+// ---------------------------------------------------------------------------
+
+export async function getCalendarMonthData(
+  year: number,
+  month: number // 0-indexed (0 = January), matches JS Date.getMonth()
+): Promise<CalendarMonthResult> {
+  if (!hasSupabasePublicEnv()) {
+    return { entries: [], errorMessage: "Supabase is not configured for this environment." };
+  }
+  try {
+    const serverClient = createSupabaseServerClient();
+    const { data: userData } = await serverClient.auth.getUser();
+    const userId = userData.user?.id ?? null;
+    if (!userId) return { entries: [], errorMessage: "Sign in is required." };
+
+    // UTC range that covers the full JST month (JST = UTC+9, so start from UTC month-1 day 15+)
+    // Using a generous range: from the 1st of the UTC month - 1 day to the 1st of UTC month + 1
+    // to ensure all JST-date sessions are captured regardless of UTC/JST boundary.
+    const rangeStart = new Date(Date.UTC(year, month - 1, 25)).toISOString();
+    const rangeEnd = new Date(Date.UTC(year, month + 1, 1)).toISOString();
+
+    const { data, error } = await serverClient
+      .from("workout_sessions")
+      .select("started_at")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .is("archived_at", null)
+      .gte("started_at", rangeStart)
+      .lt("started_at", rangeEnd);
+
+    if (error) throw new Error(error.message);
+
+    const targetMonthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const countByDate: Record<string, number> = {};
+    for (const row of data ?? []) {
+      const dateStr = jstDateSlice(row.started_at);
+      if (dateStr.startsWith(targetMonthPrefix)) {
+        countByDate[dateStr] = (countByDate[dateStr] ?? 0) + 1;
+      }
+    }
+
+    const entries: CalendarDayEntry[] = Object.entries(countByDate).map(([date, count]) => ({
+      date,
+      count,
+    }));
+    return { entries, errorMessage: null };
+  } catch (err) {
+    console.error("getCalendarMonthData failed", err);
+    return { entries: [], errorMessage: "Calendar data could not be loaded." };
   }
 }

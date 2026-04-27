@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { WorkoutSessionListItem } from "@/types/workout";
+import type { CalendarDayEntry, WorkoutSessionListItem } from "@/types/workout";
 
 import { ArchiveSessionButton } from "./ArchiveSessionButton";
 import { TrainingCalendar } from "./TrainingCalendar";
@@ -8,6 +8,8 @@ import styles from "./SessionHistoryScreen.module.css";
 
 type SessionHistoryScreenProps = {
   sessions: WorkoutSessionListItem[];
+  /** H-2: lightweight calendar entries for the current month. */
+  calendarEntries: CalendarDayEntry[];
   errorMessage?: string | null;
 };
 
@@ -25,6 +27,7 @@ function statusClassName(status: WorkoutSessionListItem["status"]) {
 
 export function SessionHistoryScreen({
   sessions,
+  calendarEntries,
   errorMessage = null
 }: SessionHistoryScreenProps) {
   return (
@@ -36,7 +39,7 @@ export function SessionHistoryScreen({
         </div>
       </header>
 
-      <TrainingCalendar sessions={sessions} />
+      <TrainingCalendar entries={calendarEntries} sessions={sessions} />
 
       {errorMessage ? (
         <section className={`${styles.statusCard} ${styles.errorCard}`}>

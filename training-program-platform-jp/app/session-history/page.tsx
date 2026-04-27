@@ -1,10 +1,24 @@
 import { SessionHistoryScreen } from "@/components/history/SessionHistoryScreen";
-import { getSessionHistoryView } from "@/lib/workout/session-list";
+import { getCalendarMonthData, getSessionHistoryView } from "@/lib/workout/session-list";
 
 export const dynamic = "force-dynamic";
 
 export default async function SessionHistoryPage() {
-  const { sessions, errorMessage } = await getSessionHistoryView();
+  const now = new Date();
+  // Use UTC month as JST approximation; getCalendarMonthData filters by JST date string.
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth(); // 0-indexed
 
-  return <SessionHistoryScreen errorMessage={errorMessage} sessions={sessions} />;
+  const [{ sessions, errorMessage }, { entries: calendarEntries }] = await Promise.all([
+    getSessionHistoryView(),
+    getCalendarMonthData(year, month),
+  ]);
+
+  return (
+    <SessionHistoryScreen
+      calendarEntries={calendarEntries}
+      errorMessage={errorMessage}
+      sessions={sessions}
+    />
+  );
 }

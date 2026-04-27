@@ -80,6 +80,7 @@
 - U-5: 休憩タイマー自動起動 ✅ 既実装確認 + save失敗修正
 - C-8: 5本目プログラム seed ✅ 本番反映済み（detail/start/train 未確認）
 - **H-1: 履歴カレンダー表示** ✅ LIVE確認済み（2026-04-26）
+- **H-1b: 履歴カレンダー専用クエリ（SESSION_LIST_LIMIT 依存解消）** ✅ CLOSED (2026-04-28) typecheck/build OK
 - **G-1: ジムタブ基本ダッシュボード** ✅ LIVE確認済み（2026-04-26）
 - **G-2: gym_announcements テーブル + 管理者投稿** ✅ CLOSED (2026-04-27) DB migration 適用済み
 - **G-3: お知らせ未読バッジ（localStorage 軽量版）** ✅ CLOSED (2026-04-27) 実機確認済み

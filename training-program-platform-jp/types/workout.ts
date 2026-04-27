@@ -272,6 +272,16 @@ export type SessionHistoryResult = {
   errorMessage: string | null;
 };
 
+export type CalendarDayEntry = {
+  date: string; // YYYY-MM-DD in JST
+  count: number;
+};
+
+export type CalendarMonthResult = {
+  entries: CalendarDayEntry[];
+  errorMessage: string | null;
+};
+
 export type WorkoutSessionDetailSet = {
   id: string;
   setNumber: number;

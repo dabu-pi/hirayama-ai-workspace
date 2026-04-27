@@ -3,13 +3,16 @@
 import { useState } from "react";
 
 import { jstDateSlice } from "@/lib/utils/date-jst";
-import type { WorkoutSessionListItem } from "@/types/workout";
+import type { CalendarDayEntry, WorkoutSessionListItem } from "@/types/workout";
 
 import styles from "./TrainingCalendar.module.css";
 
 const WEEK_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 
 type TrainingCalendarProps = {
+  /** H-2: lightweight month-specific entries for dot display. */
+  entries: CalendarDayEntry[];
+  /** Kept for selected-day detail panel (recent 20 sessions). */
   sessions: WorkoutSessionListItem[];
 };
 
@@ -31,19 +34,17 @@ function toDateStr(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export function TrainingCalendar({ sessions }: TrainingCalendarProps) {
+export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
   const today = todayJst();
   const [viewYear, setViewYear] = useState(today.year);
   const [viewMonth, setViewMonth] = useState(today.month);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  // Count completed sessions per JST date string.
-  // session.startedAt is already "YYYY-MM-DD" in JST (from jstDateSlice).
+  // H-2: Use lightweight calendar entries for dot display instead of session list.
+  // entries covers all completed sessions for the current month (not limited to 20).
   const countByDate: Record<string, number> = {};
-  for (const s of sessions) {
-    if (s.status === "completed") {
-      countByDate[s.startedAt] = (countByDate[s.startedAt] ?? 0) + 1;
-    }
+  for (const e of entries) {
+    countByDate[e.date] = e.count;
   }
 
   const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
