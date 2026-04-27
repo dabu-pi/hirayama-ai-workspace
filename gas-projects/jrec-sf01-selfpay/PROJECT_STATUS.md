@@ -2,7 +2,44 @@
 
 ## 現在ステータス
 
-**Phase 3 実装完了・実機確認待ち**（2026-04-27）
+**Phase 3 visit-form 白画面バグ修正済み・実機再確認待ち**（2026-04-27）
+
+---
+
+## 今回の作業内容（2026-04-27 セッション6）
+
+### Phase 3 visit-form 白画面バグ修正
+
+| 原因 | 修正内容 |
+|---|---|
+| `switch` 内で `var pt` を2回宣言（GAS V8 strict で挙動不安定）| `buildPage_()` 関数に分離。各 case を独立ブロック `{}` で囲み、変数名を `ptv` / `ptd` に分離 |
+| `tmpl.evaluate()` のエラーが白画面になる | `evalTemplate_()` ヘルパーで個別 try-catch。エラーページを必ず表示するように変更 |
+| `href` 属性内の `<?= expr ?>&id=<?= expr ?>` パターン | `<?= expr + '&id=' + id ?>` の単一式形式に統一し、HTML エンティティ問題を回避 |
+| `id` / `patientId` パラメータ不一致への耐性 | doGet で `e.parameter.id || e.parameter.patientId` の両方を受け付けるように変更 |
+
+**修正ファイル:**
+- `JREC_SF01_Main.gs`: doGet を `buildPage_()` + `evalTemplate_()` + `renderError_()` に分離・堅牢化
+- `visit-form.html`: href を式形式に統一
+- `patient-detail.html`: href を式形式に統一
+- `patient-list.html`: href を式形式に統一
+
+### 再デプロイ手順（ユーザー実施）
+
+```
+Apps Script エディタ
+→「デプロイを管理」
+→ 鉛筆アイコン（編集）
+→ バージョン：「新しいバージョン」を選択
+→「デプロイ」
+```
+
+### 実機確認チェックリスト（修正後）
+
+- [ ] 患者一覧 → 詳細 → 「＋ 来院・カルテ入力」をクリック
+- [ ] 白画面ではなく visit-form.html が表示される
+- [ ] 患者名・患者IDが上部に表示される
+- [ ] 来院日（今日）・主訴を入力して保存できる
+- [ ] 保存後に患者詳細に戻り、来院履歴に表示される
 
 ---
 

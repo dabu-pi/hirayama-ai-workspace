@@ -31,7 +31,7 @@
         <? if (patient.kana) { ?><span class="muted" style="margin-left:8px;font-size:13px;"><?= patient.kana ?></span><? } ?>
       </div>
       <? if (patient.phone) { ?><span style="color:#5f6368;"><?= patient.phone ?></span><? } ?>
-      <a href="<?= getAppUrl_() ?>?page=detail&id=<?= patient.patientId ?>"
+      <a href="<?= getAppUrl_() + '?page=detail&id=' + patient.patientId ?>"
          class="btn btn-secondary btn-sm" style="margin-left:auto;">← 患者詳細に戻る</a>
     </div>
   </div>

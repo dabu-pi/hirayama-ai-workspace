@@ -44,7 +44,7 @@ var visitCount    = timeline.length;
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
         <a href="<?= getAppUrl_() ?>" class="btn btn-secondary btn-sm">← 一覧に戻る</a>
-        <a href="<?= getAppUrl_() ?>?page=visitForm&id=<?= patient.patientId ?>"
+        <a href="<?= getAppUrl_() + '?page=visitForm&id=' + patient.patientId ?>"
            class="btn btn-primary btn-sm">＋ 来院・カルテ入力</a>
       </div>
     </div>
