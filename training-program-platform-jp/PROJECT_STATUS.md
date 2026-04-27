@@ -2,7 +2,7 @@
 
 ## 2026-04-27 G-4: スポンサー・協力店のDB化
 
-### STATUS: 実装完了 / DB migration 適用待ち
+### STATUS: CLOSED (2026-04-27) — DB migration 適用済み
 
 ### PURPOSE
 

@@ -84,7 +84,7 @@
 - **G-2: gym_announcements テーブル + 管理者投稿** ✅ CLOSED (2026-04-27) DB migration 適用済み
 - **G-3: お知らせ未読バッジ（localStorage 軽量版）** ✅ CLOSED (2026-04-27) typecheck/build PASS
 - G-3-DB: お知らせ未読バッジ DB-backed 版（`gym_announcement_reads` テーブル、サーバーサイド read tracking）— 将来フェーズ
-- **G-4: スポンサー・協力店のDB化** ✅ 実装完了・DB migration 適用待ち（2026-04-27）
+- **G-4: スポンサー・協力店のDB化** ✅ CLOSED (2026-04-27) DB migration 適用済み
 - Googleカレンダー連携: Phase 3 以降
 
 ### Phase 3: コンテンツ・管理拡張
