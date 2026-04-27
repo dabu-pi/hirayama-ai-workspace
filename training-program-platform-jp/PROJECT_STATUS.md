@@ -1,5 +1,68 @@
 # PROJECT_STATUS
 
+## 2026-04-27 U-1: 個人カスタム種目ライブラリ
+
+### STATUS: 実装完了 / DB migration 適用待ち
+
+### PURPOSE
+
+自由トレーニング中に既存の種目リストにない種目をユーザー自身が作成・追加し、次回以降も再利用できるようにする。
+追加した種目はユーザーごとに蓄積され、他のユーザーには見えない。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | ファイル |
+|---|---|---|
+| DBテーブル | `user_exercises`（user_id/name/category/default_unit/memo/is_archived） | `supabase/migrations/20260427_000026_user_exercises.sql` |
+| スキーマ変更 | `workout_session_exercises.exercise_id` nullable化 + `user_exercise_id` 追加 + CHECK制約 | 同上 |
+| RLS | ユーザーは自分のみ SELECT/INSERT/UPDATE/DELETE | 同上 |
+| user exercises API | GET (一覧取得) / POST (新規作成) | `app/api/user-exercises/route.ts` |
+| exercises API 拡張 | カスタムセッション時にユーザー種目も返す（`source: 'user'` フラグ付き） | `app/api/exercises/route.ts` |
+| セッション種目追加API | `user_exercise_id` パラメータ対応 | `app/api/workout-sessions/[id]/exercises/route.ts` |
+| セッション読み込み | `user_exercise_id` を持つ行を `user_exercises` テーブルから取得して名前表示 | `lib/workout/train-session.ts` |
+| WorkoutScreen UI | 種目追加モーダルに「自分」バッジ表示 + 「＋ 新しい種目を作成」フォーム追加 | `components/workout/WorkoutScreen.tsx` + `.module.css` |
+| 型更新 | `ExerciseListItem.source` / `AddExerciseResponse.userExerciseId` | `types/workout.ts` |
+
+### DESIGN_NOTES
+
+- 既存の共通種目（`exercises` テーブル）は無変更
+- `workout_session_exercises` に `user_exercise_id` nullable FK を追加し CHECK constraint で排他
+- 既存の全レコードは `exercise_id != null, user_exercise_id = null` のまま → 後方互換
+- 「新しい種目を作成」は自由トレーニング（カスタムセッション）の種目追加モーダルのみに表示
+- 種目交換（swap）は共通種目のみ対応（ユーザー種目のswapは将来フェーズ）
+
+### DEFERRED_SCOPE
+
+| 機能 | 理由 | 将来フェーズ |
+|---|---|---|
+| ユーザー種目の前回セット表示 | `buildPreviousDisplayMap` の拡張が必要 | U-4 |
+| ユーザー種目管理画面（編集/アーカイブ） | 作成・再利用優先 | U-2 |
+| 自由トレーニングテンプレート保存 | 別フェーズ | U-3 |
+| ユーザー種目の統計・履歴グラフ | 別フェーズ | U-4 |
+
+### DB_MIGRATION
+
+⚠️ **human approval 必要** — Supabase ダッシュボード > SQL Editor で以下を実行。
+
+`supabase/migrations/20260427_000026_user_exercises.sql`
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（/train: 13kB、正常増加）
+
+### LIVE_CHECK_REQUIRED
+
+| 確認項目 | 方法 |
+|---|---|
+| 自由トレーニング開始 → 種目追加モーダルで「＋ 新しい種目を作成」表示 | /train で自由トレーニング開始 |
+| 種目名入力 → 「作成して追加」→ セッションに追加されること | フォーム入力・送信 |
+| 再び種目追加モーダルを開く → 作成した種目が「自分」バッジ付きで表示 | モーダル再表示 |
+| 翌日以降に自由トレーニング開始 → 作成した種目が再利用可能 | 新規セッション起動 |
+| プログラムトレーニング中は「新しい種目を作成」ボタンが非表示 | /programs から開始 |
+
+---
+
 ## 2026-04-27 Admin Hub: 管理トップページ追加
 
 ### STATUS: CLOSED (2026-04-27)

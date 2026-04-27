@@ -1250,6 +1250,9 @@ export function WorkoutScreen({
     setAddExerciseError(null);
     setSwapTargetBlockId(null);
     setSwapGroupSlug(null);
+    setIsCreateExerciseMode(false);
+    setNewExerciseName("");
+    setNewExerciseCategory("");
   };
 
   const isCustomSession = session.programDayId === null;
@@ -1309,6 +1312,55 @@ export function WorkoutScreen({
       );
     } finally {
       setIsAddingExerciseId(null);
+    }
+  };
+
+  const handleCreateAndAddExercise = async () => {
+    const name = newExerciseName.trim();
+    if (!name) {
+      setAddExerciseError("種目名を入力してください。");
+      return;
+    }
+    if (isCreatingExercise) return;
+    setIsCreatingExercise(true);
+    setAddExerciseError(null);
+
+    try {
+      const createRes = await fetch("/api/user-exercises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, category: newExerciseCategory.trim() || undefined })
+      });
+      const createPayload = (await createRes.json().catch(() => null)) as
+        | { exercise: { id: string; name: string; category: string | null } }
+        | { error?: { message?: string } }
+        | null;
+
+      if (!createRes.ok || !createPayload || "error" in createPayload) {
+        throw new Error(
+          (createPayload && "error" in createPayload && createPayload.error?.message)
+            ? createPayload.error.message
+            : "種目の作成に失敗しました。"
+        );
+      }
+
+      const newExercise = (createPayload as { exercise: { id: string; name: string; category: string | null } }).exercise;
+
+      // Add newly created exercise to session.
+      await handleAddExercise(newExercise.id, "user");
+
+      // Also append to local exercise list so re-opening modal shows it.
+      setExerciseList((prev) => [
+        { id: newExercise.id, nameJa: newExercise.name, nameEn: newExercise.name, category: newExercise.category, source: "user" },
+        ...prev
+      ]);
+      setIsCreateExerciseMode(false);
+      setNewExerciseName("");
+      setNewExerciseCategory("");
+    } catch (err) {
+      setAddExerciseError(err instanceof Error ? err.message : "種目の作成に失敗しました。");
+    } finally {
+      setIsCreatingExercise(false);
     }
   };
 
@@ -1860,16 +1912,21 @@ export function WorkoutScreen({
                       disabled={isAddingExerciseId !== null}
                       onClick={() =>
                         exerciseModalMode === "add"
-                          ? handleAddExercise(item.id)
+                          ? handleAddExercise(item.id, item.source === "user" ? "user" : "library")
                           : handleSwapExercise(item.id)
                       }
                       type="button"
                     >
-                      <span className={styles.modalListItemName}>{item.nameJa}</span>
+                      <span className={styles.modalListItemName}>
+                        {item.nameJa}
+                        {item.source === "user" && (
+                          <span className={styles.userExerciseTag}>自分</span>
+                        )}
+                      </span>
                       <span className={styles.modalListItemSub}>
-                        {item.nameEn}
+                        {item.source !== "user" && item.nameEn}
                         {item.category ? ` · ${item.category}` : ""}
-                        {isCustomSession && exerciseModalMode === "add" && item.lastWeightKg !== undefined
+                        {isCustomSession && exerciseModalMode === "add" && item.source !== "user" && item.lastWeightKg !== undefined
                           ? item.lastWeightKg !== null
                             ? ` · 前回: ${item.lastWeightKg}kg${item.lastRepsDone !== null ? ` × ${item.lastRepsDone}` : ""}${item.lastDate ? ` (${item.lastDate})` : ""}`
                             : " · 履歴なし"
@@ -1885,6 +1942,69 @@ export function WorkoutScreen({
                 ))
               )}
             </ul>
+
+            {/* Create new personal exercise — only in add mode for custom sessions */}
+            {exerciseModalMode === "add" && isCustomSession && (
+              <div className={styles.createExerciseSection}>
+                {isCreateExerciseMode ? (
+                  <div className={styles.createExerciseForm}>
+                    <p className={styles.createExerciseTitle}>新しい種目を作成</p>
+                    <input
+                      autoFocus
+                      className={styles.createExerciseInput}
+                      maxLength={100}
+                      placeholder="種目名（必須）"
+                      type="text"
+                      value={newExerciseName}
+                      onChange={(e) => setNewExerciseName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleCreateAndAddExercise();
+                        }
+                      }}
+                    />
+                    <input
+                      className={styles.createExerciseInput}
+                      maxLength={50}
+                      placeholder="カテゴリ（任意）"
+                      type="text"
+                      value={newExerciseCategory}
+                      onChange={(e) => setNewExerciseCategory(e.target.value)}
+                    />
+                    <div className={styles.createExerciseActions}>
+                      <button
+                        className={styles.createExerciseSubmit}
+                        disabled={isCreatingExercise || !newExerciseName.trim()}
+                        type="button"
+                        onClick={handleCreateAndAddExercise}
+                      >
+                        {isCreatingExercise ? "作成中…" : "作成して追加"}
+                      </button>
+                      <button
+                        className={styles.createExerciseCancel}
+                        type="button"
+                        onClick={() => {
+                          setIsCreateExerciseMode(false);
+                          setNewExerciseName("");
+                          setNewExerciseCategory("");
+                        }}
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className={styles.createExerciseToggle}
+                    type="button"
+                    onClick={() => setIsCreateExerciseMode(true)}
+                  >
+                    ＋ 新しい種目を作成
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ) : null}

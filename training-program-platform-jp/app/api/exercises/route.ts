@@ -214,7 +214,11 @@ export async function GET(request: Request) {
     });
 
     // Append user's personal exercises when in add-mode (include_history=true means custom session).
-    let userExercises: typeof libraryExercises = [];
+    let userExercises: Array<{
+      id: string; nameJa: string; nameEn: string; category: string | null;
+      source: "library" | "user";
+      lastWeightKg?: null; lastRepsDone?: null; lastDate?: null;
+    }> = [];
     if (includeHistory && !swapGroup) {
       const serverClient = createSupabaseServerClient();
       const { data: userData } = await serverClient.auth.getUser();
