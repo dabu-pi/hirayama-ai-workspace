@@ -1,0 +1,23 @@
+<!-- ============================================================
+     index.html — 共通ナビゲーションヘッダー（各ページに include する）
+     使い方: <?!= include('index') ?> の形式で各 HTML ページに埋め込む
+     APP_URL 変数は呼び出し元ページで定義しておく必要がある
+     ============================================================ -->
+<header class="app-header">
+  <div>
+    <h1>JREC-SF01 自費カルテ・会計</h1>
+    <div class="subtitle">平山接骨院</div>
+  </div>
+  <nav>
+    <a id="hdrHome" href="#" class="btn btn-ghost">患者一覧</a>
+    <a id="hdrNew"  href="#" class="btn" style="background:#fff;color:#1a73e8;">＋ 新規患者登録</a>
+  </nav>
+</header>
+<script>
+(function() {
+  var base = (typeof APP_URL !== 'undefined') ? APP_URL : '';
+  var sep  = base.indexOf('?') >= 0 ? '&' : '?';
+  document.getElementById('hdrHome').href = base;
+  document.getElementById('hdrNew').href  = base + sep + 'page=newPatient';
+})();
+</script>

@@ -2,7 +2,73 @@
 
 ## 現在ステータス
 
-**Phase 2 UIレイアウト設計完了・実装待ち**（2026-04-27）
+**Phase 2 MVP 実装完了・Webアプリデプロイ待ち**（2026-04-27）
+
+---
+
+## 今回の作業内容（2026-04-27 セッション4）
+
+| 作業 | 内容 |
+|---|---|
+| Phase 2 MVP 実装 | 患者一覧・患者登録・患者詳細（入口のみ）の GAS Webアプリ |
+| clasp push | 9ファイルを Apps Script に反映済み |
+
+### 作成ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `JREC_SF01_Main.gs` | doGet() エントリ・ページルーティング・include/getAppUrl_ |
+| `JREC_SF01_Patient.gs` | getPatients / getPatientById / createPatient / generateNextPatientId_ / appendRunLog_ |
+| `index.html` | 共通ナビヘッダー（各ページに include('index') で埋め込む）|
+| `patient-list.html` | S01 患者一覧画面（検索・未収強調・患者行クリック）|
+| `patient-form.html` | S06 新規患者登録画面（google.script.run.createPatient）|
+| `patient-detail.html` | S02 患者詳細入口（基本情報表示・Phase 3〜4 プレースホルダー付き）|
+| `styles.html` | 共通CSS（全ページに include('styles') で埋め込む）|
+| `appsscript.json` | webapp 設定追加（executeAs: USER_DEPLOYING / access: MYSELF）|
+
+### 実装内容サマリー
+
+| 機能 | 状態 |
+|---|---|
+| doGet() ルーティング（page パラメータ）| ✅ |
+| 患者一覧表示（Patients シートから取得）| ✅ |
+| 患者検索（氏名・フリガナ・患者ID・電話番号）| ✅ |
+| 新規患者登録（Patients シートへ保存）| ✅ |
+| patientId 自動採番（P0001 形式）| ✅ |
+| Settings シートから prefix/digits を参照 | ✅ |
+| Run_Log への操作記録 | ✅ |
+| 患者詳細入口（基本情報表示）| ✅ |
+| 未収強調表示（行の橙背景）| ✅（データあり次第有効）|
+| 共通ヘッダー・CSS | ✅ |
+
+### clasp push 済みファイル一覧
+
+```
+appsscript.json / index.html / JREC_SF01_Main.gs / JREC_SF01_Patient.gs
+JREC_SF01_Setup.gs / patient-detail.html / patient-form.html
+patient-list.html / styles.html
+```
+
+### Webアプリ デプロイ手順（ユーザー実施）
+
+1. [Apps Script エディタ](https://script.google.com/d/1-1opRkAFbFQz96Uqlgy3sWjgAs_PKS_1Eg9Pz7_6geTFztHx_5APSj2G/edit) を開く
+2. 右上「デプロイ」→「新しいデプロイ」
+3. 種類: **ウェブアプリ**
+4. 次のユーザーとして実行: **自分（dabu-pi）**
+5. アクセスできるユーザー: **自分のみ**
+6. 「デプロイ」をクリック → Webアプリ URL を確認
+
+以降の更新は「デプロイを管理」→「既存のデプロイを編集」→バージョン「新しいバージョン」で更新する。
+
+### 実機確認チェックリスト（ユーザー実施）
+
+- [ ] Webアプリ URL を開いて患者一覧が表示される
+- [ ] 「＋ 新規患者登録」から患者登録フォームが開く
+- [ ] 氏名を入力して保存 → Patients シートに P0001 で記録される
+- [ ] 一覧に戻ったとき登録した患者が表示される
+- [ ] 2件目登録 → P0002 で採番される
+- [ ] 検索ボックスで絞り込みができる
+- [ ] 「詳細」ボタンで患者詳細画面が開く
 
 ---
 
@@ -124,7 +190,7 @@
 |---|---|---|
 | Phase 0 | 初期設計ドキュメント作成 | **完了（2026-04-27）** |
 | Phase 1 | スプレッドシート設計・GASセットアップ | **完了（2026-04-27）** |
-| Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **UIレイアウト設計完了（2026-04-27）/ 実装未着手** |
+| Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **実装完了（2026-04-27）/ デプロイ・実機確認待ち** |
 | Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | UI設計完了 / 実装未着手 |
 | Phase 4 | GAS Webアプリ — 会計入力・領収書・未収管理 | UI設計完了 / 実装未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |
@@ -213,3 +279,4 @@
 | 2026-04-27 | `docs/UI_DESIGN_v1.md` 作成。7画面・バックエンド関数一覧・Phase別ロードマップを定義。 |
 | 2026-04-27 | 別PC再開。`.clasp.json` 復元。`runSetupAll()` 実行・10シート確認をユーザーに依頼。 |
 | 2026-04-27 | `runSetupAll()` 実行確認・10シート作成確認済み。`docs/UI_LAYOUT_v1.md` 作成。UIレイアウト設計完了。 |
+| 2026-04-27 | Phase 2 MVP 実装。JREC_SF01_Main.gs / JREC_SF01_Patient.gs / 5 HTML + styles.html 作成。clasp push 完了（9ファイル）。 |

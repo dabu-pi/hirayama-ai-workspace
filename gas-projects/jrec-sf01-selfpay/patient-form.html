@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新規患者登録 — JREC-SF01</title>
+  <script>var APP_URL = "<?= getAppUrl_() ?>";</script>
+  <?!= include('styles') ?>
+</head>
+<body>
+
+<?!= include('index') ?>
+
+<div class="container">
+  <div class="card">
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;">新規患者登録</h2>
+    <div id="msg"></div>
+
+    <form id="patientForm" novalidate>
+
+      <p class="form-section-title">基本情報</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="name">氏名<span class="req">*</span></label>
+          <input class="form-control" id="name" type="text"
+                 placeholder="例: 山田 太郎" autocomplete="off" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="kana">フリガナ</label>
+          <input class="form-control" id="kana" type="text"
+                 placeholder="例: ヤマダ タロウ" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="dob">生年月日</label>
+          <input class="form-control" id="dob" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="gender">性別</label>
+          <select class="form-control" id="gender">
+            <option value="">— 選択 —</option>
+            <option value="男性">男性</option>
+            <option value="女性">女性</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="phone">電話番号</label>
+          <input class="form-control" id="phone" type="tel"
+                 placeholder="例: 090-1234-5678" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="address">住所
+          <span class="hint">（任意）</span>
+        </label>
+        <input class="form-control" id="address" type="text"
+               placeholder="例: 兵庫県神戸市..." autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="note">備考
+          <span class="hint">（アレルギー・注意事項など、任意）</span>
+        </label>
+        <textarea class="form-control" id="note" rows="3"
+                  placeholder="例: 高血圧既往あり"></textarea>
+      </div>
+
+      <p class="form-section-title">JREC連携（任意）</p>
+
+      <div class="form-group">
+        <label class="form-label" for="jrecPatientId">JREC本体 患者ID
+          <span class="hint">保険JREC側の同一患者IDがある場合のみ</span>
+        </label>
+        <input class="form-control" id="jrecPatientId" type="text"
+               placeholder="例: jrec-P0023" autocomplete="off">
+      </div>
+
+      <div class="form-actions">
+        <a id="cancelBtn" href="#" class="btn btn-secondary">キャンセル</a>
+        <button class="btn btn-primary" id="saveBtn" type="submit">保存する</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+  // キャンセルボタン
+  document.getElementById('cancelBtn').href = APP_URL;
+
+  // フォーム送信
+  document.getElementById('patientForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn  = document.getElementById('saveBtn');
+    var name = document.getElementById('name').value.trim();
+
+    if (!name) {
+      showMsg('error', '氏名は必須です。');
+      document.getElementById('name').focus();
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = '保存中...';
+    clearMsg();
+
+    var payload = {
+      name:          name,
+      kana:          document.getElementById('kana').value.trim(),
+      dob:           document.getElementById('dob').value,
+      gender:        document.getElementById('gender').value,
+      phone:         document.getElementById('phone').value.trim(),
+      address:       document.getElementById('address').value.trim(),
+      note:          document.getElementById('note').value.trim(),
+      jrecPatientId: document.getElementById('jrecPatientId').value.trim()
+    };
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.ok) {
+          showMsg('success', '患者 ' + res.patientId + ' を登録しました。一覧に戻ります...');
+          setTimeout(function() { window.top.location.href = APP_URL; }, 1200);
+        } else {
+          showMsg('error', res.error || '保存に失敗しました。');
+          btn.disabled    = false;
+          btn.textContent = '保存する';
+        }
+      })
+      .withFailureHandler(function(err) {
+        showMsg('error', 'エラー: ' + err.message);
+        btn.disabled    = false;
+        btn.textContent = '保存する';
+      })
+      .createPatient(payload);
+  });
+
+  function showMsg(type, text) {
+    document.getElementById('msg').innerHTML =
+      '<div class="alert alert-' + type + '">' + text + '</div>';
+  }
+  function clearMsg() {
+    document.getElementById('msg').innerHTML = '';
+  }
+})();
+</script>
+
+</body>
+</html>

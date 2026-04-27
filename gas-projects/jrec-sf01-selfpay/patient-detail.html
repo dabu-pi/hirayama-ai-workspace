@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>患者詳細 — JREC-SF01</title>
+  <script>var APP_URL = "<?= getAppUrl_() ?>";</script>
+  <?!= include('styles') ?>
+</head>
+<body>
+
+<?!= include('index') ?>
+
+<div class="container">
+
+  <!-- サマリーカード -->
+  <div class="card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div>
+        <span class="pid" style="font-size:13px;"><?= patient.patientId ?></span>
+        <h2 style="font-size:20px;font-weight:700;margin-top:4px;"><?= patient.name ?></h2>
+        <? if (patient.kana) { ?><div class="muted" style="font-size:13px;margin-top:2px;"><?= patient.kana ?></div><? } ?>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="<?= getAppUrl_() ?>" class="btn btn-secondary btn-sm">← 一覧に戻る</a>
+        <a href="<?= getAppUrl_() ?>?page=editPatient&id=<?= patient.patientId ?>"
+           class="btn btn-secondary btn-sm">基本情報編集</a>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="label">最終来院日</div>
+        <div class="value" style="font-size:15px;">—</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">来院回数</div>
+        <div class="value">—</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">累計支払</div>
+        <div class="value" style="font-size:15px;">—</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">未収残高</div>
+        <div class="value">¥0</div>
+      </div>
+    </div>
+
+    <div class="phase-note">
+      来院入力・会計・カルテ記録は Phase 3〜4 で実装予定です。
+    </div>
+  </div>
+
+  <!-- 基本情報 -->
+  <div class="card">
+    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#5f6368;">基本情報</h3>
+    <table class="info-table" style="width:100%;">
+      <tbody>
+        <tr><td>患者ID</td><td><?= patient.patientId ?></td></tr>
+        <tr><td>氏名</td><td><?= patient.name ?></td></tr>
+        <tr><td>フリガナ</td><td><?= patient.kana || '—' ?></td></tr>
+        <tr><td>生年月日</td><td><?= patient.dob || '—' ?></td></tr>
+        <tr><td>性別</td><td><?= patient.gender || '—' ?></td></tr>
+        <tr><td>電話番号</td><td><?= patient.phone || '—' ?></td></tr>
+        <tr><td>住所</td><td><?= patient.address || '—' ?></td></tr>
+        <tr><td>備考</td><td><?= patient.note || '—' ?></td></tr>
+        <? if (patient.jrecPatientId) { ?>
+        <tr><td>JREC本体ID</td><td><?= patient.jrecPatientId ?></td></tr>
+        <? } ?>
+        <tr><td>登録日</td><td><?= patient.createdAt || '—' ?></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 来院・カルテ・会計（Phase 3〜 プレースホルダー） -->
+  <div class="card">
+    <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;color:#5f6368;">来院履歴・カルテ・会計</h3>
+    <div style="text-align:center;padding:32px;color:#9aa0a6;">
+      <p>Phase 3（来院入力・カルテ）/ Phase 4（会計・領収書）で実装予定</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
