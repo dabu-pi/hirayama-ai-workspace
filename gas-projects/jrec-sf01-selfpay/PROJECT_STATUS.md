@@ -150,3 +150,4 @@
 | 2026-04-27 | `docs/SHEET_DESIGN_v1.md` 作成。MenuMaster初期データ・税設計・ID設計・全10シート列定義を確定。 |
 | 2026-04-27 | `JREC_SF01_Setup.gs` 作成。全10シート初期セットアップスクリプト。スプレッドシートID確定（15O2AIWv1...）。 |
 | 2026-04-27 | `.clasp.json` 作成・`clasp push` 実施。Apps Script に JREC_SF01_Setup.gs を反映済み。setupAll_() は未実行。 |
+| 2026-04-27 | `runSetupAll()` ラッパー追加・clasp push。Apps Script エディタの関数選択で `runSetupAll` を選んで実行可能になった。 |
