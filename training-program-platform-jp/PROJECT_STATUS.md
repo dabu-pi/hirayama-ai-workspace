@@ -295,14 +295,29 @@ DB migration 不要の localStorage ベース軽量版として実装。DB-backe
 - typecheck: ✅ pass
 - build: ✅ pass（/gym: 654B → 1.71kB、クライアントコード追加の正常増加）
 
-### LIVE_CHECK_REQUIRED
+### LIVE_CHECK — コード静的確認済み / ブラウザ実機確認待ち
 
-| 確認項目 | 方法 |
+#### コードレベルで確認済み（2026-04-27 静的解析）
+
+| 確認項目 | 根拠 | 結果 |
+|---|---|---|
+| localStorage clear → 全件未読として扱う | `readSnapshot = new Set(getReadIds())` が空 → `unreadCount = announcements.length` | ✅ |
+| 各カードに「未読」バッジ + アクセント枠 | `isUnread(id) = !markedAllRead && !readSnapshot.has(id)` → `.cardUnread` / `.unreadBadge` 付与 | ✅ |
+| BottomTabBar バッジ数がリアクティブに更新 | `saveUnreadCount()` → `gym_unread_updated` イベント → `useGymUnreadCount` が `getCachedUnreadCount()` を再取得 | ✅ |
+| 「全て既読にする」→ 件数0・イベント dispatch | `markAsRead()` が `gym_unread_count="0"` 書き込み + `gym_unread_updated` 発火 + `setMarkedAllRead(true)` | ✅ |
+| ページ再読み込み後も既読状態が維持 | `markAsRead()` が `gym_announcements_read_ids` に JSON 永続化 → reload 後も `getReadIds()` で復元 | ✅ |
+| 新しいお知らせ → 自動的に未読扱い | 新 ID は `readSnapshot` に存在しない → `isUnread()` = true → バッジ・枠が再表示 | ✅ |
+| 他タブ（/train 等）でもバッジが残る | BottomTabBar は全ページに存在し mount 時に `getCachedUnreadCount()` を読み取り | ✅ ※1 |
+
+※1 hydration flash（初期 0 → 実値）は `useState(0)` → `useEffect` 更新の設計上の意図。機能的には正常。
+
+#### ブラウザ実機確認が必要な項目
+
+| 確認項目 | 理由 |
 |---|---|
-| `/gym` 初訪問 → 未読バッジ表示 | ブラウザで localStorage クリア後に `/gym` を開く |
-| 「全て既読にする」ボタン押下 → バッジ消失 | BottomTabBar バッジも同時に 0 になること |
-| 他タブ表示中も gym タブにバッジが残ること | `/train` や `/programs` にいる間もバッジ表示確認 |
-| 既読後に `/gym` を再訪問 → バッジなし | localStorage に read_ids が保存されていることを確認 |
+| バッジの実際の表示（色・サイズ・位置） | CSS 描画 / モバイル実機確認 |
+| 「全て既読にする」クリック後の即時 UI 更新感 | React レンダリングのタイミング・体感確認 |
+| localStorage が使えない環境（Safari プライベート等）での graceful degradation | `try/catch` で空返却する設計の実動作確認 |
 
 ---
 

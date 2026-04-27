@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-27（U-1 / U-2 / G-4 / G-5 / Admin Hub 実機確認 PASS）
+最終更新: 2026-04-27（G-3 コード静的確認済み / ブラウザ実機確認待ち）
 
 ---
 
@@ -82,7 +82,7 @@
 - **H-1: 履歴カレンダー表示** ✅ LIVE確認済み（2026-04-26）
 - **G-1: ジムタブ基本ダッシュボード** ✅ LIVE確認済み（2026-04-26）
 - **G-2: gym_announcements テーブル + 管理者投稿** ✅ CLOSED (2026-04-27) DB migration 適用済み
-- **G-3: お知らせ未読バッジ（localStorage 軽量版）** ✅ CLOSED (2026-04-27) typecheck/build PASS
+- **G-3: お知らせ未読バッジ（localStorage 軽量版）** ✅ CLOSED (2026-04-27) typecheck/build PASS / コード静的確認済み / ブラウザ実機確認待ち
 - G-3-DB: お知らせ未読バッジ DB-backed 版（`gym_announcement_reads` テーブル、サーバーサイド read tracking）— 将来フェーズ
 - **G-4: スポンサー・協力店のDB化** ✅ CLOSED (2026-04-27) DB migration 適用済み / 実機確認済み
 - **G-5: トレーナー相談・パーソナルトレーニング申込フォーム** ✅ CLOSED (2026-04-27) DB migration 適用済み / 実機確認済み
