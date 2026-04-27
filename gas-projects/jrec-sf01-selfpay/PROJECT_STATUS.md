@@ -6,6 +6,34 @@
 
 ---
 
+## 今回の作業内容（2026-04-27 セッション8）
+
+### 保存ボタン無反応バグ修正
+
+| 原因 | 対応 |
+|---|---|
+| `createVisitWithChart` で `getTargetSpreadsheet_()` が try-catch の外にあり、失敗しても画面に出なかった | 全処理を1つの try-catch に統合 |
+| `withFailureHandler` の `err` が文字列の場合に `.message` が undefined → `showMsg` が空文字を表示 | `err.message \|\| String(err)` でフォールバック。`alert()` も追加 |
+| どちらのハンドラも呼ばれない場合に無反応 | 15秒タイムアウトを追加 |
+| JS 内エラーが silent になる | successHandler/failureHandler 内を try-catch でラップ |
+| デバッグ情報がなかった | `console.log(payload)` / `console.error` を追加 |
+
+**修正ファイル:**
+- `JREC_SF01_Visit.gs`: createVisitWithChart を全体 try-catch に。Logger.log を各ステップに追加。シート null チェック追加
+- `visit-form.html`: 15秒タイムアウト。successHandler/failureHandler を try-catch でラップ。alert() による確実なエラー表示
+
+### 実機確認手順（修正後）
+
+1. Apps Script → 新バージョンデプロイ
+2. visit-form で保存ボタン押下
+3. ブラウザの開発者ツール（F12）の Console タブを確認
+   - `[visitForm] payload:` のログが出ているか
+   - `[visitForm] success:` または `[visitForm] GAS failure:` のログが出るか
+4. 15秒以内に結果が出ない場合はタイムアウトメッセージが表示される
+5. GASエラーの場合は alert ダイアログが必ず表示される
+
+---
+
 ## 今回の作業内容（2026-04-27 セッション7）
 
 ### 白画面 根本修正 — iframe 遷移問題の解決

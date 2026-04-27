@@ -86,62 +86,76 @@ function getVisitTimelineByPatient(patientId) {
  * @returns {{ ok, selfPayVisitKey?, chartId?, error? }}
  */
 function createVisitWithChart(payload) {
-  if (!payload || !payload.patientId)                        return { ok: false, error: "patientId は必須です" };
-  if (!payload.visitDate)                                    return { ok: false, error: "来院日は必須です" };
-  if (!payload.chiefComplaint || !payload.chiefComplaint.trim()) return { ok: false, error: "主訴は必須です" };
-
-  // VAS 検証（空欄は許可）
-  var vas = "";
-  if (payload.vas !== "" && payload.vas !== null && payload.vas !== undefined) {
-    var vasNum = parseInt(String(payload.vas), 10);
-    if (isNaN(vasNum) || vasNum < 0 || vasNum > 10) return { ok: false, error: "VAS は 0〜10 の整数で入力してください" };
-    vas = vasNum;
-  }
-
-  var ss  = getTargetSpreadsheet_();
-  var now = new Date();
-
+  // ── バリデーション ───────────────────────────────────────
   try {
+    if (!payload || !payload.patientId)  return { ok: false, error: "patientId は必須です" };
+    if (!payload.visitDate)              return { ok: false, error: "来院日は必須です" };
+    var cc = payload.chiefComplaint ? String(payload.chiefComplaint).trim() : "";
+    if (!cc)                             return { ok: false, error: "主訴は必須です" };
+
+    var vas = "";
+    var vasRaw = payload.vas;
+    if (vasRaw !== "" && vasRaw !== null && vasRaw !== undefined) {
+      var vasNum = parseInt(String(vasRaw), 10);
+      if (isNaN(vasNum) || vasNum < 0 || vasNum > 10) {
+        return { ok: false, error: "VAS は 0〜10 の整数で入力してください（入力値: " + vasRaw + "）" };
+      }
+      vas = vasNum;
+    }
+
+    // ── スプレッドシート取得 ─────────────────────────────────
+    var ss  = getTargetSpreadsheet_();
+    var now = new Date();
+
+    // ── selfPayVisitKey 採番 ─────────────────────────────────
     var vk      = generateSelfPayVisitKey_(payload.patientId, payload.visitDate);
     var chartId = vk.replace(/^SPV_/, "SPC_");
+    Logger.log("[createVisitWithChart] vk=" + vk + " patientId=" + payload.patientId);
 
-    // SelfPayVisits
+    // ── SelfPayVisits に保存 ─────────────────────────────────
     var vSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (!vSh) return { ok: false, error: "シート SelfPayVisits が見つかりません" };
     vSh.appendRow([
       vk,
       payload.patientId,
       payload.visitDate,
-      payload.visitType         ? payload.visitType                  : "再診",
+      payload.visitType    ? String(payload.visitType).trim()    : "再診",
       getDefaultPractitioner_(),
-      payload.chiefComplaint.trim(),
+      cc,
       vas,
-      payload.nextPlan          ? payload.nextPlan.trim()            : "",
+      payload.nextPlan     ? String(payload.nextPlan).trim()     : "",
       "未会計",
       now,
       now
     ]);
+    Logger.log("[createVisitWithChart] SelfPayVisits 保存完了");
 
-    // SelfPayChart
+    // ── SelfPayChart に保存 ──────────────────────────────────
     var cSh = ss.getSheetByName(SHEET_NAMES.CHART);
+    if (!cSh) return { ok: false, error: "シート SelfPayChart が見つかりません" };
     cSh.appendRow([
       chartId,
       vk,
-      payload.assessment        ? payload.assessment.trim()       : "",
-      payload.findings          ? payload.findings.trim()         : "",
-      payload.treatment         ? payload.treatment.trim()        : "",
-      payload.equipment         ? payload.equipment.trim()        : "",
-      payload.explanation       ? payload.explanation.trim()      : "",
-      payload.contraindication  ? payload.contraindication.trim() : "",
-      payload.lifestyle         ? payload.lifestyle.trim()        : "",
-      payload.nextAppointment   ? payload.nextAppointment.trim()  : "",
+      payload.assessment       ? String(payload.assessment).trim()       : "",
+      payload.findings         ? String(payload.findings).trim()         : "",
+      payload.treatment        ? String(payload.treatment).trim()        : "",
+      payload.equipment        ? String(payload.equipment).trim()        : "",
+      payload.explanation      ? String(payload.explanation).trim()      : "",
+      payload.contraindication ? String(payload.contraindication).trim() : "",
+      payload.lifestyle        ? String(payload.lifestyle).trim()        : "",
+      payload.nextAppointment  ? String(payload.nextAppointment).trim()  : "",
       now,
       now
     ]);
+    Logger.log("[createVisitWithChart] SelfPayChart 保存完了");
 
+    // ── Run_Log ─────────────────────────────────────────────
     appendRunLog_("VISIT_CREATE", payload.patientId, "visitKey: " + vk);
+
     return { ok: true, selfPayVisitKey: vk, chartId: chartId };
 
   } catch(err) {
+    Logger.log("[createVisitWithChart] ERROR: " + err.message);
     return { ok: false, error: err.message };
   }
 }

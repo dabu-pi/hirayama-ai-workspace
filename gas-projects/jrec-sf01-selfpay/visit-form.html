@@ -220,23 +220,47 @@ var PATIENT_ID = "<?= patient.patientId ?>";
       nextAppointment: document.getElementById('nextAppointment').value.trim()
     };
 
+    console.log('[visitForm] payload:', JSON.stringify(payload));
+
+    // 15秒タイムアウト — どちらのハンドラも呼ばれない場合に通知
+    var saveTimer = setTimeout(function() {
+      showMsg('error', '保存がタイムアウトしました（15秒）。Apps Script 実行ログを確認してください。');
+      btn.disabled    = false;
+      btn.textContent = '保存して患者詳細へ戻る';
+    }, 15000);
+
     google.script.run
       .withSuccessHandler(function(res) {
-        if (res.ok) {
-          showMsg('success', '保存しました（' + res.selfPayVisitKey + '）。患者詳細に戻ります...');
-          setTimeout(function() {
-            window.top.location.href = APP_URL + '?page=detail&id=' + PATIENT_ID;
-          }, 1200);
-        } else {
-          showMsg('error', res.error || '保存に失敗しました。');
-          btn.disabled    = false;
-          btn.textContent = '保存して患者詳細へ戻る';
+        clearTimeout(saveTimer);
+        try {
+          console.log('[visitForm] success:', JSON.stringify(res));
+          if (res && res.ok) {
+            showMsg('success', '保存しました（' + res.selfPayVisitKey + '）。患者詳細に戻ります...');
+            setTimeout(function() {
+              window.top.location.href = APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
+            }, 1200);
+          } else {
+            var errMsg = (res && res.error) ? res.error : '保存に失敗しました（原因不明）';
+            showMsg('error', errMsg);
+            btn.disabled    = false;
+            btn.textContent = '保存して患者詳細へ戻る';
+          }
+        } catch(e) {
+          alert('[successHandler エラー] ' + e.message);
         }
       })
       .withFailureHandler(function(err) {
-        showMsg('error', 'エラー: ' + err.message);
-        btn.disabled    = false;
-        btn.textContent = '保存して患者詳細へ戻る';
+        clearTimeout(saveTimer);
+        try {
+          var msg = err ? (err.message || String(err)) : '不明なGASエラー';
+          console.error('[visitForm] GAS failure:', msg);
+          alert('GAS保存エラー: ' + msg);
+          showMsg('error', 'GAS エラー: ' + msg);
+          btn.disabled    = false;
+          btn.textContent = '保存して患者詳細へ戻る';
+        } catch(e2) {
+          alert('[failureHandler エラー] ' + e2.message);
+        }
       })
       .createVisitWithChart(payload);
   });
