@@ -264,7 +264,7 @@ Supabase ダッシュボード > SQL Editor で `supabase/migrations/20260427_00
 
 ## 2026-04-27 G-3: お知らせ未読バッジ（localStorage 軽量版）
 
-### STATUS: CLOSED (2026-04-27)
+### STATUS: CLOSED (2026-04-27) — 実機確認済み
 
 ### PURPOSE
 
@@ -295,7 +295,7 @@ DB migration 不要の localStorage ベース軽量版として実装。DB-backe
 - typecheck: ✅ pass
 - build: ✅ pass（/gym: 654B → 1.71kB、クライアントコード追加の正常増加）
 
-### LIVE_CHECK — コード静的確認済み / ブラウザ実機確認待ち
+### LIVE_CHECK — コード静的確認済み / ブラウザ実機確認済み（2026-04-27）
 
 #### コードレベルで確認済み（2026-04-27 静的解析）
 
@@ -311,13 +311,13 @@ DB migration 不要の localStorage ベース軽量版として実装。DB-backe
 
 ※1 hydration flash（初期 0 → 実値）は `useState(0)` → `useEffect` 更新の設計上の意図。機能的には正常。
 
-#### ブラウザ実機確認が必要な項目
+#### ブラウザ実機確認済み（2026-04-27）
 
-| 確認項目 | 理由 |
+| 確認項目 | 結果 |
 |---|---|
-| バッジの実際の表示（色・サイズ・位置） | CSS 描画 / モバイル実機確認 |
-| 「全て既読にする」クリック後の即時 UI 更新感 | React レンダリングのタイミング・体感確認 |
-| localStorage が使えない環境（Safari プライベート等）での graceful degradation | `try/catch` で空返却する設計の実動作確認 |
+| `/gym` を開いて BottomTabBar のジムタブに未読バッジが出る | ✅ |
+| 「全て既読にする」を押すと未読表示とバッジがすぐ消える | ✅ |
+| ページ再読み込み後も既読状態が維持され、バッジが復活しない | ✅ |
 
 ---
 
