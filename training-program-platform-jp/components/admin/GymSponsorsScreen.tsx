@@ -139,6 +139,8 @@ export function GymSponsorsScreen({ sponsors: initial }: GymSponsorsScreenProps)
         <a className={styles.navLink} href="/admin/members">← 会員管理</a>
         <span className={styles.navSep}>|</span>
         <a className={styles.navLink} href="/admin/gym-announcements">お知らせ管理</a>
+        <span className={styles.navSep}>|</span>
+        <a className={styles.navLink} href="/admin/gym-requests">相談申込管理 →</a>
       </nav>
 
       {/* Form: create or edit */}

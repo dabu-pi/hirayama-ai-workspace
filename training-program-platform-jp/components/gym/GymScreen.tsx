@@ -4,6 +4,7 @@ import type { GymAnnouncement } from "@/lib/gym/announcements";
 import type { GymSponsor } from "@/lib/gym/sponsors";
 import type { GymDashboardStats } from "@/lib/workout/gym-dashboard";
 import { GymAnnouncementSection } from "./GymAnnouncementSection";
+import { GymConsultationForm } from "./GymConsultationForm";
 
 import styles from "./GymScreen.module.css";
 
@@ -126,12 +127,11 @@ export function GymScreen({ stats, announcements, sponsors }: GymScreenProps) {
         </Link>
       </section>
 
-      {/* Communication placeholder (G-5 slot) */}
-      <div className={styles.comingSoonCard}>
-        <p className={styles.comingSoonText}>
-          トレーナーへの相談・パーソナルトレーニング申込は近日対応予定です。
-        </p>
-      </div>
+      {/* Consultation / Personal Training — G-5 */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>トレーナー相談・パーソナルトレーニング</h2>
+        <GymConsultationForm />
+      </section>
     </main>
   );
 }

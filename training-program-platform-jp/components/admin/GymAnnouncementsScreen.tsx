@@ -133,6 +133,8 @@ export function GymAnnouncementsScreen({ announcements: initial }: GymAnnounceme
         <a className={styles.navLink} href="/admin/members">← 会員管理</a>
         <span className={styles.navSep}>|</span>
         <a className={styles.navLink} href="/admin/gym-sponsors">スポンサー管理 →</a>
+        <span className={styles.navSep}>|</span>
+        <a className={styles.navLink} href="/admin/gym-requests">相談申込管理 →</a>
       </nav>
 
       {/* Form: create or edit */}

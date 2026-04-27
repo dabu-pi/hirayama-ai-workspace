@@ -47,6 +47,8 @@ export function MembersScreen({
         <a className={styles.navLink} href="/admin/gym-announcements">お知らせ管理 →</a>
         <span className={styles.navSep}>|</span>
         <a className={styles.navLink} href="/admin/gym-sponsors">スポンサー管理 →</a>
+        <span className={styles.navSep}>|</span>
+        <a className={styles.navLink} href="/admin/gym-requests">相談申込管理 →</a>
       </nav>
 
       {/* Summary cards */}

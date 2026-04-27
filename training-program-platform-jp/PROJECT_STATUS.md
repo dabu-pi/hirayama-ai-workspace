@@ -1,5 +1,67 @@
 # PROJECT_STATUS
 
+## 2026-04-27 G-5: トレーナー相談・パーソナルトレーニング申込フォーム
+
+### STATUS: CLOSED (2026-04-27) — DB migration 適用済み
+
+### PURPOSE
+
+`/gym` の coming soon スロットをDB-backed な申込フォームとして実装する。
+一般ユーザーが相談・申込を送信でき、管理者が `/admin/gym-requests` で一覧・ステータス管理できる。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | ファイル |
+|---|---|---|
+| DBテーブル | `gym_consultation_requests`（id/user_id/requester_name/contact/request_type/preferred_date/message/status/admin_note/created_at/updated_at） | `supabase/migrations/20260427_000025_gym_consultation_requests.sql` |
+| RLS | 誰でも INSERT 可、ユーザーは自分の申込を SELECT 可、admin は全件 SELECT/UPDATE/DELETE | 同上 |
+| 型定義 | `RequestType` / `RequestStatus` / `GymConsultationRequest` / ラベル定数 | `lib/gym/consultation-types.ts` |
+| DB操作 | `getAllConsultationRequests()` — admin client | `lib/gym/consultation-requests.ts` |
+| 公開フォーム送信 | `submitConsultationRequest()` Server Action | `app/gym/actions.ts` |
+| フォームUI | お名前・連絡先・種別・希望日時・内容、送信後サンクスカード | `components/gym/GymConsultationForm.tsx` + `.module.css` |
+| `/gym` 更新 | coming soon → `GymConsultationForm` セクションに差し替え | `components/gym/GymScreen.tsx` |
+| 管理者CRUD | `updateConsultationRequest` / `deleteConsultationRequest` Server Actions | `app/admin/gym-requests/actions.ts` |
+| 管理者UI | 申込一覧・ステータス変更（new/contacted/closed）・管理者メモ・削除 | `components/admin/GymRequestsScreen.tsx` + `.module.css` |
+| 管理者ページ | admin ロールチェック → redirect | `app/admin/gym-requests/page.tsx` |
+| admin nav | 全4画面（会員・お知らせ・スポンサー・相談申込）間のナビを追加 | MembersScreen / GymAnnouncementsScreen / GymSponsorsScreen |
+
+### DB_MIGRATION
+
+⚠️ **human approval 必要** — 以下の手順で Supabase に適用する。
+
+Supabase ダッシュボード > SQL Editor で `supabase/migrations/20260427_000025_gym_consultation_requests.sql` の内容を実行。
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（/gym: 1.72kB → 3.2kB、フォーム追加の正常増加）
+
+### NOTES
+
+- `lib/gym/consultation-types.ts` を server-only なしの共有型ファイルとして分離
+  - クライアントコンポーネントが型とラベルを安全に import できる設計
+- フォームは未ログインでも送信可能（user_id は nullable、Server Action でセッションから取得）
+- 相談種別: trainer_consultation / personal_training / other（DB constraint）
+- ステータス: new / contacted / closed（DB constraint）
+
+### LIVE_CHECK_REQUIRED
+
+| 確認項目 | 方法 |
+|---|---|
+| `/gym` 下部のフォーム表示 | DB migration 適用後にブラウザで確認 |
+| フォーム送信 → サンクスカード表示 | 内容を入力して送信 |
+| `/admin/gym-requests` でデータ確認 | 管理者でログインしてリスト確認 |
+| ステータス変更・管理者メモ保存 | 各ボタン動作確認 |
+| 未ログイン送信 → user_id=null で保存 | DB で確認 |
+| admin nav 4画面間リンク動作 | 各 admin ページ間の遷移確認 |
+
+### NEXT
+
+- DB migration 適用 → LIVE_CHECK_REQUIRED 実施後 CLOSED
+- G-6候補: プロフィール強化 / ワークアウト統計拡張 など
+
+---
+
 ## 2026-04-27 G-4: スポンサー・協力店のDB化
 
 ### STATUS: CLOSED (2026-04-27) — DB migration 適用済み
