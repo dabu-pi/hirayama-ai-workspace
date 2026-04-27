@@ -2,7 +2,89 @@
 
 ## 現在ステータス
 
-**Phase 3 visit-form 表示OK・保存処理停止中（調査待ち）**（2026-04-27）
+**Phase 3 保存停止問題 — 診断強化コード実装済み・再デプロイ待ち**（2026-04-28）
+
+---
+
+## 本日終了状態（2026-04-28）
+
+### 調査・修正内容（2026-04-28 セッション9）
+
+#### 根本原因の仮説（コード調査結果）
+
+| 仮説 | 根拠 | 確認方法 |
+|---|---|---|
+| **① session 8 修正が未デプロイ** | 15秒タイムアウトは session 8 で追加。旧バージョンが配信中 | 再デプロイして20秒タイムアウト表示が出るか確認 |
+| **② `alert()` がブラウザでブロック** | GAS WebApp は script.googleusercontent.com から配信。モダンChromeはクロスオリジン iframe の alert をブロックする場合がある | alert を削除し showMsg（DOM表示）に一本化 |
+| **③ google.script.run の同期例外** | try-catch がなかった。例外でタイマーも止まる可能性 | try-catch ラッパーを追加済み |
+| **④ err.message が undefined** | catch の `err.message` がnullの場合に空文字で表示されず | `err.message || String(err)` に修正済み |
+
+#### 実施した修正（2026-04-28）
+
+**visit-form.html:**
+- `window.onerror` ハンドラを追加（IIFE初期化エラーを DOM に表示）
+- `google.script.run` の可用性チェックを追加（WebApp以外で開いた場合に即エラー表示）
+- タイムアウトを 15秒 → 20秒 に延長（GAS コールドスタート対策）
+- `alert()` を全て削除 → `showMsg()` による DOM 表示に一本化
+- `google.script.run` 呼び出しを try-catch でラップ（同期例外を検知）
+- `showMsg` / `clearMsg` に null チェックを追加
+
+**JREC_SF01_Visit.gs:**
+- `createVisitWithChart` の先頭に `Logger.log("[createVisitWithChart] START...")` を追加
+- バリデーション通過後 / SS取得後にも Logger.log を追加
+- catch ブロックを `err.message || String(err)` に修正（non-Error throws を安全処理）
+
+#### clasp push 状況
+
+```
+clasp push --force → 11ファイル push 完了（2026-04-28 8:20:04）
+```
+
+---
+
+### 次回実機確認手順（必ず実施）
+
+**手順 1: WebApp を新バージョンで再デプロイ**
+```
+Apps Script エディタ
+→「デプロイを管理」
+→ 鉛筆アイコン（編集）
+→ バージョン：「新しいバージョン」を選択
+→「デプロイ」
+```
+
+**手順 2: F12 Console を開いて visit-form を操作**
+1. Webアプリ URL を開く
+2. F12 → Console タブを開く
+3. 患者詳細 → 「＋ 来院・カルテ入力」
+4. 来院日（今日）・主訴を入力して「保存」ボタンを押す
+
+**手順 3: Console ログを確認**
+
+| ログ | 意味 |
+|---|---|
+| `[visitForm] payload: {...}` が出る | JS は動いている。GAS呼び出しへ進む |
+| `[visitForm] payload:` が出ない | IIFE 初期化エラー。window.onerror の表示を確認 |
+| `[visitForm] success: {...}` | GAS 応答あり。res.ok が true なら成功、false ならエラーメッセージ表示 |
+| `[visitForm] GAS failure: ...` | GAS 例外。エラーメッセージが DOM に表示される |
+| 20秒後にタイムアウトメッセージ表示 | GAS が応答しない。GAS 実行ログを確認（次項） |
+| `google.script.run が利用できません` | WebApp URL で開いていない（予備チェック） |
+
+**手順 4: GAS 実行ログを確認（20秒タイムアウトが出た場合）**
+```
+Apps Script エディタ → 左メニュー「実行数」
+→ createVisitWithChart の実行ログを開く
+→ Logger.log の出力を確認
+```
+
+| Logger.log の到達点 | 意味 |
+|---|---|
+| `START patientId=P0001` が出ない | 関数が呼ばれていない（デプロイ問題） |
+| `validation OK` まで出る | バリデーション通過。SS取得で失敗 |
+| `ss OK id=...` まで出る | SS取得OK。appendRow で失敗 |
+| `SelfPayVisits 保存完了` まで出る | SelfPayVisits OK。SelfPayChart で失敗 |
+| `SelfPayChart 保存完了` まで出る | 両シート保存OK。Run_Log か return で失敗 |
+| `ERROR: ...` が出る | catch に捕まったエラーメッセージを確認 |
 
 ---
 

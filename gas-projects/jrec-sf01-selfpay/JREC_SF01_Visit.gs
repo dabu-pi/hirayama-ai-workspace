@@ -86,6 +86,7 @@ function getVisitTimelineByPatient(patientId) {
  * @returns {{ ok, selfPayVisitKey?, chartId?, error? }}
  */
 function createVisitWithChart(payload) {
+  Logger.log("[createVisitWithChart] START patientId=" + (payload && payload.patientId));
   // ── バリデーション ───────────────────────────────────────
   try {
     if (!payload || !payload.patientId)  return { ok: false, error: "patientId は必須です" };
@@ -102,9 +103,11 @@ function createVisitWithChart(payload) {
       }
       vas = vasNum;
     }
+    Logger.log("[createVisitWithChart] validation OK cc=" + cc + " vas=" + vas);
 
     // ── スプレッドシート取得 ─────────────────────────────────
     var ss  = getTargetSpreadsheet_();
+    Logger.log("[createVisitWithChart] ss OK id=" + ss.getId());
     var now = new Date();
 
     // ── selfPayVisitKey 採番 ─────────────────────────────────
@@ -155,8 +158,9 @@ function createVisitWithChart(payload) {
     return { ok: true, selfPayVisitKey: vk, chartId: chartId };
 
   } catch(err) {
-    Logger.log("[createVisitWithChart] ERROR: " + err.message);
-    return { ok: false, error: err.message };
+    var errMsg = (err && err.message) ? err.message : String(err);
+    Logger.log("[createVisitWithChart] ERROR: " + errMsg);
+    return { ok: false, error: errMsg };
   }
 }
 

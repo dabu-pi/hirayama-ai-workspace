@@ -176,6 +176,13 @@
 <script>
 var PATIENT_ID = "<?= patient.patientId ?>";
 
+// JS初期化エラーを DOM に表示（alert がブロックされる環境でも見える）
+window.onerror = function(message, source, lineno) {
+  var el = document.getElementById('msg');
+  if (el) el.innerHTML = '<div class="alert alert-error">JS初期化エラー: ' + message + ' (line ' + lineno + ')</div>';
+  return false;
+};
+
 (function() {
   // 来院日のデフォルトを今日に設定
   var today = new Date();
@@ -222,17 +229,26 @@ var PATIENT_ID = "<?= patient.patientId ?>";
 
     console.log('[visitForm] payload:', JSON.stringify(payload));
 
-    // 15秒タイムアウト — どちらのハンドラも呼ばれない場合に通知
-    var saveTimer = setTimeout(function() {
-      showMsg('error', '保存がタイムアウトしました（15秒）。Apps Script 実行ログを確認してください。');
+    // google.script.run が使えるか確認（WebApp 以外で開いた場合に検知）
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      clearMsg();
+      showMsg('error', 'google.script.run が利用できません。WebApp URL として開いているか確認してください。');
       btn.disabled    = false;
       btn.textContent = '保存して患者詳細へ戻る';
-    }, 15000);
+      return;
+    }
 
-    google.script.run
-      .withSuccessHandler(function(res) {
-        clearTimeout(saveTimer);
-        try {
+    // 20秒タイムアウト — どちらのハンドラも呼ばれない場合に通知
+    var saveTimer = setTimeout(function() {
+      showMsg('error', '保存がタイムアウトしました（20秒）。<br>Apps Script エディタ → 実行数 タブでエラーを確認してください。<br>または再試行してください。');
+      btn.disabled    = false;
+      btn.textContent = '保存して患者詳細へ戻る';
+    }, 20000);
+
+    try {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          clearTimeout(saveTimer);
           console.log('[visitForm] success:', JSON.stringify(res));
           if (res && res.ok) {
             showMsg('success', '保存しました（' + res.selfPayVisitKey + '）。患者詳細に戻ります...');
@@ -240,36 +256,40 @@ var PATIENT_ID = "<?= patient.patientId ?>";
               window.top.location.href = APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
             }, 1200);
           } else {
-            var errMsg = (res && res.error) ? res.error : '保存に失敗しました（原因不明）';
-            showMsg('error', errMsg);
+            var errMsg = (res && res.error) ? res.error : '保存に失敗しました（GASから原因不明の応答）';
+            console.error('[visitForm] save failed:', errMsg);
+            showMsg('error', '保存エラー: ' + errMsg);
             btn.disabled    = false;
             btn.textContent = '保存して患者詳細へ戻る';
           }
-        } catch(e) {
-          alert('[successHandler エラー] ' + e.message);
-        }
-      })
-      .withFailureHandler(function(err) {
-        clearTimeout(saveTimer);
-        try {
+        })
+        .withFailureHandler(function(err) {
+          clearTimeout(saveTimer);
           var msg = err ? (err.message || String(err)) : '不明なGASエラー';
           console.error('[visitForm] GAS failure:', msg);
-          alert('GAS保存エラー: ' + msg);
-          showMsg('error', 'GAS エラー: ' + msg);
+          showMsg('error', 'GAS実行エラー: ' + msg + '<br><small>Apps Script エディタ → 実行数 で詳細を確認してください。</small>');
           btn.disabled    = false;
           btn.textContent = '保存して患者詳細へ戻る';
-        } catch(e2) {
-          alert('[failureHandler エラー] ' + e2.message);
-        }
-      })
-      .createVisitWithChart(payload);
+        })
+        .createVisitWithChart(payload);
+    } catch(syncErr) {
+      // google.script.run 呼び出し自体が同期的に失敗した場合
+      clearTimeout(saveTimer);
+      console.error('[visitForm] google.script.run sync error:', syncErr.message);
+      showMsg('error', 'google.script.run 呼び出しエラー: ' + syncErr.message);
+      btn.disabled    = false;
+      btn.textContent = '保存して患者詳細へ戻る';
+    }
   });
 
   function showMsg(type, text) {
-    document.getElementById('msg').innerHTML =
-      '<div class="alert alert-' + type + '">' + text + '</div>';
+    var el = document.getElementById('msg');
+    if (el) el.innerHTML = '<div class="alert alert-' + type + '">' + text + '</div>';
   }
-  function clearMsg() { document.getElementById('msg').innerHTML = ''; }
+  function clearMsg() {
+    var el = document.getElementById('msg');
+    if (el) el.innerHTML = '';
+  }
 })();
 
 function appendField(fieldId, text) {
