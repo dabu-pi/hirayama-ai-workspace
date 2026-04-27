@@ -95,6 +95,8 @@ export type ExerciseListItem = {
   nameJa: string;
   nameEn: string;
   category: string | null;
+  /** 'library' = shared exercise; 'user' = personal custom exercise. */
+  source?: "library" | "user";
   /** Populated when fetched with include_history=true (custom session mode). */
   lastWeightKg?: number | null;
   lastRepsDone?: number | null;
@@ -119,7 +121,10 @@ export type AddExerciseSetItem = {
 export type AddExerciseResponse = {
   sessionExercise: {
     id: string;
-    exerciseId: string;
+    /** Library exercise id. null when source is 'user'. */
+    exerciseId: string | null;
+    /** User exercise id. null when source is 'library'. */
+    userExerciseId: string | null;
     exerciseSlug: string;
     exerciseNameJa: string;
     exerciseNameEn: string;

@@ -408,11 +408,19 @@ async function postCancelSession(sessionId: string): Promise<WorkoutSessionCance
   return payload as WorkoutSessionCancelResponse;
 }
 
-async function postAddExercise(sessionId: string, exerciseId: string) {
+async function postAddExercise(
+  sessionId: string,
+  exerciseId: string,
+  source: "library" | "user" = "library"
+) {
+  const body =
+    source === "user"
+      ? { user_exercise_id: exerciseId }
+      : { exercise_id: exerciseId };
   const response = await fetch(`/api/workout-sessions/${sessionId}/exercises`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ exercise_id: exerciseId })
+    body: JSON.stringify(body)
   });
   const payload = (await response.json().catch(() => null)) as
     | AddExerciseResponse
@@ -533,6 +541,12 @@ export function WorkoutScreen({
   const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
   const [scrollToExerciseId, setScrollToExerciseId] = useState<string | null>(null);
   const exerciseBlockRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  // Create custom exercise (in add modal)
+  const [isCreateExerciseMode, setIsCreateExerciseMode] = useState(false);
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseCategory, setNewExerciseCategory] = useState("");
+  const [isCreatingExercise, setIsCreatingExercise] = useState(false);
 
   // 1RM calculator modal state
   const [is1RMModalOpen, setIs1RMModalOpen] = useState(false);
@@ -1240,18 +1254,18 @@ export function WorkoutScreen({
 
   const isCustomSession = session.programDayId === null;
 
-  const handleAddExercise = async (exerciseId: string) => {
+  const handleAddExercise = async (exerciseId: string, source: "library" | "user" = "library") => {
     if (isAddingExerciseId) return;
     setIsAddingExerciseId(exerciseId);
     setAddExerciseError(null);
 
     try {
-      const result = await postAddExercise(sessionMeta.id, exerciseId);
+      const result = await postAddExercise(sessionMeta.id, exerciseId, source);
       const { sessionExercise, sets, previousSets } = result;
 
       const newBlock: WorkoutExerciseBlock = {
         id: sessionExercise.id,
-        exerciseId: sessionExercise.exerciseId,
+        exerciseId: sessionExercise.userExerciseId ?? sessionExercise.exerciseId ?? "",
         exerciseSlug: sessionExercise.exerciseSlug,
         exerciseNameJa: sessionExercise.exerciseNameJa,
         exerciseNameEn: sessionExercise.exerciseNameEn,

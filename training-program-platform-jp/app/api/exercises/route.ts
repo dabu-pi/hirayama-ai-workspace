@@ -195,13 +195,14 @@ export async function GET(request: Request) {
       }
     }
 
-    const exercises = exerciseRows.map((item) => {
+    const libraryExercises = exerciseRows.map((item) => {
       const hist = historyMap[item.id];
       return {
         id: item.id,
         nameJa: item.name_ja,
         nameEn: item.name_en,
         category: item.category,
+        source: "library" as const,
         ...(includeHistory
           ? {
               lastWeightKg: hist?.lastWeightKg ?? null,
@@ -212,6 +213,34 @@ export async function GET(request: Request) {
       };
     });
 
+    // Append user's personal exercises when in add-mode (include_history=true means custom session).
+    let userExercises: typeof libraryExercises = [];
+    if (includeHistory && !swapGroup) {
+      const serverClient = createSupabaseServerClient();
+      const { data: userData } = await serverClient.auth.getUser();
+      const userId = userData.user?.id ?? null;
+      if (userId) {
+        const { data: ueData } = await supabase
+          .from("user_exercises")
+          .select("id, name, category")
+          .eq("user_id", userId)
+          .eq("is_archived", false)
+          .order("created_at", { ascending: false })
+          .limit(100);
+        userExercises = ((ueData ?? []) as { id: string; name: string; category: string | null }[]).map((ue) => ({
+          id: ue.id,
+          nameJa: ue.name,
+          nameEn: ue.name,
+          category: ue.category,
+          source: "user" as const,
+          lastWeightKg: null,
+          lastRepsDone: null,
+          lastDate: null
+        }));
+      }
+    }
+
+    const exercises = [...libraryExercises, ...userExercises];
     return NextResponse.json({ exercises });
   } catch (error) {
     console.error("Failed to load exercises.", error);

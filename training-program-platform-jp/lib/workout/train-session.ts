@@ -62,12 +62,19 @@ type ProgramRow = {
 type WorkoutSessionExerciseRow = {
   id: string;
   workout_session_id: string;
-  exercise_id: string;
+  exercise_id: string | null;
+  user_exercise_id: string | null;
   exercise_type: ExerciseType;
   order_index: number;
   was_swapped: boolean;
   was_added: boolean;
   swap_group_slug: string | null;
+};
+
+type UserExerciseRow = {
+  id: string;
+  name: string;
+  category: string | null;
 };
 
 type ExerciseRow = {
@@ -284,7 +291,7 @@ async function selectWorkoutSessionExercises(
   const { data, error } = await client
     .from("workout_session_exercises")
     .select(
-      "id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped, was_added, swap_group_slug"
+      "id, workout_session_id, exercise_id, user_exercise_id, exercise_type, order_index, was_swapped, was_added, swap_group_slug"
     )
     .eq("workout_session_id", workoutSessionId)
     .order("order_index", { ascending: true });
@@ -311,6 +318,26 @@ async function selectExercises(client: DatabaseClient, exerciseIds: string[]) {
   }
 
   return (data ?? []) as ExerciseRow[];
+}
+
+async function selectUserExercises(
+  client: DatabaseClient,
+  userId: string,
+  userExerciseIds: string[]
+): Promise<UserExerciseRow[]> {
+  if (userExerciseIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from("user_exercises")
+    .select("id, name, category")
+    .eq("user_id", userId)
+    .in("id", userExerciseIds);
+
+  if (error) {
+    throw new Error(`Failed to load user exercises: ${error.message}`);
+  }
+
+  return (data ?? []) as UserExerciseRow[];
 }
 
 async function selectVisibleWorkoutSets(
@@ -408,8 +435,14 @@ async function buildPreviousDisplayMap(
 ): Promise<{ displayMap: Map<string, string>; previousSetsMap: Map<string, PreviousSet[]> }> {
   const empty = { displayMap: new Map<string, string>(), previousSetsMap: new Map<string, PreviousSet[]>() };
 
+  // Only library exercises have previous-set history in U-1.
+  // User exercises (user_exercise_id is set) defer history to U-4.
   const uniqueExerciseIds = Array.from(
-    new Set(workoutSessionExercises.map((item) => item.exercise_id))
+    new Set(
+      workoutSessionExercises
+        .map((item) => item.exercise_id)
+        .filter((id): id is string => id !== null)
+    )
   );
 
   if (uniqueExerciseIds.length === 0 || workoutSets.length === 0) {
@@ -548,6 +581,7 @@ async function buildPreviousDisplayMap(
 function buildExerciseBlocks(
   workoutSessionExercises: WorkoutSessionExerciseRow[],
   exercises: ExerciseRow[],
+  userExercises: UserExerciseRow[],
   workoutSets: WorkoutSetRow[],
   previousDisplayMap: Map<string, string>,
   previousSetsMap: Map<string, PreviousSet[]>,
@@ -555,6 +589,7 @@ function buildExerciseBlocks(
   methodology: string | null
 ) {
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
+  const userExerciseMap = new Map(userExercises.map((ue) => [ue.id, ue]));
   const setsByExercise = new Map<string, WorkoutSetRow[]>();
 
   workoutSets.forEach((set) => {
@@ -564,13 +599,21 @@ function buildExerciseBlocks(
   });
 
   return workoutSessionExercises.map<WorkoutExerciseBlock>((sessionExercise) => {
-    const exercise = exerciseMap.get(sessionExercise.exercise_id);
+    const isUserExercise = sessionExercise.user_exercise_id !== null;
+    const exercise = isUserExercise
+      ? null
+      : exerciseMap.get(sessionExercise.exercise_id ?? "");
+    const userExercise = isUserExercise
+      ? userExerciseMap.get(sessionExercise.user_exercise_id!)
+      : null;
+
+    // For library exercises: use exercise_id as key for previousDisplay.
+    // For user exercises: no previous-set display in U-1 (deferred to U-4).
+    const exerciseKeyId = sessionExercise.exercise_id ?? sessionExercise.user_exercise_id ?? "";
+
     const visibleSets = (setsByExercise.get(sessionExercise.id) ?? []).map(
       (set, index) => {
-        // Key: exerciseId:exerciseType:position — matches displayMap key strategy.
-        // exerciseType ensures T1 and T2 of the same exercise get separate previous values.
-        const previousKey = `${sessionExercise.exercise_id}:${sessionExercise.exercise_type}:${index + 1}`;
-
+        const previousKey = `${exerciseKeyId}:${sessionExercise.exercise_type}:${index + 1}`;
         return {
           id: set.id,
           setNumber: set.set_number,
@@ -589,20 +632,24 @@ function buildExerciseBlocks(
       }
     );
 
+    const nameJa = isUserExercise ? (userExercise?.name ?? "カスタム種目") : (exercise?.name_ja ?? "Exercise");
+    const nameEn = isUserExercise ? (userExercise?.name ?? "Custom Exercise") : (exercise?.name_en ?? "Exercise");
+    const slug = isUserExercise ? (sessionExercise.user_exercise_id ?? "") : (exercise?.slug ?? exerciseKeyId);
+
     return {
       id: sessionExercise.id,
-      exerciseId: sessionExercise.exercise_id,
-      exerciseSlug: exercise?.slug ?? sessionExercise.exercise_id,
-      exerciseNameJa: exercise?.name_ja ?? "Exercise",
-      exerciseNameEn: exercise?.name_en ?? "Exercise",
+      exerciseId: exerciseKeyId,
+      exerciseSlug: slug,
+      exerciseNameJa: nameJa,
+      exerciseNameEn: nameEn,
       exerciseType: sessionExercise.exercise_type,
       orderIndex: sessionExercise.order_index,
-      previousSets: previousSetsMap.get(`${sessionExercise.exercise_id}:${sessionExercise.exercise_type}`) ?? [],
+      previousSets: previousSetsMap.get(`${exerciseKeyId}:${sessionExercise.exercise_type}`) ?? [],
       sets: visibleSets,
       wasAdded: sessionExercise.was_added,
       wasSwapped: sessionExercise.was_swapped,
       swapGroupSlug: sessionExercise.swap_group_slug ?? null,
-      t1ProgressionHint: t1ProgressionHints.get(sessionExercise.exercise_id) ?? null,
+      t1ProgressionHint: t1ProgressionHints.get(exerciseKeyId) ?? null,
       exerciseRoleLabel: resolveExerciseRoleLabel(sessionExercise.exercise_type, methodology)
     };
   });
@@ -631,22 +678,29 @@ async function loadSessionView(
   const programWeek = programDayWithWeek?.program_weeks ?? null;
   console.log(`[PERF] loadSessionView round1 (programDayWithWeek+exercises): ${Date.now() - t0}ms`);
 
-  // Round 2: exercises + sets (both depend on workoutSessionExercises from R1).
-  // program_week is now available from the R1 embedded join — no extra round trip needed.
+  // Round 2: exercises + user exercises + sets (both depend on workoutSessionExercises from R1).
   const t1 = Date.now();
-  const [exercises, workoutSets] = await Promise.all([
-    selectExercises(queryClient, workoutSessionExercises.map((item) => item.exercise_id)),
+  const libraryExerciseIds = workoutSessionExercises
+    .map((item) => item.exercise_id)
+    .filter((id): id is string => id !== null);
+  const userExerciseIds = workoutSessionExercises
+    .map((item) => item.user_exercise_id)
+    .filter((id): id is string => id !== null);
+
+  const [exercises, userExercises, workoutSets] = await Promise.all([
+    selectExercises(queryClient, libraryExerciseIds),
+    session.user_id
+      ? selectUserExercises(queryClient, session.user_id, userExerciseIds)
+      : Promise.resolve([] as UserExerciseRow[]),
     selectVisibleWorkoutSets(queryClient, workoutSessionExercises.map((item) => item.id))
   ]);
   console.log(`[PERF] loadSessionView round2 (exercises+sets): ${Date.now() - t1}ms`);
 
-  // Round 3: program (depends on programWeek), previousDisplayMap + t1Hints (depend on
-  // workoutSessionExercises + workoutSets) — all independent of each other, run in parallel.
-  // buildPreviousDisplayMap itself has 2 sequential DB calls inside (historical exercises → historical sets).
+  // Round 3: program (depends on programWeek), previousDisplayMap + t1Hints.
   const t2 = Date.now();
   const t1ExerciseIds = workoutSessionExercises
-    .filter((e) => e.exercise_type === "T1")
-    .map((e) => e.exercise_id);
+    .filter((e) => e.exercise_type === "T1" && e.exercise_id !== null)
+    .map((e) => e.exercise_id!);
 
   const [program, { displayMap: previousDisplayMap, previousSetsMap }, t1ProgressionHints] = await Promise.all([
     selectProgram(queryClient, programWeek?.program_id ?? null),
@@ -684,6 +738,7 @@ async function loadSessionView(
     exercises: buildExerciseBlocks(
       workoutSessionExercises,
       exercises,
+      userExercises,
       workoutSets,
       previousDisplayMap,
       previousSetsMap,

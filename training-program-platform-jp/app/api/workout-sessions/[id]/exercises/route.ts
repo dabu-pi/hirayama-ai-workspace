@@ -17,6 +17,14 @@ type RouteContext = {
 
 type AddExerciseRequestBody = {
   exercise_id?: string;
+  /** Set when adding a personal custom exercise (user_exercises table). */
+  user_exercise_id?: string;
+};
+
+type UserExerciseRow = {
+  id: string;
+  name: string;
+  category: string | null;
 };
 
 type ExerciseRow = {
@@ -83,18 +91,21 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const body = (await request.json().catch(() => ({}))) as AddExerciseRequestBody;
     const exerciseId = body.exercise_id;
+    const userExerciseId = body.user_exercise_id;
 
-    if (!exerciseId || typeof exerciseId !== "string") {
+    if ((!exerciseId && !userExerciseId) || (exerciseId && userExerciseId)) {
       return NextResponse.json(
         {
           error: {
             code: "invalid_request",
-            message: "exercise_id is required."
+            message: "Exactly one of exercise_id or user_exercise_id is required."
           }
         },
         { status: 400 }
       );
     }
+
+    const isUserExercise = Boolean(userExerciseId);
 
     const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
@@ -156,49 +167,39 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const isCustomSession = session.program_day_id === null;
 
-    // Fetch exercise metadata, current max order_index, and previous sets in parallel.
+    // Fetch exercise metadata + current max order_index in parallel.
+    // User exercises don't support previous-set history in U-1 (deferred to U-4).
     const [
-      { data: exercise, error: exerciseError },
+      exerciseLookupResult,
       { data: existingExercises, error: existingError },
       previousSets
     ] = await Promise.all([
-      supabase.from("exercises").select("id, slug, name_ja, name_en").eq("id", exerciseId).maybeSingle<ExerciseRow>(),
+      isUserExercise
+        ? supabase.from("user_exercises").select("id, name, category").eq("id", userExerciseId!).eq("user_id", userId!).maybeSingle<UserExerciseRow>()
+        : supabase.from("exercises").select("id, slug, name_ja, name_en").eq("id", exerciseId!).maybeSingle<ExerciseRow>(),
       supabase.from("workout_session_exercises").select("order_index").eq("workout_session_id", session.id).order("order_index", { ascending: false }).limit(1),
-      isCustomSession ? fetchPreviousSetsForExerciseAny(supabase, userId, exerciseId) : Promise.resolve([] as PreviousSet[])
+      isCustomSession && !isUserExercise
+        ? fetchPreviousSetsForExerciseAny(supabase, userId, exerciseId!)
+        : Promise.resolve([] as PreviousSet[])
     ]);
 
-    if (exerciseError) {
+    if (exerciseLookupResult.error) {
       return NextResponse.json(
-        {
-          error: {
-            code: "exercise_lookup_failed",
-            message: "Exercise lookup failed."
-          }
-        },
+        { error: { code: "exercise_lookup_failed", message: "Exercise lookup failed." } },
         { status: 500 }
       );
     }
 
-    if (!exercise) {
+    if (!exerciseLookupResult.data) {
       return NextResponse.json(
-        {
-          error: {
-            code: "exercise_not_found",
-            message: "Exercise was not found."
-          }
-        },
+        { error: { code: "exercise_not_found", message: "Exercise was not found." } },
         { status: 404 }
       );
     }
 
     if (existingError) {
       return NextResponse.json(
-        {
-          error: {
-            code: "order_index_lookup_failed",
-            message: "Failed to determine order_index."
-          }
-        },
+        { error: { code: "order_index_lookup_failed", message: "Failed to determine order_index." } },
         { status: 500 }
       );
     }
@@ -209,20 +210,34 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const exerciseType = isCustomSession ? "T1" : "T3";
 
+    // Build insert payload depending on source.
+    const insertPayload = isUserExercise
+      ? {
+          workout_session_id: session.id,
+          exercise_id: null,
+          user_exercise_id: userExerciseId!,
+          exercise_type: exerciseType,
+          order_index: newOrderIndex,
+          was_added: true,
+          was_swapped: false
+        }
+      : {
+          workout_session_id: session.id,
+          exercise_id: exerciseId!,
+          user_exercise_id: null,
+          exercise_type: exerciseType,
+          order_index: newOrderIndex,
+          was_added: true,
+          was_swapped: false
+        };
+
     const { data: insertedExercise, error: insertExerciseError } = await supabase
       .from("workout_session_exercises")
-      .insert({
-        workout_session_id: session.id,
-        exercise_id: exerciseId,
-        exercise_type: exerciseType,
-        order_index: newOrderIndex,
-        was_added: true,
-        was_swapped: false
-      })
+      .insert(insertPayload)
       .select(
-        "id, workout_session_id, exercise_id, exercise_type, order_index, was_added"
+        "id, workout_session_id, exercise_id, user_exercise_id, exercise_type, order_index, was_added"
       )
-      .single<InsertedSessionExerciseRow>();
+      .single<InsertedSessionExerciseRow & { user_exercise_id: string | null }>();
 
     if (insertExerciseError || !insertedExercise) {
       return NextResponse.json(
@@ -275,13 +290,25 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const typedSets = insertedSets as InsertedWorkoutSetRow[];
 
+    // Resolve display name depending on exercise source.
+    const nameJa = isUserExercise
+      ? (exerciseLookupResult.data as UserExerciseRow).name
+      : (exerciseLookupResult.data as ExerciseRow).name_ja;
+    const nameEn = isUserExercise
+      ? (exerciseLookupResult.data as UserExerciseRow).name
+      : (exerciseLookupResult.data as ExerciseRow).name_en;
+    const slug = isUserExercise
+      ? userExerciseId!
+      : (exerciseLookupResult.data as ExerciseRow).slug;
+
     return NextResponse.json({
       sessionExercise: {
         id: insertedExercise.id,
-        exerciseId: insertedExercise.exercise_id,
-        exerciseSlug: exercise.slug,
-        exerciseNameJa: exercise.name_ja,
-        exerciseNameEn: exercise.name_en,
+        exerciseId: insertedExercise.exercise_id ?? null,
+        userExerciseId: insertedExercise.user_exercise_id ?? null,
+        exerciseSlug: slug,
+        exerciseNameJa: nameJa,
+        exerciseNameEn: nameEn,
         exerciseType: insertedExercise.exercise_type,
         orderIndex: insertedExercise.order_index,
         wasAdded: insertedExercise.was_added
