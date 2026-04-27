@@ -251,10 +251,19 @@ window.onerror = function(message, source, lineno) {
           clearTimeout(saveTimer);
           console.log('[visitForm] success:', JSON.stringify(res));
           if (res && res.ok) {
-            showMsg('success', '保存しました（' + res.selfPayVisitKey + '）。患者詳細に戻ります...');
-            setTimeout(function() {
-              window.top.location.href = APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
-            }, 1200);
+            // 保存ボタンを必ず復帰（自動遷移が失敗しても詰まらない）
+            btn.disabled    = false;
+            btn.textContent = '保存して患者詳細へ戻る';
+            // 成功メッセージ＋手動遷移ボタン（onclick でユーザー活性化が生まれ確実に遷移できる）
+            showMsg('success',
+              '保存しました（' + res.selfPayVisitKey + '）。' +
+              '<button type="button" onclick="goToDetail()" ' +
+              'style="margin-left:12px;padding:4px 14px;background:#1e8e3e;color:#fff;' +
+              'border:none;border-radius:4px;cursor:pointer;font-size:13px;">' +
+              '患者詳細へ戻る →</button>'
+            );
+            // 自動遷移を試みる（iframe 制限でブロックされる場合は上のボタンで手動遷移）
+            navigate(APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID));
           } else {
             var errMsg = (res && res.error) ? res.error : '保存に失敗しました（GASから原因不明の応答）';
             console.error('[visitForm] save failed:', errMsg);
@@ -273,7 +282,6 @@ window.onerror = function(message, source, lineno) {
         })
         .createVisitWithChart(payload);
     } catch(syncErr) {
-      // google.script.run 呼び出し自体が同期的に失敗した場合
       clearTimeout(saveTimer);
       console.error('[visitForm] google.script.run sync error:', syncErr.message);
       showMsg('error', 'google.script.run 呼び出しエラー: ' + syncErr.message);
@@ -291,6 +299,24 @@ window.onerror = function(message, source, lineno) {
     if (el) el.innerHTML = '';
   }
 })();
+
+// ── グローバルナビゲーション関数 ──────────────────────────────
+// window.top が cross-origin iframe でブロックされる場合 window.location にフォールバック
+function navigate(url) {
+  console.log('[visitForm] navigate to:', url);
+  try {
+    window.top.location.href = url;
+  } catch(e1) {
+    console.warn('[visitForm] top.location blocked, fallback to window.location');
+    try { window.location.href = url; } catch(e2) {
+      console.error('[visitForm] all navigation failed:', e2.message);
+    }
+  }
+}
+
+function goToDetail() {
+  navigate(APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID));
+}
 
 function appendField(fieldId, text) {
   var el = document.getElementById(fieldId);
