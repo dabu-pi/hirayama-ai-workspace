@@ -60,3 +60,31 @@
   letter-spacing: 0.02em;
   line-height: 1;
 }
+
+.iconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -7px;
+  min-width: 15px;
+  height: 15px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  border-radius: 8px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  pointer-events: none;
+}

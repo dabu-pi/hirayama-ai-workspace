@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useGymUnreadCount } from "@/hooks/useGymUnreadCount";
 import styles from "./BottomTabBar.module.css";
 
 type IconType = "programs" | "train" | "history" | "gym";
@@ -218,6 +219,7 @@ const HIDE_PREFIXES = ["/login"];
 
 export function BottomTabBar() {
   const pathname = usePathname();
+  const gymUnreadCount = useGymUnreadCount();
 
   if (HIDE_PREFIXES.some((p) => pathname.startsWith(p))) {
     return null;
@@ -236,7 +238,17 @@ export function BottomTabBar() {
           ) : iconType === "train" ? (
             <IconTrain {...iconProps} />
           ) : iconType === "gym" ? (
-            <IconGym {...iconProps} />
+            <span className={styles.iconWrap}>
+              <IconGym {...iconProps} />
+              {gymUnreadCount > 0 && (
+                <span
+                  className={styles.badge}
+                  aria-label={`未読お知らせ${gymUnreadCount}件`}
+                >
+                  {gymUnreadCount > 9 ? "9+" : gymUnreadCount}
+                </span>
+              )}
+            </span>
           ) : (
             <IconHistory {...iconProps} />
           );

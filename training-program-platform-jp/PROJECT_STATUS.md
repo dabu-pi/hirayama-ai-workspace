@@ -1,8 +1,52 @@
 # PROJECT_STATUS
 
+## 2026-04-27 G-3: お知らせ未読バッジ（localStorage 軽量版）
+
+### STATUS: CLOSED (2026-04-27)
+
+### PURPOSE
+
+BottomTabBar のジムタブに未読お知らせ件数バッジを表示し、`/gym` を開くと既読になる UX を実装する。
+DB migration 不要の localStorage ベース軽量版として実装。DB-backed 版は将来フェーズ G-3-DB に予約。
+
+### IMPLEMENTED
+
+| 機能 | 内容 | ファイル |
+|---|---|---|
+| unread store | localStorage 読み書き / カウントキャッシュ / カスタムイベント dispatch | `lib/gym/unread-store.ts` |
+| unread hook | `useGymUnreadCount()` — localStorage + storage イベントでリアクティブに件数取得 | `hooks/useGymUnreadCount.ts` |
+| お知らせセクション | 「未読」バッジ表示 / 「全て既読にする」ボタン / unread count を localStorage に保存 | `components/gym/GymAnnouncementSection.tsx` + `.module.css` |
+| BottomTabBar バッジ | gym タブアイコン右上に橙色バッジ（1〜9 は数字、10以上は "9+"）、件数0は非表示 | `components/navigation/BottomTabBar.tsx` + `.module.css` |
+| GymScreen 更新 | announcements セクションを GymAnnouncementSection に委譲 | `components/gym/GymScreen.tsx` |
+
+### DESIGN_NOTES
+
+- localStorage キー:
+  - `gym_announcements_read_ids` — 既読済み announcement ID の配列
+  - `gym_unread_count` — BottomTabBar が参照する件数キャッシュ
+- `/gym` 初回開封時: 既読履歴のない announcement に「未読」バッジ表示 → 「全て既読にする」で消える
+- BottomTabBar バッジ: GymAnnouncementSection が mount 時に `gym_unread_count` を書き込み → BottomTabBar がリアクティブに読む
+- DB-backed 版（`gym_announcement_reads` テーブル）は G-3-DB として ROADMAP に記録
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（/gym: 654B → 1.71kB、クライアントコード追加の正常増加）
+
+### LIVE_CHECK_REQUIRED
+
+| 確認項目 | 方法 |
+|---|---|
+| `/gym` 初訪問 → 未読バッジ表示 | ブラウザで localStorage クリア後に `/gym` を開く |
+| 「全て既読にする」ボタン押下 → バッジ消失 | BottomTabBar バッジも同時に 0 になること |
+| 他タブ表示中も gym タブにバッジが残ること | `/train` や `/programs` にいる間もバッジ表示確認 |
+| 既読後に `/gym` を再訪問 → バッジなし | localStorage に read_ids が保存されていることを確認 |
+
+---
+
 ## 2026-04-27 G-2: gym_announcements テーブル + 管理者投稿
 
-### STATUS: 実装完了 / DB migration 適用待ち
+### STATUS: CLOSED (2026-04-27) — DB migration 適用済み / 実機確認済み
 
 ### PURPOSE
 

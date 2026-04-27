@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { GymAnnouncement } from "@/lib/gym/announcements";
 import type { GymDashboardStats } from "@/lib/workout/gym-dashboard";
+import { GymAnnouncementSection } from "./GymAnnouncementSection";
 
 import styles from "./GymScreen.module.css";
 
@@ -99,28 +100,10 @@ export function GymScreen({ stats, announcements }: GymScreenProps) {
         </div>
       </section>
 
-      {/* Announcements */}
+      {/* Announcements — G-3: unread badge via localStorage */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>お知らせ</h2>
-        <div className={styles.cardList}>
-          {announcements.length === 0 ? (
-            <div className={styles.card}>
-              <p className={styles.cardBody}>現在お知らせはありません。</p>
-            </div>
-          ) : (
-            announcements.map((item) => (
-              <div className={styles.card} key={item.id}>
-                <p className={styles.cardTitle}>{item.title}</p>
-                {item.published_at && (
-                  <p className={styles.cardDate}>
-                    {item.published_at.slice(0, 10)}
-                  </p>
-                )}
-                <p className={styles.cardBody}>{item.body}</p>
-              </div>
-            ))
-          )}
-        </div>
+        <GymAnnouncementSection announcements={announcements} />
       </section>
 
       {/* Sponsors */}
