@@ -263,9 +263,8 @@ window.onerror = function(msg, src, line) {
 
       <!-- 領収書エリア（発行ボタン or 発行済みプレビュー） -->
 
-      <!-- 発行ボタン（入金済かつ未発行のとき表示） -->
-      <? var _showIssueArea = !receipt && payment.paymentStatus === '入金済'; ?>
-      <div id="issueArea" style="<?= _showIssueArea ? '' : 'display:none;' ?>">
+      <!-- 発行ボタン（入金済かつ未発行のとき表示 — JS で制御、DOM には常に存在）-->
+      <div id="issueArea" style="display:none;">
         <div class="phase-note no-print" style="margin-bottom:14px;">
           入金が完了しました。「領収書を発行する」ボタンで Receipts シートに保存し、領収書番号を発行します。
         </div>
@@ -305,6 +304,10 @@ var PATIENT_NAME = "<?= patient ? patient.name : visit.patientId ?>";
 var PAYMENT = <?!= JSON.stringify(payment || null).replace(/<\//g, '<\\/') ?>;
 var RECEIPT = <?!= JSON.stringify(receipt || null).replace(/<\//g, '<\\/') ?>;
 var ITEMS   = <?!= JSON.stringify(items   || []).replace(/<\//g, '<\\/') ?>;
+var SHOW_ISSUE_AREA = false;
+<? if (!receipt && payment && payment.paymentStatus === '入金済') { ?>
+SHOW_ISSUE_AREA = true;
+<? } ?>
 
 // ── ナビゲーション ────────────────────────────────────────
 function navigate(url) {
@@ -599,9 +602,12 @@ function handleIssue() {
 
 // ── 初期化 ────────────────────────────────────────────────
 (function() {
-  // ページロード時に発行済みの receipt があれば即描画
   if (RECEIPT) {
     showReceiptBox(RECEIPT);
+  }
+  if (SHOW_ISSUE_AREA) {
+    var el = document.getElementById('issueArea');
+    if (el) el.style.display = '';
   }
 })();
 </script>
