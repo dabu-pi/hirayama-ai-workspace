@@ -5,6 +5,7 @@ import {
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
 import { getOwnPendingDeletionRequest } from "@/app/profile/deletion-actions";
+import { getOwnPendingPauseRequest } from "@/app/profile/pause-actions";
 import { ProfileScreen } from "@/components/profile/ProfileScreen";
 
 export const dynamic = "force-dynamic";
@@ -24,13 +25,14 @@ export default async function ProfilePage() {
   }
 
   // Read own public.users row — allowed by "Users can read own profile" RLS policy.
-  const [userRowResult, pendingDeletionRequest] = await Promise.all([
+  const [userRowResult, pendingDeletionRequest, pendingPauseRequest] = await Promise.all([
     client
       .from("users")
       .select("display_name, membership_status")
       .eq("id", user.id)
       .maybeSingle<{ display_name: string | null; membership_status: string | null }>(),
     getOwnPendingDeletionRequest(),
+    getOwnPendingPauseRequest()
   ]);
 
   return (
@@ -39,6 +41,7 @@ export default async function ProfilePage() {
       initialDisplayName={userRowResult.data?.display_name ?? null}
       membershipStatus={userRowResult.data?.membership_status ?? null}
       pendingDeletionRequest={pendingDeletionRequest}
+      pendingPauseRequest={pendingPauseRequest}
     />
   );
 }

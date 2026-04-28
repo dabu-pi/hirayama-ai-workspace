@@ -39,6 +39,12 @@ const ADMIN_CARDS: AdminCard[] = [
     initial: "退"
   },
   {
+    href: "/admin/pause-requests",
+    title: "休会申請管理",
+    description: "休会申請を確認し、承認または却下。有効日・充当情報を表示",
+    initial: "休"
+  },
+  {
     href: "/admin/billing",
     title: "口座振替確定管理",
     description: "翌月分の口座振替データ確定を記録。休会・退会の有効日判定に使用",
