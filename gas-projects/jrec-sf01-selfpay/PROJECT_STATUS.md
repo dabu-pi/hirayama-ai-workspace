@@ -2,11 +2,34 @@
 
 ## 現在ステータス
 
-**Phase 5-B 設計調査: 一部入金の差額管理 設計確定（実装前）**（2026-04-28）
+**Phase 5-B Step 1: paidAmount 列追加 + billing-form.html UI 実装完了**（2026-04-28）
+
+次: Phase 5-B Step 2 — `collectOutstandingPayment` に `collectedAmount` 実装、receipt.html 残額表示
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+### Phase 5-B Step 1 完了（commit: 79222f7）
+
+**実装内容:**
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Setup.gs` | Payments ヘッダーに col 11 `paidAmount` を追加 |
+| `JREC_SF01_Billing.gs` | 全 Payments 読み取りを 10→11 列に更新。`paidAmount` ベースで `remaining = totalTaxInc - paidAmount` を計算。後方互換: col 11 空の場合 status=入金済→paidAmount=totalTaxInc、else→0 |
+| `JREC_SF01_Billing.gs` | `savePaymentWithItems`: paidAmount を計算・col 11 に保存。paymentStatus を paidAmount で自動確定。Run_Log に「入金額: ¥X 残額: ¥Y」を記録。一部入金・未収時の billingStatus → "未収" |
+| `JREC_SF01_DailySales.gs` | Payments 読み取り 10→11 列。`unpaidTotal` と DailySales の残額計算を `remaining` ベースに修正 |
+| `billing-form.html` | 入金状態セレクト onchange 追加。一部入金選択時に `paidAmountSection` を表示。`calcRemaining()` でリアルタイム残額表示。保存時バリデーション（paidAmount > 0 かつ < totalTaxInc）。payload に `paidAmount` を含めて送信 |
+
+**後方互換フォールバック:**
+- Payments の既存行（col 11 = 空）: status=入金済 → paidAmount=totalTaxInc と見なす（正しく処理）
+- 未収・一部入金の古い行: paidAmount=0 として残額=totalTaxInc を計上
+
+**未実装（Step 2 以降）:**
+- `collectOutstandingPayment` の `collectedAmount` 累積更新
+- receipt.html の残額表示更新（回収後 DOM 反映）
+- PaymentCollections シートは採用しない（案 C 確定）
 
 ---
 
