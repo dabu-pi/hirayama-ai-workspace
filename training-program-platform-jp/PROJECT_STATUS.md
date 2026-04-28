@@ -668,6 +668,90 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ---
 
+## 2026-04-28 D-1: 退会・アカウント削除申請と管理者退会処理
+
+### STATUS: CLOSED (DB migration 手動適用待ち)
+
+### 実装内容
+
+ユーザーが /profile から退会申請を送り、管理者が /admin/account-deletion-requests で確認・承認できる仕組みを実装。
+承認すると `membership_status = cancelled` に変更される。物理削除は一切行わない。
+
+### 変更・新規ファイル
+
+| ファイル | 種別 | 内容 |
+|---|---|---|
+| `supabase/migrations/20260428_000027_account_deletion_requests.sql` | 新規 | account_deletion_requests テーブル・RLS・インデックス |
+| `app/profile/deletion-actions.ts` | 新規 | `submitDeletionRequest` / `getOwnPendingDeletionRequest` server actions |
+| `app/admin/account-deletion-requests/page.tsx` | 新規 | 管理者退会申請一覧ページ |
+| `app/admin/account-deletion-requests/actions.ts` | 新規 | `approveDeletionRequest` / `rejectDeletionRequest` server actions |
+| `components/admin/DeletionRequestsScreen.tsx` | 新規 | 管理者退会申請画面コンポーネント |
+| `components/admin/DeletionRequestsScreen.module.css` | 新規 | 管理者画面スタイル |
+| `components/admin/AdminHubScreen.tsx` | 変更 | 「退会申請管理」カード追加 |
+| `components/profile/ProfileScreen.tsx` | 変更 | 退会申請セクション追加（2クリック確認） |
+| `components/profile/ProfileScreen.module.css` | 変更 | 退会申請セクションのスタイル追加 |
+| `app/profile/page.tsx` | 変更 | pending 申請チェックを並列フェッチ |
+
+### DB設計
+
+**テーブル:** `account_deletion_requests`
+
+| カラム | 型 | 説明 |
+|---|---|---|
+| id | uuid PK | |
+| user_id | uuid FK → users | 申請ユーザー |
+| reason | text null | 申請理由（任意） |
+| status | text | pending / approved / rejected / cancelled_by_user |
+| requested_at | timestamptz | 申請日時 |
+| reviewed_at | timestamptz null | 対応日時 |
+| reviewed_by | uuid null FK → users | 対応管理者 |
+| admin_note | text null | 管理メモ |
+
+**制約:** status check constraint / 同一 user_id での pending は1件のみ（unique partial index）
+
+**RLS:** ユーザーは自分の申請を SELECT/INSERT。管理者は全件 SELECT/UPDATE。
+
+### 安全設計ポイント
+
+- 承認しても auth.users / public.users / workout_sessions / enrollments は削除しない
+- ユーザー本人が membership_status を直接変更できない（管理者 action のみ）
+- 却下時は membership_status を変更しない
+- 申請理由の入力なしでも申請できる
+
+### DB migration 適用手順（手動）
+
+```bash
+# Supabase CLI (接続済みの場合)
+supabase db push
+
+# または Supabase ダッシュボード SQL Editor で以下を実行
+# supabase/migrations/20260428_000027_account_deletion_requests.sql
+```
+
+### CHECK
+
+- typecheck: pass
+- build: pass（/profile 2.54kB、/admin/account-deletion-requests 2.33kB 追加）
+- DB migration: ファイル作成済み・本番DB適用は手動
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] /profile に退会申請セクションが表示される
+- [ ] 理由なしでも申請できる（送信 → 確認クリック）
+- [ ] 理由ありでも申請できる
+- [ ] 申請後に「受付済みです」表示になる
+- [ ] 同一ユーザーが pending 申請を重複作成できない
+- [ ] /admin に「退会申請管理」カードが表示される
+- [ ] /admin/account-deletion-requests で申請一覧が見える
+- [ ] email / member_name / display_name が確認できる
+- [ ] 管理者が承認すると membership_status が cancelled になる
+- [ ] cancelled ユーザーは /train で退会向け案内が表示される（M-1 連携）
+- [ ] 管理者が却下すると membership_status は変更されない
+- [ ] トレーニング履歴は削除されていない
+- [ ] スマホ表示で大きく崩れていない
+
+---
+
 ## 2026-04-28 M-1: 非activeユーザー向け表示整理
 
 ### STATUS: CLOSED

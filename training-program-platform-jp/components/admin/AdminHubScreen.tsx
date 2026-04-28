@@ -31,6 +31,12 @@ const ADMIN_CARDS: AdminCard[] = [
     title: "相談申込管理",
     description: "トレーナー相談・パーソナルトレーニング申込を確認・対応",
     initial: "申"
+  },
+  {
+    href: "/admin/account-deletion-requests",
+    title: "退会申請管理",
+    description: "退会・アカウント削除申請を確認し、承認または却下",
+    initial: "退"
   }
 ];
 

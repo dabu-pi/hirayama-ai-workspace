@@ -4,6 +4,7 @@ import {
   createSupabaseServerClient,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
+import { getOwnPendingDeletionRequest } from "@/app/profile/deletion-actions";
 import { ProfileScreen } from "@/components/profile/ProfileScreen";
 
 export const dynamic = "force-dynamic";
@@ -23,16 +24,20 @@ export default async function ProfilePage() {
   }
 
   // Read own public.users row — allowed by "Users can read own profile" RLS policy.
-  const { data: userRow } = await client
-    .from("users")
-    .select("display_name")
-    .eq("id", user.id)
-    .maybeSingle<{ display_name: string | null }>();
+  const [userRowResult, pendingDeletionRequest] = await Promise.all([
+    client
+      .from("users")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle<{ display_name: string | null }>(),
+    getOwnPendingDeletionRequest(),
+  ]);
 
   return (
     <ProfileScreen
       email={user.email ?? null}
-      initialDisplayName={userRow?.display_name ?? null}
+      initialDisplayName={userRowResult.data?.display_name ?? null}
+      pendingDeletionRequest={pendingDeletionRequest}
     />
   );
 }
