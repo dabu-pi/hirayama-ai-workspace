@@ -2,7 +2,7 @@
 
 **作成日:** 2026-04-28
 **対象:** JREC-SF01 自費カルテ・会計システム
-**ステータス:** Step 1 実装完了（commit: 79222f7）/ Step 2 未実装
+**ステータス:** Step 1 実装完了（commit: 79222f7）/ Step 2 実装完了（実機確認待ち）
 
 ---
 
@@ -45,15 +45,32 @@ billing-form.html
   → 差額 ¥1,850 = totalTaxInc - paidAmount で計算可能
 ```
 
-### 1-3. 未収回収フロー（Step 2 未実装）⚠️
+### 1-3. 未収回収フロー（Step 2 実装済）✅
 
 ```
+receipt.html 未収回収 UI
+  → 金額サマリー: 請求額 / 既回収額 / 未収残額 を表示
+  → 「今回回収額」入力欄 + 「全額」ボタン（残額を自動入力）
+  → クライアントバリデーション: 0円以下 / 残額超過 → 事前エラー
+  → 回収実行 → collectOutstandingPayment(visitKey, payload)
+       payload: { collectedAmount, paymentMethod, memo }
+
 collectOutstandingPayment(visitKey, payload)
-  → curStatus が "未収"/"一部入金" を確認
-  → payload: { paymentMethod, paymentDate, memo } → collectedAmount なし（Step 2 未実装）
-  → Payments.paymentStatus → "入金済"（全額回収として処理 ← Step 2 で修正予定）
-  → Payments.totalTaxInc は変更しない（¥3,850 のまま）
-  → collectedAmount を受け取り paidAmount を累積更新する処理は Step 2 で実装
+  → curPaidAmount を Payments.col11 から取得（後方互換あり）
+  → collectedAmount を検証（> 0 かつ <= remaining）
+  → newPaidAmount = curPaidAmount + collectedAmount
+  → paymentStatus 再判定:
+       newPaidAmount = 0             → "未収"
+       0 < newPaidAmount < totalTaxInc → "一部入金"
+       newPaidAmount >= totalTaxInc  → "入金済"
+  → Payments.col7 (status), col8 (入金日), col9 (メモ), col11 (paidAmount) を更新
+  → SelfPayVisits.billingStatus: 入金済 → "会計済"、それ以外 → "未収"
+  → Run_Log: 「今回回収額: ¥N 累積入金額: ¥M 残額: ¥K」を記録
+  → レスポンス: { ok, newStatus, paidAmount, remainingAmount, collectedAmount, ... }
+
+receipt.html 成功後:
+  → 全額回収（入金済）: 回収エリアを非表示、入金状態を更新
+  → 一部回収（一部入金）: 既回収額・未収残額を更新、回収エリアは継続表示
 ```
 
 ### 1-4. 未収残高計算の問題

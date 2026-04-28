@@ -2,9 +2,71 @@
 
 ## 現在ステータス
 
-**Phase 5-B Step 1: paidAmount 列追加 + billing-form.html UI 実装完了**（2026-04-28）
+**Phase 5-B Step 2: collectOutstandingPayment collectedAmount 実装 + receipt.html 一部回収 UI 完了**（2026-04-28）
 
-次: Phase 5-B Step 2 — `collectOutstandingPayment` に `collectedAmount` 実装、receipt.html 残額表示
+次: Phase 5-B Step 2 実機確認（Test A〜C）→ 確認後 CLOSED
+
+---
+
+## 本日実装（2026-04-28）— Phase 5-B Step 2
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Billing.gs` | `collectOutstandingPayment`: `payload.collectedAmount` を受け取り `paidAmount` を累積更新。全額回収時のみ `入金済`、途中回収なら `一部入金`。billingStatus も対応。Run_Log に「今回回収額: ¥N 累積入金額: ¥M 残額: ¥K」を記録。後方互換: 一部入金 + paidAmount 空 → エラー返却（自動補正しない） |
+| `receipt.html` | 未収回収 UI に金額サマリー（請求額/既回収額/未収残額）を追加。「今回回収額」入力欄と「全額」ボタンを追加。一部回収成功時はエリアを閉じず残額を更新して継続可能。全額回収時は回収エリアを非表示。クライアントサイドバリデーション（0円以下・残額超過を事前チェック） |
+| `JREC_SF01_DailySales.gs` | `paymentCollectTotal` を `totalTaxInc` 参照から Run_Log detail の「今回回収額: ¥N」抽出に変更。旧ログ（Step 2 以前）は `MISSING_COLLECTED_AMOUNT` WARNING として除外（過大計上防止） |
+
+### 確定した paymentStatus 判定ロジック
+
+| 条件 | paymentStatus |
+|---|---|
+| paidAmount = 0 | 未収 |
+| 0 < paidAmount < totalTaxInc | 一部入金 |
+| paidAmount >= totalTaxInc | 入金済 |
+
+### Run_Log フォーマット（PAYMENT_COLLECT Step 2 以降）
+
+```
+visitKey: SPV_YYYYMMDD_P0001_001 今回回収額: ¥2000 累積入金額: ¥5000 残額: ¥5000 現金
+```
+
+### 既存 paidAmount 空欄データの扱い（後方互換）
+
+| 既存状態 | Step 2 の扱い |
+|---|---|
+| 入金済 / paidAmount 空 | paidAmount = totalTaxInc 相当 |
+| 未収 / paidAmount 空 | paidAmount = 0 |
+| 一部入金 / paidAmount 空 | エラー返却。自動補正しない |
+
+### 実機確認ステータス
+
+未実施（ユーザー確認待ち）
+
+### 次回実機確認手順
+
+#### Test A: 一部回収
+1. 未収または一部入金の visitKey を持つ来院の receipt.html を開く
+2. 未収残額より少ない金額を「今回回収額」入力欄に入力
+3. 「回収実行」をクリック
+4. 確認: Payments.paidAmount が累積更新されている
+5. 確認: paymentStatus が「一部入金」になっている
+6. 確認: receipt.html の既回収額・未収残額が更新され、回収エリアが引き続き表示されている
+7. 確認: DailySales.paymentCollectTotal に今回回収額のみ反映（rebuildDailySales 後）
+
+#### Test B: 全額回収
+1. 未収残額と同額を入力（または「全額」ボタンを押す）
+2. 「回収実行」をクリック
+3. 確認: Payments.paidAmount = totalTaxInc
+4. 確認: paymentStatus が「入金済」になっている
+5. 確認: receipt.html の回収エリアが非表示になり、入金状態が「入金済」に更新されている
+6. 確認: patient-detail 側でも未収表示が消えている
+
+#### Test C: 過大回収防止
+1. 未収残額より大きい金額を入力
+2. 「回収実行」をクリック前にクライアントバリデーションエラーが表示されること
+3. 万一サーバーに届いた場合も `ok: false` エラーが返ること
 
 ---
 

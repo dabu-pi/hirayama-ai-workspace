@@ -349,19 +349,34 @@ function getVisitForBilling(visitKey) {
 }
 
 /**
- * 未収・一部入金の Payment を「入金済」に更新する（未収回収処理）。
+ * 未収・一部入金の Payment の collectedAmount 分を回収する。
+ *
+ * paymentStatus 再判定（確定仕様）:
+ *   paidAmount = 0               → 未収
+ *   0 < paidAmount < totalTaxInc → 一部入金
+ *   paidAmount >= totalTaxInc    → 入金済
  *
  * 二重回収防止:
  *   - paymentStatus = "入金済" のときは更新せず { ok: false } を返す
  *   - Payment が存在しない visitKey（未会計）も対象外
  *
+ * 後方互換（paidAmount 空の旧データ）:
+ *   - 入金済 + paidAmount 空   → paidAmount = totalTaxInc 相当
+ *   - 未収   + paidAmount 空   → paidAmount = 0
+ *   - 一部入金 + paidAmount 空 → エラー（既回収額不明のため回収不可）
+ *
  * @param {string} visitKey
  * @param {{
- *   paymentMethod?: string,  現金/カード/電子マネー/PayPay/その他
- *   paymentDate?:  string,   YYYY-MM-DD（省略時: 当日）
- *   memo?:         string
+ *   collectedAmount: number,  今回回収額（1円以上・未収残額以下）
+ *   paymentMethod?:  string,  現金/カード/電子マネー/PayPay/その他
+ *   paymentDate?:   string,   YYYY-MM-DD（省略時: 当日）
+ *   memo?:          string
  * }} payload
- * @returns {{ ok, visitKey?, newStatus?, paymentDate?, totalTaxInc?, error? }}
+ * @returns {{
+ *   ok, visitKey?, newStatus?, paymentDate?,
+ *   totalTaxInc?, collectedAmount?, paidAmount?, remainingAmount?,
+ *   paymentMethod?, error?
+ * }}
  */
 function collectOutstandingPayment(visitKey, payload) {
   Logger.log("[collectOutstandingPayment] START visitKey=" + visitKey);
@@ -375,13 +390,13 @@ function collectOutstandingPayment(visitKey, payload) {
     if (!paymentSh || paymentSh.getLastRow() < 2)
       return { ok: false, error: "Payments シートが見つかりません" };
 
-    var rows       = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues();
-    var rowIndex          = -1;
-    var curStatus         = "";
-    var totalTaxInc       = 0;
-    var curMemo           = "";
-    var curPaymentMethod  = "";
-    var curPaidAmount     = 0;   // 現在の累積入金額（Step 2 以降で collectedAmount 累積更新に使用）
+    var rows             = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues();
+    var rowIndex         = -1;
+    var curStatus        = "";
+    var totalTaxInc      = 0;
+    var curMemo          = "";
+    var curPaymentMethod = "";
+    var curPaidAmount    = 0;
 
     for (var i = 0; i < rows.length; i++) {
       if (String(rows[i][1]) === visitKey) {
@@ -391,8 +406,17 @@ function collectOutstandingPayment(visitKey, payload) {
         curMemo          = rows[i][8] || "";
         curPaymentMethod = rows[i][5] || "";
         var rawPaid      = rows[i][10];
-        curPaidAmount    = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
-          ? (rawPaid || 0) : 0;
+        if (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined) {
+          curPaidAmount = rawPaid || 0;
+        } else if (curStatus === "入金済") {
+          curPaidAmount = totalTaxInc;
+        } else if (curStatus === "未収") {
+          curPaidAmount = 0;
+        } else {
+          // 一部入金 + paidAmount 空: 既回収額不明のため回収不可
+          return { ok: false,
+            error: "既回収額（paidAmount）が記録されていません。Payments シートの col 11 を手動確認してください。" };
+        }
         break;
       }
     }
@@ -407,6 +431,30 @@ function collectOutstandingPayment(visitKey, payload) {
     if (curStatus !== "未収" && curStatus !== "一部入金")
       return { ok: false, error: "未収または一部入金の支払のみ回収できます（現在: " + curStatus + "）。" };
 
+    // ── collectedAmount の取得・検証 ─────────────────────
+    var collectedAmount = (payload && payload.collectedAmount !== undefined && payload.collectedAmount !== null)
+      ? parseInt(payload.collectedAmount, 10) : NaN;
+    if (isNaN(collectedAmount) || collectedAmount <= 0)
+      return { ok: false, error: "今回回収額は1円以上を入力してください。" };
+
+    var remaining = Math.max(totalTaxInc - curPaidAmount, 0);
+    if (collectedAmount > remaining)
+      return { ok: false,
+        error: "今回回収額（¥" + collectedAmount + "）が未収残額（¥" + remaining + "）を超えています。" };
+
+    // ── paidAmount 累積更新・paymentStatus 再判定 ─────────
+    var newPaidAmount = curPaidAmount + collectedAmount;
+    var newStatus;
+    if (newPaidAmount >= totalTaxInc) {
+      newPaidAmount = totalTaxInc;
+      newStatus     = "入金済";
+    } else if (newPaidAmount > 0) {
+      newStatus = "一部入金";
+    } else {
+      newStatus = "未収";
+    }
+    var newRemaining = Math.max(totalTaxInc - newPaidAmount, 0);
+
     // ── 更新値の組み立て ─────────────────────────────────
     var now           = new Date();
     var paymentMethod = (payload && payload.paymentMethod) ? String(payload.paymentMethod) : "";
@@ -414,33 +462,43 @@ function collectOutstandingPayment(visitKey, payload) {
                         Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM-dd");
     var addMemo = (payload && payload.memo) ? String(payload.memo).trim() : "";
     var newMemo = curMemo
-      ? curMemo + "　回収済(" + paymentDate + ")" + (addMemo ? ": " + addMemo : "")
-      : "回収済(" + paymentDate + ")" + (addMemo ? ": " + addMemo : "");
+      ? curMemo + "　回収(" + paymentDate + " ¥" + collectedAmount + ")" + (addMemo ? ": " + addMemo : "")
+      : "回収(" + paymentDate + " ¥" + collectedAmount + ")" + (addMemo ? ": " + addMemo : "");
 
     // ── Payments を更新 ──────────────────────────────────
-    paymentSh.getRange(rowIndex, 7).setValue("入金済");     // 入金状態
-    paymentSh.getRange(rowIndex, 8).setValue(paymentDate);  // 入金日
-    paymentSh.getRange(rowIndex, 9).setValue(newMemo);      // メモ
-    if (paymentMethod) paymentSh.getRange(rowIndex, 6).setValue(paymentMethod); // 支払方法
-    Logger.log("[collectOutstandingPayment] row " + rowIndex + " → 入金済");
+    paymentSh.getRange(rowIndex, 7).setValue(newStatus);       // 入金状態
+    paymentSh.getRange(rowIndex, 8).setValue(paymentDate);     // 入金日（最終回収日）
+    paymentSh.getRange(rowIndex, 9).setValue(newMemo);         // メモ
+    paymentSh.getRange(rowIndex, 11).setValue(newPaidAmount);  // paidAmount 累積更新
+    if (paymentMethod) paymentSh.getRange(rowIndex, 6).setValue(paymentMethod);
+    Logger.log("[collectOutstandingPayment] row " + rowIndex +
+      " → " + newStatus + " paidAmount=¥" + newPaidAmount);
 
-    // ── SelfPayVisits.会計状態 → 会計済 に更新 ─────────
-    updateVisitBillingStatus_(visitKey, "会計済");
-    Logger.log("[collectOutstandingPayment] visit billingStatus → 会計済");
+    // ── SelfPayVisits.会計状態 更新 ──────────────────────
+    var newBillingStatus = (newStatus === "入金済") ? "会計済" : "未収";
+    updateVisitBillingStatus_(visitKey, newBillingStatus);
+    Logger.log("[collectOutstandingPayment] visit billingStatus → " + newBillingStatus);
 
     // ── Run_Log ──────────────────────────────────────────
     var pidForLog = visitKey.split("_")[2] || visitKey;
     appendRunLog_("PAYMENT_COLLECT", pidForLog,
-      "visitKey: " + visitKey + " 回収額: ¥" + totalTaxInc + " " + (paymentMethod || ""),
+      "visitKey: " + visitKey +
+      " 今回回収額: ¥" + collectedAmount +
+      " 累積入金額: ¥" + newPaidAmount +
+      " 残額: ¥" + newRemaining +
+      " " + (paymentMethod || ""),
       visitKey);
 
     return {
-      ok:            true,
-      visitKey:      visitKey,
-      newStatus:     "入金済",
-      paymentDate:   paymentDate,
-      totalTaxInc:   totalTaxInc,
-      paymentMethod: paymentMethod || curPaymentMethod  // UI側のDOM更新に使用
+      ok:              true,
+      visitKey:        visitKey,
+      newStatus:       newStatus,
+      paymentDate:     paymentDate,
+      totalTaxInc:     totalTaxInc,
+      collectedAmount: collectedAmount,
+      paidAmount:      newPaidAmount,
+      remainingAmount: newRemaining,
+      paymentMethod:   paymentMethod || curPaymentMethod
     };
 
   } catch(err) {

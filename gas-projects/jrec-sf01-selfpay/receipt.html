@@ -192,13 +192,48 @@ window.onerror = function(msg, src, line) {
       <? if (payment.paymentStatus === '未収' || payment.paymentStatus === '一部入金') { ?>
       <div id="collectionArea" class="no-print" style="margin-bottom:20px;">
         <p class="form-section-title" style="color:#e37400;">未収回収</p>
+        <!-- 金額サマリー -->
         <div style="background:#fff8e1;border:1px solid #f0c040;border-radius:6px;
-             padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-          <strong style="color:#774700;">
-            未収額: ¥<?!= Number(payment.totalTaxInc || 0).toLocaleString() ?>
-          </strong>
-          <span style="font-size:12px;color:#9aa0a6;">入金状態: <?= payment.paymentStatus ?></span>
+             padding:12px 16px;margin-bottom:14px;">
+          <table style="width:100%;font-size:13px;border-collapse:collapse;">
+            <tbody>
+              <tr>
+                <td style="color:#5f6368;padding:3px 0;">請求額</td>
+                <td style="font-weight:600;text-align:right;">
+                  ¥<?!= Number(payment.totalTaxInc || 0).toLocaleString() ?>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#5f6368;padding:3px 0;">既回収額</td>
+                <td style="text-align:right;" id="collPaidDisplay">
+                  ¥<?!= Number(payment.paidAmount || 0).toLocaleString() ?>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#774700;font-weight:700;padding:3px 0;">未収残額</td>
+                <td style="color:#774700;font-weight:700;text-align:right;" id="collRemainingDisplay">
+                  ¥<?!= Number(payment.remainingAmount || 0).toLocaleString() ?>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <!-- 今回回収額 -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="collectedAmount">今回回収額（円）</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input class="form-control" id="collectedAmount" type="number"
+                min="1" step="1" placeholder="例: 1000" autocomplete="off"
+                style="flex:1;">
+              <button type="button" class="btn btn-secondary btn-sm"
+                onclick="fillFullAmount()" style="white-space:nowrap;">全額</button>
+            </div>
+            <div id="collAmountError"
+              style="color:#d32f2f;font-size:12px;margin-top:4px;display:none;"></div>
+          </div>
+        </div>
+        <!-- 支払方法・メモ -->
         <div class="form-row">
           <div class="form-group">
             <label class="form-label" for="collectMethod">回収時の支払方法</label>
@@ -220,7 +255,7 @@ window.onerror = function(msg, src, line) {
         <div class="form-actions">
           <button type="button" class="btn btn-primary" id="collectBtn"
             onclick="handleCollect()">
-            未収を回収する（入金済に更新）
+            回収実行
           </button>
         </div>
       </div>
@@ -308,6 +343,16 @@ function showCollectMsg(type, html) {
   if (el) el.innerHTML = '<div class="alert alert-' + type + '">' + html + '</div>';
 }
 
+function fillFullAmount() {
+  var remaining = PAYMENT
+    ? Math.max((PAYMENT.totalTaxInc || 0) - (PAYMENT.paidAmount || 0), 0)
+    : 0;
+  var input = document.getElementById('collectedAmount');
+  if (input) input.value = remaining;
+  var errEl = document.getElementById('collAmountError');
+  if (errEl) errEl.style.display = 'none';
+}
+
 function handleCollect() {
   var btn = document.getElementById('collectBtn');
   if (!btn) return;
@@ -317,14 +362,33 @@ function handleCollect() {
     return;
   }
 
+  // ── 今回回収額のバリデーション ───────────────────────
+  var amtInput  = document.getElementById('collectedAmount');
+  var errEl     = document.getElementById('collAmountError');
+  var collectedAmount = amtInput ? parseInt(amtInput.value, 10) : NaN;
+  var remaining = PAYMENT
+    ? Math.max((PAYMENT.totalTaxInc || 0) - (PAYMENT.paidAmount || 0), 0)
+    : 0;
+
+  if (errEl) errEl.style.display = 'none';
+  if (isNaN(collectedAmount) || collectedAmount <= 0) {
+    if (errEl) { errEl.textContent = '今回回収額を入力してください（1円以上）。'; errEl.style.display = ''; }
+    return;
+  }
+  if (collectedAmount > remaining) {
+    if (errEl) { errEl.textContent = '未収残額（¥' + fmtNum(remaining) + '）を超えています。'; errEl.style.display = ''; }
+    return;
+  }
+
   var method = document.getElementById('collectMethod');
   var memo   = document.getElementById('collectMemo');
   btn.disabled    = true;
   btn.textContent = '処理中...';
 
   var payload = {
-    paymentMethod: method ? method.value : '現金',
-    memo:          memo   ? memo.value.trim() : ''
+    collectedAmount: collectedAmount,
+    paymentMethod:   method ? method.value : '現金',
+    memo:            memo   ? memo.value.trim() : ''
   };
   console.log('[receiptPage] collectOutstandingPayment:', VISIT_KEY, JSON.stringify(payload));
 
@@ -332,7 +396,7 @@ function handleCollect() {
     showCollectMsg('error',
       '処理がタイムアウトしました（20秒）。<br>Apps Script エディタ → 実行数 でエラーを確認してください。');
     btn.disabled    = false;
-    btn.textContent = '未収を回収する（入金済に更新）';
+    btn.textContent = '回収実行';
   }, 20000);
 
   try {
@@ -341,15 +405,20 @@ function handleCollect() {
         clearTimeout(timer);
         console.log('[receiptPage] collect result:', JSON.stringify(res));
         if (res && res.ok) {
-          // 回収セクションを非表示
-          var area = document.getElementById('collectionArea');
-          if (area) area.style.display = 'none';
+          // ── PAYMENT オブジェクトを更新 ───────────────────
+          if (PAYMENT) {
+            PAYMENT.paymentStatus   = res.newStatus;
+            PAYMENT.paidAmount      = res.paidAmount;
+            PAYMENT.remainingAmount = res.remainingAmount;
+            if (res.paymentMethod) PAYMENT.paymentMethod = res.paymentMethod;
+            if (res.paymentDate)   PAYMENT.paymentDate   = res.paymentDate;
+          }
 
-          // DOM上の入金状態・支払方法・入金日を「入金済」に更新
+          // ── サマリーテーブルの入金状態・支払方法・入金日を更新 ─
           var statusEl = document.getElementById('paymentStatusDisplay');
           if (statusEl) {
-            statusEl.textContent = '入金済';
-            statusEl.style.color = '#1e8e3e';
+            statusEl.textContent    = res.newStatus;
+            statusEl.style.color      = res.newStatus === '入金済' ? '#1e8e3e' : '#e37400';
             statusEl.style.fontWeight = '700';
           }
           if (res.paymentMethod) {
@@ -361,25 +430,34 @@ function handleCollect() {
             if (dateEl) dateEl.textContent = res.paymentDate;
           }
 
-          // PAYMENT オブジェクトも更新（後続の issueReceipt 等で参照された場合に備える）
-          if (PAYMENT) {
-            PAYMENT.paymentStatus = '入金済';
-            if (res.paymentMethod) PAYMENT.paymentMethod = res.paymentMethod;
-            if (res.paymentDate)   PAYMENT.paymentDate   = res.paymentDate;
+          if (res.newStatus === '入金済') {
+            // ── 全額回収完了 → 回収エリアを非表示 ────────────
+            var area = document.getElementById('collectionArea');
+            if (area) area.style.display = 'none';
+            showMsg('success',
+              '全額回収完了（入金日: ' + res.paymentDate + '　今回: ¥' + fmtNum(res.collectedAmount) + '）。' +
+              '<br><button type="button" onclick="goToDetail()" ' +
+              'style="margin-top:8px;padding:5px 14px;background:#1a73e8;color:#fff;' +
+              'border:none;border-radius:4px;cursor:pointer;font-size:13px;">' +
+              '患者詳細へ戻る →</button>'
+            );
+          } else {
+            // ── 一部回収 → 残額を更新して継続可能 ──────────
+            var paidEl = document.getElementById('collPaidDisplay');
+            if (paidEl) paidEl.textContent = '¥' + fmtNum(res.paidAmount);
+            var remEl  = document.getElementById('collRemainingDisplay');
+            if (remEl)  remEl.textContent  = '¥' + fmtNum(res.remainingAmount);
+            if (amtInput) amtInput.value = '';
+            btn.disabled    = false;
+            btn.textContent = '回収実行';
+            showCollectMsg('success',
+              '¥' + fmtNum(res.collectedAmount) + ' を回収しました。残額: ¥' + fmtNum(res.remainingAmount));
           }
-
-          showMsg('success',
-            '未収を回収しました（入金日: ' + res.paymentDate + '　¥' + fmtNum(res.totalTaxInc) + '）。' +
-            '<br><button type="button" onclick="goToDetail()" ' +
-            'style="margin-top:8px;padding:5px 14px;background:#1a73e8;color:#fff;' +
-            'border:none;border-radius:4px;cursor:pointer;font-size:13px;">' +
-            '患者詳細へ戻る →</button>'
-          );
         } else {
           var errMsg = (res && res.error) ? res.error : '回収処理に失敗しました（原因不明）';
           showCollectMsg('error', errMsg);
           btn.disabled    = false;
-          btn.textContent = '未収を回収する（入金済に更新）';
+          btn.textContent = '回収実行';
         }
       })
       .withFailureHandler(function(err) {
@@ -388,14 +466,14 @@ function handleCollect() {
         showCollectMsg('error', 'GAS エラー: ' + msg +
           '<br><small>Apps Script エディタ → 実行数 で詳細を確認してください。</small>');
         btn.disabled    = false;
-        btn.textContent = '未収を回収する（入金済に更新）';
+        btn.textContent = '回収実行';
       })
       .collectOutstandingPayment(VISIT_KEY, payload);
   } catch(syncErr) {
     clearTimeout(timer);
     showCollectMsg('error', '同期エラー: ' + syncErr.message);
     btn.disabled    = false;
-    btn.textContent = '未収を回収する（入金済に更新）';
+    btn.textContent = '回収実行';
   }
 }
 

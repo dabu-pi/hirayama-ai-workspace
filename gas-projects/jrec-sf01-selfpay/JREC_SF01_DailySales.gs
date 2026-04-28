@@ -17,8 +17,9 @@
  * paymentSaveTotal   = 当日 PAYMENT_SAVE かつ paymentStatus=入金済 の totalTaxInc 合計
  *                      新規会計入力で当日に現金/カード等で支払われた分
  *
- * paymentCollectTotal= 当日 PAYMENT_COLLECT の totalTaxInc 合計
- *                      過去の未収分を当日に回収した分
+ * paymentCollectTotal= 当日 PAYMENT_COLLECT の今回回収額（collectedAmount）合計
+ *                      Run_Log detail「今回回収額: ¥N」から抽出。Step 2 以降ログのみ正本。
+ *                      detail に今回回収額がない旧ログは MISSING_COLLECTED_AMOUNT として除外。
  *
  * unpaidTotal        = 現在時点の paymentStatus=未収/一部入金 の totalTaxInc 合計
  *                      ※日付非依存（現在スナップショット）
@@ -236,13 +237,27 @@ function getDailySalesReport(dateStr) {
           }
           seenAmountKeys[amountKey] = true;
 
-          var amount   = payment.totalTaxInc || 0;
-          var visit    = visitMap[vk];
+          var amount;
+          var visit     = visitMap[vk];
           var patientId = visit ? visit.patientId : pid;
 
           if (action === "PAYMENT_SAVE") {
+            amount = payment.totalTaxInc || 0;
             paymentSaveTotal += amount;
           } else {
+            // PAYMENT_COLLECT: detail から今回回収額を抽出（Step 2 以降ログのみ正本）
+            var collectMatch = detail.match(/今回回収額[：:]\s*¥(\d+)/);
+            if (!collectMatch) {
+              warnings.push({
+                type:     "MISSING_COLLECTED_AMOUNT",
+                action:   action,
+                visitKey: vk,
+                detail:   detail,
+                note:     "Run_Log の detail に今回回収額が見つかりません。Step 2 以前のログです。過大計上防止のため集計から除外しました。"
+              });
+              return;
+            }
+            amount = parseInt(collectMatch[1], 10) || 0;
             paymentCollectTotal += amount;
           }
 
@@ -385,7 +400,7 @@ function rebuildDailySales(dateStr) {
     var note =
       "Step 0 修正前ログは MISSING_VISIT_KEY として除外。" +
       "unpaidTotal は現在スナップショット（日付非依存）。" +
-      "paymentCollectTotal は Step 0 以降ログのみ正本。";
+      "paymentCollectTotal は Step 2 以降ログのみ正本（MISSING_COLLECTED_AMOUNT ログは除外）。";
 
     // colMap から最大列番号を求め、書き込み配列を構築
     var maxCol = 0;
