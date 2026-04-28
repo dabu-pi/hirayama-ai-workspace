@@ -85,7 +85,7 @@
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" id="cancelBtn">キャンセル</button>
-        <button class="btn btn-primary" id="saveBtn" type="submit">
+        <button type="button" class="btn btn-primary" id="saveBtn">
           <?= _isEdit ? '更新する' : '保存する' ?>
         </button>
       </div>
@@ -120,8 +120,15 @@ var PATIENT = <?!= JSON.stringify(patient).replace(/<\//g, '<\\/') ?>;
     document.getElementById('jrecPatientId').value = PATIENT.jrecPatientId || '';
   }
 
-  document.getElementById('patientForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+  // Enter キーによる誤送信を防止（textarea は改行のため除外）
+  document.getElementById('patientForm').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+    }
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', function() {
+    console.log('[patientForm] 保存ボタンがクリックされました mode=' + MODE);
     var btn  = document.getElementById('saveBtn');
     var name = document.getElementById('name').value.trim();
 
