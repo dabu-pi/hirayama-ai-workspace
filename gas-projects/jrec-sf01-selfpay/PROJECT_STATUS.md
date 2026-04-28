@@ -4,9 +4,45 @@
 
 **✅ Phase 5-C 領収書発行フロー: CLOSED**（2026-04-29 全 PASS）
 **✅ Versioned Deployment @22: 反映済み**（2026-04-29）
-**🔄 Phase 6-A 患者基本情報編集: 実装中**（2026-04-29）
+**✅ Phase 6-A 患者基本情報編集: CLOSED**（2026-04-29 主機能 PASS）
 
-次: Phase 6-A 実機確認 → CLOSED → Phase 6-B
+次: Phase 6-B（来院履歴のゴミ箱機能）または versioned deployment（Phase 6-A 本番反映）
+
+---
+
+## ✅ Phase 6-A 実機確認 PASS（2026-04-29）
+
+**commits:** 88b37d3（実装）/ cb329de（Enter 誤保存修正）
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| 1 | ✅ PASS | 患者詳細に「✏ 患者情報を編集」ボタン表示 |
+| 2 | ✅ PASS | 編集ページに既存データがプリフィル表示 |
+| 3 | ✅ PASS | 「更新する」クリック時のみ保存 → 詳細ページに戻る |
+| 4 | ✅ PASS | 氏名空欄で「氏名は必須です」エラー、保存なし |
+| 5 | ✅ PASS | キャンセル動線確認済み |
+| X-1 | ✅ PASS | 住所欄で Enter → ページ遷移・保存なし |
+| X-2 | ✅ PASS | 氏名欄 blur → 保存なし |
+| X-3 | ✅ PASS | 更新ボタンクリック時のみ保存・console.log 確認 |
+| X-4 | ⚠️ 未確認 | 新規患者登録（patient-form の new モード）への影響 |
+| X-5 | ✅ PASS | 氏名空欄バリデーションで保存なし |
+
+### X-4 未確認リスク
+
+| 項目 | 内容 |
+|---|---|
+| 対象 | `?page=newPatient` の新規患者登録フロー |
+| リスク | patient-form.html を edit モード対応に改修したため、new モードの動作に影響がある可能性がある |
+| コードレビュー上の判断 | `MODE === 'edit'` 分岐で edit 専用処理を分離済み。new モード時は `createPatient()` を呼ぶ従来動作のはず |
+| 対応方針 | 次回患者登録時に自然確認。問題があれば即修正。CLOSED の阻害要因とはしない |
+
+### バグ修正記録（commit: cb329de）
+
+| 項目 | 内容 |
+|---|---|
+| 現象 | input 欄で Enter を押すと「更新する」未押下でも保存が実行された |
+| ROOT_CAUSE | `saveBtn` が `type="submit"` → input の Enter で form submit イベント発火 → `e.preventDefault()` は画面遷移のみ止め JS の `updatePatient()` まで止めなかった |
+| FIX | `saveBtn` を `type="button"` に変更 / イベントを `form.submit` → `saveBtn.click` に変更 / `keydown` で Enter をブロック（textarea 除外）/ 保存開始ログ追加 |
 
 ---
 
