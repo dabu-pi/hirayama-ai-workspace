@@ -1,5 +1,72 @@
 # PROJECT_STATUS
 
+## 2026-04-28 Phase 2.5c: /programs タグ表示の日本語化漏れ修正
+
+### STATUS: CLOSED (2026-04-28) — typecheck/build OK / 実機確認待ち
+
+### PURPOSE
+
+Phase 2.5b 実機確認で /programs のタグ・フィルターチップが英語のままだった問題を修正。
+DB側の update-program-tags-jp.sql が未適用でも、UI側で必ず日本語表示になるよう対応。
+
+### ROOT_CAUSE
+
+- `ProgramsScreen.tsx` と `ProgramDetailScreen.tsx` が `tag.label` をそのまま表示していた
+- `update-program-tags-jp.sql` は作成済みだが本番DBへの適用が未実施
+- コード側にUI変換フォールバックが存在しなかった
+
+### IMPLEMENTED
+
+| 対象 | 変更内容 | ファイル |
+|---|---|---|
+| `formatProgramTagLabel(slug, label)` 関数追加 | slug優先・英語label fallbackの2段階変換 | `lib/workout/format-labels.ts` |
+| ProgramsScreen フィルターチップ | `tag.label` → `formatProgramTagLabel(tag.slug, tag.label)` | `components/programs/ProgramsScreen.tsx` |
+| ProgramsScreen カード内タグバッジ | 同上 | 同上 |
+| ProgramsScreen focusBadge | 同上 | 同上 |
+| ProgramDetailScreen タグバッジ | 同上 | `components/programs/ProgramDetailScreen.tsx` |
+| ProgramDetailScreen focusBadge | 同上 | 同上 |
+
+### 変換テーブル
+
+| slug | 変換後 |
+|---|---|
+| strength | 筋力アップ |
+| general-fitness | 総合フィットネス |
+| barbell | バーベル |
+| dumbbell | ダンベル |
+| full-body | 全身 |
+| upper-lower | 上半身 / 下半身 |
+| squat-focus | スクワット重視 |
+| explosive | 爆発系 |
+| hypertrophy | 筋肥大 |
+| powerlifting | パワーリフティング |
+| conditioning | 体力づくり |
+| push / pull | 押す種目 / 引く種目 |
+| legs / core | 脚 / 体幹 |
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（/programs: 100kB 正常）
+- commit: eece95d
+- push: ✅ feature/auto-dev-phase3-loop
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] /programs 上部フィルターチップが「バーベル」「全身」「筋力アップ」になっている
+- [ ] プログラムカード内タグが日本語
+- [ ] /programs/[slug] 詳細画面のタグバッジが日本語
+- [ ] /train・/workout-summary の種目名日本語化が維持されている
+
+### REMAINING_RISKS
+
+- Supabase DB の program_tags は英語のまま（update-program-tags-jp.sql 未適用）
+  → UIフォールバックで日本語表示されるため機能上は問題なし
+  → 将来の DB-first 参照（API等）を考慮して SQL 適用を推奨
+- 未登録 slug のタグは label 文字列をそのまま表示（想定内）
+
+---
+
 ## 2026-04-28 Phase 2.5b: タグ・種目名の日本語化
 
 ### STATUS: CLOSED (2026-04-28) — typecheck/build OK / DB手動適用待ち
