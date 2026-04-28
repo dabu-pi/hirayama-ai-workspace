@@ -2,11 +2,101 @@
 
 ## 現在ステータス
 
-**Phase 5-A Step 1: getDailySalesReport() 実装済み・clasp push 完了**（2026-04-28）
+**Phase 5-A Step 2: getDailySalesReport コードレビュー PASS / Apps Script 実行待ち**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## Phase 5-A Step 2: getDailySalesReport コードレビュー（2026-04-28）
+
+### コードレビュー結果
+
+全行精査を実施。**バグなし・コード変更不要。**
+
+#### 確認した項目
+
+| 確認項目 | 結果 |
+|---|---|
+| Payments 列インデックス（col1-10）| ✅ 正しい |
+| SelfPayVisits 列インデックス（col1-9）| ✅ 正しい |
+| SelfPayItems 列インデックス（col1-3）| ✅ 正しい |
+| Receipts 列インデックス（col1-4）| ✅ 正しい |
+| Run_Log 列インデックス（col1-7）| ✅ 正しい |
+| Patients 列インデックス（col1-2）| ✅ 正しい |
+| `toDateStr_()` の JST 変換（Date → YYYY-MM-DD）| ✅ 正しい |
+| `normalizeDate_()` の入力形式（YYYY-MM-DD / YYYYMMDD / Date）| ✅ 正しい |
+| Run_Log.selfPayVisitKey 空行 → MISSING_VISIT_KEY warnings | ✅ 正しい |
+| PAYMENT_SAVE かつ paymentStatus≠入金済 → 売上から除外 | ✅ 正しい |
+| 二重計上防止 `seenAmountKeys["ACTION_visitKey"]` | ✅ 正しい |
+| Object.keys() 使用（GAS V8 対応）| ✅ 正しい |
+
+#### コードトレース（2026-04-28 / SPV_20260428_P0001_005）
+
+| データソース | 期待動作 |
+|---|---|
+| Payments | SPV_20260428_P0001_005: totalTaxInc=3850, status=入金済 → paymentsMap 登録 |
+| Patients | P0001: 平山克士 → patientsMap 登録 |
+| SelfPayVisits | SPV_20260428_P0001_005: visitDate=2026-04-28 → visitCount++ |
+| Receipts | SPV_20260428_P0001_005: receiptNo=R_2026_0005 → receiptsMap 登録 |
+| Run_Log | PAYMENT_SAVE + selfPayVisitKey=SPV_20260428_P0001_005: paymentSaveTotal+=3850, rows.push() |
+| Run_Log（旧ログ）| selfPayVisitKey="" の PAYMENT_SAVE/COLLECT → MISSING_VISIT_KEY warnings |
+
+#### 期待される出力（実行確認用）
+
+```javascript
+{
+  ok:                  true,
+  date:                "2026-04-28",
+  totalSales:          3850,          // ← P0001_005 の¥3,850が反映される
+  paymentSaveTotal:    3850,          // ← 同上
+  paymentCollectTotal: 0,             // ← F-2の回収はStep0修正前のログのため除外
+  unpaidTotal:         0,             // ← 現在状態スナップショット
+  visitCount:          5,             // ← P0001_001〜P0001_005 (2026-04-28来院分)
+  mainVisitCount:      0 または 1,    // ← P0001_005の会計メニューによる
+  receiptIssuedCount:  1 以上,        // ← R_2026_0005が含まれる
+  rows: [
+    {
+      visitKey:      "SPV_20260428_P0001_005",
+      patientId:     "P0001",
+      patientName:   "平山克士",
+      visitDate:     "2026-04-28",
+      salesDate:     "2026-04-28",
+      action:        "PAYMENT_SAVE",
+      amount:        3850,
+      paymentStatus: "入金済",
+      paymentMethod: "現金",
+      receiptNo:     "R_2026_0005",
+      detail:        "paymentId: SPP_... 税込合計: ¥3850 ..."
+    }
+  ],
+  warnings: [
+    { type: "MISSING_VISIT_KEY", action: "PAYMENT_SAVE", ... },  // 旧ログ分
+    { type: "MISSING_VISIT_KEY", action: "PAYMENT_COLLECT", ... } // F-2回収の旧ログ
+  ]
+}
+```
+
+#### 既知の制限（今回の期待値からの差分）
+
+| 項目 | 説明 |
+|---|---|
+| `paymentCollectTotal = 0` | F-2 の未収回収（¥5,500）は Step 0 修正前のログのため MISSING_VISIT_KEY に分類される。想定通り。 |
+| `unpaidTotal` の日付非依存 | 現在スナップショット。対象日の残高ではない |
+| 旧ログの warnings | Step 0 以前に記録された PAYMENT_SAVE / PAYMENT_COLLECT は selfPayVisitKey 空のため除外 |
+
+### Apps Script での実行確認手順
+
+1. Apps Script エディタを開く（スクリプト URL から）
+2. 関数選択プルダウンで `runDailySalesReport` を選択
+3. 「実行」ボタンをクリック
+4. ログ表示で以下を確認:
+   - `totalSales=¥3850`
+   - rows に `SPV_20260428_P0001_005` と `patientName=平山克士` が含まれる
+   - `receiptNo=R_2026_0005` が含まれる
+   - warnings に `MISSING_VISIT_KEY` が出る（想定内）
 
 ---
 
