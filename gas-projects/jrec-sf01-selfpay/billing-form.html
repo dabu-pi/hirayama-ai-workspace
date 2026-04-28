@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>会計入力 — JREC-SF01</title>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
+  <?!= include('styles') ?>
+</head>
+<body>
+
+<?!= include('index') ?>
+
+<div class="container">
+
+  <!-- 患者サマリー -->
+  <div class="card" style="padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div>
+        <span class="pid"><?= visit.patientId ?></span>
+        <span style="font-size:17px;font-weight:700;margin-left:10px;"><?= patient ? patient.name : visit.patientId ?></span>
+        <? if (patient && patient.kana) { ?>
+          <span class="muted" style="margin-left:8px;font-size:13px;"><?= patient.kana ?></span>
+        <? } ?>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" style="margin-left:auto;"
+        onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= visit.patientId ?>'">
+        ← 患者詳細に戻る
+      </button>
+    </div>
+  </div>
+
+  <!-- 会計入力カード（Step 3 プレースホルダー）-->
+  <div class="card">
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;">会計入力</h2>
+    <p style="font-size:12px;color:#9aa0a6;margin-bottom:16px;">
+      SelfPayItems（明細）と Payments（支払）に保存します
+    </p>
+
+    <!-- 来院情報サマリー -->
+    <table class="info-table" style="width:100%;margin-bottom:20px;">
+      <tbody>
+        <tr><td>来院キー</td><td style="font-family:monospace;font-size:12px;"><?= visit.selfPayVisitKey ?></td></tr>
+        <tr><td>来院日</td><td><?= visit.visitDate ?></td></tr>
+        <tr><td>来院区分</td><td><?= visit.visitType ?></td></tr>
+        <tr><td>主訴</td><td><?= visit.chiefComplaint ?></td></tr>
+        <tr><td>会計状態</td><td><?= visit.billingStatus ?></td></tr>
+        <tr><td>有効メニュー数</td><td><?= menus ? menus.length : 0 ?> 件</td></tr>
+      </tbody>
+    </table>
+
+    <div class="phase-note">
+      <strong>Step 3 実装予定:</strong>
+      メニュー選択・数量入力・税計算・支払方法・保存機能はここに実装されます。<br>
+      現在はルーティング確認用のプレースホルダーです。
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary"
+        onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= visit.patientId ?>'">
+        キャンセル（患者詳細へ戻る）
+      </button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

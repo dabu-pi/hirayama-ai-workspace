@@ -2,11 +2,84 @@
 
 ## 現在ステータス
 
-**Phase 4 Step 1 完了（JREC_SF01_Billing.gs 実装済み）**（2026-04-28）
+**Phase 4 Step 2 完了（routing + 仮テンプレート実装済み）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 4 Step 2 完了（2026-04-28）
+
+### JREC_SF01_Main.gs ルート追加 + 仮テンプレート作成
+
+#### 変更内容
+
+**JREC_SF01_Main.gs:**
+- `doGet` に `vkParam` 抽出を追加（`e.parameter.visitKey || e.parameter.vk`）
+- `buildPage_` の引数に `vkParam` を追加
+- `billing` ルートを追加
+- `receipt` ルートを追加
+
+#### routing 仕様
+
+| URL パラメータ | 動作 |
+|---|---|
+| `?page=billing&visitKey=SPV_...` | `getVisitForBilling()` → `billing-form.html` |
+| `?page=receipt&visitKey=SPV_...` | `getReceiptByVisit()` → `receipt.html` |
+| visitKey 未指定 | エラーページ |
+| visit が見つからない | エラーページ |
+| 既に会計済み（billing ルート）| 「会計済みです」メッセージ + 領収書リンク |
+
+#### 作成したテンプレートファイル
+
+**billing-form.html（仮 / Step 3 プレースホルダー）:**
+- 患者名・来院キー・来院日・主訴・有効メニュー数を表示
+- 「Step 3 実装予定」ノートを表示
+- 「患者詳細に戻る」ボタン
+
+**receipt.html（仮 / Step 4 プレースホルダー）:**
+- 3パターンで分岐：
+  1. `receipt != null` → 発行済み領収書プレビュー（receiptNo / 宛名 / 金額 / 内訳）+ 印刷ボタン
+  2. `receipt == null && payment != null` → 会計済み・領収書未発行メッセージ + Step 4 ノート
+  3. `payment == null` → 未会計メッセージ + 「会計入力へ」ボタン
+- `@media print` で印刷不要要素を非表示
+
+#### 手動確認手順（clasp push + 再デプロイ後）
+
+**前提: WebApp を新バージョンで再デプロイしてから実施すること。**
+
+1. **billing ルート（未会計の来院）**
+   ```
+   WebアプリURL?page=billing&visitKey=SPV_20260428_P0001_001
+   ```
+   期待: 患者名・来院日・有効メニュー数が表示され、「Step 3 実装予定」ノートが出る
+
+2. **receipt ルート（未会計の来院 = payment なし）**
+   ```
+   WebアプリURL?page=receipt&visitKey=SPV_20260428_P0001_001
+   ```
+   期待: 「この来院はまだ会計されていません」メッセージ + 「会計入力へ」ボタン
+
+3. **visitKey なし（エラー確認）**
+   ```
+   WebアプリURL?page=billing
+   ```
+   期待: 「visitKey が指定されていません」エラーページ
+
+4. **billing ルート（存在しない visitKey）**
+   ```
+   WebアプリURL?page=billing&visitKey=SPV_99999999_P0000_999
+   ```
+   期待: 「来院記録が見つかりません」エラーページ
+
+#### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 10:26:56）
+billing-form.html / receipt.html が新規追加された
+```
 
 ---
 
@@ -733,7 +806,7 @@ patient-list.html / styles.html
 | Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **✅ CLOSED（2026-04-27 実機確認済）** |
 | Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | **✅ CLOSED（2026-04-28 実機確認済）** |
 | Phase 4 Step 1 | JREC_SF01_Billing.gs — GAS 会計バックエンド | **✅ 実装完了（2026-04-28）** |
-| Phase 4 Step 2 | JREC_SF01_Main.gs — billing / receipt ルート追加 | 未着手 |
+| Phase 4 Step 2 | JREC_SF01_Main.gs routing + 仮テンプレート | **✅ 実装完了（2026-04-28）** |
 | Phase 4 Step 3 | billing-form.html — 会計入力画面 | 未着手 |
 | Phase 4 Step 4 | receipt.html — 領収書プレビュー・発行 | 未着手 |
 | Phase 4 Step 5 | patient-detail.html — 会計入力/領収書ボタン追加 | 未着手 |

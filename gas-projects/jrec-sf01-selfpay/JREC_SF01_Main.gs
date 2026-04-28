@@ -5,10 +5,12 @@
 function doGet(e) {
   var page    = (e && e.parameter && e.parameter.page) || "list";
   var idParam = (e && e.parameter && (e.parameter.id || e.parameter.patientId)) || "";
-  var q       = (e && e.parameter && e.parameter.q)   || "";
+  var q       = (e && e.parameter && e.parameter.q)                          || "";
+  var vkParam = (e && e.parameter &&
+                 (e.parameter.visitKey || e.parameter.vk))                   || "";
 
   try {
-    var output = buildPage_(page, idParam, q);
+    var output = buildPage_(page, idParam, q, vkParam);
     return output
       .setTitle("JREC-SF01 自費カルテ・会計")
       .addMetaTag("viewport", "width=device-width, initial-scale=1.0")
@@ -18,7 +20,7 @@ function doGet(e) {
   }
 }
 
-function buildPage_(page, idParam, q) {
+function buildPage_(page, idParam, q, vkParam) {
   var appUrl = getAppUrl_();
 
   try {
@@ -69,6 +71,52 @@ function buildPage_(page, idParam, q) {
         t.appUrl   = appUrl;
         t.patient  = ptd;
         t.timeline = getVisitTimelineByPatient(idParam);
+        return evalTemplate_(t);
+      }
+
+      // ── 会計入力画面（Step 3 で本格実装）──────────────────
+      case "billing": {
+        Logger.log("[billing] vkParam=" + vkParam);
+        if (!vkParam) return renderError_(
+          "visitKey が指定されていません。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
+        );
+        var bd = getVisitForBilling(vkParam);
+        if (!bd.ok) return renderError_(
+          "会計情報の取得に失敗しました: " + bd.error +
+          "<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
+        );
+        if (bd.alreadyPaid) return renderError_(
+          "この来院はすでに会計済みです（" + bd.existingPayment.paymentId + "）。" +
+          "<br><a href=\"" + appUrl + "?page=receipt&visitKey=" + encodeURIComponent(vkParam) + "\">領収書を確認する</a>" +
+          "　<a href=\"" + appUrl + "?page=detail&id=" + bd.visit.patientId + "\">患者詳細へ戻る</a>"
+        );
+        var t = HtmlService.createTemplateFromFile("billing-form");
+        t.appUrl  = appUrl;
+        t.visit   = bd.visit;
+        t.patient = bd.patient;
+        t.menus   = getActiveMenus();
+        return evalTemplate_(t);
+      }
+
+      // ── 領収書プレビュー・発行画面（Step 4 で本格実装）──
+      case "receipt": {
+        Logger.log("[receipt] vkParam=" + vkParam);
+        if (!vkParam) return renderError_(
+          "visitKey が指定されていません。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
+        );
+        var rd = getReceiptByVisit(vkParam);
+        if (!rd.ok) return renderError_(
+          "領収書情報の取得に失敗しました: " + rd.error +
+          "<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
+        );
+        var t = HtmlService.createTemplateFromFile("receipt");
+        t.appUrl     = appUrl;
+        t.visit      = rd.visit;
+        t.patient    = rd.patient;
+        t.items      = rd.items;
+        t.payment    = rd.payment;
+        t.receipt    = rd.receipt;      // null = 未発行
+        t.clinicName = rd.clinicName;
         return evalTemplate_(t);
       }
 

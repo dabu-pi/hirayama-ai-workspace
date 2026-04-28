@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>領収書 — JREC-SF01</title>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
+  <?!= include('styles') ?>
+  <style>
+    .receipt-box {
+      border: 2px solid #dadce0;
+      border-radius: 8px;
+      padding: 28px 32px;
+      max-width: 480px;
+      margin: 0 auto;
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    }
+    .receipt-title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #212529;
+    }
+    .receipt-no {
+      font-size: 12px;
+      color: #5f6368;
+      text-align: right;
+      margin-bottom: 8px;
+    }
+    .receipt-addressee {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 16px 0 8px;
+    }
+    .receipt-amount {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 12px 0 4px;
+    }
+    .receipt-tax {
+      font-size: 13px;
+      color: #5f6368;
+      margin-bottom: 16px;
+    }
+    .receipt-desc {
+      font-size: 13px;
+      padding: 10px 0;
+      border-top: 1px solid #e0e0e0;
+      border-bottom: 1px solid #e0e0e0;
+      margin-bottom: 16px;
+    }
+    .receipt-clinic {
+      text-align: right;
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 20px;
+      padding-top: 12px;
+      border-top: 1px solid #e0e0e0;
+    }
+    @media print {
+      .app-header, .no-print { display: none !important; }
+      .container { padding: 0; max-width: none; }
+      .card { box-shadow: none; border: none; }
+    }
+  </style>
+</head>
+<body>
+
+<?!= include('index') ?>
+
+<div class="container">
+
+  <!-- 患者サマリー -->
+  <div class="card no-print" style="padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div>
+        <span class="pid"><?= visit.patientId ?></span>
+        <span style="font-size:17px;font-weight:700;margin-left:10px;"><?= patient ? patient.name : visit.patientId ?></span>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm"
+          onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= visit.patientId ?>'">
+          ← 患者詳細に戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 領収書エリア -->
+  <div class="card">
+
+    <? if (receipt) { ?>
+      <!-- 発行済み領収書 -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;" class="no-print">
+        <h2 style="font-size:16px;font-weight:700;">領収書（発行済み）</h2>
+        <button type="button" class="btn btn-primary btn-sm"
+          onclick="window.print()">
+          印刷
+        </button>
+      </div>
+
+      <div class="receipt-box">
+        <div class="receipt-no">No. <?= receipt.receiptNo ?>　<?= receipt.issuedDate ?></div>
+        <div class="receipt-title">領　収　書</div>
+        <div class="receipt-addressee"><?= receipt.addressee ?> 様</div>
+        <div class="receipt-amount">¥<?= Number(receipt.totalTaxInc).toLocaleString() ?><span style="font-size:16px;font-weight:400;">（税込）</span></div>
+        <div class="receipt-tax">うち消費税 ¥<?= Number(receipt.totalTaxAmt).toLocaleString() ?></div>
+        <div class="receipt-desc">但し　<?= receipt.description ?></div>
+
+        <? if (items && items.length > 0) { ?>
+          <table style="width:100%;font-size:12px;color:#5f6368;margin-bottom:12px;">
+            <tbody>
+              <? items.forEach(function(item) { ?>
+                <tr>
+                  <td><?= item.menuName ?></td>
+                  <td style="text-align:right;">×<?= item.qty ?></td>
+                  <td style="text-align:right;">¥<?= Number(item.subtotalInc).toLocaleString() ?></td>
+                </tr>
+              <? }); ?>
+            </tbody>
+          </table>
+        <? } ?>
+
+        <div class="receipt-clinic"><?= clinicName ?></div>
+      </div>
+
+      <? if (receipt.reissueCount > 0) { ?>
+        <p style="font-size:11px;color:#9aa0a6;text-align:center;margin-top:8px;" class="no-print">
+          再発行 <?= receipt.reissueCount ?> 回目
+        </p>
+      <? } ?>
+
+    <? } else if (payment) { ?>
+      <!-- 会計済みだが領収書未発行 -->
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;">領収書</h2>
+      <div class="phase-note" style="margin-bottom:20px;">
+        会計は完了していますが、領収書はまだ発行されていません。
+      </div>
+
+      <table class="info-table" style="width:100%;margin-bottom:20px;">
+        <tbody>
+          <tr><td>来院キー</td><td style="font-family:monospace;font-size:12px;"><?= visit.selfPayVisitKey ?></td></tr>
+          <tr><td>来院日</td><td><?= visit.visitDate ?></td></tr>
+          <tr><td>税込合計</td><td style="font-size:16px;font-weight:700;">¥<?= Number(payment.totalTaxInc).toLocaleString() ?></td></tr>
+          <tr><td>支払方法</td><td><?= payment.paymentMethod ?></td></tr>
+          <tr><td>入金状態</td><td><?= payment.paymentStatus ?></td></tr>
+        </tbody>
+      </table>
+
+      <div class="phase-note">
+        <strong>Step 4 実装予定:</strong>
+        「発行して患者詳細へ戻る」ボタンで領収書を発行する機能はここに実装されます。
+      </div>
+
+    <? } else { ?>
+      <!-- 未会計 -->
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;">領収書</h2>
+      <div class="phase-note" style="margin-bottom:20px;">
+        この来院はまだ会計されていません。先に会計入力を行ってください。
+      </div>
+
+      <table class="info-table" style="width:100%;margin-bottom:20px;">
+        <tbody>
+          <tr><td>来院キー</td><td style="font-family:monospace;font-size:12px;"><?= visit.selfPayVisitKey ?></td></tr>
+          <tr><td>来院日</td><td><?= visit.visitDate ?></td></tr>
+          <tr><td>会計状態</td><td><?= visit.billingStatus ?></td></tr>
+        </tbody>
+      </table>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary"
+          onclick="window.top.location.href = APP_URL + '?page=billing&visitKey=<?= visit.selfPayVisitKey ?>'">
+          会計入力へ →
+        </button>
+      </div>
+    <? } ?>
+
+    <!-- 患者詳細へ戻る（発行済み・未発行共通） -->
+    <? if (receipt || payment) { ?>
+      <div class="form-actions no-print">
+        <button type="button" class="btn btn-secondary"
+          onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= visit.patientId ?>'">
+          ← 患者詳細に戻る
+        </button>
+      </div>
+    <? } ?>
+
+  </div>
+
+</div>
+</body>
+</html>
