@@ -1,5 +1,66 @@
 # PROJECT_STATUS
 
+## 2026-04-28 Phase 2.6: 表示速度・操作速度の改善
+
+### STATUS: CLOSED (2026-04-28) — typecheck/build OK / 実機確認待ち
+
+### PURPOSE
+
+テストユーザーから「さらにスピードアップしてほしい」という要望を受け、表示速度改善調査と安全な改善を実施。
+
+### 調査結果サマリー
+
+| 項目 | 状態 | 評価 |
+|---|---|---|
+| loading.tsx カバレッジ | 5ページが欠落（session-history/gym/profile等） | ⚠️ 対応済み |
+| Supabase クエリ最適化 | SELECT * なし、並列fetch使用済み、N+1なし | ✅ 良好 |
+| console.log / 診断ログ | [PERF] ログは意図的なVercell診断ログ | ✅ 維持 |
+| キャッシュ戦略 | force-dynamic + cache:no-store（全ページ） | 意図的設計 |
+| APIルート | exercises API は force-dynamic（個人データ混在のため） | 変更せず |
+| バンドルサイズ | 全ページ適切 | ✅ 良好 |
+
+### IMPLEMENTED
+
+| 対象 | 変更内容 | ファイル |
+|---|---|---|
+| セッション履歴 | loading.tsx 追加（Suspense + ドットアニメーション） | `app/session-history/loading.tsx` |
+| セッション詳細 | loading.tsx 追加 | `app/session-history/[sessionId]/loading.tsx` |
+| ジム | loading.tsx 追加 | `app/gym/loading.tsx` |
+| プロフィール | loading.tsx 追加 | `app/profile/loading.tsx` |
+| マイ種目 | loading.tsx 追加 | `app/my-exercises/loading.tsx` |
+
+**効果:** Suspenseが有効化され、これら5ページのSSR中のブランクスクリーンが解消される。
+
+### 変更しなかった箇所とその理由
+
+| 項目 | 理由 |
+|---|---|
+| console.info / console.log ([PERF]) | app/train/page.tsx と lib/workout/ の構造化パフォーマンス診断ログ。Vercel runtime log 解析用に意図的に残す |
+| force-dynamic + cache:no-store | ユーザー認証・セッション状態に依存するため全ページ動的。設計意図通り |
+| exercises API キャッシュ化 | include_history=true 時にユーザー固有データが混在するため断念 |
+| DB構造変更 | 禁止 |
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（全ルート正常）
+- commit: 23390b5
+- push: ✅ feature/auto-dev-phase3-loop
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] /session-history 遷移時にブランクスクリーンではなくドットアニメーションが表示される
+- [ ] /gym 遷移時にローディングアニメーションが表示される
+- [ ] /profile / /my-exercises も同様に確認
+
+### REMAINING_RISKS（PWA化前の確認事項）
+
+- `force-dynamic` 全ページ使用のため、ISR/SSG による高速化余地あり（高リスク）
+- /train 初回表示が15-20クエリ → 現状は十分にチューニング済み（Promise.all並列化）
+- exercises API の応答速度が体感に影響する場合は、library部分の分離キャッシュが候補
+
+---
+
 ## 2026-04-28 Phase 2.5d: プログラム名・目標・概要・週ラベルの日本語化
 
 ### STATUS: CLOSED (2026-04-28) — typecheck/build OK / 実機確認待ち
