@@ -2,7 +2,7 @@
 
 **作成日:** 2026-04-28
 **対象:** JREC-SF01 自費カルテ・会計システム
-**ステータス:** Step 1 実装完了（commit: 79222f7）/ Step 2 実装完了（実機確認待ち）
+**ステータス:** ✅ Step 1 CLOSED / ✅ Step 2 CLOSED（2026-04-28 実機確認 全PASS）
 
 ---
 
@@ -73,52 +73,44 @@ receipt.html 成功後:
   → 一部回収（一部入金）: 既回収額・未収残額を更新、回収エリアは継続表示
 ```
 
-### 1-4. 未収残高計算の問題
+### 1-4. 未収残高計算（Step 1 + Step 2 で修正済み）✅
 
-現在の `getPatientListStats()` / `getPatientAccountingData()` の計算:
+Step 1 で `paidAmount` を追加し、Step 2 で累積更新を実装。
+`getPatientListStats()` / `getPatientAccountingData()` / `getAllOutstandingByPatient()` は
+全て `remaining = totalTaxInc - paidAmount` を使用するように修正済み。
 
-```javascript
-// 問題のある計算
-if (status === "一部入金") outstanding += totalTaxInc;  // 残額ではなく全額を加算
-if (status === "一部入金") totalPaid   += totalTaxInc;  // 入金済みでも全額を加算
-```
+**実機確認（2026-04-28）:** patient-detail で累計未収残高 ¥0 が正しく表示されることを確認。
 
-**例:** 請求 ¥3,850 のうち ¥2,000 を一部入金した場合:
-- 正しい: `outstanding = ¥1,850`（残額）
-- 現在: `outstanding = ¥3,850`（全額）→ **¥2,000 過大計上**
+### 1-5. DailySales への影響（Step 2 で修正済み）✅
 
-### 1-5. DailySales への影響
+`getDailySalesReport` の `paymentCollectTotal`:
+- **Step 2 以前**: `amount = payment.totalTaxInc`（全額計上 → 過大）
+- **Step 2 以降**: Run_Log detail の「今回回収額: ¥N」を正規表現で抽出
+- 旧ログは `MISSING_COLLECTED_AMOUNT` として集計除外（過大計上防止）
 
-`getDailySalesReport` では:
-- `PAYMENT_SAVE` の場合: `amount = payment.totalTaxInc` → 一部入金時でも全額を売上計上
-- `unpaidTotal = SUM(totalTaxInc) WHERE status=未収/一部入金` → 残額でなく全額
-
-**例:** ¥3,850 を 一部入金（¥2,000）→ 後日回収（¥1,850）の場合:
-- PAYMENT_SAVE 日: paymentSaveTotal に ¥3,850 が計上 → **¥2,000 過大**
-- PAYMENT_COLLECT 日: paymentCollectTotal に ¥3,850 が計上 → **¥1,850 過大**
-
-### 1-6. Run_Log の PAYMENT_COLLECT 記録
+### 1-6. Run_Log の PAYMENT_COLLECT 記録（Step 2 以降フォーマット）✅
 
 ```
 action: "PAYMENT_COLLECT"
-selfPayVisitKey: "SPV_..." (Step 0 以降修正済み)
-patientId: "P0001"
-detail: "visitKey: SPV_... 回収額: ¥3850 現金"
+selfPayVisitKey: "SPV_20260428_P0001_007"
+detail: "visitKey: SPV_... 今回回収額: ¥1000 累積入金額: ¥1000 残額: ¥4500 現金"
 ```
 
-`detail` テキストに回収額が入っているが、構造化フィールドではない。
+**実機確認（2026-04-28）:**
+- 1回目: `今回回収額: ¥1000 累積入金額: ¥1000 残額: ¥4500` ✅
+- 2回目: `今回回収額: ¥4500 累積入金額: ¥5500 残額: ¥0` ✅
 
 ---
 
-## 2. 現在の一部入金処理の問題点
+## 2. ✅ 解決済みの問題点（Step 1 + Step 2）
 
-| 問題 | 影響 |
-|---|---|
-| paidAmount 列がない | 一部入金額が永続的に失われる |
-| collectOutstandingPayment に collectedAmount がない | 部分回収が全額回収として処理される |
-| unpaidTotal に残額でなく全額を使用 | 患者一覧・患者詳細の未収残高が過大表示される |
-| DailySales の売上に一部入金は全額計上 | 日次売上集計が不正確になる |
-| Run_Log detail のテキストに金額が埋め込み | 回収額の監査・再集計が fragile |
+| 問題 | 対応 | ステータス |
+|---|---|---|
+| paidAmount 列がない | Step 1: col11 追加 | ✅ CLOSED |
+| collectOutstandingPayment に collectedAmount がない | Step 2: 必須化・累積更新 | ✅ CLOSED |
+| unpaidTotal に残額でなく全額を使用 | Step 1: paidAmount ベースの remaining 計算 | ✅ CLOSED |
+| DailySales の PAYMENT_COLLECT が totalTaxInc 使用 | Step 2: 今回回収額 抽出方式に変更 | ✅ CLOSED |
+| Run_Log detail の金額が非構造化 | Step 2: 「今回回収額: ¥N」パターンで正規化 | ✅ CLOSED |
 
 ---
 

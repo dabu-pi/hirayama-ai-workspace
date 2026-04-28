@@ -2,9 +2,9 @@
 
 ## 現在ステータス
 
-**Phase 5-B Step 2: collectOutstandingPayment collectedAmount 実装 + receipt.html 一部回収 UI 完了**（2026-04-28）
+**✅ Phase 5-B Step 2: CLOSED**（2026-04-28 実機確認 全PASS）
 
-次: データ補正（correctPayment_P0001_007 実行）→ Test C → Test A → Test B の順で実機確認
+次: Phase 5-C または DailySales の rebuildDailySales 再実行確認
 
 ---
 
@@ -61,20 +61,100 @@
 | `clasp push` | Apps Script エディタの HEAD を更新するだけ |
 | `clasp deploy --deploymentId <id>` | 指定 deployment を最新 HEAD から新バージョンに更新 → `/exec` に反映 |
 
-**現在の deployment 構成:**
+**現在の deployment 構成（2026-04-28 更新）:**
 
 | deployment ID（末尾） | バージョン | 用途 |
 |---|---|---|
-| `AKfycbzJWJAK...` | @HEAD | 常に最新 HEAD を参照 |
-| `AKfycbxhtWdy...` | @20 | **本番 /exec URL**（通常使用。push 後に `clasp deploy` 要） |
+| `AKfycbzJWJAK...` | @HEAD | **開発確認用**（clasp push 即反映。Step 2 UI 確認済み） |
+| `AKfycbxhtWdy...` | @21 | 本番 /exec URL（versioned。@HEAD との動作差あり → 未解決） |
 | `AKfycbyjzy_g...` | @1 | 旧デプロイ（使用停止） |
 
-**clasp push + deploy セット手順（今後の標準）:**
+**@HEAD URL（開発確認推奨）:**
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/exec
+```
 
+**今後の標準: clasp push → deploy セット:**
 ```bash
 clasp push --force
 clasp deploy --deploymentId "AKfycbxhtWdycr4Xt-LT867eoUiqixjM2zOlaE6Bcqzoi8qbtZIvLHkR820vRfRqyomdoTa7pQ" --description "変更内容の説明"
 ```
+
+**残リスク:** versioned deployment @21 でも旧UIが表示される事象が再発した場合、
+`appsscript.json` の `"access": "MYSELF"` またはブラウザキャッシュが原因の可能性。
+調査が必要な場合は Apps Script エディタのデプロイ管理 UI から手動で更新する。
+
+---
+
+## ✅ Phase 5-B Step 2 実機確認 PASS（2026-04-28）
+
+**対象 visitKey:** `SPV_20260428_P0001_007`
+**確認 URL:** @HEAD deployment（`AKfycbzJWJAK...`）
+
+### Test C: 過大回収防止
+
+| 確認項目 | 結果 |
+|---|---|
+| 残額 ¥5,500 に ¥5,501 を入力 | クライアントバリデーション「未収残額（¥5,500）を超えています。」が表示 |
+| GAS は呼ばれない | ✅ |
+| Sheets 変更なし | ✅ |
+
+判定: **PASS**
+
+### Test A: 一部回収（¥1,000）
+
+| 確認項目 | 結果 |
+|---|---|
+| 成功メッセージ | 「¥1,000 を回収しました。残額: ¥4,500」✅ |
+| 金額サマリー更新 | 既回収額 ¥1,000 / 未収残額 ¥4,500 ✅ |
+| 入金状態 | 一部入金 ✅ |
+| 回収エリア | 継続表示（再回収可能）✅ |
+| Payments.paidAmount | ¥1,000 累積 ✅ |
+| Payments.paymentStatus | 一部入金 ✅ |
+| Run_Log | `今回回収額: ¥1000 累積入金額: ¥1000 残額: ¥4500` ✅ |
+
+判定: **PASS**
+
+### Test B: 全額回収（残額 ¥4,500）
+
+| 確認項目 | 結果 |
+|---|---|
+| 成功メッセージ | 「全額回収完了（入金日: 2026-04-28　今回: ¥4,500）」✅ |
+| 入金状態 | 入金済 ✅ |
+| 回収エリア | 非表示 ✅ |
+| Payments.paidAmount | ¥5,500（= totalTaxInc）✅ |
+| Payments.paymentStatus | 入金済 ✅ |
+| Run_Log | `今回回収額: ¥4500 累積入金額: ¥5500 残額: ¥0` ✅ |
+
+判定: **PASS**
+
+### Sheets / Run_Log 裏取り
+
+| 確認対象 | 内容 |
+|---|---|
+| Payments.totalTaxInc | ¥5,500 ✅ |
+| Payments.paymentMethod | 現金 ✅ |
+| Payments.paymentStatus | 入金済 ✅ |
+| Payments.paymentDate | 2026-04-28 ✅ |
+| Payments.paidAmount | ¥5,500 ✅ |
+| Payments.memo | 訂正メモ + 回収(2026-04-28 ¥1000) + 回収(2026-04-28 ¥4500) ✅ |
+| SelfPayVisits.billingStatus | 会計済 ✅ |
+| Run_Log PAYMENT_SAVE | 入金額 ¥0 / 残額 ¥5,500（未収として保存）✅ |
+| Run_Log CORRECTION | 旧UI誤操作を未収へ戻した記録 ✅ |
+| Run_Log PAYMENT_COLLECT 1回目 | 今回回収額: ¥1,000 ✅ |
+| Run_Log PAYMENT_COLLECT 2回目 | 今回回収額: ¥4,500 ✅ |
+| patient-detail 未収残高 | ¥0 ✅ |
+| patient-detail SPV_20260428_P0001_007 | 会計済 ✅ |
+| patient-detail 未収回収ボタン | 表示なし ✅ |
+| patient-detail 領収書発行ボタン | 表示あり ✅ |
+
+判定: 全項目 **PASS**
+
+### 旧UI誤操作時の PAYMENT_COLLECT ログ扱い
+
+旧UI(@19)で発生した PAYMENT_COLLECT ログは detail が「回収額: ¥5500」形式。
+Step 2 以降の DailySales が「今回回収額:」パターンを検索するため
+`MISSING_COLLECTED_AMOUNT` warning として除外される。過大計上は発生しない。
 
 ---
 
