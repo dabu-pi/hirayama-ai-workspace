@@ -2,11 +2,96 @@
 
 ## 現在ステータス
 
-**Phase 4 Step 5 完了（patient-detail.html 会計導線・サマリー実データ化）**（2026-04-28）
+**Phase 4 CLOSED（Step 1〜5 全実機確認PASS）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 4 CLOSED（2026-04-28）
+
+### Phase 4 実機確認 Step 5 PASS
+
+| 確認項目 | 結果 |
+|---|---|
+| 未会計バッジ | ✅ PASS |
+| 「会計入力」ボタン | ✅ PASS |
+| 会計入力への遷移 | ✅ PASS |
+| 領収書発行済バッジ | ✅ PASS |
+| 「領収書」ボタン | ✅ PASS |
+| 領収書画面への遷移 | ✅ PASS |
+| 「✅ 発行済み」バナー表示 | ✅ PASS |
+| 累計支払 ¥3,850 表示 | ✅ PASS |
+| タイムライン表示（Phase 3 退行なし）| ✅ PASS |
+| 対象患者: P0001 / visitKey: SPV_20260428_P0001_004 / receiptNo: R_2026_0001 | ✅ PASS |
+
+**確認時の補足:**
+- 未収残高 = 0 の場合は「—」表示（未収なし）→ Phase 4 CLOSED の阻害要因ではない
+- 「¥0」表示の方が会計管理上明確かどうかは次フェーズで判断
+
+---
+
+### Phase 4 実装済みスコープ（CLOSED）
+
+#### 実装ファイル
+
+| ファイル | 役割 |
+|---|---|
+| `JREC_SF01_Billing.gs` | 会計バックエンド全関数 |
+| `JREC_SF01_Main.gs` | billing / receipt ルート追加・accounting データ渡し |
+| `billing-form.html` | 会計入力UI（メニュー選択・税計算・保存）|
+| `receipt.html` | 領収書発行UI（プレビュー・印刷・発行済みバナー）|
+| `patient-detail.html` | 会計導線・サマリー実データ化 |
+| `docs/ACCOUNTING_POLICY_v1.md` | 会計設計方針（カルテ/会計分離・自動変換しない理由）|
+
+#### 実装済み機能
+
+| 機能 | 詳細 |
+|---|---|
+| MenuMaster 由来のメニュー選択 | `getActiveMenus()` → optgroup カテゴリ別プルダウン |
+| 明細行の動的追加/削除 | 行追加・削除・リアルタイム税計算 |
+| 会計保存 | `savePaymentWithItems()` → SelfPayItems + Payments + SelfPayVisits 会計状態更新 |
+| 領収書発行 | `issueReceipt()` → Receipts 採番・保存 |
+| 発行済み領収書表示 | `getReceiptByVisit()` → receiptNo / 宛名 / 金額 / 明細 |
+| 印刷対応 | `window.print()` + `@media print` で UI 非表示 |
+| 発行済みバナー | `✅ 発行済み No. R_2026_0001 発行日: YYYY年M月D日` |
+| 二重保存防止 | GAS 側 Payments 重複チェック + 保存成功後フォーム disabled |
+| 二重発行防止 | GAS 側 Receipts 重複チェック + alreadyIssued 時に既存返却 |
+| 患者詳細の会計バッジ | 未会計/会計済/未収/領収書発行済 の 4状態 |
+| 患者詳細のアクションボタン | 未会計→会計入力 / 会計済未発行→領収書を発行 / 発行済→領収書 |
+| 累計支払表示 | `getPatientAccountingData()` から実値（¥X,XXX）|
+| 未収残高表示 | 未収 > 0 の場合 赤太字で表示 |
+| 会計設計方針文書 | `docs/ACCOUNTING_POLICY_v1.md` |
+
+#### 会計フロー（確定版）
+
+```
+患者詳細 → 「会計入力」ボタン（未会計の来院行）
+  → billing-form.html でメニュー選択・支払入力
+  → savePaymentWithItems() → SelfPayItems + Payments 保存
+  → receipt.html へ遷移
+  → 「領収書を発行する」ボタン
+  → issueReceipt() → Receipts 保存・receiptNo 採番
+  → 領収書プレビュー表示・印刷
+  → 患者詳細へ戻る
+患者詳細 → 来院行に「領収書発行済」バッジ + 「領収書」ボタン
+```
+
+---
+
+### Phase 4 後半以降へ回した残課題
+
+| 課題 | 優先度 | メモ |
+|---|---|---|
+| 未収0円表示の改善 | 低 | 現在は `—`。`¥0` 表示の方が明確かどうか次フェーズで判断 |
+| 未収回収処理 | 中 | Payments.paymentStatus を「入金済」に更新するモーダル |
+| 患者一覧の未収額表示 | 中 | 患者一覧で Payments と JOIN して未収額列を実データ化 |
+| 領収書の再発行 | 低 | reissueCount をインクリメントして新規 receipt INSERT |
+| DailySales 日次集計 | 中 | savePaymentWithItems 後に DailySales を更新する集計ロジック |
+| 取消・返金 | 要設計 | 不可逆操作のため設計フェーズで別途検討 |
+| 会計明細の編集・削除 | 要設計 | 誤入力訂正フロー |
 
 ---
 
@@ -1136,7 +1221,8 @@ patient-list.html / styles.html
 | Phase 4 Step 2 | JREC_SF01_Main.gs routing + 仮テンプレート | **✅ 実装完了・実機確認PASS（2026-04-28）** |
 | Phase 4 Step 3 | billing-form.html — 会計入力画面 | **✅ 実装完了・実機確認PASS（2026-04-28）** |
 | Phase 4 Step 4 | receipt.html — 領収書発行・プレビュー | **✅ 実装完了・実機確認PASS（2026-04-28）** |
-| Phase 4 Step 5 | patient-detail.html 会計導線・サマリー実データ | **✅ 実装完了（2026-04-28）** |
+| Phase 4 Step 5 | patient-detail.html 会計導線・サマリー実データ | **✅ 実装完了・実機確認PASS（2026-04-28）** |
+| **Phase 4** | **会計入力・領収書・未収管理 MVP** | **✅ CLOSED（2026-04-28）** |
 | Phase 4 Step 4 | receipt.html — 領収書プレビュー・発行 | 未着手 |
 | Phase 4 Step 5 | patient-detail.html — 会計入力/領収書ボタン追加 | 未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |
