@@ -719,14 +719,15 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 - build: pass（/gym 3.24kB、/train 13kB 変化なし）
 - DB migration: 不要
 
-### LIVE_CHECK_REQUIRED
+### LIVE_CHECK — 2026-04-28 スマホ実機確認済み
 
-- [ ] active ユーザーは通常通り /train を使える
-- [ ] paused ユーザーが /train を開くと「現在、休会中です」が表示される
-- [ ] cancelled ユーザーが /train を開くと退会向け案内が表示される
-- [ ] paused/cancelled ユーザーが /gym を開くと soft notice バナーが表示される
-- [ ] /gym / /programs / /profile の表示が active ユーザーで破綻していない
-- [ ] スマホ表示で文言が読みやすい
+| 確認項目 | 結果 |
+|---|---|
+| /gym で休会中ユーザー向け soft notice が表示される | ✅ PASS |
+| /train で退会済みユーザー向け案内画面が表示される | ✅ PASS |
+| 文言が強すぎず、利用状況と問い合わせ案内が分かる | ✅ PASS |
+| スマホ表示で大きな崩れなし | ✅ PASS |
+| active ユーザー側の通常表示に問題なし | ✅ PASS |
 
 ---
 

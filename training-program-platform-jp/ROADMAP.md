@@ -83,7 +83,7 @@
 - **H-1b: 履歴カレンダー専用クエリ（SESSION_LIST_LIMIT 依存解消）** ✅ CLOSED (2026-04-28) スマホ実機確認PASS
 - **H-1c: 月移動時カレンダーAPI取得（前月/次月 dot 更新）** ✅ CLOSED (2026-04-28) スマホ実機確認PASS
 - **H-1d: 選択日詳細パネルのAPI化（SESSION_LIST_LIMIT 完全排除）** ✅ CLOSED (2026-04-28) スマホ実機確認PASS
-- **M-1: 非activeユーザー向け表示整理（paused/cancelled ステータス別文言）** ✅ CLOSED (2026-04-28) typecheck/build OK
+- **M-1: 非activeユーザー向け表示整理（paused/cancelled ステータス別文言）** ✅ CLOSED (2026-04-28) スマホ実機確認PASS
 - **G-1: ジムタブ基本ダッシュボード** ✅ LIVE確認済み（2026-04-26）
 - **G-2: gym_announcements テーブル + 管理者投稿** ✅ CLOSED (2026-04-27) DB migration 適用済み
 - **G-3: お知らせ未読バッジ（localStorage 軽量版）** ✅ CLOSED (2026-04-27) 実機確認済み
