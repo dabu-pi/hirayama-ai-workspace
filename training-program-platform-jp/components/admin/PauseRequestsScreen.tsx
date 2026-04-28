@@ -43,6 +43,14 @@ function formatEffectiveFrom(dateStr: string | null) {
   return `${y}年${Number(m)}月${Number(d)}日`;
 }
 
+/** True when effective_from is today or earlier (pause should have started). */
+function isPauseStartDateReached(effectiveFrom: string | null): boolean {
+  if (!effectiveFrom) return false;
+  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  today.setHours(0, 0, 0, 0);
+  return new Date(effectiveFrom) <= today;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   pending: "申請中",
   approved: "承認済",
@@ -79,6 +87,10 @@ function RequestCard({ req }: { req: PauseRequest }) {
   }
 
   const statusClass = STATUS_CLASS[req.status] ?? "statusPending";
+  const showPauseStartAlert =
+    req.status === "approved" &&
+    isPauseStartDateReached(req.effectiveFrom) &&
+    req.membershipStatus !== "paused";
 
   return (
     <div className={styles.card}>
@@ -93,6 +105,12 @@ function RequestCard({ req }: { req: PauseRequest }) {
           {STATUS_LABEL[req.status] ?? req.status}
         </span>
       </div>
+
+      {showPauseStartAlert && (
+        <div className={styles.pauseStartAlert}>
+          ⚠️ 休会開始日到達済み — 会員管理画面で membership_status を paused に変更してください
+        </div>
+      )}
 
       <dl className={styles.meta}>
         <dt>申請日時</dt><dd>{formatDate(req.requestedAt)}</dd>

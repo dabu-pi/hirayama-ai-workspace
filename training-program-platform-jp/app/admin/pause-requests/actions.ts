@@ -47,7 +47,16 @@ export async function approvePauseRequest(
 
   const now = new Date().toISOString();
 
-  // Update request status
+  // Approve the request only — do NOT change users.membership_status here.
+  // Per Wild Boar rules, pause takes effect on effective_from (翌月1日 or 翌々月1日),
+  // not at approval time. Changing to 'paused' immediately would cut off a member
+  // who is still entitled to use the gym for the rest of the current month.
+  //
+  // How paused is applied:
+  //   - Admin manually sets membership_status='paused' on/after effective_from
+  //     via /admin/members (existing updateMembershipStatus action).
+  //   - This page shows a warning badge when effective_from has passed.
+  //   - Automated switching can be added in a later phase if needed.
   const { error: reqErr } = await admin
     .from("membership_pause_requests")
     .update({
@@ -63,24 +72,12 @@ export async function approvePauseRequest(
     return { ok: false, error: reqErr.message };
   }
 
-  // Update users: membership_status='paused', paused_at, prepaid_month_credit
-  const { error: userErr } = await admin
-    .from("users")
-    .update({
-      membership_status: "paused",
-      paused_at: now,
-      prepaid_month_credit: req.next_month_billing_confirmed
-    })
-    .eq("id", req.user_id);
-
-  if (userErr) {
-    console.error("approvePauseRequest: user update failed.", userErr.message);
-    return { ok: false, error: userErr.message };
-  }
-
-  console.info("approvePauseRequest: success.", { requestId, userId: req.user_id });
+  console.info("approvePauseRequest: success — users.membership_status remains active until effective_from.", {
+    requestId,
+    userId: req.user_id,
+    effectiveFrom: req.effective_from
+  });
   revalidatePath("/admin/pause-requests");
-  revalidatePath("/admin/members");
   return { ok: true };
 }
 

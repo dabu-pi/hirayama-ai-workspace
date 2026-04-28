@@ -133,7 +133,7 @@
 
 **実装タスク（優先順）:**
 - **Phase M-A**: `billing_cutoff_records` migration + `/admin/billing` ページ ✅ CLOSED / LIVE_CHECK PASS (2026-04-29)
-- **Phase M-B**: `membership_pause_requests` migration + `/profile` 休会申請 + `/admin/pause-requests` ✅ 実装済み (2026-04-29) — DB migration 手動適用待ち
+- **Phase M-B**: `membership_pause_requests` migration + `/profile` 休会申請 + `/admin/pause-requests` ✅ 実装済み・仕様バグ修正済み (2026-04-29) — DB migration 手動適用待ち
 - Phase M-C: `account_deletion_requests` 拡張（effective_date / 鍵返却 / 500円返金）+ `/admin` 更新
 - Phase M-D: `/profile`・`/gym` ユーザー表示更新
 
