@@ -2,11 +2,59 @@
 
 ## 現在ステータス
 
-**Phase 5-A Step 2: getDailySalesReport コードレビュー PASS / Apps Script 実行待ち**（2026-04-28）
+**Phase 5-A Step 2: getDailySalesReport 実機確認 PASS**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 5-A Step 2 実機確認 PASS（2026-04-28）
+
+### runDailySalesReport() 実行結果
+
+**実行時刻:** 2026-04-28 17:01
+**対象日:** 2026-04-28
+
+| 集計値 | 結果 | 判定 |
+|---|---|---|
+| ok | true | ✅ |
+| totalSales | ¥3,850 | ✅ |
+| paymentSaveTotal | ¥3,850 | ✅ |
+| paymentCollectTotal | ¥0 | ✅（Step 0 修正前ログのため設計上正しい）|
+| unpaidTotal | ¥0 | ✅ |
+| visitCount | 5 | ✅ |
+| mainVisitCount | 3 | ✅（SELFPAY_CONTINUE20 含む来院）|
+| receiptIssuedCount | 5 | ✅ |
+| rows | 1 件 | ✅ |
+| warnings | 9 件（全 MISSING_VISIT_KEY）| ✅（想定通り）|
+
+### 確認した rows[0]
+
+| フィールド | 値 |
+|---|---|
+| visitKey | SPV_20260428_P0001_005 |
+| patientId | P0001 |
+| patientName | 平山克士 |
+| visitDate | 2026-04-28 |
+| salesDate | 2026-04-28 |
+| action | PAYMENT_SAVE |
+| amount | 3850 |
+| paymentStatus | 入金済 |
+| paymentMethod | 現金 |
+| receiptNo | R_2026_0005 |
+| detail | paymentId: SPP_SPV_20260428_P0001_005 税込合計: ¥3850 現金 |
+
+### warnings=9 の判定
+
+| 種別 | 件数 | 判定 |
+|---|---|---|
+| MISSING_VISIT_KEY | 9 件 | ✅ 想定通り |
+
+9件すべて Phase 5-A Step 0 修正前の Run_Log（selfPayVisitKey 列が空）。
+PAYMENT_COLLECT 2件を含む。これらは paymentCollectTotal に加算されないため、
+paymentCollectTotal = ¥0 は設計上正しい。
 
 ---
 
