@@ -1,0 +1,489 @@
+# PROJECT_STATUS.md — 運動器初期評価システム (JASSESS-01)
+
+最終更新: 2026-03-27（saveToHistory の NS 列重複追加リスクを解消）
+
+---
+
+## 2026-03-27 saveToHistory の NS 列重複追加リスクを解消
+
+- `addNsHistoryColumns()` を idempotent 化し、評価履歴ヘッダーに NS 列が既存なら追加をスキップするよう修正
+- `saveToHistory()` 内の頚肩こり分岐側の重複呼び出しを削除し、NS 列確認は 1 回だけに整理
+- これにより、評価履歴の NS 列が 1 セットだけ存在する前提で、腰痛 / 頚肩こり保存が継続動作する
+
+---
+
+## 2026-03-27 共通正本化 + saveToHistory Phase 2 対応
+
+- 腰痛評価入力の `C3` / `C4` を `共通_初期評価` 参照へ寄せ、あわせて `C5` / `C6` / `C7` / `C8` も無理のない範囲で共通正本参照へ統一
+- `saveToHistory()` の必須チェックは `共通_初期評価!C3` / `C4` を優先参照する方式へ変更
+- `共通_初期評価!C7` を見て `腰痛` / `頚肩こり` 保存を分岐
+- 腰痛の既存保存仕様は維持しつつ、右端追加列 `モジュール種別` 以下へ `腰痛` を記録
+- 頚肩こり保存では、既存共通列に必要最小限の共通情報を入れたうえで、右端追加列
+  `モジュール種別, NS-NRS, NS-神経症状レベル, NS-ROM制限型, NS-生活負荷フラグ, NS-総合方針, NS-次の介入先`
+  へ保存する
+- `clearInputSheet()` は共通正本参照セルを保持するよう低侵襲に調整し、Phase 2 クリア仕様と整合
+
+---
+
+## 2026-03-27 clearInputSheet を Phase 2 対応へ拡張
+
+- `clearInputSheet()` のクリア範囲を腰痛評価入力だけでなく `共通_初期評価` と `頚肩こり_初期評価` まで拡張
+- `共通_初期評価` は入力セルのみクリアし、数式セル（例: `C31` / `C48`）は保持
+- `頚肩こり_初期評価` は入力セルに加えて `C59:C60` と `C63:C70` の自動出力もクリア
+- `初期評価サマリー` は直接クリアしない
+- `評価履歴` / `設定` / `頚肩こり_コメントマスタ` / `頚肩こり_判定ロジック` は非対象
+- `zz_clear_input_override.js` も同じクリア仕様へ合わせ、UI あり / なし両経路で整合
+
+---
+
+## 2026-03-27 実臨床テスト再開ポイント
+
+- **本線:** Phase 1 腰痛評価モジュールの症例レビュー再開
+- **Phase C:** 必須作業完了。残り 4 パターンの live 手入力リプレイは任意確認
+- **記録場所:** `CLINICAL_FLOW.md` の「実臨床レビュー記録テンプレート（候補）」をそのまま使う
+- **再開時に最初に見る場所はこの節でよい**
+
+---
+
+## 2026-03-27 Phase C manual live 発火確認 PASS
+
+- `標準` 1 ケースの人手編集で `nsOnEdit` が Apps Script Executions 上で success 完了
+- live シートで `C59` / `C60` / `C63:C70` の更新を確認
+- blocker の切り分けを更新:
+  - service account / Sheets API 書込では `nsOnEdit` は発火しない
+  - manual live edit では `nsOnEdit` 発火を確認済み
+- `nsOnEdit` 実発火確認は完了扱いとする
+- 残り 4 パターンの live 手入力リプレイは任意確認へ変更し、未実施のまま保留可とする
+
+---
+
+## 2026-03-26 Phase C 実行基盤安定化
+
+- Phase C の主経路を `ローカル修正 → node --check → clasp push -f → Sheets API live read/write smoke test` に固定
+- `clasp run` は補助経路へ移し、今回の主経路から切り離した
+- `msk-assessment-platform/gas/.clasp.json` をローカル配置、`gas/.clasp.json.example` をコミット対象として追加
+- `rootDir` は `.` に固定し、`msk-assessment-platform/gas` を clasp 実行ディレクトリに統一
+- `gas/.claspignore` を追加し、ローカル `.clasp.json` を push 対象から除外
+- `PHASE_C_EXECUTION.md` を追加し、主経路・補助経路・停止要因・運用ルールを文書化
+- `clasp status` 実測:
+  - `msk-assessment-platform/` 直下: `Project settings not found.`
+  - `msk-assessment-platform/gas` 直下: tracked files を正常認識
+- `clasp push -f` 実測: `msk-assessment-platform/gas` 直下から 6 files push 成功
+- `scripts/ns-live-smoke-test.mjs` を更新し、5パターンすべてで
+  - write/read back 成否
+  - restore 成否
+  - `nsOnEdit` 発火有無
+  を JSON / テキストで明示できるようにした
+- `scripts/sync-jassess-ns-comment-master.mjs` は引き続き `gas/setup_neck_shoulder.js` の rows 定義を正本として live `頚肩こり_コメントマスタ` 同期に使用する
+- live 実測結果:
+  - comment master 同期: `synced=true` / 48 行→48 行
+  - 5 パターン smoke test: `mainRouteStable=true`
+  - 5 / 5 で `inputsApplied=true` かつ `restored=true`
+  - `triggerObservedCount=0` / `blockedByOnEditCount=5`
+  - 結論: 主経路の read/write/restore は安定。service account / Sheets API 書込では `nsOnEdit` 非発火、manual live edit では発火確認済み
+
+### 主経路
+
+1. ローカル正本を修正
+   - `gas/setup_neck_shoulder.js`
+   - `gas/logic_engine_neck_shoulder.js`
+2. `node --check`
+3. `msk-assessment-platform/gas` で `clasp push -f`
+4. `node scripts/sync-jassess-ns-comment-master.mjs --json true`
+5. `node scripts/ns-live-smoke-test.mjs --json true`
+
+### 補助経路
+
+- `clasp run syncNsCommentMasterSheet`
+- `clasp run nsRunFivePatternSmokeTests`
+- Apps Script エディタからの関数実行
+- 人手による live シート編集
+
+### 既知の停止要因
+
+- `clasp` を `gas/` 以外で実行すると `.clasp.json` / `appsscript.json` の認識がずれて不安定になる
+- `clasp` は PATH で拾えないため、`C:\Users\pinsh\AppData\Roaming\npm\clasp.cmd` の絶対パス利用が安定
+- `clasp run` は permission error で止まりやすい
+- service account / Sheets API 書込では `nsOnEdit` が発火しない
+
+### 今後の運用ルール
+
+1. `clasp push -f` は必ず `msk-assessment-platform/gas` で実行する
+2. `gas/.clasp.json` はローカル専用、設定確認は `gas/.clasp.json.example` を正本にする
+3. `appsscript.json` は `gas/` 直下を manifest 正本として維持する
+4. 5パターン smoke test は `ns-live-smoke-test.mjs` を標準にし、`triggerObserved=false` は blocker として記録する
+5. `nsOnEdit` 実発火確認は manual live edit の `標準` 1 ケースで完了済みとし、残り 4 パターンは任意確認とする
+
+---
+
+## 2026-03-26 Phase C nsOnEdit 実発火確認の整理
+
+- コード修正は不要と判断
+- 今回は文書更新のみで、`nsOnEdit` 実発火確認の最短手順を固定
+- 補助経路での確認対象は 5 パターン全件ではなく、まず `標準` 1 ケースだけに絞る
+- 実行手順は `PHASE_C_EXECUTION.md` に集約
+
+### 最短手順
+
+1. 主経路の最新反映後、live シートを開く
+2. `共通_初期評価` に標準ケースの最小値を入力
+   - `C3` 当日
+   - `C4` `NS-ONEDIT-STD`
+   - `C18` `2週間〜3か月`
+   - `C20` `再発`
+   - `C34` `3`
+   - `C35` `4`
+3. `頚肩こり_初期評価` の `C23` を `肩こり` に人手で編集
+4. `C59` / `C60` / `C63:C70` 更新確認
+5. Apps Script Executions で `nsOnEdit` success を確認
+
+### PASS 条件
+
+- `C59` / `C60` が更新
+- `C63:C70` に 8 コメント出力
+- Executions に `nsOnEdit` success が 1 件出る
+
+### 現時点の結果
+
+- `標準` 1 ケースで manual live edit を実施し PASS
+- `nsOnEdit` は Executions 上で success を確認
+- `C59` / `C60` / `C63:C70` 更新を確認
+- 残り 4 パターンは任意確認扱い。必要時のみ live 手入力リプレイを追加実施する
+
+---
+
+## 2026-03-26 Phase C live sync メモ
+
+- `scripts/sync-jassess-ns-comment-master.mjs` を追加し、`gas/setup_neck_shoulder.js` の rows 定義を正本として live の `頚肩こり_コメントマスタ` を同期できるようにした
+- 2026-03-26 実行結果: live `頚肩こり_コメントマスタ` は 39 行から 48 行へ同期完了
+- `gas/setup_neck_shoulder.js` には再利用用の `syncNsCommentMasterSheet()` を追加済み
+- `gas/appsscript.json` に `executionApi` を追加して Apps Script 実行経路を整備したが、`clasp run syncNsCommentMasterSheet` / `clasp run nsRunFivePatternSmokeTests` は引き続き permission error
+- `scripts/ns-live-smoke-test.mjs` を追加し、service account 経由で値を退避・書換・復元する safe な live smoke test 補助を用意した
+- 1 パターン (`標準`) の live probe では、Sheets API 経由の書換中に `C59` / `C60` / `C63:C70` は空のままで、service account / Sheets API 書込では `nsOnEdit` が発火しないことを確認
+- 結論:
+  - live comment master 同期は完了
+  - 5 パターンの完全な live 再現確認は、Apps Script エディタからの関数実行か、人手によるシート編集で継続する必要がある
+  - 今回はこの blocker を記録し、ローカル正本と live comment master の不一致解消を優先して反映
+
+---
+
+## 現在地
+
+- **Phase C 基本実機確認完了（2026-03-26）** ← 最新
+  - `gas/logic_engine_neck_shoulder.js` 新規作成
+  - 参照正本は **`gas/setup_neck_shoulder.js`** の実装セル番地
+  - 主要参照セル: `共通_初期評価` `C31` / `C34` / `C35` / `C48`、`頚肩こり_初期評価` `C12` / `C20` / `C34` / `C50`
+  - 書き込み先: `C59` / `C60` / `C63:C70`
+  - 実装済み関数: `runNeckShoulderLogicAll()` / `nsRunLogicAll()` / `nsOnEdit(e)`
+  - コメント生成は「キー選択」と「本文取得」を分離し、`頚肩こり_コメントマスタ` 参照に寄せやすい構造で実装
+  - `頚肩こり_コメントマスタ` ベースの文言調整として、placeholder 展開（例: `{NRS}` / `{ROM_TYPE}` / `{PC_TIME}`）と不足キー補完をローカル正本へ反映
+  - Apps Script 反映済み、`runNeckShoulderLogicAll()` 手動実行 OK、`nsOnEdit` 自動更新 OK を確認
+  - live シートで `頚肩こり_初期評価` の `C59` / `C60` / `C63:C70` 更新を確認
+  - 5パターン簡易分岐（頚髄症疑い / 赤旗 / 神経根性 / 慢性高負荷 / 標準）はローカルロジック評価で確認
+  - 上記5パターンはいずれも `C59` / `C60` 相当の分岐と 8 コメント生成が成立し、今回の最小修正は不要と判断
+- **Phase C manual live 発火確認 PASS（2026-03-27）** ← 最新
+  - `標準` 1 ケースの manual live edit で `nsOnEdit` success を Executions で確認
+  - `C59` / `C60` / `C63:C70` 更新を確認
+  - blocker を「service account / Sheets API 書込では非発火、manual live edit では発火確認済み」に更新
+  - 残り 4 パターンの live 手入力リプレイは任意確認扱い、現時点では未実施
+- **Phase B 実機反映確認完了（2026-03-26）**
+  - live シートで新規5シート作成、`設定` 追記、`評価履歴` 7列追加、`頚肩こり_判定ロジック` 非表示を確認
+- **Phase B 文書整合修正完了（2026-03-26）** ← 最新
+  - `modules/neck-shoulder/README.md` / `IMPLEMENTATION_PLAN_phase2.md` / `PROJECT_STATUS.md` を更新
+  - Phase C 着手前の正本を **`gas/setup_neck_shoulder.js`** に統一
+  - `IMPLEMENTATION_PLAN_phase2.md` の主要セル番地を Phase B 実装に合わせて補正
+  - `modules/neck-shoulder/README.md` の状態表記を「設計フェーズ」から「Phase B 完了」へ更新
+  - 文書整合タスク自体は完了。次は Phase C ロジックの実機確認へ進む
+- **Phase 2 GAS セットアップスクリプト作成完了（2026-03-26）** ← 最新
+  - `gas/setup_neck_shoulder.js` 新規作成（501行）
+  - エントリーポイント: `setupNeckShoulderSheets()` — 7関数を順次呼び出し
+  - **新規作成シート（5枚）:** 共通_初期評価 / 頚肩こり_初期評価 / 頚肩こり_コメントマスタ / 頚肩こり_判定ロジック（hidden） / 初期評価サマリー
+  - **既存シートへの追記（2枚）:** 設定（末尾に8行追加） / 評価履歴（右端に7列追加）
+  - 既存シート・既存コードは一切変更しない互換性優先設計
+  - クロスシート参照: `='共通_初期評価'!C3` 等で頚肩こりシートから共通情報を自動取得
+  - COMMENT_DESIGN_neck_shoulder.md の39コメント行を全埋め込み済み
+  - live シートへの Phase B 反映確認済み。次は `logic_engine_neck_shoulder.js` の実機確認へ進む
+- **CLINICAL_FLOW.md 内容改訂（2026-03-26）**
+  - 目的・設計思想・臨床フロー（Step 0〜7）・実務使い分け・慢性疼痛強化プロジェクト接続を整理
+  - 全11セクション構成に再整理（旧版を差し替え）
+  - JASSESS-01 = **入口評価** / 運動療法初回評価 = **介入設計評価** の定義を明文化・固定
+  - **今後のコード修正・仕様修正・シート設計は `CLINICAL_FLOW.md` を前提として行うこと**
+  - **次フェーズ: 実臨床テスト再開（5〜10症例）**
+- **DESIGN_DECISIONS.md §8 追加（2026-03-26）**
+  - 入口評価/介入設計評価を分ける設計判断・採用理由・役割分担・臨床上の利点を記録
+- **JASSESS-01 臨床位置づけ確定（2026-03-26）**
+  - `CLINICAL_FLOW.md` 新規作成・`DESIGN_DECISIONS.md` §7 追記・`patient-flow.md` 参照追加
+- **実臨床テスト開始可（2026-03-25）**
+  - ローカル正本を維持しつつ、service account 共有で live Google Sheet 読取に成功
+  - live `腰痛評価入力` シートから `C95` と `C99:C106` を直接取得できる確認経路を整備
+  - Apps Script installable `onEdit` トリガー 1 本を確認（Head / スプレッドシートから / 編集時 / エラー率 0%）
+  - `refreshInputSheetC33Formula()` 実行済み
+  - `clearInputSheet()` 実行後、TC-J01 の 1 症例で `C95` および `C99:C106` の自動更新を確認
+  - 複数セル貼り付け確認: `C42:C51` および `C56:C64` の貼り付けでも自動更新を確認
+  - TC-EMPTY03 PASS: `C11=3か月以上` + NRS/RMDQ/STarT 空欄で `機能改善・セルフケア習慣化` 分岐と `【スコア】（スコア未入力）` を確認
+  - live 読取でも TC-EMPTY03 相当の `C95` / `C99:C106` 整合を再確認
+  - `saveToHistory()` 実機確認 PASS: 評価履歴に `E0001` / `TEST` / 判定文一致 / 評価まとめ一致を確認
+  - 次フェーズ: 実臨床テスト（5〜10症例）。任意残件は `C84:C87` 複数貼り付け確認のみ
+- **Phase 1 実機確認完了（2026-03-25）** ← 最新
+  - TC-J01・TC-J01b PASS → TC-J01〜J10・TC-EMPTY01〜02 全ケース PASS
+  - C52/C65 数式バグ（全空欄で0を返す）を発見・修正・実機反映で解消
+  - 次フェーズ: onEdit 確認 / 実臨床前チェック → 実臨床テスト（5〜10症例）
+- **実機確認準備完了（2026-03-24）**
+  - TESTCASES.md 更新: TC-J01〜J10 の設計検証（期待値訂正・入力パターン早見表追加）
+  - TC-J01 期待値訂正（STarT=2 → 機能改善・運動療法開始 / 旧: セルフケア習慣化 は誤り）
+  - TC-J05 入力条件訂正（両側陽性→重度になる / 中等度確認は片側陽性で行う）
+  - TC-J04〜J10 期待値をコード完全テキストに更新
+  - TC-EMPTY01〜03（空欄安全性）追加
+  - onEdit 自動トリガー実装方針・セットアップ手順を TESTCASES.md に記録
+- **Phase 1 ルールベース判定ロジック実装完了（2026-03-24）**
+  - `gas/logic_engine.js` 新規作成（Step 8〜10 GAS 実装）
+  - Step 8: 全フラグ集計（慢性期・既往含む 13 フラグ）
+  - Step 9: 総合方針判定（判定マトリクス完全版 15 パターン → C95）
+  - Step 10: 自動生成コメント（K. セクション C99〜C106 の 8 種コメント）
+- **H.動作評価まとめ判定バグ修正・確認完了（2026-03-24）**
+  - else分岐バグ（全正常→軽度制限型になっていた）を修正
+  - 右側屈・左側屈（C78/C79）が数式に含まれていなかった問題を修正
+  - 重症度ベース4段階判定（正常/軽度/中等度/重度）に変更・全確認PASS
+  - TESTCASES.md 新規作成（TC-H01〜TC-H05 PASS 記録）
+- **JASSESS-01 再整理完了（2026-03-23）**
+  - プロジェクト名: 腰痛評価シートシステム → **運動器初期評価システム** に変更
+  - フォルダ: `low-back-assessment/` → **`msk-assessment-platform/`** に変更
+  - プロジェクトID: JEVAL-01 → **JASSESS-01** に変更
+  - 腰痛評価を Phase 1 モジュールとして位置づけ確定
+  - DESIGN_DECISIONS.md に設計判断の根拠を記録
+  - modules/low-back/README.md で腰痛モジュール仕様を分離
+- **設計フェーズ完了（2026-03-23、旧JEVAL-01時点）**
+  - SPEC.md / SHEET_DESIGN.md / LOGIC.md / COMMENT_DESIGN.md / CLINICAL_OPERATION.md 作成済み
+  - gas/setup_sheets.js（スプレッドシート自動生成GAS雛形）作成済み
+
+---
+
+## プロジェクト概要
+
+| 項目 | 内容 |
+|---|---|
+| プロジェクトID | **JASSESS-01** |
+| 日本語正式名 | **運動器初期評価システム** |
+| 英字フォルダ名 | **msk-assessment-platform** |
+| 目的 | 接骨院での運動器疾患評価の標準化・評価→方針→説明の一貫化・将来AI連携基盤 |
+| 現在の実装フェーズ | **Phase 1 = 腰痛評価モジュール運用可 / Phase 2 = Phase C 基本実機確認完了** |
+| ステータス | **Phase 1 実臨床テスト開始可 + Phase 2 は Phase C 基本実機確認完了** |
+| スプレッドシートID | **1sj6dYtkFbnk4fjLOk764f-w7KUUeGNVYcbMDOg26OXY** |
+| スプレッドシート名 | **平山接骨院_運動器初期評価システム_JASSESS-01** |
+| Apps Script ID | **1EuUnfTRIEZ_0VYib_d8hdAE-EPRkng-ZBdwICrJDFuXX3TEKOdvyeTyK** |
+| clasp 設定 | `gas/.clasp.json`（ローカル専用）/ `gas/.clasp.json.example`（コミット済み）/ `gas/appsscript.json`（manifest 正本）|
+| live 読取経路 | `service_account.json` を shared viewer として使用 / `scripts/read_live_sheet_jassess.mjs` |
+
+---
+
+## システム全体の位置づけ（治療家育成の基盤）
+
+このシステムは単なる記録票ではなく、治療家育成の基盤として設計されている。
+
+```
+評価 → 説明 → 方針提示 → 施術 → セルフケア → 再評価
+```
+
+施術者がこのシステムを使い続けることで：
+- 痛みや不調を背景から整理できるようになる
+- 原因・悪化要因を患者さんに納得感を持って説明できるようになる
+- 回復の見通し・未来予測を立てられるようになる
+- 施術だけでなく運動療法・セルフケア・生活指導まで提案できるようになる
+- 患者さんと二人三脚で改善を積み上げられるようになる
+
+---
+
+## フェーズ構成
+
+### Phase 0（完了）: 設計・基盤整理
+
+| タスク | ステータス |
+|---|---|
+| プロジェクト全体設計（SPEC.md / SHEET_DESIGN.md 等） | ✅ 完了 |
+| gas/setup_sheets.js 雛形作成 | ✅ 完了 |
+| JASSESS-01 / msk-assessment-platform へ再整理 | ✅ 完了 |
+
+### Phase 1: 腰痛評価モジュール（セットアップ完了）
+
+| タスク | ステータス |
+|---|---|
+| setup_sheets.js 実行 → 8シート生成 | ✅ 完了 |
+| スプレッドシートID取得 → PROJECT_STATUS.md に記録 | ✅ 完了 |
+| 基本入力動作確認（プルダウン・赤旗アラート・自動計算） | ✅ 完了（H.まとめバグ修正・再確認済み） |
+| ルールベース判定ロジック実装（LOGIC.md 準拠） | ✅ 完了（logic_engine.js 実装済み） |
+| コメント自動生成（onEdit連携） | ✅ 完了（installable trigger 設定・1症例自動更新確認済み / 2026-03-25） |
+| **実機確認（TC-J01〜J10・TC-EMPTY）** | ✅ **完了**（TC-J01〜J10・TC-EMPTY01〜02 全 PASS / 2026-03-25） |
+| 実臨床テスト（5〜10症例） | ✅ **開始可**（onEdit / 空欄安全性 / 複数貼り付け確認済み） |
+| live Google Sheet 読取 | ✅ 完了（service account 共有後に `腰痛評価入力` の `C95` / `C99:C106` 直接取得成功） |
+
+### 拡張モジュール整理
+
+| フェーズ | 追加モジュール | 現在地 | 本格着手条件 |
+|---|---|---|---|
+| Phase 2 | 頸部・肩こり評価モジュール（neck-shoulder） | Phase C 完了（manual live 発火確認 PASS） | Phase 1 実臨床レビュー後に本格運用判断 |
+| Phase 3 | 膝慢性痛評価モジュール（knee） | 未着手 | Phase 2 完了後 |
+| Phase 4a | 姿勢評価モジュール（posture） | 未着手 | Phase 3 完了後 |
+| Phase 4b | 高齢者機能・移乗評価モジュール（elderly-function） | 未着手 | Phase 3 完了後 |
+| Phase 5 | Claude API連携（AI判定層） | 未着手 | Phase 1〜2 実臨床データ蓄積後 |
+| Phase 6 | タブレット入力UI最適化 | 未着手 | Phase 5 完了後 |
+
+---
+
+## 変更名称の対照表
+
+| 項目 | 旧（JEVAL-01） | 新（JASSESS-01） |
+|---|---|---|
+| プロジェクトID | JEVAL-01 | **JASSESS-01** |
+| 日本語名 | 腰痛評価シートシステム | **運動器初期評価システム** |
+| フォルダ名 | low-back-assessment/ | **msk-assessment-platform/** |
+
+---
+
+## 置いた仮定
+
+| 仮定 | 内容 | 要確認タイミング |
+|---|---|---|
+| Phase 1 実装シート | 腰痛評価のみ（8シート構成） | Phase 1 完了後 |
+| RMDQ | 10項目短縮版を採用 | Phase 1 実臨床テスト後 |
+| STarT | 9項目簡易版 | Phase 1 実臨床テスト後 |
+| PSFS | 施術者聞き取り入力形式 | Phase 6 タブレット化時に見直し |
+| 将来モジュール | modules/ 配下に仕様を追加する方針 | 各Phase着手時 |
+
+---
+
+## 次回再開時に最初に確認すべき点
+
+1. このファイルの `2026-03-27 実臨床テスト再開ポイント` を確認
+2. `DESIGN_DECISIONS.md` でなぜこの構造かを確認
+3. `TESTCASES.md` で確認済みテストを確認（TC-J01〜J10・TC-EMPTY01〜02 全 PASS 済み）
+4. `gas/logic_engine.js` で Steps 8〜10 の判定ロジック確認（変更が必要な場合）
+5. **Phase C を再開する場合**
+   - `gas/setup_neck_shoulder.js` を正本として頚肩こりシートのセル番地を参照する
+   - `IMPLEMENTATION_PLAN_phase2.md` の実装準拠セル番地を確認してから `gas/logic_engine_neck_shoulder.js` を更新する
+   - 主経路の安定化と `標準` 1 ケースの `nsOnEdit` 実発火確認は完了
+   - 必要時のみ、残り 4 パターンの live 手入力リプレイを任意で追加記録する
+   - 文言微調整を行う場合は `頚肩こり_コメントマスタ` と `logic_engine_neck_shoulder.js` のキー対応を優先確認する
+   - installable trigger を使う場合は既存腰痛 `onEdit` と別に `nsOnEdit` を追加する
+6. **Phase 1 側の次アクション**
+   - 実臨床テスト 5〜10 症例を実施し、評価基準・コメントを微調整
+   - 記録は `CLINICAL_FLOW.md` の「実臨床レビュー記録テンプレート（候補）」を使用する
+   - 途中確認は `scripts/read_live_sheet_jassess.mjs` で live の `C95` / `C99:C106` を読む
+   - 任意で `C84:C87` の複数セル貼り付けでも onEdit を追加確認
+
+---
+
+## 変更履歴
+
+| 日付 | 内容 | commit |
+|---|---|---|
+| 2026-03-27 | `addNsHistoryColumns()` を idempotent 化し、`saveToHistory()` の NS 列重複追加リスクを解消。評価履歴ヘッダー確認後に未追加時のみ NS 列を追加する方式へ修正 | （このコミット） |
+| 2026-03-27 | 腰痛評価入力を `共通_初期評価` 参照へ寄せ、`saveToHistory()` を Phase 2 対応。`共通_初期評価!C7` で腰痛 / 頚肩こり保存を分岐し、評価履歴右端の NS 列へ保存できるよう更新。clearInputSheet も参照セル保持に合わせて調整 | （このコミット） |
+| 2026-03-27 | `clearInputSheet()` を Phase 2 対応へ拡張。`共通_初期評価` は入力セルのみ、`頚肩こり_初期評価` は入力セル + `C59:C60` / `C63:C70` をクリア対象に追加。override 側も同仕様へ更新 | （このコミット） |
+| 2026-03-27 | 実臨床テスト再開ポイントを 1 か所に集約し、Phase 2 頚肩こりの進行済み状態が将来拡張表で未着手に見えないよう最小修正。症例レビュー記録テンプレートの参照先を `CLINICAL_FLOW.md` に固定 | （このコミット） |
+| 2026-03-27 | `標準` 1 ケースの manual live edit で `nsOnEdit` 実発火確認 PASS。Executions success と `C59/C60/C63:C70` 更新を確認し、blocker を「API書込では非発火・manual edit では発火済み」に更新。残り 4 パターンは任意確認扱いへ整理 | （このコミット） |
+| 2026-03-26 | `nsOnEdit` 実発火確認はコード修正不要と判断し、補助経路の最短手順を文書化。次アクションを `標準` 1 ケースの manual edit + Executions success 確認に限定 | （このコミット） |
+| 2026-03-26 | Phase C 実行基盤安定化。`gas/.clasp.json.example` / `.claspignore` / `PHASE_C_EXECUTION.md` を追加し、主経路を `ローカル修正 → node --check → clasp push -f → Sheets API smoke test` に固定。`gas` 直下からの push 成功、comment master 同期 `synced=true`、5 パターン smoke test は 5/5 write-read-restore 成功・0/5 `nsOnEdit` 発火で blocker を分離 | （このコミット） |
+| 2026-03-26 | live `頚肩こり_コメントマスタ` 同期スクリプトと API smoke test 補助を追加。39 行→48 行の live 同期完了、Sheets API 書込では `nsOnEdit` が発火しないことを確認 | （このコミット） |
+| 2026-03-26 | `頚肩こり_コメントマスタ` ベースの文言調整。`logic_engine_neck_shoulder.js` に placeholder 展開を追加し、`setup_neck_shoulder.js` のコメントマスタ正本へ不足キーと可変文言を反映 | （このコミット） |
+| 2026-03-26 | Phase C 基本実機確認。Apps Script 反映、`runNeckShoulderLogicAll()` 手動実行、`nsOnEdit` 自動更新、`頚肩こり_初期評価` の `C59/C60/C63:C70` 更新を確認。5パターン簡易分岐はローカルロジック評価で妥当と判断し、最小修正なしで記録更新 | （このコミット） |
+| 2026-03-26 | Phase C 初版実装。`logic_engine_neck_shoulder.js` を新規作成し、頚肩こり用フラグ集計・総合方針判定・コメント生成・`nsOnEdit` を追加。Phase B live 反映確認済みだが、Phase C ロジックの live 実行は未確認 | （このコミット） |
+| 2026-03-26 | Phase B 文書整合修正。`setup_neck_shoulder.js`（501行）を正本として README / IMPLEMENTATION_PLAN_phase2 / PROJECT_STATUS の状態表記・主要セル番地・次工程記述を補正 | （このコミット） |
+| 2026-03-25 | `saveToHistory()` 実機確認 PASS。評価履歴で `E0001` / `TEST` / 判定文一致 / 評価まとめ一致を確認し、残件を `C84:C87` 複数貼り付け確認のみに整理 | （このコミット） |
+| 2026-03-25 | service account 共有後、live `腰痛評価入力` から `C95` / `C99:C106` の直接読取に成功。ローカル正本へ反映し、再利用用スクリプトと access メモを整備 | （このコミット） |
+| 2026-03-25 | TC-EMPTY03 PASS。`C11=3か月以上` + NRS/RMDQ/STarT 空欄で `機能改善・セルフケア習慣化` と `【スコア】（スコア未入力）` を確認 | （このコミット） |
+| 2026-03-25 | `C42:C51` / `C56:C64` の複数セル貼り付けでも自動更新を確認。既知リスクは縮小し、`C84:C87` は任意の追加確認項目へ変更 | （このコミット） |
+| 2026-03-25 | onEdit トリガー1本確認・`refreshInputSheetC33Formula()` 実行・TC-J01 1症例で `C95` / `C99:C106` 自動更新確認 PASS | （このコミット） |
+| 2026-03-25 | TC-J01・TC-J01b PASS確認 → Phase 1 実機確認完了 | （このコミット） |
+| 2026-03-25 | TC-J01b 不一致の根本原因特定・C52/C65 数式修正（COUNTIF→空欄ガード付き）・LOGIC.md/TESTCASES.md/PROJECT_STATUS.md 更新 | 8793fcf |
+| 2026-03-24 | TC-J02〜J10 PASS記録・PROJECT_STATUS.md 実機確認メモ整理 | 5071d46 |
+| 2026-03-24 | openById()修正・C88転倒リスク数式修正・実機確認WIPメモ追加 | be90df3 |
+| 2026-03-24 | clasp リンク設定・appsscript.json 追加・Apps Script へ push（3ファイル反映） | dc12d6d |
+| 2026-03-24 | 実機確認準備（TC-J 設計検証・期待値訂正・入力パターン表・onEdit ガイド） | 623558d |
+| 2026-03-24 | Phase 1 ルールベース判定ロジック実装（logic_engine.js 新規 / LOGIC.md / TESTCASES.md 更新） | 08e4d3e |
+| 2026-03-24 | TESTCASES.md 新規作成・TC-H01〜H05 PASS 記録 | 117e097 |
+| 2026-03-24 | 動作評価まとめ判定バグ修正（全正常→正常・重症度ベース4段階） | 850e7ad |
+| 2026-03-24 | Phase 1 セットアップ完了・スプレッドシートID記録 | 823f8e9 |
+| 2026-03-23 | JASSESS-01 / msk-assessment-platform へ再整理 | 14a1cad |
+| 2026-03-23 | プロジェクト新規作成（旧JEVAL-01） | ac5fb10 |
+
+
+## 2026-03-24 実機確認メモ
+
+### PASS 確認済み（TESTCASES.md 記録済み）— **全ケース完了**
+| TC | 結果 | 確認日 |
+|---|---|---|
+| TC-EMPTY01 | PASS | 2026-03-24 |
+| TC-EMPTY02 | PASS | 2026-03-24 |
+| TC-J01（CHRONIC+STarT低） | PASS | 2026-03-25 |
+| TC-J01b（CHRONIC+STarT未入力） | PASS | 2026-03-25 |
+| TC-J02（馬尾緊急） | PASS | 2026-03-24 |
+| TC-J03（赤旗） | PASS | 2026-03-24 |
+| TC-J04（神経症状重度） | PASS | 2026-03-24 |
+| TC-J05（神経根障害） | PASS | 2026-03-24 |
+| TC-J06（行動変容・NRS中） | PASS | 2026-03-24 |
+| TC-J07（行動変容・NRS低） | PASS | 2026-03-24 |
+| TC-J08（疼痛管理優先） | PASS | 2026-03-24 |
+| TC-J09（急性期管理） | PASS | 2026-03-24 |
+| TC-J10（機能改善・運動療法） | PASS | 2026-03-24 |
+
+### 発見した不具合・修正済み
+| 不具合 | 対応 |
+|---|---|
+| `runLogicAll()` が standalone GAS で動かない（`getActiveSpreadsheet()` 取得不全） | `openById()` に変更・反映済み（be90df3） |
+| `C88` 転倒リスク数式：空欄でも「高」判定になる | `AND(C84<>"",C84<>"自立")` に修正済み（be90df3） |
+
+### 発見した不具合・修正済み（追記 2026-03-25）
+| 不具合 | 対応 |
+|---|---|
+| `C52`（RMDQ合計）・`C65`（STarT合計）が全空欄でも `0` を返し `START_LOW=true` になる | `COUNTIF` → `IF(COUNTA=0,"",COUNTIF)` に修正（`setup_sheets.js` 修正済み） |
+| TC-J01b 実機結果が branch12（運動療法開始）になり期待値 branch14 と不一致 | C52/C65 数式修正後に再確認済み。2026-03-25 に branch14「機能改善・セルフケア習慣化」で PASS 反映完了 |
+| `generateComments()` の `C103` で `flags.NRS_HIGH || flags.ACUTE` が同一分岐になり、慢性高疼痛でも急性期寄り文面になる | `logic_engine.js` の C103 分岐を `ACUTE + NRS_HIGH` / `CHRONIC + NRS_HIGH` / `ACUTE` / `NRS_HIGH` に分割。`judgeOverallPolicy()` と `C95` は変更なし。TC-J08 PASS 実績は維持、TC-J09 の急性期文面方針も維持 |
+
+### 未完了
+| 項目 | 状況 |
+|---|---|
+| 実臨床テスト（5〜10症例） | 開始可。5〜10 症例で評価基準・コメントの妥当性を微調整する |
+| `clearInputSheet()` | UI-less 実行対応済み（`zz_clear_input_override.js`）。継続して spreadsheet UI からの使用を基本とする |
+| onEdit の複数セル貼り付け取りこぼし | `C42:C51` / `C56:C64` の複数セル貼り付けでは再現せず自動更新を確認済み。任意残件は `C84:C87` のみで、現時点では既知重大リスクではない |
+
+### 次に最初にやること
+1. 実臨床テスト 5〜10 症例を開始
+2. 各症例で `C95` / `C99:C106` の妥当性をメモし、過不足のある文言を洗い出す
+3. live 再確認が必要なときは `node scripts/read_live_sheet_jassess.mjs` を実行する
+4. 任意で `saveToHistory()` 1回確認と `C84:C87` への複数セル貼り付け確認を行う
+
+---
+
+## 2026-03-26 位置づけ整理メモ
+
+### 今回確定したこと
+
+JASSESS-01 の臨床上の位置づけを、**慢性疼痛強化プロジェクトにおける「入口評価システム」**として明確化した。
+
+また、従来進めていた運動療法初回評価との関係を整理し、以下の役割分担を採用した。
+
+- **JASSESS-01 = 入口評価**
+- **運動療法初回評価 = 介入設計評価**
+
+### 追加した正本
+
+臨床導線の正本として、`CLINICAL_FLOW.md` を新設した。
+ここに以下を集約する。
+
+- JASSESS-01 の位置づけ
+- 運動療法初回評価との役割分担
+- 慢性疼痛強化プロジェクトとの接続
+- 実際の臨床フロー
+
+### 記録方針
+
+設計判断の理由は `DESIGN_DECISIONS.md` に記録し、
+慢性疼痛強化プロジェクト全体との接続は `hirayama-jyusei-strategy/strategy/patient-flow.md` 側にも要点のみ反映する。
+
+### 次回再開ポイント
+
+次回は実臨床テストを再開し、症例レビューを通して、
+この位置づけと分岐が現場で使いやすいかを確認する。
+
+再開の合図:
+`JASSESS-01 実臨床テスト再開：症例レビューから開始`

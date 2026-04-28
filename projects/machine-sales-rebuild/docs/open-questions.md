@@ -1,0 +1,52 @@
+# 保留事項一覧
+
+最終更新: 2026-04-05
+
+## 優先度A
+
+| ID | 論点 | 現状 | 次の確認先 |
+|---|---|---|---|
+| IMG-001 | 自社商品画像の正本はどこにあるか | 現行 `画像1〜3` は正本ではない。`machine-group.net` 公開 WordPress メディアは回収元候補として有力 | WordPress 側資産、旧ローカル控え、Google Drive |
+| IMG-002 | `strongdepot-product-manager` の PHP 実装を回収できるか | `generate.php` / `Settings.php` は workspace 内にない | サーバー側、別PC、別リポジトリ |
+| IMG-003 | 自社画像も Google Drive にすでに存在するか | 未確認 | Drive フォルダ実地確認 |
+| IMG-004 | 競合画像を自社画像と同じ正本設計に載せるか | 競合側は Drive 保存の痕跡あり | 競合運用と自社運用を分離して整理 |
+| IMG-007 | WordPress 公開画像の拡張子揺れをどう扱うか | `og:image` が `.jpg`、本文ギャラリーが `.png` の例あり | 本文ギャラリー優先で回収し、拡張子推測を避ける |
+| IMG-008 | 非公開商品・売却済み商品の画像を公開側だけで回収できるか | 公開商品 66件は全件成功したが、非公開系は未検証 | 別経路確認、または WordPress/PHP 側資産探索 |
+| IMG-009 | 公開商品の回収済み画像をどう Drive 正本へ移すか | `public_image_manifest.csv` までは生成済み | Drive フォルダ規則、対応表、移行手順の整理 |
+| IMG-010 | 派生画像の公開URLをどう確定するか | `public_derived_image_manifest.csv` の `derived_url_candidate` はストレージ相対パス止まり | products.json 反映ルール、フロント参照規則を決める |
+| IMG-011 | `sourceUrl` が `noimage.jpg` の公開商品をどう扱うか | 3商品で placeholder_source_image を検出 | 元画像の再回収可否、公開継続可否、表示方針を確認 |
+| IMG-012 | 公開用 `displayUrl` にどの base URL を前置するか | 第一候補は同一サイト配下の静的配信。差し替え点は `frontend/public-preview/config.js` | 本番URL値の確定、公開URL層の決定 |
+
+## 優先度B
+
+| ID | 論点 | 現状 | 次の確認先 |
+|---|---|---|---|
+| CODE-001 | `SANT21651AT` のメーカーコード不一致 | error のまま | 現行シート原票と現物確認 |
+| CODE-002 | `ATNT18190AT` のメーカーコード不一致 | error のまま | 現行シート原票と現物確認 |
+| CODE-003 | `KT` / `US` / 年コード `AT` を正式 seed にするか | lenient warning で許容中 | 実務継続の必要性を確認 |
+| CODE-004 | `EVERLAST` / `LEGENDFITNESS` / `PT` の扱いを恒久化するか | 暫定 seed 追加済み | 継続利用有無を確認 |
+
+## 優先度C
+
+| ID | 論点 | 現状 | 次の確認先 |
+|---|---|---|---|
+| VIS-001 | 売却済み商品の公開方針 | `private` 寄りで出力中 | サイト運用ルール確認 |
+| IMG-005 | 画像0件商品の登録可否 | v0 では warning 許容 | 新サイト公開基準を確認 |
+| IMG-006 | 派生画像の公開URL方式 | 未決 | Drive 直配信 / 別公開層を比較 |
+
+## 今回の判断メモ
+
+- 公開商品の範囲なら 700x700 生成フェーズへ進める
+- 公開商品の範囲では 700x700 生成フェーズを完了できた
+- 公開商品の `products.public.with-images.json` まで生成できた
+- 自社画像の第一候補は `machine-group.net` の WordPress 由来画像と、その背後にある過去資産
+- 今後の正本保存先の第一候補は Google Drive
+- 公開商品全件回収では 66商品・163画像の保存に成功した
+- 抽出の主ソースは `og:image` ではなく本文ギャラリー `img src` を維持する
+- 派生画像は JPEG 統一、白背景パディング、クロップなしで生成した
+- 画像パスは `public-700x700/<sd_product_code>/<file>.jpg` を採用した
+- 公開商品 66件の `products.public.with-images.json` では `displayUrl` / `galleryUrls` を 66件すべてに反映できた
+- フロント確認の結果、通常商品の表示品質は許容範囲で、placeholder 3件だけ軽微な表示分岐候補として残った
+- placeholder 3件のフロント分岐方針は `imageStatus=placeholder` または `hasRealImage=false` で「画像準備中」表示に切り替える案を採用した
+- ローカルフロント `frontend/public-preview/` で通常商品 63件 / placeholder 3件の分岐を実装済み
+- `baseImageUrl` は JSON ではなくフロント設定で前置し、同一サイト配下の静的配信を第一候補とする

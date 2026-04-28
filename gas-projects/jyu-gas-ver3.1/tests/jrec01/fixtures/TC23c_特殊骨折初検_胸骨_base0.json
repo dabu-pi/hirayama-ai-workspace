@@ -1,0 +1,16 @@
+{
+  "testId": "TC23c",
+  "description": "特殊骨折初検 安全弁: 骨折 部位=胸骨（特殊骨折：mapBuiToSettingKey_ 未登録）→ base=0 + 要確認",
+  "ref": "FRACTURE_RESTRICTION.md#TC23c / SPEC.md §18.3",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-03-01",
+    "monthlyStatus": { "initBilled": false, "reBilled": false, "supportBilled": false }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "初検", "parts": [
+      { "bui": "胸骨", "byomei": "骨折", "injuryDate": "2026-03-01",
+        "cold": false, "warm": false, "electro": false, "metal": false, "exercise": false }
+    ]}
+  ]
+}

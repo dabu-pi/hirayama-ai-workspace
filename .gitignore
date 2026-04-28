@@ -14,6 +14,8 @@ venv/
 
 # Node.js
 node_modules/
+.next/
+*.tsbuildinfo
 
 # IDE・エディタ
 .vscode/
@@ -28,6 +30,7 @@ desktop.ini
 ~$*
 *.tmp
 *.bak
+tmp/
 
 # ログ・一時ファイル
 flask_log.txt
@@ -66,6 +69,45 @@ artifacts/
 # local-only settings
 .claude/settings.local.json
 
+# Claude Code 内部ディレクトリ（worktrees はリポジトリに含めない）
+.claude/worktrees/
+
 # local secrets
 secrets/
 
+# STRONG DEPOT 実データのローカル専用フルエクスポート
+projects/machine-sales-rebuild/data/raw/*.full.csv
+projects/machine-sales-rebuild/data/output/product_master_v0.full.csv
+projects/machine-sales-rebuild/data/output/*.full.log
+projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/**
+!projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/
+!projects/machine-sales-rebuild/data/raw-images/wordpress-recovery-sample/.gitkeep
+projects/machine-sales-rebuild/data/raw-images/wordpress-public/**
+!projects/machine-sales-rebuild/data/raw-images/wordpress-public/
+!projects/machine-sales-rebuild/data/raw-images/wordpress-public/.gitkeep
+projects/machine-sales-rebuild/data/derived-images/public-700x700/**
+!projects/machine-sales-rebuild/data/derived-images/public-700x700/
+!projects/machine-sales-rebuild/data/derived-images/public-700x700/.gitkeep
+projects/machine-sales-rebuild/tmp/*
+!projects/machine-sales-rebuild/tmp/.gitkeep
+.uv-cache/
+
+# 参考資料PDF（制度資料など。Git管理対象外・ローカル保持）
+gas-projects/**/*.pdf
+
+# 申請書出力・転記バッチ（患者個人情報を含むためGit管理外）
+gas-projects/**/output/**/*.xlsx
+gas-projects/**/transfer_batch*.ndjson
+
+
+# Claude Code local settings (per-project)
+training-program-platform-jp/.claude/
+
+# aios-orchestrator — ローカルデータ・認証情報
+aios-orchestrator/data/
+aios-orchestrator/dual-agent-poc/data/
+aios-orchestrator/.env
+aios-orchestrator/dual-agent-poc/.env
+aios-orchestrator/src/__pycache__/
+aios-orchestrator/dual-agent-poc/__pycache__/
+aios-orchestrator/dual-agent-poc/.venv_phase2/

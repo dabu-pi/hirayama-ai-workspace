@@ -1,0 +1,127 @@
+{
+  "spreadsheetId": "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc",
+  "scanRange": "A1:Z40",
+  "defaultMinColumn": 8,
+  "defaultWidth": 300,
+  "colors": {
+    "title": "#D9EAF7",
+    "body": "#F7F7F7",
+    "border": "#B7B7B7"
+  },
+  "valueRefs": {
+    "insurance_b16_display": {
+      "sheetName": "保険・来院前提",
+      "range": "B16:B16",
+      "valueRenderOption": "FORMATTED_VALUE"
+    }
+  },
+  "notes": [
+    {
+      "id": "dashboard-role",
+      "sheetName": "全体ダッシュボード",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "title": "このシートの役割",
+      "lines": [
+        "管理表全体の進み具合を見るシートです。",
+        "主要KPIと未確定項目の状態をひと目で確認します。",
+        "次に確認するシートへ進む入口として使います。"
+      ]
+    },
+    {
+      "id": "roadmap-role",
+      "sheetName": "ロードマップ進捗",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "minColumn": 10,
+      "title": "このシートの役割",
+      "lines": [
+        "何をどの順番で確定するかを管理するシートです。",
+        "フェーズごとの進捗と次の着手順を確認します。",
+        "未着手と保留を見分けて優先順位を揃えます。"
+      ]
+    },
+    {
+      "id": "insurance-role",
+      "sheetName": "保険・来院前提",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "width": 360,
+      "title": "このシートの役割",
+      "lines": [
+        "保険来院の入口数字を置くシートです。",
+        "保険実人数・延べ来院数・保険単価の基準をまとめます。",
+        "数値前提へ渡す保険売上の起点として使います。"
+      ]
+    },
+    {
+      "id": "insurance-source-memo",
+      "sheetName": "保険・来院前提",
+      "columnKey": "sidebar",
+      "startRow": 8,
+      "width": 360,
+      "title": "更新メモ（保険売上参照整理 / 2026-03-15）",
+      "titleBackground": "#FCE5CD",
+      "bodyBackground": "#FFF9E6",
+      "lines": [
+        "総保険売上単価の現行正本 = 保険・来院前提!B16",
+        "月次総保険売上の試算元 = 保険・来院前提!B18",
+        "数値前提への受け渡し先 = 数値前提!B21",
+        "KPI目標の当月実績入力セル = KPI目標!D5",
+        "旧 C17 は旧セル参照",
+        "今後は B16 / B18 / B21 / D5 ベースで読む",
+        "現時点の整理値 = 保険・来院前提!B16 = {{insurance_b16_display}}"
+      ]
+    },
+    {
+      "id": "numeric-role",
+      "sheetName": "数値前提",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "title": "このシートの役割",
+      "lines": [
+        "経営判断に使う前提数字を置くシートです。",
+        "固定費と月次保険売上の基準値をまとめて見ます。",
+        "KPI判断の共通土台として使います。"
+      ]
+    },
+    {
+      "id": "pricing-role",
+      "sheetName": "価格設定",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "minColumn": 15,
+      "title": "このシートの役割",
+      "lines": [
+        "売る商品の一覧と価格を決めるシートです。",
+        "主力手技と将来メニューの位置づけをここで揃えます。",
+        "KPI逆算で使う主力手技価格の参照元です。"
+      ]
+    },
+    {
+      "id": "kpi-role",
+      "sheetName": "KPI目標",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "title": "このシートの役割",
+      "lines": [
+        "月次目標と当月実績を見比べるシートです。",
+        "月次総保険売上と自費売上の着地確認に使います。",
+        "月末に実績セルを入力して達成率を確認します。"
+      ]
+    },
+    {
+      "id": "open-items-role",
+      "sheetName": "未確定項目",
+      "columnKey": "sidebar",
+      "startRow": 2,
+      "minColumn": 11,
+      "title": "このシートの役割",
+      "lines": [
+        "まだ決め切れていない項目を一覧化するシートです。",
+        "何を先に確定するかを整理します。",
+        "価格・KPI・固定費の保留をまとめて管理します。"
+      ]
+    }
+  ]
+}

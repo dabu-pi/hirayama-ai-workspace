@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-03-06（AI開発環境 E-1〜E-9 完了・freee Phase2 2-1〜2-5 完了・Phase3 3-1〜3-3 完了）
+作成: 2026-03-05 / 最終更新: 2026-04-17（/train・Cancel 障害対応完了・本番確認済み）
 
 ---
 
@@ -30,11 +30,17 @@
 ├─ 【患者管理Web】──────────────────────────────────→
 │     認証整備 → 柔整GASと連携 → 検索・可視化
 │
-├─ 【廃棄物日報GAS】────────────────────────────────────────────→
+├─ 【トレーニング機器トレンド分析】──────────────────────────→
+│     CSV/正規化基盤 ✅ → Trends/Suggest収集 ✅ → 第3ソース追加 → 公開サイト
+│
+├─ 【廃棄物日報システム】────────────────────────────────────────────→
 │                              要件定義 → 設計 → 実装
 │
-└─ 【接骨院戦略AI】─────────────────────────────────────────────→
-                              数値入力 → Claude API実装 → 月次レポート
+├─ 【接骨院経営戦略AI】─────────────────────────────────────────────→
+│                             数値入力 → Claude API実装 → 月次レポート
+│
+└─ 【トレーニングプログラムプラットフォーム】──────────────────────→
+       MVP基盤 ✅ → Auth/owner guard ✅ → NOT NULL・RLS ✅ → History auth ✅ → 限定公開 Go ✅ → seed docs ✅ → プログラム追加
 ```
 
 ---
@@ -84,12 +90,22 @@
 | B-2 | 施術明細→申請書転記データの出力確認 | 実データで申請書生成テスト | ⏸ 待機 |
 | B-3 | SPEC.md §14（ステップ④）の仕様を実装内容に合わせて更新 | ドキュメント整合 | ⏸ 待機 |
 
+#### 2026-03-16 完了済み追加修正
+
+| # | タスク | 内容 | ステータス |
+|---|---|---|---|
+| X-1 | HIGH-1/HIGH-2/MEDIUM-1 修正束A | visitTotal 再構成・caseKey2 追加・再検抑制理由ログ | ✅ 完了（d356b27） |
+| X-2 | RC-1 転記データ case2 空行抑制 | `V3TR_buildTransferDataForMonth_` guard 追加 | ✅ 完了（80f8b0e） |
+| X-3 | NDJSON case2 空オブジェクト抑制 | `V3TR_exportTransferJson_` guard 追加 | ✅ 完了（20fc562） |
+| X-4 | write_application.py 帳票番号飛び修正 | Fix-S（施療料詰め）/ Fix-P（部位明細display_idx）| ✅ 完了（93b228e）/ 実機 PASS |
+| X-5 | 文書反映・別PCセットアップ手順作成 | PROJECT_STATUS.md / TESTCASES.md / SETUP.md / README.md | ✅ 完了（8431092） |
+
 #### フェーズ C — 将来拡張
 
 | # | タスク | ステータス |
 |---|---|---|
 | C-1 | 月次レポート自動生成（請求データ集計） | ⏸ 待機 |
-| C-2 | 接骨院戦略AIへの患者数・売上データ連携 | ⏸ 待機 |
+| C-2 | 接骨院経営戦略AIへの患者数・売上データ連携 | ⏸ 待機 |
 | C-3 | 患者管理Webアプリとの患者IDスキーマ共通化 | ⏸ 待機 |
 
 ---
@@ -167,7 +183,41 @@
 
 ---
 
-### 4. 廃棄物日報GASシステム `waste-report-system/`（企画段階・未作成）
+### トレーニング機器トレンド分析 `training-trend-analyzer/`
+
+**現状:** 手動CSV取り込み、正規化、score/ranking 計算に加え、Google Trends と Google Suggest の collector が接続済み。
+2026-04-08 時点で Phase 4 入口として整理されているが、直近タスクは第3ソース追加と score detail の改善。
+
+#### フェーズ A — 基盤整備（完了）
+
+| # | タスク | 内容 | ステータス |
+|---|---|---|---|
+| A-1 | SQLite / 初期スキーマ整備 | `scripts/init_db.py` / DB schema / master data | ✅ 完了 |
+| A-2 | 手動CSV取り込み | `scripts/import_csv.py` / import metadata 管理 | ✅ 完了 |
+| A-3 | 正規化エンジン初版 | brand / model / category canonical 化 | ✅ 完了 |
+| A-4 | score / ranking 初版 | `scripts/run_batch.py` / `src/scorer/calculator.py` | ✅ 完了 |
+
+#### フェーズ B — 自動収集の拡張（進行中）
+
+| # | タスク | 内容 | ステータス |
+|---|---|---|---|
+| B-1 | Google Trends collector | live / mock / auto と fail-safe artifact | ✅ 完了 |
+| B-2 | Trends metric 安定化 | `google_trends_interest` の初期安定化 | ✅ 完了 |
+| B-3 | Google Suggest collector | `search_suggest_count` / `search_suggest_presence` 接続 | ✅ 完了 |
+| B-4 | 第3ソース追加 | Suggest と相性の良い軽量ソースを追加 | 🔄 進行中 |
+| B-5 | score detail 改善 | 検索系軽量ソースの寄与を見やすくする | 🔄 進行中 |
+
+#### フェーズ C — 公開導線（将来）
+
+| # | タスク | ステータス |
+|---|---|---|
+| C-1 | FastAPI + PostgreSQL 化 | ⏸ 待機 |
+| C-2 | Next.js 公開ランキングページ | ⏸ 待機 |
+| C-3 | 公開DBと社内DBの分離 | ⏸ 待機 |
+
+---
+
+### 4. 廃棄物日報システム `waste-report-system/`（企画段階・未作成）
 
 **現状:** 企画段階。ディレクトリ未作成。要件定義から着手する。
 
@@ -190,7 +240,7 @@
 
 ---
 
-### 5. 接骨院戦略AI `hirayama-jyusei-strategy/`
+### 5. 接骨院経営戦略AI `hirayama-jyusei-strategy/`
 
 **現状:** 戦略・メニュー・マーケティング・財務のドキュメントは整備済み。
 慢性疼痛プロジェクト管理表（Google Sheets）の構造整備が完了。Claude APIの実装は未着手。
@@ -236,12 +286,20 @@
 
 | 時期 | マイルストーン | ステータス |
 |---|---|---|
-| **3月中旬** | 柔整GAS: 施術明細upsert完成・TC01〜TC10 通過 | 🔄 実装完了・テスト待ち |
+| **3月中旬** | 柔整GAS: 修正束A+RC-1+帳票番号飛び修正 完了・申請書出力実機確認済み | ✅ 完了 |
+| **3月下旬** | 柔整GAS: fixture 48/48 PASS・TC09b 実シート確認・B-1〜B-2 クローズ | ✅ 完了（2026-03-19） |
 | **3月上旬** | freee自動化: OAuth再構築完了・フェーズ2（見積書作成）動作確認・仕様確定 | ✅ 完了 |
 | **3月上旬** | freee自動化: フェーズ3（Gmail下書き）完成 | ✅ 完了 |
 | **4月中旬** | 患者管理Webアプリ: 本番化準備完了・柔整GASと患者ID連携 | ⏸ 待機 |
-| **4月下旬** | 廃棄物日報GAS: 要件定義完了・設計開始 | ⏸ 待機 |
-| **5月** | 接骨院戦略AI: 数値入力完了・Claude APIで月次レポート初回生成 | ⏸ 待機 |
+| **4月中旬** | トレーニング機器トレンド分析: 第3ソース小規模接続・寄与明細の見える化 | 🔄 進行中 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: Phase A 完了（live E2E・enrollment Day 進行確認済み） | ✅ 完了 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: Phase B Step 1・2 完了（Auth 基盤・アプリ側 owner guard live 確認済み） | ✅ 完了 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: B-3/B-4/B-5 完了（NOT NULL + RLS live 適用・Add/Swap live 確認済み） | ✅ 完了 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: B-7 Exercise History auth 強化完了（server client 統一・middleware 保護） | ✅ 完了 |
+| **4月中旬** | トレーニングプログラムプラットフォーム: /train・Cancel 本番障害 3件修正・本番確認済み（mock ID 流入防止 / created_at query 修正 / Cancel後ループ修正） | ✅ 完了（2026-04-17） |
+| **4月下旬〜5月** | トレーニングプログラムプラットフォーム: 限定公開判断・Phase C プログラム追加 | ⏸ 待機 |
+| **4月下旬** | 廃棄物日報システム: 要件定義完了・設計開始 | ⏸ 待機 |
+| **5月** | 接骨院経営戦略AI: 数値入力完了・Claude APIで月次レポート初回生成 | ⏸ 待機 |
 | **6月以降** | 全システム安定稼働・KPIダッシュボード構築 | ⏸ 待機 |
 
 ---
@@ -257,12 +315,151 @@
    3. freee自動化: フェーズ2完成（2-2〜2-5）✅
    4. freee自動化: フェーズ3 下書き作成（3-1〜3-3）✅
    5. 患者管理Webアプリ: 認証整備・柔整GAS連携（A-1〜B-3）
+   6. トレーニング機器トレンド分析: 第3ソース追加・score detail 改善
 
 🟢 後半（新規開発・中長期）
-   6. 接骨院戦略AI: 数値入力 → Claude API実装
-   7. 廃棄物日報GAS: 要件定義 → 設計 → 実装
+   7. 運動器初期評価システム JASSESS-01: Phase 1 シート生成 → Phase 2 ロジック実装 → Phase 5 Claude API連携
+   8. 接骨院経営戦略AI: 数値入力 → Claude API実装
+   9. 廃棄物日報システム: 要件定義 → 設計 → 実装
+  10. トレーニングプログラムプラットフォーム Phase B 完了 → 限定公開判断 → Phase C プログラム追加
 ```
 
 ---
 
-最終更新: 2026-03-06（E-9 auto-loop.ps1 完了・freee 2-1〜2-5 完了）
+## 運動器初期評価システム JASSESS-01 `msk-assessment-platform/`
+
+*旧称: 腰痛評価シートシステム JEVAL-01 / 旧フォルダ: low-back-assessment/*
+
+**現状:** 設計・全体基盤整理完了（2026-03-23）。Phase 1（腰痛評価モジュール実装）待機中。
+
+### Phase 0（完了）: 設計・全体基盤整理
+
+| # | タスク | ステータス |
+|---|---|---|
+| P0-1 | SPEC.md / SHEET_DESIGN.md / LOGIC.md / COMMENT_DESIGN.md / CLINICAL_OPERATION.md 作成 | ✅ 完了 |
+| P0-2 | gas/setup_sheets.js（腰痛モジュール GAS雛形）作成 | ✅ 完了 |
+| P0-3 | JASSESS-01 / msk-assessment-platform へ再整理・全体基盤構造化 | ✅ 完了 |
+| P0-4 | DESIGN_DECISIONS.md（設計判断の記録）作成 | ✅ 完了 |
+| P0-5 | modules/low-back/README.md（腰痛モジュール仕様）作成 | ✅ 完了 |
+
+### Phase 1: 腰痛評価モジュール実装（待機中）
+
+| # | タスク | ステータス |
+|---|---|---|
+| P1-1 | setup_sheets.js を Apps Script エディタで実行 → 8シート生成 | ⏸ 待機 |
+| P1-2 | スプレッドシートID取得 → PROJECT_STATUS.md 更新 | ⏸ 待機 |
+| P1-3 | 基本入力動作確認（プルダウン・赤旗アラート・自動計算） | ⏸ 待機 |
+| P1-4 | 判定ロジックシートの数式実装（LOGIC.md 腰痛固有ロジック） | ⏸ 待機 |
+| P1-5 | コメントマスタ充填（COMMENT_DESIGN.md の全テンプレ） | ⏸ 待機 |
+| P1-6 | onEdit トリガー実装 → コメント自動生成 | ⏸ 待機 |
+| P1-7 | saveToHistory() の必須項目バリデーション強化 | ⏸ 待機 |
+| P1-8 | 実臨床テスト（5症例以上） | ⏸ 待機 |
+| P1-9 | 評価基準・コメントの微調整 | ⏸ 待機 |
+
+### 将来フェーズ（拡張モジュール）
+
+| フェーズ | 内容 | 着手条件 |
+|---|---|---|
+| Phase 2 | 頸部・肩こり評価モジュール（modules/neck-shoulder/） | Phase 1 実臨床テスト完了後 |
+| Phase 3 | 膝慢性痛評価モジュール（modules/knee/） | Phase 2 完了後 |
+| Phase 4a | 姿勢評価モジュール（modules/posture/） | Phase 3 完了後 |
+| Phase 4b | 高齢者機能・移乗評価モジュール（modules/elderly-function/） | Phase 3 完了後 |
+| Phase 5 | Claude API連携 → AI判定層実装 | Phase 1〜2 実臨床データ蓄積後 |
+| Phase 6 | タブレット入力UI最適化 | Phase 5 完了後 |
+
+---
+
+### トレーニングプログラムプラットフォーム `training-program-platform-jp/`
+
+**位置づけ:** トレーニングプログラムを継続的に追加していくプラットフォームとして育てる想定。単発アプリではなく、複数プログラムを提供・管理する基盤として設計する。
+
+**現状:** フェーズ B 全タスク（B-1〜B-7）完了・live 確認済み（2026-04-13）。限定公開 Go 判断。Phase C プログラム拡張が次ステップ。
+/train・Cancel 本番障害（3件）を 2026-04-17 に修正・本番確認済み。
+
+#### フェーズ A — MVP 基盤（完了）
+
+| # | タスク | ステータス |
+|---|---|---|
+| A-1 | Next.js App Router + Supabase 基盤構築 | ✅ 完了 |
+| A-2 | Programs 一覧 / 詳細（Supabase DB 読込） | ✅ 完了 |
+| A-3 | Train 画面（セット記録・完了・削除・追加・交換） | ✅ 完了 |
+| A-4 | Workout Summary（セッション完了後の結果画面） | ✅ 完了 |
+| A-5 | Program Day → Session 開始 MVP（StartSessionScreen） | ✅ 完了 |
+| A-6 | program_enrollments 実装（find-or-create / Day 進行） | ✅ 完了 |
+| A-7 | live Supabase E2E 検証（GZCLP Base 通し確認） | ✅ 完了 |
+| A-8 | Next.js fetch cache 問題修正（`cache: no-store`） | ✅ 完了 |
+
+#### フェーズ B — 認証・本番整備（✅ 完了 2026-04-13）
+
+**3ステップで段階的に実施。全タスク完了・live 確認済み。限定公開 Go 判断済み。**
+
+| # | タスク | ステータス |
+|---|---|---|
+| B-1 | **[Step 1]** Supabase Auth 整備（login 画面・middleware・`auth→public.users` trigger） | ✅ 完了 |
+| B-2 | **[Step 2]** アプリ側 owner guard（finish / summary / set mutation を本人限定・他人は 404） | ✅ 完了 |
+| B-3 | **[Step 3]** `workout_sessions.user_id` / `program_enrollments.user_id` を NOT NULL に復元 | ✅ 完了（live 手動確認 2026-04-13） |
+| B-4 | **[Step 3]** RLS（Row Level Security）設計・適用 | ✅ 完了（live 手動確認 2026-04-13） |
+| B-5 | Add Exercise / Swap Exercise の live clickthrough 補完確認 | ✅ 完了（live 通し確認 2026-04-13） |
+| B-6 | sign up 429 エラー（`over_email_send_rate_limit`）の再確認 | ⏸ 待機（外部レート制限が解消次第） |
+| B-7 | Exercise History の auth 対応（admin client → server client 切替・RLS 適用・middleware 保護追加） | ✅ 完了（live 確認済み 2026-04-13） |
+
+#### 公開判断の段階
+
+> 感覚ではなく条件で判断する。
+
+**限定公開してよい条件（招待制・知人のみ）— 判断: ✅ Go（2026-04-13）:**
+
+| 条件 | 状態 |
+|---|---|
+| B-3 / B-4 完了 | ✅ `user_id NOT NULL` + RLS 適用・live 確認済み |
+| B-5 完了 | ✅ Add Exercise / Swap Exercise live 通し確認済み |
+| B-7 完了 | ✅ Exercise History middleware 保護・live 確認済み |
+| 基本エラー表示 | ✅ auth error / not found / server error 表示確認済み |
+| sign up 動作確認 | ⏸ B-6 外部レート制限のため確認待ち（限定公開の blocker としない） |
+
+> **限定公開 Go 判断（2026-04-13）:** B-6 sign up 429 は外部レート制限のため実装不備ではなく、限定公開時は既存ユーザー（テスト済み）を招待する形で運用可能。全認可境界は実装・live 確認済み。
+
+**一般公開してよい条件（URL 公開・不特定多数）:**
+
+| 条件 | 説明 |
+|---|---|
+| 限定公開を一定期間運用して問題なし | 最低 1 プログラムで複数ユーザーが実際に使えていること |
+| パスワードリセット機能 | Supabase Auth の magic link / reset を実装済み |
+| 複数プログラム掲載 | GZCLP 以外に最低 1 プログラムを追加済み |
+| プライバシー・利用規約 | 最小限の掲載（Supabase ホスト前提の基本文） |
+
+#### 本番障害対応 — /train・Cancel 不具合（✅ 完了 2026-04-17）
+
+| # | 障害内容 | 修正内容 | Commit | ステータス |
+|---|---|---|---|---|
+| INC-1 | mock session ID が実 API に到達して Cancel/Finish が 500 | `train/page.tsx` の mock fallback を削除 → `redirect("/programs")`。cancel / finish / exercises / exercises/[exerciseId] 4ルートに `isLikelyUuid()` UUID ガード追加 | a85922a | ✅ 完了 |
+| INC-2 | `getActiveProgramView` が 400 (42703) で失敗し `/train` が `/programs` に誤リダイレクト | `selectActiveEnrollments` の `.order("created_at")` を削除（`program_enrollments` に存在しない列） | 35f6e03 | ✅ 完了 |
+| INC-3 | Cancel 成功後に `/train` → StartSessionScreen ループ | `app/page.tsx` を `actionType === "resume"` のみ `/train` にリダイレクトするよう修正。`router.push("/")` → `router.replace("/")` | 6327372 | ✅ 完了 |
+
+> 本番確認: Start Workout → workout 画面表示 → Cancel → /programs 着地（ループなし）を手動確認済み（2026-04-17）
+> フォローアップ: 診断ログ削減 PR を 1〜2 週間後に検討（緊急性なし）
+
+#### フェーズ C — プラットフォーム拡張（将来）
+
+**方針:** 管理画面を先に作らず、まず SQL / seed ベースでプログラムを追加していく。管理画面は運用負荷が増えた段階で後続フェーズとして判断する。
+
+| # | タスク | 内容 | ステータス |
+|---|---|---|---|
+| C-1 | プログラム追加フロー整備 | `docs/seed-program-guide.md` + `seed/programs/_template.sql` を作成。追加順序・UUID参照方針・idempotent設計・確認クエリ・失敗しやすい点を網羅 | ✅ 完了（2026-04-13） |
+| C-2 | 2本目以降のプログラム登録 | Starting Strength Base / Upper-Lower Strength 等の seed を _template.sql から作成して Supabase に適用 | 🔄 次タスク |
+| C-3 | プログラム難易度・タグ管理 | `programs.level` / タグ検索・フィルタ UI | ⏸ 待機 |
+| C-4 | ユーザー進捗ダッシュボード | セッション履歴・完了プログラム・次 day 表示 | ⏸ 待機 |
+| C-5 | 管理画面（後続フェーズ候補） | プログラム CRUD・ユーザー管理（運用負荷が増えた段階で判断） | ⏸ 将来検討 |
+
+#### 技術スタック
+
+- Next.js 14 App Router + TypeScript
+- Supabase PostgreSQL（programs / program_enrollments / workout_sessions 他）
+- Supabase Auth（sign in / sign up / session cookie）
+- `lib/supabase/server.ts` — `cache: no-store` 設定済み（Next.js 14 fetch cache 対策）
+- seed: `seed/programs/gzclp-base.sql`（GZCLP Base 3週 × 3日）
+- 設計ドキュメント: `docs/auth-rls-design.md`（Phase B 実装順・RLS 設計）
+
+---
+
+最終更新: 2026-04-17（/train・Cancel 障害対応 3件完了・本番確認済み）

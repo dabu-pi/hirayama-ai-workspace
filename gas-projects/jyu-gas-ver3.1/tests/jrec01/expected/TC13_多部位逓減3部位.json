@@ -1,0 +1,23 @@
+{
+  "testId": "TC13",
+  "note": "3部位目: 505 * 0.6 = 303（Math.round）。baseOut は生値=505のまま、rowTotalOut にのみ coef が反映される。",
+  "header": {
+    "initFee": 0,
+    "reFee": 0,
+    "supportFee": 0,
+    "detailSum": 1313,
+    "visitTotal": 1313,
+    "needCheck": false,
+    "needCheckReason": "",
+    "billedKubun": "後療",
+    "mixedFlag": "通常",
+    "case1Summary": "case1:後療",
+    "case2Summary": "case2:なし",
+    "chargeReason": "後療のみ"
+  },
+  "details": [
+    { "detailID": "P001_2026-03-02_C1_P1", "kubun": "後療", "baseOut": 505, "coldOut": 0, "rowTotalOut": 505 },
+    { "detailID": "P001_2026-03-02_C1_P2", "kubun": "後療", "baseOut": 505, "coldOut": 0, "rowTotalOut": 505 },
+    { "detailID": "P001_2026-03-02_C1_P3", "kubun": "後療", "baseOut": 505, "coldOut": 0, "rowTotalOut": 303 }
+  ]
+}

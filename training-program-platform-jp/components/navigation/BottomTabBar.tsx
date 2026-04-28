@@ -1,0 +1,265 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import { useGymUnreadCount } from "@/hooks/useGymUnreadCount";
+import styles from "./BottomTabBar.module.css";
+
+type IconType = "programs" | "train" | "history" | "gym";
+
+type Tab = {
+  href: string;
+  label: string;
+  matchPrefixes: string[];
+  iconType: IconType;
+};
+
+function IconPrograms({ active }: { active: boolean }) {
+  return (
+    <svg
+      className={styles.icon}
+      viewBox="0 0 22 22"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="2"
+        y="2"
+        width="8"
+        height="8"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <rect
+        x="12"
+        y="2"
+        width="8"
+        height="8"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <rect
+        x="2"
+        y="12"
+        width="8"
+        height="8"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <rect
+        x="12"
+        y="12"
+        width="8"
+        height="8"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+    </svg>
+  );
+}
+
+function IconTrain({ active }: { active: boolean }) {
+  return (
+    <svg
+      className={styles.icon}
+      viewBox="0 0 22 22"
+      fill="none"
+      aria-hidden="true"
+    >
+      {/* barbell */}
+      <line
+        x1="4"
+        y1="11"
+        x2="18"
+        y2="11"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+        strokeLinecap="round"
+      />
+      <rect
+        x="1.5"
+        y="8.5"
+        width="3"
+        height="5"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <rect
+        x="17.5"
+        y="8.5"
+        width="3"
+        height="5"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <rect
+        x="4"
+        y="9"
+        width="2.5"
+        height="4"
+        rx="0.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <rect
+        x="15.5"
+        y="9"
+        width="2.5"
+        height="4"
+        rx="0.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+    </svg>
+  );
+}
+
+function IconGym({ active }: { active: boolean }) {
+  return (
+    <svg
+      className={styles.icon}
+      viewBox="0 0 22 22"
+      fill="none"
+      aria-hidden="true"
+    >
+      {/* building body */}
+      <rect
+        x="3"
+        y="8"
+        width="16"
+        height="11"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      {/* roof */}
+      <polyline
+        points="1,8 11,3 21,8"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* door */}
+      <rect
+        x="8.5"
+        y="13"
+        width="5"
+        height="6"
+        rx="0.75"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+    </svg>
+  );
+}
+
+function IconHistory({ active }: { active: boolean }) {
+  return (
+    <svg
+      className={styles.icon}
+      viewBox="0 0 22 22"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="11"
+        cy="11"
+        r="8.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <polyline
+        points="11,6.5 11,11 14.5,13.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const TABS: Tab[] = [
+  {
+    href: "/programs",
+    label: "プログラム",
+    matchPrefixes: ["/programs"],
+    iconType: "programs"
+  },
+  {
+    href: "/train",
+    label: "トレーニング",
+    matchPrefixes: ["/train"],
+    iconType: "train"
+  },
+  {
+    href: "/session-history",
+    label: "履歴",
+    matchPrefixes: ["/session-history", "/workout-summary"],
+    iconType: "history"
+  },
+  {
+    href: "/gym",
+    label: "ジム",
+    matchPrefixes: ["/gym"],
+    iconType: "gym"
+  }
+];
+
+/** Paths where the tab bar should be hidden entirely. */
+const HIDE_PREFIXES = ["/login"];
+
+export function BottomTabBar() {
+  const pathname = usePathname();
+  const gymUnreadCount = useGymUnreadCount();
+
+  if (HIDE_PREFIXES.some((p) => pathname.startsWith(p))) {
+    return null;
+  }
+
+  return (
+    <nav className={styles.tabBar} aria-label="Main navigation">
+      {TABS.map(({ href, label, matchPrefixes, iconType }) => {
+        const active = matchPrefixes.some((p) => pathname.startsWith(p));
+        const cls = `${styles.tab}${active ? ` ${styles.tabActive}` : ""}`;
+
+        const iconProps = { active };
+        const icon =
+          iconType === "programs" ? (
+            <IconPrograms {...iconProps} />
+          ) : iconType === "train" ? (
+            <IconTrain {...iconProps} />
+          ) : iconType === "gym" ? (
+            <span className={styles.iconWrap}>
+              <IconGym {...iconProps} />
+              {gymUnreadCount > 0 && (
+                <span
+                  className={styles.badge}
+                  aria-label={`未読お知らせ${gymUnreadCount}件`}
+                >
+                  {gymUnreadCount > 9 ? "9+" : gymUnreadCount}
+                </span>
+              )}
+            </span>
+          ) : (
+            <IconHistory {...iconProps} />
+          );
+
+        return (
+          <Link key={href} href={href} className={cls} aria-current={active ? "page" : undefined}>
+            {icon}
+            <span className={styles.label}>{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

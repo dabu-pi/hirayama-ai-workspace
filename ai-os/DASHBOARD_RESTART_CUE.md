@@ -168,7 +168,7 @@
   - `Task_Queue!A15:K15`
   - `Projects!A8:J8`
   - `blocked (no lifecycle allowlist configured)`
-- Verified allowed preview with `--lifecycle-projects WST-05`:
+- Verified allowed preview with `--lifecycle-projects HAIKI-05`:
   - same suggestion (`保留 -> 進行中`, `構想 -> 設計`)
   - `previewing status/phase because allowlist matched`
 - Normal non-lifecycle sync still works on the existing path:
@@ -178,12 +178,12 @@
 ## 2026-03-12 Lifecycle default allowlist cue
 
 - Added tracked default allowlist file: `ai-os/lifecycle-projects.json`.
-- Current default allowlist contains only `WST-05`.
+- Current default allowlist contains only `HAIKI-05`.
 - `scripts/sync-project-from-taskqueue.mjs` and `scripts/upsert-task-queue.mjs` now read that file automatically when no CLI/env allowlist is passed.
 - Verified default-allowlist live apply:
   - `Task_Queue!A15:K15`
   - `Projects!A8:J8`
-  - `廃棄物日報GAS` moved from `保留 / 構想` to `進行中 / 設計`
+  - `廃棄物日報システム` moved from `保留 / 構想` to `進行中 / 設計`
 - If expanding lifecycle apply later, add projects to the tracked file deliberately instead of relying on ad hoc CLI flags.
 ## 2026-03-12 Metrics task-queue hardening cue
 
@@ -293,3 +293,41 @@
   2. optional after `de` when you want to inspect what remains in `Task_Queue`
 - Do not treat the helper as a gate for commit / push / Run_Log.
 - `--project AIOS-06` may return 0 matches while AIOS work is still tracked under `workspace全体`; that is an expected advisory result, not a failure.
+
+## 2026-03-14 Live operations sync cue
+
+- Verified live ranges:
+  - `Dashboard!A1:N26`
+  - `Projects!A1:M12`
+  - `Task_Queue!A1:K18`
+  - `Metrics!A1:B10`
+  - `Run_Log!A1:J12`
+  - `Lists!A1:I13`
+- `Projects` is the practical source ledger for:
+  `project_id / 案件名 / 状態 / 段階 / 優先度 / 次アクション /
+  最終更新日 / メインシートURL / SPEC URL`.
+- `Dashboard` is confirmed as a Japanese read-only view. The project snapshot
+  shows `状態 / 段階 / 次アクション / 開く / SPEC` via `project_id` lookups.
+- Current live link policy:
+  - `開く` -> `Projects.メインシートURL`
+  - `SPEC` -> `Projects.SPEC URL`
+  - fallback text -> `未設定`
+- Current live `Projects` rows 4-10:
+  - `JREC-01` -> `本番運用中 / テスト`
+  - `JBIZ-04` -> `進行中 / 設計`
+  - `HAIKI-05` -> `進行中 / 設計`
+  - `JWEB-03` -> `進行中 / 実装`
+  - `AINV-07` -> `構想 / 構想`
+  - `AIOS-06` -> `進行中 / 運用`
+  - `FREEE-02` -> `本番運用中 / 運用`
+- Current live KPI values:
+  - `総案件数 = 7`
+  - `本番運用中 = 2`
+  - `進行中 = 4`
+  - `未完了タスク = 7`
+  - `保留アイデア数 = 1`
+  - `今日優先タスク数 = 0`
+- `Task_Queue` is already on the canonical Japanese 11-column layout and holds
+  7 active rows (`TASK-001` to `TASK-007`).
+- `Run_Log` remains append-only with English headers. `Dashboard` の
+  「最近の更新」は `Run_Log` 全体ではなく、表示条件に合う行だけを参照する。

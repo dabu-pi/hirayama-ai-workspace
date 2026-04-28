@@ -492,7 +492,16 @@ function freee_phase2_processPendingQuotations() {
         (res && res.quotation && res.quotation.id) ? res.quotation.id :
         (res && res.id) ? res.id : '';
 
-      sheet.getRange(rowIndex, CFG.COL_QUOTED_AT).setValue(new Date());
+      // G列：見積作成日（freee請求書アプリの見積URLをリンクとして付与）
+      const dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy/MM/dd');
+      if (quotationId) {
+        const freeeUrl = `https://invoice.secure.freee.co.jp/reports/quotations/${quotationId}`;
+        const safeUrl = freeeUrl.replace(/"/g, '""');
+        sheet.getRange(rowIndex, CFG.COL_QUOTED_AT).setFormula(`=HYPERLINK("${safeUrl}","${dateStr}")`);
+        console.log(`G列リンク設定: id=${quotationId} / url=${freeeUrl}`);
+      } else {
+        sheet.getRange(rowIndex, CFG.COL_QUOTED_AT).setValue(dateStr);
+      }
       if (quotationId) sheet.getRange(rowIndex, CFG.COL_FREEE_QUOTATION_ID).setValue(String(quotationId));
 
       // S列が空なら冪等キーを保存（Message-IDが取れない運用の保険）
@@ -978,13 +987,53 @@ function getCompanyId_() {
  * 6) lines JSON（item/text 両対応）
  * ========================= */
 
+/**
+ * 集計行判定：小計・消費税・合計などの集計項目を freee 明細から除外する
+ *
+ * 正規化：ASCII trim に加え全角スペース（U+3000）・ノーブレークスペース（U+00A0）も除去。
+ * マッチ：部分一致（includes）。前後に金額・括弧・空白が付いていても検出する。
+ * @param {string} description 品目名
+ * @returns {boolean} true なら集計行（除外対象）
+ */
+function isSummaryLine_(description) {
+  const SUMMARY_KEYWORDS = [
+    '小計', '消費税', '合計', '税込合計', '税額', '総額',
+    '税込', '税抜', '内税', '外税',
+  ];
+  // 半角スペース・全角スペース・ノーブレークスペース・タブ・コロン類を全除去してから部分一致
+  // 例: "消 費 税" → "消費税" / "小　　計" → "小計" / "合計：" → "合計"
+  const d = String(description || '').replace(/[\s\u3000\u00a0：:]/g, '');
+  return SUMMARY_KEYWORDS.some(kw => d.includes(kw));
+}
+
 function parseLinesJson_(linesJson) {
+  // デバッグ：RAW JSON を先頭500文字だけ出力（Q列の実際の値を確認）
+  console.log(`parseLinesJson_ RAW(500): ${String(linesJson).slice(0, 500)}`);
+
   const arr = safeJsonParse_(String(linesJson));
   if (!Array.isArray(arr) || arr.length === 0) {
+    console.log(`parseLinesJson_ parseResult(not array): ${JSON.stringify(arr).slice(0, 200)}`);
     throw new Error('lines_json must be a non-empty JSON array.');
   }
 
-  return arr.map((line) => {
+  // デバッグ：raw と normalized を並べて出力（空白混入による判定漏れを可視化）
+  arr.forEach((line, i) => {
+    const keys = Object.keys(line || {}).join(',');
+    const raw = String(line.description || '');
+    const normalized = raw.replace(/[\s\u3000\u00a0：:]/g, '');
+    const excluded = isSummaryLine_(raw);
+    console.log(`parseLinesJson_[${i}] keys=[${keys}] raw="${raw}" normalized="${normalized}" → ${excluded ? '除外(集計行)' : '採用'}`);
+  });
+
+  // 集計行（小計・消費税・合計・税込合計・税額・総額など）を freee 明細から除外する
+  const filtered = arr.filter(line => !isSummaryLine_(String(line.description || '')));
+  console.log(`parseLinesJson_: ${arr.length}行 → 集計行除外後 ${filtered.length}行`);
+
+  if (filtered.length === 0) {
+    throw new Error('lines_json に有効な明細行がありません（集計行のみのため除外されました）。Q列を確認してください。');
+  }
+
+  return filtered.map((line) => {
     const type = String(line.type || 'item');
     if (type === 'text') {
       return { type: 'text', description: String(line.description || '') };

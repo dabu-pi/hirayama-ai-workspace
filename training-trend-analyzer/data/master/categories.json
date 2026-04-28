@@ -1,0 +1,196 @@
+[
+  {
+    "_comment": "カテゴリマスタ。parent は親カテゴリの canonical_name",
+    "_version": "1.0",
+    "_updated": "2026-04-08"
+  },
+  {
+    "canonical_name": "cardio",
+    "name_ja": "有酸素マシン",
+    "parent": null,
+    "use_type": "both",
+    "status": "active"
+  },
+  {
+    "canonical_name": "treadmill",
+    "name_ja": "トレッドミル",
+    "parent": "cardio",
+    "use_type": "both",
+    "status": "active",
+    "notes": "ランニングマシン・ウォーキングマシンを含む"
+  },
+  {
+    "canonical_name": "bike",
+    "name_ja": "バイク・エルゴメーター",
+    "parent": "cardio",
+    "use_type": "both",
+    "status": "active",
+    "notes": "アップライト・リカンベント・スピンバイク・エアバイクを含む"
+  },
+  {
+    "canonical_name": "spin_bike",
+    "name_ja": "スピンバイク",
+    "parent": "bike",
+    "use_type": "both",
+    "status": "active",
+    "notes": "スタジオバイク・インドアサイクル。bike の子カテゴリ"
+  },
+  {
+    "canonical_name": "air_bike",
+    "name_ja": "エアバイク（ファンバイク）",
+    "parent": "bike",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "AssaultBike系。全身有酸素。CrossFit文脈で急増"
+  },
+  {
+    "canonical_name": "elliptical",
+    "name_ja": "クロストレーナー（エリプティカル）",
+    "parent": "cardio",
+    "use_type": "both",
+    "status": "active",
+    "notes": "エリプティカルトレーナー・クロスオーバーを含む"
+  },
+  {
+    "canonical_name": "rowing",
+    "name_ja": "ローイングマシン",
+    "parent": "cardio",
+    "use_type": "both",
+    "status": "active",
+    "notes": "エルゴメーター・ロウイングエルゴともいう"
+  },
+  {
+    "canonical_name": "stair_climber",
+    "name_ja": "ステアクライマー",
+    "parent": "cardio",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "ステップマシン・ステアマスターなど"
+  },
+  {
+    "canonical_name": "ski_erg",
+    "name_ja": "スキーエルグ",
+    "parent": "cardio",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "Concept2 SkiErg が代表。上半身有酸素"
+  },
+  {
+    "canonical_name": "strength",
+    "name_ja": "筋力マシン",
+    "parent": null,
+    "use_type": "both",
+    "status": "active"
+  },
+  {
+    "canonical_name": "smith_machine",
+    "name_ja": "スミスマシン",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "cable_machine",
+    "name_ja": "ケーブルマシン",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "ケーブルクロスオーバー・高低プーリーを含む"
+  },
+  {
+    "canonical_name": "functional_trainer",
+    "name_ja": "ファンクショナルトレーナー",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "デュアルケーブル・アジャスタブルプーリー。ケーブルマシンと重複することあり"
+  },
+  {
+    "canonical_name": "leg_press",
+    "name_ja": "レッグプレス",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "hack_squat",
+    "name_ja": "ハックスクワット",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "プレートロード機と一体型で用語がぶれやすい。英日 alias で吸収する"
+  },
+  {
+    "canonical_name": "belt_squat",
+    "name_ja": "ベルトスクワット",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active",
+    "notes": "rack / sled と混同しやすいため独立カテゴリで扱う"
+  },
+  {
+    "canonical_name": "leg_extension",
+    "name_ja": "レッグエクステンション",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "leg_curl",
+    "name_ja": "レッグカール",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "chest_press",
+    "name_ja": "チェストプレス",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "lat_pulldown",
+    "name_ja": "ラットプルダウン",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "shoulder_press",
+    "name_ja": "ショルダープレス",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "seated_row",
+    "name_ja": "シーテッドロウ",
+    "parent": "strength",
+    "use_type": "commercial",
+    "status": "active"
+  },
+  {
+    "canonical_name": "power_rack",
+    "name_ja": "パワーラック",
+    "parent": "strength",
+    "use_type": "both",
+    "status": "active",
+    "notes": "スクワットラック・ハーフラックを含む"
+  },
+  {
+    "canonical_name": "functional",
+    "name_ja": "機能的トレーニング器具",
+    "parent": null,
+    "use_type": "both",
+    "status": "active",
+    "notes": "ケトルベル・バトルロープ・スレッド等の機能的トレーニング器具カテゴリ"
+  },
+  {
+    "canonical_name": "sled",
+    "name_ja": "スレッド（プッシュスレッド）",
+    "parent": "functional",
+    "use_type": "commercial",
+    "status": "active"
+  }
+]

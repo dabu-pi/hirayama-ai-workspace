@@ -2,27 +2,33 @@ import { getSheetValues } from './lib-sheets.mjs';
 
 export const SHEET_NAME = 'Task_Queue';
 export const DEFAULT_RANGE = '1:200';
+// 2026-03-13 再設計後の日本語スキーマ（ヘッダーは行3）
 export const LIVE_HEADERS = [
-  'Task',
-  'Project',
-  'Type',
-  'Priority',
-  'Status',
-  'Assigned To',
-  'Planned Date',
-  'Done Date',
-  'Dependency',
-  'Score',
-  'Notes',
+  'task_id',
+  'タスク',
+  'project_id',
+  '案件名',
+  '種別',
+  '優先度区分',
+  '基本優先度',
+  '優先度調整',
+  '最終優先度',
+  '状態',
+  '担当',
+  '期限',
+  '完了日',
+  '依存',
+  'メモ',
 ];
 export const REQUIRED_FIELDS = [
-  ['Task', 0],
-  ['Project', 1],
-  ['Type', 2],
-  ['Priority', 3],
-  ['Status', 4],
+  ['タスク', 1],
+  ['project_id', 2],
+  ['種別', 4],
+  ['優先度区分', 5],
+  ['状態', 9],
 ];
-export const KNOWN_CLEANUP_MISSING = ['Project', 'Type', 'Priority', 'Status'];
+// task_id（col 0）のみ入力で他が全空の不完全行パターン
+export const KNOWN_CLEANUP_MISSING = ['タスク', 'project_id', '種別', '優先度区分', '状態'];
 
 export function isLiveHeaderRow(row = []) {
   return LIVE_HEADERS.every((value, index) => row[index] === value);

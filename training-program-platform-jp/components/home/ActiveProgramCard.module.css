@@ -1,0 +1,367 @@
+/* ---- Active program card ---- */
+
+.card {
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.sectionLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.levelBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(251, 146, 60, 0.12);
+  color: #fdba74;
+}
+
+/* ---- program identity ---- */
+
+.programTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.metaItem {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.metaDot {
+  color: var(--border);
+}
+
+/* ---- progress bar ---- */
+
+.progressSection {
+  margin-bottom: var(--space-4);
+}
+
+.progressHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.progressText {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.progressPct {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.progressBar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fb923c, var(--accent));
+  transition: width 0.3s ease;
+  min-width: 4px; /* always show at least a sliver when > 0% */
+}
+
+/* ---- current position ---- */
+
+.positionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 12px;
+  background: rgba(251, 146, 60, 0.06);
+  border: 1px solid rgba(251, 146, 60, 0.15);
+  margin-bottom: var(--space-4);
+}
+
+.positionLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.positionValue {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: #fdba74;
+}
+
+/* ---- continue CTA ---- */
+
+.continueButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fb923c, var(--accent));
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--text-md);
+  margin-bottom: var(--space-5);
+}
+
+/* ---- recent sessions ---- */
+
+.recentsSection {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+.recentsLabel {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.recentsList {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.recentItem {
+  display: block;
+}
+
+.recentLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.recentDate {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.recentDay {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- status badges (compact) ---- */
+
+.sessionStatus {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.statusDone {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.statusActive {
+  background: rgba(251, 146, 60, 0.12);
+  color: #fdba74;
+}
+
+.statusCancelled {
+  background: rgba(113, 113, 122, 0.12);
+  color: var(--text-muted);
+}
+
+.historyLink {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--accent);
+  text-align: right;
+}
+
+/* ---- empty / error states ---- */
+
+.emptyCard {
+  padding: var(--space-6) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  text-align: center;
+}
+
+.errorCard {
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+.emptyTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.emptyBody {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.emptyAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fb923c, var(--accent));
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+/* ---- H-4: volume trend ---- */
+
+.trendSection {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+  margin-top: var(--space-1);
+}
+
+.trendHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.trendLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.trendMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Sparkline — pure CSS bars */
+.sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+  margin-bottom: var(--space-3);
+}
+
+.sparkBar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: rgba(251, 146, 60, 0.25);
+  min-height: 2px;
+}
+
+.sparkBarLatest {
+  background: rgba(251, 146, 60, 0.65);
+}
+
+/* Volume comparison row */
+.trendValues {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.trendVolume {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.trendChange {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.trendUp {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.trendDown {
+  background: rgba(248, 113, 113, 0.1);
+  color: #fca5a5;
+}
+
+.trendInsufficient {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}

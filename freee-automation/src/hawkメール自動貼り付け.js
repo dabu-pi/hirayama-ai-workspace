@@ -555,6 +555,7 @@ function extractLinesJsonFromBody_(body) {
 
   const skipWords = [
     '消費税', '送料', '出張費', '合計', '小計', '値引', '振込', '手数料', '税額',
+    '税込合計', '総額', '税込', '税抜', '内税', '外税',
     '下記の通り', '見積書', '送付', 'お願いします', 'よろしく', 'いつも', 'お世話',
   ];
 
@@ -567,8 +568,9 @@ function extractLinesJsonFromBody_(body) {
   const items = [];
 
   for (const line of lines) {
-    // スキップワード判定（行全体）
-    if (skipWords.some(w => line.includes(w))) continue;
+    // スキップワード判定（行全体）：半角/全角スペース・コロン類を除去してから判定
+    const lineN = line.replace(/[\s\u3000\u00a0：:]/g, '');
+    if (skipWords.some(w => lineN.includes(w))) continue;
 
     // パターン: 品目名（任意の文字）＋スペース（半角/全角）＋数値円（×数量）
     //   例: KEISER M3バイクマウント（中古）　5,000円×2
@@ -580,8 +582,9 @@ function extractLinesJsonFromBody_(body) {
     const description = m[1].trim();
     if (!description || description.length < 2) continue;
 
-    // スキップワードが品目名に含まれる場合も除外
-    if (skipWords.some(w => description.includes(w))) continue;
+    // スキップワードが品目名に含まれる場合も除外（同じ正規化を適用）
+    const descN = description.replace(/[\s\u3000\u00a0：:]/g, '');
+    if (skipWords.some(w => descN.includes(w))) continue;
 
     // 単価：カンマ・ピリオドを除いて整数化（千区切り対応: 5,000 / 5.000）
     const priceRaw = toHalfWidthNum_(m[2]).replace(/[,，.]/g, '');

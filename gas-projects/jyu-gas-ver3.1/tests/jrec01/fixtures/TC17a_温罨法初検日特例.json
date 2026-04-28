@@ -1,0 +1,16 @@
+{
+  "testId": "TC17a",
+  "description": "温罨法 初検日特例（初検日 + dayDiff=6 + warmChk=true → warm=0）",
+  "ref": "TESTCASES.md#TC17 / SPEC.md §9.2",
+  "note": "injuryDate=2026-03-11, treatDate=2026-03-17, dayDiff=6（≥5 → 通常なら warm 可）。kubun=初検 → 初検日特例で warm=0, needCheck=true。shoryoNenZa=760, initFee=1550, supportFee=100, visitTotal=2410",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-03-17",
+    "monthlyStatus": { "initBilled": false, "reBilled": false, "supportBilled": false }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "初検", "parts": [
+      { "bui": "腰部", "byomei": "捻挫", "injuryDate": "2026-03-11", "cold": false, "warm": true, "electro": false }
+    ]}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "testId": "TC16b",
+  "description": "長期75%のまま（monthsElapsed=5 だが月3が9回<10）",
+  "ref": "TESTCASES.md#TC16",
+  "note": "monthlyVisitCounts=[10,10,9,10,10] → month3=9<10 → allFrequent=false → ltCoef=0.75。Math.round(505*0.75)=379",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-07-15",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true },
+    "monthlyVisitCounts": [10, 10, 9, 10, 10]
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "腰部", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": false, "warm": false, "electro": false }
+    ]}
+  ]
+}

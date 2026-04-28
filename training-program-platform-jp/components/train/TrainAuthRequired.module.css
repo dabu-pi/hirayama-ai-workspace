@@ -1,0 +1,73 @@
+.page {
+  width: min(100%, var(--page-max));
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}
+
+.hero {
+  padding: var(--space-5);
+  border: 1px solid rgba(249, 115, 22, 0.20);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(28, 28, 30, 0.96), rgba(28, 28, 30, 0.84));
+  box-shadow: var(--shadow-soft);
+}
+
+.eyebrow {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.15);
+  color: #fdba74;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: var(--space-3) 0 0;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.body {
+  margin: var(--space-3) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.loginButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fb923c, var(--accent));
+  color: #fff;
+  font-size: var(--text-base);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.28);
+}
+
+.programsLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-weight: 700;
+  text-decoration: none;
+}

@@ -19,6 +19,25 @@ V3TR.CONFIG = {
     master: "患者マスタ",
     insurer: "保険者情報",
     transfer: "申請書_転記データ",
+    history: "初検情報履歴",
+  },
+
+  /**
+   * 初検情報履歴シートの列名
+   * ★ appendInitHistory_V3_（Ver3_core.js）が書き込む正式ヘッダと一致させること
+   */
+  historyCols: {
+    createdAt:      "作成日時",
+    patientId:      "患者ID",
+    caseKey:        "caseKey",           // Pass-1 正規マッチキー
+    caseNo:         "caseNo",
+    initDate:       "施術日(初検日)",    // 月末日以前の最新1件を採用
+    injuryDatetime: "負傷の日時",
+    injuryPlace:    "負傷の場所",
+    injuryStatus:   "負傷時の状況",
+    initFindings:   "初検時の所見",
+    supportContent: "初検時相談支援の内容",
+    injuryFixed:    "受傷日_確定",       // 任意列
   },
 
   setKeys: {
@@ -27,12 +46,18 @@ V3TR.CONFIG = {
     reFee: "再検料",
     roundUnit: "窓口端数単位",
     outputFolderId: "出力フォルダID",
+    prefectureNo: "都道府県番号",    // U1 CI2書込用（施術機関所在都道府県番号、2桁）
+    torokuKigoNo: "登録記号番号",    // U2(CZ2)・下段分割欄(CR51/DK51/DR51)書込用（例: 契2804440-0-0）
+    clinicName: "施術所名",          // D5 施術証明欄: 施術所名 → L59
+    clinicAddr: "住所",              // D5 施術証明欄: 所在地 → L58
+    clinicPractitioner: "施術者氏名", // D5 施術証明欄: 施術者氏名 → L62
   },
 
   masterCols: {
     patientId: "患者ID",
     name: "氏名",
     birthday: "生年月日",
+    gender: "性別",            // "男" or "女"（申請書 AL21/AL23 丸付け用）
     address1: "住所1",
     address2: "住所2",
     relation: "本人・家族の別",
@@ -100,7 +125,7 @@ V3TR.CONFIG = {
   transferCols: [
     "recordKey", "患者ID", "対象月", "caseNo", "caseKey",
 
-    "患者氏名", "患者生年月日", "住所", "続柄",
+    "患者氏名", "患者生年月日", "性別", "住所", "続柄",
     "被保険者氏名", "保険者番号", "記号", "番号", "保険者名",
     "保険種別",
     "一部負担金割合",
@@ -135,7 +160,17 @@ V3TR.CONFIG = {
     "電療_回数", "電療_金額",
     "case計",
 
-    "当月合計", "窓口負担額", "請求金額"
+    "当月合計", "窓口負担額", "請求金額",
+
+    // 来院区分サマリー（exportHeaderFromCases_V3 と同一ロジックで導出）
+    "Mixed区分", "case1要約", "case2要約", "算定区分", "課金理由要約",
+
+    // 初検情報（初検情報履歴シートから取得：対象月末日時点での最新1件）
+    "負傷の日時", "負傷の場所", "負傷の状況", "初検時所見", "初検時相談支援内容",
+    "初検取得モード",  // "caseKey" | "patientFallback" | "none"
+
+    // 申請書上段・31行目 書込欄（U7〜）
+    "請求区分",  // "新規" | "継続" | "" （同月内治癒再発の両方○は将来対応）
   ],
 
   /**
@@ -276,6 +311,32 @@ V3TR.CONFIG = {
     // --- 請求区分 行31 ---
     請求区分: "DH31",       // "新規 ・ 継続"
 
+    // --- 申請書上段 施術機関情報 ---
+    都道府県番号: "CI2",    // CI2:CL3（U1: 施術機関所在都道府県番号、2桁）
+    施術機関コード: "CZ2",  // CZ2:DV3（U2: 登録記号番号の数字部分 ★暫定運用）
+    // --- 単併区分 行8-13 (U4) ---
+    単独: "CT8",            // CT8:CY9（固定「単独」→ テキスト"①.単独"に置換）
+
+    // --- 本家区分 行8-13 (U5) ---
+    本人: "DB8",    // DB8:DG9  テンプレート"2.本人"（70歳未満・本人）
+    六歳: "DB10",   // DB10:DG11 テンプレート"4.六歳"（6歳未満・就学前）
+    家族: "DB12",   // DB12:DG13 テンプレート"6.家族"（70歳未満・被扶養者）
+    高一: "DH8",    // DH8:DM9  テンプレート"8.高一"（前期高齢者70-74歳・2割負担）
+    高7:  "DH12",   // DH12:DM13 テンプレート"0.高7"（前期高齢者70-74歳・3割負担）
+
+    // --- 給付割合 行8-13 (U6) ---
+    // テンプレート実値: DP8='10・９' / DP11='８・７'（全角文字）
+    // 片側丸付け: 対象数字1文字のみ置換（U5と同方式）
+    給付9割:  "DP8",   // DP8:DV10  割合=1: '９'→'⑨' → '10・⑨'
+    給付8_7割: "DP11",  // DP11:DV13 割合=2: '８'→'⑧' / 割合=3: '７'→'⑦'
+
+    // --- 下段 登録記号番号 分割欄 行51-52 ---
+    // CR49:DV50 はラベル行「登録記号番号」→ 書き込み禁止
+    // 入力欄: 左=CR51:DH52 / 中=DK51:DO52 / 右=DR51:DV52
+    登録記号番号_左: "CR51",  // 左欄: 例「契2804440」（ハイフン前の部分・先頭文字含む）
+    登録記号番号_中: "DK51",  // 中欄: 例「0」（1つ目ハイフン後）
+    登録記号番号_右: "DR51",  // 右欄: 例「0」（2つ目ハイフン後）
+
     // --- 摘要 行44-46左 ---
     摘要: "E44",            // E44:CG46
   },
@@ -311,6 +372,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
   const shDetail   = ss.getSheetByName(C.sheetNames.detail);
   const shMaster   = ss.getSheetByName(C.sheetNames.master);
   const shInsurer  = ss.getSheetByName(C.sheetNames.insurer);
+  const shHistory  = ss.getSheetByName(C.sheetNames.history);  // 任意（なければ空文字）
 
   if (!shSettings || !shCases || !shDetail || !shMaster) {
     throw new Error("必要シートが見つかりません（設定/来院ケース/施術明細/患者マスタ）。");
@@ -350,6 +412,53 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
   const copay = V3TR_roundToUnit_(total * burdenRatio, settings.roundUnit);
   const claim = Math.floor(total - copay); // 小数点以下切り捨て
 
+  // 来院区分サマリー（case1行・case2行の両方に同一値を書き込む）
+  const _k1 = caseSummary.case1.kubun || "";
+  const _k2 = caseSummary.case2.caseKey ? (caseSummary.case2.kubun || "") : "";
+  const _isMixed   = !!_k2;
+  const _mixedFlag = _isMixed ? "Mixed" : "通常";
+  const _case1Summary = _k1 ? "case1:" + _k1 : "case1:なし";
+
+  // case2:初検(抑制) 判定
+  //   [A] 施術継続中 Mixed: case1.endDate が空 or >= case2.startDate → 抑制
+  //   [B] 治癒後別負傷:     case1.endDate < case2.startDate（厳密）→ 抑制しない
+  const _cs1End   = caseSummary.case1.endDate;
+  const _cs2Start = caseSummary.case2.startDate;
+  const _isPostRecovery = (_cs1End instanceof Date) && (_cs2Start instanceof Date) && (_cs1End < _cs2Start);
+  const _initSuppressed = (_k2 === "初検") && _isMixed && !_isPostRecovery;
+  const _case2Summary = !_k2                              ? "case2:なし"
+    : (_k2 === "初検" && _initSuppressed)                 ? "case2:初検(抑制)"
+    : "case2:" + _k2;
+
+  // 算定区分（display列: header 側 chargeKubun と同一ルール）
+  // _effInitFee: 抑制フラグを反映した実効初検料（算定区分の判断にのみ使用、金額計算は変えない）
+  const _hasKoryo    = (_k1 === "後療" || _k2 === "後療");
+  const _effInitFee  = _initSuppressed ? 0 : initFee;
+  const _chargeKubun = _effInitFee > 0 ? "初検"
+    : reFee > 0                        ? "再検"
+    : _hasKoryo                        ? "後療"
+    : "算定なし";
+
+  // 課金理由要約（header 側 chargeReason と同一ルール）
+  let _chargeReason;
+  if (_effInitFee > 0 && !_isMixed) {
+    _chargeReason = "初検のみ";
+  } else if (_effInitFee > 0 && _isMixed) {
+    _chargeReason = "算定可能な初検ありのため初検採用";
+  } else if (reFee > 0 && _isMixed && _initSuppressed) {
+    _chargeReason = "初検抑制のため再検採用";
+  } else if (reFee > 0 && _isMixed && !_initSuppressed) {
+    _chargeReason = "再検ありのため再検採用";
+  } else if (reFee > 0) {
+    _chargeReason = "再検のみ";
+  } else if (_hasKoryo && _isMixed && _initSuppressed) {
+    _chargeReason = "初検抑制かつ再検対象なし";
+  } else if (_hasKoryo) {
+    _chargeReason = "後療のみ";
+  } else {
+    _chargeReason = "算定なし";
+  }
+
   const rowsOut = [];
   for (const caseNo of [1, 2]) {
     const key = `${patientId}|${ym}|C${caseNo}`;
@@ -358,6 +467,11 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     const cm = (caseNo === 1) ? c1 : c2;
 
     const jitsunisu = (caseNo === 1) ? detailAgg.case1.visitDays : detailAgg.case2.visitDays;
+
+    // 初検情報（シートがなければ全列空文字）
+    const initInfo = shHistory
+      ? V3TR_loadInitInfo_(shHistory, patientId, cs.caseKey || "", end)
+      : null;
 
     const row = {};
     row["recordKey"] = key;
@@ -368,6 +482,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
 
     row["患者氏名"] = master.name || "";
     row["患者生年月日"] = master.birthday || "";
+    row["性別"] = master.gender || "";   // "男" or "女"
     row["住所"] = master.address || "";
     row["続柄"] = master.relation || "";
 
@@ -388,13 +503,15 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     // 負傷名(1),(2)  ※部位別
     // 来院ケースに日付がない場合、施術明細の日付範囲からフォールバック
     const aggDates = V3TR_aggDateRange_(agg);
+    const p1Dates  = V3TR_aggDateRange_(p1);   // 部位1専用（施術終了年月日の精度向上）
+    const p2Dates  = V3TR_aggDateRange_(p2);   // 部位2専用
 
     // 部位1
     row["負傷名1"] = V3TR_buildInjuryLabel_(p1);
     row["負傷年月日1"] = p1.injuryDate || "";
     row["初検年月日1"] = cs.startDate1 || cs.firstDate || aggDates.minDate || "";
     row["施術開始年月日1"] = cs.startDate1 || cs.startDate || aggDates.minDate || "";
-    row["施術終了年月日1"] = cs.endDate1 || "";  // 治療終了時のみ（フォールバックしない）
+    row["施術終了年月日1"] = cs.endDate1 || p1Dates.maxDate || aggDates.maxDate || "";  // 終了日優先→部位別最終施術日→ケース全体
     row["実日数1"] = p1.visitDays || jitsunisu;  // ★部位別実日数（フォールバック:ケース全体）
     row["転帰1"] = cs.tenki1 || "";
 
@@ -403,7 +520,7 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
     row["負傷年月日2"] = p2.injuryDate || "";
     row["初検年月日2"] = cs.startDate2 || cs.firstDate || aggDates.minDate || "";
     row["施術開始年月日2"] = cs.startDate2 || cs.startDate || aggDates.minDate || "";
-    row["施術終了年月日2"] = cs.endDate2 || "";  // 治療終了時のみ
+    row["施術終了年月日2"] = cs.endDate2 || p2Dates.maxDate || aggDates.maxDate || "";  // 終了日優先→部位別最終施術日→ケース全体
     row["実日数2"] = (V3TR_buildInjuryLabel_(p2)) ? (p2.visitDays || jitsunisu) : "";  // ★部位別実日数
     row["転帰2"] = cs.tenki2 || "";
 
@@ -476,6 +593,62 @@ function V3TR_buildTransferDataForMonth_(ss, patientId, ym) {
       row["請求金額"] = "";
     }
 
+    // 来院区分サマリー（case1行・case2行の両方に同一値）
+    row["Mixed区分"]    = _mixedFlag;
+    row["case1要約"]    = _case1Summary;
+    row["case2要約"]    = _case2Summary;
+    row["算定区分"]     = _chargeKubun;
+    row["課金理由要約"] = _chargeReason;
+
+    // 初検情報（caseKey 単位で取得。シート未存在 or 行なしは空文字）
+    row["負傷の日時"]         = initInfo ? initInfo.injuryDatetime  : "";
+    row["負傷の場所"]         = initInfo ? initInfo.injuryPlace      : "";
+    row["負傷の状況"]         = initInfo ? initInfo.injuryStatus     : "";
+    row["初検時所見"]         = initInfo ? initInfo.initFindings     : "";
+    row["初検時相談支援内容"] = initInfo ? initInfo.supportContent   : "";
+    row["初検取得モード"]     = initInfo ? initInfo.matchMode        : "none";
+
+    // U7 請求区分: 初検年月日（cs.firstDate）の年月と対象月（ym: "yyyy-MM"）を比較
+    // 新規 = 初検月が対象月と同じ / 継続 = 初検月が対象月より前
+    // 同月内治癒再発（「新規・継続」両方○）は将来対応。現時点では "新規" or "継続" の単一値。
+    {
+      const [ymYear, ymMonth] = ym.split("-").map(Number);
+      const initD = (cs.firstDate instanceof Date) ? cs.firstDate : null;
+      if (initD) {
+        const iYear  = initD.getFullYear();
+        const iMonth = initD.getMonth() + 1;  // 0-based → 1-based
+        row["請求区分"] = (iYear === ymYear && iMonth === ymMonth) ? "新規" : "継続";
+      } else {
+        row["請求区分"] = "";  // 初検日が不明な場合は空（手入力を促す）
+      }
+    }
+
+    // D2 継続月数・頻回: 内部値計算のみ。M31への出力は当面停止（B案: 既定で書かない）
+    // ★設計確定（2026-03-20）: 正本=摘要欄（手動）+長期欄（頻回→0.5/長期のみ→0.75、手動）
+    // ★M31（経過欄）は空欄許容。row["経過"] は常に "" とし Python 側も書かない。
+    // ★将来 M31 自動出力を復活させる場合は、下記コメントアウト部を有効化すること。
+    //
+    // --- 復活時はここから有効化 ---
+    // if (caseNo === 1) {
+    //   const injD1 = (p1.injuryDate instanceof Date) ? p1.injuryDate
+    //               : (cs.startDate1 instanceof Date)  ? cs.startDate1
+    //               : (cs.firstDate  instanceof Date)  ? cs.firstDate : null;
+    //   if (injD1 && cs.caseKey) {
+    //     const d2res = V3TR_calcD2Keizoku_(shCases, patientId, cs.caseKey, injD1, ym);
+    //     const kd = d2res.displayMonths;
+    //     row["経過"] = (kd !== "" && jitsunisu)
+    //       ? kd + "ヶ月 月" + jitsunisu + "回"
+    //       : (kd !== "") ? kd + "ヶ月" : "";
+    //   } else { row["経過"] = ""; }
+    // } else { row["経過"] = ""; }
+    // --- ここまで ---
+    row["経過"] = ""; // 常に空。M31出力停止中（設計確定 2026-03-20）
+
+    // RC-1修正: case2 データが来院ケース・施術明細の両方に存在しない月は
+    // 空レコード（caseKey=""・全金額0）の出力を抑制する。
+    // cs.caseKey が非空 or visitDays>0 のいずれかがあれば不整合検出のため出力を維持する。
+    if (caseNo === 2 && !cs.caseKey && detailAgg.case2.visitDays === 0) continue;
+
     rowsOut.push(row);
   }
 
@@ -516,6 +689,131 @@ function V3TR_loadSettings_(shSettings) {
   };
 }
 
+/**
+ * 設定シートから施術機関固定情報を読み込む（U1/U2/下段登録記号番号分割欄/D5施術証明欄）
+ * 返り値: { prefectureNo, torokuKigoNo, clinicName, clinicAddr, clinicPractitioner }
+ */
+function V3TR_loadClinicInfo_(shSettings) {
+  const C = V3TR.CONFIG;
+  if (!shSettings) return { prefectureNo: "", torokuKigoNo: "", clinicName: "", clinicAddr: "", clinicPractitioner: "" };
+  const v = shSettings.getDataRange().getValues();
+  const map = {};
+  for (let r = 1; r < v.length; r++) {
+    const k = String(v[r][0] || "").trim();
+    if (!k) continue;
+    map[k] = String(v[r][1] || "").trim();
+  }
+  return {
+    prefectureNo:       map[C.setKeys.prefectureNo]       || "",
+    torokuKigoNo:       map[C.setKeys.torokuKigoNo]       || "",
+    clinicName:         map[C.setKeys.clinicName]         || "",
+    clinicAddr:         map[C.setKeys.clinicAddr]         || "",
+    clinicPractitioner: map[C.setKeys.clinicPractitioner] || "",
+  };
+}
+
+/**
+ * 対象月末日時点の年齢を計算する
+ * @param {Date|string} birthday - 生年月日（Date or "YYYY-MM-DD"）
+ * @param {string} ym - 対象月 "YYYY-MM"
+ * @return {number|null} 年齢。計算できない場合 null
+ */
+function V3TR_calcAgeAtEndOfMonth_(birthday, ym) {
+  if (!birthday || !ym) return null;
+  let bd;
+  if (birthday instanceof Date) {
+    bd = birthday;
+  } else {
+    const parts = String(birthday).split(/[-\/]/);
+    if (parts.length < 3) return null;
+    bd = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  if (isNaN(bd.getTime())) return null;
+  const ymParts = String(ym).split("-");
+  if (ymParts.length < 2) return null;
+  const y = Number(ymParts[0]);
+  const m = Number(ymParts[1]);
+  // 対象月末日（month=m は 0-indexed で翌月 0 日 = 当月末日）
+  const endOfMonth = new Date(y, m, 0);
+  let age = endOfMonth.getFullYear() - bd.getFullYear();
+  const monthDiff = endOfMonth.getMonth() - bd.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && endOfMonth.getDate() < bd.getDate())) {
+    age--;
+  }
+  return (isFinite(age) && age >= 0) ? age : null;
+}
+
+/**
+ * U5本家区分: row1のデータから appCellMap のキー名を返す（暫定ルール）
+ *
+ * 判定ロジック（優先順位順）:
+ *   1. 保険種別=6（後期高齢）→ "高一"基本。7割給付（負担3割）のみ "高7"（★制度確定2026-03-20）
+ *   2. 6歳未満（就学前）→ "六歳"（DB10）
+ *   3. 70〜74歳 + 2割負担 → "高一"（DH8）
+ *   4. 70〜74歳 + 3割負担 → "高7"（DH12）
+ *   5. 70〜74歳 + 割合不明 → "高一"（安全側）
+ *   6. 75歳以上 → 後期高齢者扱い。高一基本、7割給付のみ高7
+ *   7. 70歳未満 + 続柄="本人" → "本人"（DB8）
+ *   8. 70歳未満 + 続柄その他 → "家族"（DB12）
+ *
+ * 生年月日が不明な場合は年齢区分をスキップして続柄のみで本人/家族判定。
+ * 保険種別はGASマスタで"後期高齢"等の名称文字列で保存されているため、名称→数値変換を内部で行う。
+ *
+ * @param {Object} row1 - transferData の row（患者毎データ）
+ * @return {string|null} appCellMap のキー名 or null（書込なし）
+ */
+function V3TR_deriveHonkeku_(row1) {
+  // 保険種別: 数値(6)も名称文字列("後期高齢")も数値に正規化
+  // GASマスタは"協会けんぽ"等の文字列で保存されているため、文字列→数値マップが必要
+  const INS_TYPE_NAME_MAP_ = {
+    "協会けんぽ": 1, "組合": 2, "共済": 3, "国保": 4, "退職": 5, "後期高齢": 6,
+  };
+  const insuranceTypeRaw = row1["保険種別"];
+  const insuranceType = (Number(insuranceTypeRaw) || INS_TYPE_NAME_MAP_[String(insuranceTypeRaw || "").trim()] || 0);
+  const relation      = String(row1["続柄"] || "").trim();
+  const burden        = Number(row1["一部負担金割合"]) || 0;
+  const birthday      = row1["患者生年月日"];
+  const ym            = String(row1["対象月"] || "");
+
+  // 後期高齢者（保険種別=6）→ 高一 基本。7割給付（負担3割）のみ 高7
+  // ★制度確定（2026-03-20）: 本人/家族区分は使わない。給付割合は U6 側で表現する。
+  if (insuranceType === 6) return (burden === 3) ? "高7" : "高一";
+
+  const age = V3TR_calcAgeAtEndOfMonth_(birthday, ym);
+
+  // 6歳未満（就学前）
+  if (age !== null && age < 6) return "六歳";
+
+  // 70〜74歳（前期高齢者）
+  if (age !== null && age >= 70 && age <= 74) {
+    if (burden === 2) return "高一";
+    if (burden === 3) return "高7";
+    return "高一"; // 負担割合不明は安全側（高一=8割給付）
+  }
+
+  // 75歳以上 → 後期高齢者扱い（保険種別=6と同じルール）
+  // ★保険種別が6以外でも75歳超は後期高齢者として高一/高7 で判定する
+  if (age !== null && age >= 75) return (burden === 3) ? "高7" : "高一";
+
+  // 70歳未満（年齢不明含む）: 続柄で判定
+  return (relation === "本人") ? "本人" : "家族";
+}
+
+/**
+ * 登録記号番号から施術機関コードを導出（暫定ルール）
+ * 例: "契2804440-0-0" → "2804440-0-0"
+ * ルール: 先頭の「協」または「契」の1文字のみ除去。ハイフンはそのまま保持。
+ * ★ 公式一次資料での完全確認未完了。現時点の暫定運用（docs/JREC-01_申請書様式運用メモ.md §4 U2参照）。
+ */
+function V3TR_deriveClinicCode_(torokuKigoNo) {
+  if (!torokuKigoNo) return "";
+  let s = String(torokuKigoNo).trim();
+  if (s.charAt(0) === "協" || s.charAt(0) === "契") {
+    s = s.substring(1);
+  }
+  return s; // ハイフン保持
+}
+
 function V3TR_buildHeaderMap_(sh) {
   const lastCol = sh.getLastColumn();
   if (lastCol < 1) return {};
@@ -549,9 +847,10 @@ function V3TR_loadMasterRow_(shMaster, patientId) {
     var addr2 = String(get(C.masterCols.address2) || "").trim();
     var address = (addr1 + " " + addr2).trim();
 
-    return {
+    const result = {
       name: get(C.masterCols.name),
       birthday: (get(C.masterCols.birthday) instanceof Date) ? get(C.masterCols.birthday) : "",
+      gender: String(get(C.masterCols.gender) || "").trim(),  // "男" or "女"
       address: address,
       relation: get(C.masterCols.relation),
       insuredName: get(C.masterCols.insuredName),
@@ -564,6 +863,8 @@ function V3TR_loadMasterRow_(shMaster, patientId) {
       insurerName: String(get(C.masterCols.insurerName) || "").trim(),
       insuranceType: String(get(C.masterCols.insuranceType) || "").trim(),
     };
+    Logger.log("[loadMaster] 取得: patientId=" + patientId + " name=" + result.name + " insuranceType=" + result.insuranceType);
+    return result;
   }
   throw new Error(`患者マスタに患者ID=${patientId}が見つかりません。`);
 }
@@ -583,13 +884,16 @@ function V3TR_loadInsurerRow_(shInsurer, patientId) {
       const c = map[colName];
       return (c === undefined) ? "" : v[r][c];
     };
-    return {
+    const result = {
       insurerNo: String(get(C.insurerCols.insurerNo) || "").trim(),
       symbol: String(get(C.insurerCols.symbol) || "").trim(),
       number: String(get(C.insurerCols.number) || "").trim(),
       insurerName: String(get(C.insurerCols.insurerName) || "").trim(),
     };
+    Logger.log("[loadInsurer] 取得: patientId=" + patientId + " insurerNo=" + result.insurerNo + " insurerName=" + result.insurerName);
+    return result;
   }
+  Logger.log("[loadInsurer] 該当なし: patientId=" + patientId);
   return {};
 }
 
@@ -598,6 +902,108 @@ function V3TR_parseYM_(ym) {
   const start = new Date(y, m - 1, 1);
   const end = new Date(y, m, 1);
   return { start, end };
+}
+
+/**
+ * D2 継続月数・頻回 計算（申請書 M31 経過欄 補助表示用）
+ *
+ * caseKey 単位で、起算月（初検日16日以降→翌月起算）からの月別来院日数を集計し、
+ * 月10回以上の連続月数（rawContMonths）と頻回開始フラグ（freqStarted）を返す。
+ *
+ * ★制度上の位置づけ:
+ *   - 継続月数の公式記録先: 摘要欄（手動記入）
+ *   - 頻回の公式記録先: 申請書「頻回」欄（0.5 を記載。長期欄0.75は書かない）
+ *   - M31「経過」欄への記載: 補助表示扱い（義務なし・制度違反でもない）
+ * ★ calcMonthsElapsed_V3_ は単純経過月数のため使用しない。
+ *
+ * @param {Sheet} shCases  - 来院ケースシート（全期間データが必要）
+ * @param {string} patientId
+ * @param {string} caseKey
+ * @param {Date}   injuryDate - 起算月計算用（受傷日または初検日）
+ * @param {string} ym         - 対象月 "yyyy-MM"（終端月として使用）
+ * @return {{ rawContMonths: number, freqStarted: boolean, displayMonths: number|string }}
+ *   displayMonths: 1〜5か月目→実連続月数 / 6か月目以降(freqStarted)→6固定 / 対象外→""
+ */
+function V3TR_calcD2Keizoku_(shCases, patientId, caseKey, injuryDate, ym) {
+  const empty = { rawContMonths: 0, freqStarted: false, displayMonths: "" };
+  if (!shCases || !patientId || !caseKey || !(injuryDate instanceof Date)) return empty;
+
+  // 起算月（初検日16日以降→翌月起算）
+  let sy = injuryDate.getFullYear();
+  let sm = injuryDate.getMonth(); // 0-indexed
+  if (injuryDate.getDate() >= 16) {
+    sm++;
+    if (sm > 11) { sm = 0; sy++; }
+  }
+
+  // 対象月（ym の終端月）
+  const [ymY, ymM] = ym.split("-").map(Number);
+  const ey = ymY, em = ymM - 1; // 0-indexed
+  const totalMonths = (ey - sy) * 12 + (em - sm) + 1;
+  if (totalMonths <= 0) return empty;
+
+  // 来院ケースシートを読み込み（全期間・患者×caseKey でフィルタ）
+  const C  = V3TR.CONFIG;
+  const vals = shCases.getDataRange().getValues();
+  const hmap = V3TR_buildHeaderMap_(shCases);
+  const pidCol = hmap[C.caseCols.patientId];
+  const ckCol  = hmap[C.caseCols.caseKey];
+  const dtCol  = hmap[C.caseCols.treatDate];
+  if (pidCol === undefined || ckCol === undefined || dtCol === undefined) return empty;
+
+  // 月別来院日数（distinct 施術日でカウント）
+  const visitSets = {};
+  for (let r = 1; r < vals.length; r++) {
+    const row = vals[r];
+    if (String(row[pidCol] || "").trim() !== patientId) continue;
+    if (String(row[ckCol]  || "").trim() !== caseKey)  continue;
+    const td = row[dtCol];
+    if (!(td instanceof Date)) continue;
+    const idx = (td.getFullYear() - sy) * 12 + (td.getMonth() - sm);
+    if (idx < 0 || idx >= totalMonths) continue;
+    if (!visitSets[idx]) visitSets[idx] = {};
+    // 日付の同一性を yyyymmdd 数値で担保
+    const dk = td.getFullYear() * 10000 + (td.getMonth() + 1) * 100 + td.getDate();
+    visitSets[idx][dk] = true;
+  }
+  const counts = {};
+  for (const idx in visitSets) {
+    counts[idx] = Object.keys(visitSets[idx]).length;
+  }
+
+  // 「対象月より前の月」で 5 連続達成（freqStarted）済みかを判定
+  let streak = 0;
+  let freqStartedBefore = false;
+  for (let m = 0; m < totalMonths - 1; m++) {
+    const cnt = counts[m] || 0;
+    if (cnt >= 10) {
+      streak++;
+      if (streak >= 5) { freqStartedBefore = true; break; } // 5連続達成 → 以降は「6」固定
+    } else {
+      streak = 0; // freqStarted 未達のためリセット可
+    }
+  }
+
+  // 対象月より前に頻回成立 → 対象月は 6か月目以降 → displayMonths = 6 固定
+  if (freqStartedBefore) {
+    return { rawContMonths: -1, freqStarted: true, displayMonths: 6 };
+  }
+
+  // 対象月を処理（当月が10回以上なら連続+1、未満なら0リセット）
+  const curCnt = counts[totalMonths - 1] || 0;
+  if (curCnt >= 10) {
+    streak++;
+  } else {
+    streak = 0;
+  }
+
+  // 対象月が 5か月目完了（freqStarted=true）の場合:
+  // 今月は「5」表示（翌月の申請から「6」固定になる）
+  return {
+    rawContMonths:  streak,
+    freqStarted:    (streak >= 5),
+    displayMonths:  (streak > 0) ? streak : "",
+  };
 }
 function V3TR_inRange_(d, start, end) {
   if (!(d instanceof Date)) return false;
@@ -627,6 +1033,7 @@ function V3TR_buildCaseMonthlySummary_(shCases, patientId, start, end) {
   const cS1 = col(C.caseCols.start1), cS2 = col(C.caseCols.start2);
   const cE1 = col(C.caseCols.end1),   cE2 = col(C.caseCols.end2);
   const cT1 = map[C.caseCols.tenki1] || -1, cT2 = map[C.caseCols.tenki2] || -1;
+  const cKubun = col(C.caseCols.kubun);
 
   const lastByCaseNo = { 1: null, 2: null };
 
@@ -648,7 +1055,7 @@ function V3TR_buildCaseMonthlySummary_(shCases, patientId, start, end) {
       caseKey: "", injuryName: "", injuryDate: "",
       firstDate: "", startDate: "", endDate: "",
       startDate1: "", endDate1: "", startDate2: "", endDate2: "",
-      tenki1: "", tenki2: "",
+      tenki1: "", tenki2: "", kubun: "",
     };
 
     const row = obj.row;
@@ -687,6 +1094,7 @@ function V3TR_buildCaseMonthlySummary_(shCases, patientId, start, end) {
       // 転帰
       tenki1: (cT1 >= 0) ? String(row[cT1] || "").trim() : "",
       tenki2: (cT2 >= 0) ? String(row[cT2] || "").trim() : "",
+      kubun: String(row[cKubun] || "").trim(),
     };
   }
 
@@ -845,6 +1253,99 @@ function V3TR_aggregateDetailMonthly_(shDetail, patientId, start, end, endDates)
   return { case1: agg1, case2: agg2 };
 }
 
+/**
+ * 初検情報履歴から対象月末日以前の最新1件を返す。
+ *
+ * 【マッチ戦略（2パス）】
+ *   Pass-1（正規ルート）: caseKey 列が存在 かつ 行の caseKey が引数と完全一致
+ *                         → matchMode: "caseKey"
+ *   Pass-2（フォールバック）: Pass-1 で行が見つからない場合のみ実行。
+ *                             patientId のみでマッチ（caseKey 不問）
+ *                             → matchMode: "patientFallback"
+ *   行なし: null を返す（呼び出し側が matchMode: "none" として扱う）
+ *
+ * @param {Sheet}  shHistory  - 初検情報履歴シート
+ * @param {string} patientId  - 患者ID
+ * @param {string} caseKey    - 対象caseKey（空文字可）
+ * @param {Date}   endExcl    - 対象月の翌月1日（exclusive）
+ * @returns {{injuryDatetime, injuryPlace, injuryStatus, initFindings, supportContent, matchMode}|null}
+ */
+function V3TR_loadInitInfo_(shHistory, patientId, caseKey, endExcl) {
+  if (!shHistory || shHistory.getLastRow() < 2) return null;
+  const C   = V3TR.CONFIG;
+  const map = V3TR_buildHeaderMap_(shHistory);
+  const v   = shHistory.getDataRange().getValues();
+
+  const cPid  = map[C.historyCols.patientId];
+  const cCK   = map[C.historyCols.caseKey];    // 任意列（undefined の場合もある）
+  // 旧ヘッダ互換 alias: 新ヘッダ名で見つからない場合に旧名にフォールバック（cDate は null 早期リターンを防ぐため必須）
+  const cDate = map[C.historyCols.initDate] !== undefined
+                ? map[C.historyCols.initDate] : map["初検日"];
+  if (cPid === undefined || cDate === undefined) return null;
+
+  // 日付フィルタ共通: 患者ID一致 かつ 対象月末日以前
+  function eligible(r) {
+    if (String(v[r][cPid] || "").trim() !== patientId) return false;
+    const dt = v[r][cDate];
+    if (!(dt instanceof Date)) return false;
+    if (endExcl instanceof Date && dt.getTime() >= endExcl.getTime()) return false;
+    return true;
+  }
+  function latest(rows) {
+    let best = null;
+    for (const r of rows) {
+      const dt = v[r][cDate];
+      if (!best || dt.getTime() > v[best][cDate].getTime()) best = r;
+    }
+    return best;
+  }
+
+  // Pass-1: caseKey 列が存在し、行の caseKey が対象と完全一致
+  let bestRow = null;
+  let matchMode = "none";
+
+  if (cCK !== undefined && caseKey) {
+    const candidates = [];
+    for (let r = 1; r < v.length; r++) {
+      if (!eligible(r)) continue;
+      if (String(v[r][cCK] || "").trim() === caseKey) candidates.push(r);
+    }
+    const found = latest(candidates);
+    if (found !== null) { bestRow = found; matchMode = "caseKey"; }
+  }
+
+  // Pass-2: フォールバック（patientId のみ）
+  if (bestRow === null) {
+    const candidates = [];
+    for (let r = 1; r < v.length; r++) {
+      if (eligible(r)) candidates.push(r);
+    }
+    const found = latest(candidates);
+    if (found !== null) { bestRow = found; matchMode = "patientFallback"; }
+  }
+
+  if (bestRow === null) return null;
+
+  const row = v[bestRow];
+  // ★ Date セルは Utilities.formatDate で変換（String(dateObj) で英語化するのを防ぐ）
+  const get = (col) => {
+    if (col === undefined) return "";
+    const val = row[col];
+    if (val instanceof Date) return Utilities.formatDate(val, "Asia/Tokyo", "yyyy/MM/dd");
+    return String(val || "").trim();
+  };
+  // 旧ヘッダ名フォールバック（列名が変わった4列のみ alias 解決）
+  const a = (newKey, oldKey) => map[newKey] !== undefined ? map[newKey] : map[oldKey];
+  return {
+    matchMode,
+    injuryDatetime: get(map[C.historyCols.injuryDatetime]),
+    injuryPlace:    get(map[C.historyCols.injuryPlace]),
+    injuryStatus:   get(a(C.historyCols.injuryStatus, "負傷の状況")),
+    initFindings:   get(a(C.historyCols.initFindings,  "初検時所見")),
+    supportContent: get(a(C.historyCols.supportContent, "初検時相談支援内容")),
+  };
+}
+
 function V3TR_emptyAgg_() {
   return {
     koryoSum: 0, coldSum: 0, warmSum: 0, elecSum: 0,
@@ -891,22 +1392,83 @@ function V3TR_countKubunInCases_(shCases, patientId, start, end) {
   const cPid = V3TR_mustCol_(map, C.caseCols.patientId, "来院ケース");
   const cDt  = V3TR_mustCol_(map, C.caseCols.treatDate, "来院ケース");
   const cKb  = V3TR_mustCol_(map, C.caseCols.kubun, "来院ケース");
+  // caseNo / end1 / end2: 存在しない列はインデックス -1 で安全にフォールバック
+  const cNo  = map[C.caseCols.caseNo] >= 0 ? map[C.caseCols.caseNo] : -1;
+  const cE1  = map[C.caseCols.end1]   >= 0 ? map[C.caseCols.end1]   : -1;
+  const cE2  = map[C.caseCols.end2]   >= 0 ? map[C.caseCols.end2]   : -1;
 
-  let initCount = 0;
-  let reCount = 0;
+  let rawInitCount = 0;
+  let rawReCount   = 0;
+  // caseNo → { hasInit, initDate, endDate }
+  //   initDate: 当月内 kubun=初検 の最早日
+  //   endDate : 当月内 施術終了日_部位1/2 の最遅日（複数行あれば最遅を保持）
+  const caseInfo = {};
 
   for (let r = 1; r < v.length; r++) {
     if (String(v[r][cPid] || "").trim() !== patientId) continue;
     const dt = v[r][cDt];
     if (!V3TR_inRange_(dt, start, end)) continue;
-    const k = String(v[r][cKb] || "").trim();
-    if (k === "初検") initCount++;
-    else if (k === "再検") reCount++;
+    const k  = String(v[r][cKb] || "").trim();
+    const no = cNo >= 0 ? Number(v[r][cNo] || 0) : 1;
+    if (!caseInfo[no]) caseInfo[no] = { hasInit: false, initDate: null, endDate: null };
+
+    if (k === "初検") {
+      rawInitCount++;
+      caseInfo[no].hasInit = true;
+      if (!caseInfo[no].initDate || dt < caseInfo[no].initDate) caseInfo[no].initDate = dt;
+    } else if (k === "再検") {
+      rawReCount++;
+    }
+
+    // 施術終了日（部位1/2 で遅い方を保持）
+    const e1 = cE1 >= 0 && v[r][cE1] instanceof Date ? v[r][cE1] : null;
+    const e2 = cE2 >= 0 && v[r][cE2] instanceof Date ? v[r][cE2] : null;
+    const eMax = (e1 && e2) ? (e1 > e2 ? e1 : e2) : (e1 || e2);
+    if (eMax && (!caseInfo[no].endDate || eMax > caseInfo[no].endDate)) {
+      caseInfo[no].endDate = eMax;
+    }
   }
-  // ★初検料・再検料は患者×月で各1回が上限（保険発第57号）
+
+  // ─── 有効な初検料算定件数（validInitCount）を算出 ─────────────────────────────
+  // 制度根拠（厚生労働省集団指導資料）:
+  //   再検料は「初検料を算定する初検の日後、最初の後療の日のみ」算定可
+  //   現に施術継続中に他の負傷が発生した場合、初検料は合わせて1回 → 再検料も増えない [A]
+  //   治癒後に同月内で新たな別負傷が発生した場合、初検料を再度算定可 → 再検料も別途1回 [B]
+  //
+  // 判定: 月内に2つの初検 event が存在する場合、先行ケースの終了日 < 後続ケースの初検日 なら [B]
+  //   [A] 施術継続中 Mixed: 終了日なし or 終了日 >= 後続初検日 → validInitCount=1
+  //   [B] 治癒後の新規別負傷: 先行ケース終了日 < 後続ケース初検日 → validInitCount=2
+  //
+  // エッジケース:
+  //   earlier.endDate === later.initDate: 厳密 < のため施術継続中 [A] 扱い（同日は保守側に倒す）
+  //   earlier.endDate が空（Date でない）: isPostRecovery=false → [A] 扱い
+  //   caseNo 列なし: 全行を caseNo=1 扱いにするため initCases.length<=1 → validInitCount=min(rawInitCount,1)
+  const initCases = Object.keys(caseInfo).filter(function(no) { return caseInfo[no].hasInit; });
+  let validInitCount;
+  if (initCases.length <= 1) {
+    validInitCount = initCases.length;
+  } else {
+    // 2件の初検あり → 時系列順で先行/後続を特定し、先行ケースが後続の初検日前に終了しているか判定
+    const sorted = initCases.map(function(no) {
+      return { initDate: caseInfo[no].initDate, endDate: caseInfo[no].endDate };
+    }).sort(function(a, b) { return a.initDate - b.initDate; });
+    const earlier = sorted[0];
+    const later   = sorted[1];
+    // earlier.endDate < later.initDate（厳密）→ 治癒後の新規別負傷 [B]
+    // earlier.endDate が Date でない or >= later.initDate → 施術継続中 [A]
+    const isPostRecovery = earlier.endDate instanceof Date && earlier.endDate < later.initDate;
+    validInitCount = isPostRecovery ? 2 : 1;
+  }
+
+  // ★ initCount: validInitCount を上限とする
+  //   amounts.js の getMonthlyBilledStatus_ が治癒後別負傷 [B] を正しく判定するよう修正済みのため、
+  //   transferData 側も validInitCount に合わせて初検料算定件数を反映する。
+  //   [A] 施術継続中 Mixed: Math.min(rawInitCount, 1) と等価
+  //   [B] 治癒後別負傷:     Math.min(rawInitCount, 2) で 2 件を反映
+  // ★ reCount: 有効初検数(validInitCount)を上限とする（[A]=1 / [B]=2）
   return {
-    initCount: Math.min(initCount, 1),
-    reCount:   Math.min(reCount, 1),
+    initCount: Math.min(rawInitCount, validInitCount),
+    reCount:   Math.min(rawReCount, validInitCount),
   };
 }
 
@@ -919,7 +1481,14 @@ function V3TR_buildCaseMoneyBlock_(agg) {
   const koryoCount = agg.koryoCount || 0;
   const koryoUnit = (koryoCount > 0) ? Math.round(koryoSum / koryoCount) : 0;
 
-  const caseTotal = koryoSum + coldSum + warmSum + elecSum;
+  // 施療料（初検日の部位基本料）を全部位分合算してcaseTotalに算入する。
+  // V3TR_aggregateDetailMonthly_ で kubun="初検" のbaseはkoryoSumに含めず
+  // ptgt.shoryoFee に個別保存されているため、ここで明示的に合算する。
+  const shoryoSum = Math.round(
+    Object.values(agg.parts || {}).reduce(function(s, p) { return s + (p.shoryoFee || 0); }, 0)
+  );
+
+  const caseTotal = shoryoSum + koryoSum + coldSum + warmSum + elecSum;
 
   return {
     koryoUnit,
@@ -1083,6 +1652,13 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   const sh = ss.getSheetByName(CM.templateSheet);
   if (!sh) throw new Error("テンプレシート「" + CM.templateSheet + "」が見つかりません。");
 
+  // RC-1整合: 転記シートに旧 case2 行が残っていても
+  // caseKey が空 かつ case計=0 ならデータなしとして null 扱いにする。
+  // exportTransferJson_（B案経路）と同じ判定条件に統一する。
+  if (row2 && !String(row2["caseKey"] || "").trim() && Number(row2["case計"] || 0) === 0) {
+    row2 = null;
+  }
+
   let count = 0;
 
   /** セルに値を書き込むヘルパー（空・0は書かない） */
@@ -1161,7 +1737,12 @@ function V3TR_writeToApplication_(ss, row1, row2) {
     const m = injRows[i];
     if (!d.name) continue;
 
-    put(m.name, d.name);
+    // 行26（i=0）→（1）、行27（i=1）→（2）を先頭に付ける
+    // 行28以降はテンプレートに (3)(4)(5) が既存のため番号不要
+    var injName = d.name;
+    if (i === 0) injName = "（1）" + injName;
+    else if (i === 1) injName = "（2）" + injName;
+    put(m.name, injName);
     V3TR_putDateYMD_(sh, m.injY, m.injM, m.injD, d.injuryDate);
     V3TR_putDateYMD_(sh, m.iniY, m.iniM, m.iniD, d.firstDate);
     V3TR_putDateYMD_(sh, m.stY, m.stM, m.stD, d.startDate);
@@ -1223,6 +1804,111 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   putDigits(CM.合計, row1["当月合計"]);
   putDigits(CM.一部負担金, row1["窓口負担額"]);
   putDigits(CM.請求金額, row1["請求金額"]);
+
+  // ===== U7 請求区分 行31 DH31 =====
+  // "新規" or "継続" を書き込む。同月内治癒再発の両方○は将来対応。
+  put(CM.請求区分, row1["請求区分"]);
+
+  // ===== U5 本家区分 行8-13 =====
+  // 判定ソース: 保険種別・続柄・生年月日・一部負担金割合・対象月
+  // ★ 後期高齢者（保険種別=6 or 75歳以上）は制度上の記載方式未確認のため空欄（保留）
+  // ★ 暫定ルール: docs/JREC-01_申請書様式運用メモ.md §4 U5 参照
+  const HONKEKU_CIRCLE_MAP_ = {
+    "本人": ["2", "②"], "六歳": ["4", "④"], "家族": ["6", "⑥"],
+    "高一": ["8", "⑧"], "高7":  ["0", "⓪"],  // "高7" の "0" → Unicode U+24EA ⓪
+  };
+  const honkekuKey = V3TR_deriveHonkeku_(row1);
+  if (honkekuKey && CM[honkekuKey]) {
+    var hcCell = sh.getRange(CM[honkekuKey]);
+    var hcVal  = String(hcCell.getValue() || "");
+    var hm     = HONKEKU_CIRCLE_MAP_[honkekuKey];
+    if (hm && hcVal.indexOf(hm[0]) !== -1) {
+      hcCell.setValue(hcVal.replace(hm[0], hm[1]));
+      count++;
+    }
+  }
+
+  // ===== U6 給付割合 行8-13 =====
+  // 片側丸付け: 対象数字1文字のみ置換（U5と同方式）
+  // テンプレート実値: DP8='10・９' / DP11='８・７'（全角文字）
+  // 割合=1→DP8('９'→'⑨') / 割合=2→DP11('８'→'⑧') / 割合=3→DP11('７'→'⑦')
+  // 根拠: docs/JREC-01_申請書様式運用メモ.md §4 U6 参照
+  const burden6 = Number(row1["一部負担金割合"]) || 0;
+  var kyufuCharMap6 = {
+    1: [CM.給付9割,  "９", "⑨"],
+    2: [CM.給付8_7割, "８", "⑧"],
+    3: [CM.給付8_7割, "７", "⑦"],
+  };
+  var kyufuEntry6 = kyufuCharMap6[burden6];
+  if (kyufuEntry6 && kyufuEntry6[0]) {
+    var kyufuRng6 = sh.getRange(kyufuEntry6[0]);
+    var kyufuVal6 = String(kyufuRng6.getValue() || "");
+    if (kyufuVal6.indexOf(kyufuEntry6[1]) !== -1) {
+      kyufuRng6.setValue(kyufuVal6.replace(kyufuEntry6[1], kyufuEntry6[2]));
+      count++;
+    }
+  }
+
+  // ===== D4 負傷原因 行20 BR20 =====
+  // 出力条件: 申請書記載部位の合計が3以上のとき
+  // 根拠: 柔整療養費告示 別表第2 備考2「3部位目は所定料金の100分の60」
+  // 部位スロット: スロット1=row1.部位1/スロット2=row1.部位2/スロット3=row2.部位1/スロット4=row2.部位2
+  // 修正理由: 旧条件「row2["部位1_計"]>0」は case1(1部位)+case2(1部位)=2部位でもトリガーしていた（2026-04-20 修正）
+  var _s1 = Number(row1["部位1_計"] || 0) > 0 || Number(row1["部位1_後療料_金額"] || 0) > 0;
+  var _s2 = Number(row1["部位2_計"] || 0) > 0 || Number(row1["部位2_後療料_金額"] || 0) > 0;
+  var _s3 = (row2 != null) && (Number(row2["部位1_計"] || 0) > 0 || Number(row2["部位1_後療料_金額"] || 0) > 0);
+  var _s4 = (row2 != null) && (Number(row2["部位2_計"] || 0) > 0 || Number(row2["部位2_後療料_金額"] || 0) > 0);
+  var _totalParts = (_s1 ? 1 : 0) + (_s2 ? 1 : 0) + (_s3 ? 1 : 0) + (_s4 ? 1 : 0);
+  var part3HasData = _totalParts >= 3;
+  if (part3HasData) {
+    var d4Parts = [];
+    function V3TR_buildInjuryText_(r) {
+      var seg = [];
+      var dt     = String(r["負傷の日時"] || "").trim();  // 日時→場所→状況
+      var place  = String(r["負傷の場所"] || "").trim();
+      var status = String(r["負傷の状況"] || "").trim();
+      if (dt)     seg.push(dt);
+      if (place)  seg.push(place);
+      if (status) seg.push(status);
+      return seg.join("\u3000"); // 全角スペース区切り
+    }
+    var d4T1 = V3TR_buildInjuryText_(row1);
+    var d4T2 = row2 ? V3TR_buildInjuryText_(row2) : "";
+    if (d4T1) d4Parts.push(d4T1);
+    if (d4T2 && d4T2 !== d4T1) d4Parts.push(d4T2);
+    // 1ケースにつき1行・行頭に（1）（2）番号付き・改行区切り
+    var d4Lines = d4Parts.map(function(t, idx) { return "（" + (idx + 1) + "）" + t; });
+    var d4Text = d4Lines.join("\n");
+    if (d4Text) put(CM.負傷原因, d4Text);
+  }
+
+  // ===== 施術機関固定情報（設定シートから取得）=====
+  // U1: 都道府県番号 → CI2 / U2: 施術機関コード → CZ2 / U4: 単独 → CT8
+  // 下段登録記号番号 → CR51(左)/DK51(中)/DR51(右) 分割書込
+  // ★ U2 は 登録記号番号 から先頭「協/契」のみ除去（ハイフン保持）した値を使う（暫定運用）
+  const shSettingsForClinic = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
+  const clinicInfo = V3TR_loadClinicInfo_(shSettingsForClinic);
+  put(CM.都道府県番号, clinicInfo.prefectureNo);
+  put(CM.施術機関コード, V3TR_deriveClinicCode_(clinicInfo.torokuKigoNo));
+  // U4 単独: テンプレート "1.単独" の "1" を "①" に置換
+  if (clinicInfo.prefectureNo || clinicInfo.torokuKigoNo) {
+    var tankeiCell = sh.getRange(CM.単独);
+    var tankeiVal = tankeiCell.getValue();
+    if (String(tankeiVal).indexOf("1") !== -1) {
+      tankeiCell.setValue(String(tankeiVal).replace("1", "①"));
+      count++;
+    }
+  }
+  // 下段 登録記号番号 → CR51/DK51/DR51（分割書込）
+  // CR49:DV50 はラベル行「登録記号番号」→ 書き込まない
+  // 例: '契2804440-0-0' → 左='契2804440' / 中='0' / 右='0'
+  var torokuFull = String(clinicInfo.torokuKigoNo || "").trim();
+  if (torokuFull && CM.登録記号番号_左) {
+    var torokuParts = torokuFull.split("-");
+    put(CM.登録記号番号_左, torokuParts[0] || "");
+    put(CM.登録記号番号_中, torokuParts.length > 1 ? torokuParts[1] : "");
+    put(CM.登録記号番号_右, torokuParts.length > 2 ? torokuParts[2] : "");
+  }
 
   return count;
 }
@@ -1441,9 +2127,12 @@ function V3TR_menuExportJson() {
  * @param {string} ym - yyyy-MM
  * @return {string} JSON文字列
  */
-function V3TR_exportTransferJson_(ss, patientId, ym) {
-  // まず転記データを生成/更新
-  V3TR_buildTransferDataForMonth_(ss, patientId, ym);
+/**
+ * @param {boolean} [skipBuild=false] true のとき build を省略（B案ループ内など build 済みの場合）
+ */
+function V3TR_exportTransferJson_(ss, patientId, ym, skipBuild) {
+  // まず転記データを生成/更新（skipBuild=true の場合は呼び出し元で build 済みのため省略）
+  if (!skipBuild) V3TR_buildTransferDataForMonth_(ss, patientId, ym);
 
   const shTransfer = ss.getSheetByName(V3TR.CONFIG.sheetNames.transfer);
   const tMap = V3TR_buildHeaderMap_(shTransfer);
@@ -1458,6 +2147,13 @@ function V3TR_exportTransferJson_(ss, patientId, ym) {
     const k = String(tData[r][cRK] || "").trim();
     if (k === recordKey1) row1 = V3TR_rowToObj_(tData[r], tMap);
     if (k === recordKey2) row2 = V3TR_rowToObj_(tData[r], tMap);
+  }
+
+  // RC-1整合: シートに旧 case2 行が残っていても
+  // caseKey が空 かつ case計=0 ならデータなしとして null 扱いにする。
+  // V3TR_buildTransferDataForMonth_ の guard（空行追加抑制）と条件を統一する。
+  if (row2 && !String(row2["caseKey"] || "").trim() && Number(row2["case計"] || 0) === 0) {
+    row2 = null;
   }
 
   // 通院日リスト（施術明細から取得）
@@ -1549,12 +2245,20 @@ function V3TR_menuBatchExportJson() {
 
   // 2. 各患者のJSONを生成
   var now = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
+  // 施術機関固定情報（設定シートから取得して meta に埋め込む）
+  var shSettingsA = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
+  var clinicInfoA = V3TR_loadClinicInfo_(shSettingsA);
   var metaLine = JSON.stringify({
     _meta: true,
     schemaVersion: "3.0",
     generatedAt: now,
     month: ym,
-    patientCount: patientIds.length
+    patientCount: patientIds.length,
+    prefectureNo:       clinicInfoA.prefectureNo,
+    torokuKigoNo:       clinicInfoA.torokuKigoNo,
+    clinicName:         clinicInfoA.clinicName,
+    clinicAddr:         clinicInfoA.clinicAddr,
+    clinicPractitioner: clinicInfoA.clinicPractitioner,
   });
 
   var ndjsonLines = [metaLine];
@@ -1571,6 +2275,16 @@ function V3TR_menuBatchExportJson() {
       // JSON生成（既存関数を利用）
       var jsonStr = V3TR_exportTransferJson_(ss, pid, ym);
       var parsed = JSON.parse(jsonStr);
+
+      // ★Layer 2 安全フィルタ: 保険請求額=0 の患者は申請対象外として除外
+      var _eL2c1 = parsed.case1 ? Number(parsed.case1["請求金額"] || 0) : 0;
+      var _eL2c2 = parsed.case2 ? Number(parsed.case2["請求金額"] || 0) : 0;
+      if (_eL2c1 === 0 && _eL2c2 === 0) {
+        Logger.log("申請対象外スキップ（保険請求額=0）: " + pid);
+        ss.toast("スキップ（申請対象外）: " + pid, "一括JSON出力", 3);
+        sheetRows.push([pid, "SKIP: 保険請求額=0円（申請対象外）"]);
+        continue;
+      }
 
       // NDJSON行: { patientId, case1, case2, visitDays }
       var patientLine = JSON.stringify({
@@ -1589,15 +2303,17 @@ function V3TR_menuBatchExportJson() {
     }
   }
 
+  // ① patientCount後補正: スキップ発生時の validate_batch_safe 不一致を防ぐ
+  var actualMetaA = JSON.parse(metaLine);
+  actualMetaA.patientCount = ndjsonLines.length - 1;  // meta行を除いた実患者数
+  ndjsonLines[0] = JSON.stringify(actualMetaA);
+
   // 3. Drive に NDJSON ファイルを出力
   var ndjsonContent = ndjsonLines.join("\n");
   var fileName = "transfer_batch_" + ym + ".ndjson";
-  var folder = V3TR_getOutputFolder_(ss);
-  // 既存の同名ファイルがあれば上書き（削除→新規作成）
-  var existing = folder.getFilesByName(fileName);
-  while (existing.hasNext()) {
-    existing.next().setTrashed(true);
-  }
+  var folder = V3TR_getApplicationOutputFolder_(ss, ym);
+  var archiveFolder = V3TR_getArchiveOutputFolder_(ss, ym);
+  V3TR_archiveExistingFilesByExactName_(folder, archiveFolder, fileName);
   var file = folder.createFile(fileName, ndjsonContent, "application/x-ndjson");
 
   // 4. _JSON出力シートにバックアップ
@@ -1644,16 +2360,23 @@ function V3TR_findPatientsForMonth_(ss, ym) {
   }
 
   // --- 来院ヘッダからスキャン（補助ソース、明細欠けの患者も拾う） ---
+  // ★Layer 1 安全フィルタ: 会計区分=「自費のみ」の行は保険申請対象外なのでスキップ。
+  //   自費のみ来院は施術明細に記録されないため、来院ヘッダ経由でのみ申請リストに混入するリスクがある。
+  //   安全ルール: 保険申請対象 = 会計区分 ∈ {保険のみ, 保険+自費, ""(旧データ)} の行のみ通す。
+  //   列が存在しない場合（旧データ等）は安全方向でスキップせず通す。
   var shHeader = ss.getSheetByName("来院ヘッダ");
   if (shHeader && shHeader.getLastRow() >= 2) {
     var hMap = V3TR_buildHeaderMap_(shHeader);
     var hPid = hMap["患者ID"];
     var hDt = hMap["施術日"];
+    var hAcct = hMap["会計区分"];  // Layer 1: 申請対象フィルタ用
     if (hPid !== undefined && hDt !== undefined) {
       var hv = shHeader.getDataRange().getValues();
       for (var r = 1; r < hv.length; r++) {
         var dt = hv[r][hDt];
         if (V3TR_inRange_(dt, month.start, month.end)) {
+          // Layer 1: 会計区分=「自費のみ」の行は申請リストに含めない
+          if (hAcct !== undefined && String(hv[r][hAcct] || "").trim() === "自費のみ") continue;
           var pid = String(hv[r][hPid] || "").trim();
           if (pid) patientSet[pid] = true;
         }
@@ -1669,6 +2392,10 @@ function V3TR_findPatientsForMonth_(ss, ym) {
  * 優先順: 設定シートの「出力フォルダID」→ スプレッドシート親フォルダ → ルート
  */
 function V3TR_getOutputFolder_(ss) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateMonthlyOutputRootFolder_) {
+    return V3OUT.getOrCreateMonthlyOutputRootFolder_(ss, '');
+  }
+
   // 設定シートから出力フォルダIDを取得
   var shSettings = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
   if (shSettings) {
@@ -1701,6 +2428,481 @@ function V3TR_getOutputFolder_(ss) {
   // 最終フォールバック: ルート
   return DriveApp.getRootFolder();
 }
+
+/**
+ * 申請書の月次保存先フォルダを返す。
+ * 新ルール: JREC-01_月次出力/YYYY-MM/01_申請書/
+ */
+function V3TR_getApplicationOutputFolder_(ss, ym) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateDocTypeFolder_) {
+    return V3OUT.getOrCreateDocTypeFolder_(ss, ym, 'application', '');
+  }
+  return V3TR_getOrCreateMonthFolder_(V3TR_getOutputFolder_(ss), ym);
+}
+
+/**
+ * 月次再生成の旧版退避先フォルダを返す。
+ * 新ルール: JREC-01_月次出力/YYYY-MM/90_再生成旧版/
+ */
+function V3TR_getArchiveOutputFolder_(ss, ym) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.getOrCreateArchiveFolder_) {
+    return V3OUT.getOrCreateArchiveFolder_(ss, ym, '');
+  }
+  return V3TR_getOrCreateMonthFolder_(V3TR_getOutputFolder_(ss), ym);
+}
+
+function V3TR_archiveExistingFilesByExactName_(sourceFolder, archiveFolder, fileName) {
+  if (typeof V3OUT !== 'undefined' && V3OUT.archiveFilesByExactName_) {
+    return V3OUT.archiveFilesByExactName_(sourceFolder, archiveFolder, fileName);
+  }
+
+  var existing = sourceFolder.getFilesByName(fileName);
+  var movedCount = 0;
+  while (existing.hasNext()) {
+    existing.next().setTrashed(true);
+    movedCount++;
+  }
+  return movedCount;
+}
+
+function V3TR_archiveExistingApplicationFiles_(sourceFolder, archiveFolder, patientId, ym) {
+  var prefix = "申請書_" + String(patientId || "").trim() + "_" + String(ym || "").trim() + "_";
+  if (typeof V3OUT !== 'undefined' && V3OUT.archiveFilesByPrefix_) {
+    return V3OUT.archiveFilesByPrefix_(sourceFolder, archiveFolder, prefix);
+  }
+  return 0;
+}
+
+/**
+ * ===== 申請書生成 B案メニュー =====
+ * スプレッドシートから1クリックで申請書 xlsx を生成して Drive に保存する。
+ *
+ * 処理フロー:
+ *   1. HTMLダイアログで患者ID（省略可）と対象月を入力
+ *   2. NDJSON 生成（既存ロジック流用）
+ *   3. Cloud Run POST /generate（X-Secret-Key 認証）
+ *   4. レスポンス base64 → Drive の月別フォルダに xlsx 保存
+ *   5. _申請書生成ログ シートへ記録
+ *   6. 完了メッセージをダイアログ内に表示
+ *
+ * 設定（スクリプトプロパティ）:
+ *   APPGEN_ENDPOINT  - Cloud Run エンドポイント URL
+ *   APPGEN_SECRET    - X-Secret-Key の値
+ */
+function V3TR_menuGenerateApplication_B() {
+  var defaultYm = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM");
+  var html =
+    '<!DOCTYPE html><style>' +
+    'body{font-family:sans-serif;font-size:13px;margin:16px;line-height:1.5}' +
+    'label{display:block;margin-top:10px;font-weight:bold}' +
+    'input{width:100%;box-sizing:border-box;margin-top:4px;padding:5px;font-size:13px}' +
+    '.note{color:#888;font-size:11px;margin-top:2px}' +
+    '.buttons{margin-top:18px}' +
+    'button{padding:7px 18px;margin-right:8px;cursor:pointer;font-size:13px;border-radius:4px}' +
+    '.primary{background:#1a73e8;color:#fff;border:none}' +
+    '.secondary{background:#fff;border:1px solid #ccc}' +
+    '#msg{margin-top:10px;color:red;white-space:pre-wrap;font-size:12px}' +
+    '#result{display:none;margin-top:10px;white-space:pre-wrap;font-size:12px}' +
+    '</style>' +
+    '<form id="frm">' +
+    '<label>患者ID <span style="font-weight:normal;color:#888">（省略 = 対象月の全患者）</span></label>' +
+    '<input id="pid" type="text" placeholder="例: P001">' +
+    '<label>対象月</label>' +
+    '<input id="ym" type="text" value="' + defaultYm + '" placeholder="yyyy-MM">' +
+    '<div class="note">例: ' + defaultYm + '</div>' +
+    '<div class="buttons">' +
+    '<button class="primary" type="button" onclick="run()">生成</button>' +
+    '<button class="secondary" type="button" onclick="google.script.host.close()">キャンセル</button>' +
+    '</div></form>' +
+    '<div id="msg"></div>' +
+    '<div id="result"></div>' +
+    '<script>' +
+    'function run(){' +
+    '  var pid=document.getElementById("pid").value.trim();' +
+    '  var ym=document.getElementById("ym").value.trim();' +
+    '  if(!/^\\d{4}-\\d{2}$/.test(ym)){document.getElementById("msg").textContent="対象月は yyyy-MM 形式で入力してください。";return;}' +
+    '  document.getElementById("msg").textContent="処理中… 別ダイアログが表示された場合はそちらを操作してください。";' +
+    '  document.querySelectorAll("button").forEach(function(b){b.disabled=true;});' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(res){' +
+    '      document.getElementById("frm").style.display="none";' +
+    '      document.getElementById("msg").textContent="";' +
+    '      document.getElementById("result").style.display="block";' +
+    '      document.getElementById("result").textContent=res;' +
+    '    })' +
+    '    .withFailureHandler(function(e){' +
+    '      document.querySelectorAll("button").forEach(function(b){b.disabled=false;});' +
+    '      document.getElementById("msg").textContent="\u26a0 "+e.message;' +
+    '    })' +
+    '    .V3TR_runGenerateApplicationDialog(pid,ym);' +
+    '}' +
+    '<\/script>';
+  SpreadsheetApp.getUi().showModalDialog(
+    HtmlService.createHtmlOutput(html).setWidth(380).setHeight(240),
+    "申請書生成（B案）"
+  );
+}
+
+function V3TR_runGenerateApplicationDialog(patientId, ym) {
+  var pid = String(patientId || "").trim();
+  var ss  = SpreadsheetApp.getActive();
+  var patientIds;
+  if (pid) {
+    patientIds = [pid];
+  } else {
+    patientIds = V3TR_findPatientsForMonth_(ss, ym);
+    if (patientIds.length === 0) {
+      throw new Error("対象月（" + ym + "）に来院記録のある患者が見つかりません。");
+    }
+  }
+  return V3TR_generateApplicationBCore_(patientIds, ym);
+}
+
+function V3TR_generateApplicationBCore_(patientIds, ym) {
+  var ss = SpreadsheetApp.getActive();
+  var ui = SpreadsheetApp.getUi();
+
+  // ===== 2. 設定取得 =====
+  var props = PropertiesService.getScriptProperties();
+  var endpoint = props.getProperty("APPGEN_ENDPOINT") || "";
+  var secretKey = props.getProperty("APPGEN_SECRET") || "";
+
+  if (!endpoint) {
+    throw new Error("スクリプトプロパティ「APPGEN_ENDPOINT」が未設定です。\n" +
+      "スクリプトエディタ > プロジェクトの設定 > スクリプトプロパティ から設定してください。");
+  }
+  if (!secretKey) {
+    throw new Error("スクリプトプロパティ「APPGEN_SECRET」が未設定です。");
+  }
+
+  // ===== 3. NDJSON 生成 =====
+  ss.toast("NDJSON 生成中... (" + patientIds.length + " 名)", "申請書生成", 5);
+
+  var genAt = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
+  // 施術機関固定情報（設定シートから取得して meta に埋め込む）
+  var shSettingsB = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
+  var clinicInfoB = V3TR_loadClinicInfo_(shSettingsB);
+  var metaLine = JSON.stringify({
+    _meta: true,
+    schemaVersion: "3.0",
+    generatedAt: genAt,
+    month: ym,
+    patientCount: patientIds.length,
+    prefectureNo:       clinicInfoB.prefectureNo,
+    torokuKigoNo:       clinicInfoB.torokuKigoNo,
+    clinicName:         clinicInfoB.clinicName,
+    clinicAddr:         clinicInfoB.clinicAddr,
+    clinicPractitioner: clinicInfoB.clinicPractitioner,
+  });
+  var ndjsonLines = [metaLine];
+
+  var skipPatients = [];
+  for (var i = 0; i < patientIds.length; i++) {
+    var pid = patientIds[i];
+    try {
+      // P1 二重build除去: build後に skipBuild=true で export を呼ぶ（1患者1回）
+      V3TR_buildTransferDataForMonth_(ss, pid, ym);
+      var jsonStr = V3TR_exportTransferJson_(ss, pid, ym, true);
+      var parsed = JSON.parse(jsonStr);
+      // ★Layer 2 安全フィルタ: 保険請求額=0 の患者は申請対象外として除外。
+      //   Layer 1（会計区分フィルタ）をすり抜けた場合の安全網。
+      //   claimPay=0 = 保険申請する金額がない = 申請書を生成してはならない。
+      var _bL2c1 = parsed.case1 ? Number(parsed.case1["請求金額"] || 0) : 0;
+      var _bL2c2 = parsed.case2 ? Number(parsed.case2["請求金額"] || 0) : 0;
+      if (_bL2c1 === 0 && _bL2c2 === 0) {
+        Logger.log("[B案] 申請対象外スキップ（保険請求額=0）: " + pid);
+        skipPatients.push(pid + "（申請対象外: 保険請求額=0円）");
+        continue;
+      }
+      ndjsonLines.push(JSON.stringify({
+        patientId: pid,
+        case1: parsed.case1,
+        case2: parsed.case2,
+        visitDays: parsed.visitDays || []
+      }));
+    } catch (e) {
+      Logger.log("[B案] NDJSON生成エラー: " + pid + " - " + e.message);
+      skipPatients.push(pid + "（" + e.message + "）");
+    }
+  }
+
+  // ===== ②-A プリフライトバリデーション（Cloud Run POST 前）=====
+  // NDJSON生成は成功したが内容に問題がある患者を検出し、人間に判断を委ねる
+  var PREFLIGHT_REQUIRED_KEYS = ["患者ID", "対象月", "患者氏名", "当月合計", "窓口負担額", "請求金額"];
+  var preflightErrors   = [];  // [{pid, reasons:[]}]  hard error → 除外対象
+  var preflightWarnings = [];  // [{pid, warnings:[]}] warning   → 確認後続行可
+
+  for (var pi = 1; pi < ndjsonLines.length; pi++) {
+    var pLine;
+    try { pLine = JSON.parse(ndjsonLines[pi]); } catch (pe) {
+      preflightErrors.push({ pid: "(行" + (pi + 1) + ")", reasons: ["JSONパース失敗: " + pe.message] });
+      continue;
+    }
+    var ppid = pLine.patientId || "(患者ID不明)";
+    var reasons  = [];
+    var warnings = [];
+    var c1 = pLine.case1;
+    if (!c1) {
+      reasons.push("case1 が null（転記データ未生成の可能性）");
+    } else {
+      // --- hard error: 必須キー空 ---
+      PREFLIGHT_REQUIRED_KEYS.forEach(function(k) {
+        var v = c1[k];
+        if (v === null || v === undefined || String(v).trim() === "") {
+          reasons.push("必須項目「" + k + "」が空");
+        }
+      });
+      // --- hard error: 対象月不一致 ---
+      var c1Month = String(c1["対象月"] || "").trim();
+      if (c1Month && c1Month !== ym) {
+        reasons.push("対象月不一致（データ=" + c1Month + ", 実行月=" + ym + "）");
+      }
+
+      // --- warning: 0値・未確定値（当月合計 > 0 の場合のみ評価）---
+      var totalAmt  = Number(c1["当月合計"]    || 0);
+      var copayAmt  = Number(c1["窓口負担額"]   || 0);
+      var claimAmt  = Number(c1["請求金額"]     || 0);
+      var burdenDig = c1["一部負担金割合"];
+      var burdenVal = (burdenDig === null || burdenDig === undefined) ? 0 : Number(burdenDig);
+      if (totalAmt > 0) {
+        if (!burdenDig || burdenVal === 0) {
+          warnings.push("一部負担金割合が 0 または未設定（負担割合が不明な可能性）");
+        }
+        if (copayAmt === 0) {
+          warnings.push("当月合計 " + totalAmt + " 円 なのに窓口負担額が 0（免除・後日確認の場合は無視可）");
+        }
+        if (claimAmt === 0) {
+          warnings.push("当月合計 " + totalAmt + " 円 なのに請求金額が 0（要確認）");
+        }
+        if (copayAmt + claimAmt !== totalAmt) {
+          warnings.push("窓口負担額(" + copayAmt + ") + 請求金額(" + claimAmt + ") = " +
+            (copayAmt + claimAmt) + " が当月合計(" + totalAmt + ")と一致しない");
+        }
+      }
+    }
+    if (reasons.length  > 0) preflightErrors.push({   pid: ppid, reasons:  reasons  });
+    if (warnings.length > 0) preflightWarnings.push({ pid: ppid, warnings: warnings });
+  }
+
+  // ===== ②-B プリフライト結果処理（hard error）=====
+  if (preflightErrors.length > 0) {
+    var pfLines = ["【確認】以下の患者にデータ上の問題が見つかりました。\n"];
+    preflightErrors.forEach(function(e) {
+      pfLines.push("  " + e.pid + ":");
+      e.reasons.forEach(function(r) { pfLines.push("    ・" + r); });
+    });
+    pfLines.push("\nこの患者をスキップして他の患者のみ生成しますか？");
+    pfLines.push("（「はい」: 問題患者を除外して続行 ／ 「いいえ」: 中断）");
+
+    var pfResp = ui.alert("申請書生成（B案）", pfLines.join("\n"), ui.ButtonSet.YES_NO);
+    if (pfResp !== ui.Button.YES) {
+      throw new Error("申請書生成を中断しました。\n問題患者のデータを確認してから再実行してください。");
+    }
+
+    // 問題患者を NDJSON から除外
+    var errorPids = {};
+    preflightErrors.forEach(function(e) { errorPids[e.pid] = true; });
+    var filteredLines = [ndjsonLines[0]];  // meta行は保持
+    for (var fi = 1; fi < ndjsonLines.length; fi++) {
+      var fl;
+      try { fl = JSON.parse(ndjsonLines[fi]); } catch(_) { continue; }
+      if (!errorPids[fl.patientId]) {
+        filteredLines.push(ndjsonLines[fi]);
+      } else {
+        // skipPatients に転記（除外理由付き）
+        var pfErr = preflightErrors.filter(function(e) { return e.pid === fl.patientId; })[0];
+        var pfReason = pfErr ? pfErr.reasons.join(" / ") : "プリフライト除外";
+        skipPatients.push(fl.patientId + "（プリフライト除外: " + pfReason + "）");
+        Logger.log("[B案] プリフライト除外: " + fl.patientId + " - " + pfReason);
+      }
+    }
+    ndjsonLines = filteredLines;
+
+    if (ndjsonLines.length === 1) {
+      throw new Error("問題患者を除外した結果、生成対象の患者がいなくなりました。\n処理を中断します。");
+    }
+  }
+
+  // ===== ②-C プリフライト結果処理（warning）=====
+  // hard error で除外された患者の warning は表示しない（もう対象外のため）
+  var excludedByError = {};
+  preflightErrors.forEach(function(e) { excludedByError[e.pid] = true; });
+  var activeWarnings = preflightWarnings.filter(function(w) { return !excludedByError[w.pid]; });
+
+  if (activeWarnings.length > 0) {
+    var wfLines = ["【要確認】以下の患者に未確定の可能性がある値があります。\n"];
+    activeWarnings.forEach(function(w) {
+      wfLines.push("  " + w.pid + ":");
+      w.warnings.forEach(function(msg) { wfLines.push("    ⚠️ " + msg); });
+    });
+    wfLines.push("\n※正当な値であれば無視して構いません。");
+    wfLines.push("このまま生成を続けますか？");
+    wfLines.push("（「はい」: このまま続行 ／ 「いいえ」: 中断して確認）");
+
+    var wfResp = ui.alert("申請書生成（B案）— 要確認", wfLines.join("\n"), ui.ButtonSet.YES_NO);
+    if (wfResp !== ui.Button.YES) {
+      throw new Error("申請書生成を中断しました。\n値を確認してから再実行してください。");
+    }
+    // 続行（患者除外なし）
+    Logger.log("[B案] warning を確認のうえ続行: " + activeWarnings.map(function(w) { return w.pid; }).join(", "));
+  }
+
+  // ① patientCount後補正: スキップ・プリフライト除外後の実患者数で補正
+  var actualMetaB = JSON.parse(ndjsonLines[0]);
+  actualMetaB.patientCount = ndjsonLines.length - 1;  // meta行を除いた実患者数
+  ndjsonLines[0] = JSON.stringify(actualMetaB);
+
+  var ndjsonStr = ndjsonLines.join("\n");
+
+  // ===== 4. Cloud Run へ POST =====
+  ss.toast("Cloud Run に送信中...", "申請書生成", 10);
+
+  var payload = JSON.stringify({ ndjson: ndjsonStr, month: ym });
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "X-Secret-Key": secretKey },
+    payload: payload,
+    muteHttpExceptions: true
+  };
+
+  var resp;
+  try {
+    resp = UrlFetchApp.fetch(endpoint + "/generate", options);
+  } catch (e) {
+    throw new Error("Cloud Run への接続に失敗しました:\n" + e.message +
+      "\n\nエンドポイント: " + endpoint);
+  }
+
+  var statusCode = resp.getResponseCode();
+  var bodyText = resp.getContentText();
+
+  if (statusCode !== 200) {
+    Logger.log("[B案] HTTP " + statusCode + ": " + bodyText);
+    throw new Error("申請書生成に失敗しました (HTTP " + statusCode + ")\n\n" + bodyText.slice(0, 300));
+  }
+
+  var result;
+  try {
+    result = JSON.parse(bodyText);
+  } catch (e) {
+    throw new Error("レスポンスの解析に失敗しました:\n" + bodyText.slice(0, 300));
+  }
+
+  // ===== 5. Drive に保存 =====
+  ss.toast("Drive に保存中...", "申請書生成", 10);
+
+  var monthFolder = V3TR_getApplicationOutputFolder_(ss, ym);
+  var archiveFolder = V3TR_getArchiveOutputFolder_(ss, ym);
+  var timestamp = Utilities.formatDate(new Date(), "Asia/Tokyo", "HHmmss");
+
+  var savedFiles = [];
+  var errorPatients = [];
+
+  var patients = result.patients || [];
+  for (var j = 0; j < patients.length; j++) {
+    var p = patients[j];
+    if (p.error || !p.content) {
+      errorPatients.push(p.patientId + "（" + (p.error || "content なし") + "）");
+      continue;
+    }
+    try {
+      V3TR_archiveExistingApplicationFiles_(monthFolder, archiveFolder, p.patientId, ym);
+      var fileName = "申請書_" + p.patientId + "_" + ym + "_" + timestamp + ".xlsx";
+      var xlsxBlob = Utilities.newBlob(
+        Utilities.base64Decode(p.content),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileName
+      );
+      var savedFile = monthFolder.createFile(xlsxBlob);
+      savedFiles.push({ patientId: p.patientId, fileName: fileName, url: savedFile.getUrl(), warnings: p.warnings || [] });
+    } catch (e) {
+      errorPatients.push(p.patientId + "（Drive保存エラー: " + e.message + "）");
+    }
+  }
+
+  // ===== 6. ログ記録 =====
+  V3TR_writeGenerationLog_(ss, ym, genAt, savedFiles, errorPatients.concat(skipPatients));
+
+  // ===== 7. 完了（結果を返す）=====
+  var lines = [
+    "【申請書生成完了】",
+    "",
+    "対象月: " + ym,
+    "保存: " + savedFiles.length + " 件",
+    "エラー: " + (errorPatients.length + skipPatients.length) + " 件",
+    "",
+    "保存先フォルダ: " + monthFolder.getUrl(),
+  ];
+
+  if (savedFiles.length > 0) {
+    lines.push("");
+    lines.push("生成ファイル:");
+    savedFiles.forEach(function(f) {
+      var warn = f.warnings.length > 0 ? " ⚠️要確認" : "";
+      lines.push("  " + f.patientId + warn);
+    });
+  }
+  if (errorPatients.length + skipPatients.length > 0) {
+    lines.push("");
+    lines.push("エラー患者:");
+    errorPatients.concat(skipPatients).forEach(function(e) {
+      lines.push("  " + e);
+    });
+  }
+
+  return lines.join("\n");
+}
+
+
+/**
+ * 月別フォルダを取得または作成する
+ * 例: output/2026-03/
+ */
+function V3TR_getOrCreateMonthFolder_(parentFolder, ym) {
+  var folders = parentFolder.getFoldersByName(ym);
+  if (folders.hasNext()) return folders.next();
+  return parentFolder.createFolder(ym);
+}
+
+
+/**
+ * _申請書生成ログ シートに生成結果を追記する
+ */
+function V3TR_writeGenerationLog_(ss, ym, generatedAt, savedFiles, errorList) {
+  var LOG_SHEET = "_申請書生成ログ";
+  var sh = ss.getSheetByName(LOG_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(LOG_SHEET);
+    sh.getRange(1, 1, 1, 8).setValues([[
+      "実行日時", "対象月", "患者ID", "ファイル名", "Drive URL",
+      "warnings", "ステータス", "エラー詳細"
+    ]]);
+    sh.setFrozenRows(1);
+  }
+
+  var rows = [];
+  savedFiles.forEach(function(f) {
+    rows.push([
+      generatedAt, ym, f.patientId, f.fileName, f.url,
+      f.warnings.join(" / "), "OK", ""
+    ]);
+  });
+  errorList.forEach(function(e) {
+    // "patientId（理由）" 形式のパース
+    var match = e.match(/^([^（]+)（(.+)）$/);
+    var pid = match ? match[1] : e;
+    var detail = match ? match[2] : "";
+    rows.push([
+      generatedAt, ym, pid, "", "", "", "ERROR", detail
+    ]);
+  });
+
+  if (rows.length > 0) {
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
+  }
+}
+
 
 /**
  * _JSON出力シートにバックアップ書き込み

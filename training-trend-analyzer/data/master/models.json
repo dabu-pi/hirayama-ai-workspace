@@ -1,0 +1,249 @@
+[
+  {
+    "_comment": "機種マスタ。brand は brands.json の canonical_name と一致させること",
+    "_version": "1.0",
+    "_updated": "2026-04-08"
+  },
+  {
+    "canonical_name": "Run",
+    "brand": "TECHNOGYM",
+    "category": "treadmill",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2019,
+    "discontinued": false,
+    "status": "active",
+    "notes": "TECHNOGYMの主力業務用トレッドミル。旧名 ARTIS Run からリニューアル"
+  },
+  {
+    "canonical_name": "Run Now",
+    "brand": "TECHNOGYM",
+    "category": "treadmill",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2023,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Runの後継モデル。タブレット搭載・Mywellness連携強化"
+  },
+  {
+    "canonical_name": "Skillmill",
+    "brand": "TECHNOGYM",
+    "category": "treadmill",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2015,
+    "discontinued": false,
+    "status": "active",
+    "notes": "エンジンレス・曲面ランニングマシン。HIT・機能的トレーニング用途"
+  },
+  {
+    "canonical_name": "Bike",
+    "brand": "TECHNOGYM",
+    "category": "bike",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2019,
+    "discontinued": false,
+    "status": "active",
+    "notes": "TECHNOGYMの主力アップライトバイク"
+  },
+  {
+    "canonical_name": "Skillrow",
+    "brand": "TECHNOGYM",
+    "category": "rowing",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2017,
+    "discontinued": false,
+    "status": "active",
+    "notes": "ウォーター抵抗式ローイングマシン。スタジオ向け"
+  },
+  {
+    "canonical_name": "ARTIS Run",
+    "brand": "TECHNOGYM",
+    "category": "treadmill",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2014,
+    "discontinued": true,
+    "status": "discontinued",
+    "notes": "Runの前身。中古市場で流通中"
+  },
+  {
+    "canonical_name": "T5",
+    "brand": "Life Fitness",
+    "category": "treadmill",
+    "model_number": "T5",
+    "use_type": "commercial",
+    "release_year": 2018,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Life Fitnessの業務用スタンダードトレッドミル"
+  },
+  {
+    "canonical_name": "95T",
+    "brand": "Life Fitness",
+    "category": "treadmill",
+    "model_number": "95T",
+    "use_type": "commercial",
+    "release_year": 2010,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Life Fitnessの長年のロングセラーモデル。中古市場でも多数流通"
+  },
+  {
+    "canonical_name": "Integrity S Treadmill",
+    "brand": "Life Fitness",
+    "category": "treadmill",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2020,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Integrityシリーズトレッドミル"
+  },
+  {
+    "canonical_name": "IC5",
+    "brand": "Life Fitness",
+    "category": "spin_bike",
+    "model_number": "IC5",
+    "use_type": "commercial",
+    "release_year": 2016,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Indoor Cycle 5。スタジオスピンバイクとして定番"
+  },
+  {
+    "canonical_name": "IC7",
+    "brand": "Life Fitness",
+    "category": "spin_bike",
+    "model_number": "IC7",
+    "use_type": "commercial",
+    "release_year": 2019,
+    "discontinued": false,
+    "status": "active",
+    "notes": "IC5の上位モデル。心拍数測定・パワーメーター搭載"
+  },
+  {
+    "canonical_name": "Axiom Series Dual Adjustable Pulley",
+    "brand": "Life Fitness",
+    "category": "functional_trainer",
+    "model_number": null,
+    "use_type": "commercial",
+    "release_year": 2015,
+    "discontinued": false,
+    "status": "active",
+    "notes": "デュアルアジャスタブルプーリー。通称 Axiom Series"
+  },
+  {
+    "canonical_name": "T75",
+    "brand": "Matrix",
+    "category": "treadmill",
+    "model_number": "T75",
+    "use_type": "commercial",
+    "release_year": 2019,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Matrixの業務用トレッドミル中上位モデル"
+  },
+  {
+    "canonical_name": "T50",
+    "brand": "Matrix",
+    "category": "treadmill",
+    "model_number": "T50",
+    "use_type": "commercial",
+    "release_year": 2018,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Matrixの業務用トレッドミルスタンダードモデル"
+  },
+  {
+    "canonical_name": "A50",
+    "brand": "Matrix",
+    "category": "elliptical",
+    "model_number": "A50",
+    "use_type": "commercial",
+    "release_year": 2019,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Matrixのエリプティカル中上位"
+  },
+  {
+    "canonical_name": "TRM 445",
+    "brand": "Precor",
+    "category": "treadmill",
+    "model_number": "TRM 445",
+    "use_type": "commercial",
+    "release_year": 2016,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Precorのエントリー業務用トレッドミル"
+  },
+  {
+    "canonical_name": "TRM 885",
+    "brand": "Precor",
+    "category": "treadmill",
+    "model_number": "TRM 885",
+    "use_type": "commercial",
+    "release_year": 2016,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Precorの業務用フラッグシップトレッドミル"
+  },
+  {
+    "canonical_name": "EFX 835",
+    "brand": "Precor",
+    "category": "elliptical",
+    "model_number": "EFX 835",
+    "use_type": "commercial",
+    "release_year": 2016,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Precorのフラッグシップエリプティカル"
+  },
+  {
+    "canonical_name": "770T",
+    "brand": "CYBEX",
+    "category": "treadmill",
+    "model_number": "770T",
+    "use_type": "commercial",
+    "release_year": 2015,
+    "discontinued": false,
+    "status": "active",
+    "notes": "CYBEXの業務用トレッドミル主力"
+  },
+  {
+    "canonical_name": "Model D",
+    "brand": "Concept2",
+    "category": "rowing",
+    "model_number": "Model D",
+    "use_type": "both",
+    "release_year": 2003,
+    "discontinued": false,
+    "status": "active",
+    "notes": "世界で最も普及しているローイングマシン。競技・ジム・自宅で標準的"
+  },
+  {
+    "canonical_name": "Model E",
+    "brand": "Concept2",
+    "category": "rowing",
+    "model_number": "Model E",
+    "use_type": "both",
+    "release_year": 2006,
+    "discontinued": false,
+    "status": "active",
+    "notes": "Model Dの高さ調整版。シート高が高くより快適"
+  },
+  {
+    "canonical_name": "SkiErg",
+    "brand": "Concept2",
+    "category": "ski_erg",
+    "model_number": null,
+    "use_type": "both",
+    "release_year": 2009,
+    "discontinued": false,
+    "status": "active",
+    "notes": "スキー動作の有酸素マシン。上半身特化"
+  }
+]

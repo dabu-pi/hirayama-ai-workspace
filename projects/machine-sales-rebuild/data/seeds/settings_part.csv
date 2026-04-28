@@ -1,0 +1,11 @@
+master_type,code,display_name,legacy_value,legacy_code,aliases,is_active,sort_order,site_label,remarks
+part,LG,脚,脚,LG,足|下肢,true,10,脚,
+part,SH,肩,肩,SH,ショルダー,true,20,肩,
+part,CH,胸,胸,CH,チェスト,true,30,胸,
+part,BK,背中,背中,BK,バック,true,40,背中,
+part,AM,腕,腕,AM,アーム,true,50,腕,
+part,AB,腹,腹,AB,腹部|腹筋,true,60,腹,
+part,HP,尻,尻,HP,臀部,true,70,尻,
+part,BI,備品,備品,BI,,true,80,備品,
+part,AT,その他,その他,AT,全身|その他|マルチ|有酸素運動|空白,true,90,その他,現行ルール上、部位空欄は AT 扱い
+part,NECK,首,首,,ネック,true,100,首,旧商品コードでは末尾コード空欄の例外あり

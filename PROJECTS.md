@@ -1,7 +1,7 @@
 # PROJECTS.md — プロジェクト設計図
 
 平山克司ワークスペース全プロジェクトの構成・目的・技術方針をまとめた設計図。
-最終更新: 2026-03-05
+最終更新: 2026-04-17（training-program-platform-jp 障害対応完了を反映）
 
 ---
 
@@ -10,8 +10,10 @@
 1. [柔整GASプロジェクト](#1-柔整gasプロジェクト)
 2. [freee見積自動化プロジェクト](#2-freee見積自動化プロジェクト)
 3. [患者管理Webアプリ](#3-患者管理webアプリ)
-4. [hirayama接骨院戦略AI](#4-hirayama接骨院戦略ai)
-5. [廃棄物日報GASシステム（企画段階）](#5-廃棄物日報gasシステム企画段階)
+4. [hirayama接骨院経営戦略AI](#4-hirayama接骨院戦略ai)
+5. [トレーニング機器トレンド分析](#5-トレーニング機器トレンド分析)
+6. [廃棄物日報システム（企画段階）](#6-廃棄物日報システム企画段階)
+7. [運動器初期評価システム JASSESS-01](#7-運動器初期評価システム-jassess-01)
 
 ---
 
@@ -154,13 +156,13 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 
 ### 今後の拡張
 
-- 柔整GASシステムとの患者IDスキーマ共通化
+- 柔整毎日記録システムとの患者IDスキーマ共通化
 - 患者検索・フィルタリング機能
 - 来院履歴の可視化
 
 ---
 
-## 4. hirayama接骨院戦略AI
+## 4. hirayama接骨院経営戦略AI
 
 **ディレクトリ:** `hirayama-jyusei-strategy/`
 **ステータス:** ドキュメント作成済み・実装予定
@@ -184,7 +186,7 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 |---|---|
 | 言語 | Python |
 | AI | Claude API (`claude-sonnet-4-6`) |
-| データソース | Google スプレッドシート（柔整GASシステム） |
+| データソース | Google スプレッドシート（柔整毎日記録システム） |
 | 出力形式 | Markdown レポート / PDF |
 
 ### ドキュメント構成
@@ -203,7 +205,60 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 
 ---
 
-## 5. 廃棄物日報GASシステム（企画段階）
+## 5. トレーニング機器トレンド分析
+
+**ディレクトリ:** `training-trend-analyzer/`
+**ステータス:** 開発中（Phase 4 入口）
+**最終確認日:** 2026-04-08
+
+### 目的
+
+トレーニング機器の brand / model / category ごとのトレンド信号を収集し、
+少数ソースでも安全にランキングへ流せる分析基盤を作る。
+
+### 対象業務
+
+- 手動 CSV と collector から `source_metrics` へ指標を投入
+- brand / model / category の canonical 正規化
+- ranking / score 算出と寄与確認
+- alias review と低信頼候補の保守的な育成
+
+### 技術構成
+
+| 要素 | 内容 |
+|---|---|
+| 言語 | Python |
+| データ基盤 | SQLite |
+| 収集ソース | Google Trends / Google Suggest / 手動CSV |
+| 実行形態 | CLI / バッチ |
+
+### 主要ファイル
+
+| ファイル | 役割 |
+|---|---|
+| `scripts/import_csv.py` | 手動CSVの取り込み |
+| `scripts/run_google_trends.py` | Google Trends 収集 |
+| `scripts/run_google_suggest.py` | Google Suggest 収集 |
+| `scripts/run_batch.py` | DB投入後のランキング生成 |
+| `src/normalizer/engine.py` | canonical 正規化エンジン |
+| `src/scorer/calculator.py` | score / ranking 計算 |
+
+### 現在地
+
+- Phase 0〜2 の基盤整備と CSV 取り込みパイプラインは整備済み
+- Google Trends collector は live / mock / auto で運用可能
+- Google Suggest collector 初版を追加し、`search_suggest_count` を低ウェイト補助指標として接続済み
+- `PROJECT_STATUS.md` では Phase 4 入口として整理されているが、実装内容としては「収集基盤と ranking 接続を拡張中」の段階
+
+### 直近の次アクション
+
+1. Google Suggest と相性の良い第3ソースを 1 本追加する
+2. model seed の見直しと 0 件になりにくい seed 設計を進める
+3. score detail で軽量検索系ソースの寄与を見やすくする
+
+---
+
+## 6. 廃棄物日報システム（企画段階）
 
 **ディレクトリ:** `waste-report-system/`（**未作成**）
 **ステータス:** 企画段階 — 要件定義から着手
@@ -241,16 +296,81 @@ Gmailで受信した見積依頼メールを起点に、freee見積書作成・P
 ## プロジェクト間の連携
 
 ```
-柔整GASシステム
-  └─ 患者数・売上データ ──→ 接骨院戦略AI（分析・提案）
+柔整毎日記録システム
+  └─ 患者数・売上データ ──→ 接骨院経営戦略AI（分析・提案）
   └─ 患者データ ──────→ 患者管理Webアプリ（将来連携）
 
 freee見積自動化
   └─ 請求データ ──→ freee会計
 
-廃棄物日報GAS
+廃棄物日報システム
   └─ 独立システム（将来 freee連携の可能性）
+
+運動器初期評価システム (JASSESS-01)
+  └─ 評価履歴 ──→ 接骨院経営戦略AI（KPI連携・将来）
+  └─ 患者ID ───→ 患者管理Webアプリ（将来連携）
+  └─ 評価データ ─→ Claude API（AI判定 Phase 5〜）
+  └─ Phase 1: 腰痛 → Phase 2: 頸肩 → Phase 3: 膝 → Phase 4: 姿勢/高齢者
 ```
+
+---
+
+## 7. 運動器初期評価システム JASSESS-01
+
+**ディレクトリ:** `msk-assessment-platform/`
+**ステータス:** 設計完了・Phase 1 実装待ち
+**最終確認日:** 2026-03-23
+*（旧称: 腰痛評価シートシステム JEVAL-01 / 旧フォルダ: low-back-assessment/）*
+
+### 目的
+
+接骨院における運動器疾患評価（腰痛・頸肩・膝・姿勢・高齢者機能）の標準化基盤。
+評価→説明→方針提示→施術→セルフケア→再評価まで一貫したフローを支援し、
+施術者が「結果が出せて、説明できて、再発予防まで導ける治療家」へ成長する基盤を提供する。
+
+**現在の実装フェーズ: Phase 1 = 腰痛評価モジュール**
+
+### フォルダ構成
+
+```
+msk-assessment-platform/
+├── PROJECT_STATUS.md        # 現在地・フェーズ・仮定
+├── SPEC.md                  # システム全体仕様（共通基盤 + モジュール設計思想）
+├── DESIGN_DECISIONS.md      # 設計判断の記録（なぜこの構造か）
+├── SHEET_DESIGN.md          # シート構成（共通基盤 + 腰痛モジュール分離）
+├── LOGIC.md                 # 判定ロジック（共通 + 腰痛固有）
+├── COMMENT_DESIGN.md        # コメント生成設計（共通 + 腰痛固有）
+├── CLINICAL_OPERATION.md    # 臨床運用設計（全体フロー + 腰痛フロー）
+├── modules/
+│   └── low-back/
+│       └── README.md        # 腰痛モジュール仕様（Phase 1）
+└── gas/
+    └── setup_sheets.js      # Phase 1 シート自動生成GAS
+```
+
+### 採用評価ツール（Phase 1: 腰痛モジュール）
+
+| ツール | 位置づけ | 目的 |
+|---|---|---|
+| 赤旗スクリーニング | **共通基盤** | 重篤疾患除外（全症状必須） |
+| NRS | **共通基盤** | 痛みの強度評価 |
+| PSFS | **共通基盤** | 患者固有の機能目標評価 |
+| RMDQ-10（短縮版） | **腰痛モジュール** | 腰痛機能障害評価 |
+| STarT簡易版（9項目） | **腰痛モジュール** | 慢性化リスクスクリーニング |
+| 腰部動作評価 | **腰痛モジュール** | 可動域・制限パターン評価 |
+| 神経症状評価（SLR等） | **腰痛モジュール** | 神経根障害・馬尾症候群除外 |
+
+### 拡張ロードマップ
+
+| フェーズ | 内容 | ステータス |
+|---|---|---|
+| Phase 0 | 設計・全体基盤整理 | ✅ 完了 |
+| Phase 1 | 腰痛評価モジュール実装 | ⏸ 待機 |
+| Phase 2 | 頸部・肩こり評価モジュール | ⏸ 将来 |
+| Phase 3 | 膝慢性痛評価モジュール | ⏸ 将来 |
+| Phase 4 | 姿勢評価 / 高齢者機能評価モジュール | ⏸ 将来 |
+| Phase 5 | Claude API連携（AI判定層） | ⏸ 将来 |
+| Phase 6 | タブレット入力UI最適化 | ⏸ 将来 |
 
 ---
 
@@ -259,7 +379,33 @@ freee見積自動化
 | 優先度 | プロジェクト | 理由 |
 |---|---|---|
 | 1 | 柔整GASプロジェクト | 稼働中・テスト通過で完成 |
-| 2 | freee見積自動化 | 業務効率化の即効性が高い |
-| 3 | 患者管理Webアプリ | 柔整GASとの連携基盤 |
-| 4 | 接骨院戦略AI | 中長期の経営強化 |
-| 5 | 廃棄物日報GAS | 要件定義待ち |
+| 2 | 運動器初期評価システム JASSESS-01 | 臨床現場での即時活用・治療家育成の基盤 |
+| 3 | freee見積自動化 | 業務効率化の即効性が高い |
+| 4 | 患者管理Webアプリ | 柔整GASとの連携基盤 |
+| 5 | 接骨院経営戦略AI | 中長期の経営強化 |
+| 6 | 廃棄物日報システム | 要件定義待ち |
+## 2026-03-13 Projects / Sheets Management Update
+
+This section is the current management override for project-to-sheet alignment.
+Older sections remain for history, but the rows below should be treated as the
+latest operational view until the Dashboard Projects sheet is updated.
+
+| project_id | project_name | local_folder | main_sheet_name | sheet_status | cleanup_status |
+|------------|--------------|--------------|-----------------|--------------|----------------|
+| AIOS-06 | Hirayama AI OS | `workspace/ai-os` | `Hirayama_AI_OS_Dashboard` | active | keep |
+| JREC-01 | 柔整毎日記録システム | `workspace/gas-projects/jyu-gas-ver3.1` | `【毎日記録】来店管理施術録ver3.1` | source_of_truth | keep |
+| FREEE-02 | freee見積自動化 | `workspace/freee-automation` | `2024長谷川さん管理シート` | active | keep |
+| JWEB-03 | 患者管理Webアプリ | `workspace/patient-management` | `整骨院 電子カルテ` | migration_target | archive_candidate |
+| JBIZ-04 | 接骨院経営戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
+| HAIKI-05 | 廃棄物日報システム | `workspace/waste-report-system` | `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）` | active_setup_pending | keep |
+| AINV-07 | AI投資プロジェクト | `workspace/ai-invest` | `AI投資用スプレッドシート` | registration_candidate | keep |
+| TPPJ-08 | トレーニングプログラムプラットフォーム | `workspace/training-program-platform-jp` | — (Supabase / Vercel) | active_limited_release | keep |
+
+Notes:
+- `JREC-01` is the current operational center project and its main sheet is the
+  current source of truth.
+- `JWEB-03` is no longer a current source of truth. Keep it as a migration /
+  archive candidate until the remaining data handling is confirmed.
+- `HAIKI-05` now adopts `workspace/waste-report-system` as the canonical local
+  folder path, even if the local implementation is still being prepared.
+- `TPPJ-08` 2026-04-17 障害対応完了: /train mock ID 流入防止・created_at query 修正・Cancel後ループ修正の3件を本番確認済み。フォローアップ: 1〜2週間後に診断ログ削減PR検討。

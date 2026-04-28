@@ -1,0 +1,34 @@
+# Directory exclusions
+.git/
+.claude/
+.venv/
+venv/
+node_modules/
+dist/
+build/
+coverage/
+.mypy_cache/
+.pytest_cache/
+__pycache__/
+tmp/
+secrets/
+artifacts/
+logs/run/
+logs/error/
+logs/artifacts/
+logs/runlog/
+
+# File exclusions
+.env
+*.env
+*.log
+service_account.json
+credentials.json
+token.json
+client_secret*.json
+*.pem
+*.p12
+*.pfx
+.clasp.json
+Thumbs.db
+desktop.ini

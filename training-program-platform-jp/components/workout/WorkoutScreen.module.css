@@ -1,0 +1,1306 @@
+.page {
+  width: min(100%, var(--page-max));
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-4) var(--space-8);
+}
+
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px var(--space-4);
+  margin: 0 calc(var(--space-4) * -1) var(--space-4);
+  background: linear-gradient(180deg, rgba(26, 26, 29, 0.96), rgba(17, 17, 17, 0.9));
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(82, 82, 91, 0.45);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  background: rgba(31, 31, 35, 0.96);
+  border: 1px solid rgba(82, 82, 91, 0.76);
+  border-radius: 14px;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.toolButton {
+  min-width: 52px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+}
+
+.toolButtonLabel {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toolButtonValue,
+.toolButtonHint {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.toolButtonValue {
+  color: #f4f4f5;
+}
+
+.toolButtonHint {
+  color: var(--text-muted);
+}
+
+.iconButton:not(:disabled):hover {
+  border-color: rgba(113, 113, 122, 0.92);
+  background: rgba(39, 39, 42, 0.98);
+}
+
+/* Rest timer: counting down */
+.restActive {
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(74, 222, 128, 0.36);
+  color: #86efac;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(34, 197, 94, 0.12);
+}
+
+/* Rest timer: just finished */
+.restDone {
+  background: rgba(34, 197, 94, 0.22);
+  border-color: rgba(134, 239, 172, 0.58);
+  color: #86efac;
+  animation: restDonePulse 0.4s ease-out 3;
+}
+
+.restActive .toolButtonLabel,
+.restDone .toolButtonLabel {
+  color: currentColor;
+}
+
+.restActive .toolButtonValue,
+.restDone .toolButtonValue {
+  color: #f0fdf4;
+}
+
+@keyframes restDonePulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.timerPanel {
+  min-height: 48px;
+  padding: 6px 12px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  border-radius: 14px;
+  border: 1px solid rgba(82, 82, 91, 0.72);
+  background: rgba(22, 22, 24, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.timerLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.timer {
+  justify-self: center;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  color: #f4f4f5;
+  font-variant-numeric: tabular-nums;
+}
+
+.finishButton {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fbbf24, #fb923c);
+  color: #1c1917;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 22px rgba(249, 115, 22, 0.28);
+}
+
+.finishButton:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.finishButtonCompleted {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(21, 128, 61, 0.92));
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.22);
+}
+
+.finishButtonCancelled {
+  background: var(--surface);
+  color: var(--text-secondary);
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+
+/* S-5: topBarActions wraps Cancel + Finish together on the right side of topBar */
+.topBarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* S-5: Cancel / Discard button — subtle destructive style */
+.cancelButton {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  border-radius: 14px;
+  background: rgba(63, 24, 24, 0.52);
+  color: #fda4af;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.cancelButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 430px) {
+  .topBar {
+    gap: 6px;
+    padding: 8px 10px;
+    margin: 0 -10px var(--space-4);
+  }
+
+  .iconButton,
+  .cancelButton,
+  .finishButton,
+  .timerPanel {
+    min-height: 44px;
+  }
+
+  .toolButton {
+    min-width: 48px;
+    padding: 5px 6px;
+  }
+
+  .toolButtonLabel {
+    font-size: 9px;
+  }
+
+  .toolButtonValue,
+  .toolButtonHint {
+    font-size: 12px;
+  }
+
+  .timerPanel {
+    padding: 5px 10px;
+  }
+
+  .timer {
+    font-size: 20px;
+  }
+
+  .cancelButton {
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .finishButton {
+    padding: 0 12px;
+    font-size: 14px;
+  }
+}
+
+.programCard {
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.weekDayBadge {
+  display: inline-flex;
+  padding: 5px 12px;
+  margin-bottom: var(--space-2);
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: #fdba74;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.programTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.programMeta {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.programNote {
+  margin-top: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--accent);
+  color: var(--text-secondary);
+}
+
+.selectionBanner,
+.selectionWarning {
+  display: grid;
+  gap: 4px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 14px;
+}
+
+.selectionBanner {
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  background: rgba(120, 53, 15, 0.24);
+}
+
+.selectionWarning {
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  background: rgba(120, 53, 15, 0.18);
+  color: #fde68a;
+}
+
+.selectionLabel {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.selectionValue {
+  font-size: var(--text-md);
+}
+
+.selectionMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.hint {
+  margin-top: var(--space-3);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: #fdba74;
+  font-size: var(--text-xs);
+}
+
+.completedBanner {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  background: rgba(20, 83, 45, 0.28);
+  color: #dcfce7;
+}
+
+/* S-5: Cancelled session banner */
+.cancelledBanner {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.24);
+  background: rgba(127, 29, 29, 0.20);
+  color: #fca5a5;
+}
+
+.exerciseList {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.statusMessage,
+.refreshState {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+}
+
+.statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.statusActionPrimary,
+.statusActionSecondary,
+.statusActionRetry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 12px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.statusActionPrimary {
+  background: #fef2f2;
+  color: #7f1d1d;
+  text-decoration: none;
+}
+
+.statusActionSecondary,
+.statusActionRetry {
+  border: 1px solid rgba(254, 202, 202, 0.26);
+  background: rgba(69, 10, 10, 0.28);
+  color: #fecaca;
+  text-decoration: none;
+}
+
+.statusActionRetry:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
+.refreshState {
+  margin-top: var(--space-4);
+  margin-bottom: 0;
+  border-color: rgba(251, 191, 36, 0.24);
+  background: rgba(120, 53, 15, 0.28);
+  color: #fde68a;
+}
+
+.exerciseCard {
+  padding: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.exerciseHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.typeT1 {
+  background: var(--t1-bg);
+  color: var(--t1-text);
+}
+
+.typeT2 {
+  background: var(--t2-bg);
+  color: var(--t2-text);
+}
+
+.typeT3 {
+  background: var(--t3-bg);
+  color: var(--t3-text);
+}
+
+.exerciseLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.headerHint {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.swappedBadge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+}
+
+.setTable {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* Previous session summary block — shown per exercise card */
+.previousSummary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px var(--space-2);
+  margin-bottom: var(--space-2);
+  background: rgba(148, 163, 184, 0.07);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.previousSummaryLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.previousSummaryValues {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.previousSummarySep {
+  color: var(--text-muted);
+}
+
+.swipeHint {
+  margin-bottom: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.setHeader,
+.setRow {
+  display: grid;
+  /* # | Prev | Target | Kg | Reps | Done
+     Reduced Prev (72→60) and Target (52→44) to give more width to the input columns. */
+  grid-template-columns: 18px 68px 46px minmax(46px, 1fr) minmax(46px, 1fr) 38px;
+  gap: 5px;
+  align-items: center;
+}
+
+@media (min-width: 430px) {
+  .setHeader,
+  .setRow {
+    grid-template-columns: 22px 80px 56px minmax(54px, 1fr) minmax(54px, 1fr) 42px;
+    gap: var(--space-2);
+  }
+}
+
+.setHeader {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.swipeRow {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.deleteLane {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  width: 96px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(8px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.deleteLaneVisible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.swipeTrack {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.18s ease;
+  touch-action: pan-y;
+}
+
+.swipeTrackRevealed {
+  transform: translateX(-88px);
+}
+
+.setRow {
+  padding: var(--space-2) 6px;
+  background: rgba(44, 44, 46, 0.96);
+  border: 1px solid rgba(63, 63, 70, 0.85);
+  border-radius: 14px;
+}
+
+.completedRow {
+  border-color: rgba(34, 197, 94, 0.28);
+  background: rgba(28, 36, 31, 0.96);
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Previous column: compact to fit in narrow space */
+.previous {
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.previousText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previousEmpty {
+  color: var(--text-muted);
+}
+
+.diffLine {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.diffPositive {
+  font-size: 9px;
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.diffNegative {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+/* Per-set evaluation label — shown below the set row inside swipeTrack */
+.setEvalPositive,
+.setEvalNeutral,
+.setEvalNegative {
+  font-size: 10px;
+  text-align: right;
+  padding: 2px 8px 4px;
+  line-height: 1;
+}
+
+.setEvalPositive {
+  color: rgba(74, 222, 128, 0.7);
+}
+
+.setEvalNeutral {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.setEvalNegative {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.suggestionPositive {
+  font-size: 11px;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.07);
+  border-left: 2px solid rgba(74, 222, 128, 0.4);
+  border-radius: 0 6px 6px 0;
+  margin: var(--space-2) 0 0;
+  padding: 6px 10px;
+  line-height: 1.6;
+}
+
+.suggestionNegative {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.07);
+  border-left: 2px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0 6px 6px 0;
+  margin: var(--space-2) 0 0;
+  padding: 6px 10px;
+  line-height: 1.6;
+}
+
+.target {
+  /* Shared styles for both the span and button variants of the Target cell */
+  color: #fdba74;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  text-align: center;
+  width: 100%;
+  cursor: default;
+}
+
+.targetClickable {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 2px;
+  transition: background 0.12s;
+}
+
+.targetClickable:hover {
+  background: rgba(253, 186, 116, 0.15);
+}
+
+.targetClickable:active {
+  background: rgba(253, 186, 116, 0.28);
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 6px;
+  font-size: 15px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.input:disabled {
+  opacity: 0.68;
+  background: var(--locked-bg);
+}
+
+.inputSaving {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(120, 53, 15, 0.22);
+}
+
+.inputAutoFilled {
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.28);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  justify-self: end;
+  border-radius: 999px;
+  border: 1px solid rgba(82, 82, 91, 0.96);
+  background: rgba(24, 24, 27, 0.92);
+  color: rgba(161, 161, 170, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.actionButton {
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.actionButton.check {
+  padding: 0;
+  border-radius: 999px;
+}
+
+.checkIcon {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.24;
+  transform: translateY(-0.5px);
+  transition:
+    opacity 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.check:not(:disabled):hover {
+  border-color: rgba(113, 113, 122, 0.96);
+  background: rgba(39, 39, 42, 0.96);
+  color: rgba(228, 228, 231, 0.68);
+}
+
+.check:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.check.checkDone {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  color: #f7fee7;
+  border-color: rgba(134, 239, 172, 0.84);
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.2),
+    0 8px 18px rgba(22, 163, 74, 0.3);
+}
+
+.check.checkDone .checkIcon {
+  opacity: 1;
+  color: #f7fee7;
+  transform: scale(1.04);
+}
+
+.unlockButton {
+  width: 100%;
+  height: 42px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: rgba(120, 53, 15, 0.34);
+  color: #fde68a;
+}
+
+.deleteButton {
+  width: 88px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(239, 68, 68, 0.92);
+  color: #fff;
+  font-weight: 700;
+}
+
+.deleteDisabled {
+  background: rgba(82, 82, 91, 0.92);
+  color: rgba(245, 245, 247, 0.72);
+  cursor: not-allowed;
+}
+
+.exerciseActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.subtleButton,
+.primaryGhostButton {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.subtleButton {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.primaryGhostButton {
+  background: var(--accent-dim);
+  color: #fdba74;
+  border-color: rgba(249, 115, 22, 0.18);
+}
+
+.primaryGhostButton:disabled,
+.subtleButton:disabled {
+  opacity: 0.64;
+  cursor: not-allowed;
+}
+
+.footerAction {
+  margin-top: var(--space-4);
+}
+
+.footerAction button {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* ── Add Exercise modal ── */
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.modal {
+  width: min(100%, 480px);
+  max-height: 72dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.modalCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modalSubtitle {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
+.modalSubtitle strong {
+  color: #fdba74;
+}
+
+.swapGroupHint {
+  color: var(--text-tertiary, var(--text-secondary));
+  font-style: italic;
+}
+
+/* ---- T1 progression hint bar ---- */
+
+.t1ProgressionHintBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--space-2);
+  margin-bottom: var(--space-1);
+  background: rgba(249, 115, 22, 0.08);
+  border-radius: 6px;
+}
+
+.t1ProgressionLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary, #94a3b8);
+  font-weight: 500;
+}
+
+.t1ProgressionValue {
+  font-size: var(--text-sm);
+  color: var(--accent, #f97316);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.modalSearchWrapper {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modalSearch {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.modalSearch::placeholder {
+  color: var(--text-muted);
+}
+
+.muscleFilter {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.muscleFilterLabel {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-2);
+}
+
+.muscleChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.muscleChip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.muscleChip:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  color: var(--text-primary);
+}
+
+.muscleChipActive {
+  border-color: rgba(249, 115, 22, 0.6);
+  background: var(--accent-dim);
+  color: #fdba74;
+}
+
+.modalErrorMessage {
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3);
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.modalList {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+  list-style: none;
+  margin: 0;
+}
+
+.modalEmpty {
+  padding: var(--space-4);
+  color: var(--text-muted);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.modalListItem {
+  display: block;
+}
+
+.modalListItemButton {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.modalListItemButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.modalListItemButton:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.modalListItemName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.modalListItemSub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ── 1RM calculator modal ── */
+
+.calc1RMBody {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.calc1RMInputRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.calc1RMField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.calc1RMLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.calc1RMInput {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+}
+
+.calc1RMInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.calc1RMResult {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.calc1RMResultLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calc1RMResultValue {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.calc1RMResultSub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.calc1RMPlaceholder {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-4) 0;
+}
+
+.calc1RMError {
+  text-align: center;
+  color: var(--danger);
+  font-size: var(--text-sm);
+  padding: var(--space-3) 0;
+}
+
+.calc1RMNote {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── User exercise tag in modal list ── */
+
+.userExerciseTag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 1px 5px;
+  border-radius: 5px;
+  vertical-align: middle;
+  line-height: 1.6;
+}
+
+/* ── Create exercise section (bottom of add modal) ── */
+
+.createExerciseSection {
+  border-top: 1px solid var(--border);
+  padding: var(--space-3) var(--space-4);
+}
+
+.createExerciseToggle {
+  width: 100%;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: var(--space-3);
+  text-align: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.createExerciseToggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.createExerciseForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.createExerciseTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-1);
+}
+
+.createExerciseInput {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.createExerciseInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.createExerciseActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.createExerciseSubmit {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  flex: 1;
+}
+
+.createExerciseSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.createExerciseCancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+}

@@ -1,0 +1,28 @@
+{
+  "testId": "TC22b",
+  "description": "柔道整復運動後療料 Phase 2: 骨折 dayDiff=15 exercisePriorCount=4（5回目）→ exerciseOut=320 算定可",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-01-20",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    {
+      "caseNo": 1,
+      "kubun": "後療",
+      "parts": [
+        {
+          "bui": "右前腕",
+          "byomei": "骨折",
+          "injuryDate": "2026-01-05",
+          "cold": false,
+          "warm": false,
+          "electro": false,
+          "metal": false,
+          "exercise": true,
+          "exercisePriorCount": 4
+        }
+      ]
+    }
+  ]
+}

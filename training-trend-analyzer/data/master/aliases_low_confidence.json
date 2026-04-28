@@ -1,0 +1,24 @@
+[
+  {
+    "_comment": "自動投入しない低信頼 alias 候補。review から育てる保留箱として使う",
+    "_version": "1.0",
+    "_updated": "2026-04-08",
+    "_loading_policy": "load_master_data.py はこのファイルを読まない。十分な根拠が揃ったら aliases.json へ昇格する"
+  },
+  {
+    "alias_text": "STAIRMASTER",
+    "entity_type": "category",
+    "canonical": "stair_climber",
+    "source": "brand_as_category",
+    "confidence": 0.7,
+    "note": "ブランド名としての StairMaster とカテゴリ名 stair climber が混在するため保留"
+  },
+  {
+    "alias_text": "STAIR MASTER",
+    "entity_type": "category",
+    "canonical": "stair_climber",
+    "source": "brand_as_category",
+    "confidence": 0.7,
+    "note": "brand/category 混在語。review で十分な再現性が出るまで自動投入しない"
+  }
+]

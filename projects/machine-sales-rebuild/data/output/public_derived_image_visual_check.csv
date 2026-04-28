@@ -1,0 +1,9 @@
+﻿sd_product_code,image_seq,source_path,derived_path,check_reason
+HYMX22754AT,1,data/raw-images/wordpress-public/HYMX22754AT/HYMX22754AT_1.jpg,data/derived-images/public-700x700/HYMX22754AT/HYMX22754AT-01-700x700.jpg,horizontal
+EHTC22772AT,1,data/raw-images/wordpress-public/EHTC22772AT/EHTC22772AT_1.jpg,data/derived-images/public-700x700/EHTC22772AT/EHTC22772AT-01-700x700.jpg,vertical
+HNOT24914AT,1,data/raw-images/wordpress-public/HNOT24914AT/HNOT24914AT_1.jpg,data/derived-images/public-700x700/HNOT24914AT/HNOT24914AT-01-700x700.jpg,square
+HYCY26924AT,1,data/raw-images/wordpress-public/HYCY26924AT/HYCY26924AT_1.png,data/derived-images/public-700x700/HYCY26924AT/HYCY26924AT-01-700x700.jpg,png_source
+EHTC22772AT,2,data/raw-images/wordpress-public/EHTC22772AT/EHTC22772AT_2.jpg,data/derived-images/public-700x700/EHTC22772AT/EHTC22772AT-02-700x700.jpg,jpg_source
+HNOT24906AT,1,data/raw-images/wordpress-public/HNOT24906AT/HNOT24906AT_1.jpg,data/derived-images/public-700x700/HNOT24906AT/HNOT24906AT-01-700x700.jpg,single_image_product
+EHTC22772AT,3,data/raw-images/wordpress-public/EHTC22772AT/EHTC22772AT_3.jpg,data/derived-images/public-700x700/EHTC22772AT/EHTC22772AT-03-700x700.jpg,multi_image_product
+EHTC22772AT,4,data/raw-images/wordpress-public/EHTC22772AT/EHTC22772AT_4.jpg,data/derived-images/public-700x700/EHTC22772AT/EHTC22772AT-04-700x700.jpg,white_padding

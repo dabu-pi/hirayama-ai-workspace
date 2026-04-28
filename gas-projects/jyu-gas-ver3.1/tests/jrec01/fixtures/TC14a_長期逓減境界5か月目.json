@@ -1,0 +1,16 @@
+{
+  "testId": "TC14a",
+  "description": "長期逓減 境界（monthsElapsed=4、減額なし）",
+  "ref": "TESTCASES.md#TC14",
+  "note": "injuryDate=2026-02-01（16日未満→2月起算）、treatDate=2026-06-30 → monthsElapsed=4 → ltCoef=1.0",
+  "context": {
+    "patientId": "P001",
+    "treatDate": "2026-06-30",
+    "monthlyStatus": { "initBilled": true, "reBilled": true, "supportBilled": true }
+  },
+  "cases": [
+    { "caseNo": 1, "kubun": "後療", "parts": [
+      { "bui": "腰部", "byomei": "捻挫", "injuryDate": "2026-02-01", "cold": false, "warm": false, "electro": false }
+    ]}
+  ]
+}

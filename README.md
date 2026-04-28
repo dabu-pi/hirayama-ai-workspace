@@ -23,11 +23,12 @@
 
 | プロジェクト | ディレクトリ | ステータス |
 |---|---|---|
-| 柔整GASシステム | `gas-projects/jyu-gas-ver3.1/` | 稼働中 |
+| 柔整毎日記録システム | `gas-projects/jyu-gas-ver3.1/` | 稼働中 |
 | freee見積自動化 | `freee-automation/` | 開発中 |
 | 患者管理Webアプリ | `patient-management/` | 開発中（プロトタイプ） |
-| 接骨院戦略AI | `hirayama-jyusei-strategy/` | ドキュメント整備済み・実装予定 |
-| 廃棄物日報GAS | `waste-report-system/`（未作成） | 企画段階 |
+| 接骨院経営戦略AI | `hirayama-jyusei-strategy/` | ドキュメント整備済み・実装予定 |
+| トレーニング機器トレンド分析 | `training-trend-analyzer/` | 開発中（Phase 4 入口） |
+| 廃棄物日報システム | `waste-report-system/`（未作成） | 企画段階 |
 
 詳細は [PROJECTS.md](./PROJECTS.md) を参照。
 
@@ -43,3 +44,14 @@
 ---
 
 管理者: 平山克司 (Katsushi Hirayama)
+
+## Google Drive 同期運用
+
+- GitHub / `C:\hirayama-ai-workspace\workspace` を正本とし、Google Drive は共有・検索・参照・バックアップ先として使います。
+- push だけでは共有完了ではありません。`workspace-export` 更新と Google Drive sync まで完了条件に含みます。
+- workspace の共有完了フローの正規入口は `scripts/publish-workspace.ps1` です。
+- `publish-workspace.ps1` は commit / push の後に `workspace-export` を更新し、その後 `scripts/upload-workspace-export-to-gdrive.ps1` で Google Drive へ一方向アップロードします。
+- Google Drive for desktop の常駐同期は前提にしません。
+- Drive 側コピーや `workspace-export` 側では Git 作業をしません。
+- 詳細は [docs/GOOGLE_DRIVE_SYNC.md](./docs/GOOGLE_DRIVE_SYNC.md) を参照してください。
+

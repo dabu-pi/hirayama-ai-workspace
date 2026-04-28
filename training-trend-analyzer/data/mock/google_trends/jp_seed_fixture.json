@@ -1,0 +1,135 @@
+{
+  "mode": "mock",
+  "generated_at": "2026-04-08T00:00:00+09:00",
+  "weeks": ["2026-03-23", "2026-03-30", "2026-04-06"],
+  "series": [
+    {
+      "seed_id": "technogym_run_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"technogym run": 54, "テクノジム run": 46}},
+        {"week_start": "2026-03-30", "values": {"technogym run": 58, "テクノジム run": 48}},
+        {"week_start": "2026-04-06", "values": {"technogym run": 64, "テクノジム run": 52}}
+      ]
+    },
+    {
+      "seed_id": "lifefitness_t5_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"life fitness t5": 33, "ライフフィットネス t5": 27}},
+        {"week_start": "2026-03-30", "values": {"life fitness t5": 37, "ライフフィットネス t5": 29}},
+        {"week_start": "2026-04-06", "values": {"life fitness t5": 40, "ライフフィットネス t5": 30}}
+      ]
+    },
+    {
+      "seed_id": "precor_trm445_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"precor trm 445": 24, "trm445": 21}},
+        {"week_start": "2026-03-30", "values": {"precor trm 445": 25, "trm445": 22}},
+        {"week_start": "2026-04-06", "values": {"precor trm 445": 28, "trm445": 24}}
+      ]
+    },
+    {
+      "seed_id": "concept2_skierg_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"concept2 ski erg": 41, "c2 ski erg": 29, "skierg": 45}},
+        {"week_start": "2026-03-30", "values": {"concept2 ski erg": 44, "c2 ski erg": 31, "skierg": 47}},
+        {"week_start": "2026-04-06", "values": {"concept2 ski erg": 48, "c2 ski erg": 34, "skierg": 50}}
+      ]
+    },
+    {
+      "seed_id": "cybex_770t_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"cybex 770t": 21, "cybex 770t treadmill": 18}},
+        {"week_start": "2026-03-30", "values": {"cybex 770t": 23, "cybex 770t treadmill": 19}},
+        {"week_start": "2026-04-06", "values": {"cybex 770t": 25, "cybex 770t treadmill": 21}}
+      ]
+    },
+    {
+      "seed_id": "concept2_model_d_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"concept2 model d": 35, "concept2 rowerg model d": 22}},
+        {"week_start": "2026-03-30", "values": {"concept2 model d": 37, "concept2 rowerg model d": 24}},
+        {"week_start": "2026-04-06", "values": {"concept2 model d": 39, "concept2 rowerg model d": 26}}
+      ]
+    },
+    {
+      "seed_id": "lifefitness_95t_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"life fitness 95t": 20, "life fitness 95t treadmill": 17}},
+        {"week_start": "2026-03-30", "values": {"life fitness 95t": 22, "life fitness 95t treadmill": 18}},
+        {"week_start": "2026-04-06", "values": {"life fitness 95t": 24, "life fitness 95t treadmill": 20}}
+      ]
+    },
+    {
+      "seed_id": "lifefitness_ic5_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"life fitness ic5": 18, "life fitness ic5 indoor cycle": 15}},
+        {"week_start": "2026-03-30", "values": {"life fitness ic5": 20, "life fitness ic5 indoor cycle": 16}},
+        {"week_start": "2026-04-06", "values": {"life fitness ic5": 22, "life fitness ic5 indoor cycle": 18}}
+      ]
+    },
+    {
+      "seed_id": "lifefitness_ic7_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"life fitness ic7": 19, "life fitness ic7 indoor cycle": 16}},
+        {"week_start": "2026-03-30", "values": {"life fitness ic7": 21, "life fitness ic7 indoor cycle": 17}},
+        {"week_start": "2026-04-06", "values": {"life fitness ic7": 23, "life fitness ic7 indoor cycle": 19}}
+      ]
+    },
+    {
+      "seed_id": "matrix_a50_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"matrix a50": 17, "matrix a50 elliptical": 14}},
+        {"week_start": "2026-03-30", "values": {"matrix a50": 18, "matrix a50 elliptical": 15}},
+        {"week_start": "2026-04-06", "values": {"matrix a50": 20, "matrix a50 elliptical": 17}}
+      ]
+    },
+    {
+      "seed_id": "technogym_run_now_model",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"technogym run now": 26, "technogym run now treadmill": 22}},
+        {"week_start": "2026-03-30", "values": {"technogym run now": 28, "technogym run now treadmill": 23}},
+        {"week_start": "2026-04-06", "values": {"technogym run now": 31, "technogym run now treadmill": 25}}
+      ]
+    },
+    {
+      "seed_id": "leg_press_category",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"leg press": 38, "レッグプレス": 35}},
+        {"week_start": "2026-03-30", "values": {"leg press": 39, "レッグプレス": 37}},
+        {"week_start": "2026-04-06", "values": {"leg press": 42, "レッグプレス": 38}}
+      ]
+    },
+    {
+      "seed_id": "hack_squat_category",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"hack squat": 22, "ハックスクワット": 20}},
+        {"week_start": "2026-03-30", "values": {"hack squat": 24, "ハックスクワット": 22}},
+        {"week_start": "2026-04-06", "values": {"hack squat": 26, "ハックスクワット": 24}}
+      ]
+    },
+    {
+      "seed_id": "belt_squat_category",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"belt squat": 18, "ベルトスクワット": 16}},
+        {"week_start": "2026-03-30", "values": {"belt squat": 20, "ベルトスクワット": 18}},
+        {"week_start": "2026-04-06", "values": {"belt squat": 21, "ベルトスクワット": 19}}
+      ]
+    },
+    {
+      "seed_id": "stair_climber_compare",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"stair climber": 32, "stairmaster": 48, "stair master": 15}},
+        {"week_start": "2026-03-30", "values": {"stair climber": 34, "stairmaster": 50, "stair master": 16}},
+        {"week_start": "2026-04-06", "values": {"stair climber": 36, "stairmaster": 52, "stair master": 18}}
+      ]
+    },
+    {
+      "seed_id": "commercial_brand_compare",
+      "points": [
+        {"week_start": "2026-03-23", "values": {"cybex": 30, "life fitness": 40, "matrix": 36, "hammer strength": 29}},
+        {"week_start": "2026-03-30", "values": {"cybex": 31, "life fitness": 39, "matrix": 38, "hammer strength": 28}},
+        {"week_start": "2026-04-06", "values": {"cybex": 32, "life fitness": 41, "matrix": 37, "hammer strength": 30}}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "_comment": "モックデータ — 開発・テスト用。実際のデータではない",
+    "_week": "2026-03-30",
+    "source": "mock",
+    "metric_type": "search_volume",
+    "entries": [
+      {"brand": "TECHNOGYM",    "model": "Run",             "category": "treadmill",   "value": 72, "value_prev": 60},
+      {"brand": "TECHNOGYM",    "model": "Bike",            "category": "bike",        "value": 55, "value_prev": 58},
+      {"brand": "Life Fitness", "model": "T5",              "category": "treadmill",   "value": 61, "value_prev": 50},
+      {"brand": "Life Fitness", "model": "IC5",             "category": "bike",        "value": 48, "value_prev": 45},
+      {"brand": "Matrix",       "model": "T75",             "category": "treadmill",   "value": 43, "value_prev": 44},
+      {"brand": "Matrix",       "model": "A50",             "category": "elliptical",  "value": 38, "value_prev": 35},
+      {"brand": "Precor",       "model": "TRM 445",         "category": "treadmill",   "value": 35, "value_prev": 40},
+      {"brand": "CYBEX",        "model": "770T",            "category": "treadmill",   "value": 30, "value_prev": 28},
+      {"brand": "TECHNOGYM",    "model": "Skillrow",        "category": "rowing",      "value": 42, "value_prev": 25},
+      {"brand": "Life Fitness", "model": "Axiom Series",    "category": "cable_machine","value": 50, "value_prev": 47}
+    ]
+  },
+  {
+    "_week": "2026-03-30",
+    "source": "mock",
+    "metric_type": "mention_count",
+    "entries": [
+      {"brand": "TECHNOGYM",    "model": "Run",          "category": "treadmill",    "value": 320, "value_prev": 240},
+      {"brand": "TECHNOGYM",    "model": "Bike",         "category": "bike",         "value": 180, "value_prev": 200},
+      {"brand": "Life Fitness", "model": "T5",           "category": "treadmill",    "value": 210, "value_prev": 155},
+      {"brand": "Life Fitness", "model": "IC5",          "category": "bike",         "value": 145, "value_prev": 140},
+      {"brand": "Matrix",       "model": "T75",          "category": "treadmill",    "value": 120, "value_prev": 125},
+      {"brand": "Matrix",       "model": "A50",          "category": "elliptical",   "value": 98,  "value_prev": 82},
+      {"brand": "Precor",       "model": "TRM 445",      "category": "treadmill",    "value": 88,  "value_prev": 110},
+      {"brand": "CYBEX",        "model": "770T",         "category": "treadmill",    "value": 72,  "value_prev": 65},
+      {"brand": "TECHNOGYM",    "model": "Skillrow",     "category": "rowing",       "value": 160, "value_prev": 75},
+      {"brand": "Life Fitness", "model": "Axiom Series", "category": "cable_machine","value": 130, "value_prev": 120}
+    ]
+  },
+  {
+    "_week": "2026-03-30",
+    "source": "mock",
+    "metric_type": "review_count",
+    "entries": [
+      {"brand": "TECHNOGYM",    "model": "Run",          "category": "treadmill",    "value": 45, "value_prev": 38},
+      {"brand": "TECHNOGYM",    "model": "Bike",         "category": "bike",         "value": 32, "value_prev": 35},
+      {"brand": "Life Fitness", "model": "T5",           "category": "treadmill",    "value": 28, "value_prev": 21},
+      {"brand": "Life Fitness", "model": "IC5",          "category": "bike",         "value": 20, "value_prev": 19},
+      {"brand": "Matrix",       "model": "T75",          "category": "treadmill",    "value": 18, "value_prev": 18},
+      {"brand": "Matrix",       "model": "A50",          "category": "elliptical",   "value": 15, "value_prev": 12},
+      {"brand": "Precor",       "model": "TRM 445",      "category": "treadmill",    "value": 12, "value_prev": 16},
+      {"brand": "CYBEX",        "model": "770T",         "category": "treadmill",    "value": 9,  "value_prev": 8},
+      {"brand": "TECHNOGYM",    "model": "Skillrow",     "category": "rowing",       "value": 22, "value_prev": 10},
+      {"brand": "Life Fitness", "model": "Axiom Series", "category": "cable_machine","value": 17, "value_prev": 15}
+    ]
+  }
+]
