@@ -6019,13 +6019,16 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 | `npx next build` | ✅ 成功 / `/manifest.webmanifest` 出力確認 |
 | build エラー・警告 | なし |
 
-### 実機確認待ち項目（次回ユーザー確認）
+### 実機確認結果 (2026-04-29)
 
-```
-[ ] iOS Safari: ホーム画面に追加 → アイコン・アプリ名が表示されるか
-[ ] iOS Safari: ホーム画面から起動 → display:standalone でアドレスバーなし起動
-[ ] Android Chrome: インストールバナーまたは「ホーム画面に追加」が表示されるか
-[ ] Android: 起動時のスプラッシュ背景色が #ffffff（白）であるか
-[ ] Vercel ログに SW registration error が出ていないこと
-```
+| プラットフォーム | 確認項目 | 結果 |
+|---|---|---|
+| Android Chrome | ホーム画面追加・インストール | ✅ PASS |
+| Android Chrome | ホーム画面アイコンから起動 | ✅ PASS |
+| Android Chrome | アプリ風表示（standalone） | ✅ PASS |
+| Android Chrome | アイコン表示 | ✅ PASS |
+| iOS Safari | ホーム画面に追加 → アイコン・アプリ名表示 | ⏳ 未確認 |
+| iOS Safari | ホーム画面から起動 → アドレスバーなし | ⏳ 未確認 |
+
+**Phase 2.7 ステータス: Android PASS / iOS 未確認 — CLOSED 保留**
 
