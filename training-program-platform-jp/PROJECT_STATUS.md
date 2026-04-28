@@ -6027,8 +6027,12 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 | Android Chrome | ホーム画面アイコンから起動 | ✅ PASS |
 | Android Chrome | アプリ風表示（standalone） | ✅ PASS |
 | Android Chrome | アイコン表示 | ✅ PASS |
-| iOS Safari | ホーム画面に追加 → アイコン・アプリ名表示 | ⏳ 未確認 |
-| iOS Safari | ホーム画面から起動 → アドレスバーなし | ⏳ 未確認 |
+| iOS Safari | ホーム画面に追加 → アイコン・アプリ名表示 | ⚠️ 未確認（iPhone 未所持） |
+| iOS Safari | ホーム画面から起動 → アドレスバーなし | ⚠️ 未確認（iPhone 未所持） |
 
-**Phase 2.7 ステータス: Android PASS / iOS 未確認 — CLOSED 保留**
+**Phase 2.7 ステータス: CONDITIONAL CLOSED (2026-04-29)**
+- Android Chrome: PASS — PWA土台の実用動作確認済み
+- iOS Safari: 未確認 — ユーザーが iPhone 未所持のため後日確認（deferred risk）
+- 既知リスク: iOS Safari のホーム画面追加・standalone表示は未検証
+- G-6b 以降は Android PASS を根拠に進行する
 

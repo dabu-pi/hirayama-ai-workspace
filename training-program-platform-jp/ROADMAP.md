@@ -120,8 +120,9 @@
 
 - **PWA manifest 追加（アプリ名・アイコン・カラー設定）** ✅ 実装済み (2026-04-29)
 - **service worker 最小構成（キャッシュなし）** ✅ 実装済み (2026-04-29)
-- **iOS/Android ホーム画面追加確認** — Android ✅ PASS (2026-04-29) / iOS ⏳ 未確認
-- G-6b: PWA起動時の再開メッセージ強調 — iOS確認後に着手
+- **iOS/Android ホーム画面追加確認** — Android ✅ PASS / iOS ⚠️ deferred（iPhone 未所持）
+- **Phase 2.7: CONDITIONAL CLOSED (2026-04-29)** — iOS は後日確認
+- **G-6b: PWA起動時の再開メッセージ強調** — 次タスク
 
 ### Phase 3: コンテンツ・管理拡張
 
