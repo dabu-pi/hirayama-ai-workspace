@@ -37,6 +37,12 @@ const ADMIN_CARDS: AdminCard[] = [
     title: "退会申請管理",
     description: "退会・アカウント削除申請を確認し、承認または却下",
     initial: "退"
+  },
+  {
+    href: "/admin/billing",
+    title: "口座振替確定管理",
+    description: "翌月分の口座振替データ確定を記録。休会・退会の有効日判定に使用",
+    initial: "振"
   }
 ];
 
