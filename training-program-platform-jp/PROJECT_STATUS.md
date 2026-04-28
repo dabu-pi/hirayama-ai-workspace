@@ -1,5 +1,72 @@
 # PROJECT_STATUS
 
+## 2026-04-28 Phase 2.5d: プログラム名・目標・概要・週ラベルの日本語化
+
+### STATUS: CLOSED (2026-04-28) — typecheck/build OK / 実機確認待ち
+
+### PURPOSE
+
+Phase 2.5c 実機確認でタグ表示は日本語化されたが、プログラムカード名・目標・概要・週ラベルに英語が残っていた。
+DB側（update-program-titles-jp.sql）が未適用でも、UI側フォールバックで日本語表示になるよう対応。
+
+### ROOT_CAUSE
+
+| 症状 | 原因 |
+|---|---|
+| BIG3 2-Day などカード名が英語 | `program.title` を変換せず表示 / DB未更新 |
+| 目標・概要が英語 | `program.goal`, `program.overview` をそのまま表示 / DB未更新 |
+| 1週目 — Week 1 の二重表示 | `{week.label ? ` — ${week.label}` : ""}` が "Week 1" をそのまま追加 |
+
+### IMPLEMENTED
+
+| 対象 | 変更内容 | ファイル |
+|---|---|---|
+| `formatProgramTitle(slug, title)` | 9プログラムのタイトルマップ + slug変換 | `lib/workout/format-labels.ts` |
+| `formatProgramGoal(slug, goal)` | 9プログラムの目標テキストマップ | 同上 |
+| `formatProgramOverview(slug, overview)` | 9プログラムの概要テキストマップ | 同上 |
+| `formatProgramWeekLabel(weekNumber, label)` | "Week N" パターンを抑制し、番号のみ表示 | 同上 |
+| ProgramsScreen カードタイトル | `program.title` → `formatProgramTitle` 適用 | `components/programs/ProgramsScreen.tsx` |
+| ProgramsScreen カード目標 | `program.goal` → `formatProgramGoal` 適用 | 同上 |
+| ProgramDetailScreen タイトル | `resolveTitle` に変換済みタイトルを渡す | `components/programs/ProgramDetailScreen.tsx` |
+| ProgramDetailScreen 目標 | `program.goal` → `formatProgramGoal` 適用 | 同上 |
+| ProgramDetailScreen 概要 | `program.overview` → `formatProgramOverview` 適用 | 同上 |
+| ProgramDetailScreen 週ラベル | `{week.weekNumber}週目 — {week.label}` → `formatProgramWeekLabel` | 同上 |
+
+### 対応プログラム
+
+| slug | 表示タイトル |
+|---|---|
+| gzclp-base | GZCLP 基礎プログラム |
+| gzclp-base-v2-4day | GZCLP 基礎 4日/週（4週） |
+| big3-2day | BIG3 2日/週（4週） |
+| big3-3day | BIG3 3日/週（4週） |
+| big3-2day-6week | BIG3 2日/週（6週） |
+| barbell-2day-base | バーベル全身 2日/週（4週） |
+| starting-strength-base | スターティングストレングス 基礎 |
+| upper-lower-base | アッパー/ロワー 基礎 |
+| dumbbell-full-body-base | ダンベル全身 基礎 |
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（/programs: 101kB 正常）
+- commit: d867946
+- push: ✅ feature/auto-dev-phase3-loop
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] /programs カードに「BIG3 2日/週（4週）」「バーベル全身 2日/週（4週）」等が表示される
+- [ ] /programs/[slug] タイトル・目標・概要が日本語
+- [ ] /programs/[slug] プログラム構成で「1週目」のみ表示（「— Week 1」なし）
+- [ ] タグ・種目名の日本語化が維持されている
+
+### REMAINING_RISKS
+
+- DB側の title/description は英語のまま（SQL未適用）→ UIフォールバックで表示は日本語
+- 未登録 slug のプログラムはDB値をそのまま表示（想定内）
+
+---
+
 ## 2026-04-28 Phase 2.5c: /programs タグ表示の日本語化漏れ修正
 
 ### STATUS: CLOSED (2026-04-28) — typecheck/build OK / 実機確認待ち
