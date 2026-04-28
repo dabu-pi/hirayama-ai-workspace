@@ -8,6 +8,32 @@
 
 ---
 
+## GAS デプロイ運用メモ（2026-04-28 判明）
+
+**重要: `clasp push` だけでは `/exec` URL に変更が反映されない。**
+
+| コマンド | 効果 |
+|---|---|
+| `clasp push` | Apps Script エディタの HEAD を更新するだけ |
+| `clasp deploy --deploymentId <id>` | 指定 deployment を最新 HEAD から新バージョンに更新 → `/exec` に反映 |
+
+**現在の deployment 構成:**
+
+| deployment ID（末尾） | バージョン | 用途 |
+|---|---|---|
+| `AKfycbzJWJAK...` | @HEAD | 常に最新 HEAD を参照 |
+| `AKfycbxhtWdy...` | @20 | **本番 /exec URL**（通常使用。push 後に `clasp deploy` 要） |
+| `AKfycbyjzy_g...` | @1 | 旧デプロイ（使用停止） |
+
+**clasp push + deploy セット手順（今後の標準）:**
+
+```bash
+clasp push --force
+clasp deploy --deploymentId "AKfycbxhtWdycr4Xt-LT867eoUiqixjM2zOlaE6Bcqzoi8qbtZIvLHkR820vRfRqyomdoTa7pQ" --description "変更内容の説明"
+```
+
+---
+
 ## 本日実装（2026-04-28）— Phase 5-B Step 2
 
 ### 実装内容
