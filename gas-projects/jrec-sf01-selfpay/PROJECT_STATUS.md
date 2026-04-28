@@ -4,7 +4,40 @@
 
 **Phase 5-B Step 2: collectOutstandingPayment collectedAmount 実装 + receipt.html 一部回収 UI 完了**（2026-04-28）
 
-次: Phase 5-B Step 2 実機確認（Test A〜C）→ 確認後 CLOSED
+次: データ補正（correctPayment_P0001_007 実行）→ Test C → Test A → Test B の順で実機確認
+
+---
+
+## インシデント記録（2026-04-28）— 旧UI誤操作による SPV_20260428_P0001_007 入金済誤更新
+
+### 経緯
+
+1. Step 2 実装後 `clasp push` は完了したが `clasp deploy` を忘れた
+2. /exec は依然 @19（旧コード）を参照
+3. ユーザーが旧UI（「未収を回収する（入金済みに更新）」ボタン）を押した
+4. 旧 `collectOutstandingPayment` が動作し `SPV_20260428_P0001_007` が誤って全額入金済に
+
+### 旧コードが起こした破損
+
+| 列 | 誤った値 | 正しい値 |
+|---|---|---|
+| Payments col7 paymentStatus | `入金済` | `未収` |
+| Payments col8 paymentDate | `2026-04-28` | 空欄 |
+| Payments col9 memo | `回収済(2026-04-28)` | 訂正メモ |
+| Payments col11 paidAmount | **空欄**（旧コードは書かない） | `0` |
+| SelfPayVisits billingStatus | `会計済` | `未収` |
+
+### 補正方針
+
+- 実際には現金回収なし（テスト操作）のため全項目を「未収」状態に戻す
+- 補正関数 `correctPayment_P0001_007()` を JREC_SF01_Billing.gs に一時追加済み
+- 補正実行後はこの関数を削除して再度 clasp push する
+
+### 補正状況
+
+未実施（ユーザー確認待ち）
+
+### 教訓 → GAS デプロイ標準手順に組み込み済み
 
 ---
 
