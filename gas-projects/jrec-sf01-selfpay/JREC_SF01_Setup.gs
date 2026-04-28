@@ -240,8 +240,10 @@ function setupSelfPayItems_(ss) {
 function setupPayments_(ss) {
   var sh = getOrCreateSheet_(ss, SHEET_NAMES.PAYMENTS);
 
-  var headers = [["paymentId", "selfPayVisitKey", "税別合計", "消費税額合計", "税込合計", "支払方法", "入金状態", "入金日", "メモ", "createdAt"]];
-  setHeaders_(sh, headers, [200, 200, 90, 100, 90, 110, 90, 100, 200, 160]);
+  // col 11: paidAmount = 実際に入金された累積額。新規追加。
+  // outstandingAmount = max(税込合計 - paidAmount, 0) で計算可能。
+  var headers = [["paymentId", "selfPayVisitKey", "税別合計", "消費税額合計", "税込合計", "支払方法", "入金状態", "入金日", "メモ", "createdAt", "paidAmount"]];
+  setHeaders_(sh, headers, [200, 200, 90, 100, 90, 110, 90, 100, 200, 160, 100]);
 
   // 支払方法プルダウン
   applyDropdown_(sh, 2, 6, 200, ["現金", "カード", "電子マネー", "未収"]);

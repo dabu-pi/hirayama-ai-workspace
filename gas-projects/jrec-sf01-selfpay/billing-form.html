@@ -183,12 +183,30 @@ window.onerror = function(msg, src, line) {
         </div>
         <div class="form-group">
           <label class="form-label" for="paymentStatus">入金状態</label>
-          <select class="form-control" id="paymentStatus">
+          <select class="form-control" id="paymentStatus" onchange="onPaymentStatusChange()">
             <option value="入金済">入金済</option>
             <option value="未収">未収</option>
             <option value="一部入金">一部入金</option>
           </select>
         </div>
+      </div>
+
+      <!-- 一部入金のみ表示: 今回入金額 -->
+      <div id="paidAmountSection" style="display:none;" class="cash-section">
+        <div class="cash-row">
+          <span class="cash-label">今回入金額</span>
+          <input type="number" id="paidAmount" class="form-control"
+            style="width:140px;text-align:right;"
+            placeholder="0" min="0" oninput="calcRemaining()">
+          <span style="font-size:13px;color:#5f6368;">円（税込）</span>
+        </div>
+        <div class="cash-row">
+          <span class="cash-label">未収残額</span>
+          <span id="remainingDisp" class="change-val">—</span>
+        </div>
+        <p style="font-size:11px;color:#9aa0a6;margin-top:4px;">
+          未収残額は後日 receipt 画面から回収できます。
+        </p>
       </div>
 
       <!-- 現金のみ表示: 預かり金 / お釣り -->
@@ -346,6 +364,7 @@ function recalcTotals() {
   document.getElementById('totalTaxDisp').textContent = '¥' + fmtNum(totalTax);
   document.getElementById('totalIncDisp').textContent = '¥' + fmtNum(totalEx + totalTax);
   calcChange();
+  calcRemaining();
 }
 
 // ── 現金 お釣り計算 ──────────────────────────────────────
@@ -366,13 +385,45 @@ function calcChange() {
 function onPaymentMethodChange() {
   var method    = document.getElementById('paymentMethod').value;
   var statusSel = document.getElementById('paymentStatus');
-  var cashSec   = document.getElementById('cashSection');
-  if (method === '未収') {
-    statusSel.value    = '未収';
-    cashSec.style.display = 'none';
+  statusSel.value = (method === '未収') ? '未収' : '入金済';
+  updatePaymentSections();
+}
+
+// ── 入金状態変更 ─────────────────────────────────────────
+function onPaymentStatusChange() {
+  updatePaymentSections();
+}
+
+// ── 支払セクション表示制御 ────────────────────────────────
+function updatePaymentSections() {
+  var method  = document.getElementById('paymentMethod').value;
+  var status  = document.getElementById('paymentStatus').value;
+  var cashSec = document.getElementById('cashSection');
+  var paidSec = document.getElementById('paidAmountSection');
+  cashSec.style.display = (method === '現金' && status === '入金済') ? 'block' : 'none';
+  paidSec.style.display = (status === '一部入金') ? 'block' : 'none';
+  calcRemaining();
+}
+
+// ── 一部入金 残額計算 ────────────────────────────────────
+function calcRemaining() {
+  var section = document.getElementById('paidAmountSection');
+  if (!section || section.style.display === 'none') return;
+  var incText  = document.getElementById('totalIncDisp').textContent;
+  var totalInc = parseInt(incText.replace(/[¥,]/g, ''), 10) || 0;
+  var paid     = parseInt(document.getElementById('paidAmount').value, 10) || 0;
+  var dispEl   = document.getElementById('remainingDisp');
+  if (!paid) { dispEl.textContent = '—'; dispEl.className = 'change-val'; return; }
+  var remaining = totalInc - paid;
+  if (remaining > 0) {
+    dispEl.textContent = '¥' + fmtNum(remaining);
+    dispEl.className   = 'change-val change-ok';
+  } else if (remaining === 0) {
+    dispEl.textContent = '¥0（完済）';
+    dispEl.className   = 'change-val change-ok';
   } else {
-    statusSel.value    = '入金済';
-    cashSec.style.display = (method === '現金') ? 'block' : 'none';
+    dispEl.textContent = '¥' + fmtNum(-remaining) + ' 超過';
+    dispEl.className   = 'change-val change-ng';
   }
 }
 
@@ -428,6 +479,22 @@ function onPaymentMethodChange() {
 
     if (!valid || items.length === 0) return;
 
+    // ── 一部入金 バリデーション ───────────────────────
+    var statusCheck = document.getElementById('paymentStatus').value;
+    if (statusCheck === '一部入金') {
+      var paidCheck  = parseInt(document.getElementById('paidAmount').value, 10) || 0;
+      var totalCheck = parseInt(
+        document.getElementById('totalIncDisp').textContent.replace(/[¥,]/g, ''), 10) || 0;
+      if (paidCheck <= 0) {
+        showMsg('error', '一部入金の場合は今回入金額（0より大きい金額）を入力してください。');
+        return;
+      }
+      if (paidCheck >= totalCheck) {
+        showMsg('error', '今回入金額が税込合計以上です。「入金済」を選択してください。');
+        return;
+      }
+    }
+
     // ── google.script.run 確認 ───────────────────────
     if (typeof google === 'undefined' || !google.script || !google.script.run) {
       showMsg('error', 'google.script.run が利用できません。WebApp URL として開いているか確認してください。');
@@ -449,6 +516,9 @@ function onPaymentMethodChange() {
       paymentStatus:   paymentStatus,
       memo:            memo
     };
+    if (paymentStatus === '一部入金') {
+      payload.paidAmount = parseInt(document.getElementById('paidAmount').value, 10) || 0;
+    }
 
     console.log('[billingForm] payload:', JSON.stringify(payload));
 

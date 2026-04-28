@@ -37,17 +37,24 @@ function getPatientListStats(patientId) {
       });
     }
 
-    // Payments: 会計済み visitKey を確認 + 未収を集計
+    // Payments: 会計済み visitKey を確認 + 未収残額を集計
+    // paidAmount (col 11): 実際の入金済み累積額。未設定の旧データはフォールバックで推定。
     var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
     if (paymentSh && paymentSh.getLastRow() >= 2) {
-      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 7).getValues().forEach(function(r) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
         var vk     = String(r[1]);
         var status = r[6] || "";
         var amt    = r[4] || 0;
         var pid    = vkToPatient[vk];
         if (!pid || !patientTotals[pid]) return;
         patientTotals[pid].billedVisits++;
-        if (status === "未収" || status === "一部入金") patientTotals[pid].outstanding += amt;
+        if (status === "未収" || status === "一部入金") {
+          // paidAmount がなければ旧データとしてフォールバック（未収=0 既払い、一部入金=0）
+          var rawPaid   = r[10];
+          var paidAmt   = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined) ? (rawPaid || 0) : 0;
+          var remaining = Math.max(amt - paidAmt, 0);
+          patientTotals[pid].outstanding += remaining;
+        }
       });
     }
 
@@ -95,17 +102,21 @@ function getAllOutstandingByPatient() {
       });
     }
 
-    // Payments: 未収・一部入金 を patientId 別に集計
+    // Payments: 未収・一部入金 の残額を patientId 別に集計（paidAmount 対応）
     var result = {};
     var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
     if (paymentSh && paymentSh.getLastRow() >= 2) {
-      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 7).getValues().forEach(function(r) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
         var vk     = String(r[1]);
         var status = r[6] || "";
         if (status !== "未収" && status !== "一部入金") return;
         var pid = vkToPatient[vk];
         if (!pid) return;
-        result[pid] = (result[pid] || 0) + (r[4] || 0);
+        var amt      = r[4] || 0;
+        var rawPaid  = r[10];
+        var paidAmt  = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined) ? (rawPaid || 0) : 0;
+        var remaining = Math.max(amt - paidAmt, 0);
+        result[pid] = (result[pid] || 0) + remaining;
       });
     }
 
@@ -148,24 +159,32 @@ function getPatientAccountingData(patientId) {
     }
 
     // ── Payments 集計 ────────────────────────────────────
+    // paidAmount (col 11): 実際の入金済み累積額。旧データは paymentStatus から推定。
     var payments         = {};
     var totalPaid        = 0;
     var totalOutstanding = 0;
     var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
     if (paymentSh && paymentSh.getLastRow() >= 2) {
-      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues().forEach(function(r) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
         var vk = String(r[1]);
         if (!visitKeySet[vk]) return;
         var status   = r[6] || "";
         var totalInc = r[4] || 0;
+        var rawPaid  = r[10];
+        // フォールバック: 入金済→totalInc、未収/一部入金→0（旧データは不明として0扱い）
+        var paidAmt  = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+          ? (rawPaid || 0)
+          : (status === "入金済" ? totalInc : 0);
+        var remaining = Math.max(totalInc - paidAmt, 0);
         payments[vk] = {
           paymentId:     String(r[0]),
           totalTaxInc:   totalInc,
+          paidAmount:    paidAmt,
           paymentMethod: r[5] || "",
           paymentStatus: status
         };
-        if (status === "入金済" || status === "一部入金") totalPaid        += totalInc;
-        if (status === "未収"   || status === "一部入金") totalOutstanding += totalInc;
+        totalPaid        += paidAmt;
+        totalOutstanding += remaining;
       });
     }
 
@@ -281,17 +300,23 @@ function getVisitForBilling(visitKey) {
     var existingPayment = null;
     var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
     if (paymentSh && paymentSh.getLastRow() >= 2) {
-      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues()
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues()
         .forEach(function(r) {
           if (alreadyPaid || String(r[1]) !== visitKey) return;
           alreadyPaid = true;
+          var status   = r[6] || "";
+          var totalInc = r[4] || 0;
+          var rawPaid  = r[10];
+          var paidAmt  = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+            ? (rawPaid || 0) : (status === "入金済" ? totalInc : 0);
           existingPayment = {
             paymentId:     String(r[0]),
             totalTaxEx:    r[2],
             totalTaxAmt:   r[3],
-            totalTaxInc:   r[4],
+            totalTaxInc:   totalInc,
+            paidAmount:    paidAmt,
             paymentMethod: r[5] || "",
-            paymentStatus: r[6] || ""
+            paymentStatus: status
           };
         });
     }
@@ -350,12 +375,13 @@ function collectOutstandingPayment(visitKey, payload) {
     if (!paymentSh || paymentSh.getLastRow() < 2)
       return { ok: false, error: "Payments シートが見つかりません" };
 
-    var rows       = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues();
+    var rows       = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues();
     var rowIndex          = -1;
     var curStatus         = "";
     var totalTaxInc       = 0;
     var curMemo           = "";
     var curPaymentMethod  = "";
+    var curPaidAmount     = 0;   // 現在の累積入金額（Step 2 以降で collectedAmount 累積更新に使用）
 
     for (var i = 0; i < rows.length; i++) {
       if (String(rows[i][1]) === visitKey) {
@@ -364,6 +390,9 @@ function collectOutstandingPayment(visitKey, payload) {
         totalTaxInc      = rows[i][4] || 0;
         curMemo          = rows[i][8] || "";
         curPaymentMethod = rows[i][5] || "";
+        var rawPaid      = rows[i][10];
+        curPaidAmount    = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+          ? (rawPaid || 0) : 0;
         break;
       }
     }
@@ -515,10 +544,36 @@ function savePaymentWithItems(payload) {
     var paymentId     = "SPP_" + visitKey;
     var paymentMethod = payload.paymentMethod ? String(payload.paymentMethod) : "現金";
     var paymentStatus = payload.paymentStatus ? String(payload.paymentStatus) : "入金済";
-    var paymentDate   = "";
+
+    // ── paidAmount 計算 ──────────────────────────────────
+    // paidAmount = 実際に入金された累積額
+    //   入金済:   paidAmount = totalTaxInc（全額）
+    //   未収:     paidAmount = 0
+    //   一部入金: paidAmount = payload.paidAmount（フォームから入力。0〜totalTaxInc-1）
+    var paidAmount;
+    if (paymentStatus === "入金済") {
+      paidAmount = totalTaxInc;
+    } else if (paymentStatus === "未収") {
+      paidAmount = 0;
+    } else {  // 一部入金
+      var rawPaid = (payload.paidAmount !== undefined && payload.paidAmount !== null)
+        ? parseInt(payload.paidAmount, 10) : 0;
+      paidAmount = isNaN(rawPaid) ? 0 : Math.max(0, rawPaid);
+      // paidAmount の範囲チェック・paymentStatus の自動補正
+      if (paidAmount >= totalTaxInc) {
+        paidAmount    = totalTaxInc;
+        paymentStatus = "入金済";
+      } else if (paidAmount === 0) {
+        paymentStatus = "未収";
+      }
+    }
+    var remainingAmount = Math.max(totalTaxInc - paidAmount, 0);
+    Logger.log("[savePaymentWithItems] paidAmount=¥" + paidAmount + " remaining=¥" + remainingAmount);
+
+    var paymentDate = "";
     if (payload.paymentDate) {
       paymentDate = String(payload.paymentDate);
-    } else if (paymentStatus === "入金済") {
+    } else if (paymentStatus === "入金済" || paymentStatus === "一部入金") {
       try { paymentDate = Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
     }
 
@@ -530,12 +585,14 @@ function savePaymentWithItems(payload) {
       totalTaxEx, totalTaxAmt, totalTaxInc,
       paymentMethod, paymentStatus, paymentDate,
       payload.memo ? String(payload.memo).trim() : "",
-      now
+      now,
+      paidAmount    // col 11: 実際の入金済み累積額
     ]);
     Logger.log("[savePaymentWithItems] payment saved: " + paymentId);
 
     // ── SelfPayVisits.会計状態 更新 ──────────────────────
-    var newBillingStatus = (paymentStatus === "未収") ? "未収" : "会計済";
+    // 一部入金・未収 → "未収"、入金済 → "会計済"
+    var newBillingStatus = (paymentStatus === "入金済") ? "会計済" : "未収";
     updateVisitBillingStatus_(visitKey, newBillingStatus);
     Logger.log("[savePaymentWithItems] billingStatus → " + newBillingStatus);
 
@@ -543,7 +600,8 @@ function savePaymentWithItems(payload) {
     // patientId: visitKey から "P0001" 部分を抽出（SPV_YYYYMMDD_P0001_001 形式）
     var pidForLog = visitKey.split("_")[2] || visitKey;
     appendRunLog_("PAYMENT_SAVE", pidForLog,
-      "paymentId: " + paymentId + " 税込合計: ¥" + totalTaxInc + " " + paymentMethod,
+      "paymentId: " + paymentId + " 税込合計: ¥" + totalTaxInc
+        + " 入金額: ¥" + paidAmount + " 残額: ¥" + remainingAmount + " " + paymentMethod,
       visitKey);
 
     return {
@@ -612,7 +670,7 @@ function issueReceipt(selfPayVisitKey) {
       return { ok: false, error: "Payments シートが見つかりません" };
 
     var payment = null;
-    paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues()
+    paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues()
       .forEach(function(r) {
         if (!payment && String(r[1]) === visitKey) {
           payment = { totalTaxEx: r[2], totalTaxAmt: r[3], totalTaxInc: r[4] };
@@ -737,19 +795,26 @@ function getReceiptByVisit(selfPayVisitKey) {
     var payment = null;
     var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
     if (paymentSh && paymentSh.getLastRow() >= 2) {
-      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues().forEach(function(r) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
         if (payment || String(r[1]) !== visitKey) return;
         var pd = "";
         if (r[7]) { try { pd = Utilities.formatDate(new Date(r[7]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {} }
+        var status   = r[6] || "";
+        var totalInc = r[4] || 0;
+        var rawPaid  = r[10];
+        var paidAmt  = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+          ? (rawPaid || 0) : (status === "入金済" ? totalInc : 0);
         payment = {
-          paymentId:     String(r[0]),
-          totalTaxEx:    r[2],
-          totalTaxAmt:   r[3],
-          totalTaxInc:   r[4],
-          paymentMethod: r[5] || "",
-          paymentStatus: r[6] || "",
-          paymentDate:   pd,
-          memo:          r[8] || ""
+          paymentId:       String(r[0]),
+          totalTaxEx:      r[2],
+          totalTaxAmt:     r[3],
+          totalTaxInc:     totalInc,
+          paidAmount:      paidAmt,
+          remainingAmount: Math.max(totalInc - paidAmt, 0),
+          paymentMethod:   r[5] || "",
+          paymentStatus:   status,
+          paymentDate:     pd,
+          memo:            r[8] || ""
         };
       });
     }
@@ -758,7 +823,7 @@ function getReceiptByVisit(selfPayVisitKey) {
     var receipt = null;
     var receiptSh = ss.getSheetByName(SHEET_NAMES.RECEIPTS);
     if (receiptSh && receiptSh.getLastRow() >= 2) {
-      receiptSh.getRange(2, 1, receiptSh.getLastRow() - 1, 10).getValues().forEach(function(r) {
+      receiptSh.getRange(2, 1, receiptSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
         if (receipt || String(r[1]) !== visitKey) return;
         var rd = "";
         if (r[3]) { try { rd = Utilities.formatDate(new Date(r[3]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {} }

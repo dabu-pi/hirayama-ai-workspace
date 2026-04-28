@@ -77,24 +77,32 @@ function getDailySalesReport(dateStr) {
     // 列: paymentId / selfPayVisitKey / 税別 / 税額 / 税込 / 支払方法 / 入金状態 / 入金日 / メモ / createdAt
     var paymentsMap = {};
     var unpaidTotal = 0;
+    // paidAmount (col 11): 実際の入金済み累積額。旧データは paymentStatus から推定。
     var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
     if (paymentSh && paymentSh.getLastRow() >= 2) {
-      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues()
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues()
         .forEach(function(r) {
           if (!r[0] || !r[1]) return;
-          var vk     = String(r[1]);
-          var status = r[6] || "";
+          var vk       = String(r[1]);
+          var status   = r[6] || "";
+          var totalInc = r[4] || 0;
+          var rawPaid  = r[10];
+          var paidAmt  = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+            ? (rawPaid || 0) : (status === "入金済" ? totalInc : 0);
+          var remaining = Math.max(totalInc - paidAmt, 0);
           paymentsMap[vk] = {
-            paymentId:     String(r[0]),
-            totalTaxEx:    r[2] || 0,
-            totalTaxAmt:   r[3] || 0,
-            totalTaxInc:   r[4] || 0,
-            paymentMethod: r[5] || "",
-            paymentStatus: status,
-            paymentDate:   r[7] ? toDateStr_(r[7]) : "",
-            memo:          r[8] || ""
+            paymentId:       String(r[0]),
+            totalTaxEx:      r[2] || 0,
+            totalTaxAmt:     r[3] || 0,
+            totalTaxInc:     totalInc,
+            paidAmount:      paidAmt,
+            remainingAmount: remaining,
+            paymentMethod:   r[5] || "",
+            paymentStatus:   status,
+            paymentDate:     r[7] ? toDateStr_(r[7]) : "",
+            memo:            r[8] || ""
           };
-          if (status === "未収" || status === "一部入金") unpaidTotal += (r[4] || 0);
+          if (status === "未収" || status === "一部入金") unpaidTotal += remaining;
         });
     }
 
