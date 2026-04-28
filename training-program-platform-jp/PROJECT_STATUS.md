@@ -1,5 +1,72 @@
 # PROJECT_STATUS
 
+## 2026-04-28 Phase 2.5b: タグ・種目名の日本語化
+
+### STATUS: CLOSED (2026-04-28) — typecheck/build OK / DB手動適用待ち
+
+### PURPOSE
+
+Phase 2.5 の日本語化対応で残っていた英語表記（プログラムタグ・種目名・カテゴリ）を日本語化。
+
+### IMPLEMENTED
+
+| 対象 | 変更内容 | ファイル |
+|---|---|---|
+| ExercisePreview 型 | `nameJa: string | null` フィールドを追加 | `types/programs.ts` |
+| program-library | WeekPreview 種目名クエリに `name_ja` を追加、`ExercisePreview.nameJa` を設定 | `lib/programs/program-library.ts` |
+| プログラム詳細「プログラム構成」 | 種目名を `nameJa ?? nameEn` 優先表示に変更 | `components/programs/ProgramDetailScreen.tsx` |
+| WorkoutScreen 種目リンク | `exerciseNameJa \|\| exerciseNameEn` 優先表示に変更 | `components/workout/WorkoutScreen.tsx` |
+| WorkoutScreen swapモーダル | 置換対象表示を `exerciseNameJa` 優先に変更 | 同上 |
+| WorkoutScreen カテゴリ表示 | 種目追加モーダルの category を日本語マップで翻訳（胸/背中/肩/腕/脚/お尻/体幹） | 同上 |
+| WorkoutSummaryScreen | 種目名を日本語主・英語サブ表示に変更 | `components/summary/WorkoutSummaryScreen.tsx` |
+| SessionDetailScreen | 種目名を日本語主・英語サブ表示に変更 | `components/history/SessionDetailScreen.tsx` |
+| ExerciseHistoryScreen | ページタイトル種目名を `exerciseNameJa` 優先に変更 | `components/history/ExerciseHistoryScreen.tsx` |
+| lib fallbacks | "Exercise" / "Custom Exercise" → "種目" / "カスタム種目" に統一 | `lib/workout/workout-summary.ts`, `session-detail.ts`, `train-session.ts` |
+
+### DB_UPDATE（手動適用が必要）
+
+プログラムタグのラベルはDBに保存されているため、以下のSQLを Supabase SQL Editor で手動実行すること。
+
+```
+seed/programs/update-program-tags-jp.sql
+```
+
+変更内容:
+- Strength → 筋力アップ
+- General Fitness → 総合フィットネス
+- Barbell → バーベル
+- Dumbbell → ダンベル
+- Full Body → 全身
+- Upper / Lower → 上半身 / 下半身
+- Squat Focus → スクワット重視
+- Explosive → 爆発系
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（全ルート正常）
+- commit: 92e88e1
+- push: ✅ feature/auto-dev-phase3-loop
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] /programs のプログラムカードのタグが日本語になっている（DB SQL 適用後）
+- [ ] /programs/[slug] のタグバッジ（バーベル/全身/筋力アップ等）が日本語
+- [ ] /programs/[slug] の「プログラム構成」で種目名がカタカナ・日本語表示
+- [ ] /train セッション中の種目名リンクが日本語（スクワット/ベンチプレス等）
+- [ ] 種目追加モーダルのカテゴリ表示（胸/背中/脚等）が日本語
+- [ ] /workout-summary の種目名が日本語主・英語サブ
+- [ ] /session-history/[id] の種目名が日本語主・英語サブ
+- [ ] /exercise-history/[slug] のページタイトルが日本語
+
+### REMAINING_RISKS
+
+- program_tags ラベルは SQL 手動適用が必要（適用前は英語のまま表示される）
+- exercises テーブルの name_ja が null の種目は nameEn フォールバックで英語表示される
+- Week 1 / Day 1 等の週ラベルは format-labels.ts で変換済み（DB変更不要）
+
+---
+
 ## 2026-04-28 I18N: 利用者向け画面の全面日本語化
 
 ### STATUS: CLOSED (2026-04-28) — typecheck/build OK / 実機確認待ち
