@@ -471,6 +471,7 @@ function onPaymentMethodChange() {
             document.getElementById('billingForm')
               .querySelectorAll('input, select, textarea, button')
               .forEach(function(el) { el.disabled = true; });
+            btn.textContent = '保存済み ✓';
 
             showMsg('success',
               '保存しました（' + res.paymentId + '）。' +

@@ -324,6 +324,100 @@ function getVisitForBilling(visitKey) {
 }
 
 /**
+ * 未収・一部入金の Payment を「入金済」に更新する（未収回収処理）。
+ *
+ * 二重回収防止:
+ *   - paymentStatus = "入金済" のときは更新せず { ok: false } を返す
+ *   - Payment が存在しない visitKey（未会計）も対象外
+ *
+ * @param {string} visitKey
+ * @param {{
+ *   paymentMethod?: string,  現金/カード/電子マネー/PayPay/その他
+ *   paymentDate?:  string,   YYYY-MM-DD（省略時: 当日）
+ *   memo?:         string
+ * }} payload
+ * @returns {{ ok, visitKey?, newStatus?, paymentDate?, totalTaxInc?, error? }}
+ */
+function collectOutstandingPayment(visitKey, payload) {
+  Logger.log("[collectOutstandingPayment] START visitKey=" + visitKey);
+  try {
+    if (!visitKey) return { ok: false, error: "visitKey は必須です" };
+    visitKey = String(visitKey);
+    var ss   = getTargetSpreadsheet_();
+
+    // ── Payment を検索 ───────────────────────────────────
+    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (!paymentSh || paymentSh.getLastRow() < 2)
+      return { ok: false, error: "Payments シートが見つかりません" };
+
+    var rows       = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues();
+    var rowIndex   = -1;
+    var curStatus  = "";
+    var totalTaxInc = 0;
+    var curMemo    = "";
+
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i][1]) === visitKey) {
+        rowIndex    = i + 2;   // 1-indexed + header row
+        curStatus   = rows[i][6] || "";
+        totalTaxInc = rows[i][4] || 0;
+        curMemo     = rows[i][8] || "";
+        break;
+      }
+    }
+
+    if (rowIndex === -1)
+      return { ok: false, error: "この来院の支払記録が見つかりません。先に会計入力を行ってください。" };
+
+    // ── 二重回収防止 ─────────────────────────────────────
+    if (curStatus === "入金済")
+      return { ok: false, error: "この支払はすでに入金済みです（二重回収は行いません）。" };
+
+    if (curStatus !== "未収" && curStatus !== "一部入金")
+      return { ok: false, error: "未収または一部入金の支払のみ回収できます（現在: " + curStatus + "）。" };
+
+    // ── 更新値の組み立て ─────────────────────────────────
+    var now           = new Date();
+    var paymentMethod = (payload && payload.paymentMethod) ? String(payload.paymentMethod) : "";
+    var paymentDate   = (payload && payload.paymentDate)   ? String(payload.paymentDate) :
+                        Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM-dd");
+    var addMemo = (payload && payload.memo) ? String(payload.memo).trim() : "";
+    var newMemo = curMemo
+      ? curMemo + "　回収済(" + paymentDate + ")" + (addMemo ? ": " + addMemo : "")
+      : "回収済(" + paymentDate + ")" + (addMemo ? ": " + addMemo : "");
+
+    // ── Payments を更新 ──────────────────────────────────
+    paymentSh.getRange(rowIndex, 7).setValue("入金済");     // 入金状態
+    paymentSh.getRange(rowIndex, 8).setValue(paymentDate);  // 入金日
+    paymentSh.getRange(rowIndex, 9).setValue(newMemo);      // メモ
+    if (paymentMethod) paymentSh.getRange(rowIndex, 6).setValue(paymentMethod); // 支払方法
+    Logger.log("[collectOutstandingPayment] row " + rowIndex + " → 入金済");
+
+    // ── SelfPayVisits.会計状態 → 会計済 に更新 ─────────
+    updateVisitBillingStatus_(visitKey, "会計済");
+    Logger.log("[collectOutstandingPayment] visit billingStatus → 会計済");
+
+    // ── Run_Log ──────────────────────────────────────────
+    var pidForLog = visitKey.split("_")[2] || visitKey;
+    appendRunLog_("PAYMENT_COLLECT", pidForLog,
+      "visitKey: " + visitKey + " 回収額: ¥" + totalTaxInc + " " + (paymentMethod || ""));
+
+    return {
+      ok:          true,
+      visitKey:    visitKey,
+      newStatus:   "入金済",
+      paymentDate: paymentDate,
+      totalTaxInc: totalTaxInc
+    };
+
+  } catch(err) {
+    var m = (err && err.message) ? err.message : String(err);
+    Logger.log("[collectOutstandingPayment] ERROR: " + m);
+    return { ok: false, error: m };
+  }
+}
+
+/**
  * 明細（SelfPayItems）と支払（Payments）を保存し、SelfPayVisits.会計状態を更新する。
  *
  * @param {Object} payload

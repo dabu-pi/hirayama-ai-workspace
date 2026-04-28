@@ -175,6 +175,44 @@ window.onerror = function(msg, src, line) {
         </table>
       </div>
 
+      <!-- ── 未収回収セクション（paymentStatus が未収/一部入金のとき表示）── -->
+      <? if (payment.paymentStatus === '未収' || payment.paymentStatus === '一部入金') { ?>
+      <div id="collectionArea" class="no-print" style="margin-bottom:20px;">
+        <p class="form-section-title" style="color:#e37400;">未収回収</p>
+        <div style="background:#fff8e1;border:1px solid #f0c040;border-radius:6px;
+             padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <strong style="color:#774700;">
+            未収額: ¥<?!= Number(payment.totalTaxInc || 0).toLocaleString() ?>
+          </strong>
+          <span style="font-size:12px;color:#9aa0a6;">入金状態: <?= payment.paymentStatus ?></span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="collectMethod">回収時の支払方法</label>
+            <select class="form-control" id="collectMethod">
+              <option value="現金">現金</option>
+              <option value="カード">カード</option>
+              <option value="電子マネー">電子マネー</option>
+              <option value="PayPay">PayPay</option>
+              <option value="その他">その他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="collectMemo">回収メモ（任意）</label>
+            <input class="form-control" id="collectMemo" type="text"
+              placeholder="例: 翌日現金回収" autocomplete="off">
+          </div>
+        </div>
+        <div id="collectMsg"></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="collectBtn"
+            onclick="handleCollect()">
+            未収を回収する（入金済に更新）
+          </button>
+        </div>
+      </div>
+      <? } ?>
+
       <!-- 領収書エリア（発行ボタン or 発行済みプレビュー） -->
 
       <!-- 発行ボタン（receipt == null のとき表示、発行後に非表示） -->
@@ -250,6 +288,78 @@ function showMsg(type, html) {
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 function clearMsg() { var el = document.getElementById('msg'); if (el) el.innerHTML = ''; }
+
+// ── 未収回収 ─────────────────────────────────────────────
+function showCollectMsg(type, html) {
+  var el = document.getElementById('collectMsg');
+  if (el) el.innerHTML = '<div class="alert alert-' + type + '">' + html + '</div>';
+}
+
+function handleCollect() {
+  var btn = document.getElementById('collectBtn');
+  if (!btn) return;
+
+  if (typeof google === 'undefined' || !google.script || !google.script.run) {
+    showCollectMsg('error', 'google.script.run が利用できません。WebApp URL として開いているか確認してください。');
+    return;
+  }
+
+  var method = document.getElementById('collectMethod');
+  var memo   = document.getElementById('collectMemo');
+  btn.disabled    = true;
+  btn.textContent = '処理中...';
+
+  var payload = {
+    paymentMethod: method ? method.value : '現金',
+    memo:          memo   ? memo.value.trim() : ''
+  };
+  console.log('[receiptPage] collectOutstandingPayment:', VISIT_KEY, JSON.stringify(payload));
+
+  var timer = setTimeout(function() {
+    showCollectMsg('error',
+      '処理がタイムアウトしました（20秒）。<br>Apps Script エディタ → 実行数 でエラーを確認してください。');
+    btn.disabled    = false;
+    btn.textContent = '未収を回収する（入金済に更新）';
+  }, 20000);
+
+  try {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        clearTimeout(timer);
+        console.log('[receiptPage] collect result:', JSON.stringify(res));
+        if (res && res.ok) {
+          var area = document.getElementById('collectionArea');
+          if (area) area.style.display = 'none';
+          showMsg('success',
+            '未収を回収しました（入金日: ' + res.paymentDate + '　¥' + fmtNum(res.totalTaxInc) + '）。' +
+            '<br><button type="button" onclick="goToDetail()" ' +
+            'style="margin-top:8px;padding:5px 14px;background:#1a73e8;color:#fff;' +
+            'border:none;border-radius:4px;cursor:pointer;font-size:13px;">' +
+            '患者詳細へ戻る →</button>'
+          );
+        } else {
+          var errMsg = (res && res.error) ? res.error : '回収処理に失敗しました（原因不明）';
+          showCollectMsg('error', errMsg);
+          btn.disabled    = false;
+          btn.textContent = '未収を回収する（入金済に更新）';
+        }
+      })
+      .withFailureHandler(function(err) {
+        clearTimeout(timer);
+        var msg = err ? (err.message || String(err)) : '不明なGASエラー';
+        showCollectMsg('error', 'GAS エラー: ' + msg +
+          '<br><small>Apps Script エディタ → 実行数 で詳細を確認してください。</small>');
+        btn.disabled    = false;
+        btn.textContent = '未収を回収する（入金済に更新）';
+      })
+      .collectOutstandingPayment(VISIT_KEY, payload);
+  } catch(syncErr) {
+    clearTimeout(timer);
+    showCollectMsg('error', '同期エラー: ' + syncErr.message);
+    btn.disabled    = false;
+    btn.textContent = '未収を回収する（入金済に更新）';
+  }
+}
 
 // ── 領収書プレビュー描画 ────────────────────────────────
 function showReceiptBox(data) {
