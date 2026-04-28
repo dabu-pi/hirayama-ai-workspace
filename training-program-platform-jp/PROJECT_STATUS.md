@@ -47,17 +47,27 @@
 - commit: 23390b5
 - push: ✅ feature/auto-dev-phase3-loop
 
-### LIVE_CHECK_REQUIRED
+### LIVE_CHECK — 2026-04-28 スマホ実機確認済み
 
-- [ ] /session-history 遷移時にブランクスクリーンではなくドットアニメーションが表示される
-- [ ] /gym 遷移時にローディングアニメーションが表示される
-- [ ] /profile / /my-exercises も同様に確認
+| 確認項目 | 結果 |
+|---|---|
+| /session-history 遷移時に読み込み中表示が出る | ✅ PASS |
+| /session-history/[id] 遷移時に読み込み中表示が出る | ✅ PASS |
+| /gym 遷移時に読み込み中表示が出る | ✅ PASS |
+| /profile 遷移時に読み込み中表示が出る | ✅ PASS |
+| /my-exercises 遷移時に読み込み中表示が出る | ✅ PASS |
+| ページ遷移時の真っ白な待ち時間が軽減されている | ✅ PASS |
+| 既存表示・主要機能に大きな崩れがない | ✅ PASS |
+
+**体感改善内容:** loading.tsx 追加によるブランクスクリーン軽減。SSR待機中にドットアニメーションが表示され、ユーザーへの応答フィードバックが向上した。
 
 ### REMAINING_RISKS（PWA化前の確認事項）
 
-- `force-dynamic` 全ページ使用のため、ISR/SSG による高速化余地あり（高リスク）
-- /train 初回表示が15-20クエリ → 現状は十分にチューニング済み（Promise.all並列化）
-- exercises API の応答速度が体感に影響する場合は、library部分の分離キャッシュが候補
+- 今回の改善は「ブランクスクリーン軽減による体感速度改善」であり、実際のDB取得速度は未変更
+- `force-dynamic` 全ページ使用のため、ISR/SSG による高速化余地あり → 高リスクにつき将来候補
+- /train 初回表示が15-20クエリ → 現状は十分にチューニング済み（Promise.all並列化）、PWA化後に再評価
+- exercises API の応答速度が体感に影響する場合は、library部分の分離キャッシュが将来候補
+- D-2 cancelled_at の実機確認は引き続き保留
 
 ---
 
