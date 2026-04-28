@@ -31,6 +31,33 @@
 - receipt.html の残額表示更新（回収後 DOM 反映）
 - PaymentCollections シートは採用しない（案 C 確定）
 
+**実機確認ステータス:** 未実施（ユーザー確認待ち）
+
+### 次回再開時の実機確認手順
+
+1. 会計入力画面（billing-form.html）を開く
+2. 入金状態セレクトで「一部入金」を選択 → 「今回入金額」入力欄が表示されること
+3. 税込合計が表示されている状態で入金額を入力 → 「未収残額」がリアルタイム更新されること
+4. 入金額=0 のまま「保存して領収書へ →」を押す → バリデーションエラーが出ること
+5. 入金額 ≥ 税込合計 で保存 → 「入金済を選択してください」エラーが出ること
+6. 正常な一部入金額（0 < paidAmount < totalTaxInc）で保存
+7. Payments シートの col 11 に paidAmount が記録されていること
+8. 患者詳細画面で当該来院の入金状態が「一部入金」、未収残額が正しく表示されること
+
+### 次回実装候補: Phase 5-B Step 2
+
+**テーマ:** `collectOutstandingPayment` に `collectedAmount` 引数を追加し、残額回収を正確に処理する
+
+| 対象 | 変更内容 |
+|---|---|
+| `JREC_SF01_Billing.gs` | `collectOutstandingPayment`: `payload.collectedAmount` を受け取り `paidAmount` を累積更新。全額回収（paidAmount >= totalTaxInc）なら paymentStatus → 入金済。部分回収なら → 一部入金。Run_Log に「今回回収額: ¥N 累積入金額: ¥M 残額: ¥K」を記録 |
+| `receipt.html` | 未収回収 UI に「今回回収額」入力フィールドを追加。保存後に画面の `paidAmount`・`remainingAmount`・`paymentStatus` をリアルタイム更新 |
+| `JREC_SF01_DailySales.gs` | `paymentCollectTotal` を `collectedAmount`（今回回収額）ベースに修正（現在は totalTaxInc を使用） |
+
+**Step 2 実装前確認事項:**
+- 一部回収後に再び一部入金状態に戻す（paymentStatus=一部入金）のか、回収済み（入金済）とするのかを確認
+- receipt.html の未収回収モーダルに金額入力欄を追加する UI 仕様を確認
+
 ---
 
 ## Phase 5-B 設計調査: 一部入金の差額管理（2026-04-28）
