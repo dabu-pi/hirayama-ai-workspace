@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-27（G-3 ブラウザ実機確認 PASS — Phase 2 全タスク実機確認完了）
+最終更新: 2026-04-28（Phase 2.5〜G-6a 完了 — 次回 Phase 2.7 PWA化から再開）
 
 ---
 
@@ -105,6 +105,23 @@
 - U-3: 自由トレーニングテンプレート保存 — 将来フェーズ
 - U-4: ユーザー種目の前回セット表示・統計 — 将来フェーズ
 - Googleカレンダー連携: Phase 3 以降
+
+### Phase 2.5〜2.6 追加対応（✅ 完了 2026-04-28）
+
+- **Phase 2.5 I18N: 利用者向け画面の全面日本語化** ✅ CLOSED / 実機確認PASS
+- **Phase 2.5b: タグ・種目名の日本語化** ✅ CLOSED / 種目名実機確認PASS
+- **Phase 2.5c: /programs タグ表示の日本語化（UIフォールバック追加）** ✅ CLOSED / 実機確認PASS
+- **Phase 2.5d: プログラム名・目標・概要・週ラベルの日本語化** ✅ CLOSED / 実機確認PASS
+- **Phase 2.6: 表示速度改善（loading.tsx 5ページ追加）** ✅ CLOSED / 実機確認PASS
+- **D-2: cancelled_at 記録** ✅ コードレビューPASS / 管理者直接変更実機PASS / 退会申請フロー実機未確認
+- **G-6a: /gym 前回トレーニング経過日数メッセージ** ✅ CLOSED / 実機確認PASS
+
+### Phase 2.7: PWA化 / ホーム画面追加対応（次回）
+
+- PWA manifest 追加（アプリ名・アイコン・カラー設定）
+- service worker / next-pwa または手動設定
+- iOS/Android ホーム画面追加確認
+- G-6b: PWA起動時の再開メッセージ強調
 
 ### Phase 3: コンテンツ・管理拡張
 
