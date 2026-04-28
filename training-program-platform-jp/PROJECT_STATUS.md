@@ -1,5 +1,79 @@
 # PROJECT_STATUS
 
+## 2026-04-28 I18N: 利用者向け画面の全面日本語化
+
+### STATUS: CLOSED (2026-04-28) — typecheck/build OK / 実機確認待ち
+
+### PURPOSE
+
+テストユーザーから「英語が多すぎて分かりにくい」という意見を受け、利用者・管理者が画面で見る英語表記を原則すべて日本語化した。
+
+### IMPLEMENTED
+
+| 対象 | 変更内容 | ファイル |
+|---|---|---|
+| ログイン画面 | Sign In→ログイン / Sign Up→新規登録 / Email→メールアドレス / Password→パスワード / Browse Programs→プログラム一覧を見る | `app/login/page.tsx` |
+| トレーニング認証ガード | Login Required→ログインが必要です | `components/train/TrainAuthRequired.tsx` |
+| ホームカード | My Program→進行中のプログラム / Up next→次のワークアウト / Resume workout→ワークアウトを再開 / Not enough data→データ不足 / Volume trend→ボリューム推移 / Est. 1RM→推定1RM / days complete→日 完了 | `components/home/ActiveProgramCard.tsx` |
+| ブロック画面 | Workout In Progress→トレーニング進行中 / Back to Program→プログラムへ戻る / Go to Home→ホームへ戻る | `components/train/BlockedSessionScreen.tsx` |
+| セッション開始画面 | Start {day}→{day}を開始 / Cancel→キャンセル / Back to Program→プログラムへ戻る | `components/workout/StartSessionScreen.tsx` |
+| プログラム一覧 | Program Library→プログラム一覧 / Open detail→詳細を見る / Level/Frequency/Duration TBD→日本語 / Clear→リセット | `components/programs/ProgramsScreen.tsx` |
+| プログラム詳細 | Program Detail→プログラム詳細 / Level/Frequency/Duration→レベル/頻度/期間 / Goal→目標 / Overview→概要 / Program Structure→プログラム構成 / Week N Day M→N週目 M日目 / Start Program→プログラムを開始 / Resume Training→トレーニングを再開 / Back to Programs→プログラム一覧へ戻る | `components/programs/ProgramDetailScreen.tsx` |
+| セッション履歴 | Workout History→トレーニング履歴 / Completed/In Progress/Cancelled→完了/進行中/キャンセル済 / Free session→フリーセッション / N exercises→N種目 / Summary/Detail→サマリー/詳細 | `components/history/SessionHistoryScreen.tsx` |
+| アーカイブボタン | Archive→アーカイブ | `components/history/ArchiveSessionButton.tsx` |
+| サマリー画面 | N sets→Nセット | `components/summary/WorkoutSummaryScreen.tsx` |
+| プログラム再開ボタン | Restarting→再開中 / Restart Program→プログラムを最初から / エラー文→日本語 | `components/summary/RestartProgramButton.tsx` |
+| 管理者Hub | Admin badge→管理者 | `components/admin/AdminHubScreen.tsx` |
+| 会員管理 | Active/Paused/Cancelled→利用中/休会中/退会済（StatsCard・フィルター） | `components/admin/MembersScreen.tsx` |
+| 退会申請管理 | status表示（pending/approved/rejected）→未処理/承認済み/却下済み | `components/admin/DeletionRequestsScreen.tsx` |
+| program-library.ts | Beginner/Intermediate/Advanced→初級/中級/上級 / N days per week→N日/週 / N weeks→N週間 | `lib/programs/program-library.ts` |
+| program-catalog.ts | BIG3 2-Day→BIG3 2日/週（4週）など全プログラム名・頻度・期間を日本語化 | `lib/programs/program-catalog.ts` |
+| format-labels.ts | formatWeekDay: Week N / Day M → N週目 · M日目 に変換 | `lib/workout/format-labels.ts` |
+
+### DB_UPDATE（手動適用が必要）
+
+プログラム名はDBに保存されているため、コード側の変更だけでは本番に反映されない。
+以下のSQLを Supabase ダッシュボード SQL Editor で手動実行すること。
+
+```
+seed/programs/update-program-titles-jp.sql
+```
+
+対象: big3-2day / big3-3day / big3-2day-6week / gzclp-base / gzclp-base-v2-4day / barbell-2day-base / starting-strength-base / upper-lower-base / dumbbell-full-body-base
+
+### CHECK
+
+- typecheck: ✅ pass
+- build: ✅ pass（全ルート正常ビルド）
+- commit: fbab6b9
+- push: ✅ feature/auto-dev-phase3-loop
+
+### LIVE_CHECK_REQUIRED（次回実機確認リスト）
+
+- [ ] /login: ログイン/新規登録タブ・ボタン・フィールドラベルが日本語
+- [ ] /programs: プログラム一覧・フィルター・カード内文言が日本語
+- [ ] /programs/[slug]: レベル/頻度/期間/目標/概要・週構成が日本語
+- [ ] /train 開始画面: 「N週目 · M日目を開始」ボタン
+- [ ] ホーム: My Program→進行中のプログラム / Up next→次のワークアウト
+- [ ] セッション履歴: 完了/進行中/キャンセル済バッジ
+- [ ] 管理者画面: 利用中/休会中/退会済 表示
+- [ ] DBプログラム名更新SQL手動適用後に /programs でプログラム名が日本語になること
+
+### REMAINING_RISKS
+
+- DBプログラム名・説明文はSQLの手動適用が必要（Supabaseダッシュボード）
+- program_weeks.label（"Week 1"等）はDBに格納されているため、format-labelsでの変換に依存する
+  → formatWeekDay() が "Week N" → "N週目" に変換するので表示は日本語になる
+- 管理者画面の membership_status 生値（"active"/"paused"/"cancelled"）はいくつか箇所でそのまま表示されている可能性あり
+
+### NEXT
+
+- DBプログラム名更新SQLを手動適用
+- 実機で全主要画面を確認
+- 英語が残る箇所があれば追加対応
+
+---
+
 ## 2026-04-27 U-2: ユーザー種目管理画面（編集/アーカイブ）
 
 ### STATUS: CLOSED (2026-04-27)
