@@ -8,6 +8,55 @@
 // ============================================================
 
 /**
+ * 全患者の未収残高を { [patientId]: outstandingAmount } で返す。
+ * 患者一覧の未収額列表示に使用する。
+ *
+ * 未収額の定義:
+ *   Payments.paymentStatus = "未収" または "一部入金" の totalTaxInc 合計。
+ *   会計入力がまだない来院（未会計）は未収に含めない。
+ *
+ * 読み取りコスト: SelfPayVisits 全行 + Payments 全行 の2回読み取り。
+ * 患者数・来院数が増えた場合は DailySales への集計キャッシュ化を検討する。
+ *
+ * @returns {{ [patientId]: number }}
+ */
+function getAllOutstandingByPatient() {
+  try {
+    var ss = getTargetSpreadsheet_();
+
+    // SelfPayVisits: visitKey → patientId マップ
+    var vkToPatient = {};
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (visitSh && visitSh.getLastRow() >= 2) {
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, 2).getValues().forEach(function(r) {
+        if (r[0] && r[1]) vkToPatient[String(r[0])] = String(r[1]);
+      });
+    }
+
+    // Payments: 未収・一部入金 を patientId 別に集計
+    var result = {};
+    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (paymentSh && paymentSh.getLastRow() >= 2) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 7).getValues().forEach(function(r) {
+        var vk     = String(r[1]);
+        var status = r[6] || "";
+        if (status !== "未収" && status !== "一部入金") return;
+        var pid = vkToPatient[vk];
+        if (!pid) return;
+        result[pid] = (result[pid] || 0) + (r[4] || 0);
+      });
+    }
+
+    return result;
+
+  } catch(err) {
+    var m = (err && err.message) ? err.message : String(err);
+    Logger.log("[getAllOutstandingByPatient] ERROR: " + m);
+    return {};
+  }
+}
+
+/**
  * 患者単位の会計集計と visitKey ごとの支払・領収書状態を返す。
  * patient-detail.html のサマリー表示と来院ごとの会計導線に使用する。
  *

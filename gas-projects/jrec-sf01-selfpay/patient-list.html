@@ -28,8 +28,16 @@
     </div>
 
     <!-- 件数 -->
-    <? if (patients.length > 0) { ?>
-      <p class="count-label"><?= patients.length ?> 件</p>
+    <? if (patients.length > 0) {
+      var outstandingCount = 0;
+      patients.forEach(function(p) { if (p.outstanding > 0) outstandingCount++; });
+    ?>
+      <p class="count-label">
+        <?= patients.length ?> 件
+        <? if (outstandingCount > 0) { ?>
+          　<span style="color:#d93025;font-weight:700;">（未収あり <?= outstandingCount ?> 件）</span>
+        <? } ?>
+      </p>
     <? } ?>
 
     <!-- 患者テーブル -->
@@ -72,9 +80,9 @@
               </td>
               <td style="text-align:right;">
                 <? if (p.outstanding > 0) { ?>
-                  <span class="badge badge-warn">¥<?= p.outstanding ?></span>
+                  <span class="badge badge-warn">¥<?!= Number(p.outstanding).toLocaleString() ?></span>
                 <? } else { ?>
-                  <span class="muted">0円</span>
+                  <span class="muted">¥0</span>
                 <? } ?>
               </td>
               <td>

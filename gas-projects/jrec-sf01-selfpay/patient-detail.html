@@ -82,11 +82,11 @@ var visitCount    = timeline.length;
       <div class="summary-item">
         <div class="label">未収残高</div>
         <div class="value" style="font-size:14px;
-          <?= (accounting && accounting.totalOutstanding > 0) ? 'color:#d93025;font-weight:700;' : 'color:#9aa0a6;' ?>">
-          <? if (accounting && accounting.totalOutstanding > 0) { ?>
-            ¥<?!= Number(accounting.totalOutstanding).toLocaleString() ?>
+          <?= (accounting && accounting.totalOutstanding > 0) ? 'color:#d93025;font-weight:700;' : '' ?>">
+          <? if (accounting) { ?>
+            ¥<?!= Number(accounting.totalOutstanding || 0).toLocaleString() ?>
           <? } else { ?>
-            —
+            <span style="color:#9aa0a6;">—</span>
           <? } ?>
         </div>
       </div>
