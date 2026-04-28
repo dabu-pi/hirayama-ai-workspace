@@ -6,63 +6,513 @@
   <title>会計入力 — JREC-SF01</title>
   <script>var APP_URL = "<?= appUrl ?>";</script>
   <?!= include('styles') ?>
+  <style>
+    /* ── 明細テーブル ── */
+    .item-header,
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 70px 110px 120px 32px;
+      gap: 8px;
+      align-items: center;
+    }
+    .item-header {
+      padding: 0 0 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #9aa0a6;
+    }
+    .item-row {
+      padding: 8px 0;
+      border-top: 1px solid #f1f3f4;
+    }
+    .item-row .price-cell  { font-size: 13px; color: #5f6368; text-align: right; }
+    .item-row .total-cell  { font-size: 14px; font-weight: 600; text-align: right; }
+    .remove-btn {
+      width: 28px; height: 28px;
+      background: none; border: 1px solid #dadce0; border-radius: 4px;
+      font-size: 14px; color: #9aa0a6; cursor: pointer; line-height: 1;
+    }
+    .remove-btn:hover { background: #fce8e6; color: #c5221f; border-color: #f5c6c3; }
+
+    /* ── 合計テーブル ── */
+    .total-table { width: 280px; margin-left: auto; }
+    .total-table td { padding: 5px 0; }
+    .total-table td:last-child { text-align: right; font-weight: 600; }
+    .total-row-grand td {
+      padding-top: 10px !important;
+      border-top: 2px solid #e0e0e0;
+      font-size: 18px; font-weight: 700; color: #1a73e8;
+    }
+
+    /* ── 現金お釣り ── */
+    .cash-section {
+      margin-top: 10px; padding: 12px 16px;
+      background: #f8f9fa; border-radius: 6px;
+    }
+    .cash-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .cash-row:last-child { margin-bottom: 0; }
+    .cash-label { width: 80px; font-size: 13px; color: #5f6368; flex-shrink: 0; }
+    .change-val { font-size: 17px; font-weight: 700; }
+    .change-ok  { color: #1e8e3e; }
+    .change-ng  { color: #d93025; }
+
+    /* ── レスポンシブ ── */
+    @media (max-width: 600px) {
+      .item-header { display: none; }
+      .item-row { grid-template-columns: 1fr 55px 95px 100px 28px; gap: 5px; }
+    }
+  </style>
 </head>
 <body>
+
+<!-- JS初期化エラーを DOM に表示 -->
+<script>
+window.onerror = function(msg, src, line) {
+  var el = document.getElementById('msg');
+  if (el) el.innerHTML = '<div class="alert alert-error">JS初期化エラー: ' + msg + ' (line ' + line + ')</div>';
+  return false;
+};
+</script>
 
 <?!= include('index') ?>
 
 <div class="container">
 
-  <!-- 患者サマリー -->
+  <!-- ── 患者サマリー ──────────────────────────────────────── -->
   <div class="card" style="padding:14px 20px;">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       <div>
         <span class="pid"><?= visit.patientId ?></span>
-        <span style="font-size:17px;font-weight:700;margin-left:10px;"><?= patient ? patient.name : visit.patientId ?></span>
+        <span style="font-size:17px;font-weight:700;margin-left:10px;">
+          <?= patient ? patient.name : visit.patientId ?>
+        </span>
         <? if (patient && patient.kana) { ?>
           <span class="muted" style="margin-left:8px;font-size:13px;"><?= patient.kana ?></span>
         <? } ?>
       </div>
+      <? if (patient && patient.phone) { ?>
+        <span style="color:#5f6368;font-size:13px;"><?= patient.phone ?></span>
+      <? } ?>
       <button type="button" class="btn btn-secondary btn-sm" style="margin-left:auto;"
-        onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= visit.patientId ?>'">
-        ← 患者詳細に戻る
-      </button>
+        onclick="goToDetail()">← 患者詳細に戻る</button>
     </div>
   </div>
 
-  <!-- 会計入力カード（Step 3 プレースホルダー）-->
+  <!-- ── 来院情報 ──────────────────────────────────────────── -->
+  <div class="card" style="padding:10px 20px;">
+    <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;align-items:center;">
+      <div><span style="color:#9aa0a6;font-size:11px;">来院日</span>
+        <strong style="margin-left:6px;"><?= visit.visitDate ?></strong></div>
+      <div><span style="color:#9aa0a6;font-size:11px;">区分</span>
+        <span style="margin-left:6px;"><?= visit.visitType ?></span></div>
+      <? if (visit.chiefComplaint) { ?>
+        <div><span style="color:#9aa0a6;font-size:11px;">主訴</span>
+          <span style="margin-left:6px;"><?= visit.chiefComplaint ?></span></div>
+      <? } ?>
+      <div style="margin-left:auto;font-family:monospace;font-size:11px;color:#c5c7c9;">
+        <?= visit.selfPayVisitKey ?>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 会計入力カード ─────────────────────────────────────── -->
   <div class="card">
     <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;">会計入力</h2>
     <p style="font-size:12px;color:#9aa0a6;margin-bottom:16px;">
-      SelfPayItems（明細）と Payments（支払）に保存します
+      SelfPayItems（明細）と Payments（支払）に同時保存します。
+      最終税計算は保存時に GAS 側で確定します。
     </p>
 
-    <!-- 来院情報サマリー -->
-    <table class="info-table" style="width:100%;margin-bottom:20px;">
-      <tbody>
-        <tr><td>来院キー</td><td style="font-family:monospace;font-size:12px;"><?= visit.selfPayVisitKey ?></td></tr>
-        <tr><td>来院日</td><td><?= visit.visitDate ?></td></tr>
-        <tr><td>来院区分</td><td><?= visit.visitType ?></td></tr>
-        <tr><td>主訴</td><td><?= visit.chiefComplaint ?></td></tr>
-        <tr><td>会計状態</td><td><?= visit.billingStatus ?></td></tr>
-        <tr><td>有効メニュー数</td><td><?= menus ? menus.length : 0 ?> 件</td></tr>
-      </tbody>
-    </table>
+    <div id="msg"></div>
 
-    <div class="phase-note">
-      <strong>Step 3 実装予定:</strong>
-      メニュー選択・数量入力・税計算・支払方法・保存機能はここに実装されます。<br>
-      現在はルーティング確認用のプレースホルダーです。
-    </div>
+    <form id="billingForm" novalidate>
 
-    <div class="form-actions">
-      <button type="button" class="btn btn-secondary"
-        onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= visit.patientId ?>'">
-        キャンセル（患者詳細へ戻る）
-      </button>
-    </div>
-  </div>
+      <!-- ── 施術明細 ────────────────────────────────────── -->
+      <p class="form-section-title">施術明細</p>
 
-</div>
+      <div class="item-header">
+        <div>メニュー</div>
+        <div style="text-align:right;">数量</div>
+        <div style="text-align:right;">税別単価</div>
+        <div style="text-align:right;">税込小計</div>
+        <div></div>
+      </div>
+
+      <div id="itemsArea"></div>
+
+      <button type="button" class="btn btn-secondary btn-sm" style="margin-top:10px;"
+        onclick="addItemRow()">＋ 行を追加</button>
+
+      <!-- ── 合計 ────────────────────────────────────────── -->
+      <p class="form-section-title">合計</p>
+
+      <table class="total-table">
+        <tbody>
+          <tr>
+            <td style="color:#5f6368;">税別合計</td>
+            <td id="totalExDisp">¥0</td>
+          </tr>
+          <tr>
+            <td style="color:#5f6368;">消費税（10%）</td>
+            <td id="totalTaxDisp">¥0</td>
+          </tr>
+          <tr class="total-row-grand">
+            <td>税込合計</td>
+            <td id="totalIncDisp">¥0</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:#9aa0a6;text-align:right;margin-top:4px;">
+        ※ 端数処理・税区分は保存時に GAS 側で確定します
+      </p>
+
+      <!-- ── 支払情報 ───────────────────────────────────── -->
+      <p class="form-section-title">支払情報</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="paymentMethod">
+            支払方法<span class="req">*</span>
+          </label>
+          <select class="form-control" id="paymentMethod" onchange="onPaymentMethodChange()">
+            <option value="現金">現金</option>
+            <option value="カード">カード</option>
+            <option value="電子マネー">電子マネー</option>
+            <option value="未収">未収（後払い）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="paymentStatus">入金状態</label>
+          <select class="form-control" id="paymentStatus">
+            <option value="入金済">入金済</option>
+            <option value="未収">未収</option>
+            <option value="一部入金">一部入金</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 現金のみ表示: 預かり金 / お釣り -->
+      <div class="cash-section" id="cashSection" style="display:none;">
+        <div class="cash-row">
+          <span class="cash-label">預かり金</span>
+          <input type="number" id="cashReceived" class="form-control"
+            style="width:130px;text-align:right;"
+            placeholder="0" min="0" oninput="calcChange()">
+          <span style="font-size:13px;color:#5f6368;">円</span>
+        </div>
+        <div class="cash-row">
+          <span class="cash-label">お釣り</span>
+          <span id="changeDisp" class="change-val">—</span>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label" for="paymentMemo">メモ</label>
+        <input class="form-control" id="paymentMemo" type="text"
+          placeholder="特記事項があれば入力" autocomplete="off">
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="goToDetail()">
+          キャンセル
+        </button>
+        <button class="btn btn-primary" id="saveBtn" type="submit">
+          保存して領収書へ →
+        </button>
+      </div>
+
+    </form>
+  </div><!-- /card -->
+</div><!-- /container -->
+
+<script>
+var VISIT_KEY  = "<?= visit.selfPayVisitKey ?>";
+var PATIENT_ID = "<?= visit.patientId ?>";
+var MENUS      = <?!= JSON.stringify(menus || []).replace(/<\//g, '<\\/') ?>;
+
+// ── ナビゲーション ────────────────────────────────────────
+function navigate(url) {
+  try { window.top.location.href = url; } catch(e) {
+    try { window.location.href = url; } catch(e2) {}
+  }
+}
+function goToDetail()  { navigate(APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID)); }
+function goToReceipt() { navigate(APP_URL + '?page=receipt&visitKey=' + encodeURIComponent(VISIT_KEY)); }
+
+// ── ユーティリティ ───────────────────────────────────────
+function fmtNum(n) { return Number(n || 0).toLocaleString(); }
+function escHtml(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showMsg(type, html) {
+  var el = document.getElementById('msg');
+  if (!el) return;
+  el.innerHTML = '<div class="alert alert-' + type + '">' + html + '</div>';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function clearMsg() { var el = document.getElementById('msg'); if (el) el.innerHTML = ''; }
+
+// ── メニューオプション HTML（初回1回だけ生成） ─────────────
+var MENU_OPTIONS_HTML = (function() {
+  if (!MENUS || MENUS.length === 0) {
+    return '<option value="">— 有効なメニューがありません —</option>';
+  }
+  var cats = {}, catOrder = [];
+  MENUS.forEach(function(m) {
+    if (!cats[m.category]) { cats[m.category] = []; catOrder.push(m.category); }
+    cats[m.category].push(m);
+  });
+  var html = '<option value="">— メニューを選択 —</option>';
+  catOrder.forEach(function(cat) {
+    html += '<optgroup label="' + escHtml(cat) + '">';
+    cats[cat].forEach(function(m) {
+      html += '<option value="' + escHtml(m.menuCode) + '"' +
+              ' data-price="' + (m.priceEx || 0) + '"' +
+              ' data-name="'  + escHtml(m.name)   + '">' +
+              escHtml(m.name) + '　¥' + fmtNum(m.priceEx) + '税別</option>';
+    });
+    html += '</optgroup>';
+  });
+  return html;
+})();
+
+// ── 明細行管理 ───────────────────────────────────────────
+var rowSeq = 0;
+
+function addItemRow() {
+  rowSeq++;
+  var rid = 'row_' + rowSeq;
+  var html =
+    '<div class="item-row" id="' + rid + '" data-priceex="0">' +
+      '<select class="form-control menu-select" onchange="onMenuChange(this)">' +
+        MENU_OPTIONS_HTML +
+      '</select>' +
+      '<input type="number" class="form-control qty-input" value="1" min="1"' +
+        ' style="text-align:right;" oninput="onQtyChange(this)">' +
+      '<span class="price-cell" data-role="priceex">—</span>' +
+      '<span class="total-cell" data-role="subtotinc">—</span>' +
+      '<button type="button" class="remove-btn" onclick="removeItemRow(this)"' +
+        ' title="この行を削除">×</button>' +
+    '</div>';
+  document.getElementById('itemsArea').insertAdjacentHTML('beforeend', html);
+}
+
+function removeItemRow(btn) {
+  if (document.querySelectorAll('.item-row').length <= 1) {
+    showMsg('error', '明細は最低1行必要です。'); return;
+  }
+  btn.closest('.item-row').remove();
+  recalcTotals();
+}
+
+function onMenuChange(sel) {
+  var row    = sel.closest('.item-row');
+  var opt    = sel.options[sel.selectedIndex];
+  var price  = opt ? (parseInt(opt.getAttribute('data-price'), 10) || 0) : 0;
+  row.dataset.priceex = price;
+  recalcRow(row);
+  recalcTotals();
+}
+
+function onQtyChange(input) {
+  var qty = parseInt(input.value, 10) || 1;
+  if (qty < 1) { input.value = 1; }
+  recalcRow(input.closest('.item-row'));
+  recalcTotals();
+}
+
+function recalcRow(row) {
+  var priceEx = parseInt(row.dataset.priceex, 10) || 0;
+  var qty     = parseInt(row.querySelector('.qty-input').value, 10) || 1;
+  var taxAmt  = Math.floor(priceEx * qty * 0.10);
+  var totInc  = priceEx * qty + taxAmt;
+  row.querySelector('[data-role="priceex"]').textContent   =
+    priceEx > 0 ? '¥' + fmtNum(priceEx) : '—';
+  row.querySelector('[data-role="subtotinc"]').textContent =
+    totInc  > 0 ? '¥' + fmtNum(totInc)  : '—';
+}
+
+function recalcTotals() {
+  var totalEx = 0, totalTax = 0;
+  document.querySelectorAll('.item-row').forEach(function(row) {
+    var priceEx = parseInt(row.dataset.priceex, 10) || 0;
+    var qty     = parseInt(row.querySelector('.qty-input').value, 10) || 1;
+    totalEx  += priceEx * qty;
+    totalTax += Math.floor(priceEx * qty * 0.10);
+  });
+  document.getElementById('totalExDisp').textContent  = '¥' + fmtNum(totalEx);
+  document.getElementById('totalTaxDisp').textContent = '¥' + fmtNum(totalTax);
+  document.getElementById('totalIncDisp').textContent = '¥' + fmtNum(totalEx + totalTax);
+  calcChange();
+}
+
+// ── 現金 お釣り計算 ──────────────────────────────────────
+function calcChange() {
+  var incText  = document.getElementById('totalIncDisp').textContent;
+  var totalInc = parseInt(incText.replace(/[¥,]/g, ''), 10) || 0;
+  var received = parseInt(document.getElementById('cashReceived').value, 10) || 0;
+  var dispEl   = document.getElementById('changeDisp');
+  if (!received) { dispEl.textContent = '—'; dispEl.className = 'change-val'; return; }
+  var change = received - totalInc;
+  dispEl.textContent = change >= 0
+    ? '¥' + fmtNum(change)  + ' お釣り'
+    : '¥' + fmtNum(-change) + ' 不足';
+  dispEl.className = 'change-val ' + (change >= 0 ? 'change-ok' : 'change-ng');
+}
+
+// ── 支払方法変更 ─────────────────────────────────────────
+function onPaymentMethodChange() {
+  var method    = document.getElementById('paymentMethod').value;
+  var statusSel = document.getElementById('paymentStatus');
+  var cashSec   = document.getElementById('cashSection');
+  if (method === '未収') {
+    statusSel.value    = '未収';
+    cashSec.style.display = 'none';
+  } else {
+    statusSel.value    = '入金済';
+    cashSec.style.display = (method === '現金') ? 'block' : 'none';
+  }
+}
+
+// ── フォーム初期化・送信 ──────────────────────────────────
+(function() {
+  // 支払方法の初期状態
+  onPaymentMethodChange();
+
+  // メニューが0件の場合は警告
+  if (!MENUS || MENUS.length === 0) {
+    showMsg('error', '有効なメニューが MenuMaster に見つかりません。<br>' +
+      '有効フラグ=TRUE のメニューを登録してから会計入力を行ってください。');
+  }
+
+  // 最初の明細行を追加
+  addItemRow();
+
+  // フォーム送信
+  document.getElementById('billingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    clearMsg();
+
+    // ── バリデーション ────────────────────────────────
+    var rows  = document.querySelectorAll('.item-row');
+    var items = [];
+    var valid = true;
+
+    rows.forEach(function(row, idx) {
+      if (!valid) return;
+      var sel    = row.querySelector('.menu-select');
+      var code   = sel ? sel.value : '';
+      var opt    = sel ? sel.options[sel.selectedIndex] : null;
+      var name   = opt ? (opt.getAttribute('data-name') || '') : '';
+      var qty    = parseInt(row.querySelector('.qty-input').value, 10) || 0;
+      var price  = parseInt(row.dataset.priceex, 10) || 0;
+
+      if (!code) {
+        showMsg('error', (idx + 1) + '行目のメニューを選択してください。');
+        valid = false; return;
+      }
+      if (qty < 1) {
+        showMsg('error', (idx + 1) + '行目の数量は1以上にしてください。');
+        valid = false; return;
+      }
+      items.push({
+        menuCode:    code,
+        menuName:    name,
+        qty:         qty,
+        priceEx:     price,
+        taxCategory: '課税'
+      });
+    });
+
+    if (!valid || items.length === 0) return;
+
+    // ── google.script.run 確認 ───────────────────────
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      showMsg('error', 'google.script.run が利用できません。WebApp URL として開いているか確認してください。');
+      return;
+    }
+
+    var btn           = document.getElementById('saveBtn');
+    var paymentMethod = document.getElementById('paymentMethod').value;
+    var paymentStatus = document.getElementById('paymentStatus').value;
+    var memo          = document.getElementById('paymentMemo').value.trim();
+
+    btn.disabled    = true;
+    btn.textContent = '保存中...';
+
+    var payload = {
+      selfPayVisitKey: VISIT_KEY,
+      items:           items,
+      paymentMethod:   paymentMethod,
+      paymentStatus:   paymentStatus,
+      memo:            memo
+    };
+
+    console.log('[billingForm] payload:', JSON.stringify(payload));
+
+    // 20秒タイムアウト
+    var saveTimer = setTimeout(function() {
+      showMsg('error',
+        '保存がタイムアウトしました（20秒）。<br>' +
+        'Apps Script エディタ → 実行数 タブでエラーを確認してください。');
+      btn.disabled    = false;
+      btn.textContent = '保存して領収書へ →';
+    }, 20000);
+
+    try {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          clearTimeout(saveTimer);
+          console.log('[billingForm] success:', JSON.stringify(res));
+          if (res && res.ok) {
+            // フォーム入力を無効化（再保存防止）
+            document.getElementById('billingForm')
+              .querySelectorAll('input, select, textarea, button')
+              .forEach(function(el) { el.disabled = true; });
+
+            showMsg('success',
+              '保存しました（' + res.paymentId + '）。' +
+              '税込合計: <strong>¥' + fmtNum(res.totalTaxInc) + '</strong><br>' +
+              '<button type="button" onclick="goToReceipt()" ' +
+              'style="margin-top:10px;padding:7px 20px;background:#1a73e8;color:#fff;' +
+              'border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">' +
+              '領収書へ進む →</button>'
+            );
+
+            // 自動遷移を試みる（iframe 制限でブロックされる場合は上のボタンで手動遷移）
+            navigate(APP_URL + '?page=receipt&visitKey=' + encodeURIComponent(VISIT_KEY));
+
+          } else {
+            var errMsg = (res && res.error) ? res.error : '保存に失敗しました（原因不明）';
+            console.error('[billingForm] save failed:', errMsg);
+            showMsg('error', '保存エラー: ' + errMsg);
+            btn.disabled    = false;
+            btn.textContent = '保存して領収書へ →';
+          }
+        })
+        .withFailureHandler(function(err) {
+          clearTimeout(saveTimer);
+          var msg = err ? (err.message || String(err)) : '不明なGASエラー';
+          console.error('[billingForm] GAS failure:', msg);
+          showMsg('error',
+            'GAS実行エラー: ' + msg +
+            '<br><small>Apps Script エディタ → 実行数 で詳細を確認してください。</small>');
+          btn.disabled    = false;
+          btn.textContent = '保存して領収書へ →';
+        })
+        .savePaymentWithItems(payload);
+
+    } catch(syncErr) {
+      clearTimeout(saveTimer);
+      console.error('[billingForm] sync error:', syncErr.message);
+      showMsg('error', 'google.script.run 同期エラー: ' + syncErr.message);
+      btn.disabled    = false;
+      btn.textContent = '保存して領収書へ →';
+    }
+  });
+})();
+</script>
 </body>
 </html>

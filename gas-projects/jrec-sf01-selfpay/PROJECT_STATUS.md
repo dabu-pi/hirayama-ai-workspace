@@ -2,11 +2,104 @@
 
 ## 現在ステータス
 
-**Phase 4 Step 2 完了（routing + 仮テンプレート実装済み）**（2026-04-28）
+**Phase 4 Step 3 完了（billing-form.html 会計入力UI 実装済み）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 4 Step 3 完了（2026-04-28）
+
+### billing-form.html 会計入力UI 実装内容
+
+#### 機能一覧
+
+| 機能 | 実装内容 |
+|---|---|
+| 患者サマリー | 患者ID / 氏名 / フリガナ / 電話番号 + 患者詳細へ戻るボタン |
+| 来院情報 | 来院日 / 区分 / 主訴 / visitKey（モノスペース表示）|
+| メニュー選択 | MenuMaster の有効フラグ=TRUE をカテゴリ別 `<optgroup>` で表示。選択時に税別単価を自動セット |
+| 数量入力 | 数量変更で税込小計を即時再計算 |
+| 行の追加 | 「＋ 行を追加」ボタンで明細行を動的に追加 |
+| 行の削除 | 「×」ボタンで行削除（最低1行は保持）|
+| 合計表示 | 税別合計 / 消費税（10%）/ 税込合計をリアルタイム更新 |
+| 支払方法 | 現金 / カード / 電子マネー / 未収（後払い）|
+| 入金状態 | 支払方法に連動して自動設定（現金・カード → 入金済、未収 → 未収）|
+| 預かり金・お釣り | 現金のみ表示。預かり金入力でお釣りをリアルタイム計算 |
+| メモ | 任意入力 |
+| 保存処理 | `savePaymentWithItems(payload)` を呼び出し。20秒タイムアウト付き |
+| 二重保存防止 | 保存成功後: フォーム全体を `disabled` にして再保存不可 |
+| 成功表示 | 保存成功後: 税込合計 + 「領収書へ進む →」ボタン表示 |
+| エラー表示 | GAS エラー / タイムアウト / 同期エラーを DOM に表示（alert 不使用）|
+| 自動遷移 | 保存成功後に `receipt` ページへ自動遷移試行（iframe制限時はボタンで手動遷移）|
+| メニューなし警告 | MENUS が空の場合に警告を表示 |
+
+#### Payload 仕様
+
+```javascript
+{
+  selfPayVisitKey: "SPV_20260428_P0001_001",
+  items: [
+    {
+      menuCode:    "SELFPAY_CONTINUE20",
+      menuName:    "継続標準施術",
+      qty:         1,
+      priceEx:     3500,
+      taxCategory: "課税"
+    }
+  ],
+  paymentMethod: "現金",      // 現金 | カード | 電子マネー | 未収
+  paymentStatus: "入金済",    // 入金済 | 未収 | 一部入金（手動変更可）
+  memo:          ""
+}
+```
+
+GAS 側 `savePaymentWithItems` がこのペイロードを受け取り、
+SelfPayItems / Payments に保存して SelfPayVisits.会計状態を更新する。
+
+#### 二重保存防止 UI
+
+| 状態 | 動作 |
+|---|---|
+| alreadyPaid=true（routing で検知）| Main.gs が renderError_ でブロック → billing-form.html は表示されない |
+| 保存成功後 | フォーム全 input/select/button を disabled 化 → 再保存ボタンを押せなくなる |
+| GAS 側でも二重チェック | Payments シートに同 visitKey が存在する場合 `{ ok: false, error: "既に会計済みです" }` を返す |
+
+#### 税計算の分担
+
+| 場所 | 役割 |
+|---|---|
+| クライアント（JS）| `Math.floor(priceEx × qty × 0.10)` でリアルタイム表示（概算）|
+| GAS（savePaymentWithItems）| Settings の tax_rate / tax_rounding / tax_unit を参照して確定計算 |
+| 注意 | Settings の端数処理設定により、UI 表示と実際の保存金額が1円ずれる可能性あり |
+
+#### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 10:42:44）
+billing-form.html が更新された
+```
+
+---
+
+## ✅ Phase 4 Step 2 実機確認 PASS（2026-04-28）
+
+### 確認内容
+
+| 確認項目 | 結果 |
+|---|---|
+| billing ルート表示（visitKey=SPV_20260428_P0001_004）| ✅ PASS |
+| 患者名「平山克士」表示 | ✅ PASS |
+| 来院日「2026-04-28」表示 | ✅ PASS |
+| 会計状態「未会計」表示 | ✅ PASS |
+| 有効メニュー数「12件」表示 | ✅ PASS |
+| receipt ルート（未会計メッセージ）| ✅ PASS |
+| visitKey なしエラー | ✅ PASS |
+| 存在しない visitKey エラー | ✅ PASS |
+| Phase 3 退行なし（来院保存 / 患者詳細遷移 / タイムライン）| ✅ PASS |
+| 同日採番 SPV_20260428_P0001_004 まで確認 | ✅ PASS |
 
 ---
 
@@ -806,8 +899,8 @@ patient-list.html / styles.html
 | Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **✅ CLOSED（2026-04-27 実機確認済）** |
 | Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | **✅ CLOSED（2026-04-28 実機確認済）** |
 | Phase 4 Step 1 | JREC_SF01_Billing.gs — GAS 会計バックエンド | **✅ 実装完了（2026-04-28）** |
-| Phase 4 Step 2 | JREC_SF01_Main.gs routing + 仮テンプレート | **✅ 実装完了（2026-04-28）** |
-| Phase 4 Step 3 | billing-form.html — 会計入力画面 | 未着手 |
+| Phase 4 Step 2 | JREC_SF01_Main.gs routing + 仮テンプレート | **✅ 実装完了・実機確認PASS（2026-04-28）** |
+| Phase 4 Step 3 | billing-form.html — 会計入力画面 | **✅ 実装完了（2026-04-28）** |
 | Phase 4 Step 4 | receipt.html — 領収書プレビュー・発行 | 未着手 |
 | Phase 4 Step 5 | patient-detail.html — 会計入力/領収書ボタン追加 | 未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |
