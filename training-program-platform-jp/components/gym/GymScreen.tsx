@@ -9,6 +9,71 @@ import { GymConsultationForm } from "./GymConsultationForm";
 
 import styles from "./GymScreen.module.css";
 
+// ---------------------------------------------------------------------------
+// Training gap helpers
+// ---------------------------------------------------------------------------
+
+/** Returns the number of whole days since lastTrainingDate (JST "YYYY-MM-DD"). */
+function getDaysSince(lastTrainingDate: string | null): number | null {
+  if (!lastTrainingDate) return null;
+  const last = new Date(`${lastTrainingDate}T00:00:00+09:00`);
+  const todayJst = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
+  );
+  todayJst.setHours(0, 0, 0, 0);
+  const diffMs = todayJst.getTime() - last.getTime();
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+type TrainingGapInfo = {
+  daysLabel: string;
+  message: string;
+  level: "none" | "good" | "ok" | "warn" | "alert";
+};
+
+function getTrainingGapInfo(days: number | null): TrainingGapInfo {
+  if (days === null) {
+    return {
+      daysLabel: "",
+      message: "まだトレーニング記録がありません。まずは最初の1回から始めてみましょう。",
+      level: "none"
+    };
+  }
+  if (days === 0) {
+    return {
+      daysLabel: "今日トレーニングしました",
+      message: "今日もトレーニングできています。いいペースです。",
+      level: "good"
+    };
+  }
+  if (days <= 2) {
+    return {
+      daysLabel: `前回から${days}日経過`,
+      message: "いいペースです。今日も無理なく続けていきましょう。",
+      level: "good"
+    };
+  }
+  if (days <= 6) {
+    return {
+      daysLabel: `前回から${days}日経過`,
+      message: "少し間が空いています。今日は軽めでもOKです。",
+      level: "ok"
+    };
+  }
+  if (days <= 13) {
+    return {
+      daysLabel: `前回から${days}日経過`,
+      message: "前回から1週間ほど空いています。まずは短時間で再開しましょう。",
+      level: "warn"
+    };
+  }
+  return {
+    daysLabel: `前回から${days}日経過`,
+    message: "しばらく間が空いています。重量は控えめにして、フォーム確認から始めましょう。",
+    level: "alert"
+  };
+}
+
 // ── Quick links ───────────────────────────────────────────────────────────────
 
 const QUICK_LINKS = [
@@ -41,6 +106,9 @@ type GymScreenProps = {
 export function GymScreen({ stats, announcements, sponsors, membershipStatus }: GymScreenProps) {
   const isLoggedIn = stats !== null;
   const membershipNotice = getMembershipNotice(membershipStatus);
+  const trainingGap = isLoggedIn
+    ? getTrainingGapInfo(getDaysSince(stats.lastTrainingDate))
+    : null;
 
   return (
     <main className={styles.page}>
@@ -72,6 +140,14 @@ export function GymScreen({ stats, announcements, sponsors, membershipStatus }: 
                   ? `最終トレーニング: ${stats.lastTrainingDate}`
                   : "まだトレーニング記録がありません"}
               </p>
+              {trainingGap && (
+                <div className={`${styles.trainingGap} ${styles[`trainingGap_${trainingGap.level}`]}`}>
+                  {trainingGap.daysLabel && (
+                    <p className={styles.trainingGapDays}>{trainingGap.daysLabel}</p>
+                  )}
+                  <p className={styles.trainingGapMessage}>{trainingGap.message}</p>
+                </div>
+              )}
               <Link className={styles.statsLink} href="/session-history">
                 履歴を見る →
               </Link>
