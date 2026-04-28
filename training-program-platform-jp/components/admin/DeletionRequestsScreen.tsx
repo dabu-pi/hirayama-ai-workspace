@@ -95,7 +95,7 @@ function RequestCard({ request: r, onDone }: RequestCardProps) {
       {isPendingStatus && (
         <div className={styles.actions}>
           <p className={styles.disclaimer}>
-            この処理ではログイン情報やトレーニング履歴は削除されません。
+            この処理ではログイン情報やトレーニング履歴は削除されません。退会後のデータは原則1年間保管し、1年経過後に削除対象として扱います。
           </p>
           <div className={styles.noteField}>
             <label className={styles.noteLabel} htmlFor={`note-${r.id}`}>
@@ -164,7 +164,8 @@ export function DeletionRequestsScreen({ requests: initialRequests }: Props) {
         <h1 className={styles.title}>退会申請管理</h1>
         <p className={styles.subtitle}>
           承認すると会員ステータスが「cancelled（退会済み）」になります。
-          ログイン情報・トレーニング履歴は削除されません。
+          ログイン情報・トレーニング履歴はこの処理では削除されません。
+          退会後のデータは確認・問い合わせ対応のため原則1年間保管し、1年経過後に削除対象として扱います。
         </p>
       </header>
 

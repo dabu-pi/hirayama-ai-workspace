@@ -149,7 +149,8 @@ export function ProfileScreen({
             <p className={styles.deletionDescription}>
               退会をご希望の場合は、こちらから申請できます。
               申請後、スタッフが確認のうえ手続きを進めます。
-              トレーニング履歴や会員情報の扱いについて確認が必要な場合があります。
+              退会後も、確認やお問い合わせ対応のため、一定期間データを保管します。
+              原則として退会完了から1年経過後に、アカウント情報を削除対象とします。
             </p>
             <div className={styles.deletionForm}>
               <label className={styles.label} htmlFor="deletion-reason">

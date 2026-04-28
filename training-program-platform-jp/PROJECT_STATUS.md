@@ -719,6 +719,47 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ---
 
+## 2026-04-28 D-1c: 退会後データ保持方針の明文化・文言追加
+
+### STATUS: CLOSED
+
+### 方針
+
+退会後のデータは、問い合わせ対応・再開希望・会費確認・履歴確認に備えて原則1年間保管する。
+1年経過後は削除対象として扱う方針とする。
+
+現時点では完全削除処理は未実装。auth.users / public.users / workout_sessions / enrollments は削除しない。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `components/profile/ProfileScreen.tsx` | 退会申請説明に「退会後1年保管・1年後に削除対象」を追記 |
+| `components/admin/DeletionRequestsScreen.tsx` | ページ subtitle と承認カード disclaimer に1年保管方針を追記 |
+
+### CHECK
+
+- typecheck: pass
+- build: pass
+- DB migration: 不要
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] /profile の退会申請セクションに「退会後データを1年保管する」旨が表示される
+- [ ] /admin/account-deletion-requests の説明文に1年保管方針が表示される
+- [ ] 承認カードの disclaimer に1年保管方針が表示される
+
+### 将来タスク（D-2〜D-5）
+
+| タスク | 内容 |
+|---|---|
+| D-2 | 退会承認時に cancelled_at を記録する |
+| D-3 | 退会後1年経過したユーザーを削除対象として管理画面に表示する |
+| D-4 | 管理者が最終確認して完全削除または匿名化できるようにする |
+| D-5 | 必要なら Vercel Cron / Supabase Cron で自動処理を検討する |
+
+---
+
 ## 2026-04-28 D-1: 退会・アカウント削除申請と管理者退会処理
 
 ### STATUS: CLOSED (DB migration 手動適用待ち)

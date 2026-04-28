@@ -86,6 +86,11 @@
 - **M-1: 非activeユーザー向け表示整理（paused/cancelled ステータス別文言）** ✅ CLOSED (2026-04-28) スマホ実機確認PASS
 - **D-1: 退会・アカウント削除申請と管理者退会処理** ✅ CLOSED (2026-04-28) typecheck/build OK — DB migration 手動適用待ち
 - **D-1b: 管理者退会申請一覧 email JOIN バグ修正** ✅ CLOSED (2026-04-28) スマホ実機確認PASS（承認フロー確認は後日）
+- **D-1c: 退会後データ保持方針の明文化・文言追加（1年保管方針）** ✅ CLOSED (2026-04-28) typecheck/build OK
+- D-2: 退会承認時に cancelled_at を記録する — 将来フェーズ
+- D-3: 退会後1年経過ユーザーを削除対象として管理画面に表示する — 将来フェーズ
+- D-4: 管理者が最終確認して完全削除または匿名化できるようにする — 将来フェーズ
+- D-5: Vercel Cron / Supabase Cron による自動処理検討 — 将来フェーズ
 - **G-1: ジムタブ基本ダッシュボード** ✅ LIVE確認済み（2026-04-26）
 - **G-2: gym_announcements テーブル + 管理者投稿** ✅ CLOSED (2026-04-27) DB migration 適用済み
 - **G-3: お知らせ未読バッジ（localStorage 軽量版）** ✅ CLOSED (2026-04-27) 実機確認済み
