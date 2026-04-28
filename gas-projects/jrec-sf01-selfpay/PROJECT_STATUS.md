@@ -2,11 +2,88 @@
 
 ## 現在ステータス
 
-**Phase 4 後半 F-2「未収回収処理」表示不整合修正済み**（2026-04-28）
+**Phase 4 後半 F-2 タイムライン優先順位修正済み**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## Phase 4 後半 F-2 タイムライン優先順位修正（2026-04-28）
+
+### 発見した問題と根本原因
+
+**現象:** 患者詳細タイムラインで未収の来院が「領収書発行済」と表示される。赤バッジ「未収」が見えない。
+
+**根本原因:** `patient-detail.html` の状態判定で `if (rec)` が最優先になっていた。
+領収書が発行済みなら `paymentStatus` に関わらず「領収書発行済」と表示されていた。
+
+```javascript
+// 修正前（問題あり）
+if (rec) {                         // ← Receipt が最優先 → 未収でも「領収書発行済」
+  billingLabel = '領収書発行済';
+} else if (v.billingStatus === '未収') {
+  billingLabel = '未収';           // ← Receipt がある場合は到達しない
+```
+
+### 修正内容（patient-detail.html）
+
+#### 状態判定の優先順位（確定版）
+
+| 優先度 | 条件 | バッジ | 色 |
+|---|---|---|---|
+| 1 | `!pay`（Payments なし）| 未会計 | 黄/橙 |
+| 2 | `payStatus = "未収"/"一部入金"` | 未収 / 一部入金 | 赤太字 ← **最優先** |
+| 3 | `pay && rec`（入金済+領収書発行）| 領収書発行済 | 青 |
+| 4 | `pay && !rec`（入金済+未発行）| 会計済 | 緑 |
+
+**ポイント:** 未収は receipt 発行有無にかかわらず最優先で赤表示。
+領収書が発行済みでも入金がない場合は「未収」を優先する。
+
+```javascript
+// 修正後
+var payStatus = pay ? (pay.paymentStatus || '') : '';
+if (!pay) {
+  billingLabel = '未会計';
+} else if (payStatus === '未収' || payStatus === '一部入金') {
+  billingLabel = payStatus;  // "未収" or "一部入金"
+} else if (rec) {
+  billingLabel = '領収書発行済';
+} else {
+  billingLabel = '会計済';
+}
+```
+
+#### アクションボタン（確定版）
+
+| 状態 | ボタン | 遷移先 | クラス |
+|---|---|---|---|
+| 未会計 | 会計入力 | `?page=billing&visitKey=...` | tl-action-billing（青）|
+| **未収/一部入金** | **未収回収** | `?page=receipt&visitKey=...` | **tl-action-outstanding（赤）** |
+| 会計済（領収書未発行）| 領収書を発行 | `?page=receipt&visitKey=...` | tl-action-receipt（緑）|
+| 領収書発行済 | 領収書 | `?page=receipt&visitKey=...` | tl-action-receipt（緑）|
+
+CSS 追加: `.tl-action-outstanding { background:#fce8e6; color:#d93025; }`
+
+#### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 16:07:18）
+```
+
+### 手動確認手順（再デプロイ後）
+
+1. **未収の来院がある患者詳細を開く**
+   - 期待: タイムラインで「未収」赤太字バッジ + 赤「未収回収」ボタン表示
+   - 領収書発行済みの来院でも未収なら「未収」バッジが表示されることを確認
+
+2. **「未収回収」ボタンをクリック**
+   - 期待: `?page=receipt&visitKey=...` に遷移
+   - receipt 画面で「未収回収」セクションが表示される
+
+3. **回収後に患者詳細に戻る**
+   - 期待: 該当来院のバッジが「未収」→「領収書発行済」または「会計済」に変わる
 
 ---
 

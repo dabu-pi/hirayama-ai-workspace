@@ -24,6 +24,8 @@
     .tl-action-billing:hover { background:#d2e3fc; }
     .tl-action-receipt { background:#e6f4ea; color:#1e8e3e; }
     .tl-action-receipt:hover { background:#ceead6; }
+    .tl-action-outstanding { background:#fce8e6; color:#d93025; }
+    .tl-action-outstanding:hover { background:#f5c6c3; }
     .tl-toggle { margin-left:auto; font-size:12px; color:#1a73e8; white-space:nowrap; border:none; background:none; cursor:pointer; padding:0; }
     .tl-detail { margin-top:10px; padding:10px 12px; background:#f8f9fa; border-radius:6px; font-size:13px; }
     .tl-row    { display:flex; gap:8px; padding:3px 0; }
@@ -138,20 +140,22 @@ var visitCount    = timeline.length;
           var pay = accounting && accounting.payments && accounting.payments[vk];
           var rec = accounting && accounting.receipts && accounting.receipts[vk];
 
-          // 会計ステータスクラス・ラベル
+          // 会計ステータスクラス・ラベル（優先順: 未会計 > 未収/一部入金 > 領収書発行済 > 会計済）
+          // 未収は receipt 発行有無にかかわらず最優先で赤表示する
+          var payStatus    = pay ? (pay.paymentStatus || '') : '';
           var billingClass, billingLabel;
-          if (rec) {
-            billingClass = 'tl-billing-receipt';
-            billingLabel = '領収書発行済';
-          } else if (v.billingStatus === '未収') {
-            billingClass = 'tl-billing-outstanding';
-            billingLabel = '未収';
-          } else if (pay) {
-            billingClass = 'tl-billing-done';
-            billingLabel = '会計済';
-          } else {
+          if (!pay) {
             billingClass = 'tl-billing-todo';
             billingLabel = '未会計';
+          } else if (payStatus === '未収' || payStatus === '一部入金') {
+            billingClass = 'tl-billing-outstanding';
+            billingLabel = payStatus;
+          } else if (rec) {
+            billingClass = 'tl-billing-receipt';
+            billingLabel = '領収書発行済';
+          } else {
+            billingClass = 'tl-billing-done';
+            billingLabel = '会計済';
           }
         ?>
         <div class="timeline-entry">
@@ -166,6 +170,11 @@ var visitCount    = timeline.length;
               <button type="button" class="tl-action-btn tl-action-billing"
                 onclick="event.stopPropagation();top.location.href=APP_URL+'?page=billing&visitKey=<?= vk ?>'">
                 会計入力
+              </button>
+            <? } else if (payStatus === '未収' || payStatus === '一部入金') { ?>
+              <button type="button" class="tl-action-btn tl-action-outstanding"
+                onclick="event.stopPropagation();top.location.href=APP_URL+'?page=receipt&visitKey=<?= vk ?>'">
+                未収回収
               </button>
             <? } else { ?>
               <button type="button" class="tl-action-btn tl-action-receipt"
