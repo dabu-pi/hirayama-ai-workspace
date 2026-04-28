@@ -47,9 +47,11 @@ export async function updateMembershipStatus(
   }
 
   const admin = createSupabaseAdminClient();
+  // D-2: record cancelled_at when setting to cancelled; clear it when restoring to active/paused.
+  const cancelledAt = newStatus === "cancelled" ? new Date().toISOString() : null;
   const { error } = await admin
     .from("users")
-    .update({ membership_status: newStatus })
+    .update({ membership_status: newStatus, cancelled_at: cancelledAt })
     .eq("id", targetUserId);
 
   if (error) {

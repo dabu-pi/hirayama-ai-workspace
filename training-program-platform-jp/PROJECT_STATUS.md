@@ -719,6 +719,62 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ---
 
+## 2026-04-28 D-2: 退会承認時に cancelled_at を記録する
+
+### STATUS: CLOSED (DB migration 手動適用待ち)
+
+### 実装内容
+
+D-1c「退会後1年保管方針」の基準日として、`public.users.cancelled_at` を追加した。
+退会申請承認時（管理者 approve）および /admin/members 直接ステータス変更時に `cancelled_at` を記録する。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `supabase/migrations/20260428_000028_users_cancelled_at.sql` | 新規。`public.users` に `cancelled_at timestamptz` を追加 |
+| `app/admin/account-deletion-requests/actions.ts` | `approveDeletionRequest` で `cancelled_at = now` をセット |
+| `app/admin/members/actions.ts` | `updateMembershipStatus` で `cancelled` → `cancelled_at = now`、`active/paused` → `cancelled_at = null` |
+
+### 設計ポイント
+
+- `cancelled_at` は D-3「退会後1年経過ユーザーの削除対象表示」の基準日として使う
+- `/admin/members` から直接 cancelled にした場合も記録される（退会申請なしの管理者操作でも一貫性を保つ）
+- `active` / `paused` へ戻した場合は `cancelled_at = null` にクリア（将来の D-6 再入会を見据えた設計）
+- 既存 cancelled ユーザーの `cancelled_at` は `null` のまま（補完は D-2b または手動確認として残す）
+- 物理削除は一切行わない
+
+### DB migration 適用手順（手動）
+
+```bash
+# Supabase CLI (接続済みの場合)
+supabase db push
+
+# または Supabase ダッシュボード SQL Editor で実行
+# supabase/migrations/20260428_000028_users_cancelled_at.sql
+```
+
+### CHECK
+
+- typecheck: pass
+- build: pass
+- DB migration: ファイル作成済み・本番DB適用は手動
+
+### LIVE_CHECK_REQUIRED（DB migration 適用後）
+
+- [ ] public.users に cancelled_at カラムが存在する
+- [ ] 管理者が退会申請を承認すると membership_status=cancelled かつ cancelled_at に日時が入る
+- [ ] /admin/members から直接 cancelled にしても cancelled_at に日時が入る
+- [ ] active/paused に戻すと cancelled_at が null になる
+- [ ] トレーニング履歴は削除されていない
+- [ ] member_name / display_name / email は壊れていない
+
+### DEFERRED（引き続き）
+
+- 既存 cancelled ユーザーの `cancelled_at` 補完（account_deletion_requests.reviewed_at を使う補完は D-2b 候補）
+
+---
+
 ## 2026-04-28 D-1d: 退会済みユーザーの再申請防止・表示整理
 
 ### STATUS: CLOSED

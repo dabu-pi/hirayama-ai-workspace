@@ -59,10 +59,10 @@ export async function approveDeletionRequest(
     return { ok: false, error: reqError.message };
   }
 
-  // Set membership_status = cancelled (safe — no data deleted)
+  // Set membership_status = cancelled + record cancelled_at (safe — no data deleted)
   const { error: userError } = await admin
     .from("users")
-    .update({ membership_status: "cancelled" })
+    .update({ membership_status: "cancelled", cancelled_at: now })
     .eq("id", targetUserId);
 
   if (userError) {
