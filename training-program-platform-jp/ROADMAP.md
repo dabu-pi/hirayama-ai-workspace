@@ -124,6 +124,19 @@
 - **Phase 2.7: CONDITIONAL CLOSED (2026-04-29)** — iOS は後日確認
 - **G-6b: PWA起動時の再開メッセージ強調** ✅ CLOSED (2026-04-29) — Android PASS / iOS deferred
 
+### Phase M: 会員ライフサイクル管理（休会・退会ロジック）設計確定 (2026-04-29)
+
+**ビジネスルール（ワイルドボア）:**
+- 休会: 翌月1日開始 / 翌月振替確定後は翌々月1日（翌月分は再開時充当）
+- 退会: 振替未確定→当月末 / 確定後→翌月末 / 鍵返却で500円返金
+- 判定: 「翌月分口座振替データ確定済みか」フラグで制御
+
+**実装タスク（優先順）:**
+- Phase M-A: `billing_cutoff_records` migration + `/admin/billing` ページ
+- Phase M-B: `membership_pause_requests` migration + `/profile` 休会申請 + `/admin/pause-requests`
+- Phase M-C: `account_deletion_requests` 拡張（effective_date / 鍵返却 / 500円返金）+ `/admin` 更新
+- Phase M-D: `/profile`・`/gym` ユーザー表示更新
+
 ### Phase 3: コンテンツ・管理拡張
 
 - A-1: Admin プログラム登録UI（SQLレス化）

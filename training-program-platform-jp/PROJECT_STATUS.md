@@ -6079,3 +6079,48 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 
 **G-6b LIVE_CHECK: Android ✅ PASS (2026-04-29) / iOS deferred**
 
+---
+
+## 2026-04-29 休会・退会ロジック 仕様設計（Phase M: Membership Lifecycle）
+
+### STATUS: 設計確定 — 実装未着手
+
+### 対象ビジネスルール（ワイルドボア運用）
+
+| フロー | ルール |
+|---|---|
+| 休会 | 当月申請→翌月1日開始。翌月分振替確定後なら翌々月1日開始（翌月分は再開月に充当） |
+| 退会 | 翌月分振替未確定→当月末退会。確定後→翌月末退会 |
+| 鍵返却 | 退会時に受付へ返却。返却確認で500円返金 |
+| 判定基準 | 「毎月10日」等の日付固定ではなく「翌月分口座振替データが確定済みか」で判定 |
+
+### 現状スキーマとの整合
+
+| 現状 | 評価 |
+|---|---|
+| `users.membership_status` ('active'/'paused'/'cancelled') | ✅ そのまま使用 |
+| `users.cancelled_at` | ✅ そのまま使用 |
+| `account_deletion_requests` テーブル | ✅ 退会申請として拡張して使用。命名問題は将来フェーズで整理 |
+| `users.paused_at` / `prepaid_month_credit` | 未実装 → 新規追加 |
+| `billing_cutoff_records` テーブル | 未実装 → 新規作成 |
+| `membership_pause_requests` テーブル | 未実装 → 新規作成 |
+
+### DB変更サマリー
+
+**新規テーブル:**
+- `billing_cutoff_records` — 管理者が翌月振替確定を記録
+- `membership_pause_requests` — 休会申請。1ユーザー1pending制約
+
+**既存テーブル拡張:**
+- `users` に `paused_at timestamptz` / `prepaid_month_credit boolean DEFAULT false`
+- `account_deletion_requests` に `effective_date` / `next_month_billing_confirmed` / `key_returned_at` / `refund_500_paid_at`
+
+### 実装フェーズ
+
+| Phase | 内容 |
+|---|---|
+| A | billing_cutoff_records migration + /admin/billing ページ |
+| B | membership_pause_requests migration + /profile 休会申請 + /admin/pause-requests |
+| C | account_deletion_requests 拡張 + /admin 鍵返却・返金チェック |
+| D | /profile・/gym ユーザー表示更新 |
+
