@@ -351,17 +351,19 @@ function collectOutstandingPayment(visitKey, payload) {
       return { ok: false, error: "Payments シートが見つかりません" };
 
     var rows       = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues();
-    var rowIndex   = -1;
-    var curStatus  = "";
-    var totalTaxInc = 0;
-    var curMemo    = "";
+    var rowIndex          = -1;
+    var curStatus         = "";
+    var totalTaxInc       = 0;
+    var curMemo           = "";
+    var curPaymentMethod  = "";
 
     for (var i = 0; i < rows.length; i++) {
       if (String(rows[i][1]) === visitKey) {
-        rowIndex    = i + 2;   // 1-indexed + header row
-        curStatus   = rows[i][6] || "";
-        totalTaxInc = rows[i][4] || 0;
-        curMemo     = rows[i][8] || "";
+        rowIndex         = i + 2;   // 1-indexed + header row
+        curStatus        = rows[i][6] || "";
+        totalTaxInc      = rows[i][4] || 0;
+        curMemo          = rows[i][8] || "";
+        curPaymentMethod = rows[i][5] || "";
         break;
       }
     }
@@ -403,11 +405,12 @@ function collectOutstandingPayment(visitKey, payload) {
       "visitKey: " + visitKey + " 回収額: ¥" + totalTaxInc + " " + (paymentMethod || ""));
 
     return {
-      ok:          true,
-      visitKey:    visitKey,
-      newStatus:   "入金済",
-      paymentDate: paymentDate,
-      totalTaxInc: totalTaxInc
+      ok:            true,
+      visitKey:      visitKey,
+      newStatus:     "入金済",
+      paymentDate:   paymentDate,
+      totalTaxInc:   totalTaxInc,
+      paymentMethod: paymentMethod || curPaymentMethod  // UI側のDOM更新に使用
     };
 
   } catch(err) {

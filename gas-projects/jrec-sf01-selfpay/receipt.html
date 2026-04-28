@@ -163,11 +163,24 @@ window.onerror = function(msg, src, line) {
                 ¥<?!= Number(payment.totalTaxInc || 0).toLocaleString() ?>
               </td>
             </tr>
-            <tr><td>支払方法</td><td><?= payment.paymentMethod ?></td></tr>
-            <tr><td>入金状態</td><td><?= payment.paymentStatus ?></td></tr>
-            <? if (payment.paymentDate) { ?>
-              <tr><td>入金日</td><td><?= payment.paymentDate ?></td></tr>
-            <? } ?>
+            <tr>
+              <td>支払方法</td>
+              <td id="paymentMethodDisplay"><?= payment.paymentMethod ?></td>
+            </tr>
+            <tr>
+              <td>入金状態</td>
+              <td id="paymentStatusDisplay"><?= payment.paymentStatus ?></td>
+            </tr>
+            <tr>
+              <td>入金日</td>
+              <td id="paymentDateDisplay">
+                <? if (payment.paymentDate) { ?>
+                  <?= payment.paymentDate ?>
+                <? } else { ?>
+                  <span style="color:#9aa0a6;">—</span>
+                <? } ?>
+              </td>
+            </tr>
             <? if (payment.memo) { ?>
               <tr><td>メモ</td><td><?= payment.memo ?></td></tr>
             <? } ?>
@@ -328,8 +341,33 @@ function handleCollect() {
         clearTimeout(timer);
         console.log('[receiptPage] collect result:', JSON.stringify(res));
         if (res && res.ok) {
+          // 回収セクションを非表示
           var area = document.getElementById('collectionArea');
           if (area) area.style.display = 'none';
+
+          // DOM上の入金状態・支払方法・入金日を「入金済」に更新
+          var statusEl = document.getElementById('paymentStatusDisplay');
+          if (statusEl) {
+            statusEl.textContent = '入金済';
+            statusEl.style.color = '#1e8e3e';
+            statusEl.style.fontWeight = '700';
+          }
+          if (res.paymentMethod) {
+            var methodEl = document.getElementById('paymentMethodDisplay');
+            if (methodEl) methodEl.textContent = res.paymentMethod;
+          }
+          if (res.paymentDate) {
+            var dateEl = document.getElementById('paymentDateDisplay');
+            if (dateEl) dateEl.textContent = res.paymentDate;
+          }
+
+          // PAYMENT オブジェクトも更新（後続の issueReceipt 等で参照された場合に備える）
+          if (PAYMENT) {
+            PAYMENT.paymentStatus = '入金済';
+            if (res.paymentMethod) PAYMENT.paymentMethod = res.paymentMethod;
+            if (res.paymentDate)   PAYMENT.paymentDate   = res.paymentDate;
+          }
+
           showMsg('success',
             '未収を回収しました（入金日: ' + res.paymentDate + '　¥' + fmtNum(res.totalTaxInc) + '）。' +
             '<br><button type="button" onclick="goToDetail()" ' +

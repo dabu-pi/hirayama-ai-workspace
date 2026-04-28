@@ -2,11 +2,75 @@
 
 ## 現在ステータス
 
-**Phase 4 後半 F-2「未収回収処理」実装済み**（2026-04-28）
+**Phase 4 後半 F-2「未収回収処理」表示不整合修正済み**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## Phase 4 後半 F-2 表示不整合修正（2026-04-28）
+
+### F-2 実機確認結果 + 表示不整合の修正
+
+#### F-2 実機確認
+
+| 確認項目 | 結果 |
+|---|---|
+| 患者一覧 未会計件数・未収額表示 | ✅ PASS |
+| 患者詳細 累計支払・未収残高・未会計件数 | ✅ PASS |
+| receipt 画面に「未収回収」セクション表示 | ✅ PASS |
+| 「未収を回収する」ボタン表示 | ✅ PASS |
+| 回収成功メッセージ表示 | ✅ PASS |
+| 領収書発行 + 発行済みバナー表示 | ✅ PASS |
+| 患者一覧 未収額表示 | ✅ PASS |
+| **問題** 回収後も画面上の入金状態が「未収」のまま | ❌ → 修正済み |
+
+#### 根本原因
+
+receipt.html はページロード時に GAS テンプレートから `PAYMENT` オブジェクトを受け取りサーバーサイドレンダリングする。
+`collectOutstandingPayment()` は Payments シートを正しく更新するが、
+DOM に反映されるのはページロード時の値（`payment.paymentStatus = "未収"`）のまま。
+ページをリロードしない限り「未収」表示が残る。
+
+#### 修正内容
+
+**JREC_SF01_Billing.gs:**
+
+`collectOutstandingPayment()` の return に `paymentMethod` を追加。
+UI 側が DOM 更新で使用できるようにした。
+
+```javascript
+return {
+  ok: true, visitKey, newStatus: "入金済",
+  paymentDate, totalTaxInc,
+  paymentMethod: paymentMethod || curPaymentMethod  // ← 追加
+};
+```
+
+**receipt.html:**
+
+- 支払方法セルに `id="paymentMethodDisplay"` 付与
+- 入金状態セルに `id="paymentStatusDisplay"` 付与
+- 入金日セルに `id="paymentDateDisplay"` 付与（常時表示、未設定時は「—」）
+- メモブロック重複バグを修正（Edit時に生じた重複 `if(memo)` を削除）
+- 入金日の `<?= date || '<span>...</span>' ?>` HTML エスケープバグを if ブロックに修正
+
+**handleCollect() の成功ハンドラ:**
+
+回収成功後に以下を実行:
+1. DOM 更新: `paymentStatusDisplay` → 「入金済」（緑太字）
+2. DOM 更新: `paymentMethodDisplay` → 回収時の支払方法
+3. DOM 更新: `paymentDateDisplay` → 入金日
+4. JS オブジェクト更新: `PAYMENT.paymentStatus / paymentMethod / paymentDate`
+   （後続の issueReceipt でも正しい値を参照できる）
+
+#### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 15:49:44）
+```
 
 ---
 
