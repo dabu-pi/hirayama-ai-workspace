@@ -85,6 +85,7 @@
 - **H-1d: 選択日詳細パネルのAPI化（SESSION_LIST_LIMIT 完全排除）** ✅ CLOSED (2026-04-28) スマホ実機確認PASS
 - **M-1: 非activeユーザー向け表示整理（paused/cancelled ステータス別文言）** ✅ CLOSED (2026-04-28) スマホ実機確認PASS
 - **D-1: 退会・アカウント削除申請と管理者退会処理** ✅ CLOSED (2026-04-28) typecheck/build OK — DB migration 手動適用待ち
+- **D-1b: 管理者退会申請一覧 email JOIN バグ修正** ✅ CLOSED (2026-04-28) typecheck/build OK
 - **G-1: ジムタブ基本ダッシュボード** ✅ LIVE確認済み（2026-04-26）
 - **G-2: gym_announcements テーブル + 管理者投稿** ✅ CLOSED (2026-04-27) DB migration 適用済み
 - **G-3: お知らせ未読バッジ（localStorage 軽量版）** ✅ CLOSED (2026-04-27) 実機確認済み

@@ -668,6 +668,38 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ---
 
+## 2026-04-28 D-1b: 管理者退会申請一覧 — email JOIN バグ修正
+
+### STATUS: CLOSED
+
+### 根本原因
+
+`app/admin/account-deletion-requests/page.tsx` で embedded join に `email` を含めていたが、
+`email` は `public.users` に存在せず `auth.users` にのみある。
+クエリがエラーになり `data=null` → 空リスト表示。
+
+### 修正内容
+
+- `users ( email, ... )` の embedded join を廃止
+- `account_deletion_requests` を plain select で取得
+- `public.users` から member_name / display_name / membership_status を別クエリ（`.in("id", userIds)`）
+- `auth.admin.listUsers()` から email を取得（`lib/admin/members.ts` と同パターン）
+- 両者を Map で結合して DeletionRequestsScreen に渡す
+
+### 変更ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `app/admin/account-deletion-requests/page.tsx` | JOIN 廃止・2段階取得・email を auth から取得 |
+
+### CHECK
+
+- typecheck: pass
+- build: pass
+- DB migration: 不要（コードのみ）
+
+---
+
 ## 2026-04-28 D-1: 退会・アカウント削除申請と管理者退会処理
 
 ### STATUS: CLOSED (DB migration 手動適用待ち)
