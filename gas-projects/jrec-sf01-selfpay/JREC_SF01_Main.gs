@@ -38,8 +38,25 @@ function buildPage_(page, idParam, q, vkParam) {
 
       case "newPatient": {
         var t = HtmlService.createTemplateFromFile("patient-form");
-        t.appUrl = appUrl;
-        t.mode   = "new";
+        t.appUrl   = appUrl;
+        t.mode     = "new";
+        t.patient  = null;
+        return evalTemplate_(t);
+      }
+
+      case "editPatient": {
+        Logger.log("[editPatient] idParam=" + idParam);
+        if (!idParam) return renderError_(
+          "患者IDが指定されていません。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
+        );
+        var pte = getPatientById(idParam);
+        if (!pte) return renderError_(
+          "患者 " + idParam + " が見つかりませんでした。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
+        );
+        var t = HtmlService.createTemplateFromFile("patient-form");
+        t.appUrl   = appUrl;
+        t.mode     = "edit";
+        t.patient  = pte;
         return evalTemplate_(t);
       }
 

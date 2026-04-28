@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新規患者登録 — JREC-SF01</title>
+  <? var _isEdit = (mode === 'edit'); ?>
+  <title><?= _isEdit ? '患者情報編集' : '新規患者登録' ?> — JREC-SF01</title>
   <script>var APP_URL = "<?= appUrl ?>";</script>
   <?!= include('styles') ?>
 </head>
@@ -13,7 +14,9 @@
 
 <div class="container">
   <div class="card">
-    <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;">新規患者登録</h2>
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;">
+      <?= _isEdit ? '患者情報を編集' : '新規患者登録' ?>
+    </h2>
     <div id="msg"></div>
 
     <form id="patientForm" novalidate>
@@ -81,9 +84,10 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary"
-          onclick="window.top.location.href = APP_URL">キャンセル</button>
-        <button class="btn btn-primary" id="saveBtn" type="submit">保存する</button>
+        <button type="button" class="btn btn-secondary" id="cancelBtn">キャンセル</button>
+        <button class="btn btn-primary" id="saveBtn" type="submit">
+          <?= _isEdit ? '更新する' : '保存する' ?>
+        </button>
       </div>
 
     </form>
@@ -91,7 +95,31 @@
 </div>
 
 <script>
+var MODE    = "<?= mode ?>";
+var PATIENT = <?!= JSON.stringify(patient).replace(/<\//g, '<\\/') ?>;
+
 (function() {
+  // キャンセル: edit → 患者詳細、new → 一覧
+  document.getElementById('cancelBtn').addEventListener('click', function() {
+    if (MODE === 'edit' && PATIENT) {
+      window.top.location.href = APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT.patientId);
+    } else {
+      window.top.location.href = APP_URL;
+    }
+  });
+
+  // edit モード: フォームにプリフィル
+  if (MODE === 'edit' && PATIENT) {
+    document.getElementById('name').value    = PATIENT.name            || '';
+    document.getElementById('kana').value    = PATIENT.kana            || '';
+    document.getElementById('dob').value     = PATIENT.dob             || '';
+    document.getElementById('gender').value  = PATIENT.gender          || '';
+    document.getElementById('phone').value   = PATIENT.phone           || '';
+    document.getElementById('address').value = PATIENT.address         || '';
+    document.getElementById('note').value    = PATIENT.note            || '';
+    document.getElementById('jrecPatientId').value = PATIENT.jrecPatientId || '';
+  }
+
   document.getElementById('patientForm').addEventListener('submit', function(e) {
     e.preventDefault();
     var btn  = document.getElementById('saveBtn');
@@ -118,23 +146,37 @@
       jrecPatientId: document.getElementById('jrecPatientId').value.trim()
     };
 
-    google.script.run
+    var btnLabel = MODE === 'edit' ? '更新する' : '保存する';
+
+    var runner = google.script.run
       .withSuccessHandler(function(res) {
         if (res.ok) {
-          showMsg('success', '患者 ' + res.patientId + ' を登録しました。一覧に戻ります...');
-          setTimeout(function() { window.top.location.href = APP_URL; }, 1200);
+          if (MODE === 'edit') {
+            showMsg('success', '患者情報を更新しました。詳細ページに戻ります...');
+            setTimeout(function() {
+              window.top.location.href = APP_URL + '?page=detail&id=' + encodeURIComponent(res.patientId);
+            }, 1200);
+          } else {
+            showMsg('success', '患者 ' + res.patientId + ' を登録しました。一覧に戻ります...');
+            setTimeout(function() { window.top.location.href = APP_URL; }, 1200);
+          }
         } else {
           showMsg('error', res.error || '保存に失敗しました。');
           btn.disabled    = false;
-          btn.textContent = '保存する';
+          btn.textContent = btnLabel;
         }
       })
       .withFailureHandler(function(err) {
-        showMsg('error', 'エラー: ' + err.message);
+        showMsg('error', 'エラー: ' + (err.message || String(err)));
         btn.disabled    = false;
-        btn.textContent = '保存する';
-      })
-      .createPatient(payload);
+        btn.textContent = btnLabel;
+      });
+
+    if (MODE === 'edit') {
+      runner.updatePatient(PATIENT.patientId, payload);
+    } else {
+      runner.createPatient(payload);
+    }
   });
 
   function showMsg(type, text) {

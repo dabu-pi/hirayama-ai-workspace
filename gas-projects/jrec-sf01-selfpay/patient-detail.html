@@ -55,6 +55,10 @@ var visitCount    = timeline.length;
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
         <button type="button" class="btn btn-secondary btn-sm"
           onclick="window.top.location.href = APP_URL">← 一覧に戻る</button>
+        <button type="button" class="btn btn-secondary btn-sm"
+          onclick="window.top.location.href = APP_URL + '?page=editPatient&id=<?= patient.patientId ?>'">
+          ✏ 患者情報を編集
+        </button>
         <button type="button" class="btn btn-primary btn-sm"
           onclick="window.top.location.href = APP_URL + '?page=visitForm&id=<?= patient.patientId ?>'">
           ＋ 来院・カルテ入力

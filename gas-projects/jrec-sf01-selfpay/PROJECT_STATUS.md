@@ -3,8 +3,23 @@
 ## 現在ステータス
 
 **✅ Phase 5-C 領収書発行フロー: CLOSED**（2026-04-29 全 PASS）
+**✅ Versioned Deployment @22: 反映済み**（2026-04-29）
+**🔄 Phase 6-A 患者基本情報編集: 実装中**（2026-04-29）
 
-次: Phase 6-A（患者基本情報編集）または versioned deployment（本番反映）
+次: Phase 6-A 実機確認 → CLOSED → Phase 6-B
+
+---
+
+## GAS デプロイ履歴
+
+| 日付 | バージョン | deploymentId（末尾） | 内容 |
+|---|---|---|---|
+| 2026-04-28 | @21 | `AKfycbxhtWdy...` | Phase 5-B Step 2 v2 |
+| 2026-04-29 | @22 | `AKfycbxhtWdy...` | Phase 5-C receipt flow closed |
+
+**本番 /exec 確認事項（2026-04-29 @22 反映後）:**
+- 発行済み visitKey で再発行ボタン非表示 → 実機確認待ち
+- 未収 visitKey で発行ボタン非表示 → 実機確認待ち
 
 ---
 

@@ -146,6 +146,49 @@ function generateNextPatientId_() {
 }
 
 /**
+ * 既存患者の基本情報を更新する。patientId は変更不可。
+ * @param {string} patientId
+ * @param {{name, kana?, dob?, gender?, phone?, address?, note?, jrecPatientId?}} payload
+ * @returns {{ ok: boolean, patientId?: string, error?: string }}
+ */
+function updatePatient(patientId, payload) {
+  Logger.log("[updatePatient] START patientId=" + patientId);
+  try {
+    if (!patientId) return { ok: false, error: "patientId は必須です" };
+    var name = payload && payload.name ? String(payload.name).trim() : "";
+    if (!name) return { ok: false, error: "氏名は必須です" };
+
+    var ss = getTargetSpreadsheet_();
+    var sh = ss.getSheetByName(SHEET_NAMES.PATIENTS);
+    if (!sh || sh.getLastRow() < 2) return { ok: false, error: "Patients シートが見つかりません" };
+
+    var ids = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i][0]) !== String(patientId)) continue;
+      var rowNum = i + 2;
+      var now    = new Date();
+      sh.getRange(rowNum, 2).setValue(name);
+      sh.getRange(rowNum, 3).setValue(payload.kana    ? String(payload.kana).trim()    : "");
+      sh.getRange(rowNum, 4).setValue(payload.dob     ? String(payload.dob)            : "");
+      sh.getRange(rowNum, 5).setValue(payload.gender  ? String(payload.gender)         : "");
+      sh.getRange(rowNum, 6).setValue(payload.phone   ? String(payload.phone).trim()   : "");
+      sh.getRange(rowNum, 7).setValue(payload.address ? String(payload.address).trim() : "");
+      sh.getRange(rowNum, 8).setValue(payload.note    ? String(payload.note).trim()    : "");
+      sh.getRange(rowNum, 11).setValue(now);
+      Logger.log("[updatePatient] row " + rowNum + " updated: " + name);
+      appendRunLog_("PATIENT_UPDATE", String(patientId), "氏名: " + name);
+      return { ok: true, patientId: String(patientId) };
+    }
+    return { ok: false, error: "患者が見つかりません: " + patientId };
+
+  } catch (err) {
+    var m = err && err.message ? err.message : String(err);
+    Logger.log("[updatePatient] ERROR: " + m);
+    return { ok: false, error: m };
+  }
+}
+
+/**
  * Run_Log に操作記録を追記する。失敗してもエラーにしない。
  * @param {string}  action    操作種別（VISIT_CREATE / PAYMENT_SAVE / PAYMENT_COLLECT / RECEIPT_ISSUE 等）
  * @param {string}  patientId 対象患者ID（P0001 形式）
