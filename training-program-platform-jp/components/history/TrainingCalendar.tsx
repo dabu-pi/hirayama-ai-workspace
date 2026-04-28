@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { jstDateSlice } from "@/lib/utils/date-jst";
-import type { CalendarDayEntry, WorkoutSessionListItem } from "@/types/workout";
+import type { CalendarDayEntry, CalendarMonthResult, WorkoutSessionListItem } from "@/types/workout";
 
 import styles from "./TrainingCalendar.module.css";
 
@@ -40,10 +40,33 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
   const [viewMonth, setViewMonth] = useState(today.month);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  // H-2: Use lightweight calendar entries for dot display instead of session list.
-  // entries covers all completed sessions for the current month (not limited to 20).
+  // H-1c: currentEntries is initialized from server-side entries (today's month).
+  // On month navigation, it is replaced by the API response for the target month.
+  const [currentEntries, setCurrentEntries] = useState<CalendarDayEntry[]>(entries);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  async function fetchMonthData(year: number, month: number) {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const res = await fetch(`/api/session-history/calendar?year=${year}&month=${month}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as CalendarMonthResult;
+      if (data.errorMessage) {
+        setFetchError(data.errorMessage);
+      } else {
+        setCurrentEntries(data.entries);
+      }
+    } catch {
+      setFetchError("カレンダーデータを取得できませんでした");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   const countByDate: Record<string, number> = {};
-  for (const e of entries) {
+  for (const e of currentEntries) {
     countByDate[e.date] = e.count;
   }
 
@@ -57,23 +80,21 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
   const totalCells = Math.ceil((firstDow + totalDays) / 7) * 7;
 
   function goToPrevMonth() {
-    if (viewMonth === 0) {
-      setViewYear((y) => y - 1);
-      setViewMonth(11);
-    } else {
-      setViewMonth((m) => m - 1);
-    }
+    const newYear = viewMonth === 0 ? viewYear - 1 : viewYear;
+    const newMonth = viewMonth === 0 ? 11 : viewMonth - 1;
+    setViewYear(newYear);
+    setViewMonth(newMonth);
     setSelectedDate(null);
+    void fetchMonthData(newYear, newMonth);
   }
 
   function goToNextMonth() {
-    if (viewMonth === 11) {
-      setViewYear((y) => y + 1);
-      setViewMonth(0);
-    } else {
-      setViewMonth((m) => m + 1);
-    }
+    const newYear = viewMonth === 11 ? viewYear + 1 : viewYear;
+    const newMonth = viewMonth === 11 ? 0 : viewMonth + 1;
+    setViewYear(newYear);
+    setViewMonth(newMonth);
     setSelectedDate(null);
+    void fetchMonthData(newYear, newMonth);
   }
 
   const selectedSessions = selectedDate
@@ -108,9 +129,18 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
 
       {/* Monthly summary */}
       <div className={styles.monthCount}>
-        今月のトレーニング:{" "}
-        <strong className={styles.monthCountValue}>{monthTotal}回</strong>
+        {isLoading ? (
+          <span className={styles.calendarLoading}>読み込み中...</span>
+        ) : (
+          <>
+            {viewMonth + 1}月のトレーニング:{" "}
+            <strong className={styles.monthCountValue}>{monthTotal}回</strong>
+          </>
+        )}
       </div>
+      {fetchError && (
+        <p className={styles.calendarError}>{fetchError}</p>
+      )}
 
       {/* Calendar grid */}
       <div className={styles.grid}>
