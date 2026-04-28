@@ -2,37 +2,50 @@
 
 ## 現在ステータス
 
-**🔄 Phase 5-C 領収書発行フロー: バグ修正済み・Test A 再確認待ち**（2026-04-29）
+**✅ Phase 5-C 領収書発行フロー: CLOSED**（2026-04-29 全 PASS）
 
-次: Test A 再確認（SPV_20260429_P0001_002）→ PASS で Test C〜E を続ける
+次: Phase 6-A（患者基本情報編集）または versioned deployment（本番反映）
 
 ---
 
-## Phase 5-C 実機確認状況（2026-04-29）
+## ✅ Phase 5-C 実機確認 PASS（2026-04-29）
 
-| Test | 対象 visitKey | 判定 | 備考 |
+**最終確認 visitKey:** `SPV_20260429_P0001_002` / @HEAD URL
+
+| Test | 判定 | 対象 | 確認内容 |
 |---|---|---|---|
-| A | SPV_20260429_P0001_002 | ⚠️ 再確認待ち（2回 FAIL 後、根本修正済み） | issueArea が未収状態で表示されていた |
-| B | — | SKIP 候補 | 一部入金データなし |
-| C | SPV_20260429_P0001_001 | ✅ PASS | 全額回収後 issueArea 自動表示を確認 |
-| D | SPV_20260429_P0001_001 | ✅ PASS | R_2026_0008 発行確認 |
-| E | R_2026_0008 | ✅ PASS | 発行済みプレビュー・再発行ボタン非表示確認 |
+| A | ✅ PASS | SPV_20260429_P0001_002 | 未収状態で issueArea 非表示・回収エリア表示のみ |
+| B | SKIP | — | 一部入金データなし |
+| C | ✅ PASS | SPV_20260429_P0001_002 | 全額 ¥2,750 回収 → 入金済遷移 → 発行ボタン自動表示 |
+| D | ✅ PASS | SPV_20260429_P0001_002 | R_2026_0009 発行・領収書プレビュー表示 |
+| E | ✅ PASS | R_2026_0009 | 発行済みプレビューのみ表示・通常発行ボタン非表示 |
 
-### Test A バグ経緯と根本修正（commit: be311f3）
+### CLOSED_SCOPE
 
-| 試行 | commit | 内容 | 結果 |
+| 確認済み動作 | 詳細 |
+|---|---|
+| 未収では発行 UI 非表示 | issueArea・「後で発行する」・「領収書を発行する」すべて非表示 |
+| 回収完了後のみ発行 UI 表示 | ページリロード不要、handleCollect 成功時に JS で表示 |
+| 入金済で発行可能 | SHOW_ISSUE_AREA = true → 初期化 IIFE が表示 |
+| 発行後は発行済みプレビューのみ | receiptArea・印刷ボタン表示、issueArea 非表示 |
+| 再発行は禁止 | GAS alreadyIssued 返却（Phase 6-C で将来対応） |
+| GAS 側ガード | issueReceipt() で paymentStatus !== 入金済 は ok:false 返却 |
+
+### Test A バグ経緯と根本修正
+
+| 試行 | commit | 手法 | 結果 |
 |---|---|---|---|
-| 1回目 | 60678e4 | `<?= (receipt \|\| !payment \|\| payment.paymentStatus !== '入金済') ? '...' : '' ?>` | FAIL |
-| 2回目 | 0f1bf82 | `<? var _showIssueArea = ... ?>` + `<?= _showIssueArea ? '' : '...' ?>` | FAIL |
-| 3回目（根本修正） | be311f3 | `display:none;` ハードコード + `<? if ?>` で SHOW_ISSUE_AREA JS フラグ注入 | 確認待ち |
+| 1回目 | 60678e4 | `style="<?= complex-expr ?>"` | FAIL |
+| 2回目 | 0f1bf82 | `<? var flag = ... ?>` + `<?= flag ? '' : 'none' ?>` | FAIL |
+| 3回目（根本修正） | be311f3 | `display:none;` ハードコード + `<? if ?>` で JS フラグ注入 | ✅ PASS |
 
-**ROOT_CAUSE（確定）:** GAS HTML テンプレートの `<?= expression ?>` を `style=""` 属性内で使うと、式の評価結果が正しく反映されない。`<? if ?>` コードスクリプレットは動作する（collectionArea で実証済み）。
+**ROOT_CAUSE（確定）:** GAS HTML テンプレートの `<?= expression ?>` を `style=""` 属性値の中で使うと評価結果が安定しない。`<? if ?>` コードスクリプレットは確実に動作する（collectionArea で実証済み）。`<?= ?>` は style 属性内で使わない。
 
-**根本修正の設計:**
-- `issueArea` は `style="display:none;"` を常時ハードコード
-- サーバー側の `<? if (!receipt && payment && payment.paymentStatus === '入金済') { ?>` でフラグを JS に注入
-- 初期化 IIFE が `SHOW_ISSUE_AREA` を見て `issueArea.style.display = ''` を実行
-- `handleCollect` が全額回収後に同じ `issueArea.style.display = ''` を実行
+**根本修正の設計（be311f3）:**
+- `issueArea` は `style="display:none;"` を常時ハードコード（テンプレート式なし）
+- `<? if (!receipt && payment && payment.paymentStatus === '入金済') { ?> SHOW_ISSUE_AREA = true; <? } ?>` で JS フラグを注入
+- 初期化 IIFE が `SHOW_ISSUE_AREA` を確認して `issueArea.style.display = ''`
+- `handleCollect` が全額回収後に同じ処理を実行
 
 ---
 
