@@ -147,14 +147,18 @@ function generateNextPatientId_() {
 
 /**
  * Run_Log に操作記録を追記する。失敗してもエラーにしない。
+ * @param {string}  action    操作種別（VISIT_CREATE / PAYMENT_SAVE / PAYMENT_COLLECT / RECEIPT_ISSUE 等）
+ * @param {string}  patientId 対象患者ID（P0001 形式）
+ * @param {string}  detail    詳細テキスト
+ * @param {string=} visitKey  対象 selfPayVisitKey（省略可。患者登録など visit を伴わない操作は省略）
  */
-function appendRunLog_(action, patientId, detail) {
+function appendRunLog_(action, patientId, detail, visitKey) {
   try {
     var ss = getTargetSpreadsheet_();
     var sh = ss.getSheetByName(SHEET_NAMES.RUN_LOG);
     if (!sh) return;
     sh.appendRow([
-      new Date(), action, "", patientId || "", "SUCCESS",
+      new Date(), action, visitKey || "", patientId || "", "SUCCESS",
       detail || "", Session.getActiveUser().getEmail() || ""
     ]);
   } catch (e) {

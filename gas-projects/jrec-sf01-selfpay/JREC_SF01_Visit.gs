@@ -153,7 +153,7 @@ function createVisitWithChart(payload) {
     Logger.log("[createVisitWithChart] SelfPayChart 保存完了");
 
     // ── Run_Log ─────────────────────────────────────────────
-    appendRunLog_("VISIT_CREATE", payload.patientId, "visitKey: " + vk);
+    appendRunLog_("VISIT_CREATE", payload.patientId, "visitKey: " + vk, vk);
 
     return { ok: true, selfPayVisitKey: vk, chartId: chartId };
 

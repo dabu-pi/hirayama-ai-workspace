@@ -402,7 +402,8 @@ function collectOutstandingPayment(visitKey, payload) {
     // ── Run_Log ──────────────────────────────────────────
     var pidForLog = visitKey.split("_")[2] || visitKey;
     appendRunLog_("PAYMENT_COLLECT", pidForLog,
-      "visitKey: " + visitKey + " 回収額: ¥" + totalTaxInc + " " + (paymentMethod || ""));
+      "visitKey: " + visitKey + " 回収額: ¥" + totalTaxInc + " " + (paymentMethod || ""),
+      visitKey);
 
     return {
       ok:            true,
@@ -542,7 +543,8 @@ function savePaymentWithItems(payload) {
     // patientId: visitKey から "P0001" 部分を抽出（SPV_YYYYMMDD_P0001_001 形式）
     var pidForLog = visitKey.split("_")[2] || visitKey;
     appendRunLog_("PAYMENT_SAVE", pidForLog,
-      "paymentId: " + paymentId + " 税込合計: ¥" + totalTaxInc + " " + paymentMethod);
+      "paymentId: " + paymentId + " 税込合計: ¥" + totalTaxInc + " " + paymentMethod,
+      visitKey);
 
     return {
       ok:          true,
@@ -657,7 +659,8 @@ function issueReceipt(selfPayVisitKey) {
 
     var pidForLog = visitKey.split("_")[2] || visitKey;
     appendRunLog_("RECEIPT_ISSUE", pidForLog,
-      "receiptNo: " + receiptNo + " 宛名: " + patientName + " ¥" + payment.totalTaxInc);
+      "receiptNo: " + receiptNo + " 宛名: " + patientName + " ¥" + payment.totalTaxInc,
+      visitKey);
 
     return {
       ok:           true,

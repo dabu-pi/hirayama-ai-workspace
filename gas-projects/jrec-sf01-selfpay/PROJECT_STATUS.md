@@ -2,7 +2,7 @@
 
 ## 現在ステータス
 
-**Phase 5-A DailySales 設計調査完了（コード変更なし）**（2026-04-28）
+**Phase 5-A Step 0: appendRunLog_ バグ修正済み**（2026-04-28）
 
 ---
 
@@ -10,7 +10,69 @@
 
 ---
 
-## Phase 5-A DailySales 集計 設計調査（2026-04-28）
+## Phase 5-A Step 0: appendRunLog_ バグ修正（2026-04-28）
+
+### 根本原因
+
+`appendRunLog_(action, patientId, detail)` が Run_Log の `selfPayVisitKey` 列（col 3）に
+**常に空文字**を書き込んでいた。visitKey は `detail` テキストにのみ埋め込まれ、
+DailySales 集計で `PAYMENT_COLLECT` の visitKey を取得するにはテキスト解析が必要だった。
+
+### 修正内容
+
+**JREC_SF01_Patient.gs: `appendRunLog_` に省略可能な第4引数 `visitKey` を追加**
+
+```javascript
+// 修正前
+function appendRunLog_(action, patientId, detail) {
+  sh.appendRow([new Date(), action, "", patientId, "SUCCESS", detail, email]);
+}
+
+// 修正後
+function appendRunLog_(action, patientId, detail, visitKey) {
+  sh.appendRow([new Date(), action, visitKey || "", patientId, "SUCCESS", detail, email]);
+}
+```
+
+既存の3引数呼び出し（`PATIENT_CREATE`）は `visitKey || ""` でそのまま動作。後方互換あり。
+
+**呼び出し側の修正（4箇所）:**
+
+| ファイル | action | visitKey 引数 |
+|---|---|---|
+| `JREC_SF01_Visit.gs` | VISIT_CREATE | `vk` を追加 |
+| `JREC_SF01_Billing.gs` | PAYMENT_COLLECT | `visitKey` を追加 ← **DailySales 集計の主目的** |
+| `JREC_SF01_Billing.gs` | PAYMENT_SAVE | `visitKey` を追加 |
+| `JREC_SF01_Billing.gs` | RECEIPT_ISSUE | `visitKey` を追加 |
+
+**変更なし（visitKey なし）:**
+- `JREC_SF01_Patient.gs: PATIENT_CREATE` → 患者登録は visit を伴わないため、visitKey なしが正しい
+
+### 修正後の Run_Log 記録例
+
+| timestamp | action | **selfPayVisitKey** | patientId | result | detail |
+|---|---|---|---|---|---|
+| 2026-04-28 | VISIT_CREATE | **SPV_20260428_P0001_005** | P0001 | SUCCESS | visitKey: SPV_... |
+| 2026-04-28 | PAYMENT_SAVE | **SPV_20260428_P0001_005** | P0001 | SUCCESS | paymentId: SPP_... ¥3850 |
+| 2026-04-28 | PAYMENT_COLLECT | **SPV_20260428_P0001_004** | P0001 | SUCCESS | visitKey: SPV_... 回収額: ¥5500 |
+| 2026-04-28 | RECEIPT_ISSUE | **SPV_20260428_P0001_005** | P0001 | SUCCESS | receiptNo: R_2026_0001 |
+| 2026-04-28 | PATIENT_CREATE | （空）| P0001 | SUCCESS | 氏名: 平山克士 |
+
+### 実機確認手順（再デプロイ後）
+
+1. 未収の来院で「未収を回収する」を実行
+2. スプレッドシートの Run_Log シートを確認
+3. PAYMENT_COLLECT 行の `selfPayVisitKey` 列に `SPV_...` が入っていることを確認
+4. `detail` 列にも従来通り `"visitKey: SPV_... 回収額: ¥..."` が残っていることを確認
+5. 新規来院保存でも VISIT_CREATE / PAYMENT_SAVE / RECEIPT_ISSUE に visitKey が入ることを確認
+
+### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 16:34:12）
+```
+
+---
 
 **詳細:** `docs/PHASE5A_DAILYSALES_DESIGN.md` を参照
 
