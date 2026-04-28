@@ -2,11 +2,140 @@
 
 ## 現在ステータス
 
-**Phase 4 Step 3 完了（billing-form.html 会計入力UI 実装済み）**（2026-04-28）
+**Phase 4 Step 4 完了（receipt.html 領収書発行UI 実装済み）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 4 Step 4 完了（2026-04-28）
+
+### receipt.html 領収書発行UI 実装内容
+
+#### 3状態の分岐表示
+
+| 状態 | 条件 | 表示内容 |
+|---|---|---|
+| 未会計 | `payment == null` | 「未会計」メッセージ + 「会計入力へ」ボタン |
+| 会計済み・未発行 | `payment != null && receipt == null` | 会計サマリー + 「領収書を発行する」ボタン |
+| 発行済み | `receipt != null`（初期表示 or 発行後）| 領収書プレビュー + 印刷ボタン |
+
+#### 領収書発行フロー
+
+```
+「領収書を発行する」ボタン押下
+  → google.script.run.issueReceipt(VISIT_KEY) 呼び出し
+  → 20秒タイムアウト付き
+  → 成功: showReceiptBox(res) で領収書プレビューを DOM に描画
+          発行ボタンを非表示、印刷ボタン・戻るボタンを表示
+  → 失敗: DOM に GAS エラーメッセージを表示、ボタン再有効化
+```
+
+#### 二重発行防止
+
+| 防止層 | 内容 |
+|---|---|
+| GAS 側（issueReceipt）| Receipts シートに同 visitKey が存在する場合、新規 INSERT せず既存レコードを返す（`alreadyIssued=true`）|
+| UI 側 | 発行ボタンを押した時点で disabled。発行完了後は issueArea を非表示に変更 |
+| ページロード時 | `receipt != null` の場合はボタンを初期非表示、プレビューを即描画 |
+
+#### 領収書プレビュー（`showReceiptBox(data)` 関数）
+
+| 表示項目 | データソース |
+|---|---|
+| 領収書番号（No.）| `data.receiptNo` |
+| 発行日 | `data.issuedDate`（YYYY-MM-DD → YYYY年M月D日 に変換）|
+| 宛名 | `data.addressee` または `data.patientName` または テンプレートの患者名 |
+| 金額（税込）| `data.totalTaxInc` |
+| 内消費税 | `data.totalTaxAmt` |
+| 但し書き | `data.description`（デフォルト: 「施術費として」）|
+| 明細 | `ITEMS` 配列（menuName × qty → subtotalInc）|
+| 院名 | `data.clinicName` または `CLINIC_NAME` |
+
+`showReceiptBox` は発行後の GAS レスポンスとページロード時の RECEIPT オブジェクト両方を処理できる正規化実装。
+
+#### 印刷対応
+
+- `@media print` で `.no-print` 要素（ヘッダー・ナビ・ボタン類）を非表示
+- 白背景・ボックスシャドウなしの A4 フレンドリーレイアウト
+- `window.print()` で印刷ダイアログを表示
+
+#### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 11:22:57）
+receipt.html が更新された
+```
+
+### 手動確認手順（再デプロイ後）
+
+1. **発行前状態の確認**（billing 保存済みで receipt 未発行の visitKey）
+   ```
+   ?page=receipt&visitKey=SPV_20260428_P0001_004
+   ```
+   期待: 会計サマリー + 「領収書を発行する」ボタン
+
+2. **「領収書を発行する」ボタン押下**
+   期待: 20秒以内に領収書プレビューが表示。receiptNo（R_2026_0001 形式）が表示される
+
+3. **印刷ボタン**
+   期待: 印刷ダイアログが開く
+
+4. **ページリロード（再表示）**
+   期待: 発行済み状態で表示（発行ボタンは出ない、プレビューが即表示）
+
+5. **二重発行テスト（発行済みの visitKey で再度「発行する」ボタンを押す）**
+   期待: 「既に発行済みの領収書を表示しています。」メッセージ。既存 receiptNo が変わらない
+
+6. **未会計の visitKey で receipt ページを開く**
+   ```
+   ?page=receipt&visitKey=SPV_20260428_P0001_001
+   ```
+   期待: 「この来院はまだ会計されていません」メッセージ + 「会計入力へ」ボタン
+
+### Phase 4 Step 5 に残すこと
+
+| 項目 | 内容 |
+|---|---|
+| patient-detail.html 更新 | 未会計の来院に「会計入力」ボタン、会計済みに「領収書」リンクを追加 |
+| 患者一覧の未収額表示 | Payments との JOIN が必要（現在は `—` 固定）|
+| 患者詳細サマリーの累計支払・未収残高 | Payments のリアルタイム集計（現在は `—` 固定）|
+
+---
+
+---
+
+## 会計方針 v1（2026-04-28 確定）
+
+**参照:** `docs/ACCOUNTING_POLICY_v1.md`
+
+### 要約
+
+| 項目 | 方針 |
+|---|---|
+| 来院・カルテ入力 | 施術事実を記録する（SelfPayVisits / SelfPayChart）|
+| 会計入力 | MenuMaster から請求項目を選択する（SelfPayItems / Payments）|
+| カルテ → 会計の自動変換 | **実装しない**（単価誤り・税区分誤り・外販対応の観点から）|
+| 会計の確定 | 必ず人が確認してから「保存」ボタンを押す |
+| 将来の候補自動セット | 検討は可。ただし確認・変更できる状態で提示し、自動保存は禁止 |
+
+---
+
+## ✅ Phase 4 Step 3 実機確認 PASS（2026-04-28）
+
+| 確認項目 | 結果 |
+|---|---|
+| 会計入力画面表示 | ✅ PASS |
+| MenuMaster 由来の UI 表示 | ✅ PASS |
+| 保存成功（SPV_20260428_P0001_004）| ✅ PASS |
+| receipt 画面への遷移 | ✅ PASS |
+| 「会計済み・領収書未発行」状態表示 | ✅ PASS |
+| 税込合計 ¥3,850 表示 | ✅ PASS |
+| 支払方法: 現金 / 入金状態: 入金済 | ✅ PASS |
+| 同 visitKey の billing 再表示で二重保存ブロック | ✅ PASS |
+| 二重保存ブロック画面に「領収書を確認する」「患者詳細へ戻る」導線 | ✅ PASS |
 
 ---
 
@@ -900,7 +1029,8 @@ patient-list.html / styles.html
 | Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | **✅ CLOSED（2026-04-28 実機確認済）** |
 | Phase 4 Step 1 | JREC_SF01_Billing.gs — GAS 会計バックエンド | **✅ 実装完了（2026-04-28）** |
 | Phase 4 Step 2 | JREC_SF01_Main.gs routing + 仮テンプレート | **✅ 実装完了・実機確認PASS（2026-04-28）** |
-| Phase 4 Step 3 | billing-form.html — 会計入力画面 | **✅ 実装完了（2026-04-28）** |
+| Phase 4 Step 3 | billing-form.html — 会計入力画面 | **✅ 実装完了・実機確認PASS（2026-04-28）** |
+| Phase 4 Step 4 | receipt.html — 領収書発行・プレビュー | **✅ 実装完了（2026-04-28）** |
 | Phase 4 Step 4 | receipt.html — 領収書プレビュー・発行 | 未着手 |
 | Phase 4 Step 5 | patient-detail.html — 会計入力/領収書ボタン追加 | 未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |
