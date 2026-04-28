@@ -12,6 +12,7 @@ import type {
   ProgramTagAxis
 } from "@/types/programs";
 import { CustomWorkoutButton } from "@/components/workout/CustomWorkoutButton";
+import { formatProgramTagLabel } from "@/lib/workout/format-labels";
 
 import styles from "./ProgramsScreen.module.css";
 
@@ -233,7 +234,7 @@ export function ProgramsScreen({
                   onClick={() => setActiveTagSlug(activeTagSlug === tag.slug ? null : tag.slug)}
                   type="button"
                 >
-                  {tag.label}
+                  {formatProgramTagLabel(tag.slug, tag.label)}
                 </button>
               ))}
             </div>
@@ -283,7 +284,7 @@ export function ProgramsScreen({
                         {program.level ?? "レベル未設定"}
                       </span>
                       {focusTag ? (
-                        <span className={styles.focusBadge}>{focusTag.label}</span>
+                        <span className={styles.focusBadge}>{formatProgramTagLabel(focusTag.slug, focusTag.label)}</span>
                       ) : null}
                     </div>
                   </div>
@@ -295,7 +296,7 @@ export function ProgramsScreen({
                   <div className={styles.tagRow}>
                     {requiredTags.map((tag) => (
                       <span className={styles.tagBadge} key={`${program.id}-${tag.axis}`}>
-                        {tag.label}
+                        {formatProgramTagLabel(tag.slug, tag.label)}
                       </span>
                     ))}
                   </div>

@@ -7,6 +7,7 @@ import type {
   ProgramTagAxis,
   WeekPreview
 } from "@/types/programs";
+import { formatProgramTagLabel } from "@/lib/workout/format-labels";
 
 import styles from "./ProgramDetailScreen.module.css";
 
@@ -184,11 +185,11 @@ export function ProgramDetailScreen({
               <div className={styles.tagRow}>
                 {requiredTags.map((tag) => (
                   <span className={styles.tagBadge} key={tag.slug}>
-                    {tag.label}
+                    {formatProgramTagLabel(tag.slug, tag.label)}
                   </span>
                 ))}
                 {focusTag ? (
-                  <span className={styles.focusBadge}>{focusTag.label}</span>
+                  <span className={styles.focusBadge}>{formatProgramTagLabel(focusTag.slug, focusTag.label)}</span>
                 ) : null}
               </div>
             );
