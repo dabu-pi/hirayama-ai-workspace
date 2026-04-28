@@ -14,8 +14,16 @@
     .tl-type   { font-size:12px; color:#5f6368; background:#f1f3f4; padding:2px 8px; border-radius:10px; }
     .tl-cc     { font-size:13px; flex:1; }
     .tl-vas    { font-size:12px; color:#5f6368; }
-    .tl-billing-todo { font-size:11px; background:#fff8e1; color:#e37400; padding:2px 7px; border-radius:10px; }
-    .tl-billing-done { font-size:11px; background:#e6f4ea; color:#1e8e3e; padding:2px 7px; border-radius:10px; }
+    .tl-billing-todo        { font-size:11px; background:#fff8e1; color:#e37400; padding:2px 7px; border-radius:10px; }
+    .tl-billing-done        { font-size:11px; background:#e6f4ea; color:#1e8e3e; padding:2px 7px; border-radius:10px; }
+    .tl-billing-receipt     { font-size:11px; background:#e8f0fe; color:#1a73e8; padding:2px 7px; border-radius:10px; }
+    .tl-billing-outstanding { font-size:11px; background:#fce8e6; color:#d93025; padding:2px 7px; border-radius:10px; font-weight:700; }
+    .tl-action-btn  { font-size:11px; padding:2px 9px; border:none; border-radius:10px; cursor:pointer;
+                      white-space:nowrap; font-weight:600; flex-shrink:0; }
+    .tl-action-billing { background:#e8f0fe; color:#1a73e8; }
+    .tl-action-billing:hover { background:#d2e3fc; }
+    .tl-action-receipt { background:#e6f4ea; color:#1e8e3e; }
+    .tl-action-receipt:hover { background:#ceead6; }
     .tl-toggle { margin-left:auto; font-size:12px; color:#1a73e8; white-space:nowrap; border:none; background:none; cursor:pointer; padding:0; }
     .tl-detail { margin-top:10px; padding:10px 12px; background:#f8f9fa; border-radius:6px; font-size:13px; }
     .tl-row    { display:flex; gap:8px; padding:3px 0; }
@@ -63,11 +71,24 @@ var visitCount    = timeline.length;
       </div>
       <div class="summary-item">
         <div class="label">累計支払</div>
-        <div class="value" style="font-size:14px;color:#9aa0a6;">—</div>
+        <div class="value" style="font-size:14px;">
+          <? if (accounting && accounting.totalPaid > 0) { ?>
+            ¥<?!= Number(accounting.totalPaid).toLocaleString() ?>
+          <? } else { ?>
+            <span style="color:#9aa0a6;">—</span>
+          <? } ?>
+        </div>
       </div>
       <div class="summary-item">
         <div class="label">未収残高</div>
-        <div class="value" style="font-size:14px;color:#9aa0a6;">—</div>
+        <div class="value" style="font-size:14px;
+          <?= (accounting && accounting.totalOutstanding > 0) ? 'color:#d93025;font-weight:700;' : 'color:#9aa0a6;' ?>">
+          <? if (accounting && accounting.totalOutstanding > 0) { ?>
+            ¥<?!= Number(accounting.totalOutstanding).toLocaleString() ?>
+          <? } else { ?>
+            —
+          <? } ?>
+        </div>
       </div>
     </div>
 
@@ -100,9 +121,27 @@ var visitCount    = timeline.length;
     <? } else { ?>
       <div id="timeline">
         <? timeline.forEach(function(entry, idx) {
-          var v = entry.visit;
-          var c = entry.chart;
-          var billingClass = v.billingStatus === '会計済' ? 'tl-billing-done' : 'tl-billing-todo';
+          var v   = entry.visit;
+          var c   = entry.chart;
+          var vk  = v.selfPayVisitKey;
+          var pay = accounting && accounting.payments && accounting.payments[vk];
+          var rec = accounting && accounting.receipts && accounting.receipts[vk];
+
+          // 会計ステータスクラス・ラベル
+          var billingClass, billingLabel;
+          if (rec) {
+            billingClass = 'tl-billing-receipt';
+            billingLabel = '領収書発行済';
+          } else if (v.billingStatus === '未収') {
+            billingClass = 'tl-billing-outstanding';
+            billingLabel = '未収';
+          } else if (pay) {
+            billingClass = 'tl-billing-done';
+            billingLabel = '会計済';
+          } else {
+            billingClass = 'tl-billing-todo';
+            billingLabel = '未会計';
+          }
         ?>
         <div class="timeline-entry">
           <div class="tl-header" onclick="toggleDetail(<?= idx ?>)">
@@ -110,7 +149,19 @@ var visitCount    = timeline.length;
             <span class="tl-type"><?= v.visitType ?></span>
             <span class="tl-cc"><?= v.chiefComplaint ?></span>
             <? if (v.vas !== '') { ?><span class="tl-vas">VAS <?= v.vas ?></span><? } ?>
-            <span class="<?= billingClass ?>"><?= v.billingStatus ?></span>
+            <span class="<?= billingClass ?>"><?= billingLabel ?></span>
+            <!-- 会計導線ボタン -->
+            <? if (!pay) { ?>
+              <button type="button" class="tl-action-btn tl-action-billing"
+                onclick="event.stopPropagation();top.location.href=APP_URL+'?page=billing&visitKey=<?= vk ?>'">
+                会計入力
+              </button>
+            <? } else { ?>
+              <button type="button" class="tl-action-btn tl-action-receipt"
+                onclick="event.stopPropagation();top.location.href=APP_URL+'?page=receipt&visitKey=<?= vk ?>'">
+                <?= rec ? '領収書' : '領収書を発行' ?>
+              </button>
+            <? } ?>
             <button type="button" class="tl-toggle" id="toggle-<?= idx ?>">▼ 詳細</button>
           </div>
 

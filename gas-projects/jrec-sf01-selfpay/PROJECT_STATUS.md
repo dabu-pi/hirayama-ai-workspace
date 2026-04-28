@@ -2,11 +2,91 @@
 
 ## 現在ステータス
 
-**Phase 4 Step 4 完了（receipt.html 領収書発行UI 実装済み）**（2026-04-28）
+**Phase 4 Step 5 完了（patient-detail.html 会計導線・サマリー実データ化）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 4 Step 5 完了（2026-04-28）
+
+### patient-detail.html 会計導線・サマリー実データ化
+
+#### 変更内容
+
+**JREC_SF01_Billing.gs に追加:**
+
+`getPatientAccountingData(patientId)` — 患者単位の会計集計
+
+| 戻り値 | 内容 |
+|---|---|
+| `totalPaid` | 入金済・一部入金 の tax-inc 合計 |
+| `totalOutstanding` | 未収・一部入金 の tax-inc 合計 |
+| `payments[visitKey]` | visitKey ごとの支払情報（exists ならば会計済み）|
+| `receipts[visitKey]` | visitKey ごとの領収書情報（exists ならば発行済み）|
+
+**JREC_SF01_Main.gs の detail ルート:**
+
+`t.accounting = getPatientAccountingData(idParam)` を追加
+
+**patient-detail.html:**
+
+| 変更箇所 | 内容 |
+|---|---|
+| 累計支払 | `accounting.totalPaid > 0` の場合に `¥X,XXX` 表示（0なら `—`）|
+| 未収残高 | `accounting.totalOutstanding > 0` の場合に赤太字で `¥X,XXX` 表示 |
+| 来院ごとのステータスバッジ | 4状態: 未会計（黄）/ 会計済（緑）/ 未収（赤）/ 領収書発行済（青）|
+| 来院ごとのアクションボタン | 未会計 → `会計入力` / 会計済み未発行 → `領収書を発行` / 発行済み → `領収書` |
+
+#### 会計ステータスバッジ仕様
+
+| 状態 | 条件 | バッジ | スタイル |
+|---|---|---|---|
+| 未会計 | `pay == null` | 「未会計」 | 黄背景・橙文字 |
+| 会計済 | `pay != null && billingStatus != "未収" && rec == null` | 「会計済」 | 緑背景・緑文字 |
+| 未収 | `billingStatus == "未収"` | 「未収」 | 赤背景・赤文字・太字 |
+| 領収書発行済 | `rec != null` | 「領収書発行済」 | 青背景・青文字 |
+
+#### アクションボタン動作
+
+```javascript
+// 会計入力ボタン（未会計のみ）
+top.location.href = APP_URL + '?page=billing&visitKey=' + vk
+
+// 領収書ボタン（会計済み・発行済み）
+top.location.href = APP_URL + '?page=receipt&visitKey=' + vk
+```
+
+`event.stopPropagation()` で `tl-header` の `toggleDetail()` が誤発火しないよう制御済み。
+
+#### 手動確認手順（再デプロイ後）
+
+1. **未会計の来院がある患者詳細を開く**
+   - 期待: タイムラインの各来院に「未会計」バッジ + 「会計入力」ボタン表示
+
+2. **「会計入力」ボタンをクリック**
+   - 期待: `?page=billing&visitKey=SPV_...` に遷移
+
+3. **会計済み・領収書未発行の来院を持つ患者詳細を開く**（SPV_20260428_P0001_004 など）
+   - 期待: 「会計済」バッジ + 「領収書を発行」ボタン
+   - 累計支払に ¥3,850（または実際の値）表示
+
+4. **「領収書を発行」ボタンをクリック**
+   - 期待: `?page=receipt&visitKey=...` に遷移
+
+5. **領収書発行済みの来院を持つ患者詳細を開く**
+   - 期待: 「領収書発行済」青バッジ + 「領収書」ボタン表示
+
+6. **「領収書」ボタンをクリック**
+   - 期待: receipt 画面に直接遷移し、発行済みプレビューが即表示される
+
+#### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 11:47:50）
+```
 
 ---
 
@@ -1056,6 +1136,7 @@ patient-list.html / styles.html
 | Phase 4 Step 2 | JREC_SF01_Main.gs routing + 仮テンプレート | **✅ 実装完了・実機確認PASS（2026-04-28）** |
 | Phase 4 Step 3 | billing-form.html — 会計入力画面 | **✅ 実装完了・実機確認PASS（2026-04-28）** |
 | Phase 4 Step 4 | receipt.html — 領収書発行・プレビュー | **✅ 実装完了・実機確認PASS（2026-04-28）** |
+| Phase 4 Step 5 | patient-detail.html 会計導線・サマリー実データ | **✅ 実装完了（2026-04-28）** |
 | Phase 4 Step 4 | receipt.html — 領収書プレビュー・発行 | 未着手 |
 | Phase 4 Step 5 | patient-detail.html — 会計入力/領収書ボタン追加 | 未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |

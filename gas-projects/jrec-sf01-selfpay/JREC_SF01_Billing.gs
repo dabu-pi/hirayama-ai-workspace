@@ -8,6 +8,81 @@
 // ============================================================
 
 /**
+ * 患者単位の会計集計と visitKey ごとの支払・領収書状態を返す。
+ * patient-detail.html のサマリー表示と来院ごとの会計導線に使用する。
+ *
+ * @param {string} patientId
+ * @returns {{
+ *   totalPaid:        number,  // 入金済・一部入金 の tax-inc 合計
+ *   totalOutstanding: number,  // 未収・一部入金 の tax-inc 合計
+ *   payments: { [visitKey]: { paymentId, totalTaxInc, paymentMethod, paymentStatus } },
+ *   receipts: { [visitKey]: { receiptId, receiptNo } }
+ * }}
+ */
+function getPatientAccountingData(patientId) {
+  try {
+    if (!patientId) return { totalPaid: 0, totalOutstanding: 0, payments: {}, receipts: {} };
+    var ss = getTargetSpreadsheet_();
+
+    // ── 患者の visitKey セット ───────────────────────────
+    var visitKeySet = {};
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (visitSh && visitSh.getLastRow() >= 2) {
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, 2).getValues().forEach(function(r) {
+        if (r[0] && String(r[1]) === String(patientId)) {
+          visitKeySet[String(r[0])] = true;
+        }
+      });
+    }
+
+    // ── Payments 集計 ────────────────────────────────────
+    var payments         = {};
+    var totalPaid        = 0;
+    var totalOutstanding = 0;
+    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (paymentSh && paymentSh.getLastRow() >= 2) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 10).getValues().forEach(function(r) {
+        var vk = String(r[1]);
+        if (!visitKeySet[vk]) return;
+        var status   = r[6] || "";
+        var totalInc = r[4] || 0;
+        payments[vk] = {
+          paymentId:     String(r[0]),
+          totalTaxInc:   totalInc,
+          paymentMethod: r[5] || "",
+          paymentStatus: status
+        };
+        if (status === "入金済" || status === "一部入金") totalPaid        += totalInc;
+        if (status === "未収"   || status === "一部入金") totalOutstanding += totalInc;
+      });
+    }
+
+    // ── Receipts 取得 ────────────────────────────────────
+    var receipts  = {};
+    var receiptSh = ss.getSheetByName(SHEET_NAMES.RECEIPTS);
+    if (receiptSh && receiptSh.getLastRow() >= 2) {
+      receiptSh.getRange(2, 1, receiptSh.getLastRow() - 1, 3).getValues().forEach(function(r) {
+        var vk = String(r[1]);
+        if (!visitKeySet[vk] || receipts[vk]) return;
+        receipts[vk] = { receiptId: String(r[0]), receiptNo: String(r[2]) };
+      });
+    }
+
+    return {
+      totalPaid:        totalPaid,
+      totalOutstanding: totalOutstanding,
+      payments:         payments,
+      receipts:         receipts
+    };
+
+  } catch(err) {
+    var m = (err && err.message) ? err.message : String(err);
+    Logger.log("[getPatientAccountingData] ERROR: " + m);
+    return { totalPaid: 0, totalOutstanding: 0, payments: {}, receipts: {} };
+  }
+}
+
+/**
  * MenuMaster の有効フラグ=TRUE のメニューを表示順で返す。
  * billing-form のメニュー選択プルダウンに使用する。
  * @returns {Object[]}
