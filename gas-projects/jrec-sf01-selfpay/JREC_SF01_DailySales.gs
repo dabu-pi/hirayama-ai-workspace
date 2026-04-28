@@ -14,8 +14,10 @@
  * totalSales         = paymentSaveTotal + paymentCollectTotal
  *                      当日に入金が確定した売上の合計（税込）
  *
- * paymentSaveTotal   = 当日 PAYMENT_SAVE かつ paymentStatus=入金済 の totalTaxInc 合計
- *                      新規会計入力で当日に現金/カード等で支払われた分
+ * paymentSaveTotal   = 当日 PAYMENT_SAVE の実受取額（Run_Log detail「入金額: ¥N」N > 0）の合計
+ *                      未収保存（入金額 = 0）は除外。旧ログ（入金額なし）は paymentStatus=入金済 で後方互換判定。
+ *                      ※ paymentStatus の現在値ではなく、ログ時点の入金額で判定することで
+ *                        後続の PAYMENT_COLLECT による status 変化による二重計上を防ぐ。
  *
  * paymentCollectTotal= 当日 PAYMENT_COLLECT の今回回収額（collectedAmount）合計
  *                      Run_Log detail「今回回収額: ¥N」から抽出。Step 2 以降ログのみ正本。
@@ -221,28 +223,44 @@ function getDailySalesReport(dateStr) {
             return;
           }
 
-          // PAYMENT_SAVE かつ paymentStatus が入金済でない → 未収として保存された会計。売上計上しない
-          if (action === "PAYMENT_SAVE" && payment.paymentStatus !== "入金済") return;
+          // ── PAYMENT_SAVE 前処理: 重複チェック + 当日入金確定分のみ計上 ───────
+          // detail「入金額: ¥N」で当時の実受取額を判定。N=0 は未収保存のため除外。
+          // 旧ログ（入金額なし）は paymentStatus=入金済 で後方互換判定。
+          // ★ paymentStatus の現在値は PAYMENT_COLLECT 後に変化するため使わない。
+          // ── PAYMENT_COLLECT: 同一 visitKey で複数許容（分割回収）。重複チェックなし。 ─
+          var savePaidAmt = -1;  // PAYMENT_SAVE 専用作業変数: -1=未確認、0=未収、>0=入金確定
+          if (action === "PAYMENT_SAVE") {
+            // 重複チェック（1 visitKey につき PAYMENT_SAVE は1件のみ）
+            var saveKey = "SAVE_" + vk;
+            if (seenAmountKeys[saveKey]) {
+              warnings.push({
+                type:     "DUPLICATE_LOG",
+                action:   action,
+                visitKey: vk,
+                note:     "同一 visitKey の PAYMENT_SAVE が2件以上あります。最初の1件のみ集計しました。"
+              });
+              return;
+            }
+            seenAmountKeys[saveKey] = true;
 
-          // 二重計上チェック（同一 visitKey + 同一 action が複数ある場合は最初の1件のみ）
-          var amountKey = action + "_" + vk;
-          if (seenAmountKeys[amountKey]) {
-            warnings.push({
-              type:     "DUPLICATE_LOG",
-              action:   action,
-              visitKey: vk,
-              note:     "同一 visitKey の " + action + " が2件以上あります。最初の1件のみ集計しました。"
-            });
-            return;
+            // 保存時の入金額を detail から抽出
+            var mPaid = detail.match(/入金額[：:]\s*¥(\d+)/);
+            if (mPaid) {
+              savePaidAmt = parseInt(mPaid[1], 10) || 0;
+              if (savePaidAmt <= 0) return; // 未収・一部入金(¥0)として保存 → 計上しない
+            } else {
+              // 旧ログ（入金額なし）: 現在の paymentStatus で後方互換判定
+              if (payment.paymentStatus !== "入金済") return;
+              savePaidAmt = payment.totalTaxInc || 0;
+            }
           }
-          seenAmountKeys[amountKey] = true;
 
           var amount;
           var visit     = visitMap[vk];
           var patientId = visit ? visit.patientId : pid;
 
           if (action === "PAYMENT_SAVE") {
-            amount = payment.totalTaxInc || 0;
+            amount = savePaidAmt; // detail 解析済みの実受取額
             paymentSaveTotal += amount;
           } else {
             // PAYMENT_COLLECT: detail から今回回収額を抽出（Step 2 以降ログのみ正本）
