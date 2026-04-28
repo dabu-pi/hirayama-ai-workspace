@@ -2,11 +2,45 @@
 
 ## 現在ステータス
 
-**Phase 5-A「DailySales 集計基盤」CLOSED**（2026-04-28）
+**Phase 5-B 設計調査: 一部入金の差額管理 設計確定（実装前）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## Phase 5-B 設計調査: 一部入金の差額管理（2026-04-28）
+
+**詳細:** `docs/PARTIAL_PAYMENT_DESIGN.md` を参照
+
+### 現状の問題点（サマリー）
+
+| 問題 | 影響 |
+|---|---|
+| Payments に paidAmount 列がない | 一部入金額が保存されず、残額が計算できない |
+| collectOutstandingPayment に collectedAmount がない | 部分回収が全額回収として処理される |
+| unpaidTotal / outstanding が totalTaxInc を使用 | 一部入金の未収残高が過大（請求額を表示） |
+| DailySales の売上が totalTaxInc を計上 | 一部入金の日次売上が過大計上になる |
+
+### 確定した推奨案（案 C）
+
+**Payments に paidAmount 列を追加 + Run_Log を監査ログとして活用**
+
+- Payments col 11: `paidAmount`（実際の入金済み累積額）を追加
+- `savePaymentWithItems`: 一部入金時に paidAmount を保存
+- `collectOutstandingPayment`: collectedAmount を受け取り paidAmount を累積更新
+- `outstanding = totalTaxInc - paidAmount`（残額として正しく計算）
+- Run_Log.PAYMENT_COLLECT: 回収日・金額・手段の監査ログとして維持
+
+### 実装前の確認事項（ユーザー判断待ち）
+
+| # | 確認事項 |
+|---|---|
+| 1 | 一部入金の残額回収は「receipt 画面から」か「新規会計入力」か |
+| 2 | 複数回分割払い履歴が必要か（案 B）、累積管理で十分か（案 C）|
+| 3 | 一部入金時の部分領収書を発行するか |
+| 4 | 既存の一部入金データ（paidAmount 不明）をどう補正するか |
 
 ---
 
