@@ -2,11 +2,87 @@
 
 ## 現在ステータス
 
-**Phase 3 CLOSED・Phase 4「会計入力・領収書」着手前整理済み**（2026-04-28）
+**Phase 4 Step 1 完了（JREC_SF01_Billing.gs 実装済み）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 4 Step 1 完了（2026-04-28）
+
+### JREC_SF01_Billing.gs 実装内容
+
+#### 実装した Public 関数
+
+| 関数名 | 役割 |
+|---|---|
+| `getActiveMenus()` | MenuMaster から有効フラグ=TRUE のメニューを表示順で返す |
+| `getVisitForBilling(visitKey)` | visit・患者・既存支払・既存領収書を返す（billing-form 表示用 + alreadyPaid 判定）|
+| `savePaymentWithItems(payload)` | SelfPayItems 明細 + Payments 保存 + SelfPayVisits.会計状態 更新 |
+| `issueReceipt(selfPayVisitKey)` | Receipts に保存し receiptNo を採番。二重発行防止で既存 receipt を返す |
+| `getReceiptByVisit(selfPayVisitKey)` | receipt.html 用に visit/patient/items/payment/receipt/clinicName を集約 |
+
+#### 実装した Private ヘルパー
+
+| 関数名 | 役割 |
+|---|---|
+| `getSettingValue_(key)` | Settings シートから特定キーの値を取得 |
+| `getTaxSettings_()` | tax_rate / tax_rounding / tax_unit を Settings から読む |
+| `calcItemTax_(priceEx, qty, taxCategory, taxCfg)` | 明細1行の税額・税込小計を計算（item 単位）|
+| `getMaxItemSeq_(visitKey)` | SelfPayItems の visitKey 最大連番を返す（重複防止）|
+| `nextReceiptNo_()` | Settings の prefix/digits/reset から領収書番号を採番 |
+| `updateVisitBillingStatus_(visitKey, status)` | SelfPayVisits の会計状態（col 9）を更新 |
+
+#### 二重保存・二重発行の防止ロジック
+
+| ケース | 対策 |
+|---|---|
+| `savePaymentWithItems` の二重保存 | 先頭で Payments を全件読み、同 visitKey が存在したら `{ ok: false, error: "既に会計済みです" }` を返す |
+| `issueReceipt` の二重発行 | 先頭で Receipts を全件読み、同 visitKey が存在したら **既存レコードを返す**（新規 INSERT しない）|
+
+#### 採番設計
+
+| ID種別 | フォーマット | 例 |
+|---|---|---|
+| itemId | `SPI_{visitKey}_{3桁連番}` | `SPI_SPV_20260428_P0001_001_001` |
+| paymentId | `SPP_{visitKey}` | `SPP_SPV_20260428_P0001_001` |
+| receiptNo | `{prefix}_{YYYY}_{4桁連番}` | `R_2026_0001` |
+
+#### ⚠️ Settings 不整合メモ
+
+`receipt_no_prefix` の Settings 初期値は `"R"` → receiptNo が `R_2026_0001` になる。
+設計書の例 `SPR_2026_0001` に合わせたい場合は、Settings シートの `receipt_no_prefix` を `"SPR"` に変更する。
+
+#### 既存コードとの整合
+
+| 項目 | 対応 |
+|---|---|
+| `getTargetSpreadsheet_()` | Setup.gs のものを使用 |
+| `getPatientById()` | Patient.gs のものを使用 |
+| `appendRunLog_()` | Patient.gs のものを使用（patientId に visitKey から抽出した P0001 を渡す）|
+| `SHEET_NAMES` | Setup.gs の定数を使用 |
+
+#### clasp push
+
+```
+clasp push --force → 12ファイル push 完了（2026-04-28 9:06:54）
+JREC_SF01_Billing.gs が新規追加された
+```
+
+#### 次は Step 2
+
+`JREC_SF01_Main.gs` に `billing` / `receipt` ルートを追加する。
+
+```javascript
+case "billing": {
+  // getVisitForBilling(vk) → billing-form.html へ
+}
+case "receipt": {
+  // getReceiptByVisit(vk) → receipt.html へ
+}
+```
 
 ---
 
@@ -656,7 +732,11 @@ patient-list.html / styles.html
 | Phase 1 | スプレッドシート設計・GASセットアップ | **✅ CLOSED（2026-04-27）** |
 | Phase 2 | GAS Webアプリ — 患者一覧・患者詳細・患者登録 | **✅ CLOSED（2026-04-27 実機確認済）** |
 | Phase 3 | GAS Webアプリ — 来院入力・カルテ記録 | **✅ CLOSED（2026-04-28 実機確認済）** |
-| Phase 4 | GAS Webアプリ — 会計入力・領収書・未収管理 | **🔵 着手前整理完了・実装待ち** |
+| Phase 4 Step 1 | JREC_SF01_Billing.gs — GAS 会計バックエンド | **✅ 実装完了（2026-04-28）** |
+| Phase 4 Step 2 | JREC_SF01_Main.gs — billing / receipt ルート追加 | 未着手 |
+| Phase 4 Step 3 | billing-form.html — 会計入力画面 | 未着手 |
+| Phase 4 Step 4 | receipt.html — 領収書プレビュー・発行 | 未着手 |
+| Phase 4 Step 5 | patient-detail.html — 会計入力/領収書ボタン追加 | 未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |
 | Phase 6 | Next.js / Supabase 化検討 | 未着手 |
 | Phase 7 | 外販モデル化 | 未着手 |
