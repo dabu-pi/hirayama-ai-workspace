@@ -6036,3 +6036,44 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 - 既知リスク: iOS Safari のホーム画面追加・standalone表示は未検証
 - G-6b 以降は Android PASS を根拠に進行する
 
+---
+
+## 2026-04-29 G-6b — PWA起動時の再開メッセージ強調
+
+### STATUS: 実装完了 — Android実機確認待ち
+
+### 実装内容
+
+| 変更 | 内容 |
+|---|---|
+| `components/gym/GymTrainingGapBanner.tsx` | 新規クライアントコンポーネント |
+| `components/gym/GymScreen.tsx` | trainingGap ブロックを GymTrainingGapBanner に差し替え |
+| `components/gym/GymScreen.module.css` | `.trainingGap_standalone` / `.trainingGapPwaLabel` / `.trainingGapCta` を追加 |
+
+### 実装方針
+
+- `GymScreen`（サーバーコンポーネント）は極力触らず、trainingGap ブロックのみクライアント化
+- standalone 検出: `window.matchMedia('(display-mode: standalone)')` ＋ iOS用 `navigator.standalone`
+- SSR 時は `isStandalone = false` でフォールバック（通常表示）
+- standalone 時の追加表示:
+  1. `ホーム画面から起動中` ラベル（accent / uppercase / 10px）
+  2. trainingGap 背景に `--accent-dim`（orange tint）と border-left 4px
+  3. `トレーニングを始める →` CTA（level !== "none" の場合のみ）
+
+### build 確認
+
+| 確認項目 | 結果 |
+|---|---|
+| `npx tsc --noEmit` | ✅ エラーなし |
+| `npx next build` | ✅ `/gym: 3.73kB` — エラー・警告なし |
+
+### 実機確認待ち（Android）
+
+```
+[ ] PWA ホーム画面から /gym を開く
+[ ] 「ホーム画面から起動中」ラベルが表示される
+[ ] trainingGap に orange tint 背景が適用される
+[ ] 「トレーニングを始める →」CTA が表示される（記録ありの場合）
+[ ] ブラウザ（非standalone）から開いた場合は通常表示のまま
+```
+

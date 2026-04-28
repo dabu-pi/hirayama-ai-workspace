@@ -6,6 +6,7 @@ import type { MembershipStatus } from "@/lib/workout/membership";
 import type { GymDashboardStats } from "@/lib/workout/gym-dashboard";
 import { GymAnnouncementSection } from "./GymAnnouncementSection";
 import { GymConsultationForm } from "./GymConsultationForm";
+import { GymTrainingGapBanner } from "./GymTrainingGapBanner";
 
 import styles from "./GymScreen.module.css";
 
@@ -141,12 +142,10 @@ export function GymScreen({ stats, announcements, sponsors, membershipStatus }: 
                   : "まだトレーニング記録がありません"}
               </p>
               {trainingGap && (
-                <div className={`${styles.trainingGap} ${styles[`trainingGap_${trainingGap.level}`]}`}>
-                  {trainingGap.daysLabel && (
-                    <p className={styles.trainingGapDays}>{trainingGap.daysLabel}</p>
-                  )}
-                  <p className={styles.trainingGapMessage}>{trainingGap.message}</p>
-                </div>
+                <GymTrainingGapBanner
+                  trainingGap={trainingGap}
+                  showCta={trainingGap.level !== "none"}
+                />
               )}
               <Link className={styles.statsLink} href="/session-history">
                 履歴を見る →

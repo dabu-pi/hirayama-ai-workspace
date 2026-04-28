@@ -325,6 +325,36 @@
   margin: 0;
 }
 
+/* ── G-6b: PWA standalone emphasis ── */
+
+.trainingGap_standalone {
+  background: var(--accent-dim);
+  border-left-width: 4px;
+}
+
+.trainingGapPwaLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 var(--space-1);
+  opacity: 0.8;
+}
+
+.trainingGapCta {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.trainingGapCta:hover {
+  text-decoration: underline;
+}
+
 /* ── Membership notice (non-active users) ── */
 
 .membershipNotice {
