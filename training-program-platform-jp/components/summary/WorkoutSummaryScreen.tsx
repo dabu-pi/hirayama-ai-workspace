@@ -205,9 +205,11 @@ export function WorkoutSummaryScreen({
                 </span>
                 <div className={styles.exerciseTitleWrap}>
                   <strong className={styles.exerciseName}>
-                    {exercise.exerciseNameEn}
+                    {exercise.exerciseNameJa || exercise.exerciseNameEn}
                   </strong>
-                  <span className={styles.exerciseSub}>{exercise.exerciseNameJa}</span>
+                  {exercise.exerciseNameJa && exercise.exerciseNameJa !== exercise.exerciseNameEn && (
+                    <span className={styles.exerciseSub}>{exercise.exerciseNameEn}</span>
+                  )}
                   {exercise.wasSwapped && (
                     <span className={styles.swappedBadge}>このセッションで置換</span>
                   )}

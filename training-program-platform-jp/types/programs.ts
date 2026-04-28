@@ -56,6 +56,7 @@ export type ProgramListView = {
 
 export type ExercisePreview = {
   nameEn: string;
+  nameJa: string | null;
   exerciseType: string | null;
 };
 

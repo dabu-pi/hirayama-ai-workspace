@@ -632,8 +632,8 @@ function buildExerciseBlocks(
       }
     );
 
-    const nameJa = isUserExercise ? (userExercise?.name ?? "カスタム種目") : (exercise?.name_ja ?? "Exercise");
-    const nameEn = isUserExercise ? (userExercise?.name ?? "Custom Exercise") : (exercise?.name_en ?? "Exercise");
+    const nameJa = isUserExercise ? (userExercise?.name ?? "カスタム種目") : (exercise?.name_ja ?? "種目");
+    const nameEn = isUserExercise ? (userExercise?.name ?? "カスタム種目") : (exercise?.name_en ?? "種目");
     const slug = isUserExercise ? (sessionExercise.user_exercise_id ?? "") : (exercise?.slug ?? exerciseKeyId);
 
     return {

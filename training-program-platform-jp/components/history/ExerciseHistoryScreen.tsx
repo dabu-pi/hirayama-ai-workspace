@@ -41,7 +41,7 @@ export function ExerciseHistoryScreen({
             <span className={typeClassName(history.exerciseType)}>
               {EXERCISE_TYPE_BADGE[history.exerciseType]}
             </span>
-            <h1 className={styles.title}>{history.exerciseNameEn}</h1>
+            <h1 className={styles.title}>{history.exerciseNameJa || history.exerciseNameEn}</h1>
           </div>
           <p className={styles.subtitle}>
             完了セットを新しい順に表示しています。

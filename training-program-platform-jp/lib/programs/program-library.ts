@@ -359,7 +359,7 @@ type DayExerciseRow = {
   exercise_type: string;
   order_index: number;
   // PostgREST many-to-one join returns a single object (not array)
-  exercises: { name_en: string } | { name_en: string }[] | null;
+  exercises: { name_en: string; name_ja: string | null } | { name_en: string; name_ja: string | null }[] | null;
 };
 
 /**
@@ -398,7 +398,7 @@ export async function getProgramWeekPreviews(
 
     const { data: exData, error: exError } = await client
       .from("program_day_exercises")
-      .select("program_day_id, exercise_type, order_index, exercises(name_en)")
+      .select("program_day_id, exercise_type, order_index, exercises(name_en, name_ja)")
       .in("program_day_id", dayIds)
       .order("order_index", { ascending: true });
 
@@ -415,8 +415,14 @@ export async function getProgramWeekPreviews(
           ? (exField[0]?.name_en ?? "Unknown")
           : exField.name_en
         : "Unknown";
+      const nameJa = exField
+        ? Array.isArray(exField)
+          ? (exField[0]?.name_ja ?? null)
+          : exField.name_ja
+        : null;
       exercisesByDayId.get(row.program_day_id)!.push({
         nameEn,
+        nameJa,
         exerciseType: row.exercise_type ?? null
       });
     }

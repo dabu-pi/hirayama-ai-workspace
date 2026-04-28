@@ -1419,6 +1419,13 @@ export function WorkoutScreen({
     { label: "体幹", value: "core" },
   ];
 
+  const CATEGORY_JA: Record<string, string> = {
+    chest: "胸", back: "背中", shoulders: "肩", arms: "腕",
+    legs: "脚", glutes: "お尻", core: "体幹"
+  };
+  const translateCategory = (cat: string | null | undefined) =>
+    cat ? (CATEGORY_JA[cat] ?? cat) : "";
+
   const filteredExercises = exerciseList.filter((item) => {
     const q = exerciseSearchQuery.trim().toLowerCase();
     const matchesSearch = !q || item.nameJa.toLowerCase().includes(q) || item.nameEn.toLowerCase().includes(q);
@@ -1584,7 +1591,7 @@ export function WorkoutScreen({
                 <span className={typeClassName(exercise.exerciseType)}>{exercise.exerciseRoleLabel}</span>
               ) : null}
               <Link className={styles.exerciseLink} href={`/exercise-history/${exercise.exerciseSlug}`}>
-                <span>{exercise.exerciseNameEn}</span>
+                <span>{exercise.exerciseNameJa || exercise.exerciseNameEn}</span>
                 <span aria-hidden="true">→</span>
               </Link>
               {exercise.wasSwapped ? (
@@ -1853,8 +1860,10 @@ export function WorkoutScreen({
               <div className={styles.modalSubtitle}>
                 置換対象:{" "}
                 <strong>
-                  {exercises.find((b) => b.id === swapTargetBlockId)
-                    ?.exerciseNameEn ?? ""}
+                  {(() => {
+                    const b = exercises.find((x) => x.id === swapTargetBlockId);
+                    return b ? (b.exerciseNameJa || b.exerciseNameEn) : "";
+                  })()}
                 </strong>
                 {swapGroupSlug ? (
                   <span className={styles.swapGroupHint}> — 推奨代替種目</span>
@@ -1925,7 +1934,7 @@ export function WorkoutScreen({
                       </span>
                       <span className={styles.modalListItemSub}>
                         {item.source !== "user" && item.nameEn}
-                        {item.category ? ` · ${item.category}` : ""}
+                        {item.category ? ` · ${translateCategory(item.category)}` : ""}
                         {isCustomSession && exerciseModalMode === "add" && item.source !== "user" && item.lastWeightKg !== undefined
                           ? item.lastWeightKg !== null
                             ? ` · 前回: ${item.lastWeightKg}kg${item.lastRepsDone !== null ? ` × ${item.lastRepsDone}` : ""}${item.lastDate ? ` (${item.lastDate})` : ""}`

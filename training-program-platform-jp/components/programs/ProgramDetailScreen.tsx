@@ -44,7 +44,7 @@ function WeekPreviewSection({ weekPreviews }: { weekPreviews: WeekPreview[] }) {
                 <li key={day.dayNumber} className={styles.dayRow}>
                   <span className={styles.dayLabel}>{day.dayNumber}日目</span>
                   <span className={styles.exerciseNames}>
-                    {day.exercises.map((ex) => ex.nameEn).join(" · ")}
+                    {day.exercises.map((ex) => ex.nameJa ?? ex.nameEn).join(" · ")}
                   </span>
                 </li>
               ))}
