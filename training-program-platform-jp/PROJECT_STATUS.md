@@ -1090,7 +1090,7 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ## 2026-04-28 D-2: 退会承認時に cancelled_at を記録する
 
-### STATUS: CLOSED (DB migration 手動適用待ち)
+### STATUS: CLOSED — コードレビュー PASS / Supabase実機確認は手動実施が必要
 
 ### 実装内容
 
@@ -1139,21 +1139,43 @@ supabase db push
 
 **方針メモ:** 既存 cancelled ユーザーは cancelled_at=NULL のため、D-3「1年後削除対象判定」では `cancelled_at IS NOT NULL` を条件にする。既存ユーザーは削除対象外になるため安全。
 
-### LIVE_CHECK_REQUIRED（次 PC で確認）
+### CODE_REVIEW — 2026-04-28 コードレビュー実施
 
-- [x] public.users に cancelled_at カラムが存在する ✅ SQL確認済み
-- [ ] 管理者が退会申請を承認すると membership_status=cancelled かつ cancelled_at に日時が入る
-- [ ] /admin/members から直接 cancelled にしても cancelled_at に日時が入る
-- [ ] active/paused に戻すと cancelled_at が null になる
-- [ ] トレーニング履歴は削除されていない
-- [ ] member_name / display_name / email は壊れていない
+Claude が `app/admin/account-deletion-requests/actions.ts` および `app/admin/members/actions.ts` を読んでロジックを検証した。
 
-### DEFERRED（次 PC へ持ち越し）
+| 確認シナリオ | コードの動作 | 判定 |
+|---|---|---|
+| 退会申請を承認（approveDeletionRequest） | `users.membership_status = 'cancelled'` + `cancelled_at = now()` を同一UPDATE | ✅ 正しい |
+| 退会申請を却下（rejectDeletionRequest） | `account_deletion_requests` のみ更新。`users` テーブルに一切触れない | ✅ 正しい（cancelled_at 入らない） |
+| 管理者画面から直接 cancelled（updateMembershipStatus） | `newStatus === 'cancelled'` 時 → `cancelled_at = new Date().toISOString()` | ✅ 正しい |
+| cancelled → active / paused へ変更（updateMembershipStatus） | `newStatus !== 'cancelled'` 時 → `cancelled_at = null` | ✅ 正しい |
+| データ削除 | 実施しない（`users` レコードの削除コードなし） | ✅ 正しい |
 
-- 退会申請承認時の cancelled_at 記録を実機で確認
-- /admin/members 直接変更時の cancelled_at 記録を実機で確認
-- 再入会（cancelled→active 時の cancelled_at=null）を実機で確認
-- 既存 cancelled ユーザーの cancelled_at 補完（D-2b 候補）
+**注意:** 以上はコードレビューによる論理検証。Supabase 上での実際の値変化は UI 操作 + ダッシュボード確認が必要。
+
+### LIVE_CHECK — 手動実施が必要（Supabaseダッシュボード確認）
+
+以下をテストユーザーで実施してください。
+
+| 手順 | 操作 | Supabase で確認する値 |
+|---|---|---|
+| 1 | テストユーザーが /profile から退会申請を送信 | account_deletion_requests に pending レコードが入ること |
+| 2 | 管理者が /admin/account-deletion-requests で「承認して退会済みにする」 | users.membership_status = cancelled / cancelled_at = 日時が入ること |
+| 3 | 同テストユーザーで /profile を開く | 退会済み案内が表示され退会申請フォームが非表示になること |
+| 4 | 管理者が /admin/members で同ユーザーを active に変更 | users.membership_status = active / cancelled_at = NULL になること |
+| 5 | 別のテストユーザーを管理者画面から直接 cancelled に変更 | users.membership_status = cancelled / cancelled_at = 日時が入ること |
+| 6 | そのユーザーを paused に変更 | users.membership_status = paused / cancelled_at = NULL になること |
+
+**確認状態:** 手動確認待ち（Supabase直接アクセス不可のためClaudeによる代替確認不可）
+
+- [x] public.users に cancelled_at カラムが存在する ✅ SQL確認済み（2026-04-28）
+- [x] コードレビュー：承認時に cancelled_at が入るロジックが正しい ✅
+- [x] コードレビュー：却下時に cancelled_at が入らないロジックが正しい ✅
+- [x] コードレビュー：active/paused 変更時に cancelled_at = null になるロジックが正しい ✅
+- [ ] Supabase実機：退会申請承認時の cancelled_at 記録（手動確認待ち）
+- [ ] Supabase実機：/admin/members 直接変更時の cancelled_at 記録（手動確認待ち）
+- [ ] Supabase実機：cancelled→active 時の cancelled_at=null（手動確認待ち）
+- [ ] Supabase実機：トレーニング履歴が削除されていないこと（手動確認待ち）
 
 ---
 
