@@ -84,11 +84,13 @@ function buildPage_(page, idParam, q, vkParam) {
         if (!ptd) return renderError_(
           "患者 " + idParam + " が見つかりませんでした。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
         );
+        var fullTl = getFullVisitTimelineByPatient(idParam);
         var t = HtmlService.createTemplateFromFile("patient-detail");
-        t.appUrl      = appUrl;
-        t.patient     = ptd;
-        t.timeline    = getVisitTimelineByPatient(idParam);
-        t.accounting  = getPatientAccountingData(idParam);
+        t.appUrl          = appUrl;
+        t.patient         = ptd;
+        t.timeline        = fullTl.timeline;
+        t.deletedTimeline = fullTl.deletedTimeline;
+        t.accounting      = getPatientAccountingData(idParam);
         return evalTemplate_(t);
       }
 

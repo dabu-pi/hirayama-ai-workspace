@@ -5,8 +5,9 @@
 **✅ Phase 5-C 領収書発行フロー: CLOSED**（2026-04-29 全 PASS）
 **✅ Versioned Deployment @22: 反映済み**（2026-04-29）
 **✅ Phase 6-A 患者基本情報編集: CLOSED**（2026-04-29 主機能 PASS）
+**🔄 Phase 6-B 来院履歴ゴミ箱機能: 実装済み・実機確認待ち**（2026-04-29）
 
-次: Phase 6-B（来院履歴のゴミ箱機能）または versioned deployment（Phase 6-A 本番反映）
+次: Phase 6-B 実機確認（migration 実行 → ゴミ箱ボタン確認 → 削除・復元確認）
 
 ---
 

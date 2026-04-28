@@ -193,15 +193,52 @@ function setupPatients_(ss) {
 function setupSelfPayVisits_(ss) {
   var sh = getOrCreateSheet_(ss, SHEET_NAMES.VISITS);
 
-  var headers = [["selfPayVisitKey", "patientId", "来院日", "来院区分", "担当者", "主訴", "VAS", "次回方針", "会計状態", "createdAt", "updatedAt"]];
-  setHeaders_(sh, headers, [200, 80, 100, 80, 90, 260, 50, 200, 80, 160, 160]);
+  var headers = [["selfPayVisitKey", "patientId", "来院日", "来院区分", "担当者", "主訴", "VAS", "次回方針", "会計状態", "createdAt", "updatedAt", "isDeleted", "deletedAt", "deleteReason"]];
+  setHeaders_(sh, headers, [200, 80, 100, 80, 90, 260, 50, 200, 80, 160, 160, 80, 160, 200]);
 
   // 来院区分プルダウン
   applyDropdown_(sh, 2, 4, 200, ["初診", "再診"]);
   // 会計状態プルダウン
   applyDropdown_(sh, 2, 9, 200, ["未会計", "会計済", "未収"]);
+  // isDeleted チェックボックス
+  sh.getRange(2, 12, 200, 1).insertCheckboxes();
 
   sh.setFrozenRows(1);
+}
+
+/**
+ * 既存 SelfPayVisits シートにゴミ箱列（col 12-14）を追加する。
+ * Phase 6-B 導入時に Apps Script エディタから1回手動実行する。
+ * 列が既に存在する場合はスキップ。
+ */
+function runAddTrashColumns() {
+  var sh = getTargetSpreadsheet_().getSheetByName(SHEET_NAMES.VISITS);
+  if (!sh) {
+    SpreadsheetApp.getUi().alert("SelfPayVisits シートが見つかりません。");
+    return;
+  }
+  var lastCol = sh.getLastColumn();
+  if (lastCol >= 12) {
+    SpreadsheetApp.getUi().alert(
+      "ゴミ箱列はすでに存在します（現在 " + lastCol + " 列）。スキップしました。"
+    );
+    return;
+  }
+  sh.getRange(1, 12).setValue("isDeleted");
+  sh.getRange(1, 13).setValue("deletedAt");
+  sh.getRange(1, 14).setValue("deleteReason");
+  sh.setColumnWidth(12, 80);
+  sh.setColumnWidth(13, 160);
+  sh.setColumnWidth(14, 200);
+  if (sh.getLastRow() >= 2) {
+    sh.getRange(2, 12, sh.getLastRow() - 1, 1).insertCheckboxes();
+  }
+  Logger.log("[runAddTrashColumns] isDeleted / deletedAt / deleteReason 追加完了");
+  SpreadsheetApp.getUi().alert(
+    "✅ SelfPayVisits にゴミ箱列を追加しました\n" +
+    "  col 12: isDeleted\n  col 13: deletedAt\n  col 14: deleteReason\n\n" +
+    "既存行の isDeleted は FALSE（未チェック）として扱われます。"
+  );
 }
 
 // ============================================================

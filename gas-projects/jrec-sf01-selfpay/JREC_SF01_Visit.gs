@@ -4,20 +4,27 @@
 // appendRunLog_: defined in JREC_SF01_Patient.gs
 
 /**
- * 指定患者の来院履歴を降順で返す。
+ * 指定患者の来院履歴を降順で返す。isDeleted フィールドを含む。
+ * col 12: isDeleted / col 13: deletedAt / col 14: deleteReason
+ * 列が未追加（11列以下）の場合は isDeleted=false として扱う。
  */
 function getVisitsByPatient(patientId) {
   var ss = getTargetSpreadsheet_();
   var sh = ss.getSheetByName(SHEET_NAMES.VISITS);
   if (!sh || sh.getLastRow() < 2) return [];
 
-  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 11).getValues();
+  var numCols = Math.min(sh.getLastColumn(), 14);
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, numCols).getValues();
   var results = [];
   rows.forEach(function(r) {
     if (!r[0] || String(r[1]) !== String(patientId)) return;
     var visitDate = "";
     if (r[2]) {
       try { visitDate = Utilities.formatDate(new Date(r[2]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
+    }
+    var deletedAt = "";
+    if (r[12]) {
+      try { deletedAt = Utilities.formatDate(new Date(r[12]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
     }
     results.push({
       selfPayVisitKey: String(r[0]),
@@ -28,7 +35,10 @@ function getVisitsByPatient(patientId) {
       chiefComplaint:  r[5]  || "",
       vas:             r[6] !== "" ? String(r[6]) : "",
       nextPlan:        r[7]  || "",
-      billingStatus:   r[8]  || "未会計"
+      billingStatus:   r[8]  || "未会計",
+      isDeleted:       r[11] === true || r[11] === "TRUE",
+      deletedAt:       deletedAt,
+      deleteReason:    r[13] ? String(r[13]) : ""
     });
   });
   results.sort(function(a, b) { return b.visitDate.localeCompare(a.visitDate); });
@@ -69,15 +79,147 @@ function getChartsByVisitKeys(visitKeys) {
 }
 
 /**
- * 来院 + カルテを統合したタイムラインを返す（降順）。
+ * 来院 + カルテを統合したタイムラインを返す（降順）。isDeleted=TRUE は除外。
  */
 function getVisitTimelineByPatient(patientId) {
-  var visits = getVisitsByPatient(patientId);
+  var visits = getVisitsByPatient(patientId).filter(function(v) { return !v.isDeleted; });
   if (visits.length === 0) return [];
   var charts = getChartsByVisitKeys(visits.map(function(v) { return v.selfPayVisitKey; }));
   return visits.map(function(v) {
     return { visit: v, chart: charts[v.selfPayVisitKey] || null };
   });
+}
+
+/**
+ * 来院 + カルテを統合し、アクティブとゴミ箱の両方を返す。
+ * @param {string} patientId
+ * @returns {{ timeline: Array, deletedTimeline: Array }}
+ */
+function getFullVisitTimelineByPatient(patientId) {
+  var visits  = getVisitsByPatient(patientId);
+  var active  = visits.filter(function(v) { return !v.isDeleted; });
+  var deleted = visits.filter(function(v) { return  v.isDeleted; });
+  var charts  = getChartsByVisitKeys(visits.map(function(v) { return v.selfPayVisitKey; }));
+  return {
+    timeline: active.map(function(v) {
+      return { visit: v, chart: charts[v.selfPayVisitKey] || null };
+    }),
+    deletedTimeline: deleted.map(function(v) {
+      return { visit: v, chart: charts[v.selfPayVisitKey] || null };
+    })
+  };
+}
+
+/**
+ * 来院記録をゴミ箱に移動する（論理削除）。
+ * 入金済・一部入金・領収書発行済みは拒否。
+ * @param {string} visitKey
+ * @param {string=} reason
+ * @returns {{ ok: boolean, visitKey?: string, error?: string }}
+ */
+function trashVisit(visitKey, reason) {
+  Logger.log("[trashVisit] START visitKey=" + visitKey);
+  try {
+    if (!visitKey) return { ok: false, error: "visitKey は必須です" };
+    visitKey = String(visitKey);
+    var ss   = getTargetSpreadsheet_();
+
+    // 領収書チェック（発行済みは拒否）
+    var receiptSh = ss.getSheetByName(SHEET_NAMES.RECEIPTS);
+    if (receiptSh && receiptSh.getLastRow() >= 2) {
+      var rRows = receiptSh.getRange(2, 1, receiptSh.getLastRow() - 1, 2).getValues();
+      for (var ri = 0; ri < rRows.length; ri++) {
+        if (String(rRows[ri][1]) === visitKey)
+          return { ok: false, error: "領収書が発行済みです。ゴミ箱移動はできません。" };
+      }
+    }
+
+    // 支払チェック（入金済・一部入金・paidAmount>0 は拒否）
+    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (paymentSh && paymentSh.getLastRow() >= 2) {
+      var pRows = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues();
+      for (var pi = 0; pi < pRows.length; pi++) {
+        if (String(pRows[pi][1]) !== visitKey) continue;
+        var status  = pRows[pi][6] || "";
+        var rawPaid = pRows[pi][10];
+        var paidAmt = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined) ? (rawPaid || 0) : 0;
+        if (status === "入金済")
+          return { ok: false, error: "入金済みです。ゴミ箱移動はできません。" };
+        if (status === "一部入金")
+          return { ok: false, error: "一部入金済みです。ゴミ箱移動はできません。" };
+        if (paidAmt > 0)
+          return { ok: false, error: "入金記録があります（paidAmount=¥" + paidAmt + "）。ゴミ箱移動はできません。" };
+        break;
+      }
+    }
+
+    // SelfPayVisits を更新
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (!visitSh || visitSh.getLastRow() < 2)
+      return { ok: false, error: "SelfPayVisits シートが見つかりません" };
+
+    var keys = visitSh.getRange(2, 1, visitSh.getLastRow() - 1, 1).getValues();
+    for (var vi = 0; vi < keys.length; vi++) {
+      if (String(keys[vi][0]) !== visitKey) continue;
+      var rowNum = vi + 2;
+      var now    = new Date();
+      visitSh.getRange(rowNum, 12).setValue(true);
+      visitSh.getRange(rowNum, 13).setValue(now);
+      visitSh.getRange(rowNum, 14).setValue(reason ? String(reason).trim() : "");
+      Logger.log("[trashVisit] row " + rowNum + " → isDeleted=true");
+      appendRunLog_("VISIT_TRASH", visitKey.split("_")[2] || visitKey,
+        "visitKey: " + visitKey + (reason ? " reason: " + reason : ""),
+        visitKey);
+      return { ok: true, visitKey: visitKey };
+    }
+    return { ok: false, error: "来院記録が見つかりません: " + visitKey };
+
+  } catch (err) {
+    var m = err && err.message ? err.message : String(err);
+    Logger.log("[trashVisit] ERROR: " + m);
+    return { ok: false, error: m };
+  }
+}
+
+/**
+ * ゴミ箱の来院記録を復元する（isDeleted=FALSE に戻す）。
+ * @param {string} visitKey
+ * @returns {{ ok: boolean, visitKey?: string, error?: string }}
+ */
+function restoreVisit(visitKey) {
+  Logger.log("[restoreVisit] START visitKey=" + visitKey);
+  try {
+    if (!visitKey) return { ok: false, error: "visitKey は必須です" };
+    visitKey = String(visitKey);
+    var ss   = getTargetSpreadsheet_();
+
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (!visitSh || visitSh.getLastRow() < 2)
+      return { ok: false, error: "SelfPayVisits シートが見つかりません" };
+
+    var numCols = Math.min(visitSh.getLastColumn(), 12);
+    var rows    = visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues();
+    for (var vi = 0; vi < rows.length; vi++) {
+      if (String(rows[vi][0]) !== visitKey) continue;
+      var rowNum    = vi + 2;
+      var isDeleted = rows[vi][11] === true || rows[vi][11] === "TRUE";
+      if (!isDeleted)
+        return { ok: false, error: "この来院記録はゴミ箱に入っていません。" };
+      visitSh.getRange(rowNum, 12).setValue(false);
+      visitSh.getRange(rowNum, 13).setValue("");
+      visitSh.getRange(rowNum, 14).setValue("");
+      Logger.log("[restoreVisit] row " + rowNum + " → restored");
+      appendRunLog_("VISIT_RESTORE", visitKey.split("_")[2] || visitKey,
+        "visitKey: " + visitKey, visitKey);
+      return { ok: true, visitKey: visitKey };
+    }
+    return { ok: false, error: "来院記録が見つかりません: " + visitKey };
+
+  } catch (err) {
+    var m = err && err.message ? err.message : String(err);
+    Logger.log("[restoreVisit] ERROR: " + m);
+    return { ok: false, error: m };
+  }
 }
 
 /**
