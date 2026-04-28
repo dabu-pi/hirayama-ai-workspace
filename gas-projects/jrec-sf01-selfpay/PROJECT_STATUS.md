@@ -10,6 +10,31 @@
 
 ---
 
+## ✅ Phase 4 Step 4 実機確認 PASS（2026-04-28）
+
+| 確認項目 | 結果 |
+|---|---|
+| 領収書発行ボタン | ✅ PASS |
+| 発行後プレビュー表示 | ✅ PASS |
+| receiptNo 表示（R_2026_0001）| ✅ PASS |
+| 税込合計 ¥3,850 表示 | ✅ PASS |
+| 印刷ボタン表示 | ✅ PASS |
+| リロード後の発行済み表示 | ✅ PASS（receiptNo・プレビュー表示、発行ボタン再表示なし）|
+| 二重発行防止 | ✅ PASS |
+| 改善: 「発行済み」ラベル追加 | ✅ 対応済み（`showReceiptBox` に statusBanner を追加）|
+
+### 改善内容（2026-04-28）
+
+`showReceiptBox()` の先頭に「発行済み」ステータスバナーを追加。
+リロード後に発行済み状態で開いたとき、受領書番号と発行日が画面上部で一目で確認できる。
+
+```
+✅ 発行済み  No. R_2026_0001  発行日: 2026年4月28日
+```
+（`no-print` クラス付き → 印刷時は非表示）
+
+---
+
 ## ✅ Phase 4 Step 4 完了（2026-04-28）
 
 ### receipt.html 領収書発行UI 実装内容
@@ -1030,7 +1055,7 @@ patient-list.html / styles.html
 | Phase 4 Step 1 | JREC_SF01_Billing.gs — GAS 会計バックエンド | **✅ 実装完了（2026-04-28）** |
 | Phase 4 Step 2 | JREC_SF01_Main.gs routing + 仮テンプレート | **✅ 実装完了・実機確認PASS（2026-04-28）** |
 | Phase 4 Step 3 | billing-form.html — 会計入力画面 | **✅ 実装完了・実機確認PASS（2026-04-28）** |
-| Phase 4 Step 4 | receipt.html — 領収書発行・プレビュー | **✅ 実装完了（2026-04-28）** |
+| Phase 4 Step 4 | receipt.html — 領収書発行・プレビュー | **✅ 実装完了・実機確認PASS（2026-04-28）** |
 | Phase 4 Step 4 | receipt.html — 領収書プレビュー・発行 | 未着手 |
 | Phase 4 Step 5 | patient-detail.html — 会計入力/領収書ボタン追加 | 未着手 |
 | Phase 5 | タイムライン・VASグラフ・日次集計 | UI設計完了 / 実装未着手 |

@@ -277,7 +277,18 @@ function showReceiptBox(data) {
     itemsHtml += '</tbody></table>';
   }
 
+  // 発行済みステータスバナー（印刷時非表示）
+  var statusBanner =
+    '<div class="no-print" style="display:flex;align-items:center;gap:10px;' +
+    'padding:10px 14px;background:#e6f4ea;border:1px solid #a8d5b5;' +
+    'border-radius:6px;margin-bottom:14px;font-size:13px;">' +
+      '<span style="color:#1e8e3e;font-weight:700;">✅ 発行済み</span>' +
+      '<span style="font-family:monospace;color:#5f6368;">No. ' + escHtml(receiptNo) + '</span>' +
+      '<span style="color:#9aa0a6;margin-left:auto;">発行日: ' + escHtml(issuedDate) + '</span>' +
+    '</div>';
+
   var html =
+    statusBanner +
     '<div class="receipt-box">' +
       '<div class="receipt-title">領　収　書</div>' +
       '<div class="receipt-header-row">' +
