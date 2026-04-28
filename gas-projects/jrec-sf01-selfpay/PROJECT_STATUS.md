@@ -2,11 +2,74 @@
 
 ## 現在ステータス
 
-**Phase 5-A Step 3: rebuildDailySales() 実機確認 PASS・CLOSED**（2026-04-28）
+**Phase 5-A「DailySales 集計基盤」CLOSED**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 5-A「DailySales 集計基盤」CLOSED（2026-04-28）
+
+### 完了スコープ
+
+| Step | 内容 | 状態 |
+|---|---|---|
+| Step 0 | Run_Log `selfPayVisitKey` 列を常に空文字 → visitKey を正しく記録するよう修正 | ✅ CLOSED |
+| Step 1 | `getDailySalesReport(date)` 実装（6シート読み取り・Run_Log 正本） | ✅ CLOSED |
+| Step 2 | `runDailySalesReport()` 実機確認 PASS | ✅ CLOSED |
+| Step 3 | `rebuildDailySales(date)` 実装・DailySales 16列 UPSERT | ✅ CLOSED |
+| Step 3 実機確認 | insert/update UPSERT PASS・重複行なし | ✅ CLOSED |
+| daily-sales.html | Web UI 未実装 | 保留（Phase 5-B 以降）|
+
+### 実装済み関数一覧（JREC_SF01_DailySales.gs）
+
+| 関数名 | 種別 | 説明 |
+|---|---|---|
+| `getDailySalesReport(dateStr)` | Public | 指定日の日次集計を返す（6シート読み取り）|
+| `runDailySalesReport()` | Public | 今日の集計を Logger 出力（手動確認用）|
+| `rebuildDailySales(dateStr)` | Public | getDailySalesReport 結果を DailySales シートへ UPSERT |
+| `runRebuildDailySales()` | Public | "2026-04-28" 対象の rebuildDailySales を実行（手動確認用）|
+| `normalizeDate_(val)` | Private | 日付を YYYY-MM-DD JST に正規化 |
+| `toDateStr_(val)` | Private | Sheets の Date 値を YYYY-MM-DD JST に変換 |
+| `ensureDailySalesHeaders_(sh)` | Private | DailySales ヘッダー初期化・列名→列番号マップ返却 |
+
+### 実機確認サマリー
+
+| 確認項目 | 結果 |
+|---|---|
+| getDailySalesReport("2026-04-28") ok=true | ✅ |
+| totalSales=¥3,850（SPV_20260428_P0001_005）| ✅ |
+| rows=1（patientName=平山克士 / receiptNo=R_2026_0005）| ✅ |
+| warnings=9（全 MISSING_VISIT_KEY・旧ログ由来）| ✅ 想定通り |
+| rebuildDailySales 1回目: insert row=2 | ✅ |
+| rebuildDailySales 2回目: update row=2（重複なし）| ✅ |
+
+### 確定した集計定義
+
+| 集計値 | 定義 | 正本 |
+|---|---|---|
+| totalSales | 当日入金確定額（paymentSaveTotal + paymentCollectTotal）| Run_Log + Payments |
+| paymentSaveTotal | 当日 PAYMENT_SAVE かつ paymentStatus=入金済 | Run_Log 基準 |
+| paymentCollectTotal | 当日 PAYMENT_COLLECT（Step 0 以降ログのみ正本）| Run_Log 基準 |
+| unpaidTotal | 現在時点の未収/一部入金合計（日付非依存スナップショット）| Payments |
+| visitCount | SelfPayVisits.来院日 = date の件数 | SelfPayVisits |
+| mainVisitCount | SELFPAY_CONTINUE20 含む当日来院件数 | SelfPayItems |
+| receiptIssuedCount | Receipts.発行日 = date の件数 | Receipts |
+| 売上日基準 | Run_Log.timestamp（PAYMENT_SAVE/COLLECT 記録日）| — |
+
+### 保留・後続タスク候補
+
+| 項目 | 内容 | 優先度 |
+|---|---|---|
+| daily-sales.html | 日次集計 Web 画面 | 低（スプレッドシートで確認可能）|
+| 旧ログ MISSING_VISIT_KEY 補正 | Step 0 修正前ログの visitKey を detail から補完 | 低 |
+| unpaidTotal の日付履歴化 | 日付時点の未収残高を正確に記録する設計 | 中 |
+| visitCount / lastVisitDate 実データ化 | getPatients で常に 0 / 空の問題 | 中 |
+| 一部入金の差額管理 | 現在は全額入金済として処理 | 中 |
+| 領収書再発行 | reissueCount インクリメント | 低 |
+| 取消・返金設計 | 不可逆操作のため別途設計が必要 | 低 |
 
 ---
 
