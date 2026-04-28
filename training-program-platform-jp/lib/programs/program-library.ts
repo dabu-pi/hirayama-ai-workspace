@@ -64,9 +64,9 @@ type ProgramLibraryResult = {
 };
 
 const PROGRAM_LEVEL_DISPLAY: Record<ProgramLevel, string> = {
-  beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced"
+  beginner: "初級",
+  intermediate: "中級",
+  advanced: "上級"
 };
 
 const PROGRAM_TAG_AXES: ProgramTagAxis[] = ["goal", "equipment", "split", "focus"];
@@ -127,12 +127,12 @@ function normalizeProgramSourceFidelity(
 
 function buildFrequencyLabel(daysPerWeek: number | null) {
   if (!daysPerWeek || daysPerWeek <= 0) return null;
-  return `${daysPerWeek} days / week`;
+  return `${daysPerWeek}日/週`;
 }
 
 function buildDurationLabel(durationWeeks: number | null) {
   if (!durationWeeks || durationWeeks <= 0) return null;
-  return `${durationWeeks} weeks`;
+  return `${durationWeeks}週間`;
 }
 
 function extractGoal(description: string | null) {
@@ -146,7 +146,7 @@ function extractGoal(description: string | null) {
 function buildOverview(description: string | null, title: string) {
   const normalized = description?.trim() ?? "";
   if (normalized) return normalized;
-  return `${title} overview is not available in Supabase yet.`;
+  return `${title}の概要はまだ登録されていません。`;
 }
 
 function mapProgramTagRow(row: ProgramTagRow): ProgramTag | null {

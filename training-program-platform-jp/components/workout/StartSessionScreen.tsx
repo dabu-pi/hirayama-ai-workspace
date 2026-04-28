@@ -67,7 +67,7 @@ export function StartSessionScreen({
           href={`/programs/${encodeURIComponent(programSlug)}`}
         >
           <span aria-hidden="true">&larr;</span>
-          <span>Back to Program</span>
+          <span>プログラムへ戻る</span>
         </Link>
       </header>
 
@@ -95,13 +95,13 @@ export function StartSessionScreen({
           onClick={handleStart}
           type="button"
         >
-          {isStarting ? "開始中…" : `Start ${formatWeekDay(programDayLabel)}`}
+          {isStarting ? "開始中…" : `${formatWeekDay(programDayLabel)}を開始`}
         </button>
         <Link
           className={styles.cancelLink}
           href={`/programs/${encodeURIComponent(programSlug)}`}
         >
-          Cancel
+          キャンセル
         </Link>
       </div>
     </main>

@@ -42,7 +42,7 @@ export function ArchiveSessionButton({ sessionId }: Props) {
       onClick={handleArchive}
       type="button"
     >
-      {loading ? "…" : "Archive"}
+      {loading ? "…" : "アーカイブ"}
     </button>
   );
 }

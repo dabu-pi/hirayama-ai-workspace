@@ -45,7 +45,7 @@ export function AdminHubScreen() {
     <main className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>管理メニュー</h1>
-        <span className={styles.adminBadge}>Admin</span>
+        <span className={styles.adminBadge}>管理者</span>
       </header>
 
       <div className={styles.grid}>

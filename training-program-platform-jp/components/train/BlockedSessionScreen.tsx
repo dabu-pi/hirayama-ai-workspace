@@ -31,7 +31,7 @@ export function BlockedSessionScreen({
   blockedByDayLabel,
   blockedByProgramDayId
 }: BlockedSessionScreenProps) {
-  const dayLabel = blockedByDayLabel ?? "another day";
+  const dayLabel = blockedByDayLabel ?? "別の日";
 
   const resumeUrl =
     blockedByProgramDayId
@@ -46,29 +46,29 @@ export function BlockedSessionScreen({
           href={`/programs/${encodeURIComponent(programSlug)}`}
         >
           <span aria-hidden="true">&larr;</span>
-          <span>Back to Program</span>
+          <span>プログラムへ戻る</span>
         </Link>
       </header>
 
       <section className={styles.hero}>
-        <span className={styles.eyebrow}>Workout In Progress</span>
+        <span className={styles.eyebrow}>トレーニング進行中</span>
         <h1 className={styles.title}>{programTitle}</h1>
         <p className={styles.body}>
-          You have an unfinished session for{" "}
-          <strong className={styles.dayHighlight}>{dayLabel}</strong>.
-          Finish or cancel that session before starting a new one.
+          <strong className={styles.dayHighlight}>{dayLabel}</strong>
+          {" "}のセッションが未完了です。
+          新しいセッションを開始する前に完了またはキャンセルしてください。
         </p>
       </section>
 
       <div className={styles.actions}>
         <Link className={styles.resumeButton} href={resumeUrl}>
-          Resume {dayLabel}
+          {dayLabel}を再開
         </Link>
         <Link
           className={styles.homeLink}
           href="/"
         >
-          Go to Home
+          ホームへ戻る
         </Link>
       </div>
     </main>

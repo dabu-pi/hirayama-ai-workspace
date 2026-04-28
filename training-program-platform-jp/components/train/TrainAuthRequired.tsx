@@ -10,7 +10,7 @@ export function TrainAuthRequired() {
   return (
     <main className={styles.page}>
       <section className={styles.hero}>
-        <span className={styles.eyebrow}>Login Required</span>
+        <span className={styles.eyebrow}>ログインが必要です</span>
         <h1 className={styles.title}>ログインが必要です</h1>
         <p className={styles.body}>
           ワークアウトを記録・再開するにはログインしてください。

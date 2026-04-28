@@ -14,9 +14,9 @@ type SessionHistoryScreenProps = {
 };
 
 function statusLabel(status: WorkoutSessionListItem["status"]) {
-  if (status === "completed") return "Completed";
-  if (status === "in_progress") return "In Progress";
-  return "Cancelled";
+  if (status === "completed") return "完了";
+  if (status === "in_progress") return "進行中";
+  return "キャンセル済";
 }
 
 function statusClassName(status: WorkoutSessionListItem["status"]) {
@@ -34,8 +34,8 @@ export function SessionHistoryScreen({
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.titleWrap}>
-          <span className={styles.eyebrow}>Workout History</span>
-          <h1 className={styles.title}>Recent Sessions</h1>
+          <span className={styles.eyebrow}>トレーニング履歴</span>
+          <h1 className={styles.title}>セッション一覧</h1>
         </div>
       </header>
 
@@ -47,13 +47,12 @@ export function SessionHistoryScreen({
         </section>
       ) : sessions.length === 0 ? (
         <section className={styles.statusCard}>
-          <p className={styles.emptyTitle}>No sessions yet</p>
+          <p className={styles.emptyTitle}>セッションがまだありません</p>
           <p className={styles.emptyBody}>
-            Complete a workout from{" "}
             <Link className={styles.inlineLink} href="/train">
-              Train
-            </Link>{" "}
-            and it will appear here.
+              トレーニング
+            </Link>
+            {" "}を完了するとここに表示されます。
           </p>
         </section>
       ) : (
@@ -71,7 +70,7 @@ export function SessionHistoryScreen({
                 {session.programTitle ? (
                   <span className={styles.programTitle}>{session.programTitle}</span>
                 ) : (
-                  <span className={styles.programTitleNone}>Free session</span>
+                  <span className={styles.programTitleNone}>フリーセッション</span>
                 )}
                 {session.programWeekDayLabel && (
                   <span className={styles.weekDay}>{session.programWeekDayLabel}</span>
@@ -81,10 +80,8 @@ export function SessionHistoryScreen({
               <div className={styles.cardBottom}>
                 <span className={styles.exerciseCount}>
                   {session.exerciseCount === 0
-                    ? "No exercises recorded"
-                    : session.exerciseCount === 1
-                      ? "1 exercise"
-                      : `${session.exerciseCount} exercises`}
+                    ? "種目の記録なし"
+                    : `${session.exerciseCount}種目`}
                 </span>
                 <div className={styles.cardLinks}>
                   {session.status === "completed" && (
@@ -92,14 +89,14 @@ export function SessionHistoryScreen({
                       className={styles.summaryLink}
                       href={`/workout-summary/${session.sessionId}`}
                     >
-                      Summary →
+                      サマリー →
                     </Link>
                   )}
                   <Link
                     className={styles.detailLink}
                     href={`/session-history/${session.sessionId}`}
                   >
-                    Detail →
+                    詳細 →
                   </Link>
                   <ArchiveSessionButton sessionId={session.sessionId} />
                 </div>

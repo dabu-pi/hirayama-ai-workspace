@@ -62,7 +62,7 @@ function RequestCard({ request: r, onDone }: RequestCardProps) {
     <article className={styles.card}>
       <div className={styles.cardHeader}>
         <span className={[styles.statusBadge, styles[`status_${r.status}`]].join(" ")}>
-          {r.status}
+          {r.status === "pending" ? "未処理" : r.status === "approved" ? "承認済み" : "却下済み"}
         </span>
         <span className={styles.requestedAt}>{r.requestedAt.slice(0, 16).replace("T", " ")}</span>
       </div>

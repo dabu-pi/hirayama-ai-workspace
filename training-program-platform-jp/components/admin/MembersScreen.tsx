@@ -40,7 +40,7 @@ export function MembersScreen({
     <main className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>会員管理</h1>
-        <span className={styles.adminBadge}>Admin</span>
+        <span className={styles.adminBadge}>管理者</span>
       </header>
 
       <nav className={styles.adminNav}>
@@ -56,9 +56,9 @@ export function MembersScreen({
       {/* Summary cards */}
       <div className={styles.statsGrid}>
         <StatCard label="登録会員" value={globalStats.total_members} />
-        <StatCard color="green" label="Active" value={globalStats.active_count} />
-        <StatCard color="yellow" label="Paused" value={globalStats.paused_count} />
-        <StatCard color="red" label="Cancelled" value={globalStats.cancelled_count} />
+        <StatCard color="green" label="利用中" value={globalStats.active_count} />
+        <StatCard color="yellow" label="休会中" value={globalStats.paused_count} />
+        <StatCard color="red" label="退会済" value={globalStats.cancelled_count} />
         <StatCard label="直近30日 完了" value={globalStats.completed_sessions_last30d} />
         <StatCard
           color={globalStats.inactive_active_members_last30d > 0 ? "yellow" : undefined}
@@ -81,9 +81,9 @@ export function MembersScreen({
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
         >
           <option value="all">すべて</option>
-          <option value="active">active</option>
-          <option value="paused">paused</option>
-          <option value="cancelled">cancelled</option>
+          <option value="active">利用中</option>
+          <option value="paused">休会中</option>
+          <option value="cancelled">退会済</option>
         </select>
       </div>
 

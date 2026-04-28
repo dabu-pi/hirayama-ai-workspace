@@ -57,7 +57,7 @@ export default function LoginPage() {
     setNoticeMessage(null);
 
     if (!supabase) {
-      setErrorMessage("Supabase environment is not configured for browser auth.");
+      setErrorMessage("認証環境が設定されていません。管理者にお問い合わせください。");
       return;
     }
 
@@ -114,20 +114,19 @@ export default function LoginPage() {
   const submitLabel =
     mode === "sign_in"
       ? isSubmitting
-        ? "Signing in..."
-        : "Sign In"
+        ? "ログイン中..."
+        : "ログイン"
       : isSubmitting
-        ? "Creating account..."
-        : "Create Account";
+        ? "登録中..."
+        : "新規登録";
 
   return (
     <main className={styles.page}>
       <section className={styles.panel}>
         <header className={styles.header}>
-          <span className={styles.eyebrow}>Phase B</span>
-          <h1 className={styles.title}>Sign in to continue your training</h1>
+          <h1 className={styles.title}>ログインしてトレーニングを続けましょう</h1>
           <p className={styles.description}>
-            Programs は引き続き public ですが、ワークアウト開始や今後の個人データ保護にはログインを使います。
+            プログラム一覧はログインなしで見られます。ワークアウトの記録・進捗管理にはログインが必要です。
           </p>
         </header>
 
@@ -139,7 +138,7 @@ export default function LoginPage() {
             onClick={() => { setMode("sign_in"); setDisplayName(""); setErrorMessage(null); }}
             type="button"
           >
-            Sign In
+            ログイン
           </button>
           <button
             className={`${styles.toggleButton} ${
@@ -148,7 +147,7 @@ export default function LoginPage() {
             onClick={() => { setMode("sign_up"); setErrorMessage(null); }}
             type="button"
           >
-            Sign Up
+            新規登録
           </button>
         </div>
 
@@ -170,7 +169,7 @@ export default function LoginPage() {
           )}
 
           <label className={styles.field}>
-            <span className={styles.label}>Email</span>
+            <span className={styles.label}>メールアドレス</span>
             <input
               autoComplete="email"
               className={styles.input}
@@ -183,7 +182,7 @@ export default function LoginPage() {
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Password</span>
+            <span className={styles.label}>パスワード</span>
             <input
               autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
               className={styles.input}
@@ -206,7 +205,7 @@ export default function LoginPage() {
 
           {!supabase && (
             <p className={`${styles.message} ${styles.error}`}>
-              Supabase environment is not configured for browser auth.
+              認証環境が設定されていません。管理者にお問い合わせください。
             </p>
           )}
 
@@ -220,9 +219,9 @@ export default function LoginPage() {
         </form>
 
         <footer className={styles.footer}>
-          <span>公開中の Programs 一覧へ戻る:</span>
+          <span>プログラム一覧へ戻る:</span>
           <Link className={styles.footerLink} href="/programs">
-            Browse Programs
+            プログラム一覧を見る
           </Link>
         </footer>
       </section>

@@ -31,18 +31,18 @@ function WeekPreviewSection({ weekPreviews }: { weekPreviews: WeekPreview[] }) {
   if (weekPreviews.length === 0) return null;
   return (
     <section className={styles.weekPreview}>
-      <span className={styles.sectionLabel}>Program Structure</span>
+      <span className={styles.sectionLabel}>プログラム構成</span>
       <div className={styles.weekList}>
         {weekPreviews.map((week) => (
           <div key={week.weekNumber} className={styles.weekBlock}>
             <p className={styles.weekHeading}>
-              Week {week.weekNumber}
+              {week.weekNumber}週目
               {week.label ? ` — ${week.label}` : ""}
             </p>
             <ol className={styles.dayList}>
               {week.days.map((day) => (
                 <li key={day.dayNumber} className={styles.dayRow}>
-                  <span className={styles.dayLabel}>Day {day.dayNumber}</span>
+                  <span className={styles.dayLabel}>{day.dayNumber}日目</span>
                   <span className={styles.exerciseNames}>
                     {day.exercises.map((ex) => ex.nameEn).join(" · ")}
                   </span>
@@ -75,10 +75,10 @@ function formatSourceLabel(source: ProgramDetailView["source"]) {
 }
 
 function resolveTitle(state: ProgramDetailState, programTitle: string | null) {
-  if (state === "loading") return "Loading program";
-  if (state === "not_found") return "Program not found";
-  if (state === "error") return "Program unavailable";
-  return programTitle ?? "Program detail";
+  if (state === "loading") return "プログラム読み込み中";
+  if (state === "not_found") return "プログラムが見つかりません";
+  if (state === "error") return "プログラムが利用できません";
+  return programTitle ?? "プログラム詳細";
 }
 
 function resolveBody(
@@ -86,14 +86,14 @@ function resolveBody(
   errorMessage: string | null | undefined
 ) {
   if (errorMessage) return errorMessage;
-  if (state === "loading") return "Preparing the selected program detail...";
+  if (state === "loading") return "選択したプログラムの詳細を準備中...";
   if (state === "not_found") {
-    return "This program slug is not in the current catalog.";
+    return "このプログラムは現在のカタログにありません。";
   }
   if (state === "error") {
-    return "Please try again after refreshing the page.";
+    return "ページを更新してから再試行してください。";
   }
-  return "Review the program outline, then move into Train when you're ready.";
+  return "プログラムの内容を確認して、準備ができたらトレーニングを始めましょう。";
 }
 
 export function ProgramDetailScreen({
@@ -138,7 +138,7 @@ export function ProgramDetailScreen({
       </header>
 
       <section className={styles.hero}>
-        <span className={styles.eyebrow}>Program Detail</span>
+        <span className={styles.eyebrow}>プログラム詳細</span>
         <h1 className={styles.title}>{resolveTitle(state, program?.title ?? null)}</h1>
         <p className={styles.lead}>{bodyText}</p>
         <div className={styles.heroMeta}>
@@ -157,21 +157,21 @@ export function ProgramDetailScreen({
         <>
           <section className={styles.metaGrid}>
             <article className={styles.metaCard}>
-              <span className={styles.metaLabel}>Level</span>
+              <span className={styles.metaLabel}>レベル</span>
               <strong className={styles.metaValue}>
-                {program.level ?? "Level TBD"}
+                {program.level ?? "レベル未設定"}
               </strong>
             </article>
             <article className={styles.metaCard}>
-              <span className={styles.metaLabel}>Frequency</span>
+              <span className={styles.metaLabel}>頻度</span>
               <strong className={styles.metaValue}>
-                {program.frequencyLabel ?? "Frequency TBD"}
+                {program.frequencyLabel ?? "頻度未設定"}
               </strong>
             </article>
             <article className={styles.metaCard}>
-              <span className={styles.metaLabel}>Duration</span>
+              <span className={styles.metaLabel}>期間</span>
               <strong className={styles.metaValue}>
-                {program.durationLabel ?? "Duration TBD"}
+                {program.durationLabel ?? "期間未設定"}
               </strong>
             </article>
           </section>
@@ -195,12 +195,12 @@ export function ProgramDetailScreen({
           })()}
 
           <section className={styles.contentCard}>
-            <span className={styles.sectionLabel}>Goal</span>
-            <p className={styles.bodyCopy}>{program.goal ?? "Goal TBD"}</p>
+            <span className={styles.sectionLabel}>目標</span>
+            <p className={styles.bodyCopy}>{program.goal ?? "目標未設定"}</p>
           </section>
 
           <section className={styles.contentCard}>
-            <span className={styles.sectionLabel}>Overview</span>
+            <span className={styles.sectionLabel}>概要</span>
             <p className={styles.bodyCopy}>{program.overview}</p>
           </section>
 
@@ -230,19 +230,19 @@ export function ProgramDetailScreen({
       <div className={styles.actions}>
         {enrollmentState === "this" ? (
           <Link className={styles.primaryAction} href={trainHref}>
-            Resume Training
+            トレーニングを再開
           </Link>
         ) : enrollmentState === "other" ? (
           <Link className={styles.secondaryAction} href="/programs">
-            Back to Programs
+            プログラム一覧へ戻る
           </Link>
         ) : (
           <>
             <Link className={styles.primaryAction} href={trainHref}>
-              Start Program
+              プログラムを開始
             </Link>
             <Link className={styles.secondaryAction} href="/programs">
-              Back to Programs
+              プログラム一覧へ戻る
             </Link>
           </>
         )}

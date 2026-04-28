@@ -213,7 +213,7 @@ export function WorkoutSummaryScreen({
                   )}
                 </div>
                 <span className={styles.countPill}>
-                  {exercise.completedSetCount} / {exercise.totalVisibleSetCount} sets
+                  {exercise.completedSetCount} / {exercise.totalVisibleSetCount}セット
                 </span>
               </div>
             </article>

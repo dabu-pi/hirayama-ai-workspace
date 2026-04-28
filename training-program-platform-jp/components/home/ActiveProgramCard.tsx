@@ -25,9 +25,9 @@ function levelLabel(level: string | null): string | null {
 }
 
 function statusLabel(status: string): string {
-  if (status === "completed") return "Done";
-  if (status === "in_progress") return "Active";
-  return "Cancelled";
+  if (status === "completed") return "完了";
+  if (status === "in_progress") return "進行中";
+  return "キャンセル済";
 }
 
 function statusClass(status: string): string {
@@ -43,12 +43,12 @@ function statusClass(status: string): string {
 function NotSignedIn() {
   return (
     <div className={styles.emptyCard}>
-      <p className={styles.emptyTitle}>Sign in to track your progress</p>
+      <p className={styles.emptyTitle}>ログインして記録を始めましょう</p>
       <p className={styles.emptyBody}>
-        Your active program and session history will appear here.
+        進行中のプログラムとセッション履歴がここに表示されます。
       </p>
       <Link className={styles.emptyAction} href="/login">
-        Sign In
+        ログイン
       </Link>
     </div>
   );
@@ -57,13 +57,12 @@ function NotSignedIn() {
 function NoProgramCard() {
   return (
     <div className={styles.emptyCard}>
-      <p className={styles.emptyTitle}>No active program</p>
+      <p className={styles.emptyTitle}>プログラムがありません</p>
       <p className={styles.emptyBody}>
-        Choose a program from the library to get started. Your progress will be
-        tracked here.
+        プログラム一覧から選んでトレーニングを始めましょう。進捗がここに表示されます。
       </p>
       <Link className={styles.emptyAction} href="/programs">
-        Browse Programs
+        プログラム一覧を見る
       </Link>
     </div>
   );
@@ -76,7 +75,7 @@ function ErrorCard({ message }: { message: string }) {
     <div className={`${styles.emptyCard} ${styles.errorCard}`}>
       <p className={styles.emptyBody}>{message}</p>
       <Link className={styles.emptyAction} href="/login">
-        Sign In
+        ログイン
       </Link>
     </div>
   );
@@ -104,10 +103,9 @@ function TrendSection({ trend }: { trend: VolumeTrend }) {
   return (
     <div className={styles.trendSection}>
       <div className={styles.trendHeader}>
-        <span className={styles.trendLabel}>Volume trend</span>
+        <span className={styles.trendLabel}>ボリューム推移</span>
         <span className={styles.trendMeta}>
-          Last {trend.recentVolumes.length} session
-          {trend.recentVolumes.length !== 1 ? "s" : ""}
+          直近{trend.recentVolumes.length}回
         </span>
       </div>
 
@@ -146,7 +144,7 @@ function TrendSection({ trend }: { trend: VolumeTrend }) {
             <span className={styles.trendVolume}>
               {trend.latestVolume!.toLocaleString()} kg
             </span>
-            <span className={styles.trendInsufficient}>Not enough data</span>
+            <span className={styles.trendInsufficient}>データ不足</span>
           </>
         )}
       </div>
@@ -176,10 +174,9 @@ function E1RMSection({ e1rmTrend }: { e1rmTrend: E1RMTrend }) {
   return (
     <div className={styles.trendSection}>
       <div className={styles.trendHeader}>
-        <span className={styles.trendLabel}>Est. 1RM · T1</span>
+        <span className={styles.trendLabel}>推定1RM · T1</span>
         <span className={styles.trendMeta}>
-          Last {e1rmTrend.recentE1RMs.length} session
-          {e1rmTrend.recentE1RMs.length !== 1 ? "s" : ""}
+          直近{e1rmTrend.recentE1RMs.length}回
         </span>
       </div>
 
@@ -218,7 +215,7 @@ function E1RMSection({ e1rmTrend }: { e1rmTrend: E1RMTrend }) {
             <span className={styles.trendVolume}>
               {e1rmTrend.latestE1RM!.toFixed(1)} kg
             </span>
-            <span className={styles.trendInsufficient}>Not enough data</span>
+            <span className={styles.trendInsufficient}>データ不足</span>
           </>
         )}
       </div>
@@ -236,7 +233,7 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
     <div className={styles.card}>
       {/* ---- header ---- */}
       <div className={styles.cardHeader}>
-        <span className={styles.sectionLabel}>My Program</span>
+        <span className={styles.sectionLabel}>進行中のプログラム</span>
         {view.level && (
           <span className={styles.levelBadge}>{levelLabel(view.level)}</span>
         )}
@@ -256,7 +253,7 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
         <div className={styles.progressSection}>
           <div className={styles.progressHeader}>
             <span className={styles.progressText}>
-              {view.completedDays} / {view.totalDays} days complete
+              {view.completedDays} / {view.totalDays}日 完了
             </span>
             <span className={styles.progressPct}>{view.progressPercent}%</span>
           </div>
@@ -279,7 +276,7 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
       {/* ---- current position ---- */}
       {view.currentWeekDayLabel && (
         <div className={styles.positionRow}>
-          <span className={styles.positionLabel}>Up next</span>
+          <span className={styles.positionLabel}>次のワークアウト</span>
           <span className={styles.positionValue}>{view.currentWeekDayLabel}</span>
         </div>
       )}
@@ -287,16 +284,16 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
       {/* ---- S-2: primary CTA (Resume / Start / fallback) ---- */}
       <Link className={styles.continueButton} href={view.continueUrl}>
         {view.actionType === "resume"
-          ? "Resume workout"
+          ? "ワークアウトを再開"
           : view.actionType === "start"
-          ? "Start next workout"
-          : "Continue Training"}
+          ? "次のワークアウトを開始"
+          : "トレーニングへ"}
       </Link>
 
       {/* ---- recent sessions ---- */}
       {view.recentSessions.length > 0 && (
         <div className={styles.recentsSection}>
-          <span className={styles.recentsLabel}>Recent sessions</span>
+          <span className={styles.recentsLabel}>最近のセッション</span>
           <ul className={styles.recentsList}>
             {view.recentSessions.map((session) => (
               <li key={session.sessionId} className={styles.recentItem}>
@@ -318,7 +315,7 @@ function ProgramCard({ view }: { view: ActiveProgramView }) {
             ))}
           </ul>
           <Link className={styles.historyLink} href="/session-history">
-            View all sessions →
+            すべてのセッション →
           </Link>
         </div>
       )}

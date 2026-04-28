@@ -34,17 +34,17 @@ function formatSourceLabel(source: ProgramListView["source"]) {
 }
 
 function resolveTitle(state: ProgramListState) {
-  if (state === "loading") return "Loading programs";
-  if (state === "error") return "Programs unavailable";
-  return "Programs";
+  if (state === "loading") return "プログラム読み込み中";
+  if (state === "error") return "プログラムが利用できません";
+  return "プログラム";
 }
 
 function resolveBody(state: ProgramListState, errorMessage: string | null | undefined) {
   if (errorMessage) return errorMessage;
-  if (state === "loading") return "Preparing the current program catalog...";
-  if (state === "empty") return "Programs will appear here once the catalog is ready.";
-  if (state === "error") return "Please try again after refreshing the page.";
-  return "Choose a program base for Train, Summary, and upcoming detail pages.";
+  if (state === "loading") return "プログラム一覧を準備中...";
+  if (state === "empty") return "準備ができ次第、プログラムが表示されます。";
+  if (state === "error") return "ページを更新してから再試行してください。";
+  return "トレーニング・サマリー・詳細で使うプログラムを選んでください。";
 }
 
 const REQUIRED_TAG_AXES: ProgramTagAxis[] = ["goal", "equipment", "split"];
@@ -174,7 +174,7 @@ export function ProgramsScreen({
       )}
 
       <header className={styles.hero}>
-        <span className={styles.eyebrow}>Program Library</span>
+        <span className={styles.eyebrow}>プログラム一覧</span>
         <h1 className={styles.title}>{resolveTitle(state)}</h1>
 
         {isReady ? (
@@ -240,7 +240,7 @@ export function ProgramsScreen({
           )}
           {hasActiveFilter && (
             <button className={styles.clearBtn} onClick={clearFilters} type="button">
-              Clear ×
+              リセット ×
             </button>
           )}
         </div>
@@ -254,11 +254,11 @@ export function ProgramsScreen({
         <section className={styles.statusCard}>
           <p>
             {hasActiveFilter
-              ? "No programs match the current filter. "
-              : "No programs are available yet."}
+              ? "該当するプログラムがありません。"
+              : "プログラムがまだ登録されていません。"}
             {hasActiveFilter && (
               <button className={styles.clearLink} onClick={clearFilters} type="button">
-                Clear filters
+                フィルターをリセット
               </button>
             )}
           </p>
@@ -280,7 +280,7 @@ export function ProgramsScreen({
                     <h2 className={styles.cardTitle}>{program.title}</h2>
                     <div className={styles.levelRow}>
                       <span className={styles.levelBadge}>
-                        {program.level ?? "Level TBD"}
+                        {program.level ?? "レベル未設定"}
                       </span>
                       {focusTag ? (
                         <span className={styles.focusBadge}>{focusTag.label}</span>
@@ -289,7 +289,7 @@ export function ProgramsScreen({
                   </div>
                 </div>
 
-                <p className={styles.goalText}>{program.goal ?? "Goal TBD"}</p>
+                <p className={styles.goalText}>{program.goal ?? "目標未設定"}</p>
 
                 {requiredTags.length > 0 ? (
                   <div className={styles.tagRow}>
@@ -303,15 +303,15 @@ export function ProgramsScreen({
 
                 <div className={styles.metaRow}>
                   <span className={styles.metaPill}>
-                    {program.frequencyLabel ?? "Frequency TBD"}
+                    {program.frequencyLabel ?? "頻度未設定"}
                   </span>
                   <span className={styles.metaPillSecondary}>
-                    {program.durationLabel ?? "Duration TBD"}
+                    {program.durationLabel ?? "期間未設定"}
                   </span>
                 </div>
 
                 <div className={styles.cardFooter}>
-                  <span className={styles.openCta}>Open detail →</span>
+                  <span className={styles.openCta}>詳細を見る →</span>
                 </div>
               </Link>
             );

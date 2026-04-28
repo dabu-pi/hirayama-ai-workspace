@@ -87,6 +87,7 @@ export async function getProgramDayLabel(programDayId: string): Promise<string> 
   }
 }
 
+
 /**
  * Resolves program_id from program_day_id via program_days → program_weeks.
  */

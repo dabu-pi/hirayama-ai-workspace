@@ -56,7 +56,7 @@ export function RestartProgramButton({
         };
         setError(
           body.error?.message ??
-            "Failed to restart program. Please try again."
+            "プログラムの再開に失敗しました。もう一度お試しください。"
         );
         setIsSubmitting(false);
         return;
@@ -70,7 +70,7 @@ export function RestartProgramButton({
         router.refresh();
       });
     } catch {
-      setError("Network error. Please check your connection and try again.");
+      setError("ネットワークエラーが発生しました。接続を確認してもう一度お試しください。");
       setIsSubmitting(false);
     }
   }
@@ -83,7 +83,7 @@ export function RestartProgramButton({
         onClick={handleClick}
         type="button"
       >
-        {isBusy ? "Restarting…" : children ?? "Restart Program"}
+        {isBusy ? "再開中..." : children ?? "プログラムを最初から"}
       </button>
       {error && (
         <p
