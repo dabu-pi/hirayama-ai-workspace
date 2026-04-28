@@ -2,11 +2,89 @@
 
 ## 現在ステータス
 
-**Phase 5-A Step 0: appendRunLog_ バグ修正済み**（2026-04-28）
+**Phase 5-A Step 1: getDailySalesReport() 実装済み・clasp push 完了**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## Phase 5-A Step 1: getDailySalesReport() 実装（2026-04-28）
+
+### 実装内容
+
+**新規ファイル:** `JREC_SF01_DailySales.gs`
+
+#### 関数一覧
+
+| 関数名 | 種別 | 説明 |
+|---|---|---|
+| `getDailySalesReport(dateStr)` | Public | 指定日の日次集計を返す |
+| `runDailySalesReport()` | Public（手動確認用）| 今日の集計を Logger 出力するラッパー |
+| `normalizeDate_(val)` | Private | 日付を YYYY-MM-DD に正規化（JST）|
+| `toDateStr_(val)` | Private | Sheets の Date 値を YYYY-MM-DD 文字列に変換（JST）|
+
+#### getDailySalesReport の集計定義（確定）
+
+| 集計値 | 定義 | 正本シート |
+|---|---|---|
+| totalSales | paymentSaveTotal + paymentCollectTotal | Run_Log + Payments |
+| paymentSaveTotal | PAYMENT_SAVE かつ paymentStatus=入金済 の totalTaxInc 合計 | Run_Log 基準 |
+| paymentCollectTotal | PAYMENT_COLLECT の totalTaxInc 合計 | Run_Log 基準 |
+| unpaidTotal | 現在時点の未収/一部入金の totalTaxInc 合計（日付非依存）| Payments |
+| visitCount | SelfPayVisits.来院日 = date の件数 | SelfPayVisits |
+| mainVisitCount | SELFPAY_CONTINUE20 を含む当日来院の件数 | SelfPayItems JOIN SelfPayVisits |
+| receiptIssuedCount | Receipts.発行日 = date の件数 | Receipts |
+
+**売上日基準:** Run_Log.timestamp（PAYMENT_SAVE/COLLECT が記録された日）
+
+#### warnings 種別
+
+| type | 内容 |
+|---|---|
+| MISSING_VISIT_KEY | Run_Log.selfPayVisitKey が空（Step 0 修正前の古いログ）|
+| PAYMENT_NOT_FOUND | Run_Log に visitKey があるが Payments に対応行なし |
+| DUPLICATE_LOG | 同一 visitKey の同一 action が2件以上（最初の1件のみ集計）|
+
+#### 読み取りシートと目的
+
+| シート | 目的 |
+|---|---|
+| Payments | 金額・入金状態・入金日 / unpaidTotal 集計 |
+| Patients | patientName（rows の表示用）|
+| SelfPayVisits | visitDate / visitCount / rows の JOIN |
+| SelfPayItems | mainVisitCount（SELFPAY_CONTINUE20 フィルタ）|
+| Receipts | receiptNo の JOIN / receiptIssuedCount |
+| Run_Log | 売上日基準の正本（PAYMENT_SAVE / PAYMENT_COLLECT）|
+
+#### 実機確認手順（再デプロイ後）
+
+1. Apps Script エディタ → 関数選択「`runDailySalesReport`」→ 実行
+2. 実行ログに以下が出力されることを確認:
+   ```
+   [getDailySalesReport] DONE totalSales=¥3850 save=¥3850 collect=¥0 ...
+   ```
+3. rows 配列に `SPV_20260428_P0001_005` が含まれることを確認（金額 ¥3,850）
+4. receiptNo に `R_2026_0005`（または該当 receiptNo）が入ることを確認
+5. warnings に `MISSING_VISIT_KEY` が出る場合は古いログ（想定内）
+6. 患者詳細・会計・領収書画面が壊れていないことを確認（退行テスト）
+
+#### 既知の制限
+
+| 制限 | 内容 |
+|---|---|
+| unpaidTotal | 現在スナップショット。日付時点の残高履歴は未実装 |
+| 古いログ | Step 0 修正前（selfPayVisitKey 空）の PAYMENT_COLLECT は MISSING_VISIT_KEY warnings に分類 |
+| mainVisitCount | SELFPAY_CONTINUE20 固定。外販時は Settings 設定化を推奨 |
+| 日次集計 Web UI | 今回は作成しない（Step 2 以降）|
+
+#### clasp push
+
+```
+clasp push --force → 15ファイル push 完了（2026-04-28 16:45:29）
+JREC_SF01_DailySales.gs が新規追加された
+```
 
 ---
 
