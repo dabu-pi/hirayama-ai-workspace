@@ -1172,10 +1172,19 @@ Claude が `app/admin/account-deletion-requests/actions.ts` および `app/admin
 - [x] コードレビュー：承認時に cancelled_at が入るロジックが正しい ✅
 - [x] コードレビュー：却下時に cancelled_at が入らないロジックが正しい ✅
 - [x] コードレビュー：active/paused 変更時に cancelled_at = null になるロジックが正しい ✅
-- [ ] Supabase実機：退会申請承認時の cancelled_at 記録（手動確認待ち）
-- [ ] Supabase実機：/admin/members 直接変更時の cancelled_at 記録（手動確認待ち）
-- [ ] Supabase実機：cancelled→active 時の cancelled_at=null（手動確認待ち）
-- [ ] Supabase実機：トレーニング履歴が削除されていないこと（手動確認待ち）
+- [ ] Supabase実機：退会申請承認時の cancelled_at 記録 — **コードレビューPASS / 実機未確認**
+- [x] Supabase実機：/admin/members 直接変更時の cancelled_at 記録 ✅ **PASS（2026-04-28 手動確認）**
+- [x] Supabase実機：cancelled→active 時の cancelled_at=null ✅ **PASS（2026-04-28 手動確認）**
+- [ ] Supabase実機：トレーニング履歴が削除されていないこと — 未確認
+
+### LIVE_CHECK 結果サマリー（2026-04-28）
+
+| 確認項目 | 方法 | 結果 |
+|---|---|---|
+| /admin/members から cancelled に変更 → cancelled_at が入る | Supabase実機 | ✅ PASS |
+| /admin/members から active / paused に変更 → cancelled_at が null になる | Supabase実機 | ✅ PASS |
+| 退会申請承認フロー → cancelled_at が入る | コードレビューのみ | ⚠️ 実機未確認 |
+| 退会申請却下フロー → cancelled_at が入らない | コードレビューのみ | ⚠️ 実機未確認 |
 
 ---
 
