@@ -78,6 +78,46 @@ export async function approveDeletionRequest(
   return { ok: true };
 }
 
+/** Records the gym key as returned (sets key_returned_at to now). */
+export async function recordKeyReturned(
+  requestId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) return { ok: false, error: "forbidden" };
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("account_deletion_requests")
+    .update({ key_returned_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  if (error) {
+    console.error("recordKeyReturned: failed.", { requestId, errorMessage: error.message });
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/** Records the 500-yen refund as paid (sets refund_500_paid_at to now). */
+export async function recordRefund500Paid(
+  requestId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) return { ok: false, error: "forbidden" };
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("account_deletion_requests")
+    .update({ refund_500_paid_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  if (error) {
+    console.error("recordRefund500Paid: failed.", { requestId, errorMessage: error.message });
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 /**
  * Rejects a deletion request.
  * membership_status is NOT changed.

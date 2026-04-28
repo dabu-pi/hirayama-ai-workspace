@@ -5,6 +5,7 @@ import {
   createSupabaseServerClient,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
+import { isNextMonthBillingConfirmed, nextMonthFirstDay } from "@/lib/admin/billing";
 
 export type DeletionRequestStatus =
   | "pending"
@@ -67,11 +68,30 @@ export async function submitDeletionRequest(
     return { ok: false, error: "already_cancelled" };
   }
 
+  // Snapshot billing confirmation and calculate effective_date at request time.
+  const confirmed = await isNextMonthBillingConfirmed();
+
+  // effective_date = last day of current month (未確定) or last day of next month (確定済).
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  let effectiveDate: string;
+  if (confirmed) {
+    // 翌月末: advance to next month then get last day
+    const nextFirst = new Date(nextMonthFirstDay());
+    const lastOfNext = new Date(nextFirst.getFullYear(), nextFirst.getMonth() + 1, 0);
+    effectiveDate = lastOfNext.toISOString().slice(0, 10);
+  } else {
+    // 当月末
+    const lastOfCurrent = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    effectiveDate = lastOfCurrent.toISOString().slice(0, 10);
+  }
+
   const admin = createSupabaseAdminClient();
   const { error } = await admin.from("account_deletion_requests").insert({
     user_id: user.id,
     reason: reason?.trim() || null,
     status: "pending",
+    next_month_billing_confirmed: confirmed,
+    effective_date: effectiveDate
   });
 
   if (error) {

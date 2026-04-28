@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 import {
   approveDeletionRequest,
   rejectDeletionRequest,
+  recordKeyReturned,
+  recordRefund500Paid
 } from "@/app/admin/account-deletion-requests/actions";
 
 import styles from "./DeletionRequestsScreen.module.css";
@@ -21,6 +23,11 @@ export type DeletionRequestItem = {
   memberName: string | null;
   displayName: string | null;
   membershipStatus: string;
+  // M-C fields
+  effectiveDate: string | null;
+  nextMonthBillingConfirmed: boolean | null;
+  keyReturnedAt: string | null;
+  refund500PaidAt: string | null;
 };
 
 type RequestCardProps = {
@@ -33,6 +40,26 @@ function RequestCard({ request: r, onDone }: RequestCardProps) {
   const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const isPendingStatus = r.status === "pending";
+
+  // M-C: local state mirrors DB values; updated optimistically on action success
+  const [keyReturnedAt, setKeyReturnedAt] = useState(r.keyReturnedAt);
+  const [refund500PaidAt, setRefund500PaidAt] = useState(r.refund500PaidAt);
+
+  function handleRecordKeyReturned() {
+    startTransition(async () => {
+      const result = await recordKeyReturned(r.id);
+      if (result.ok) setKeyReturnedAt(new Date().toISOString());
+      else setFeedback({ ok: false, message: `鍵返却記録エラー: ${result.error}` });
+    });
+  }
+
+  function handleRecordRefund() {
+    startTransition(async () => {
+      const result = await recordRefund500Paid(r.id);
+      if (result.ok) setRefund500PaidAt(new Date().toISOString());
+      else setFeedback({ ok: false, message: `返金記録エラー: ${result.error}` });
+    });
+  }
 
   function handleApprove() {
     startTransition(async () => {
@@ -78,6 +105,29 @@ function RequestCard({ request: r, onDone }: RequestCardProps) {
         <dd>{r.membershipStatus}</dd>
         <dt>申請理由</dt>
         <dd>{r.reason || "（未入力）"}</dd>
+        {r.effectiveDate && (
+          <>
+            <dt>退会適用日</dt>
+            <dd>
+              {r.effectiveDate.replace(/-/g, "年").replace(/年(\d+)年/, "年$1月").replace(/月(\d+)$/, "月$1日")}
+              {r.nextMonthBillingConfirmed && (
+                <span className={styles.billingBadge}>翌月分引落済</span>
+              )}
+            </dd>
+          </>
+        )}
+        <dt>鍵返却</dt>
+        <dd>
+          {keyReturnedAt
+            ? `✅ ${keyReturnedAt.slice(0, 16).replace("T", " ")}`
+            : <span className={styles.unchecked}>未返却</span>}
+        </dd>
+        <dt>500円返金</dt>
+        <dd>
+          {refund500PaidAt
+            ? `✅ ${refund500PaidAt.slice(0, 16).replace("T", " ")}`
+            : <span className={styles.unchecked}>未返金</span>}
+        </dd>
         {r.reviewedAt && (
           <>
             <dt>対応日時</dt>
@@ -94,6 +144,25 @@ function RequestCard({ request: r, onDone }: RequestCardProps) {
 
       {isPendingStatus && (
         <div className={styles.actions}>
+          {/* M-C: key return / refund actions */}
+          <div className={styles.cancelChecks}>
+            {!keyReturnedAt && (
+              <button className={styles.checkBtn} onClick={handleRecordKeyReturned} disabled={isPending}>
+                🔑 鍵を受け取った
+              </button>
+            )}
+            {!refund500PaidAt && (
+              <button className={styles.checkBtn} onClick={handleRecordRefund} disabled={isPending}>
+                💴 500円を返金した
+              </button>
+            )}
+            {(!keyReturnedAt || !refund500PaidAt) && (
+              <p className={styles.cancelCheckNote}>
+                ⚠️ 承認前に鍵返却と返金を完了することを推奨します（未完了でも承認は可能）
+              </p>
+            )}
+          </div>
+
           {/* D-1d: warn when user is already cancelled */}
           {r.membershipStatus === "cancelled" && (
             <p className={styles.alreadyCancelledNote}>

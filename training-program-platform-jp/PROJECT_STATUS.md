@@ -6121,6 +6121,6 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 |---|---|
 | A | billing_cutoff_records migration + /admin/billing ページ | ✅ LIVE_CHECK PASS (2026-04-29) — 確定/履歴/リロード全項目PASS |
 | B | membership_pause_requests migration + /profile 休会申請 + /admin/pause-requests | ✅ MAIN FLOW PASS (2026-04-29) — 一般会員テスト deferred |
-| C | account_deletion_requests 拡張 + /admin 鍵返却・返金チェック | 未着手 |
+| C | account_deletion_requests 拡張 + /admin 鍵返却・返金チェック | ✅ 実装済み (2026-04-29) — DB migration 手動適用待ち |
 | D | /profile・/gym ユーザー表示更新 | 未着手 |
 
