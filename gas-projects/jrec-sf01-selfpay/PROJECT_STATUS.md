@@ -47,10 +47,12 @@
 |---|---|---|---|
 | 2026-04-28 | @21 | `AKfycbxhtWdy...` | Phase 5-B Step 2 v2 |
 | 2026-04-29 | @22 | `AKfycbxhtWdy...` | Phase 5-C receipt flow closed |
+| 2026-04-29 | @23 | `AKfycbxhtWdy...` | Phase 6-A patient edit closed |
 
-**本番 /exec 確認事項（2026-04-29 @22 反映後）:**
+**本番 /exec 確認事項（2026-04-29 @23 反映後）:**
+- `?page=detail&id=P0001` で「✏ 患者情報を編集」ボタン表示 → 実機確認待ち
+- `?page=editPatient&id=P0001` で編集画面・プリフィル表示 → 実機確認待ち
 - 発行済み visitKey で再発行ボタン非表示 → 実機確認待ち
-- 未収 visitKey で発行ボタン非表示 → 実機確認待ち
 
 ---
 
