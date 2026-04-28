@@ -4,7 +4,50 @@
 
 **✅ Phase 5-B Step 2: CLOSED**（2026-04-28 実機確認 全PASS）
 
-次: Phase 5-C または DailySales の rebuildDailySales 再実行確認
+次: Phase 5-C または Phase 6-A（患者基本情報編集）→ Phase 6-B（ゴミ箱機能）
+
+---
+
+## 将来タスク — Phase 6（未実装）
+
+詳細設計: [`docs/patient-detail-maintenance-design.md`](./docs/patient-detail-maintenance-design.md)
+
+### Phase 6-A: 患者基本情報編集
+
+| 項目 | 内容 |
+|---|---|
+| 概要 | patient-detail から患者氏名・よみ・連絡先等を編集できるようにする |
+| 対象 | Patients シート / patient-detail.html / JREC_SF01_Patient.gs |
+| 優先度 | 中 |
+| 前提 | なし |
+
+### Phase 6-B: 来院履歴のゴミ箱機能
+
+| 項目 | 内容 |
+|---|---|
+| 概要 | 未会計・未収の来院記録をゴミ箱へ移動・復元・完全削除できるようにする |
+| 対象 | SelfPayVisits（isDeleted 列追加）/ patient-detail.html / JREC_SF01_Visit.gs |
+| 方式 | **deletedFlag 方式**（SelfPayVisits に isDeleted / deletedAt / deleteReason 等を追加）|
+| 優先度 | 中 |
+| 前提 | Phase 5-B CLOSED ✅ |
+
+**削除可否ポリシー（確定）:**
+
+| 会計状態 | 削除方針 |
+|---|---|
+| 未会計 | ゴミ箱 → 復元 or 完全削除 OK |
+| 未収（paidAmount=0） | Payments 確認後にゴミ箱 OK |
+| 一部入金 | 要確認（paidAmount > 0 の場合の扱い） |
+| 入金済 | 削除不可 → Phase 6-C で対応 |
+| 領収書発行済み | 削除不可 → Phase 6-C で対応 |
+
+### Phase 6-C: 会計済み・領収書発行済みの取消/返金/再発行
+
+| 項目 | 内容 |
+|---|---|
+| 概要 | 入金済み取消・領収書取消・返金・再発行・DailySales 整合 |
+| 優先度 | 低（Phase 6-B 完了後） |
+| 前提 | Phase 6-B CLOSED |
 
 ---
 
