@@ -698,6 +698,25 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 - build: pass
 - DB migration: 不要（コードのみ）
 
+### LIVE_CHECK — 2026-04-28 スマホ実機確認済み
+
+| 確認項目 | 結果 |
+|---|---|
+| /admin/account-deletion-requests に pending 申請が表示される | ✅ PASS |
+| email が表示される | ✅ PASS |
+| member_name / display_name が表示される | ✅ PASS |
+| membership_status が表示される | ✅ PASS |
+| 申請理由が未入力の場合「未入力」と表示される | ✅ PASS |
+| 承認・却下ボタンが表示される | ✅ PASS |
+| 「ログイン情報やトレーニング履歴は削除されません」の注意文が表示される | ✅ PASS |
+| 管理画面の表示崩れなし | ✅ PASS |
+
+### DEFERRED_CHECK（後日確認）
+
+- [ ] active/paused ユーザーを承認した時に membership_status が cancelled になる（今回の確認ユーザーは既に cancelled だったため後日別ユーザーで確認）
+- [ ] cancelled ユーザーが /train で退会向け案内になる（M-1 連携）
+- [ ] 却下時に membership_status が変わらない
+
 ---
 
 ## 2026-04-28 D-1: 退会・アカウント削除申請と管理者退会処理
