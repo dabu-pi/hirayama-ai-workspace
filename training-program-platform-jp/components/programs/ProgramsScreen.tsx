@@ -12,7 +12,7 @@ import type {
   ProgramTagAxis
 } from "@/types/programs";
 import { CustomWorkoutButton } from "@/components/workout/CustomWorkoutButton";
-import { formatProgramTagLabel } from "@/lib/workout/format-labels";
+import { formatProgramTagLabel, formatProgramTitle, formatProgramGoal } from "@/lib/workout/format-labels";
 
 import styles from "./ProgramsScreen.module.css";
 
@@ -278,7 +278,7 @@ export function ProgramsScreen({
               >
                 <div className={styles.cardTop}>
                   <div>
-                    <h2 className={styles.cardTitle}>{program.title}</h2>
+                    <h2 className={styles.cardTitle}>{formatProgramTitle(program.slug, program.title)}</h2>
                     <div className={styles.levelRow}>
                       <span className={styles.levelBadge}>
                         {program.level ?? "レベル未設定"}
@@ -290,7 +290,7 @@ export function ProgramsScreen({
                   </div>
                 </div>
 
-                <p className={styles.goalText}>{program.goal ?? "目標未設定"}</p>
+                <p className={styles.goalText}>{formatProgramGoal(program.slug, program.goal) ?? "目標未設定"}</p>
 
                 {requiredTags.length > 0 ? (
                   <div className={styles.tagRow}>

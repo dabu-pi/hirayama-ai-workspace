@@ -7,7 +7,13 @@ import type {
   ProgramTagAxis,
   WeekPreview
 } from "@/types/programs";
-import { formatProgramTagLabel } from "@/lib/workout/format-labels";
+import {
+  formatProgramTagLabel,
+  formatProgramTitle,
+  formatProgramGoal,
+  formatProgramOverview,
+  formatProgramWeekLabel
+} from "@/lib/workout/format-labels";
 
 import styles from "./ProgramDetailScreen.module.css";
 
@@ -37,8 +43,7 @@ function WeekPreviewSection({ weekPreviews }: { weekPreviews: WeekPreview[] }) {
         {weekPreviews.map((week) => (
           <div key={week.weekNumber} className={styles.weekBlock}>
             <p className={styles.weekHeading}>
-              {week.weekNumber}週目
-              {week.label ? ` — ${week.label}` : ""}
+              {formatProgramWeekLabel(week.weekNumber, week.label)}
             </p>
             <ol className={styles.dayList}>
               {week.days.map((day) => (
@@ -140,7 +145,9 @@ export function ProgramDetailScreen({
 
       <section className={styles.hero}>
         <span className={styles.eyebrow}>プログラム詳細</span>
-        <h1 className={styles.title}>{resolveTitle(state, program?.title ?? null)}</h1>
+        <h1 className={styles.title}>
+          {resolveTitle(state, isReady && program ? formatProgramTitle(program.slug, program.title) : program?.title ?? null)}
+        </h1>
         <p className={styles.lead}>{bodyText}</p>
         <div className={styles.heroMeta}>
           <span>Source: {formatSourceLabel(view.source)}</span>
@@ -197,12 +204,12 @@ export function ProgramDetailScreen({
 
           <section className={styles.contentCard}>
             <span className={styles.sectionLabel}>目標</span>
-            <p className={styles.bodyCopy}>{program.goal ?? "目標未設定"}</p>
+            <p className={styles.bodyCopy}>{formatProgramGoal(program.slug, program.goal) ?? "目標未設定"}</p>
           </section>
 
           <section className={styles.contentCard}>
             <span className={styles.sectionLabel}>概要</span>
-            <p className={styles.bodyCopy}>{program.overview}</p>
+            <p className={styles.bodyCopy}>{formatProgramOverview(program.slug, program.overview)}</p>
           </section>
 
           <WeekPreviewSection weekPreviews={view.weekPreviews} />
