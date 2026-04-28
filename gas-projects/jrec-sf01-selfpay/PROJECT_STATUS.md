@@ -2,9 +2,87 @@
 
 ## 現在ステータス
 
-**✅ Phase 5-B Step 2: CLOSED**（2026-04-28 実機確認 全PASS）
+**✅ Phase 5-B + DailySales 集計確認: CLOSED**（2026-04-28 全PASS）
 
-次: Phase 5-C または Phase 6-A（患者基本情報編集）→ Phase 6-B（ゴミ箱機能）
+次: Phase 5-C（領収書発行フロー）または Phase 6-A（患者基本情報編集）
+
+---
+
+## ✅ DailySales 集計確認 PASS（2026-04-28）
+
+**対象日:** 2026-04-28  **実行関数:** `runRebuildDailySales()`  **action:** update (row=2)
+
+### 集計結果
+
+| 項目 | 値 | 判定 |
+|---|---|---|
+| totalSales | ¥14,850 | ✅ |
+| paymentSaveTotal | ¥9,350 | ✅ |
+| paymentCollectTotal | ¥5,500 | ✅ |
+| unpaidTotal | ¥0 | ✅ |
+| visitCount | 7 | ✅ |
+| mainVisitCount | 3 | ✅ |
+| receiptIssuedCount | 6 | ✅ |
+| rowsCount | 4 | ✅ |
+| warningsCount | 11 | ✅ 想定範囲 |
+| warningTypes | MISSING_VISIT_KEY, MISSING_COLLECTED_AMOUNT | ✅ 想定どおり |
+
+### rowsJson 内訳
+
+| action | visitKey | amount | 内容 |
+|---|---|---|---|
+| PAYMENT_SAVE | SPV_20260428_P0001_005 | ¥3,850 | 入金済保存 |
+| PAYMENT_SAVE | SPV_20260428_P0001_006 | ¥5,500 | 入金済保存 |
+| PAYMENT_COLLECT | SPV_20260428_P0001_007 | ¥1,000 | Step 2 一部回収 |
+| PAYMENT_COLLECT | SPV_20260428_P0001_007 | ¥4,500 | Step 2 残額全額回収 |
+
+### 旧ログの扱い
+
+| ログ種別 | 扱い |
+|---|---|
+| `PAYMENT_COLLECT 回収額: ¥5500`（旧UI誤操作） | `MISSING_COLLECTED_AMOUNT` として除外 ✅ |
+| Phase 5-A Step 0 前の selfPayVisitKey 空欄ログ | `MISSING_VISIT_KEY` として除外 ✅ |
+
+### 確認した整合チェーン
+
+```
+billing-form.html（会計入力）
+→ Payments.paidAmount 累積保存
+→ Run_Log PAYMENT_SAVE / PAYMENT_COLLECT 記録
+→ receipt.html（分割回収 ¥1,000 + ¥4,500）
+→ patient-detail（未収残高 ¥0 / 会計済）
+→ DailySales paymentCollectTotal = ¥5,500
+```
+
+全連鎖が整合確認済み。
+
+### バグ修正（commit: 294db4f）
+
+| バグ | 内容 | 修正内容 |
+|---|---|---|
+| DUPLICATE_LOG ブロック | 旧PAYMENT_COLLECTが visitKey を先取りし Step 2 ログを全除外 | PAYMENT_COLLECT は seenAmountKeys チェックなし（分割回収を許容） |
+| PAYMENT_SAVE 二重計上 | paymentStatus の現在値が 入金済 になった未収保存を誤計上 | detail「入金額: ¥N」でログ当時の実受取額を判定 |
+
+---
+
+## 将来タスク — Phase 5-D（未実装）
+
+詳細設計: [`docs/chart-to-billing-flow-design.md`](./docs/chart-to-billing-flow-design.md)
+
+### Phase 5-D: カルテ連動会計フロー
+
+| 項目 | 内容 |
+|---|---|
+| 概要 | カルテ記録画面から施術内容をもとに会計候補を自動生成し、直接会計画面へ進める導線を追加 |
+| 対象 | visit-form.html / billing-form.html / JREC_SF01_Visit.gs / JREC_SF01_Billing.gs |
+| 優先度 | 低（Phase 5-C または Deployment 整理の後に検討） |
+| 前提 | Phase 5-B CLOSED ✅ |
+
+**設計方針:**
+- カルテ記録からそのまま会計画面へ移行できる導線を追加
+- カルテ内容を即請求確定にはしない（人間確認後に確定）
+- 施術内容から会計候補を自動生成し、入力漏れを減らす
+- 内部データは明細保持。患者向け表示は必要に応じて合算
 
 ---
 
