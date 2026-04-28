@@ -2,11 +2,44 @@
 
 ## 現在ステータス
 
-**Phase 4 後半 F-2「未収回収処理」CLOSED（実機確認PASS）**（2026-04-28）
+**Phase 5-A DailySales 設計調査完了（コード変更なし）**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## Phase 5-A DailySales 集計 設計調査（2026-04-28）
+
+**詳細:** `docs/PHASE5A_DAILYSALES_DESIGN.md` を参照
+
+### 調査サマリー
+
+| 項目 | 現状 |
+|---|---|
+| DailySales シート | 存在するが空。集計ロジック未実装 |
+| 集計の正本 | Payments（売上・未収）/ SelfPayVisits（来院数）/ Run_Log（未収回収） |
+| Run_Log バグ | `appendRunLog_` の selfPayVisitKey 列が常に空。visitKey は detail テキストに埋め込み |
+| 未収回収額の検出 | Run_Log.PAYMENT_COLLECT または Payments の createdAt ≠ 入金日 で判定 |
+
+### 推奨実装方針（3ステップ）
+
+```
+Step 1: getDailySalesReport(date) — オンデマンド集計関数
+Step 2: 日次集計画面（daily-sales.html）
+Step 3: rebuildDailySales(date) — DailySales シートへの書き込み
+```
+
+### 実装前確認事項（ユーザー確認待ち）
+
+| # | 確認事項 |
+|---|---|
+| 1 | 売上の日付基準: 来院日 / 入金日 / 領収書発行日 のどれ? |
+| 2 | 未収回収額の帰属: 回収日 or 来院日? |
+| 3 | Run_Log バグ修正を先に行うか? |
+| 4 | 主力来院数の KPI 基準: SELFPAY_CONTINUE20 固定でよいか? |
+| 5 | 日次集計画面を Web 画面として作るか、シートで直接見るか? |
 
 ---
 
