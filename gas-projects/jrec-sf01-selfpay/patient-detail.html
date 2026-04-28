@@ -90,6 +90,17 @@ var visitCount    = timeline.length;
           <? } ?>
         </div>
       </div>
+      <div class="summary-item">
+        <div class="label">未会計</div>
+        <div class="value" style="font-size:14px;
+          <?= (accounting && accounting.unbilledCount > 0) ? 'color:#e37400;font-weight:700;' : '' ?>">
+          <? if (accounting) { ?>
+            <?= accounting.unbilledCount || 0 ?>件
+          <? } else { ?>
+            <span style="color:#9aa0a6;">—</span>
+          <? } ?>
+        </div>
+      </div>
     </div>
 
     <? if (timeline.length > 0) { ?>

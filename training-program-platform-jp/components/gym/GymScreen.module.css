@@ -280,3 +280,20 @@
   line-height: 1.5;
   margin: 0;
 }
+
+/* ── Membership notice (non-active users) ── */
+
+.membershipNotice {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  border-radius: 10px;
+  background: rgba(249, 115, 22, 0.06);
+  margin-bottom: var(--space-4);
+}
+
+.membershipNoticeText {
+  font-size: var(--text-sm);
+  color: #fdba74;
+  line-height: 1.6;
+  margin: 0;
+}

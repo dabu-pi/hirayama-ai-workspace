@@ -668,6 +668,68 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ---
 
+## 2026-04-28 M-1: 非activeユーザー向け表示整理
+
+### STATUS: CLOSED
+
+### 背景・目的
+
+`membership_status` が `paused` / `cancelled` のユーザーがアプリを開いた時、なぜ使えないのかが分からない問題に対応。
+強い拒絶表現を避け、やわらかく状況を伝える文言へ整理した。
+
+### 対象 status
+
+| status | 意味 |
+|---|---|
+| `paused` | 休会中 |
+| `cancelled` | 退会済み |
+| その他（将来的な拡張） | 汎用停止メッセージ |
+
+※ `suspended` / `inactive` は現在 DB の `MembershipStatus` 型に存在しない（`active` / `paused` / `cancelled` のみ）
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `components/train/MembershipRequiredScreen.tsx` | `status` prop 追加、paused / cancelled / default で文言を切り替え |
+| `app/train/page.tsx` | `membershipStatus` を `MembershipRequiredScreen` に渡す |
+| `components/gym/GymScreen.tsx` | `membershipStatus` prop 追加、非active 時に soft notice バナーを表示 |
+| `components/gym/GymScreen.module.css` | `.membershipNotice` / `.membershipNoticeText` スタイル追加 |
+| `app/gym/page.tsx` | `getMembershipStatus` を並列呼び出し、GymScreen に渡す |
+
+### 文言方針
+
+| status | タイトル | 本文要約 |
+|---|---|---|
+| paused | 現在、休会中です | 休会中につきトレーニング機能利用不可・再開はスタッフへ |
+| cancelled | ご利用状況をご確認ください | 再度利用希望の場合はスタッフへ |
+| default | 現在ご利用を一時停止しています | 詳細はスタッフへ |
+
+### 変更しなかった範囲
+
+- `/programs` — 閲覧は引き続き可能（変更なし）
+- `/profile` — 表示は可能、membership_status 編集は admin-only（変更なし）
+- enrollment / 履歴カレンダー H-1b〜H-1d — 触らない
+- トレーニング記録保存処理 — 触らない
+- DB migration — 不要
+
+### CHECK
+
+- typecheck: pass
+- build: pass（/gym 3.24kB、/train 13kB 変化なし）
+- DB migration: 不要
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] active ユーザーは通常通り /train を使える
+- [ ] paused ユーザーが /train を開くと「現在、休会中です」が表示される
+- [ ] cancelled ユーザーが /train を開くと退会向け案内が表示される
+- [ ] paused/cancelled ユーザーが /gym を開くと soft notice バナーが表示される
+- [ ] /gym / /programs / /profile の表示が active ユーザーで破綻していない
+- [ ] スマホ表示で文言が読みやすい
+
+---
+
 ## 2026-04-26 C-8: 5本目プログラム seed 追加
 
 ### STATUS: CLOSED (seed追加済み / 本番DB反映は手動SQL実行待ち)

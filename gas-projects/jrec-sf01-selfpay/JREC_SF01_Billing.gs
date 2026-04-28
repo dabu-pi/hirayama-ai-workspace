@@ -8,6 +8,68 @@
 // ============================================================
 
 /**
+ * 患者一覧表示用に未収額・未会計件数を1回の読み取りで返す。
+ * SelfPayVisits と Payments を各1回だけ読み取り、患者ごとの集計を返す。
+ *
+ * 未収額:    Payments.paymentStatus = "未収" または "一部入金" の totalTaxInc 合計
+ * 未会計件数: Payments が存在しない SelfPayVisits 行の数
+ *
+ * @param {string=} patientId 指定時はその患者のみ集計（省略時は全患者）
+ * @returns {{ [patientId]: { outstanding: number, unbilledCount: number } }}
+ */
+function getPatientListStats(patientId) {
+  try {
+    var ss = getTargetSpreadsheet_();
+
+    // SelfPayVisits: visitKey→patientId マップ + patientId ごとの totalVisits カウント
+    var vkToPatient   = {};
+    var patientTotals = {};
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (visitSh && visitSh.getLastRow() >= 2) {
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, 2).getValues().forEach(function(r) {
+        if (!r[0] || !r[1]) return;
+        var vk  = String(r[0]);
+        var pid = String(r[1]);
+        if (patientId && pid !== String(patientId)) return;
+        vkToPatient[vk] = pid;
+        if (!patientTotals[pid]) patientTotals[pid] = { totalVisits: 0, billedVisits: 0, outstanding: 0 };
+        patientTotals[pid].totalVisits++;
+      });
+    }
+
+    // Payments: 会計済み visitKey を確認 + 未収を集計
+    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (paymentSh && paymentSh.getLastRow() >= 2) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 7).getValues().forEach(function(r) {
+        var vk     = String(r[1]);
+        var status = r[6] || "";
+        var amt    = r[4] || 0;
+        var pid    = vkToPatient[vk];
+        if (!pid || !patientTotals[pid]) return;
+        patientTotals[pid].billedVisits++;
+        if (status === "未収" || status === "一部入金") patientTotals[pid].outstanding += amt;
+      });
+    }
+
+    // 結果を組み立て
+    var result = {};
+    Object.keys(patientTotals).forEach(function(pid) {
+      var t = patientTotals[pid];
+      result[pid] = {
+        outstanding:   t.outstanding,
+        unbilledCount: Math.max(0, t.totalVisits - t.billedVisits)
+      };
+    });
+    return result;
+
+  } catch(err) {
+    var m = (err && err.message) ? err.message : String(err);
+    Logger.log("[getPatientListStats] ERROR: " + m);
+    return {};
+  }
+}
+
+/**
  * 全患者の未収残高を { [patientId]: outstandingAmount } で返す。
  * 患者一覧の未収額列表示に使用する。
  *
@@ -64,6 +126,7 @@ function getAllOutstandingByPatient() {
  * @returns {{
  *   totalPaid:        number,  // 入金済・一部入金 の tax-inc 合計
  *   totalOutstanding: number,  // 未収・一部入金 の tax-inc 合計
+ *   unbilledCount:    number,  // Payments が存在しない来院件数（未会計）
  *   payments: { [visitKey]: { paymentId, totalTaxInc, paymentMethod, paymentStatus } },
  *   receipts: { [visitKey]: { receiptId, receiptNo } }
  * }}
@@ -117,9 +180,14 @@ function getPatientAccountingData(patientId) {
       });
     }
 
+    // 未会計件数 = Payment が存在しない visitKey の数
+    var unbilledCount = 0;
+    Object.keys(visitKeySet).forEach(function(vk) { if (!payments[vk]) unbilledCount++; });
+
     return {
       totalPaid:        totalPaid,
       totalOutstanding: totalOutstanding,
+      unbilledCount:    unbilledCount,
       payments:         payments,
       receipts:         receipts
     };
@@ -127,7 +195,7 @@ function getPatientAccountingData(patientId) {
   } catch(err) {
     var m = (err && err.message) ? err.message : String(err);
     Logger.log("[getPatientAccountingData] ERROR: " + m);
-    return { totalPaid: 0, totalOutstanding: 0, payments: {}, receipts: {} };
+    return { totalPaid: 0, totalOutstanding: 0, unbilledCount: 0, payments: {}, receipts: {} };
   }
 }
 

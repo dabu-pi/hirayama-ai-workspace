@@ -27,15 +27,21 @@
       </form>
     </div>
 
-    <!-- 件数 -->
+    <!-- 件数 + 未収/未会計サマリー -->
     <? if (patients.length > 0) {
-      var outstandingCount = 0;
-      patients.forEach(function(p) { if (p.outstanding > 0) outstandingCount++; });
+      var outstandingCount = 0, unbilledPatientCount = 0;
+      patients.forEach(function(p) {
+        if (p.outstanding   > 0) outstandingCount++;
+        if (p.unbilledCount > 0) unbilledPatientCount++;
+      });
     ?>
       <p class="count-label">
         <?= patients.length ?> 件
         <? if (outstandingCount > 0) { ?>
-          　<span style="color:#d93025;font-weight:700;">（未収あり <?= outstandingCount ?> 件）</span>
+          　<span style="color:#d93025;font-weight:700;">（未収あり <?= outstandingCount ?> 名）</span>
+        <? } ?>
+        <? if (unbilledPatientCount > 0) { ?>
+          　<span style="color:#e37400;font-weight:700;">（未会計あり <?= unbilledPatientCount ?> 名）</span>
         <? } ?>
       </p>
     <? } ?>
@@ -76,13 +82,22 @@
               <td><?= p.phone || '—' ?></td>
               <td class="muted"><?= p.lastVisitDate || '—' ?></td>
               <td style="text-align:right;">
-                <?= p.visitCount > 0 ? p.visitCount + '回' : '<span class="muted">—</span>' ?>
+                <? if (p.visitCount > 0) { ?>
+                  <?= p.visitCount ?>回
+                <? } else { ?>
+                  <span class="muted">—</span>
+                <? } ?>
               </td>
               <td style="text-align:right;">
                 <? if (p.outstanding > 0) { ?>
                   <span class="badge badge-warn">¥<?!= Number(p.outstanding).toLocaleString() ?></span>
                 <? } else { ?>
                   <span class="muted">¥0</span>
+                <? } ?>
+                <? if (p.unbilledCount > 0) { ?>
+                  <div style="margin-top:3px;font-size:11px;color:#e37400;font-weight:600;">
+                    未会計 <?= p.unbilledCount ?>件
+                  </div>
                 <? } ?>
               </td>
               <td>

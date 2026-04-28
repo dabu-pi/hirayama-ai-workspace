@@ -2,7 +2,7 @@
 
 ## 現在ステータス
 
-**Phase 4 後半 F-1「未収管理の入口整備」実装済み**（2026-04-28）
+**Phase 4 後半 F-1 follow-up「未会計件数表示・バグ修正」実装済み**（2026-04-28）
 
 ---
 
@@ -10,7 +10,80 @@
 
 ---
 
-## Phase 4 後半 F-1「未収管理の入口整備」（2026-04-28）
+## Phase 4 後半 F-1 follow-up「未会計件数表示・バグ修正」（2026-04-28）
+
+### 未収と未会計の定義（確定）
+
+| 種別 | 条件 | 表示 |
+|---|---|---|
+| **未収** | Payments が存在 かつ paymentStatus = "未収" または "一部入金" | 赤太字 ¥X,XXX |
+| **未会計** | SelfPayVisits に来院記録あり かつ Payments が存在しない | 橙 X件 |
+| **なし** | Payments あり かつ paymentStatus = "入金済" | ¥0（未収）/ 0件（未会計）|
+
+**未会計を未収に含めない理由:**
+会計入力がなければ金額が確定していないため「請求したが回収できていない」状態とは言えない。
+未収 = 金額確定後の未回収。未会計 = 金額未確定の来院。
+
+### 実装内容
+
+**JREC_SF01_Billing.gs 追加:**
+
+`getPatientListStats(patientId?)`:
+- SelfPayVisits（visitKey→patientId）と Payments を各1回読み取り
+- `{ [patientId]: { outstanding, unbilledCount } }` を返す
+- `getAllOutstandingByPatient()` と新規の `unbilledCount` を統合した効率化関数
+- 旧 `getAllOutstandingByPatient()` は後方互換で残す
+
+`getPatientAccountingData()` を更新:
+- `unbilledCount` フィールドを追加（Payments が存在しない visitKey の数）
+- エラー時のフォールバックにも `unbilledCount: 0` を追加
+
+**JREC_SF01_Main.gs 更新:**
+
+`list` ルートを `getPatientListStats()` に切り替え（SS 読み取り 4回 → 2回に削減）。
+`p.outstanding` と `p.unbilledCount` を patients 配列に注入。
+
+**patient-list.html 変更:**
+
+| 変更 | 内容 |
+|---|---|
+| バグ修正 | `<?= p.visitCount > 0 ? ... : '<span class="muted">—</span>' ?>` が HTML エスケープで文字列表示されていたのを if ブロックに変更 |
+| 件数ラベル | `（未収あり X名）` に加えて `（未会計あり X名）` を橙色で追加 |
+| 未収残高列 | 未収額の下に `未会計 X件` を橙色で表示（未会計が 0 の場合は非表示）|
+
+**patient-detail.html 変更:**
+
+サマリーグリッドに「未会計」アイテムを追加（5列目）。
+- 未会計 0件: 通常表示 `0件`
+- 未会計 > 0件: 橙太字 `X件`
+- accounting が null: `—` フォールバック
+
+#### clasp push
+
+```
+clasp push --force → 14ファイル push 完了（2026-04-28 12:25:59）
+```
+
+### 手動確認手順（再デプロイ後）
+
+1. **患者一覧**
+   - 未会計の来院がある患者: `（未会計あり X名）` が橙色表示 + 行の「未収残高」列に `未会計 X件` 橙表示
+   - 未会計なし患者: 「未会計」表示なし、未収残高は `¥0`
+   - 件数行の `<span class="muted">—</span>` が HTML 文字列として表示されないことを確認
+
+2. **患者詳細**
+   - サマリーグリッドに「未会計 X件」が 5列目に表示される
+   - 未会計 0件: `0件` 通常色
+   - 未会計 > 0件: `X件` 橙太字
+
+### F-1 残課題とF-2への接続
+
+| 残課題 | F-2 として実装 |
+|---|---|
+| 未収回収処理（paymentStatus 更新）| F-2 で実装予定 |
+| `visitCount` の実データ表示 | 別途 Phase 5 で SelfPayVisits から集計 |
+
+---
 
 ### 実装内容
 

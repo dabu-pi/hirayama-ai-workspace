@@ -66,7 +66,7 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
 
   if (membershipStatus !== null && membershipStatus !== "active") {
     console.info(`${PAGE}:branch`, { branch: "membership_required", status: membershipStatus });
-    return <MembershipRequiredScreen />;
+    return <MembershipRequiredScreen status={membershipStatus} />;
   }
 
   console.info(`${PAGE}:selected_program`, {

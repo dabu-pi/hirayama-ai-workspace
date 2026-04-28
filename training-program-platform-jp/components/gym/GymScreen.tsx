@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { GymAnnouncement } from "@/lib/gym/announcements";
 import type { GymSponsor } from "@/lib/gym/sponsors";
+import type { MembershipStatus } from "@/lib/workout/membership";
 import type { GymDashboardStats } from "@/lib/workout/gym-dashboard";
 import { GymAnnouncementSection } from "./GymAnnouncementSection";
 import { GymConsultationForm } from "./GymConsultationForm";
@@ -17,16 +18,29 @@ const QUICK_LINKS = [
   { href: "/profile", label: "プロフィール", icon: "👤" }
 ] as const;
 
+function getMembershipNotice(status: MembershipStatus | null | undefined): string | null {
+  switch (status) {
+    case "paused":
+      return "現在、休会中のため一部機能はご利用いただけません。再開をご希望の場合はスタッフまでご連絡ください。";
+    case "cancelled":
+      return "現在、このアカウントでは一部機能をご利用いただけません。再度利用をご希望の場合はスタッフまでお問い合わせください。";
+    default:
+      return null;
+  }
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 type GymScreenProps = {
   stats: GymDashboardStats | null;
   announcements: GymAnnouncement[];
   sponsors: GymSponsor[];
+  membershipStatus?: MembershipStatus | null;
 };
 
-export function GymScreen({ stats, announcements, sponsors }: GymScreenProps) {
+export function GymScreen({ stats, announcements, sponsors, membershipStatus }: GymScreenProps) {
   const isLoggedIn = stats !== null;
+  const membershipNotice = getMembershipNotice(membershipStatus);
 
   return (
     <main className={styles.page}>
@@ -35,6 +49,13 @@ export function GymScreen({ stats, announcements, sponsors }: GymScreenProps) {
         <h1 className={styles.pageTitle}>ジム</h1>
         <p className={styles.gymName}>Hirayama Gym</p>
       </div>
+
+      {/* Soft notice for non-active members */}
+      {membershipNotice && (
+        <aside className={styles.membershipNotice}>
+          <p className={styles.membershipNoticeText}>{membershipNotice}</p>
+        </aside>
+      )}
 
       {/* Monthly training stats */}
       <section className={styles.section}>

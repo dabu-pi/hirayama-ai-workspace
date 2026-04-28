@@ -122,9 +122,13 @@ function buildPage_(page, idParam, q, vkParam) {
       }
 
       default: { // "list"
-        var pts  = getPatients(q);
-        var outs = getAllOutstandingByPatient();
-        pts.forEach(function(p) { p.outstanding = outs[p.patientId] || 0; });
+        var pts   = getPatients(q);
+        var stats = getPatientListStats();
+        pts.forEach(function(p) {
+          var s = stats[p.patientId] || { outstanding: 0, unbilledCount: 0 };
+          p.outstanding   = s.outstanding;
+          p.unbilledCount = s.unbilledCount;
+        });
         var t = HtmlService.createTemplateFromFile("patient-list");
         t.appUrl    = appUrl;
         t.patients  = pts;
