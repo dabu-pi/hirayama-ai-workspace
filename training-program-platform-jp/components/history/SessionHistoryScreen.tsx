@@ -39,7 +39,7 @@ export function SessionHistoryScreen({
         </div>
       </header>
 
-      <TrainingCalendar entries={calendarEntries} sessions={sessions} />
+      <TrainingCalendar entries={calendarEntries} />
 
       {errorMessage ? (
         <section className={`${styles.statusCard} ${styles.errorCard}`}>

@@ -622,6 +622,48 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ---
 
+## 2026-04-28 H-1d: 選択日詳細パネルのAPI化（SESSION_LIST_LIMIT 完全排除）
+
+### STATUS: CLOSED
+
+### 実装内容
+
+カレンダーで日付を選択した時の詳細パネルを、`sessions`（最新20件）ベースから
+`/api/session-history/day?date=YYYY-MM-DD` の API フェッチに切り替え。
+20件より古い日付でも正確な詳細カードが表示できるようになった。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `lib/workout/session-list.ts` | `getDaySessionData(date)` 関数を追加（JST日付指定クエリ） |
+| `app/api/session-history/day/route.ts` | 新規。GET `?date=YYYY-MM-DD` で DaySessionResult を返す API |
+| `components/history/TrainingCalendar.tsx` | `sessions` prop を削除、`daySessions` / `daySessionsCache` / `isDayLoading` / `dayError` state 追加、日付クリック時に fetchDaySessions() 呼び出し |
+| `components/history/SessionHistoryScreen.tsx` | TrainingCalendar への `sessions` 渡しを削除 |
+
+### 設計ポイント
+
+- JST日付 → UTC範囲変換: `(day-1) T15:00:00Z` ～ `day T15:00:00Z`、さらに `jstDateSlice` で再フィルタ
+- 同一日付は `daySessionsCache` にキャッシュし再フェッチを防止
+- ローディング中は「読み込み中...」、エラー時は控えめなエラーメッセージ
+- 月移動時に selectedDate / daySessions をクリア
+- `SESSION_LIST_LIMIT` への依存がカレンダー周りから完全排除された
+
+### CHECK
+
+- typecheck: pass
+- build: pass（/session-history 3.35kB、/api/session-history/day が追加）
+- DB migration: 不要
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] 日付選択時に詳細カードが表示されるか
+- [ ] 最新20件より古い日付でも詳細が表示されるか（20件超ユーザーのみ確認可）
+- [ ] loading 表示が出るか
+- [ ] 月移動後に日付を選択しても正しい月のデータが出るか
+
+---
+
 ## 2026-04-26 C-8: 5本目プログラム seed 追加
 
 ### STATUS: CLOSED (seed追加済み / 本番DB反映は手動SQL実行待ち)

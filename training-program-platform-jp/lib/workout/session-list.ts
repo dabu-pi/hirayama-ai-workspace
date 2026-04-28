@@ -15,6 +15,11 @@ import type {
   WorkoutSessionStatus
 } from "@/types/workout";
 
+type DaySessionResult = {
+  sessions: WorkoutSessionListItem[];
+  errorMessage: string | null;
+};
+
 const SESSION_LIST_LIMIT = 20;
 
 type DatabaseClient = SupabaseClient;
@@ -263,5 +268,109 @@ export async function getCalendarMonthData(
   } catch (err) {
     console.error("getCalendarMonthData failed", err);
     return { entries: [], errorMessage: "Calendar data could not be loaded." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// H-1d: Day-specific session query for calendar selected-day detail panel.
+// Returns full WorkoutSessionListItem[] for a given JST date.
+// Independent of SESSION_LIST_LIMIT.
+// ---------------------------------------------------------------------------
+
+export async function getDaySessionData(date: string): Promise<DaySessionResult> {
+  if (!hasSupabasePublicEnv()) {
+    return { sessions: [], errorMessage: "Supabase is not configured for this environment." };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { sessions: [], errorMessage: "Invalid date format." };
+  }
+  try {
+    const serverClient = createSupabaseServerClient();
+    const { data: userData } = await serverClient.auth.getUser();
+    const userId = userData.user?.id ?? null;
+    if (!userId) return { sessions: [], errorMessage: "Sign in is required." };
+
+    // JST day YYYY-MM-DD spans UTC [day-1 T15:00:00Z, day T15:00:00Z).
+    const [year, monthStr, dayStr] = date.split("-").map(Number);
+    const month = monthStr - 1; // 0-indexed
+    const utcStart = new Date(Date.UTC(year, month, dayStr - 1, 15, 0, 0)).toISOString();
+    const utcEnd = new Date(Date.UTC(year, month, dayStr, 15, 0, 0)).toISOString();
+
+    const { data, error } = await serverClient
+      .from("workout_sessions")
+      .select("id, status, started_at, finished_at, program_day_id")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .is("archived_at", null)
+      .gte("started_at", utcStart)
+      .lt("started_at", utcEnd)
+      .order("started_at", { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    // Re-filter by JST date string to guard against UTC/JST boundary edge cases.
+    const sessions = ((data ?? []) as SessionRow[]).filter(
+      (s) => jstDateSlice(s.started_at) === date
+    );
+
+    if (sessions.length === 0) return { sessions: [], errorMessage: null };
+
+    const sessionIds = sessions.map((s) => s.id);
+    const programDayIds = Array.from(
+      new Set(sessions.map((s) => s.program_day_id).filter((id): id is string => id !== null))
+    );
+
+    const [exerciseRows, programDays] = await Promise.all([
+      selectSessionExercises(serverClient, sessionIds),
+      selectProgramDays(serverClient, programDayIds),
+    ]);
+
+    const exerciseCountMap = new Map<string, number>();
+    exerciseRows.forEach((row) => {
+      exerciseCountMap.set(
+        row.workout_session_id,
+        (exerciseCountMap.get(row.workout_session_id) ?? 0) + 1
+      );
+    });
+    const programDayMap = new Map(programDays.map((d) => [d.id, d]));
+
+    const programWeekIds = Array.from(new Set(programDays.map((d) => d.program_week_id)));
+    const programWeeks = await selectProgramWeeks(serverClient, programWeekIds);
+    const programWeekMap = new Map(programWeeks.map((w) => [w.id, w]));
+
+    const programIds = Array.from(new Set(programWeeks.map((w) => w.program_id)));
+    const programs = await selectPrograms(serverClient, programIds);
+    const programMap = new Map(programs.map((p) => [p.id, p]));
+
+    const items: WorkoutSessionListItem[] = sessions.map((session) => {
+      const programDay = session.program_day_id
+        ? (programDayMap.get(session.program_day_id) ?? null)
+        : null;
+      const programWeek = programDay
+        ? (programWeekMap.get(programDay.program_week_id) ?? null)
+        : null;
+      const program = programWeek ? (programMap.get(programWeek.program_id) ?? null) : null;
+
+      let programWeekDayLabel: string | null = null;
+      if (programWeek && programDay) {
+        const weekPart = programWeek.label?.trim() || `Week ${programWeek.week_number}`;
+        programWeekDayLabel = `${weekPart} / Day ${programDay.day_number}`;
+      }
+
+      return {
+        sessionId: session.id,
+        status: session.status,
+        startedAt: formatDate(session.started_at),
+        finishedAt: session.finished_at ? formatDate(session.finished_at) : null,
+        programTitle: program?.title ?? null,
+        programWeekDayLabel,
+        exerciseCount: exerciseCountMap.get(session.id) ?? 0,
+      };
+    });
+
+    return { sessions: items, errorMessage: null };
+  } catch (err) {
+    console.error("getDaySessionData failed", err);
+    return { sessions: [], errorMessage: "この日の履歴を取得できませんでした。" };
   }
 }

@@ -9,11 +9,14 @@ import styles from "./TrainingCalendar.module.css";
 
 const WEEK_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 
-type TrainingCalendarProps = {
-  /** H-2: lightweight month-specific entries for dot display. */
-  entries: CalendarDayEntry[];
-  /** Kept for selected-day detail panel (recent 20 sessions). */
+type DaySessionResult = {
   sessions: WorkoutSessionListItem[];
+  errorMessage: string | null;
+};
+
+type TrainingCalendarProps = {
+  /** H-1b: lightweight month-specific entries for dot display. */
+  entries: CalendarDayEntry[];
 };
 
 function todayJst(): { year: number; month: number; dateStr: string } {
@@ -34,7 +37,7 @@ function toDateStr(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
+export function TrainingCalendar({ entries }: TrainingCalendarProps) {
   const today = todayJst();
   const [viewYear, setViewYear] = useState(today.year);
   const [viewMonth, setViewMonth] = useState(today.month);
@@ -45,6 +48,13 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
   const [currentEntries, setCurrentEntries] = useState<CalendarDayEntry[]>(entries);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // H-1d: Day session data fetched from API on date selection.
+  // Cached by date string to avoid re-fetching the same date.
+  const [daySessions, setDaySessions] = useState<WorkoutSessionListItem[]>([]);
+  const [daySessionsCache, setDaySessionsCache] = useState<Record<string, WorkoutSessionListItem[]>>({});
+  const [isDayLoading, setIsDayLoading] = useState(false);
+  const [dayError, setDayError] = useState<string | null>(null);
 
   async function fetchMonthData(year: number, month: number) {
     setIsLoading(true);
@@ -85,6 +95,7 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
     setViewYear(newYear);
     setViewMonth(newMonth);
     setSelectedDate(null);
+    setDaySessions([]);
     void fetchMonthData(newYear, newMonth);
   }
 
@@ -94,12 +105,46 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
     setViewYear(newYear);
     setViewMonth(newMonth);
     setSelectedDate(null);
+    setDaySessions([]);
     void fetchMonthData(newYear, newMonth);
   }
 
-  const selectedSessions = selectedDate
-    ? sessions.filter((s) => s.status === "completed" && s.startedAt === selectedDate)
-    : [];
+  async function fetchDaySessions(date: string) {
+    if (daySessionsCache[date] !== undefined) {
+      setDaySessions(daySessionsCache[date]);
+      return;
+    }
+    setIsDayLoading(true);
+    setDayError(null);
+    try {
+      const res = await fetch(`/api/session-history/day?date=${date}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as DaySessionResult;
+      if (data.errorMessage) {
+        setDayError(data.errorMessage);
+        setDaySessions([]);
+      } else {
+        setDaySessions(data.sessions);
+        setDaySessionsCache((prev) => ({ ...prev, [date]: data.sessions }));
+      }
+    } catch {
+      setDayError("この日の履歴を取得できませんでした");
+      setDaySessions([]);
+    } finally {
+      setIsDayLoading(false);
+    }
+  }
+
+  function handleDateClick(ds: string, isSelected: boolean) {
+    if (isSelected) {
+      setSelectedDate(null);
+      setDaySessions([]);
+      setDayError(null);
+    } else {
+      setSelectedDate(ds);
+      void fetchDaySessions(ds);
+    }
+  }
 
   return (
     <section className={styles.calendar}>
@@ -181,7 +226,7 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
                 .filter(Boolean)
                 .join(" ")}
               type="button"
-              onClick={() => setSelectedDate(isSelected ? null : ds)}
+              onClick={() => handleDateClick(ds, isSelected)}
             >
               <span className={styles.dayNumber}>{day}</span>
               {count > 0 && (
@@ -192,15 +237,19 @@ export function TrainingCalendar({ entries, sessions }: TrainingCalendarProps) {
         })}
       </div>
 
-      {/* Selected day detail */}
+      {/* Selected day detail — H-1d: fetched from API, not limited to 20 sessions */}
       {selectedDate && (
         <div className={styles.selectedDetail}>
           <p className={styles.selectedDateLabel}>{selectedDate}</p>
-          {selectedSessions.length === 0 ? (
+          {isDayLoading ? (
+            <p className={styles.calendarLoading}>読み込み中...</p>
+          ) : dayError ? (
+            <p className={styles.calendarError}>{dayError}</p>
+          ) : daySessions.length === 0 ? (
             <p className={styles.noSession}>この日のトレーニングはありません</p>
           ) : (
             <ul className={styles.sessionList}>
-              {selectedSessions.map((s) => (
+              {daySessions.map((s) => (
                 <li key={s.sessionId} className={styles.sessionItem}>
                   <span className={styles.sessionTitle}>
                     {s.programTitle ?? "フリーセッション"}
