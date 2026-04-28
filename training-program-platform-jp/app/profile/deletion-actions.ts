@@ -43,7 +43,7 @@ export async function getOwnPendingDeletionRequest(): Promise<OwnDeletionRequest
 
 /**
  * Submits a new account deletion request for the authenticated user.
- * Fails if a pending request already exists (unique index).
+ * Fails if the user is already cancelled or a pending request already exists.
  */
 export async function submitDeletionRequest(
   reason: string | null
@@ -55,6 +55,17 @@ export async function submitDeletionRequest(
     data: { user }
   } = await client.auth.getUser();
   if (!user) return { ok: false, error: "unauthenticated" };
+
+  // D-1d: Guard — already cancelled users must not create new requests.
+  const { data: userRow } = await client
+    .from("users")
+    .select("membership_status")
+    .eq("id", user.id)
+    .maybeSingle<{ membership_status: string | null }>();
+
+  if (userRow?.membership_status === "cancelled") {
+    return { ok: false, error: "already_cancelled" };
+  }
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin.from("account_deletion_requests").insert({

@@ -27,9 +27,9 @@ export default async function ProfilePage() {
   const [userRowResult, pendingDeletionRequest] = await Promise.all([
     client
       .from("users")
-      .select("display_name")
+      .select("display_name, membership_status")
       .eq("id", user.id)
-      .maybeSingle<{ display_name: string | null }>(),
+      .maybeSingle<{ display_name: string | null; membership_status: string | null }>(),
     getOwnPendingDeletionRequest(),
   ]);
 
@@ -37,6 +37,7 @@ export default async function ProfilePage() {
     <ProfileScreen
       email={user.email ?? null}
       initialDisplayName={userRowResult.data?.display_name ?? null}
+      membershipStatus={userRowResult.data?.membership_status ?? null}
       pendingDeletionRequest={pendingDeletionRequest}
     />
   );

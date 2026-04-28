@@ -11,12 +11,14 @@ import styles from "./ProfileScreen.module.css";
 type ProfileScreenProps = {
   email: string | null;
   initialDisplayName: string | null;
+  membershipStatus: string | null;
   pendingDeletionRequest: OwnDeletionRequest | null;
 };
 
 export function ProfileScreen({
   email,
   initialDisplayName,
+  membershipStatus,
   pendingDeletionRequest,
 }: ProfileScreenProps) {
   const [displayName, setDisplayName] = useState(initialDisplayName ?? "");
@@ -138,7 +140,16 @@ export function ProfileScreen({
       <section className={styles.deletionSection}>
         <h2 className={styles.deletionTitle}>退会・アカウント削除申請</h2>
 
-        {hasPending ? (
+        {/* D-1d: cancelled users see a notice instead of the form */}
+        {membershipStatus === "cancelled" ? (
+          <div className={styles.deletionPendingCard}>
+            <p className={styles.deletionPendingText}>
+              現在、このアカウントは退会済みです。
+              再入会をご希望の場合は、スタッフまでお問い合わせください。
+              退会後のデータは確認・お問い合わせ対応のため原則1年間保管し、1年経過後に削除対象として扱います。
+            </p>
+          </div>
+        ) : hasPending ? (
           <div className={styles.deletionPendingCard}>
             <p className={styles.deletionPendingText}>
               退会申請は受付済みです。スタッフ確認後に手続きを進めます。

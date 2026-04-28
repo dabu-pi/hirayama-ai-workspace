@@ -719,6 +719,57 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 
 ---
 
+## 2026-04-28 D-1d: 退会済みユーザーの再申請防止・表示整理
+
+### STATUS: CLOSED
+
+### 問題
+
+`membership_status=cancelled` のユーザーが /profile から再度退会申請を作成できた。
+管理者画面に cancelled ユーザーの pending 申請が表示され、誤って承認操作できる状態だった。
+
+### 修正内容
+
+| 層 | 変更内容 |
+|---|---|
+| UI（/profile） | `membershipStatus=cancelled` 時は退会申請フォームを非表示。「退会済みです。再入会はスタッフへ」の案内を表示。 |
+| Server Action | `submitDeletionRequest` で insert 前に `membership_status` を確認。cancelled なら `already_cancelled` エラーで拒否。 |
+| 管理者画面 | pending 申請のユーザーが cancelled の場合、黄色の警告バナーを表示。承認ボタンを disabled に。却下ボタンは維持。 |
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `app/profile/page.tsx` | `membership_status` も取得して ProfileScreen に渡す |
+| `components/profile/ProfileScreen.tsx` | `membershipStatus` prop 追加。cancelled 時は退会済み案内を表示 |
+| `app/profile/deletion-actions.ts` | `submitDeletionRequest` に cancelled チェックを追加 |
+| `components/admin/DeletionRequestsScreen.tsx` | cancelled ユーザーの pending 申請に警告バナー・承認ボタン disabled |
+| `components/admin/DeletionRequestsScreen.module.css` | `.alreadyCancelledNote` スタイル追加 |
+
+### CHECK
+
+- typecheck: pass
+- build: pass
+- DB migration: 不要
+
+### LIVE_CHECK_REQUIRED
+
+- [ ] cancelled ユーザーで /profile を開くと退会済み案内が表示される
+- [ ] cancelled ユーザーには退会申請フォームが表示されない
+- [ ] cancelled ユーザーが直接送信しようとしても新規 pending 申請が作られない
+- [ ] active / paused ユーザーでは退会申請フォームが表示される
+- [ ] pending 申請がある場合は受付済み表示になる
+- [ ] /admin で cancelled ユーザーの pending 申請に警告バナーが表示される
+- [ ] 警告バナーがある場合、承認ボタンが無効化されている
+- [ ] 却下処理は動く
+- [ ] スマホ表示で崩れなし
+
+### DEFERRED_CHECK（引き続き）
+
+- [ ] active/paused ユーザーの承認フロー（active→cancelled）は後日別ユーザーで確認
+
+---
+
 ## 2026-04-28 D-1c: 退会後データ保持方針の明文化・文言追加
 
 ### STATUS: CLOSED

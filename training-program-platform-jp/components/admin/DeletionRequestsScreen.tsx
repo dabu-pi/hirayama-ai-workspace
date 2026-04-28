@@ -94,6 +94,12 @@ function RequestCard({ request: r, onDone }: RequestCardProps) {
 
       {isPendingStatus && (
         <div className={styles.actions}>
+          {/* D-1d: warn when user is already cancelled */}
+          {r.membershipStatus === "cancelled" && (
+            <p className={styles.alreadyCancelledNote}>
+              このユーザーはすでに退会済み（cancelled）です。承認処理は不要です。却下してメモを残すことをお勧めします。
+            </p>
+          )}
           <p className={styles.disclaimer}>
             この処理ではログイン情報やトレーニング履歴は削除されません。退会後のデータは原則1年間保管し、1年経過後に削除対象として扱います。
           </p>
@@ -115,11 +121,11 @@ function RequestCard({ request: r, onDone }: RequestCardProps) {
           <div className={styles.buttons}>
             <button
               className={styles.approveButton}
-              disabled={isPending}
+              disabled={isPending || r.membershipStatus === "cancelled"}
               type="button"
               onClick={handleApprove}
             >
-              {isPending ? "処理中..." : "承認して退会済みにする"}
+              {isPending ? "処理中..." : r.membershipStatus === "cancelled" ? "すでに退会済み" : "承認して退会済みにする"}
             </button>
             <button
               className={styles.rejectButton}
