@@ -263,11 +263,11 @@ window.onerror = function(msg, src, line) {
 
       <!-- 領収書エリア（発行ボタン or 発行済みプレビュー） -->
 
-      <!-- 発行ボタン（receipt == null のとき表示、発行後に非表示） -->
+      <!-- 発行ボタン（入金済かつ未発行のとき表示） -->
       <div id="issueArea"
-        style="<?= receipt ? 'display:none;' : '' ?>">
+        style="<?= (receipt || !payment || payment.paymentStatus !== '入金済') ? 'display:none;' : '' ?>">
         <div class="phase-note no-print" style="margin-bottom:14px;">
-          会計は完了しています。「領収書を発行する」ボタンで Receipts シートに保存し、領収書番号を発行します。
+          入金が完了しました。「領収書を発行する」ボタンで Receipts シートに保存し、領収書番号を発行します。
         </div>
         <div class="form-actions no-print">
           <button type="button" class="btn btn-secondary"
@@ -431,15 +431,14 @@ function handleCollect() {
           }
 
           if (res.newStatus === '入金済') {
-            // ── 全額回収完了 → 回収エリアを非表示 ────────────
+            // ── 全額回収完了 → 回収エリアを非表示・発行ボタンを表示 ──
             var area = document.getElementById('collectionArea');
             if (area) area.style.display = 'none';
+            var issueEl = document.getElementById('issueArea');
+            if (issueEl) issueEl.style.display = '';
             showMsg('success',
               '全額回収完了（入金日: ' + res.paymentDate + '　今回: ¥' + fmtNum(res.collectedAmount) + '）。' +
-              '<br><button type="button" onclick="goToDetail()" ' +
-              'style="margin-top:8px;padding:5px 14px;background:#1a73e8;color:#fff;' +
-              'border:none;border-radius:4px;cursor:pointer;font-size:13px;">' +
-              '患者詳細へ戻る →</button>'
+              '<br>このまま領収書を発行できます。'
             );
           } else {
             // ── 一部回収 → 残額を更新して継続可能 ──────────

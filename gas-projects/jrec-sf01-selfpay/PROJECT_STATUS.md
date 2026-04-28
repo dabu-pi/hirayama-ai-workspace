@@ -2,9 +2,42 @@
 
 ## 現在ステータス
 
-**✅ Phase 5-B + DailySales 集計確認: CLOSED**（2026-04-28 全PASS）
+**🔄 Phase 5-C 領収書発行フロー: 実装済み・実機確認待ち**（2026-04-29）
 
-次: Phase 5-C（領収書発行フロー）または Phase 6-A（患者基本情報編集）
+次: Phase 5-C 実機確認 → PASS で CLOSED → Phase 6-A（患者基本情報編集）
+
+---
+
+## Phase 5-C — 領収書発行フロー（2026-04-29 実装）
+
+### 修正内容
+
+| ファイル | 変更箇所 | 内容 |
+|---|---|---|
+| `JREC_SF01_Billing.gs` | `issueReceipt()` | Payments の `paymentStatus` を取得し、`入金済` 以外は `{ ok: false }` を返すガードを追加 |
+| `receipt.html` | `issueArea` 表示条件（サーバーサイド） | `receipt \|\| !payment \|\| payment.paymentStatus !== '入金済'` なら非表示に変更 |
+| `receipt.html` | `handleCollect()` 完了ハンドラ | 全額回収完了（`res.newStatus === '入金済'`）時に `issueArea` を表示する処理を追加 |
+
+### 設計判断
+
+| 項目 | 決定内容 |
+|---|---|
+| 発行条件 | `paymentStatus === "入金済"` のみ。未収・一部入金は GAS と UI の両方でブロック |
+| 再発行 | 今回は禁止（既存 receipt がある visitKey は `alreadyIssued: true` で既存返却）。将来タスクとして Phase 6-C で対応 |
+| 二重発行防止の正本 | Receipts シートの visitKey 一意チェック（既存実装）が正本。GAS 側で `alreadyIssued` を返す |
+| 回収完了後のフロー | ページリロード不要。`handleCollect()` 完了時に JS で `issueArea` を表示 |
+
+### ROOT_CAUSE（修正前の問題）
+
+| 問題 | 内容 |
+|---|---|
+| `issueReceipt()` が paymentStatus 未チェック | Payments が存在すれば未収でも発行できていた |
+| `issueArea` 表示条件が甘い | `receipt == null` なら未収状態でも発行ボタンが表示されていた |
+| 回収→発行ボタンが自動表示されない | `handleCollect()` で `issueArea` を show する処理がなかった |
+
+### clasp push 状況
+
+✅ `clasp push --force` 完了（2026-04-29）
 
 ---
 

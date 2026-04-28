@@ -722,7 +722,7 @@ function issueReceipt(selfPayVisitKey) {
       }
     }
 
-    // ── Payments 確認（会計済みか検証）──────────────────
+    // ── Payments 確認（入金済のみ発行許可）────────────────
     var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
     if (!paymentSh || paymentSh.getLastRow() < 2)
       return { ok: false, error: "Payments シートが見つかりません" };
@@ -731,11 +731,22 @@ function issueReceipt(selfPayVisitKey) {
     paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues()
       .forEach(function(r) {
         if (!payment && String(r[1]) === visitKey) {
-          payment = { totalTaxEx: r[2], totalTaxAmt: r[3], totalTaxInc: r[4] };
+          payment = {
+            totalTaxEx:    r[2],
+            totalTaxAmt:   r[3],
+            totalTaxInc:   r[4],
+            paymentStatus: r[6] || ""
+          };
         }
       });
     if (!payment)
       return { ok: false, error: "支払記録がありません。先に会計入力を完了してください。" };
+
+    // 入金済のみ発行許可（未収・一部入金は拒否）
+    if (payment.paymentStatus !== "入金済")
+      return { ok: false,
+        error: "領収書は入金済みの場合のみ発行できます（現在: " + payment.paymentStatus + "）。" +
+               "先に未収回収を完了してください。" };
 
     // ── 患者名・院名 ──────────────────────────────────────
     var patientId = visitKey.split("_")[2] || "";
