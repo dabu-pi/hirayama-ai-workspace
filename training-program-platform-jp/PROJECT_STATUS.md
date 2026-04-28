@@ -53,17 +53,40 @@ DB側（update-program-titles-jp.sql）が未適用でも、UI側フォールバ
 - commit: d867946
 - push: ✅ feature/auto-dev-phase3-loop
 
-### LIVE_CHECK_REQUIRED
+### LIVE_CHECK — 2026-04-28 スマホ実機確認済み
 
-- [ ] /programs カードに「BIG3 2日/週（4週）」「バーベル全身 2日/週（4週）」等が表示される
-- [ ] /programs/[slug] タイトル・目標・概要が日本語
-- [ ] /programs/[slug] プログラム構成で「1週目」のみ表示（「— Week 1」なし）
-- [ ] タグ・種目名の日本語化が維持されている
+| 確認項目 | 結果 |
+|---|---|
+| /programs カードに「BIG3 2日/週（4週）」「バーベル全身 2日/週（4週）」等が表示される | ✅ PASS |
+| /programs の英語タイトル（Barbell 2-Day Full Body Base / BIG3 2-Day / BIG3 3-Day 等）が消えている | ✅ PASS |
+| /programs のタグが「筋力アップ」「バーベル」「全身」等の日本語表示のまま | ✅ PASS |
+| /programs/[slug] の目標・概要が日本語表示 | ✅ PASS |
+| Original Cody Lefever... 等の英語説明文が消えている | ✅ PASS |
+| /programs/[slug] プログラム構成の週ラベルが「1週目」「2週目」のみ（「— Week 1」なし） | ✅ PASS |
+| /programs/[slug] プログラム構成の種目名が日本語表示のまま | ✅ PASS |
+| /train の種目名表示が日本語のまま | ✅ PASS |
 
 ### REMAINING_RISKS
 
-- DB側の title/description は英語のまま（SQL未適用）→ UIフォールバックで表示は日本語
-- 未登録 slug のプログラムはDB値をそのまま表示（想定内）
+- DB側の title/description は英語のまま（SQL未適用）→ UIフォールバックで表示は日本語になっている
+- 未登録 slug のプログラムが将来追加された場合は DB値そのまま表示される可能性あり（format-labels.ts への追加が必要）
+- Supabase SQL Editor で update-program-titles-jp.sql を適用すると DB も日本語になり二重管理が解消される（任意）
+
+### PHASE_STATUS
+
+**Phase 2.5 日本語化シリーズ — 全確認完了**
+
+| フェーズ | 対応内容 | 実機確認 |
+|---|---|---|
+| 2.5 (I18N) | 主要画面の全面日本語化（ログイン・プログラム・トレーニング等） | 一部確認済み |
+| 2.5b | タグ・種目名の日本語化 | 種目名 ✅ |
+| 2.5c | /programs タグ・フィルターの日本語化（UIフォールバック追加） | ✅ 全確認済み |
+| 2.5d | プログラム名・目標・概要・週ラベルの日本語化 | ✅ 全確認済み |
+
+**次フェーズ候補:**
+- D-2: cancelled_at 実機確認（保留中）
+- Phase 3 A-1: Admin プログラム登録UI
+- Phase 3 C-9: Week preview 拡張
 
 ---
 
