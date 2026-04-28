@@ -89,7 +89,7 @@
 - **D-1c: 退会後データ保持方針の明文化・文言追加（1年保管方針）** ✅ CLOSED (2026-04-28) typecheck/build OK
 - **D-1d: 退会済みユーザーの再申請防止・表示整理** ✅ CLOSED (2026-04-28) スマホ実機確認PASS（pending警告・承認フローは後日確認）
 - D-6: 再入会処理（管理者が cancelled→active に戻す・退会後1年以内は既存データ保持） — 将来フェーズ
-- **D-2: 退会承認時に cancelled_at を記録する** ✅ CLOSED (2026-04-28) typecheck/build OK — DB migration 手動適用待ち
+- **D-2: 退会承認時に cancelled_at を記録する** ✅ CLOSED (2026-04-28) DB migration 本番適用済み — 動作確認は次 PC へ持ち越し
 - D-3: 退会後1年経過ユーザーを削除対象として管理画面に表示する — 将来フェーズ
 - D-4: 管理者が最終確認して完全削除または匿名化できるようにする — 将来フェーズ
 - D-5: Vercel Cron / Supabase Cron による自動処理検討 — 将来フェーズ

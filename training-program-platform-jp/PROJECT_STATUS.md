@@ -758,20 +758,33 @@ supabase db push
 
 - typecheck: pass
 - build: pass
-- DB migration: ファイル作成済み・本番DB適用は手動
+- DB migration: ファイル作成済み・**本番DB適用済み（2026-04-28 Supabase Dashboard SQL Editor）**
 
-### LIVE_CHECK_REQUIRED（DB migration 適用後）
+### MIGRATION 適用確認 — 2026-04-28
 
-- [ ] public.users に cancelled_at カラムが存在する
+| 確認項目 | 結果 |
+|---|---|
+| Supabase Dashboard SQL Editor で migration SQL を適用 | ✅ 完了 |
+| public.users に cancelled_at カラムが存在する | ✅ 確認済み |
+| 既存 cancelled ユーザーの cancelled_at | NULL のまま（安全側・自動補完は未実施） |
+
+**方針メモ:** 既存 cancelled ユーザーは cancelled_at=NULL のため、D-3「1年後削除対象判定」では `cancelled_at IS NOT NULL` を条件にする。既存ユーザーは削除対象外になるため安全。
+
+### LIVE_CHECK_REQUIRED（次 PC で確認）
+
+- [x] public.users に cancelled_at カラムが存在する ✅ SQL確認済み
 - [ ] 管理者が退会申請を承認すると membership_status=cancelled かつ cancelled_at に日時が入る
 - [ ] /admin/members から直接 cancelled にしても cancelled_at に日時が入る
 - [ ] active/paused に戻すと cancelled_at が null になる
 - [ ] トレーニング履歴は削除されていない
 - [ ] member_name / display_name / email は壊れていない
 
-### DEFERRED（引き続き）
+### DEFERRED（次 PC へ持ち越し）
 
-- 既存 cancelled ユーザーの `cancelled_at` 補完（account_deletion_requests.reviewed_at を使う補完は D-2b 候補）
+- 退会申請承認時の cancelled_at 記録を実機で確認
+- /admin/members 直接変更時の cancelled_at 記録を実機で確認
+- 再入会（cancelled→active 時の cancelled_at=null）を実機で確認
+- 既存 cancelled ユーザーの cancelled_at 補完（D-2b 候補）
 
 ---
 
