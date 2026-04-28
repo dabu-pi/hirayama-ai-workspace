@@ -302,6 +302,153 @@ function runDailySalesReport() {
   Logger.log(JSON.stringify(result, null, 2));
 }
 
+/**
+ * getDailySalesReport(date) の結果を DailySales シートへ UPSERT する。
+ *
+ * UPSERT ルール:
+ *   - date 列を主キーとして一致する行を検索する
+ *   - 既存行が見つかった場合: 同行を上書き更新（action="update"）
+ *   - 見つからない場合:  末尾に新規追加（action="insert"）
+ *   - 同一日付で何度実行しても重複行を作らない
+ *
+ * DailySales シート列:
+ *   date / totalSales / paymentSaveTotal / paymentCollectTotal / unpaidTotal
+ *   visitCount / mainVisitCount / receiptIssuedCount
+ *   rowsCount / warningsCount / warningTypes / status
+ *   updatedAt / rowsJson / warningsJson / note
+ *
+ * @param {string} dateStr "YYYY-MM-DD" 形式
+ * @returns {{ ok, date, action?, rowNumber?, report?, warnings?, error? }}
+ */
+function rebuildDailySales(dateStr) {
+  Logger.log("[rebuildDailySales] START date=" + dateStr);
+  try {
+    if (!dateStr) return { ok: false, error: "date は必須です", warnings: [] };
+    var targetDate = normalizeDate_(dateStr);
+    if (!targetDate) return { ok: false, error: "日付の形式が不正です: " + dateStr, warnings: [] };
+
+    // ── Step 1: getDailySalesReport を実行 ───────────────────
+    var report = getDailySalesReport(targetDate);
+    if (!report.ok) {
+      Logger.log("[rebuildDailySales] getDailySalesReport failed: " + report.error);
+      return { ok: false, date: targetDate, error: report.error, warnings: [] };
+    }
+    Logger.log("[rebuildDailySales] report OK totalSales=" + report.totalSales);
+
+    // ── Step 2: DailySales シートを取得・ヘッダー初期化 ──────
+    var ss = getTargetSpreadsheet_();
+    var sh = ss.getSheetByName(SHEET_NAMES.DAILY_SALES);
+    if (!sh) {
+      sh = ss.insertSheet(SHEET_NAMES.DAILY_SALES);
+      Logger.log("[rebuildDailySales] DailySales シートを新規作成しました");
+    }
+    var colMap = ensureDailySalesHeaders_(sh);
+
+    // ── Step 3: 対象 date 行を検索（UPSERT キー）────────────
+    var targetRow = -1;
+    var action    = "insert";
+    var lastRow   = sh.getLastRow();
+
+    if (lastRow >= 2) {
+      var dateColIdx = colMap["date"];
+      var dateCells  = sh.getRange(2, dateColIdx, lastRow - 1, 1).getValues();
+      for (var i = 0; i < dateCells.length; i++) {
+        if (toDateStr_(dateCells[i][0]) === targetDate) {
+          targetRow = i + 2;   // 1-indexed: row 2 以降 + header offset
+          action    = "update";
+          break;
+        }
+      }
+    }
+    if (targetRow === -1) targetRow = sh.getLastRow() + 1;
+
+    // ── Step 4: 書き込むデータを組み立て ────────────────────
+    var now          = new Date();
+    var updatedAt    = Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM-dd HH:mm:ss");
+    var warnings     = report.warnings || [];
+    var rows         = report.rows     || [];
+    var typeSet      = {};
+    warnings.forEach(function(w) { if (w.type) typeSet[w.type] = true; });
+    var warningTypes  = Object.keys(typeSet).join(', ');
+    var warningsCount = warnings.length;
+    var status        = warningsCount > 0 ? "WARNING" : "OK";
+    var rowsJson      = JSON.stringify(rows);
+    var warningsJson  = JSON.stringify(warnings);
+    var note =
+      "Step 0 修正前ログは MISSING_VISIT_KEY として除外。" +
+      "unpaidTotal は現在スナップショット（日付非依存）。" +
+      "paymentCollectTotal は Step 0 以降ログのみ正本。";
+
+    // colMap から最大列番号を求め、書き込み配列を構築
+    var maxCol = 0;
+    Object.keys(colMap).forEach(function(k) { if (colMap[k] > maxCol) maxCol = colMap[k]; });
+    var rowData = [];
+    for (var j = 0; j < maxCol; j++) rowData[j] = "";
+
+    function setCell(colName, value) {
+      var idx = colMap[colName];
+      if (idx) rowData[idx - 1] = (value !== undefined && value !== null) ? value : "";
+    }
+
+    setCell("date",                targetDate);
+    setCell("totalSales",          report.totalSales);
+    setCell("paymentSaveTotal",    report.paymentSaveTotal);
+    setCell("paymentCollectTotal", report.paymentCollectTotal);
+    setCell("unpaidTotal",         report.unpaidTotal);
+    setCell("visitCount",          report.visitCount);
+    setCell("mainVisitCount",      report.mainVisitCount);
+    setCell("receiptIssuedCount",  report.receiptIssuedCount);
+    setCell("rowsCount",           rows.length);
+    setCell("warningsCount",       warningsCount);
+    setCell("warningTypes",        warningTypes);
+    setCell("status",              status);
+    setCell("updatedAt",           updatedAt);
+    setCell("rowsJson",            rowsJson);
+    setCell("warningsJson",        warningsJson);
+    setCell("note",                note);
+
+    // ── Step 5: UPSERT 実行 ──────────────────────────────────
+    sh.getRange(targetRow, 1, 1, maxCol).setValues([rowData]);
+    Logger.log("[rebuildDailySales] " + action + " row=" + targetRow + " date=" + targetDate);
+
+    return {
+      ok:        true,
+      date:      targetDate,
+      action:    action,
+      rowNumber: targetRow,
+      report:    report,
+      warnings:  warnings
+    };
+
+  } catch(err) {
+    var m = (err && err.message) ? err.message : String(err);
+    Logger.log("[rebuildDailySales] ERROR: " + m);
+    return { ok: false, date: dateStr, error: m, warnings: [] };
+  }
+}
+
+/**
+ * rebuildDailySales("2026-04-28") を実行して Logger に出力する。
+ * Apps Script エディタから手動確認するためのラッパー。
+ *
+ * 使い方: Apps Script エディタ → 関数選択「runRebuildDailySales」→ 実行
+ */
+function runRebuildDailySales() {
+  var date   = "2026-04-28";
+  var result = rebuildDailySales(date);
+  Logger.log("=== RebuildDailySales ===");
+  Logger.log("ok=" + result.ok +
+    " action=" + result.action +
+    " row=" + result.rowNumber +
+    " date=" + result.date);
+  if (result.report) {
+    Logger.log("totalSales=" + result.report.totalSales +
+      " rows=" + (result.report.rows || []).length +
+      " warnings=" + (result.report.warnings || []).length);
+  }
+  if (!result.ok) Logger.log("ERROR: " + result.error);
+}
+
 // ============================================================
 // プライベートヘルパー
 // ============================================================
@@ -335,4 +482,55 @@ function toDateStr_(val) {
   var d = (val instanceof Date) ? val : new Date(val);
   if (isNaN(d.getTime())) return "";
   try { return Utilities.formatDate(d, "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) { return ""; }
+}
+
+/**
+ * DailySales シートのヘッダー行を確認・初期化し、列名 → 列番号（1-indexed）のマップを返す。
+ *
+ * - データ行がない場合（lastRow <= 1）: 推奨ヘッダーを新規書き込み
+ * - データ行がある場合: 既存ヘッダーを読み取り、不足列を右端に追加
+ * - 既存データは一切変更しない
+ */
+function ensureDailySalesHeaders_(sh) {
+  var COLS = [
+    "date", "totalSales", "paymentSaveTotal", "paymentCollectTotal",
+    "unpaidTotal", "visitCount", "mainVisitCount", "receiptIssuedCount",
+    "rowsCount", "warningsCount", "warningTypes", "status",
+    "updatedAt", "rowsJson", "warningsJson", "note"
+  ];
+
+  var colMap  = {};
+  var lastRow = sh.getLastRow();
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+
+  // ① データ行なし（空またはヘッダーのみ）→ 推奨ヘッダーを上書き
+  if (lastRow <= 1) {
+    sh.getRange(1, 1, 1, COLS.length).setValues([COLS]);
+    var hdr = sh.getRange(1, 1, 1, COLS.length);
+    hdr.setBackground("#263238").setFontColor("#FFFFFF")
+      .setFontWeight("bold").setFontSize(10).setWrap(false);
+    sh.setFrozenRows(1);
+    COLS.forEach(function(c, i) { colMap[c] = i + 1; });
+    Logger.log("[ensureDailySalesHeaders_] wrote " + COLS.length + " new headers");
+    return colMap;
+  }
+
+  // ② データ行あり → 既存ヘッダーを読み取り、不足列を右端に追加
+  sh.getRange(1, 1, 1, lastCol).getValues()[0]
+    .forEach(function(h, i) { if (h) colMap[String(h).trim()] = i + 1; });
+
+  var nextCol = lastCol + 1;
+  COLS.forEach(function(c) {
+    if (!colMap[c]) {
+      var cell = sh.getRange(1, nextCol);
+      cell.setValue(c)
+        .setBackground("#263238").setFontColor("#FFFFFF")
+        .setFontWeight("bold").setFontSize(10);
+      colMap[c] = nextCol;
+      nextCol++;
+      Logger.log("[ensureDailySalesHeaders_] added column '" + c + "' at col " + (nextCol - 1));
+    }
+  });
+
+  return colMap;
 }

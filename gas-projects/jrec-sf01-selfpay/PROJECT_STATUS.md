@@ -2,11 +2,109 @@
 
 ## 現在ステータス
 
-**Phase 5-A Step 2: getDailySalesReport 実機確認 PASS**（2026-04-28）
+**Phase 5-A Step 3: rebuildDailySales() 実装済み・clasp push 完了**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## Phase 5-A Step 3: rebuildDailySales() 実装（2026-04-28）
+
+### 実装内容
+
+**変更ファイル:** `JREC_SF01_DailySales.gs`
+
+#### 追加した関数
+
+| 関数名 | 種別 | 説明 |
+|---|---|---|
+| `rebuildDailySales(dateStr)` | Public | getDailySalesReport の結果を DailySales シートへ UPSERT |
+| `runRebuildDailySales()` | Public（手動確認用）| "2026-04-28" を対象に rebuildDailySales を実行して Logger 出力 |
+| `ensureDailySalesHeaders_(sh)` | Private | ヘッダー確認・初期化・列名→列番号マップを返す |
+
+#### DailySales シートの列定義（16列）
+
+| 列 | 名前 | 内容 |
+|---|---|---|
+| 1 | date | 集計日（YYYY-MM-DD）|
+| 2 | totalSales | 当日売上合計（税込）|
+| 3 | paymentSaveTotal | 新規会計（入金済）合計 |
+| 4 | paymentCollectTotal | 未収回収合計 |
+| 5 | unpaidTotal | 現在時点の未収残高（スナップショット）|
+| 6 | visitCount | 来院件数 |
+| 7 | mainVisitCount | 主力メニュー来院数 |
+| 8 | receiptIssuedCount | 領収書発行件数 |
+| 9 | rowsCount | rows 件数 |
+| 10 | warningsCount | warnings 件数 |
+| 11 | warningTypes | warnings の種別（カンマ区切り）|
+| 12 | status | OK / WARNING / ERROR |
+| 13 | updatedAt | 最終更新日時（JST）|
+| 14 | rowsJson | rows の JSON |
+| 15 | warningsJson | warnings の JSON |
+| 16 | note | 既知制限の説明文 |
+
+#### UPSERT ロジック
+
+```
+1. getDailySalesReport(date) を実行
+2. DailySales シートを取得（なければ作成）
+3. ensureDailySalesHeaders_ でヘッダーを初期化
+   - データ行なし → 推奨16列ヘッダーを新規書き込み
+   - データ行あり → 既存ヘッダーを読み取り、不足列を右端に追加
+4. date 列でターゲット行を検索
+   - 見つかれば UPDATE（action="update"）
+   - 見つからなければ末尾に INSERT（action="insert"）
+5. 全16列を setValues([rowData]) で一括書き込み
+```
+
+#### status の判定
+
+| status | 条件 |
+|---|---|
+| OK | warningsCount = 0 |
+| WARNING | warningsCount > 0 |
+| ERROR | getDailySalesReport が ok:false またはエラー |
+
+#### 期待される確認結果（2026-04-28）
+
+| 列 | 期待値 |
+|---|---|
+| date | 2026-04-28 |
+| totalSales | 3850 |
+| paymentSaveTotal | 3850 |
+| paymentCollectTotal | 0 |
+| unpaidTotal | 0 |
+| visitCount | 5 |
+| mainVisitCount | 3 |
+| receiptIssuedCount | 5 |
+| rowsCount | 1 |
+| warningsCount | 9 |
+| warningTypes | MISSING_VISIT_KEY |
+| status | WARNING |
+| rowsJson | SPV_20260428_P0001_005 / 平山克士 / R_2026_0005 含む |
+
+#### UPSERT 確認手順
+
+1. Apps Script エディタ → `runRebuildDailySales` 実行
+2. DailySales シートに `2026-04-28` 行が作成されることを確認
+3. もう一度 `runRebuildDailySales` 実行
+4. 行が重複せず、同じ行の `updatedAt` が更新されることを確認
+
+#### Dashboard / Projects / Task_Queue / Run_Log への追加反映
+
+今回は反映不要。理由:
+- DailySales 書き込みは Payments / SelfPayVisits の派生集計であり、データ正本ではない
+- Run_Log には `PAYMENT_SAVE` / `PAYMENT_COLLECT` で会計事実は記録済み
+- DailySales はスプレッドシート上での日次確認用キャッシュとして位置づける
+- Web UI は Step 4 以降で検討
+
+#### clasp push
+
+```
+clasp push --force → 15ファイル push 完了（2026-04-28 17:13:19）
+```
 
 ---
 
