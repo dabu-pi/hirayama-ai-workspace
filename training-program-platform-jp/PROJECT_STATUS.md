@@ -752,20 +752,25 @@ H-1b の残課題として記録されていた「前月/次月移動時に cale
 - build: pass
 - DB migration: 不要
 
-### LIVE_CHECK_REQUIRED
+### LIVE_CHECK — 2026-04-28 スマホ実機確認済み
 
-- [ ] cancelled ユーザーで /profile を開くと退会済み案内が表示される
-- [ ] cancelled ユーザーには退会申請フォームが表示されない
-- [ ] cancelled ユーザーが直接送信しようとしても新規 pending 申請が作られない
-- [ ] active / paused ユーザーでは退会申請フォームが表示される
-- [ ] pending 申請がある場合は受付済み表示になる
-- [ ] /admin で cancelled ユーザーの pending 申請に警告バナーが表示される
+| 確認項目 | 結果 |
+|---|---|
+| cancelled ユーザーで /profile を開くと退会済み案内が表示される | ✅ PASS |
+| cancelled ユーザーには退会申請フォームが表示されない | ✅ PASS |
+| /profile に再入会希望はスタッフ問い合わせの案内が表示される | ✅ PASS |
+| /profile に退会後データは原則1年間保管する旨が表示される | ✅ PASS |
+| /admin/account-deletion-requests で処理済み申請が表示される | ✅ PASS |
+| 処理済み申請で approved status が表示される | ✅ PASS |
+| 処理済み申請で membership_status cancelled が表示される | ✅ PASS |
+| スマホ表示で大きな崩れなし | ✅ PASS |
+
+### DEFERRED_CHECK（後日確認）
+
+- [ ] cancelled ユーザーが直接送信しようとしても新規 pending 申請が作られない（Server Action ガード）
+- [ ] /admin で cancelled ユーザーの pending 申請に警告バナーが表示される（今回は pending が処理済みだったため未確認）
 - [ ] 警告バナーがある場合、承認ボタンが無効化されている
 - [ ] 却下処理は動く
-- [ ] スマホ表示で崩れなし
-
-### DEFERRED_CHECK（引き続き）
-
 - [ ] active/paused ユーザーの承認フロー（active→cancelled）は後日別ユーザーで確認
 
 ---
