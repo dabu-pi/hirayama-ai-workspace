@@ -264,8 +264,8 @@ window.onerror = function(msg, src, line) {
       <!-- 領収書エリア（発行ボタン or 発行済みプレビュー） -->
 
       <!-- 発行ボタン（入金済かつ未発行のとき表示） -->
-      <div id="issueArea"
-        style="<?= (receipt || !payment || payment.paymentStatus !== '入金済') ? 'display:none;' : '' ?>">
+      <? var _showIssueArea = !receipt && payment.paymentStatus === '入金済'; ?>
+      <div id="issueArea" style="<?= _showIssueArea ? '' : 'display:none;' ?>">
         <div class="phase-note no-print" style="margin-bottom:14px;">
           入金が完了しました。「領収書を発行する」ボタンで Receipts シートに保存し、領収書番号を発行します。
         </div>
