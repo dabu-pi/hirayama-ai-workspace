@@ -2,11 +2,32 @@
 
 ## 現在ステータス
 
-**Phase 5-A Step 3: rebuildDailySales() 実装済み・clasp push 完了**（2026-04-28）
+**Phase 5-A Step 3: rebuildDailySales() 実機確認 PASS・CLOSED**（2026-04-28）
 
 ---
 
 ## 本日終了状態（2026-04-28）
+
+---
+
+## ✅ Phase 5-A Step 3 実機確認 PASS（2026-04-28）
+
+### runRebuildDailySales() 実行結果
+
+| 実行 | 時刻 | action | row | totalSales | rows | warnings |
+|---|---|---|---|---|---|---|
+| 1回目 | 17:28:29 | **insert** | 2 | ¥3,850 | 1 | 9 |
+| 2回目 | 17:29:19 | **update** | 2 | ¥3,850 | 1 | 9 |
+
+| 確認項目 | 結果 |
+|---|---|
+| 16列ヘッダー新規作成 | ✅ `[ensureDailySalesHeaders_] wrote 16 new headers` |
+| 初回 insert（date=2026-04-28, row=2）| ✅ |
+| 2回目 update（同 row=2、重複なし）| ✅ |
+| totalSales = ¥3,850 | ✅ |
+| UPSERT ロジック正常 | ✅ |
+| warnings=9（全 MISSING_VISIT_KEY）| ✅ 想定通り |
+| status = WARNING | ✅ 想定通り（warningsCount > 0）|
 
 ---
 
