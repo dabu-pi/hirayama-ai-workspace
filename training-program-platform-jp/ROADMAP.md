@@ -122,7 +122,7 @@
 - **service worker 最小構成（キャッシュなし）** ✅ 実装済み (2026-04-29)
 - **iOS/Android ホーム画面追加確認** — Android ✅ PASS / iOS ⚠️ deferred（iPhone 未所持）
 - **Phase 2.7: CONDITIONAL CLOSED (2026-04-29)** — iOS は後日確認
-- **G-6b: PWA起動時の再開メッセージ強調** ✅ 実装済み (2026-04-29) — Android実機確認待ち
+- **G-6b: PWA起動時の再開メッセージ強調** ✅ CLOSED (2026-04-29) — Android PASS / iOS deferred
 
 ### Phase 3: コンテンツ・管理拡張
 

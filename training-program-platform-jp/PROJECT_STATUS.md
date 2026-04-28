@@ -6067,13 +6067,15 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 | `npx tsc --noEmit` | ✅ エラーなし |
 | `npx next build` | ✅ `/gym: 3.73kB` — エラー・警告なし |
 
-### 実機確認待ち（Android）
+### 実機確認結果 (2026-04-29)
 
-```
-[ ] PWA ホーム画面から /gym を開く
-[ ] 「ホーム画面から起動中」ラベルが表示される
-[ ] trainingGap に orange tint 背景が適用される
-[ ] 「トレーニングを始める →」CTA が表示される（記録ありの場合）
-[ ] ブラウザ（非standalone）から開いた場合は通常表示のまま
-```
+| 確認項目 | 結果 |
+|---|---|
+| 「ホーム画面から起動中」ラベル表示 | ✅ PASS |
+| trainingGap orange tint 背景 | ✅ PASS |
+| 「トレーニングを始める →」CTA 表示 | ✅ PASS |
+| Chrome通常タブでは通常表示のまま | ✅ PASS |
+| iOS Safari | ⚠️ deferred（iPhone 未所持） |
+
+**G-6b LIVE_CHECK: Android ✅ PASS (2026-04-29) / iOS deferred**
 
