@@ -130,7 +130,7 @@ var visitCount    = timeline.length;
   <!-- 来院・カルテ履歴 -->
   <div class="card">
     <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#5f6368;">
-      来院・カルテ履歴（<?= visitCount ?>件）
+      来院・カルテ履歴（<span id="visitCount"><?= visitCount ?></span>件）
     </h3>
     <div id="trashMsg" class="alert" style="display:none;margin-bottom:12px;"></div>
 
@@ -165,7 +165,7 @@ var visitCount    = timeline.length;
             billingLabel = '会計済';
           }
         ?>
-        <div class="timeline-entry">
+        <div class="timeline-entry" data-visitkey="<?= vk ?>">
           <div class="tl-header" onclick="toggleDetail(<?= idx ?>)">
             <span class="tl-date"><?= v.visitDate ?></span>
             <span class="tl-type"><?= v.visitType ?></span>
@@ -301,20 +301,27 @@ function toggleDetail(idx) {
   if (t) t.textContent = '▲ 閉じる';
 })();
 
-function reloadPage_() {
-  var dest = WEB_APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
-  console.log('[reloadPage_] WEB_APP_URL=' + WEB_APP_URL);
-  console.log('[reloadPage_] PATIENT_ID=' + PATIENT_ID);
-  console.log('[reloadPage_] dest=' + dest);
-  window.location.href = dest;
+// 手動リロードボタン onclick（ユーザー操作）
+function navigateToDetail_() {
+  window.top.location.href = WEB_APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
 }
-function showTrashMsg_(text) {
+
+// trashMsg エリアにメッセージを表示する
+function showTrashMsg_(type, html) {
   var el = document.getElementById('trashMsg');
   if (!el) return;
-  el.className    = 'alert alert-error';
-  el.textContent  = text;
+  el.className     = 'alert alert-' + type;
+  el.innerHTML     = html;
   el.style.display = '';
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// リロードボタン HTML（ユーザークリックで navigateToDetail_() を呼ぶ）
+function reloadBtn_() {
+  return '<button type="button" onclick="navigateToDetail_()" ' +
+    'style="margin-left:8px;padding:4px 12px;background:#1a73e8;color:#fff;' +
+    'border:none;border-radius:4px;cursor:pointer;font-size:12px;vertical-align:middle;">' +
+    '↺ 画面を更新する</button>';
 }
 
 function handleTrash(visitKey, trashType) {
@@ -335,17 +342,24 @@ function handleTrash(visitKey, trashType) {
     .withSuccessHandler(function(res) {
       console.log('[handleTrash] success: ' + JSON.stringify(res));
       if (res && res.ok) {
-        reloadPage_();
+        // DOM から対象行を非表示
+        var entryEl = document.querySelector('[data-visitkey="' + visitKey + '"]');
+        if (entryEl) entryEl.style.display = 'none';
+        // 件数表示を更新
+        var cntEl = document.getElementById('visitCount');
+        if (cntEl) cntEl.textContent = Math.max((parseInt(cntEl.textContent, 10) || 1) - 1, 0);
+        // 成功メッセージ + 手動リロードボタン
+        showTrashMsg_('success', 'ゴミ箱へ移動しました。' + reloadBtn_());
       } else {
         var errMsg = (res && res.error) ? res.error : '不明なエラー';
         console.error('[handleTrash] error: ' + errMsg);
-        showTrashMsg_('ゴミ箱移動エラー: ' + errMsg);
+        showTrashMsg_('error', 'ゴミ箱移動エラー: ' + errMsg);
       }
     })
     .withFailureHandler(function(err) {
       var errMsg = err ? (err.message || String(err)) : '不明なGASエラー';
       console.error('[handleTrash] failure: ' + errMsg);
-      showTrashMsg_('GASエラー: ' + errMsg);
+      showTrashMsg_('error', 'GASエラー: ' + errMsg);
     })
     .trashVisit(visitKey, '');
 }
@@ -357,17 +371,17 @@ function handleRestore(visitKey) {
     .withSuccessHandler(function(res) {
       console.log('[handleRestore] success: ' + JSON.stringify(res));
       if (res && res.ok) {
-        reloadPage_();
+        showTrashMsg_('success', '復元しました。' + reloadBtn_());
       } else {
         var errMsg = (res && res.error) ? res.error : '不明なエラー';
         console.error('[handleRestore] error: ' + errMsg);
-        showTrashMsg_('復元エラー: ' + errMsg);
+        showTrashMsg_('error', '復元エラー: ' + errMsg);
       }
     })
     .withFailureHandler(function(err) {
       var errMsg = err ? (err.message || String(err)) : '不明なGASエラー';
       console.error('[handleRestore] failure: ' + errMsg);
-      showTrashMsg_('GASエラー: ' + errMsg);
+      showTrashMsg_('error', 'GASエラー: ' + errMsg);
     })
     .restoreVisit(visitKey);
 }
