@@ -105,7 +105,7 @@ export function phaseBadgeLabel(phase: T1Phase): string {
     "5x3": "5×3+",
     "6x2": "6×2+",
     "10x1": "10×1+",
-    retest_required: "Retest"
+    retest_required: "再テスト"
   };
   return labels[phase];
 }

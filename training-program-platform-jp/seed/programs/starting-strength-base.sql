@@ -99,15 +99,15 @@ begin
 
   insert into public.program_days (program_week_id, day_number, progression_guide, notes)
   values
-    (w1, 1, 'Day A progression: add weight every workout while 3x5 squat and bench stay solid. Deadlift adds 5-10 lb while 1x5 remains technically sound.', 'Day A: Squat 3x5, Bench Press 3x5, Deadlift 1x5'),
-    (w1, 2, 'Day B progression: add weight every workout while 3x5 squat and press stay solid. Power clean adds weight only while bar speed and technique stay crisp.', 'Day B: Squat 3x5, Overhead Press 3x5, Power Clean 5x3'),
-    (w1, 3, 'Repeat Day A. This seed captures the official Phase 2 A/B cadence, not the earlier Phase 1 deadlift-every-session setup.', 'Day A: Squat 3x5, Bench Press 3x5, Deadlift 1x5'),
-    (w2, 1, 'Repeat Day B. Keep the squat every session and alternate the upper-body press between bench and overhead press.', 'Day B: Squat 3x5, Overhead Press 3x5, Power Clean 5x3'),
-    (w2, 2, 'Repeat Day A. Microload bench if 5 lb jumps become too large.', 'Day A: Squat 3x5, Bench Press 3x5, Deadlift 1x5'),
-    (w2, 3, 'Repeat Day B. Power clean is used here because deadlifting three times per week is no longer the Phase 2 standard.', 'Day B: Squat 3x5, Overhead Press 3x5, Power Clean 5x3'),
-    (w3, 1, 'Repeat Day A. Continue linear progression workout to workout while recovery supports it.', 'Day A: Squat 3x5, Bench Press 3x5, Deadlift 1x5'),
-    (w3, 2, 'Repeat Day B. Use smaller jumps on the press or power clean as needed.', 'Day B: Squat 3x5, Overhead Press 3x5, Power Clean 5x3'),
-    (w3, 3, 'Repeat Day A. This 3-week seed is a reusable base snapshot of Phase 2, not the entire novice lifecycle.', 'Day A: Squat 3x5, Bench Press 3x5, Deadlift 1x5');
+    (w1, 1, 'Day A — 各セッションでフォームを保てる範囲で重量を増やすことを目標にします。スクワットとベンチプレスは2.5kg、デッドリフトは5kg刻みで増やします。回数が安定して達成できているうちは毎回重量を上げ続けます。', 'Day A: スクワット 3×5、ベンチプレス 3×5、デッドリフト 1×5'),
+    (w1, 2, 'Day B — スクワットは毎回行い、オーバーヘッドプレスも正しいフォームを保ちながら少しずつ重量を増やします。パワークリーンはバーのスピードとフォームが維持できている間だけ重量を増やします。', 'Day B: スクワット 3×5、オーバーヘッドプレス 3×5、パワークリーン 5×3'),
+    (w1, 3, 'Day A（繰り返し）— スクワット・ベンチプレス・デッドリフトの3種目を引き続き行います。A/Bを交互に繰り返すことで、ベンチプレスとオーバーヘッドプレスが均等に強化されます。', 'Day A: スクワット 3×5、ベンチプレス 3×5、デッドリフト 1×5'),
+    (w2, 1, 'Day B（繰り返し）— スクワットは毎回行い、上半身のプレス種目をベンチとオーバーヘッドで交互に担当します。無理なく記録を伸ばしていきましょう。', 'Day B: スクワット 3×5、オーバーヘッドプレス 3×5、パワークリーン 5×3'),
+    (w2, 2, 'Day A（繰り返し）— ベンチプレスの重量増加幅が大きく感じたら、プレートを細かく分けてマイクロロードを使うことも選択肢のひとつです。', 'Day A: スクワット 3×5、ベンチプレス 3×5、デッドリフト 1×5'),
+    (w2, 3, 'Day B（繰り返し）— スクワットは引き続き毎回行います。フェーズ2ではパワークリーンをデッドリフトの代わりに使い、全身の連動性を高めます。', 'Day B: スクワット 3×5、オーバーヘッドプレス 3×5、パワークリーン 5×3'),
+    (w3, 1, 'Day A（繰り返し）— 回復ができている間は毎回重量を増やし続けます。フォームが崩れてきたら重量を少し落として立て直しましょう。', 'Day A: スクワット 3×5、ベンチプレス 3×5、デッドリフト 1×5'),
+    (w3, 2, 'Day B（繰り返し）— プレスやパワークリーンの伸びが鈍くなってきたら、増加幅を小さくして継続します。焦らず積み上げることが大切です。', 'Day B: スクワット 3×5、オーバーヘッドプレス 3×5、パワークリーン 5×3'),
+    (w3, 3, 'Day A（繰り返し）— この3週間のプログラムは線形漸進フェーズの基礎スナップショットです。ここで培った土台をもとに次のフェーズへと進みます。', 'Day A: スクワット 3×5、ベンチプレス 3×5、デッドリフト 1×5');
 
   select id into w1d1 from public.program_days where program_week_id = w1 and day_number = 1;
   select id into w1d2 from public.program_days where program_week_id = w1 and day_number = 2;
