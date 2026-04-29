@@ -167,7 +167,7 @@
           onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= patient.patientId ?>'">
           キャンセル
         </button>
-        <button class="btn btn-primary" id="saveBtn" type="submit">保存して患者詳細へ戻る</button>
+        <button class="btn btn-primary" id="saveBtn" type="submit">カルテを保存する</button>
       </div>
     </form>
   </div>
@@ -234,7 +234,7 @@ window.onerror = function(message, source, lineno) {
       clearMsg();
       showMsg('error', 'google.script.run が利用できません。WebApp URL として開いているか確認してください。');
       btn.disabled    = false;
-      btn.textContent = '保存して患者詳細へ戻る';
+      btn.textContent = 'カルテを保存する';
       return;
     }
 
@@ -242,7 +242,7 @@ window.onerror = function(message, source, lineno) {
     var saveTimer = setTimeout(function() {
       showMsg('error', '保存がタイムアウトしました（20秒）。<br>Apps Script エディタ → 実行数 タブでエラーを確認してください。<br>または再試行してください。');
       btn.disabled    = false;
-      btn.textContent = '保存して患者詳細へ戻る';
+      btn.textContent = 'カルテを保存する';
     }, 20000);
 
     try {
@@ -251,25 +251,29 @@ window.onerror = function(message, source, lineno) {
           clearTimeout(saveTimer);
           console.log('[visitForm] success:', JSON.stringify(res));
           if (res && res.ok) {
-            // 保存ボタンを必ず復帰（自動遷移が失敗しても詰まらない）
+            var savedKey = res.selfPayVisitKey;
             btn.disabled    = false;
-            btn.textContent = '保存して患者詳細へ戻る';
-            // 成功メッセージ＋手動遷移ボタン（onclick でユーザー活性化が生まれ確実に遷移できる）
+            btn.textContent = 'カルテを保存する';
             showMsg('success',
-              '保存しました（' + res.selfPayVisitKey + '）。' +
-              '<button type="button" onclick="goToDetail()" ' +
-              'style="margin-left:12px;padding:4px 14px;background:#1e8e3e;color:#fff;' +
-              'border:none;border-radius:4px;cursor:pointer;font-size:13px;">' +
-              '患者詳細へ戻る →</button>'
+              '保存しました（' + savedKey + '）。<br>' +
+              '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+                '<button type="button" onclick="goToDetail()" ' +
+                'style="padding:5px 14px;background:#5f6368;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;">' +
+                '患者詳細へ戻る</button>' +
+                '<button type="button" onclick="goToBilling(\'' + savedKey + '\')" ' +
+                'style="padding:5px 16px;background:#1a73e8;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">' +
+                '🧾 会計入力へ進む →</button>' +
+              '</div>'
             );
-            // 自動遷移を試みる（iframe 制限でブロックされる場合は上のボタンで手動遷移）
-            navigate(APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID));
+            // 自動遷移は行わない（GAS iframe 遷移トラブル防止・ユーザークリックに統一）
           } else {
             var errMsg = (res && res.error) ? res.error : '保存に失敗しました（GASから原因不明の応答）';
             console.error('[visitForm] save failed:', errMsg);
             showMsg('error', '保存エラー: ' + errMsg);
             btn.disabled    = false;
-            btn.textContent = '保存して患者詳細へ戻る';
+            btn.textContent = 'カルテを保存する';
           }
         })
         .withFailureHandler(function(err) {
@@ -278,7 +282,7 @@ window.onerror = function(message, source, lineno) {
           console.error('[visitForm] GAS failure:', msg);
           showMsg('error', 'GAS実行エラー: ' + msg + '<br><small>Apps Script エディタ → 実行数 で詳細を確認してください。</small>');
           btn.disabled    = false;
-          btn.textContent = '保存して患者詳細へ戻る';
+          btn.textContent = 'カルテを保存する';
         })
         .createVisitWithChart(payload);
     } catch(syncErr) {
@@ -286,7 +290,7 @@ window.onerror = function(message, source, lineno) {
       console.error('[visitForm] google.script.run sync error:', syncErr.message);
       showMsg('error', 'google.script.run 呼び出しエラー: ' + syncErr.message);
       btn.disabled    = false;
-      btn.textContent = '保存して患者詳細へ戻る';
+      btn.textContent = 'カルテを保存する';
     }
   });
 
@@ -316,6 +320,10 @@ function navigate(url) {
 
 function goToDetail() {
   navigate(APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID));
+}
+
+function goToBilling(visitKey) {
+  navigate(APP_URL + '?page=billing&visitKey=' + encodeURIComponent(visitKey));
 }
 
 function appendField(fieldId, text) {
