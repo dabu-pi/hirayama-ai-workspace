@@ -142,7 +142,7 @@ export function ProgramStatsScreen({ stats }: Props) {
         <h2 className={styles.legendTitle}>ステータスの意味</h2>
         <dl className={styles.legendList}>
           <dt>利用中 (active)</dt>
-          <dd>現在プログラムを進めているユーザー数</dd>
+          <dd>現在プログラムを進めているユーザー数（アーカイブ済みは除く）</dd>
           <dt>完了 (completed)</dt>
           <dd>プログラムの全日程を完走したユーザー数（のべ件数）</dd>
           <dt>切替中断 (paused)</dt>

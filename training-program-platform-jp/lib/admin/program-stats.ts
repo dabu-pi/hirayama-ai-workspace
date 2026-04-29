@@ -18,6 +18,9 @@ type EnrollmentRow = {
   program_id: string;
   status: string;
   started_at: string;
+  // archived_at is included to correctly classify "利用中":
+  // an enrollment can have status='active' AND archived_at IS NOT NULL (user pressed 終了).
+  archived_at: string | null;
 };
 
 type ProgramRow = {
@@ -30,6 +33,10 @@ type ProgramRow = {
 /**
  * Aggregates program_enrollments by program — no personal data included.
  * Results sorted by totalEnrollments descending (most popular first).
+ *
+ * activeCount counts ONLY non-archived active enrollments
+ * (status='active' AND archived_at IS NULL), mirroring how active-program.ts
+ * resolves the "currently in use" enrollment shown in /train.
  */
 export async function getProgramStats(): Promise<ProgramStatRow[]> {
   const admin = createSupabaseAdminClient();
@@ -37,7 +44,7 @@ export async function getProgramStats(): Promise<ProgramStatRow[]> {
   const [enrollmentsResult, programsResult] = await Promise.all([
     admin
       .from("program_enrollments")
-      .select("program_id, status, started_at"),
+      .select("program_id, status, started_at, archived_at"),
     admin
       .from("programs")
       .select("id, slug, title, level")
@@ -65,7 +72,9 @@ export async function getProgramStats(): Promise<ProgramStatRow[]> {
     const entry = agg.get(e.program_id);
     if (!entry) continue;
     entry.total++;
-    if (e.status === "active") entry.active++;
+    // "利用中" = active AND not archived.
+    // archived_at IS NOT NULL means the user ended this enrollment from /programs.
+    if (e.status === "active" && e.archived_at === null) entry.active++;
     else if (e.status === "completed") entry.completed++;
     else if (e.status === "paused") entry.paused++;
     if (!entry.lastAt || e.started_at > entry.lastAt) entry.lastAt = e.started_at;
