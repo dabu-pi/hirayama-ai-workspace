@@ -7,9 +7,9 @@
 **✅ Phase 6-B 来院履歴ゴミ箱機能: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 6-D トップメニュー + 本日会計待ち一覧: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 5-D カルテ連動会計フロー: CLOSED（完全）**（2026-04-29 H-1〜H-4 全 PASS）
-**✅ Versioned Deployment @25: 反映済み**（2026-04-29）
+**✅ Versioned Deployment @26: 反映済み**（2026-04-29）
 
-次: versioned deployment @26（Phase 5-D 本番反映）→ Phase 6-C または次案件
+次: Phase 6-C（来院完全削除）または次案件
 
 ---
 
@@ -181,6 +181,7 @@
 | 2026-04-29 | @23 | `AKfycbxhtWdy...` | Phase 6-A patient edit closed |
 | 2026-04-29 | @24 | `AKfycbxhtWdy...` | Phase 6-B visit trash closed |
 | 2026-04-29 | @25 | `AKfycbxhtWdy...` | Phase 6-D home menu + daily checkout |
+| 2026-04-29 | @26 | `AKfycbxhtWdy...` | Phase 5-D cart-to-billing flow closed |
 
 **本番 /exec 確認事項（2026-04-29 @23 反映後）:**
 - `?page=detail&id=P0001` で「✏ 患者情報を編集」ボタン表示 → 実機確認待ち
