@@ -6122,5 +6122,8 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 | A | billing_cutoff_records migration + /admin/billing ページ | ✅ LIVE_CHECK PASS (2026-04-29) — 確定/履歴/リロード全項目PASS |
 | B | membership_pause_requests migration + /admin/pause-requests — 休会申請アプリ受付 ⛔ 停止 | ✅ MAIN FLOW PASS / 停止完了 (2026-04-29) |
 | C | 退会申請アプリ受付停止・窓口受付に変更 | ✅ LIVE_CHECK PASS (2026-04-29) — /profile フォームなし・管理画面正常 |
-| D | /profile ステータスバッジ + 休会退会受付案内統合 + /gym 申請中通知除去 | ✅ 実装済み (2026-04-29) — 実機確認待ち |
+| D | /profile ステータスバッジ + 休会退会受付案内統合 + /gym 申請中通知除去 | ✅ LIVE_CHECK PASS (2026-04-29) — 全項目PASS |
+
+**Phase M 全体: ✅ CLOSED (2026-04-29)**
+休会・退会はアプリ申請なし、受付対応に統一。管理者手動変更（/admin/members）は継続稼働。
 
