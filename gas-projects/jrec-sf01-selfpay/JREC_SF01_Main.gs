@@ -87,6 +87,7 @@ function buildPage_(page, idParam, q, vkParam) {
         var fullTl = getFullVisitTimelineByPatient(idParam);
         var t = HtmlService.createTemplateFromFile("patient-detail");
         t.appUrl          = appUrl;
+        t.webAppUrl       = ScriptApp.getService().getUrl();
         t.patient         = ptd;
         t.timeline        = fullTl.timeline;
         t.deletedTimeline = fullTl.deletedTimeline;

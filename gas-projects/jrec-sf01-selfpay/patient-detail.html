@@ -282,7 +282,8 @@ var visitCount    = timeline.length;
 </div>
 
 <script>
-var PATIENT_ID = "<?= patient.patientId ?>";
+var PATIENT_ID  = "<?= patient.patientId ?>";
+var WEB_APP_URL = "<?= webAppUrl ?>";
 
 function toggleDetail(idx) {
   var detail = document.getElementById('detail-' + idx);
@@ -301,8 +302,11 @@ function toggleDetail(idx) {
 })();
 
 function reloadPage_() {
-  var url = APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
-  try { window.top.location.href = url; } catch(e) { window.location.href = url; }
+  var dest = WEB_APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
+  console.log('[reloadPage_] WEB_APP_URL=' + WEB_APP_URL);
+  console.log('[reloadPage_] PATIENT_ID=' + PATIENT_ID);
+  console.log('[reloadPage_] dest=' + dest);
+  window.location.href = dest;
 }
 function showTrashMsg_(text) {
   var el = document.getElementById('trashMsg');
