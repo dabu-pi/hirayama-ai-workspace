@@ -1,77 +1,66 @@
 # ROADMAP
 
-最終更新: 2026-04-28（Phase 2.5〜G-6a 完了 — 次回 Phase 2.7 PWA化から再開）
+最終更新: 2026-04-30（Phase 2系・PWA・会員ライフサイクル管理 完了 — 次は Phase 3 コンテンツ・管理拡張 または Phase 4 会員管理強化）
 
 ---
 
-## 現在地（2026-04-26）棚卸しサマリー
+## 現在地（2026-04-30）
 
-### 完了済みエリア
+Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase M）・UX修正 はすべて完了。
+次フェーズは **Phase 3（コンテンツ・管理拡張）** または **Phase 4（会員管理強化）** から選択。
 
-| エリア | 状態 |
-|---|---|
-| トレーニング基本フロー（Programs→Train→Summary） | ✅ live 確認済み |
-| セッション記録（重量・回数・完了チェック・ロック） | ✅ |
-| Add Set / Swap / Add Exercise | ✅ |
-| 休憩タイマー（手動起動 1:30 固定） | ✅ |
-| ワークアウト経過タイマー（U-1） | ✅ |
-| Reps 初期値（U-2）/ Target→Reps（U-3）/ Unlock楽観的更新（U-4） | ✅ |
-| Day progression・re-enroll・idempotency guard | ✅ |
-| Session History / Detail | ✅ |
-| Home dashboard（Progress / Volume / e1RM Trend） | ✅ |
-| IA redesign（BottomTabBar） | ✅ |
-| Programs 4本（GZCLP / SS / UL / Dumbbell） + metadata + filter | ✅ |
-| Auth（Email/Password + RLS + membership guard） | ✅ |
-| **会員管理 Phase 1**（member_name / display_name /profile / admin集計） | **✅ 2026-04-26** |
-| 限定公開（Vercel live） | ✅ |
+### 完了済みフェーズ一覧
 
-### スタブのみ・未動作
-
-| 項目 | 状態 | 場所 |
+| フェーズ | 内容 | 状態 |
 |---|---|---|
-| 計算ボタン（1RM/Calc） | UIボタンあり・onClick未実装 | `WorkoutScreen.tsx:1348` |
-| 休憩タイマー自動起動（セット完了後） | 手動起動のみ | `WorkoutScreen.tsx` |
+| Phase 2 | トレーニング実行UX完成（Train/Summary/History/Swap/Timer 等） | ✅ 全完了 |
+| Phase 2.5〜2.6 | 全面日本語化 / loading.tsx 5ページ / G-6a 経過日数メッセージ | ✅ 全完了 |
+| Phase 2.7 | PWA化（manifest / service worker / icons）/ G-6b 起動時メッセージ強調 | ✅ CONDITIONAL CLOSED |
+| Phase M | 会員ライフサイクル管理（休会・退会・billing_cutoff 設計〜実装） | ✅ CLOSED |
+| UX修正 | チェック高速化 / 通知音 / 重量後続セット反映 / プログラム一覧改善 / アーカイブ連鎖修正 | ✅ 全 LIVE_CHECK PASS |
 
-### 確認待ち
+### 未完了・保留・スタブ
 
-| 項目 | 状態 |
-|---|---|
-| S-7: Restart Program ユーザー E2E | 静的検証済み・実ユーザー E2E 未確認 |
-| B-6: sign up 429 | 外部レート制限（低優先） |
-
----
-
-## 次フェーズ候補と優先度（2026-04-26 棚卸し）
-
-### 高優先
-
-| ID | タスク | 理由 | 影響範囲 | リスク |
-|---|---|---|---|---|
-| V-1 | S-7 Restart Program E2E確認 | 静的検証 PASS。LIVE E2E は完走 or Supabase 直接設定が必要 | Summary画面のみ | 低（コードは静的pass済み） |
-| V-2 | 計算ボタン機能化（基本1RM） | ✅ 完了・LIVE確認済み（2026-04-26）Epley式モーダル。DB保存なし | WorkoutScreen上部ツールバー | — |
-
-### 中優先
-
-| ID | タスク | 理由 | 影響範囲 | リスク |
-|---|---|---|---|---|
-| C-8 | 5本目プログラム seed 追加 | ✅ 本番反映済み（2026-04-26）barbell-2day-base 一覧表示 PASS / detail/start/train は未確認 | seed SQL | — |
-| U-5 | 休憩タイマー自動起動 | ✅ 完了（2026-04-26）既実装確認 + save失敗時キャンセル追加 | WorkoutScreen | — |
-| A-1 | Admin プログラム登録UI | 現状SQLのみで管理者が新プログラムを追加できない | /admin 配下に新ページ | 中 |
-
-### 低優先
-
-| ID | タスク | 理由 |
+| 項目 | 状態 | 備考 |
 |---|---|---|
-| M-2 | /admin/members スマホカードUI | Phase 2 持ち越し |
-| M-3 | ログイン回数（user_login_events） | Phase 2 持ち越し |
-| M-4 | PC横スクロール改善 | Phase 2 持ち越し |
-| M-5 | DB view / RPC 化 | 会員数増加時に検討 |
-| C-9 | Week preview 拡張 | T1/T2/T3折りたたみ |
-| P-1 | PWA 最適化 | 継続利用者増加後 |
+| iOS PWA確認 | ⚠️ deferred | iPhone 未所持のため未確認。Android PASS |
+| D-2 退会申請フロー | ⚠️ 保留 | migration 000031 未適用。退会は窓口受付に統一 |
+| 計算ボタン（1RM/Calc） | スタブ | UIボタンあり・onClick 未実装（`WorkoutScreen.tsx`） |
+| 休憩タイマー自動起動 | 未実装 | 現状は手動起動のみ（`WorkoutScreen.tsx`） |
+| B-6: sign up 429 | 低優先 | 外部レート制限 |
 
 ---
 
-## フェーズ構成提案（2026-04-26 版）
+## 次フェーズ候補（2026-04-30 更新）
+
+### Phase 3: コンテンツ・管理拡張（次の優先フェーズ）
+
+| ID | タスク | 概要 | 優先度 |
+|---|---|---|---|
+| A-1 | Admin プログラム登録UI | 現状 SQL 直打ちのみ。管理者が画面から新プログラムを追加できるようにする | 高 |
+| C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 中 |
+| — | Program recommendation UI | level/tag ベースの推奨表示 | 中 |
+
+### Phase 4: 会員管理強化
+
+| ID | タスク | 概要 |
+|---|---|---|
+| M-2 | /admin/members スマホカードUI | PC テーブルをスマホカードに対応 |
+| M-3 | ログイン回数（user_login_events） | Auth Webhook + ログイン記録 |
+| M-4 | PC横スクロール改善 | 管理画面の横スクロール UX |
+| M-5 | DB view / RPC 化 | 会員数増加時のパフォーマンス対策 |
+
+### Phase 5: 成長・PWA 最適化
+
+| タスク | 概要 |
+|---|---|
+| PWA 最適化 | オフライン耐性・起動速度強化 |
+| Analytics 拡張 | 利用状況可視化 |
+| 一般ユーザー招待フロー | 招待リンク・承認フロー |
+
+---
+
+## フェーズ構成詳細（完了ログ）
 
 ### Phase 2: トレーニング実行UX 完成（✅ 全タスク実機確認完了 2026-04-27）
 
