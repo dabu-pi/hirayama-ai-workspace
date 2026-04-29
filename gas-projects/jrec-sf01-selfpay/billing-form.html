@@ -254,8 +254,9 @@ function navigate(url) {
     try { window.location.href = url; } catch(e2) {}
   }
 }
-function goToDetail()  { navigate(APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID)); }
-function goToReceipt() { navigate(APP_URL + '?page=receipt&visitKey=' + encodeURIComponent(VISIT_KEY)); }
+function goToDetail()        { navigate(APP_URL + '?page=detail&id='       + encodeURIComponent(PATIENT_ID)); }
+function goToReceipt()       { navigate(APP_URL + '?page=receipt&visitKey=' + encodeURIComponent(VISIT_KEY)); }
+function goToDailyCheckout() { navigate(APP_URL + '?page=dailyCheckout'); }
 
 // ── ユーティリティ ───────────────────────────────────────
 function fmtNum(n) { return Number(n || 0).toLocaleString(); }
@@ -387,11 +388,32 @@ function onPaymentMethodChange() {
   var statusSel = document.getElementById('paymentStatus');
   statusSel.value = (method === '未収') ? '未収' : '入金済';
   updatePaymentSections();
+  updateSaveBtnLabel();
 }
 
 // ── 入金状態変更 ─────────────────────────────────────────
 function onPaymentStatusChange() {
+  var status = document.getElementById('paymentStatus').value;
+  // 未収を選んだ場合は支払方法も「未収」に統一する
+  if (status === '未収') {
+    document.getElementById('paymentMethod').value = '未収';
+  }
   updatePaymentSections();
+  updateSaveBtnLabel();
+}
+
+// ── 保存ボタンラベルを入金状態に応じて更新 ────────────────
+function updateSaveBtnLabel() {
+  var status = document.getElementById('paymentStatus').value;
+  var btn    = document.getElementById('saveBtn');
+  if (!btn || btn.disabled) return;
+  if (status === '未収') {
+    btn.textContent = '未収として保存';
+  } else if (status === '一部入金') {
+    btn.textContent = '一部入金として保存';
+  } else {
+    btn.textContent = '保存して領収書へ →';
+  }
 }
 
 // ── 支払セクション表示制御 ────────────────────────────────
@@ -528,7 +550,7 @@ function calcRemaining() {
         '保存がタイムアウトしました（20秒）。<br>' +
         'Apps Script エディタ → 実行数 タブでエラーを確認してください。');
       btn.disabled    = false;
-      btn.textContent = '保存して領収書へ →';
+      updateSaveBtnLabel();
     }, 20000);
 
     try {
@@ -543,24 +565,58 @@ function calcRemaining() {
               .forEach(function(el) { el.disabled = true; });
             btn.textContent = '保存済み ✓';
 
-            showMsg('success',
-              '保存しました（' + res.paymentId + '）。' +
-              '税込合計: <strong>¥' + fmtNum(res.totalTaxInc) + '</strong><br>' +
-              '<button type="button" onclick="goToReceipt()" ' +
-              'style="margin-top:10px;padding:7px 20px;background:#1a73e8;color:#fff;' +
-              'border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">' +
-              '領収書へ進む →</button>'
-            );
+            // paymentStatus に応じてメッセージ・ボタンを切り替え
+            var savedStatus = paymentStatus;
+            var baseInfo    = '税込合計: <strong>¥' + fmtNum(res.totalTaxInc) + '</strong>';
+            var msgText, btnHtml;
 
-            // 自動遷移を試みる（iframe 制限でブロックされる場合は上のボタンで手動遷移）
-            navigate(APP_URL + '?page=receipt&visitKey=' + encodeURIComponent(VISIT_KEY));
+            if (savedStatus === '未収') {
+              msgText = '未収として保存しました。本日の受付・会計に反映されます。<br>' + baseInfo;
+              btnHtml =
+                '<button type="button" onclick="goToDailyCheckout()" ' +
+                'style="padding:5px 16px;background:#1a73e8;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">' +
+                '本日の受付・会計へ →</button>' +
+                '<button type="button" onclick="goToDetail()" ' +
+                'style="padding:5px 14px;background:#5f6368;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;">' +
+                '患者詳細へ戻る</button>';
+            } else if (savedStatus === '一部入金') {
+              msgText = '一部入金として保存しました。残額は本日の受付・会計から回収できます。<br>' + baseInfo;
+              btnHtml =
+                '<button type="button" onclick="goToDailyCheckout()" ' +
+                'style="padding:5px 16px;background:#1a73e8;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">' +
+                '本日の受付・会計へ →</button>' +
+                '<button type="button" onclick="goToDetail()" ' +
+                'style="padding:5px 14px;background:#5f6368;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;">' +
+                '患者詳細へ戻る</button>';
+            } else {
+              msgText = '入金済として保存しました。<br>' + baseInfo;
+              btnHtml =
+                '<button type="button" onclick="goToReceipt()" ' +
+                'style="padding:5px 16px;background:#1a73e8;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">' +
+                '領収書発行へ進む →</button>' +
+                '<button type="button" onclick="goToDetail()" ' +
+                'style="padding:5px 14px;background:#5f6368;color:#fff;border:none;' +
+                'border-radius:4px;cursor:pointer;font-size:13px;">' +
+                '患者詳細へ戻る</button>';
+            }
+
+            showMsg('success',
+              msgText + '<br>' +
+              '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' + btnHtml + '</div>'
+            );
+            // 自動遷移は行わない（GAS iframe 遷移トラブル防止・ユーザークリックに統一）
 
           } else {
             var errMsg = (res && res.error) ? res.error : '保存に失敗しました（原因不明）';
             console.error('[billingForm] save failed:', errMsg);
             showMsg('error', '保存エラー: ' + errMsg);
             btn.disabled    = false;
-            btn.textContent = '保存して領収書へ →';
+            updateSaveBtnLabel();
           }
         })
         .withFailureHandler(function(err) {
@@ -571,7 +627,7 @@ function calcRemaining() {
             'GAS実行エラー: ' + msg +
             '<br><small>Apps Script エディタ → 実行数 で詳細を確認してください。</small>');
           btn.disabled    = false;
-          btn.textContent = '保存して領収書へ →';
+          updateSaveBtnLabel();
         })
         .savePaymentWithItems(payload);
 
@@ -580,7 +636,7 @@ function calcRemaining() {
       console.error('[billingForm] sync error:', syncErr.message);
       showMsg('error', 'google.script.run 同期エラー: ' + syncErr.message);
       btn.disabled    = false;
-      btn.textContent = '保存して領収書へ →';
+      updateSaveBtnLabel();
     }
   });
 })();
