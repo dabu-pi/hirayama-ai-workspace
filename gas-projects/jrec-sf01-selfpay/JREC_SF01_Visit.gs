@@ -278,6 +278,105 @@ function createVisitWithChart(payload) {
 }
 
 /**
+ * 既存の来院記録とカルテを更新する（visitKey を変えずに内容を上書き）。
+ * カルテ入力画面での再保存時に呼ばれる。会計状態は変更しない。
+ *
+ * @param {string} visitKey
+ * @param {Object} payload - createVisitWithChart と同じ形式
+ * @returns {{ ok: boolean, selfPayVisitKey?: string, error?: string }}
+ */
+function updateVisitWithChart(visitKey, payload) {
+  Logger.log("[updateVisitWithChart] START visitKey=" + visitKey);
+  try {
+    if (!visitKey) return { ok: false, error: "visitKey は必須です" };
+    var cc = payload && payload.chiefComplaint ? String(payload.chiefComplaint).trim() : "";
+    if (!cc) return { ok: false, error: "主訴は必須です" };
+
+    var ss  = getTargetSpreadsheet_();
+    var now = new Date();
+
+    // ── SelfPayVisits を更新（会計状態・isDeleted 列は変更しない）──
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (!visitSh || visitSh.getLastRow() < 2)
+      return { ok: false, error: "SelfPayVisits シートが見つかりません" };
+
+    var vKeys      = visitSh.getRange(2, 1, visitSh.getLastRow() - 1, 1).getValues();
+    var visitFound = false;
+    for (var vi = 0; vi < vKeys.length; vi++) {
+      if (String(vKeys[vi][0]) !== visitKey) continue;
+      var rowNum = vi + 2;
+      var vas    = "";
+      if (payload.vas !== "" && payload.vas !== null && payload.vas !== undefined) {
+        var vasNum = parseInt(String(payload.vas), 10);
+        if (!isNaN(vasNum) && vasNum >= 0 && vasNum <= 10) vas = vasNum;
+      }
+      visitSh.getRange(rowNum, 3).setValue(payload.visitDate  || "");
+      visitSh.getRange(rowNum, 4).setValue(payload.visitType  || "再診");
+      visitSh.getRange(rowNum, 5).setValue(getDefaultPractitioner_());
+      visitSh.getRange(rowNum, 6).setValue(cc);
+      visitSh.getRange(rowNum, 7).setValue(vas);
+      visitSh.getRange(rowNum, 8).setValue(payload.nextPlan ? String(payload.nextPlan).trim() : "");
+      visitSh.getRange(rowNum, 11).setValue(now);  // updatedAt
+      visitFound = true;
+      Logger.log("[updateVisitWithChart] SelfPayVisits row " + rowNum + " updated");
+      break;
+    }
+    if (!visitFound) return { ok: false, error: "来院記録が見つかりません: " + visitKey };
+
+    // ── SelfPayChart を更新（なければ新規追加）────────────
+    var chartSh = ss.getSheetByName(SHEET_NAMES.CHART);
+    if (chartSh) {
+      var chartFound = false;
+      if (chartSh.getLastRow() >= 2) {
+        var cData = chartSh.getRange(2, 1, chartSh.getLastRow() - 1, 2).getValues();
+        for (var ci = 0; ci < cData.length; ci++) {
+          if (String(cData[ci][1]) !== visitKey) continue;
+          var crow = ci + 2;
+          chartSh.getRange(crow, 3).setValue(payload.assessment       ? String(payload.assessment).trim()       : "");
+          chartSh.getRange(crow, 4).setValue(payload.findings         ? String(payload.findings).trim()         : "");
+          chartSh.getRange(crow, 5).setValue(payload.treatment        ? String(payload.treatment).trim()        : "");
+          chartSh.getRange(crow, 6).setValue(payload.equipment        ? String(payload.equipment).trim()        : "");
+          chartSh.getRange(crow, 7).setValue(payload.explanation      ? String(payload.explanation).trim()      : "");
+          chartSh.getRange(crow, 8).setValue(payload.contraindication ? String(payload.contraindication).trim() : "");
+          chartSh.getRange(crow, 9).setValue(payload.lifestyle        ? String(payload.lifestyle).trim()        : "");
+          chartSh.getRange(crow, 10).setValue(payload.nextAppointment ? String(payload.nextAppointment).trim()  : "");
+          chartSh.getRange(crow, 12).setValue(now);  // updatedAt
+          chartFound = true;
+          Logger.log("[updateVisitWithChart] SelfPayChart row " + crow + " updated");
+          break;
+        }
+      }
+      if (!chartFound) {
+        var chartId = visitKey.replace(/^SPV_/, "SPC_");
+        chartSh.appendRow([
+          chartId, visitKey,
+          payload.assessment       ? String(payload.assessment).trim()       : "",
+          payload.findings         ? String(payload.findings).trim()         : "",
+          payload.treatment        ? String(payload.treatment).trim()        : "",
+          payload.equipment        ? String(payload.equipment).trim()        : "",
+          payload.explanation      ? String(payload.explanation).trim()      : "",
+          payload.contraindication ? String(payload.contraindication).trim() : "",
+          payload.lifestyle        ? String(payload.lifestyle).trim()        : "",
+          payload.nextAppointment  ? String(payload.nextAppointment).trim()  : "",
+          now, now
+        ]);
+        Logger.log("[updateVisitWithChart] SelfPayChart new row appended");
+      }
+    }
+
+    var pidForLog = visitKey.split("_")[2] || visitKey;
+    appendRunLog_("VISIT_UPDATE", pidForLog, "visitKey: " + visitKey, visitKey);
+
+    return { ok: true, selfPayVisitKey: visitKey };
+
+  } catch (err) {
+    var m = err && err.message ? err.message : String(err);
+    Logger.log("[updateVisitWithChart] ERROR: " + m);
+    return { ok: false, error: m };
+  }
+}
+
+/**
  * selfPayVisitKey を採番する: SPV_YYYYMMDD_patientId_001
  */
 function generateSelfPayVisitKey_(patientId, visitDate) {

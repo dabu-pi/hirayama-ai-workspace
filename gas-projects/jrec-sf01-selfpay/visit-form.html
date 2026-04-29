@@ -174,7 +174,8 @@
 </div>
 
 <script>
-var PATIENT_ID = "<?= patient.patientId ?>";
+var PATIENT_ID     = "<?= patient.patientId ?>";
+var SAVED_VISIT_KEY = null;  // 初回保存後に visitKey を保持。以降の保存は update になる
 
 // JS初期化エラーを DOM に表示（alert がブロックされる環境でも見える）
 window.onerror = function(message, source, lineno) {
@@ -234,28 +235,36 @@ window.onerror = function(message, source, lineno) {
       clearMsg();
       showMsg('error', 'google.script.run が利用できません。WebApp URL として開いているか確認してください。');
       btn.disabled    = false;
-      btn.textContent = 'カルテを保存する';
+      btn.textContent = SAVED_VISIT_KEY ? 'カルテを更新する' : 'カルテを保存する';
       return;
     }
+
+    // 初回: create / 2回目以降: update
+    var isUpdate = !!SAVED_VISIT_KEY;
+    console.log('[visitForm] isUpdate=' + isUpdate + (isUpdate ? ' key=' + SAVED_VISIT_KEY : ''));
 
     // 20秒タイムアウト — どちらのハンドラも呼ばれない場合に通知
     var saveTimer = setTimeout(function() {
       showMsg('error', '保存がタイムアウトしました（20秒）。<br>Apps Script エディタ → 実行数 タブでエラーを確認してください。<br>または再試行してください。');
       btn.disabled    = false;
-      btn.textContent = 'カルテを保存する';
+      btn.textContent = SAVED_VISIT_KEY ? 'カルテを更新する' : 'カルテを保存する';
     }, 20000);
 
     try {
-      google.script.run
+      var runner = google.script.run
         .withSuccessHandler(function(res) {
           clearTimeout(saveTimer);
           console.log('[visitForm] success:', JSON.stringify(res));
           if (res && res.ok) {
             var savedKey = res.selfPayVisitKey;
+            if (!SAVED_VISIT_KEY) {
+              SAVED_VISIT_KEY = savedKey;  // 初回保存後に visitKey を保持
+            }
             btn.disabled    = false;
-            btn.textContent = 'カルテを保存する';
+            btn.textContent = 'カルテを更新する';  // 次回以降は update
+            var actionWord = isUpdate ? '更新しました' : '保存しました';
             showMsg('success',
-              '保存しました（' + savedKey + '）。<br>' +
+              actionWord + '（' + savedKey + '）。<br>' +
               '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
                 '<button type="button" onclick="goToDetail()" ' +
                 'style="padding:5px 14px;background:#5f6368;color:#fff;border:none;' +
@@ -273,7 +282,7 @@ window.onerror = function(message, source, lineno) {
             console.error('[visitForm] save failed:', errMsg);
             showMsg('error', '保存エラー: ' + errMsg);
             btn.disabled    = false;
-            btn.textContent = 'カルテを保存する';
+            btn.textContent = SAVED_VISIT_KEY ? 'カルテを更新する' : 'カルテを保存する';
           }
         })
         .withFailureHandler(function(err) {
@@ -282,15 +291,21 @@ window.onerror = function(message, source, lineno) {
           console.error('[visitForm] GAS failure:', msg);
           showMsg('error', 'GAS実行エラー: ' + msg + '<br><small>Apps Script エディタ → 実行数 で詳細を確認してください。</small>');
           btn.disabled    = false;
-          btn.textContent = 'カルテを保存する';
-        })
-        .createVisitWithChart(payload);
+          btn.textContent = SAVED_VISIT_KEY ? 'カルテを更新する' : 'カルテを保存する';
+        });
+
+      if (isUpdate) {
+        runner.updateVisitWithChart(SAVED_VISIT_KEY, payload);
+      } else {
+        runner.createVisitWithChart(payload);
+      }
+
     } catch(syncErr) {
       clearTimeout(saveTimer);
       console.error('[visitForm] google.script.run sync error:', syncErr.message);
       showMsg('error', 'google.script.run 呼び出しエラー: ' + syncErr.message);
       btn.disabled    = false;
-      btn.textContent = 'カルテを保存する';
+      btn.textContent = SAVED_VISIT_KEY ? 'カルテを更新する' : 'カルテを保存する';
     }
   });
 
