@@ -6209,3 +6209,5 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 - 音が鳴らなくてもタイマー表示・セット記録は正常動作
 - 既存のチェック高速化（completingSetIds）に影響なし
 
+**STATUS: ✅ LIVE_CHECK PASS (2026-04-29)** — 全8項目PASS（カウントダウン音/終了音/ON/OFF/localStorage/操作重さなし）
+
