@@ -504,12 +504,17 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
     const client = createQueryClient();
 
     // ── Strategy 1: enrollment-based ─────────────────────────────────────────
-    // Include 'paused' to tolerate enrollment status drift after advancement.
+    // Only active (non-archived) enrollments are used as resume candidates.
+    // 'paused' is intentionally excluded: status='paused' means the user switched
+    // to a different program and this enrollment was automatically stepped aside.
+    // Including 'paused' here would surface the old program's StartSessionScreen
+    // even though the user moved on. If no active enrollment is found, Strategy 2
+    // (session-based) provides a safe fallback.
     const { data: enrollment } = await client
       .from("program_enrollments")
       .select("id, program_id, current_program_day_id")
       .eq("user_id", userId)
-      .in("status", ["active", "paused"])
+      .eq("status", "active")
       .is("archived_at", null)
       .order("updated_at", { ascending: false })
       .limit(1)

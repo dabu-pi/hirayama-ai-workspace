@@ -6364,6 +6364,30 @@ WHERE status = 'in_progress'
   );
 ```
 
+---
+
+## 2026-04-29 getTrainFallbackView Strategy 1 — paused 除外
+
+### STATUS: 実装完了 — 実機確認待ち
+
+### ROOT_CAUSE
+
+`getTrainFallbackView` Strategy 1 が `.in("status", ["active", "paused"])` で
+`paused` enrollment も /train の再開候補にしていた。
+
+`paused` = 別プログラムへ切り替えた古い受講（enrollment:paused_for_program_switch）
+→ GZCLP の paused enrollment が拾われ、StartSessionScreen「2週目・3日目を開始」が表示されていた。
+
+### FIX（1行変更）
+
+```
+.in("status", ["active", "paused"])
+→ .eq("status", "active")
+```
+
+`paused` を除外。active enrollment がなければ Strategy 2（session-based）へフォールバック。
+Strategy 2 が null を返せば /programs へリダイレクト。
+
 ### 再選択フローの確認
 
 同じプログラムを再選択した場合:
