@@ -4,7 +4,6 @@ import {
   createSupabaseServerClient,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
-import { getOwnPendingPauseRequest } from "@/app/profile/pause-actions";
 import { ProfileScreen } from "@/components/profile/ProfileScreen";
 
 export const dynamic = "force-dynamic";
@@ -23,21 +22,17 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const [userRowResult, pendingPauseRequest] = await Promise.all([
-    client
-      .from("users")
-      .select("display_name, membership_status")
-      .eq("id", user.id)
-      .maybeSingle<{ display_name: string | null; membership_status: string | null }>(),
-    getOwnPendingPauseRequest()
-  ]);
+  const { data: userRow } = await client
+    .from("users")
+    .select("display_name, membership_status")
+    .eq("id", user.id)
+    .maybeSingle<{ display_name: string | null; membership_status: string | null }>();
 
   return (
     <ProfileScreen
       email={user.email ?? null}
-      initialDisplayName={userRowResult.data?.display_name ?? null}
-      membershipStatus={userRowResult.data?.membership_status ?? null}
-      pendingPauseRequest={pendingPauseRequest}
+      initialDisplayName={userRow?.display_name ?? null}
+      membershipStatus={userRow?.membership_status ?? null}
     />
   );
 }

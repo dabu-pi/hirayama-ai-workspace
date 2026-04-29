@@ -3,20 +3,16 @@
 import { useState, useTransition } from "react";
 
 import { updateOwnDisplayName } from "@/app/profile/actions";
-import { submitPauseRequest } from "@/app/profile/pause-actions";
-import type { OwnPauseRequest } from "@/app/profile/pause-actions";
 
 import styles from "./ProfileScreen.module.css";
 
-type StatusLevel = "active" | "pending" | "paused" | "cancelled";
+type StatusLevel = "active" | "paused" | "cancelled";
 
 function getMembershipStatusDisplay(
-  status: string | null,
-  hasPendingPause: boolean
+  status: string | null
 ): { label: string; level: StatusLevel } {
   if (status === "cancelled") return { label: "退会済み", level: "cancelled" };
-  if (status === "paused")    return { label: "休会中", level: "paused" };
-  if (hasPendingPause)        return { label: "休会申請中（承認待ち）", level: "pending" };
+  if (status === "paused")    return { label: "休会中",  level: "paused" };
   return { label: "会員（利用中）", level: "active" };
 }
 
@@ -24,14 +20,12 @@ type ProfileScreenProps = {
   email: string | null;
   initialDisplayName: string | null;
   membershipStatus: string | null;
-  pendingPauseRequest: OwnPauseRequest | null;
 };
 
 export function ProfileScreen({
   email,
   initialDisplayName,
   membershipStatus,
-  pendingPauseRequest,
 }: ProfileScreenProps) {
   const [displayName, setDisplayName] = useState(initialDisplayName ?? "");
   const [feedback, setFeedback] = useState<{
@@ -39,39 +33,6 @@ export function ProfileScreen({
     message: string;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  // Pause request state
-  const [hasPausePending, setHasPausePending] = useState(pendingPauseRequest !== null);
-  const [pauseReason, setPauseReason] = useState("");
-  const [pauseConfirmMode, setPauseConfirmMode] = useState(false);
-  const [pauseFeedback, setPauseFeedback] = useState<{ ok: boolean; message: string } | null>(null);
-  const [isPausePending, startPauseTransition] = useTransition();
-
-  function handlePauseSubmit() {
-    if (!pauseConfirmMode) {
-      setPauseConfirmMode(true);
-      return;
-    }
-    setPauseFeedback(null);
-    startPauseTransition(async () => {
-      const result = await submitPauseRequest(pauseReason || null);
-      if (result.ok) {
-        setHasPausePending(true);
-        setPauseConfirmMode(false);
-        setPauseFeedback({
-          ok: true,
-          message: result.billingMessage ?? "休会申請を受け付けました。"
-        });
-      } else if (result.error === "already_pending") {
-        setHasPausePending(true);
-        setPauseFeedback({ ok: false, message: "休会申請は既に受付済みです。" });
-      } else if (result.error === "already_paused") {
-        setPauseFeedback({ ok: false, message: "すでに休会中です。" });
-      } else {
-        setPauseFeedback({ ok: false, message: result.error ?? "申請に失敗しました。" });
-      }
-    });
-  }
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -87,6 +48,8 @@ export function ProfileScreen({
     });
   }
 
+  const { label, level } = getMembershipStatusDisplay(membershipStatus);
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
@@ -100,20 +63,10 @@ export function ProfileScreen({
           <p className={styles.staticValue}>{email ?? "—"}</p>
         </div>
 
-        {(() => {
-          const { label, level } = getMembershipStatusDisplay(membershipStatus, hasPausePending);
-          return (
-            <div className={styles.field}>
-              <span className={styles.label}>会員ステータス</span>
-              <span className={`${styles.statusBadge} ${styles[`status_${level}`]}`}>{label}</span>
-              {level === "pending" && pendingPauseRequest?.effective_from && (
-                <p className={styles.hint}>
-                  休会開始予定日: {pendingPauseRequest.effective_from.replace(/-(\d+)-(\d+)$/, "年$1月$2日")}
-                </p>
-              )}
-            </div>
-          );
-        })()}
+        <div className={styles.field}>
+          <span className={styles.label}>会員ステータス</span>
+          <span className={`${styles.statusBadge} ${styles[`status_${level}`]}`}>{label}</span>
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="display-name">
@@ -156,75 +109,13 @@ export function ProfileScreen({
         </a>
       </nav>
 
-      {/* M-B: Pause request section */}
-      {membershipStatus !== "cancelled" && (
-        <section className={styles.deletionSection}>
-          <h2 className={styles.deletionTitle}>休会申請</h2>
-
-          {membershipStatus === "paused" ? (
-            <div className={styles.deletionPendingCard}>
-              <p className={styles.deletionPendingText}>
-                現在、休会中です。再開をご希望の場合はスタッフまでご連絡ください。
-              </p>
-            </div>
-          ) : hasPausePending ? (
-            <div className={styles.deletionPendingCard}>
-              <p className={styles.deletionPendingText}>
-                休会申請は受付済みです。スタッフ確認後に手続きを進めます。
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className={styles.deletionDescription}>
-                休会をご希望の場合は、こちらから申請できます。
-                申請後、スタッフが確認のうえ開始日をご連絡いたします。
-                翌月分の口座振替データが確定済みの場合、翌々月からの適用となります。
-              </p>
-              <div className={styles.deletionForm}>
-                <label className={styles.label} htmlFor="pause-reason">
-                  申請理由（任意）
-                </label>
-                <textarea
-                  id="pause-reason"
-                  className={styles.deletionTextarea}
-                  disabled={isPausePending}
-                  maxLength={500}
-                  placeholder="理由をご記入ください（任意）"
-                  rows={3}
-                  value={pauseReason}
-                  onChange={(e) => { setPauseReason(e.target.value); setPauseConfirmMode(false); }}
-                />
-                {pauseConfirmMode && (
-                  <p className={styles.deletionConfirmText}>
-                    本当に休会申請を送信しますか？もう一度ボタンを押すと申請されます。
-                  </p>
-                )}
-                <button
-                  className={pauseConfirmMode ? styles.deletionConfirmButton : styles.deletionButton}
-                  disabled={isPausePending}
-                  type="button"
-                  onClick={handlePauseSubmit}
-                >
-                  {isPausePending ? "送信中..." : pauseConfirmMode ? "申請を確定する" : "休会を申請する"}
-                </button>
-              </div>
-            </>
-          )}
-
-          {pauseFeedback && (
-            <p className={pauseFeedback.ok ? styles.feedbackOk : styles.feedbackError}>
-              {pauseFeedback.message}
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* 退会: アプリ申請は停止中。窓口で受付 */}
+      {/* 休会・退会: アプリ申請は停止中。受付で対応 */}
       <section className={styles.deletionSection}>
-        <h2 className={styles.deletionTitle}>退会について</h2>
+        <h2 className={styles.deletionTitle}>休会・退会について</h2>
         <div className={styles.deletionPendingCard}>
           <p className={styles.deletionPendingText}>
-            退会をご希望の場合は、受付までお申し出ください。
+            休会・退会をご希望の場合は、受付までお申し出ください。
+            口座振替の確定状況、休会開始月、再開時の充当についてスタッフよりご案内いたします。
             {membershipStatus === "cancelled" && (
               <> このアカウントはすでに退会済みです。再入会をご希望の場合もスタッフまでご連絡ください。</>
             )}

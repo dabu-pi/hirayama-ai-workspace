@@ -84,13 +84,7 @@ const QUICK_LINKS = [
   { href: "/profile", label: "プロフィール", icon: "👤" }
 ] as const;
 
-function getMembershipNotice(
-  status: MembershipStatus | null | undefined,
-  hasPendingPause: boolean
-): string | null {
-  if (hasPendingPause) {
-    return "休会申請を受け付けています。スタッフが確認後、休会開始日をご連絡いたします。";
-  }
+function getMembershipNotice(status: MembershipStatus | null | undefined): string | null {
   switch (status) {
     case "paused":
       return "現在、休会中のため一部機能はご利用いただけません。再開をご希望の場合はスタッフまでご連絡ください。";
@@ -108,12 +102,11 @@ type GymScreenProps = {
   announcements: GymAnnouncement[];
   sponsors: GymSponsor[];
   membershipStatus?: MembershipStatus | null;
-  hasPendingPause?: boolean;
 };
 
-export function GymScreen({ stats, announcements, sponsors, membershipStatus, hasPendingPause = false }: GymScreenProps) {
+export function GymScreen({ stats, announcements, sponsors, membershipStatus }: GymScreenProps) {
   const isLoggedIn = stats !== null;
-  const membershipNotice = getMembershipNotice(membershipStatus, hasPendingPause);
+  const membershipNotice = getMembershipNotice(membershipStatus);
   const trainingGap = isLoggedIn
     ? getTrainingGapInfo(getDaysSince(stats.lastTrainingDate))
     : null;

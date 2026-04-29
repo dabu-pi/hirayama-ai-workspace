@@ -133,9 +133,9 @@
 
 **実装タスク（優先順）:**
 - **Phase M-A**: `billing_cutoff_records` migration + `/admin/billing` ページ ✅ CLOSED / LIVE_CHECK PASS (2026-04-29)
-- **Phase M-B**: `membership_pause_requests` migration + `/profile` 休会申請 + `/admin/pause-requests` ✅ MAIN FLOW PASS (2026-04-29) — 一般会員テスト deferred
+- **Phase M-B**: `membership_pause_requests` migration + `/admin/pause-requests` ✅ MAIN FLOW PASS — 休会申請アプリ受付 ⛔ 停止 (2026-04-29) — 受付対応に変更
 - **Phase M-C**: 退会申請アプリ受付 ⛔ 停止 ✅ LIVE_CHECK PASS (2026-04-29) — 窓口受付に運用変更。migration 000031 は未適用保留
-- **Phase M-D**: `/profile`・`/gym` ユーザー表示更新 ✅ 実装済み (2026-04-29) — 実機確認待ち
+- **Phase M-D**: `/profile` ステータスバッジ・受付案内統合 + `/gym` 休会申請中通知除去 ✅ 実装済み (2026-04-29) — 実機確認待ち
 
 ### Phase 3: コンテンツ・管理拡張
 
