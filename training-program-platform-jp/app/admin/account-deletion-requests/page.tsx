@@ -18,10 +18,6 @@ type RequestRow = {
   requested_at: string;
   reviewed_at: string | null;
   admin_note: string | null;
-  effective_date: string | null;
-  next_month_billing_confirmed: boolean | null;
-  key_returned_at: string | null;
-  refund_500_paid_at: string | null;
 };
 
 type UserRow = {
@@ -41,7 +37,7 @@ export default async function AccountDeletionRequestsPage() {
   // Fetch requests without embedded join (email lives in auth.users, not public.users)
   const { data: rawRequests, error } = await admin
     .from("account_deletion_requests")
-    .select("id, user_id, reason, status, requested_at, reviewed_at, admin_note, effective_date, next_month_billing_confirmed, key_returned_at, refund_500_paid_at")
+    .select("id, user_id, reason, status, requested_at, reviewed_at, admin_note")
     .order("requested_at", { ascending: false })
     .limit(100);
 
@@ -94,10 +90,10 @@ export default async function AccountDeletionRequestsPage() {
       memberName: u?.member_name ?? null,
       displayName: u?.display_name ?? null,
       membershipStatus: u?.membership_status ?? "unknown",
-      effectiveDate: r.effective_date,
-      nextMonthBillingConfirmed: r.next_month_billing_confirmed,
-      keyReturnedAt: r.key_returned_at,
-      refund500PaidAt: r.refund_500_paid_at,
+      effectiveDate: null,
+      nextMonthBillingConfirmed: null,
+      keyReturnedAt: null,
+      refund500PaidAt: null,
     };
   });
 

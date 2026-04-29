@@ -3,8 +3,6 @@
 import { useState, useTransition } from "react";
 
 import { updateOwnDisplayName } from "@/app/profile/actions";
-import { submitDeletionRequest } from "@/app/profile/deletion-actions";
-import type { OwnDeletionRequest } from "@/app/profile/deletion-actions";
 import { submitPauseRequest } from "@/app/profile/pause-actions";
 import type { OwnPauseRequest } from "@/app/profile/pause-actions";
 
@@ -14,7 +12,6 @@ type ProfileScreenProps = {
   email: string | null;
   initialDisplayName: string | null;
   membershipStatus: string | null;
-  pendingDeletionRequest: OwnDeletionRequest | null;
   pendingPauseRequest: OwnPauseRequest | null;
 };
 
@@ -22,7 +19,6 @@ export function ProfileScreen({
   email,
   initialDisplayName,
   membershipStatus,
-  pendingDeletionRequest,
   pendingPauseRequest,
 }: ProfileScreenProps) {
   const [displayName, setDisplayName] = useState(initialDisplayName ?? "");
@@ -38,16 +34,6 @@ export function ProfileScreen({
   const [pauseConfirmMode, setPauseConfirmMode] = useState(false);
   const [pauseFeedback, setPauseFeedback] = useState<{ ok: boolean; message: string } | null>(null);
   const [isPausePending, startPauseTransition] = useTransition();
-
-  // Deletion request state
-  const [hasPending, setHasPending] = useState(pendingDeletionRequest !== null);
-  const [deletionReason, setDeletionReason] = useState("");
-  const [confirmMode, setConfirmMode] = useState(false);
-  const [deletionFeedback, setDeletionFeedback] = useState<{
-    ok: boolean;
-    message: string;
-  } | null>(null);
-  const [isDeletionPending, startDeletionTransition] = useTransition();
 
   function handlePauseSubmit() {
     if (!pauseConfirmMode) {
@@ -71,36 +57,6 @@ export function ProfileScreen({
         setPauseFeedback({ ok: false, message: "すでに休会中です。" });
       } else {
         setPauseFeedback({ ok: false, message: result.error ?? "申請に失敗しました。" });
-      }
-    });
-  }
-
-  function handleDeletionSubmit() {
-    if (!confirmMode) {
-      setConfirmMode(true);
-      return;
-    }
-    setDeletionFeedback(null);
-    startDeletionTransition(async () => {
-      const result = await submitDeletionRequest(deletionReason || null);
-      if (result.ok) {
-        setHasPending(true);
-        setConfirmMode(false);
-        setDeletionFeedback({
-          ok: true,
-          message: "退会申請を受け付けました。スタッフ確認後に手続きを進めます。",
-        });
-      } else if (result.error === "already_pending") {
-        setHasPending(true);
-        setDeletionFeedback({
-          ok: false,
-          message: "退会申請は既に受付済みです。",
-        });
-      } else {
-        setDeletionFeedback({
-          ok: false,
-          message: result.error ?? "申請に失敗しました。",
-        });
       }
     });
   }
@@ -236,85 +192,17 @@ export function ProfileScreen({
         </section>
       )}
 
-      {/* D-1: Account deletion request section */}
+      {/* 退会: アプリ申請は停止中。窓口で受付 */}
       <section className={styles.deletionSection}>
-        <h2 className={styles.deletionTitle}>退会・アカウント削除申請</h2>
-
-        {/* D-1d: cancelled users see a notice instead of the form */}
-        {membershipStatus === "cancelled" ? (
-          <div className={styles.deletionPendingCard}>
-            <p className={styles.deletionPendingText}>
-              現在、このアカウントは退会済みです。
-              再入会をご希望の場合は、スタッフまでお問い合わせください。
-              退会後のデータは確認・お問い合わせ対応のため原則1年間保管し、1年経過後に削除対象として扱います。
-            </p>
-          </div>
-        ) : hasPending ? (
-          <div className={styles.deletionPendingCard}>
-            <p className={styles.deletionPendingText}>
-              退会申請は受付済みです。スタッフ確認後に手続きを進めます。
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className={styles.deletionDescription}>
-              退会をご希望の場合は、こちらから申請できます。
-              申請後、スタッフが確認のうえ手続きを進めます。
-              退会後も、確認やお問い合わせ対応のため、一定期間データを保管します。
-              原則として退会完了から1年経過後に、アカウント情報を削除対象とします。
-            </p>
-            <div className={styles.deletionForm}>
-              <label className={styles.label} htmlFor="deletion-reason">
-                申請理由（任意）
-              </label>
-              <textarea
-                id="deletion-reason"
-                className={styles.deletionTextarea}
-                disabled={isDeletionPending}
-                maxLength={500}
-                placeholder="理由をご記入ください（任意）"
-                rows={3}
-                value={deletionReason}
-                onChange={(e) => {
-                  setDeletionReason(e.target.value);
-                  setConfirmMode(false);
-                }}
-              />
-              {confirmMode && (
-                <p className={styles.deletionConfirmText}>
-                  本当に退会申請を送信しますか？もう一度ボタンを押すと申請されます。
-                </p>
-              )}
-              <button
-                className={confirmMode ? styles.deletionConfirmButton : styles.deletionButton}
-                disabled={isDeletionPending}
-                type="button"
-                onClick={handleDeletionSubmit}
-              >
-                {isDeletionPending
-                  ? "送信中..."
-                  : confirmMode
-                  ? "申請を確定する"
-                  : "退会を申請する"}
-              </button>
-              {!confirmMode && (
-                <p className={styles.deletionNote}>
-                  ご不明な点があれば、スタッフまでお気軽にお問い合わせください。
-                </p>
-              )}
-            </div>
-          </>
-        )}
-
-        {deletionFeedback && (
-          <p
-            className={
-              deletionFeedback.ok ? styles.feedbackOk : styles.feedbackError
-            }
-          >
-            {deletionFeedback.message}
+        <h2 className={styles.deletionTitle}>退会について</h2>
+        <div className={styles.deletionPendingCard}>
+          <p className={styles.deletionPendingText}>
+            退会をご希望の場合は、受付までお申し出ください。
+            {membershipStatus === "cancelled" && (
+              <> このアカウントはすでに退会済みです。再入会をご希望の場合もスタッフまでご連絡ください。</>
+            )}
           </p>
-        )}
+        </div>
       </section>
     </main>
   );
