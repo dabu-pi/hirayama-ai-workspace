@@ -6175,5 +6175,5 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 | complete API | body から `weightKg` / `repsDone` を受け取り DB update に含める |
 | Finish / Cancel 側 | `completingSetIds.length > 0` を guard に追加 |
 
-**STATUS: 実装完了 — 実機確認待ち（2回目）**
+**STATUS: ✅ LIVE_CHECK PASS (2026-04-29)** — 重量入力即チェック/リロード保存/連続チェック/Finish 全項目PASS
 
