@@ -209,20 +209,19 @@ function setupSelfPayVisits_(ss) {
 /**
  * 既存 SelfPayVisits シートにゴミ箱列（col 12-14）を追加する。
  * Phase 6-B 導入時に Apps Script エディタから1回手動実行する。
- * 列が既に存在する場合はスキップ。
+ * 列が既に存在する場合はスキップして ok:true を返す。
+ * @returns {{ ok: boolean, message: string }}
  */
 function runAddTrashColumns() {
   var sh = getTargetSpreadsheet_().getSheetByName(SHEET_NAMES.VISITS);
   if (!sh) {
-    SpreadsheetApp.getUi().alert("SelfPayVisits シートが見つかりません。");
-    return;
+    Logger.log("[runAddTrashColumns] SelfPayVisits シートが見つかりません");
+    return { ok: false, message: "SelfPayVisits シートが見つかりません" };
   }
   var lastCol = sh.getLastColumn();
   if (lastCol >= 12) {
-    SpreadsheetApp.getUi().alert(
-      "ゴミ箱列はすでに存在します（現在 " + lastCol + " 列）。スキップしました。"
-    );
-    return;
+    Logger.log("[runAddTrashColumns] 既に " + lastCol + " 列あります。スキップ。");
+    return { ok: true, message: "既に列が存在します（" + lastCol + " 列）。スキップしました。" };
   }
   sh.getRange(1, 12).setValue("isDeleted");
   sh.getRange(1, 13).setValue("deletedAt");
@@ -234,11 +233,7 @@ function runAddTrashColumns() {
     sh.getRange(2, 12, sh.getLastRow() - 1, 1).insertCheckboxes();
   }
   Logger.log("[runAddTrashColumns] isDeleted / deletedAt / deleteReason 追加完了");
-  SpreadsheetApp.getUi().alert(
-    "✅ SelfPayVisits にゴミ箱列を追加しました\n" +
-    "  col 12: isDeleted\n  col 13: deletedAt\n  col 14: deleteReason\n\n" +
-    "既存行の isDeleted は FALSE（未チェック）として扱われます。"
-  );
+  return { ok: true, message: "isDeleted / deletedAt / deleteReason 列を追加しました" };
 }
 
 // ============================================================
