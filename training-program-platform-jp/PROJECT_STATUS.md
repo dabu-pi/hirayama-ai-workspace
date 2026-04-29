@@ -6316,6 +6316,54 @@ WHERE status = 'in_progress'
   );
 ```
 
+---
+
+## 2026-04-29 アーカイブ連鎖修正 追加 — paused enrollment の in_progress session も archive
+
+### STATUS: 実装完了 — 既存データ修正 SQL 実行待ち / 実機確認待ち
+
+### ROOT_CAUSE（追加）
+
+前回の archive route 修正は `archived_at IS NOT NULL` の enrollment のみ対象だった。  
+本当の原因は `status='paused' AND archived_at IS NULL` の enrollment。
+
+別プログラム開始時（`enrollment:paused_for_program_switch`）に:
+- `program_enrollments.status = 'paused'` にするが `archived_at` は NULL のまま
+- 紐づく `workout_sessions` の `in_progress` も変更しない
+→ `getCurrentWorkoutSessionView()` が古い session を拾い /train に表示
+
+### FIX（追加）
+
+`lib/workout/enrollment.ts` の program switch 処理に連鎖アーカイブを追加:
+- enrollment を paused にする直後に
+- `workout_sessions WHERE enrollment_id=X AND status='in_progress' AND archived_at IS NULL`
+- → `archived_at = pausedAt` に更新（completed/cancelled は変更しない）
+- Non-fatal（session archive 失敗でも enrollment pause は成功扱い）
+
+### 既存データ修正 SQL（要手動実行）
+
+```sql
+-- 対象確認
+SELECT COUNT(*) AS target_count
+FROM workout_sessions
+WHERE status = 'in_progress'
+  AND archived_at IS NULL
+  AND program_enrollment_id IN (
+    SELECT id FROM program_enrollments
+    WHERE status = 'paused' AND archived_at IS NULL
+  );
+
+-- 問題なければ実行
+UPDATE workout_sessions
+SET archived_at = now()
+WHERE status = 'in_progress'
+  AND archived_at IS NULL
+  AND program_enrollment_id IN (
+    SELECT id FROM program_enrollments
+    WHERE status = 'paused' AND archived_at IS NULL
+  );
+```
+
 ### 再選択フローの確認
 
 同じプログラムを再選択した場合:

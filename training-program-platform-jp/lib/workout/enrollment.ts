@@ -147,10 +147,30 @@ export async function findOrCreateEnrollment(
       .maybeSingle<{ id: string }>();
 
     if (otherActive) {
+      const pausedAt = new Date().toISOString();
       await client
         .from("program_enrollments")
-        .update({ status: "paused", updated_at: new Date().toISOString() })
+        .update({ status: "paused", updated_at: pausedAt })
         .eq("id", otherActive.id);
+
+      // Archive any in_progress sessions from the now-paused enrollment so that
+      // /train's getCurrentWorkoutSessionView (archived_at IS NULL filter) no longer
+      // picks them up. completed/cancelled sessions are left untouched to preserve history.
+      const { error: sessionArchiveError } = await client
+        .from("workout_sessions")
+        .update({ archived_at: pausedAt })
+        .eq("program_enrollment_id", otherActive.id)
+        .eq("status", "in_progress")
+        .is("archived_at", null);
+
+      if (sessionArchiveError) {
+        // Non-fatal: log and continue. The enrollment is already paused.
+        console.warn("enrollment:paused_for_program_switch: failed to archive linked sessions", {
+          pausedEnrollmentId: otherActive.id,
+          error: sessionArchiveError.message
+        });
+      }
+
       console.info("enrollment:paused_for_program_switch", {
         pausedEnrollmentId: otherActive.id,
         newProgramId: programId,
