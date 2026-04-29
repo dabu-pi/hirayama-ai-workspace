@@ -282,6 +282,8 @@ var visitCount    = timeline.length;
 </div>
 
 <script>
+var PATIENT_ID = "<?= patient.patientId ?>";
+
 function toggleDetail(idx) {
   var detail = document.getElementById('detail-' + idx);
   var toggle = document.getElementById('toggle-' + idx);
@@ -299,7 +301,8 @@ function toggleDetail(idx) {
 })();
 
 function reloadPage_() {
-  try { window.top.location.reload(); } catch(e) { window.location.reload(); }
+  var url = APP_URL + '?page=detail&id=' + encodeURIComponent(PATIENT_ID);
+  try { window.top.location.href = url; } catch(e) { window.location.href = url; }
 }
 function showTrashMsg_(text) {
   var el = document.getElementById('trashMsg');
