@@ -6218,5 +6218,6 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 - カウントダウン (3/2/1秒): 880Hz / 0.07s / vol 0.04（「ピッ」）
 - 終了時: 880+1320+1760Hz 重ね / 0.6s / vol 0.045 / quick attack + exponential decay（「チーン」）
 - `playBellChime()` を追加（3 oscillator 同時起動）
-- build: tsc clean / next build PASS — 実機確認待ち
+- build: tsc clean / next build PASS
+- **✅ LIVE_CHECK PASS (2026-04-29)** — ピッ×3 + チーン / ON/OFF / localStorage 全項目PASS
 
