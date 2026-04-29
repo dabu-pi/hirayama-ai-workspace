@@ -8,6 +8,18 @@ import type { OwnPauseRequest } from "@/app/profile/pause-actions";
 
 import styles from "./ProfileScreen.module.css";
 
+type StatusLevel = "active" | "pending" | "paused" | "cancelled";
+
+function getMembershipStatusDisplay(
+  status: string | null,
+  hasPendingPause: boolean
+): { label: string; level: StatusLevel } {
+  if (status === "cancelled") return { label: "退会済み", level: "cancelled" };
+  if (status === "paused")    return { label: "休会中", level: "paused" };
+  if (hasPendingPause)        return { label: "休会申請中（承認待ち）", level: "pending" };
+  return { label: "会員（利用中）", level: "active" };
+}
+
 type ProfileScreenProps = {
   email: string | null;
   initialDisplayName: string | null;
@@ -87,6 +99,21 @@ export function ProfileScreen({
           <span className={styles.label}>メールアドレス</span>
           <p className={styles.staticValue}>{email ?? "—"}</p>
         </div>
+
+        {(() => {
+          const { label, level } = getMembershipStatusDisplay(membershipStatus, hasPausePending);
+          return (
+            <div className={styles.field}>
+              <span className={styles.label}>会員ステータス</span>
+              <span className={`${styles.statusBadge} ${styles[`status_${level}`]}`}>{label}</span>
+              {level === "pending" && pendingPauseRequest?.effective_from && (
+                <p className={styles.hint}>
+                  休会開始予定日: {pendingPauseRequest.effective_from.replace(/-(\d+)-(\d+)$/, "年$1月$2日")}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="display-name">
