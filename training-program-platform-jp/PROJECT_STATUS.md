@@ -6246,3 +6246,5 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 - `isAutoFilled=false` かつ非空（ユーザー手入力）→ 上書きされない ✅
 - 完了済みセット → 対象外 ✅
 
+**✅ LIVE_CHECK PASS (2026-04-29)** — 全9項目PASS（後続反映/手入力保護/完了済み保護/リロード保存）
+
