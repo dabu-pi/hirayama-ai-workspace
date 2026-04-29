@@ -6221,3 +6221,28 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 - build: tsc clean / next build PASS
 - **✅ LIVE_CHECK PASS (2026-04-29)** — ピッ×3 + チーン / ON/OFF / localStorage 全項目PASS
 
+---
+
+## 2026-04-29 重量反映の後続セット拡張
+
+### STATUS: 実装完了 — 実機確認待ち
+
+### ROOT_CAUSE
+
+`handleInputChange` の `shouldReflectWeight` に `targetSet.displaySetNumber === 1` 条件があり、セット1以外では後続への反映が起きなかった。また候補フィルターにセット順序の制約がなかった。
+
+### FIX（2行変更）
+
+| 変更 | 内容 |
+|---|---|
+| `displaySetNumber === 1` を削除 | 全セットで重量入力時に反映を試みる |
+| `candidate.setNumber > targetSet.setNumber` を追加 | **後続セットのみ**に絞る（前セットは対象外） |
+
+### 上書きルール（変更なし）
+
+既存の `isAutoFilled` フラグを継続利用:
+- 空欄 → 反映される ✅
+- `isAutoFilled=true`（自動反映値）→ 上書きされる ✅
+- `isAutoFilled=false` かつ非空（ユーザー手入力）→ 上書きされない ✅
+- 完了済みセット → 対象外 ✅
+

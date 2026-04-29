@@ -870,12 +870,19 @@ export function WorkoutScreen({
     if (!exercise || !targetSet) return;
 
     clearTransientError();
-    const shouldReflectWeight =
-      field === "weightKg" && targetSet.displaySetNumber === 1 && nextValue.trim() !== "";
+    // Propagate weight to subsequent incomplete sets when typing in any set's weight field.
+    // Candidates must be: (a) after the edited set by setNumber, (b) not yet completed,
+    // (c) either empty or auto-filled (= not hand-typed by the user).
+    const shouldReflectWeight = field === "weightKg" && nextValue.trim() !== "";
 
     const reflectedSetIds = shouldReflectWeight
       ? exercise.sets
-          .filter((candidate) => candidate.id !== setId && !candidate.isCompleted)
+          .filter(
+            (candidate) =>
+              candidate.id !== setId &&
+              !candidate.isCompleted &&
+              candidate.setNumber > targetSet.setNumber
+          )
           .filter((candidate) => {
             const candidateDraft = getSetDraft(draftInputs, candidate);
             return candidateDraft.weightKg.trim() === "" || candidate.isAutoFilled;
