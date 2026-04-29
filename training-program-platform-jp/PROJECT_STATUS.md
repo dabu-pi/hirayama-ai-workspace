@@ -1,5 +1,44 @@
 # PROJECT_STATUS
 
+## 2026-04-30 BUG-FIX: 自由に作成フロー（Custom Workout Entry）
+
+### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
+
+### 不具合概要
+
+`/programs` の「自由に作成」ボタンを押してもトレーニング画面に入れず、`/programs` に戻される。
+
+### 根本原因
+
+Next.js 14 の Router Cache が `/train` の古い RSC エントリ（セッションなし → `redirect("/programs")`）を
+最大 30 秒間キャッシュする。`router.refresh()` は現在のルート（`/programs`）のキャッシュのみをクリアし、
+`/train` のキャッシュは残ったまま。そのため `router.push("/train")` がキャッシュ済みのリダイレクトを
+再生し、ユーザーが `/programs` に戻されていた。
+
+### 修正内容
+
+`components/workout/CustomWorkoutButton.tsx`
+- `router.refresh()` + `router.push("/train")` を削除
+- `window.location.assign("/train")` に置き換え（Router Cache をバイパスするフルナビゲーション）
+- 不要になった `useRouter` import も除去
+
+修正コミット: `c2770bb`
+
+### LIVE_CHECK 結果（2026-04-30）
+
+| 確認項目 | 結果 |
+|---|---|
+| /programs → 「自由に作成」→ トレーニング開始画面 | ✅ PASS |
+| 種目追加 | ✅ PASS |
+| セット追加 | ✅ PASS |
+| セット削除 | ✅ PASS |
+| トレーニング完了（エラーなし） | ✅ PASS |
+| 履歴に「フリーセッション」として記録 | ✅ PASS |
+| paused/cancelled ユーザーの membership guard | ⚠️ 未確認 |
+| 通常 GZCL プログラム開始フロー | ⚠️ 未確認 |
+
+---
+
 ## 2026-04-28 G-6: 前回トレーニングから経過日数メッセージ — 設計方針
 
 ### STATUS: 設計整理完了 / 実装は次フェーズで実施

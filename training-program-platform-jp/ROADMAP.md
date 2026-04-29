@@ -18,6 +18,7 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 | Phase 2.7 | PWA化（manifest / service worker / icons）/ G-6b 起動時メッセージ強調 | ✅ CONDITIONAL CLOSED |
 | Phase M | 会員ライフサイクル管理（休会・退会・billing_cutoff 設計〜実装） | ✅ CLOSED |
 | UX修正 | チェック高速化 / 通知音 / 重量後続セット反映 / プログラム一覧改善 / アーカイブ連鎖修正 | ✅ 全 LIVE_CHECK PASS |
+| BUG-FIX | 自由に作成フロー（Router Cache バイパス）— custom session 作成後に `/programs` に戻される問題 | ✅ LIVE_CHECK PASS (2026-04-30) |
 
 ### 未完了・保留・スタブ
 
