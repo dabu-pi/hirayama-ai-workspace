@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
@@ -162,7 +161,10 @@ export async function POST(_: Request, { params }: RouteContext) {
       isLocked: updatedSet.is_locked
     });
 
-    revalidatePath("/train");
+    // revalidatePath("/train") intentionally removed.
+    // WorkoutScreen manages its state client-side; marking /train stale here
+    // has no immediate effect and can cause an unnecessary full reload on
+    // the next router.refresh() call.
 
     return NextResponse.json({
       id: updatedSet.id,

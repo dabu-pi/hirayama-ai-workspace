@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
@@ -184,7 +183,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    revalidatePath("/train");
+    // revalidatePath("/train") intentionally removed — same reasoning as complete route.
 
     return NextResponse.json({
       id: updatedSet.id,

@@ -948,7 +948,12 @@ export function WorkoutScreen({
   };
 
   const handleComplete = async (exerciseId: string, setId: string) => {
-    if (isSessionEnded || pendingMutation || savingSetIds.includes(setId) || isFinishing) {
+    // savingSetIds is intentionally excluded from this guard.
+    // If an onBlur input save is in flight for this set, we let complete proceed:
+    // handleInputSave will be a no-op (its own guard skips a duplicate save),
+    // and the in-flight save will finish independently. Both update different
+    // DB columns (weight_kg/reps_done vs is_completed/completed_at), so no conflict.
+    if (isSessionEnded || pendingMutation || isFinishing) {
       return;
     }
 
@@ -1032,7 +1037,8 @@ export function WorkoutScreen({
   };
 
   const handleUncomplete = async (exerciseId: string, setId: string) => {
-    if (isSessionEnded || pendingMutation || savingSetIds.includes(setId) || isFinishing) {
+    // Same reasoning as handleComplete: allow uncomplete even during an input save.
+    if (isSessionEnded || pendingMutation || isFinishing) {
       return;
     }
 

@@ -6127,3 +6127,32 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 **Phase M 全体: ✅ CLOSED (2026-04-29)**
 休会・退会はアプリ申請なし、受付対応に統一。管理者手動変更（/admin/members）は継続稼働。
 
+---
+
+## 2026-04-29 UX fix: セット完了チェック遅延問題
+
+### STATUS: 実装完了 — 実機確認待ち
+
+### ROOT_CAUSE
+
+| # | 問題 | 場所 |
+|---|---|---|
+| 1 (主因) | `handleComplete` の guard に `savingSetIds.includes(setId)` があるため、`onBlur` 入力保存中にチェックタップすると**アクションが DROP される**。ユーザーは保存完了（~300ms）を待って再タップ必要 | `WorkoutScreen.tsx:951` |
+| 2 (副因) | `complete` API と `PATCH` API で `revalidatePath("/train")` を呼んでいる。`WorkoutScreen` はクライアント管理なので不要。後続の `router.refresh()` で不要な全画面リロードを誘発 | `complete/route.ts:165` / `route.ts:187` |
+
+### FIX
+
+| 変更 | 内容 |
+|---|---|
+| `WorkoutScreen.tsx` | `handleComplete` / `handleUncomplete` guard から `savingSetIds.includes(setId)` を削除。入力保存中でもチェックを受け付ける |
+| `complete/route.ts` | `revalidatePath("/train")` を削除 |
+| `route.ts` (PATCH) | `revalidatePath("/train")` を削除 |
+
+### 安全性
+
+- `handleInputSave` は自身の guard で重複呼び出しをスキップ（no-op）。既存の in-flight save がそのまま完了する
+- `postSetAction(complete)` と in-flight `patchWorkoutSet` は異なる DB カラムを更新（競合なし）
+- 失敗時の rollback ロジックは変更なし
+
+
+
