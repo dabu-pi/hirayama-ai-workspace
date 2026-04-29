@@ -56,10 +56,10 @@ export function ProgramStatsScreen({ stats }: Props) {
               <tr>
                 <th className={styles.thRank}>順位</th>
                 <th className={styles.thName}>プログラム名</th>
-                <th className={styles.thNum}>累計</th>
+                <th className={styles.thNum}>累計選択数</th>
                 <th className={styles.thNum}>利用中</th>
                 <th className={styles.thNum}>完了</th>
-                <th className={styles.thNum}>休止</th>
+                <th className={styles.thNum}>一時停止</th>
                 <th className={styles.thDate}>最終選択日</th>
               </tr>
             </thead>
@@ -95,7 +95,9 @@ export function ProgramStatsScreen({ stats }: Props) {
       )}
 
       <p className={styles.note}>
-        ※ 「利用中」は現在アクティブな受講数。同一ユーザーが同じプログラムを複数回受講した場合も累計に含まれます。
+        ※ ステータスの説明: 「利用中」= active（進行中）/ 「完了」= completed（最終日クリア）/ 「一時停止」= paused（稀なエラー状態）。
+        「cancelled」は program_enrollments には存在しません（workout_sessions のみ）。
+        同一ユーザーが同じプログラムを複数回受講した場合も累計選択数に含まれます。
       </p>
     </main>
   );
