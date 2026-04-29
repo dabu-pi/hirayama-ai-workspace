@@ -83,9 +83,11 @@ export async function POST(_request: Request, { params }: RouteContext) {
       return NextResponse.json({ id: enrollment.id, archived: true, noOp: true });
     }
 
+    const now = new Date().toISOString();
+
     const { error: updateError } = await dbClient
       .from("program_enrollments")
-      .update({ archived_at: new Date().toISOString() })
+      .update({ archived_at: now })
       .eq("id", params.enrollmentId)
       .eq("user_id", userId);
 
@@ -96,7 +98,27 @@ export async function POST(_request: Request, { params }: RouteContext) {
       );
     }
 
+    // Also archive any in_progress sessions for this enrollment so that
+    // /train's getCurrentWorkoutSessionView (which filters archived_at IS NULL)
+    // no longer picks them up. Completed/cancelled sessions are left untouched
+    // to preserve training history.
+    const { error: sessionsUpdateError } = await dbClient
+      .from("workout_sessions")
+      .update({ archived_at: now })
+      .eq("program_enrollment_id", params.enrollmentId)
+      .eq("status", "in_progress")
+      .is("archived_at", null);
+
+    if (sessionsUpdateError) {
+      // Non-fatal: log and continue. The enrollment is already archived.
+      console.warn("archive enrollment: failed to archive linked sessions", {
+        enrollmentId: params.enrollmentId,
+        error: sessionsUpdateError.message
+      });
+    }
+
     revalidatePath("/programs");
+    revalidatePath("/train");
     revalidatePath("/");
 
     return NextResponse.json({ id: params.enrollmentId, archived: true, noOp: false });

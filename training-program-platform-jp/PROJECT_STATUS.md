@@ -6279,3 +6279,46 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 
 **✅ LIVE_CHECK PASS (2026-04-29)** — 全8項目PASS（切替中断/運営コメント/ステータス説明/個人情報なし）。横スクロールは管理者画面として許容範囲。将来的にカード型表示を検討。
 
+---
+
+## 2026-04-29 アーカイブ連鎖修正 — enrollment アーカイブ時に in_progress session も archived_at を記録
+
+### STATUS: 実装完了 — 既存データ修正 SQL 実行待ち / 実機確認待ち
+
+### ROOT_CAUSE
+
+`/api/enrollments/[id]/archive` が `program_enrollments.archived_at` のみ更新し、
+紐づく `workout_sessions` は変更しなかった。
+
+`getCurrentWorkoutSessionView()` は `workout_sessions.archived_at IS NULL` でフィルターするだけで
+enrollment の状態を確認しないため、アーカイブ済み enrollment の `in_progress` session を拾ってしまう。
+
+→ /train ではトレーニング中に見える が /admin/program-stats では「利用中 0」のズレが発生。
+
+### FIX
+
+archive route に連鎖アーカイブを追加:
+- `program_enrollments.archived_at = now()` 更新後
+- `workout_sessions WHERE program_enrollment_id = enrollmentId AND status='in_progress' AND archived_at IS NULL` も `archived_at = now()` に更新
+- completed/cancelled 履歴は変更しない（物理削除なし）
+- Non-fatal: session archive 失敗でも enrollment archive は成功扱い
+
+### 既存データ修正 SQL（手動実行が必要）
+
+```sql
+-- アーカイブ済み enrollment の in_progress session を連鎖アーカイブ
+UPDATE workout_sessions
+SET archived_at = now()
+WHERE status = 'in_progress'
+  AND archived_at IS NULL
+  AND program_enrollment_id IN (
+    SELECT id FROM program_enrollments WHERE archived_at IS NOT NULL
+  );
+```
+
+### 再選択フローの確認
+
+同じプログラムを再選択した場合:
+- archived enrollment は `archived_at IS NOT NULL` のため active enrollment 検索から除外される
+- `findOrCreateEnrollment` が新規 enrollment を Week1 Day1 で作成 → 正常動作
+
