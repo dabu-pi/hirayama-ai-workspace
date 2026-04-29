@@ -139,14 +139,54 @@
 
 .activeNum { color: #4ade80; font-weight: 700; }
 
+.thComment { min-width: 180px; }
+.tdComment { font-size: var(--text-xs); }
+
+.commentGood    { color: #4ade80; }
+.commentCaution { color: #fb923c; }
+.commentInfo    { color: var(--text-muted); }
+
 .empty {
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
 
-.note {
+/* ── Legend ── */
+
+.legend {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.legendTitle {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 var(--space-3);
+}
+
+.legendList {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px var(--space-4);
+  margin: 0;
+}
+
+.legendList dt {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.legendList dd {
   font-size: var(--text-xs);
   color: var(--text-muted);
-  line-height: 1.5;
   margin: 0;
+  line-height: 1.5;
 }

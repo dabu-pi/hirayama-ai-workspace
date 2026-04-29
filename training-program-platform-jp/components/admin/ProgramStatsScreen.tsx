@@ -23,6 +23,35 @@ const LEVEL_LABEL: Record<string, string> = {
   advanced: "上級"
 };
 
+/**
+ * Rule-based admin comment — no AI API.
+ * Helps operations staff quickly read the health of each program.
+ */
+function getAdminComment(row: ProgramStatRow): { text: string; variant: "good" | "info" | "caution" | "" } {
+  const { totalEnrollments, activeCount, completedCount, pausedCount } = row;
+
+  if (totalEnrollments === 0) {
+    return { text: "未選択", variant: "info" };
+  }
+
+  const completionRate = completedCount / totalEnrollments;
+  const switchRate = pausedCount / totalEnrollments;
+
+  if (completionRate >= 0.5) {
+    return { text: `完走率${Math.round(completionRate * 100)}% — 継続しやすいプログラム`, variant: "good" };
+  }
+  if (completionRate >= 0.3) {
+    return { text: `完走率${Math.round(completionRate * 100)}% — 完走者あり`, variant: "good" };
+  }
+  if (switchRate >= 0.5) {
+    return { text: "切替が多い — 他プログラムへの移行が目立つ", variant: "caution" };
+  }
+  if (activeCount > 0 && completedCount === 0) {
+    return { text: "利用中のみ — 完走者はまだなし", variant: "info" };
+  }
+  return { text: "", variant: "" };
+}
+
 export function ProgramStatsScreen({ stats }: Props) {
   const totalEnrollments = stats.reduce((sum, r) => sum + r.totalEnrollments, 0);
 
@@ -59,46 +88,67 @@ export function ProgramStatsScreen({ stats }: Props) {
                 <th className={styles.thNum}>累計選択数</th>
                 <th className={styles.thNum}>利用中</th>
                 <th className={styles.thNum}>完了</th>
-                <th className={styles.thNum}>一時停止</th>
+                <th className={styles.thNum}>切替中断</th>
                 <th className={styles.thDate}>最終選択日</th>
+                <th className={styles.thComment}>運営コメント</th>
               </tr>
             </thead>
             <tbody>
-              {stats.map((row, idx) => (
-                <tr key={row.programId} className={idx === 0 ? styles.topRow : ""}>
-                  <td className={styles.tdRank}>
-                    {idx + 1}
-                    {idx === 0 && row.totalEnrollments > 0 && (
-                      <span className={styles.topBadge}>★</span>
-                    )}
-                  </td>
-                  <td className={styles.tdName}>
-                    <span className={styles.programTitle}>{row.title}</span>
-                    {row.level && (
-                      <span className={styles.levelChip}>
-                        {LEVEL_LABEL[row.level] ?? row.level}
-                      </span>
-                    )}
-                  </td>
-                  <td className={styles.tdNum}>{row.totalEnrollments}</td>
-                  <td className={`${styles.tdNum} ${row.activeCount > 0 ? styles.activeNum : ""}`}>
-                    {row.activeCount}
-                  </td>
-                  <td className={styles.tdNum}>{row.completedCount}</td>
-                  <td className={styles.tdNum}>{row.pausedCount}</td>
-                  <td className={styles.tdDate}>{formatDate(row.lastEnrolledAt)}</td>
-                </tr>
-              ))}
+              {stats.map((row, idx) => {
+                const comment = getAdminComment(row);
+                return (
+                  <tr key={row.programId} className={idx === 0 ? styles.topRow : ""}>
+                    <td className={styles.tdRank}>
+                      {idx + 1}
+                      {idx === 0 && row.totalEnrollments > 0 && (
+                        <span className={styles.topBadge}>★</span>
+                      )}
+                    </td>
+                    <td className={styles.tdName}>
+                      <span className={styles.programTitle}>{row.title}</span>
+                      {row.level && (
+                        <span className={styles.levelChip}>
+                          {LEVEL_LABEL[row.level] ?? row.level}
+                        </span>
+                      )}
+                    </td>
+                    <td className={styles.tdNum}>{row.totalEnrollments}</td>
+                    <td className={`${styles.tdNum} ${row.activeCount > 0 ? styles.activeNum : ""}`}>
+                      {row.activeCount}
+                    </td>
+                    <td className={styles.tdNum}>{row.completedCount}</td>
+                    <td className={styles.tdNum}>{row.pausedCount}</td>
+                    <td className={styles.tdDate}>{formatDate(row.lastEnrolledAt)}</td>
+                    <td className={styles.tdComment}>
+                      {comment.text && (
+                        <span className={
+                          comment.variant === "good" ? styles.commentGood
+                          : comment.variant === "caution" ? styles.commentCaution
+                          : styles.commentInfo
+                        }>
+                          {comment.text}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      <p className={styles.note}>
-        ※ ステータスの説明: 「利用中」= active（進行中）/ 「完了」= completed（最終日クリア）/ 「一時停止」= paused（稀なエラー状態）。
-        「cancelled」は program_enrollments には存在しません（workout_sessions のみ）。
-        同一ユーザーが同じプログラムを複数回受講した場合も累計選択数に含まれます。
-      </p>
+      <section className={styles.legend}>
+        <h2 className={styles.legendTitle}>ステータスの意味</h2>
+        <dl className={styles.legendList}>
+          <dt>利用中 (active)</dt>
+          <dd>現在プログラムを進めているユーザー数</dd>
+          <dt>完了 (completed)</dt>
+          <dd>プログラムの全日程を完走したユーザー数（のべ件数）</dd>
+          <dt>切替中断 (paused)</dt>
+          <dd>このプログラム進行中に別のプログラムを開始し、自動的に中断された件数。会員の「休会」とは無関係</dd>
+        </dl>
+      </section>
     </main>
   );
 }
