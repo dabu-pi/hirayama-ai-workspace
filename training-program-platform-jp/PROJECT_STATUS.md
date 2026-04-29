@@ -6385,6 +6385,8 @@ WHERE status = 'in_progress'
 
 Strategy 2 が paused/completed enrollment の session を拾って `/train?program=gzclp-base&programDayId=XXXX` にリダイレクトしていた。これを排除。active enrollment がない場合は /programs へ。active enrollment があるが current_program_day_id が null の場合は enrollment スコープの session 検索で解決。
 
+**✅ LIVE_CHECK PASS (2026-04-29)** — GZCLP 古い画面なし / /programs 誘導OK / 履歴残存 / エラーなし（シークレット確認済み）
+
 ### 再選択フローの確認
 
 同じプログラムを再選択した場合:
