@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 import styles from "./CustomWorkoutButton.module.css";
 
 export function CustomWorkoutButton() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -28,8 +26,9 @@ export function CustomWorkoutButton() {
         return;
       }
 
-      router.refresh();
-      router.push("/train");
+      // router.push("/train") はNext.js 14 Router Cacheの古いエントリを
+      // 再生するため、window.location.assign でRouter Cacheをバイパスする。
+      window.location.assign("/train");
     } catch {
       setErrorMessage("ネットワークエラーが発生しました。");
     } finally {
