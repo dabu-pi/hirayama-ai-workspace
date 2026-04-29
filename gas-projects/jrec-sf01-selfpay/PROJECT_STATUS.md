@@ -3,11 +3,60 @@
 ## 現在ステータス
 
 **✅ Phase 5-C 領収書発行フロー: CLOSED**（2026-04-29 全 PASS）
-**✅ Versioned Deployment @22: 反映済み**（2026-04-29）
-**✅ Phase 6-A 患者基本情報編集: CLOSED**（2026-04-29 主機能 PASS）
-**🔄 Phase 6-B 来院履歴ゴミ箱機能: 実装済み・実機確認待ち**（2026-04-29）
+**✅ Versioned Deployment @23: 反映済み**（2026-04-29）
+**✅ Phase 6-A 患者基本情報編集: CLOSED**（2026-04-29 全 PASS）
+**✅ Phase 6-B 来院履歴ゴミ箱機能: CLOSED**（2026-04-29 全 PASS）
 
-次: Phase 6-B 実機確認（migration 実行 → ゴミ箱ボタン確認 → 削除・復元確認）
+次: versioned deployment（Phase 6-B 本番反映 @24）→ Phase 6-C または次案件
+
+---
+
+## ✅ Phase 6-B 実機確認 PASS（2026-04-29）
+
+**主要 commits:** 4f7cc78 / 99bfbef / 6e1f739 / e3e7786
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| B-1 | ✅ PASS | 未会計行に 🗑 ボタン表示 |
+| B-2 | ✅ PASS | ゴミ箱移動 → 通常一覧から消える / Google Drive 権限画面に飛ばない / 成功メッセージ + 手動更新ボタン |
+| B-3 | ✅ PASS | 復元 → 通常一覧に戻る / ゴミ箱件数が減る / Drive 権限画面なし |
+| B-4 revised | ✅ PASS | 会計済・領収書発行済みでも 🗑 表示 / confirm 文言で「売上データは残る」と明示 |
+| B-5 | ✅ PASS | isDeleted=true は来院件数・未会計件数から除外 / 復元後は件数に戻る |
+
+### CLOSED_SCOPE
+
+| 機能 | 内容 |
+|---|---|
+| SelfPayVisits 列追加 | isDeleted / deletedAt / deleteReason（col 12-14）|
+| 来院履歴の論理ゴミ箱化 | isDeleted=TRUE → 通常一覧から非表示 |
+| 全ステータス対応 | 未会計・未収・一部入金・入金済・領収書発行済みすべてゴミ箱可 |
+| データ保護 | Payments / Receipts / DailySales / Run_Log は変更しない |
+| 復元 | isDeleted=FALSE に戻すだけ。完全削除は未実装 |
+| サマリ除外 | isDeleted=TRUE は来院件数・未会計件数から除外（getPatientAccountingData / getPatientListStats）|
+| 遷移方式 | GAS iframe の success handler 内自動遷移を禁止 → 手動更新ボタン方式 |
+
+### バグ修正履歴（Phase 6-B 中）
+
+| commit | 問題 | 修正 |
+|---|---|---|
+| 99bfbef | B-2 FAIL: trashVisit 成功後 UI 変化なし | ROOT_CAUSE: `window.top.location.reload()` がクロスオリジン制約で silent fail → try/catch + `window.location.reload()` フォールバックへ（のちに廃止）|
+| 6e1f739 | Google Drive「アクセス権が必要です」 | ROOT_CAUSE: success handler 内の自動遷移が GAS iframe → Drive へ飛ぶ → 自動遷移を廃止し DOM 更新 + 手動ボタン方式に変更 |
+| e3e7786 | 未会計カウントにゴミ箱 visit が残る | ROOT_CAUSE: getPatientAccountingData が isDeleted 列を読まず全 visit を集計 → 12列読み取り + isDeleted フィルタ追加 |
+
+### GAS iframe 遷移の教訓
+
+| 禁止 | 理由 |
+|---|---|
+| `google.script.run` success handler 内での `window.location.href` | GAS iframe → Google Drive 権限画面に飛ぶ |
+| `window.top.location.reload()` | クロスオリジン SecurityError または外側フレームの URL をリロード |
+| `window.location.reload()` | フレームの URL にページパラメータが含まれず白画面 |
+| **許可** | ユーザー操作（onclick）の `window.top.location.href = APP_URL + '?...'` |
+
+### 将来タスク（DEFERRED）
+
+- 完全削除（permanentlyDeleteVisit）→ Phase 6-C
+- ゴミ箱内の詳細表示・理由入力 UI 改善
+- 累計支払額のゴミ箱 visit 除外（現在は Payments は変更しないため除外なし）
 
 ---
 
