@@ -167,7 +167,7 @@ begin
   update public.programs
   set
     title            = 'GZCLP Base',
-    description      = 'Original Cody Lefever GZCLP base month: 3 days per week, four rotating workouts (A1/B1/A2/B2), and the standard T1/T2/T3 progression model.',
+    description      = 'Cody LefeverオリジナルのGZCLP基礎プログラムです。週3日でスクワット・ベンチプレス・デッドリフト・プレスをバランスよく鍛え、T1/T2/T3の3段階構成で筋力と筋量を伸ばします。バーベルトレーニング初心者に最適です。',
     duration_weeks   = 4,
     days_per_week    = 3,
     level            = 'beginner',

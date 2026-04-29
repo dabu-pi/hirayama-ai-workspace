@@ -17,11 +17,11 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     sourceProgramName: "GZCLP",
     sourceFidelity: "original",
     sourceNotes:
-      "Cody Lefever オリジナルベース月：4週間にわたりA1/B1/A2/B2を循環し、T1/T2/T3の漸進モデルで進める。",
+      "Cody Lefever オリジナルベース月：4週間でスクワット・ベンチプレス・デッドリフト・プレスを循環し、T1/T2/T3の漸進モデルで進める。",
     tags: [],
     methodology: "gzcl",
     overview:
-      "T1メイン5×3+、T2練習3×10、T3アクセサリー3×15+で構成するGZCLPオリジナルベース月。"
+      "週3日でスクワット・ベンチプレス・デッドリフト・プレスをバランスよく鍛えるGZCLP基礎プログラムです。T1のメイン種目で重さを伸ばし、T2の補助種目でフォームと基礎筋力を固め、T3のアクセサリー種目で弱点補強を行います。"
   },
   {
     id: "program-gzclp-v2-4day",
@@ -29,17 +29,17 @@ const PROGRAM_CATALOG: ProgramCatalogItem[] = [
     title: "GZCLP 基礎 4日/週（4週）",
     level: "初級",
     levelKey: "beginner",
-    goal: "週4トレーニングで完全なA1/B1/A2/B2サイクルを毎週こなし、筋力と筋量を効率よく積み上げる。",
+    goal: "週4回のトレーニングで、スクワット・ベンチプレス・デッドリフト・プレスをバランスよく鍛え、筋力と筋量を少しずつ積み上げていく。",
     frequencyLabel: "4日/週",
     durationLabel: "4週間",
     sourceProgramName: "GZCLP",
     sourceFidelity: "adapted",
     sourceNotes:
-      "gzclp-base-v2 をベースに週4版へ拡張。毎週 A1/B1/A2/B2 の完全サイクルを実施。T3候補は動作パターン別（スクワット系/ベンチ系/OHP系/デッドリフト系）に各3種から選択可能。",
+      "gzclp-base-v2 をベースに週4版へ拡張。T3候補は動作パターン別（スクワット系/ベンチ系/OHP系/デッドリフト系）に各3種から選択可能。",
     tags: [],
     methodology: "gzcl",
     overview:
-      "完全な A1/B1/A2/B2 サイクルを毎週繰り返す週4版 GZCLP。各セッション: T1 メイン 5×3+、T2 練習 3×10、T3アクセサリー3種（固定プル種目 + 動作系統別の選択T3×2）。T3は主種目の動作パターン（スクワット/ベンチ/OHP/デッドリフト）に応じた3候補から交換可能。"
+      "週4回で全身をしっかり鍛えるGZCLPプログラムです。T1のメイン種目で重さを伸ばし、T2の補助種目でフォームと基礎筋力を高め、T3のアクセサリー種目で弱点補強や筋肉量アップを狙います。種目はトレーニングの動作パターン（スクワット系・ベンチ系・プレス系・デッドリフト系）に応じて選択できます。"
   },
   {
     id: "program-big3-3day",

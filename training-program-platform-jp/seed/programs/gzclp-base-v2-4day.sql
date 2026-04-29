@@ -128,11 +128,11 @@ begin
      source_program_name, source_fidelity, source_notes, is_public)
   values (
     'gzclp-base-v2-4day',
-    'GZCLP 5-Exercise 4-Day',
-    'Full A1/B1/A2/B2 cycle completed every week at 4 days per week. Each session has 5 exercises: T1 main lift, T2 practice, fixed back pull, and two movement-family T3 accessories selectable from 3 focused candidates.',
+    'GZCLP 基礎 4日/週（4週）',
+    '週4回で全身をしっかり鍛えるGZCLPプログラムです。T1のメイン種目で重さを伸ばし、T2の補助種目でフォームと基礎筋力を高め、T3のアクセサリー種目で弱点補強や筋肉量アップを狙います。無理に重量を上げるのではなく、決められた回数を丁寧にこなしながら、少しずつ成長していく内容です。',
     4, 4, 'beginner',
     'GZCLP', 'adapted',
-    'Based on gzclp-base-v2. Full A1/B1/A2/B2 rotation completed each week. T3 candidates trimmed to 3 per movement family (squat/bench/ohp/deadlift).',
+    'gzclp-base-v2 をベースに週4日版へ拡張。T3候補は動作パターン別（スクワット系/ベンチ系/OHP系/デッドリフト系）に各3種から選択可能。',
     true
   )
   returning id into prog_id;

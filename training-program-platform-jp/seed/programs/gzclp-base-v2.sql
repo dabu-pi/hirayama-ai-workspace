@@ -122,11 +122,11 @@ begin
      source_program_name, source_fidelity, source_notes, is_public)
   values (
     'gzclp-base-v2',
-    'GZCLP 5-Exercise Base',
-    'GZCLP base month extended to 5 exercises per session. The original A1/B1/A2/B2 rotation and T1/T2/T3 tier structure are preserved; each session adds a T1-support and T2-support T3 accessory alongside the fixed pull slot.',
+    'GZCLP 基礎プログラム（改良版）',
+    '週3日で全身をしっかり鍛える改良版GZCLPプログラムです。T1のメイン種目で重さを伸ばし、T2の補助種目でフォームと基礎筋力を高め、T3のアクセサリー種目で弱点補強や筋肉量アップを狙います。種目の入れ替えに対応しており、バリエーションを持たせながら継続できます。',
     4, 3, 'beginner',
     'GZCLP', 'adapted',
-    'Based on Cody Lefever''s original GZCLP base month. Core T1/T2/T3 tier and A1/B1/A2/B2 rotation unchanged. Extended from 3 to 5 exercises per session by adding T1-support and T2-support T3 accessories.',
+    'Cody Lefever オリジナルをベースに、各セッションのT3アクセサリーを拡張した改良版。T1/T2/T3の3段階構成はそのままに、セッションあたり5種目に増加。',
     true
   )
   returning id into prog_id;

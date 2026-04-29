@@ -28,13 +28,21 @@ WHERE slug = 'big3-2day-6week';
 UPDATE public.programs
 SET
   title = 'GZCLP 基礎プログラム',
-  description = 'Cody LefeverオリジナルのGZCLP基礎月。週3日でA1/B1/A2/B2を4週間循環し、T1/T2/T3の漸進モデルで筋力と筋量を伸ばします。バーベルトレーニング初心者に最適です。'
+  description = 'Cody LefeverオリジナルのGZCLP基礎プログラムです。週3日でスクワット・ベンチプレス・デッドリフト・プレスをバランスよく鍛え、T1/T2/T3の3段階構成で筋力と筋量を伸ばします。バーベルトレーニング初心者に最適です。'
 WHERE slug = 'gzclp-base';
+
+-- GZCLP Base v2
+UPDATE public.programs
+SET
+  title = 'GZCLP 基礎プログラム（改良版）',
+  description = '週3日で全身をしっかり鍛える改良版GZCLPプログラムです。T1のメイン種目で重さを伸ばし、T2の補助種目でフォームと基礎筋力を高め、T3のアクセサリー種目で弱点補強や筋肉量アップを狙います。種目の入れ替えに対応しており、バリエーションを持たせながら継続できます。'
+WHERE slug = 'gzclp-base-v2';
 
 -- GZCLP Base v2 4-Day
 UPDATE public.programs
 SET
-  title = 'GZCLP 基礎 4日/週（4週）'
+  title = 'GZCLP 基礎 4日/週（4週）',
+  description = '週4回で全身をしっかり鍛えるGZCLPプログラムです。T1のメイン種目で重さを伸ばし、T2の補助種目でフォームと基礎筋力を高め、T3のアクセサリー種目で弱点補強や筋肉量アップを狙います。無理に重量を上げるのではなく、決められた回数を丁寧にこなしながら、少しずつ成長していく内容です。'
 WHERE slug = 'gzclp-base-v2-4day';
 
 -- Barbell 2-Day Full Body Base
