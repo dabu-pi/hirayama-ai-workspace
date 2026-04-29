@@ -520,98 +520,48 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
       .limit(1)
       .maybeSingle<TrainFallbackEnrollmentRow>();
 
-    if (enrollment) {
-      const { data: program } = await client
-        .from("programs")
-        .select("slug")
-        .eq("id", enrollment.program_id)
-        .maybeSingle<TrainFallbackProgramRow>();
+    // No active enrollment → redirect to /programs.
+    // Strategy 2 (global session-based) is intentionally removed: it bypassed
+    // enrollment entirely and surfaced sessions from paused/completed enrollments,
+    // causing old programs to appear as StartSessionScreen candidates in /train.
+    if (!enrollment) return null;
 
-      if (program?.slug) {
-        let programDayId: string | null = enrollment.current_program_day_id;
+    const { data: program } = await client
+      .from("programs")
+      .select("slug")
+      .eq("id", enrollment.program_id)
+      .maybeSingle<TrainFallbackProgramRow>();
 
-        if (!programDayId) {
-          const { data: lastEnrollmentSession } = await client
-            .from("workout_sessions")
-            .select("program_day_id")
-            .eq("program_enrollment_id", enrollment.id)
-            .in("status", ["completed", "cancelled"])
-            .is("archived_at", null)
-            .order("started_at", { ascending: false })
-            .limit(1)
-            .maybeSingle<TrainFallbackSessionRow>();
-
-          if (lastEnrollmentSession?.program_day_id) {
-            programDayId = await findNextProgramDayId(lastEnrollmentSession.program_day_id);
-          }
-        }
-
-        if (programDayId) return { programSlug: program.slug, programDayId };
-      } else {
-        console.warn("train-fallback:strategy1_no_slug", {
-          enrollmentId: enrollment.id,
-          programId: enrollment.program_id
-        });
-      }
-    }
-
-    // ── Strategy 2: session-based (bypasses enrollment entirely) ─────────────
-    // Used when enrollment is absent, archived, or in an unrecoverable status.
-    // program_day_id IS NOT NULL excludes custom sessions (free sessions have
-    // program_day_id=null and must not be mistaken for the last program session).
-    const { data: lastSession } = await client
-      .from("workout_sessions")
-      .select("program_day_id, status")
-      .eq("user_id", userId)
-      .not("program_day_id", "is", null)
-      .in("status", ["completed", "cancelled"])
-      .is("archived_at", null)
-      .order("started_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<{ program_day_id: string | null; status: string }>();
-
-    if (!lastSession?.program_day_id) return null;
-
-    // cancelled → retry same day; completed → advance to next day
-    const targetDayId: string | null =
-      lastSession.status === "completed"
-        ? await findNextProgramDayId(lastSession.program_day_id)
-        : lastSession.program_day_id;
-
-    if (!targetDayId) {
-      console.warn("train-fallback:strategy2_no_next_day", {
-        lastSessionProgramDayId: lastSession.program_day_id,
-        note: "findNextProgramDayId returned null — program may be at final day or data issue"
+    if (!program?.slug) {
+      console.warn("train-fallback:strategy1_no_slug", {
+        enrollmentId: enrollment.id,
+        programId: enrollment.program_id
       });
       return null;
     }
 
-    // Resolve slug via program_days → program_weeks → programs
-    // All three tables are readable by everyone (anon + authenticated) — no RLS risk.
-    const { data: dayRow } = await client
-      .from("program_days")
-      .select("program_week_id")
-      .eq("id", targetDayId)
-      .maybeSingle<{ program_week_id: string }>();
+    let programDayId: string | null = enrollment.current_program_day_id;
 
-    if (!dayRow) return null;
+    if (!programDayId) {
+      // Active enrollment exists but current_program_day_id is null.
+      // Scoped session lookup: only sessions from THIS enrollment.
+      const { data: lastEnrollmentSession } = await client
+        .from("workout_sessions")
+        .select("program_day_id")
+        .eq("program_enrollment_id", enrollment.id)
+        .in("status", ["completed", "cancelled"])
+        .is("archived_at", null)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<TrainFallbackSessionRow>();
 
-    const { data: weekRow } = await client
-      .from("program_weeks")
-      .select("program_id")
-      .eq("id", dayRow.program_week_id)
-      .maybeSingle<{ program_id: string }>();
+      if (lastEnrollmentSession?.program_day_id) {
+        programDayId = await findNextProgramDayId(lastEnrollmentSession.program_day_id);
+      }
+    }
 
-    if (!weekRow) return null;
-
-    const { data: programRow } = await client
-      .from("programs")
-      .select("slug")
-      .eq("id", weekRow.program_id)
-      .maybeSingle<TrainFallbackProgramRow>();
-
-    if (!programRow?.slug) return null;
-    return { programSlug: programRow.slug, programDayId: targetDayId };
+    if (programDayId) return { programSlug: program.slug, programDayId };
+    return null;
   } catch {
     return null;
   }

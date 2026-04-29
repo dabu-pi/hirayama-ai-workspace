@@ -144,7 +144,7 @@
 - **休憩タイマー通知音** ✅ CLOSED (2026-04-29) — ベル風(D) LIVE_CHECK PASS / ピッ×3 + チーン
 - **重量反映の後続セット拡張** ✅ CLOSED (2026-04-29) — 全9項目PASS
 - **プログラム一覧改善** ✅ CLOSED (2026-04-29) — おすすめバッジ + /admin/program-stats 全8項目PASS（横スクロールは許容）
-- **アーカイブ・paused 連鎖修正 + getTrainFallbackView paused 除外** ✅ 実装済み (2026-04-29) — 実機確認待ち
+- **アーカイブ連鎖修正 + getTrainFallbackView Strategy 2 削除** ✅ 実装済み (2026-04-29) — 実機確認待ち
 
 ### Phase 3: コンテンツ・管理拡張
 

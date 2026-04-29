@@ -6378,15 +6378,12 @@ WHERE status = 'in_progress'
 `paused` = 別プログラムへ切り替えた古い受講（enrollment:paused_for_program_switch）
 → GZCLP の paused enrollment が拾われ、StartSessionScreen「2週目・3日目を開始」が表示されていた。
 
-### FIX（1行変更）
+### FIX（2段階）
 
-```
-.in("status", ["active", "paused"])
-→ .eq("status", "active")
-```
+**Step 1（前回）:** `.in("status", ["active", "paused"])` → `.eq("status", "active")`  
+**Step 2（今回）:** active enrollment が null なら即 `return null`。Strategy 2（全 session グローバル検索）を削除。
 
-`paused` を除外。active enrollment がなければ Strategy 2（session-based）へフォールバック。
-Strategy 2 が null を返せば /programs へリダイレクト。
+Strategy 2 が paused/completed enrollment の session を拾って `/train?program=gzclp-base&programDayId=XXXX` にリダイレクトしていた。これを排除。active enrollment がない場合は /programs へ。active enrollment があるが current_program_day_id が null の場合は enrollment スコープの session 検索で解決。
 
 ### 再選択フローの確認
 
