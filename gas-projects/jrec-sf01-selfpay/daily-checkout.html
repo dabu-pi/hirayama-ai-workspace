@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>本日の受付・会計 — JREC-SF01</title>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
+  <?!= include('styles') ?>
+  <style>
+    .date-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .date-input {
+      padding: 6px 10px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .summary-bar {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      font-size: 13px;
+      align-items: center;
+    }
+    /* 状態バッジ */
+    .sbadge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .sbadge-outstanding   { background:#fce8e6; color:#d93025; }
+    .sbadge-partial       { background:#fff3cd; color:#856404; }
+    .sbadge-paid-noreceipt{ background:#e8f0fe; color:#1a73e8; }
+    .sbadge-unbilled      { background:#fff8e1; color:#e37400; }
+    .sbadge-issued        { background:#e6f4ea; color:#1e8e3e; }
+    /* 行の背景 */
+    .row-outstanding      { background: #fff8f7; }
+    .row-partial          { background: #fffdf0; }
+    .row-paid-noreceipt   { background: #f8f9ff; }
+    .row-unbilled         { background: #fffce6; }
+    .row-issued           { background: #fafafa; }
+
+    .fmtnum     { text-align: right; font-family: monospace; font-size: 13px; }
+    .visit-key  { font-size: 10px; color: #c5c7c9; font-family: monospace; line-height: 1.2; }
+    .checkout-empty { text-align: center; padding: 40px 20px; color: #9aa0a6; }
+
+    @media (max-width: 680px) {
+      .hide-sm { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<?!= include('index') ?>
+
+<div class="container">
+  <div class="card">
+
+    <!-- 日付ナビゲーション -->
+    <div class="date-nav">
+      <h2 style="font-size:16px;font-weight:700;margin:0;">本日の受付・会計</h2>
+      <form id="dateForm" style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap;">
+        <input type="date" id="dateInput" class="date-input" value="<?= date ?>">
+        <button type="submit" class="btn btn-secondary btn-sm">表示</button>
+        <? if (date !== today) { ?>
+          <button type="button" class="btn btn-ghost btn-sm"
+            onclick="window.top.location.href = APP_URL + '?page=dailyCheckout'">
+            今日に戻る
+          </button>
+        <? } ?>
+      </form>
+    </div>
+
+    <? if (checkoutError) { ?>
+      <div class="alert alert-error">取得エラー: <?= checkoutError ?></div>
+
+    <? } else if (!checkoutList || checkoutList.length === 0) { ?>
+      <div class="checkout-empty">
+        <p style="font-size:15px;font-weight:700;margin-bottom:6px;">来院記録なし</p>
+        <p><?= date ?> の来院記録はありません。</p>
+      </div>
+
+    <? } else {
+      // サマリ集計
+      var sumOutstanding = 0, sumPartial = 0, sumPaidNoReceipt = 0;
+      var sumUnbilled = 0, sumIssued = 0;
+      checkoutList.forEach(function(row) {
+        if      (row.displayStatus === '未収')                   sumOutstanding++;
+        else if (row.displayStatus === '一部入金')               sumPartial++;
+        else if (row.displayStatus === '入金済（領収書未発行）') sumPaidNoReceipt++;
+        else if (row.displayStatus === '未会計')                 sumUnbilled++;
+        else                                                     sumIssued++;
+      });
+    ?>
+
+      <!-- サマリバー -->
+      <div class="summary-bar">
+        <? if (sumOutstanding > 0) { ?>
+          <span style="color:#d93025;font-weight:700;">未収 <?= sumOutstanding ?>件</span>
+        <? } ?>
+        <? if (sumPartial > 0) { ?>
+          <span style="color:#856404;font-weight:700;">一部入金 <?= sumPartial ?>件</span>
+        <? } ?>
+        <? if (sumPaidNoReceipt > 0) { ?>
+          <span style="color:#1a73e8;font-weight:700;">領収書未発行 <?= sumPaidNoReceipt ?>件</span>
+        <? } ?>
+        <? if (sumUnbilled > 0) { ?>
+          <span style="color:#e37400;font-weight:700;">未会計 <?= sumUnbilled ?>件</span>
+        <? } ?>
+        <span style="color:#9aa0a6;margin-left:auto;">合計 <?= checkoutList.length ?>件</span>
+      </div>
+
+      <!-- 一覧テーブル -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>状態</th>
+              <th>患者</th>
+              <th class="hide-sm">主訴</th>
+              <th style="text-align:right;">税込</th>
+              <th style="text-align:right;" class="hide-sm">既回収</th>
+              <th style="text-align:right;">残額</th>
+              <th class="hide-sm">領収書</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          <? checkoutList.forEach(function(row) {
+            var rowClass, badgeClass;
+            if      (row.displayStatus === '未収')                   { rowClass = 'row-outstanding';    badgeClass = 'sbadge-outstanding'; }
+            else if (row.displayStatus === '一部入金')               { rowClass = 'row-partial';         badgeClass = 'sbadge-partial'; }
+            else if (row.displayStatus === '入金済（領収書未発行）') { rowClass = 'row-paid-noreceipt'; badgeClass = 'sbadge-paid-noreceipt'; }
+            else if (row.displayStatus === '未会計')                 { rowClass = 'row-unbilled';        badgeClass = 'sbadge-unbilled'; }
+            else                                                     { rowClass = 'row-issued';          badgeClass = 'sbadge-issued'; }
+          ?>
+            <tr class="<?= rowClass ?>">
+              <td>
+                <span class="sbadge <?= badgeClass ?>"><?= row.displayStatus ?></span>
+              </td>
+              <td>
+                <button type="button" class="btn btn-ghost btn-sm"
+                  style="font-weight:700;padding:2px 4px;text-align:left;"
+                  onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= row.patientId ?>'">
+                  <?= row.patientName ?>
+                </button>
+                <div class="visit-key"><?= row.selfPayVisitKey ?></div>
+              </td>
+              <td class="hide-sm" style="font-size:12px;color:#5f6368;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <?= row.chiefComplaint ?>
+              </td>
+              <td class="fmtnum">
+                <? if (row.totalTaxInc > 0) { ?>
+                  ¥<?!= Number(row.totalTaxInc).toLocaleString() ?>
+                <? } else { ?>
+                  <span style="color:#9aa0a6;">—</span>
+                <? } ?>
+              </td>
+              <td class="fmtnum hide-sm">
+                <? if (row.paidAmount > 0) { ?>
+                  ¥<?!= Number(row.paidAmount).toLocaleString() ?>
+                <? } else { ?>
+                  <span style="color:#9aa0a6;">—</span>
+                <? } ?>
+              </td>
+              <td class="fmtnum">
+                <? if (row.remainingAmount > 0) { ?>
+                  <span style="color:#d93025;font-weight:700;">¥<?!= Number(row.remainingAmount).toLocaleString() ?></span>
+                <? } else { ?>
+                  <span style="color:#9aa0a6;">—</span>
+                <? } ?>
+              </td>
+              <td class="hide-sm" style="font-size:11px;color:#5f6368;">
+                <?= row.receiptNo || '—' ?>
+              </td>
+              <td>
+                <? if (row.displayStatus === '未会計') { ?>
+                  <button type="button" class="btn btn-primary btn-sm"
+                    onclick="window.top.location.href = APP_URL + '?page=billing&visitKey=<?= row.selfPayVisitKey ?>'">
+                    会計入力
+                  </button>
+                <? } else if (row.displayStatus === '入金済（領収書未発行）') { ?>
+                  <button type="button" class="btn btn-primary btn-sm"
+                    onclick="window.top.location.href = APP_URL + '?page=receipt&visitKey=<?= row.selfPayVisitKey ?>'">
+                    領収書発行
+                  </button>
+                <? } else if (row.displayStatus === '領収書発行済') { ?>
+                  <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="window.top.location.href = APP_URL + '?page=receipt&visitKey=<?= row.selfPayVisitKey ?>'">
+                    領収書確認
+                  </button>
+                <? } else { ?>
+                  <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="window.top.location.href = APP_URL + '?page=receipt&visitKey=<?= row.selfPayVisitKey ?>'">
+                    回収・領収書
+                  </button>
+                <? } ?>
+              </td>
+            </tr>
+          <? }); ?>
+          </tbody>
+        </table>
+      </div>
+
+    <? } ?>
+
+  </div>
+</div>
+
+<script>
+document.getElementById('dateForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var d = document.getElementById('dateInput').value;
+  if (d) window.top.location.href = APP_URL + '?page=dailyCheckout&date=' + encodeURIComponent(d);
+});
+</script>
+
+</body>
+</html>

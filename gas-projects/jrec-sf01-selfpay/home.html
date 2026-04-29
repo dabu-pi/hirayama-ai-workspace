@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JREC-SF01 — 業務メニュー</title>
+  <script>var APP_URL = "<?= appUrl ?>";</script>
+  <?!= include('styles') ?>
+  <style>
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .menu-card {
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s;
+      background: #fff;
+      width: 100%;
+    }
+    .menu-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-color: #1a73e8; }
+    .menu-icon  { font-size: 30px; margin-bottom: 10px; }
+    .menu-label { font-size: 14px; font-weight: 700; color: #202124; }
+    .menu-desc  { font-size: 12px; color: #5f6368; margin-top: 4px; }
+    .menu-card-primary {
+      border-color: #1a73e8;
+      background: #f0f4ff;
+    }
+    .menu-card-primary .menu-label { color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+<?!= include('index') ?>
+
+<div class="container">
+  <div class="card">
+    <h2 style="font-size:15px;font-weight:700;margin-bottom:18px;color:#5f6368;">業務メニュー</h2>
+
+    <div class="menu-grid">
+
+      <button type="button" class="menu-card menu-card-primary"
+        onclick="window.top.location.href = APP_URL + '?page=dailyCheckout'">
+        <div class="menu-icon">💳</div>
+        <div class="menu-label">本日の受付・会計</div>
+        <div class="menu-desc">今日の来院と会計状況を確認</div>
+      </button>
+
+      <button type="button" class="menu-card"
+        onclick="window.top.location.href = APP_URL + '?page=list'">
+        <div class="menu-icon">👥</div>
+        <div class="menu-label">患者一覧・検索</div>
+        <div class="menu-desc">名前・ID・電話番号で検索</div>
+      </button>
+
+      <button type="button" class="menu-card"
+        onclick="window.top.location.href = APP_URL + '?page=newPatient'">
+        <div class="menu-icon">➕</div>
+        <div class="menu-label">新規患者登録</div>
+        <div class="menu-desc">新しい患者を登録する</div>
+      </button>
+
+      <button type="button" class="menu-card"
+        onclick="window.top.location.href = APP_URL + '?page=list'">
+        <div class="menu-icon">📋</div>
+        <div class="menu-label">来院・カルテ入力</div>
+        <div class="menu-desc">患者一覧から患者を選択</div>
+      </button>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

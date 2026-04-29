@@ -1055,3 +1055,146 @@ function updateVisitBillingStatus_(visitKey, status) {
     Logger.log("[updateVisitBillingStatus_] ERROR: " + e.message);
   }
 }
+
+// ============================================================
+// PUBLIC — 本日受付・会計待ち一覧（Phase 6-D）
+// ============================================================
+
+/**
+ * 指定日に来院した SelfPayVisits を Payments / Receipts / Patients と join して返す。
+ * isDeleted=TRUE の visit は除外。省略時は JST 当日。
+ *
+ * ソート順（ジム側会計業務優先）:
+ *   1. 未収 → 2. 一部入金 → 3. 入金済（領収書未発行）→ 4. 未会計 → 5. 領収書発行済
+ *
+ * @param {string=} dateStr "YYYY-MM-DD"（省略時: 当日 JST）
+ * @returns {{
+ *   ok: boolean, date: string,
+ *   list: Array<{
+ *     selfPayVisitKey, patientId, patientName, visitDate, chiefComplaint,
+ *     paymentStatus, totalTaxInc, paidAmount, remainingAmount, paymentMethod,
+ *     receiptNo, displayStatus, sortOrder
+ *   }>,
+ *   error?: string
+ * }}
+ */
+function getDailyCheckoutList(dateStr) {
+  Logger.log("[getDailyCheckoutList] START date=" + dateStr);
+  try {
+    if (!dateStr) {
+      dateStr = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+    }
+    var ss = getTargetSpreadsheet_();
+
+    // ── Patients をインデックス化（patientId → 氏名）────────────
+    var patientMap = {};
+    var patSh = ss.getSheetByName(SHEET_NAMES.PATIENTS);
+    if (patSh && patSh.getLastRow() >= 2) {
+      patSh.getRange(2, 1, patSh.getLastRow() - 1, 2).getValues().forEach(function(r) {
+        if (r[0]) patientMap[String(r[0])] = r[1] ? String(r[1]) : "";
+      });
+    }
+
+    // ── Payments をインデックス化（visitKey → payment）──────────
+    var paymentMap = {};
+    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (paymentSh && paymentSh.getLastRow() >= 2) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
+        if (!r[0]) return;
+        var vk      = String(r[1]);
+        var status  = r[6] || "";
+        var totalInc = r[4] || 0;
+        var rawPaid  = r[10];
+        var paidAmt  = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+          ? (rawPaid || 0) : (status === "入金済" ? totalInc : 0);
+        paymentMap[vk] = {
+          totalTaxInc:     totalInc,
+          paymentMethod:   r[5] || "",
+          paymentStatus:   status,
+          paidAmount:      paidAmt,
+          remainingAmount: Math.max(totalInc - paidAmt, 0)
+        };
+      });
+    }
+
+    // ── Receipts をインデックス化（visitKey → receiptNo）─────────
+    var receiptMap = {};
+    var receiptSh = ss.getSheetByName(SHEET_NAMES.RECEIPTS);
+    if (receiptSh && receiptSh.getLastRow() >= 2) {
+      receiptSh.getRange(2, 1, receiptSh.getLastRow() - 1, 3).getValues().forEach(function(r) {
+        if (!r[0]) return;
+        var vk = String(r[1]);
+        if (!receiptMap[vk]) receiptMap[vk] = { receiptNo: String(r[2]) };
+      });
+    }
+
+    // ── 対象日の SelfPayVisits を抽出（isDeleted 除外）──────────
+    var list = [];
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (visitSh && visitSh.getLastRow() >= 2) {
+      var numCols = Math.min(visitSh.getLastColumn(), 12);
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues().forEach(function(r) {
+        if (!r[0]) return;
+        var isDeleted = r[11] === true || r[11] === "TRUE";
+        if (isDeleted) return;
+
+        var visitDate = "";
+        if (r[2]) {
+          try { visitDate = Utilities.formatDate(new Date(r[2]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
+        }
+        if (visitDate !== dateStr) return;
+
+        var vk        = String(r[0]);
+        var patientId = String(r[1]);
+        var pay       = paymentMap[vk] || null;
+        var rec       = receiptMap[vk] || null;
+
+        // 表示ステータスとソート順（ジム側会計優先）
+        var displayStatus, sortOrder;
+        if (!pay) {
+          displayStatus = "未会計";
+          sortOrder     = 3;
+        } else if (pay.paymentStatus === "未収") {
+          displayStatus = "未収";
+          sortOrder     = 0;
+        } else if (pay.paymentStatus === "一部入金") {
+          displayStatus = "一部入金";
+          sortOrder     = 1;
+        } else if (pay.paymentStatus === "入金済" && !rec) {
+          displayStatus = "入金済（領収書未発行）";
+          sortOrder     = 2;
+        } else {
+          displayStatus = "領収書発行済";
+          sortOrder     = 4;
+        }
+
+        list.push({
+          selfPayVisitKey: vk,
+          patientId:       patientId,
+          patientName:     patientMap[patientId] || patientId,
+          visitDate:       visitDate,
+          chiefComplaint:  r[5] ? String(r[5]) : "",
+          paymentStatus:   pay ? pay.paymentStatus : null,
+          totalTaxInc:     pay ? pay.totalTaxInc     : 0,
+          paidAmount:      pay ? pay.paidAmount       : 0,
+          remainingAmount: pay ? pay.remainingAmount  : 0,
+          paymentMethod:   pay ? pay.paymentMethod    : "",
+          receiptNo:       rec ? rec.receiptNo        : null,
+          displayStatus:   displayStatus,
+          sortOrder:       sortOrder
+        });
+      });
+    }
+
+    // ソート: 未収→一部入金→入金済未発行→未会計→発行済
+    list.sort(function(a, b) { return a.sortOrder - b.sortOrder; });
+
+    Logger.log("[getDailyCheckoutList] date=" + dateStr + " count=" + list.length);
+    return { ok: true, date: dateStr, list: list };
+
+  } catch (err) {
+    var m = err && err.message ? err.message : String(err);
+    Logger.log("[getDailyCheckoutList] ERROR: " + m);
+    return { ok: false, error: m, date: dateStr || "", list: [] };
+  }
+}

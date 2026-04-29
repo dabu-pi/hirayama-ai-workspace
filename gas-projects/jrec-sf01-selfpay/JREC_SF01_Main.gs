@@ -3,14 +3,14 @@
 // SPREADSHEET_ID, SHEET_NAMES, getTargetSpreadsheet_: defined in JREC_SF01_Setup.gs
 
 function doGet(e) {
-  var page    = (e && e.parameter && e.parameter.page) || "list";
-  var idParam = (e && e.parameter && (e.parameter.id || e.parameter.patientId)) || "";
-  var q       = (e && e.parameter && e.parameter.q)                          || "";
-  var vkParam = (e && e.parameter &&
-                 (e.parameter.visitKey || e.parameter.vk))                   || "";
+  var page      = (e && e.parameter && e.parameter.page) || "home";
+  var idParam   = (e && e.parameter && (e.parameter.id || e.parameter.patientId)) || "";
+  var q         = (e && e.parameter && e.parameter.q)                             || "";
+  var vkParam   = (e && e.parameter && (e.parameter.visitKey || e.parameter.vk))  || "";
+  var dateParam = (e && e.parameter && e.parameter.date)                           || "";
 
   try {
-    var output = buildPage_(page, idParam, q, vkParam);
+    var output = buildPage_(page, idParam, q, vkParam, dateParam);
     return output
       .setTitle("JREC-SF01 自費カルテ・会計")
       .addMetaTag("viewport", "width=device-width, initial-scale=1.0")
@@ -20,7 +20,7 @@ function doGet(e) {
   }
 }
 
-function buildPage_(page, idParam, q, vkParam) {
+function buildPage_(page, idParam, q, vkParam, dateParam) {
   var appUrl = getAppUrl_();
 
   try {
@@ -141,7 +141,26 @@ function buildPage_(page, idParam, q, vkParam) {
         return evalTemplate_(t);
       }
 
-      default: { // "list"
+      case "home": {
+        var th = HtmlService.createTemplateFromFile("home");
+        th.appUrl = appUrl;
+        return evalTemplate_(th);
+      }
+
+      case "dailyCheckout": {
+        var today      = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+        var targetDate = dateParam || today;
+        var coData     = getDailyCheckoutList(targetDate);
+        var tco = HtmlService.createTemplateFromFile("daily-checkout");
+        tco.appUrl        = appUrl;
+        tco.date          = targetDate;
+        tco.today         = today;
+        tco.checkoutList  = coData.list;
+        tco.checkoutError = coData.error || null;
+        return evalTemplate_(tco);
+      }
+
+      case "list": {
         var pts   = getPatients(q);
         var stats = getPatientListStats();
         pts.forEach(function(p) {
@@ -149,11 +168,17 @@ function buildPage_(page, idParam, q, vkParam) {
           p.outstanding   = s.outstanding;
           p.unbilledCount = s.unbilledCount;
         });
-        var t = HtmlService.createTemplateFromFile("patient-list");
-        t.appUrl    = appUrl;
-        t.patients  = pts;
-        t.query     = q;
-        return evalTemplate_(t);
+        var tl = HtmlService.createTemplateFromFile("patient-list");
+        tl.appUrl    = appUrl;
+        tl.patients  = pts;
+        tl.query     = q;
+        return evalTemplate_(tl);
+      }
+
+      default: {
+        var td = HtmlService.createTemplateFromFile("home");
+        td.appUrl = appUrl;
+        return evalTemplate_(td);
       }
     }
   } catch (err) {
