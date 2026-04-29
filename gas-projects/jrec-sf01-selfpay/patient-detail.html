@@ -132,6 +132,7 @@ var visitCount    = timeline.length;
     <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#5f6368;">
       来院・カルテ履歴（<?= visitCount ?>件）
     </h3>
+    <div id="trashMsg" class="alert" style="display:none;margin-bottom:12px;"></div>
 
     <? if (timeline.length === 0) { ?>
       <div style="text-align:center;padding:32px;color:#9aa0a6;">
@@ -188,13 +189,11 @@ var visitCount    = timeline.length;
                 <?= rec ? '領収書' : '領収書を発行' ?>
               </button>
             <? } ?>
-            <? var canTrash = !rec && (!pay || (payStatus === '未収' && (pay.paidAmount || 0) === 0)); ?>
-            <? if (canTrash) { ?>
-              <button type="button" class="tl-action-btn tl-action-trash"
-                onclick="event.stopPropagation();handleTrash('<?= vk ?>')">
-                🗑
-              </button>
-            <? } ?>
+            <? var trashType = rec ? 'receipt' : (!pay ? 'unbilled' : payStatus === '入金済' ? 'paid' : payStatus === '一部入金' ? 'partial' : 'outstanding'); ?>
+            <button type="button" class="tl-action-btn tl-action-trash"
+              onclick="event.stopPropagation();handleTrash('<?= vk ?>','<?= trashType ?>')">
+              🗑
+            </button>
             <button type="button" class="tl-toggle" id="toggle-<?= idx ?>">▼ 詳細</button>
           </div>
 
@@ -299,34 +298,69 @@ function toggleDetail(idx) {
   if (t) t.textContent = '▲ 閉じる';
 })();
 
-function handleTrash(visitKey) {
-  if (!window.confirm('この来院記録をゴミ箱に移動しますか？\n\n' + visitKey)) return;
+function reloadPage_() {
+  try { window.top.location.reload(); } catch(e) { window.location.reload(); }
+}
+function showTrashMsg_(text) {
+  var el = document.getElementById('trashMsg');
+  if (!el) return;
+  el.className    = 'alert alert-error';
+  el.textContent  = text;
+  el.style.display = '';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function handleTrash(visitKey, trashType) {
+  console.log('[handleTrash] START visitKey=' + visitKey + ' trashType=' + trashType);
+  var confirmMsg;
+  if (trashType === 'receipt') {
+    confirmMsg = '領収書発行済みの来院です。\n来院履歴から非表示にしますが、領収書と売上データは残ります。\nよろしいですか？';
+  } else if (trashType === 'paid') {
+    confirmMsg = '入金済みの来院です。\n来院履歴から非表示にしますが、会計データは削除されません。\nよろしいですか？';
+  } else if (trashType === 'partial') {
+    confirmMsg = '一部入金済みの来院です。\n来院履歴から非表示にしますが、会計データは削除されません。\nよろしいですか？';
+  } else {
+    confirmMsg = 'この来院記録をゴミ箱に移動します。よろしいですか？';
+  }
+  if (!window.confirm(confirmMsg)) return;
+  console.log('[handleTrash] google.script.run.trashVisit 呼び出し');
   google.script.run
     .withSuccessHandler(function(res) {
-      if (res.ok) {
-        window.top.location.reload();
+      console.log('[handleTrash] success: ' + JSON.stringify(res));
+      if (res && res.ok) {
+        reloadPage_();
       } else {
-        window.alert('ゴミ箱移動エラー: ' + (res.error || '不明なエラー'));
+        var errMsg = (res && res.error) ? res.error : '不明なエラー';
+        console.error('[handleTrash] error: ' + errMsg);
+        showTrashMsg_('ゴミ箱移動エラー: ' + errMsg);
       }
     })
     .withFailureHandler(function(err) {
-      window.alert('GASエラー: ' + (err.message || String(err)));
+      var errMsg = err ? (err.message || String(err)) : '不明なGASエラー';
+      console.error('[handleTrash] failure: ' + errMsg);
+      showTrashMsg_('GASエラー: ' + errMsg);
     })
     .trashVisit(visitKey, '');
 }
 
 function handleRestore(visitKey) {
+  console.log('[handleRestore] START visitKey=' + visitKey);
   if (!window.confirm('この来院記録を復元しますか？')) return;
   google.script.run
     .withSuccessHandler(function(res) {
-      if (res.ok) {
-        window.top.location.reload();
+      console.log('[handleRestore] success: ' + JSON.stringify(res));
+      if (res && res.ok) {
+        reloadPage_();
       } else {
-        window.alert('復元エラー: ' + (res.error || '不明なエラー'));
+        var errMsg = (res && res.error) ? res.error : '不明なエラー';
+        console.error('[handleRestore] error: ' + errMsg);
+        showTrashMsg_('復元エラー: ' + errMsg);
       }
     })
     .withFailureHandler(function(err) {
-      window.alert('GASエラー: ' + (err.message || String(err)));
+      var errMsg = err ? (err.message || String(err)) : '不明なGASエラー';
+      console.error('[handleRestore] failure: ' + errMsg);
+      showTrashMsg_('GASエラー: ' + errMsg);
     })
     .restoreVisit(visitKey);
 }

@@ -111,8 +111,9 @@ function getFullVisitTimelineByPatient(patientId) {
 }
 
 /**
- * 来院記録をゴミ箱に移動する（論理削除）。
- * 入金済・一部入金・領収書発行済みは拒否。
+ * 来院記録をゴミ箱に移動する（論理削除 — 来院履歴を非表示にする）。
+ * Payments / Receipts / DailySales は変更しない。
+ * 支払い状態にかかわらずゴミ箱移動を許可する。
  * @param {string} visitKey
  * @param {string=} reason
  * @returns {{ ok: boolean, visitKey?: string, error?: string }}
@@ -124,36 +125,6 @@ function trashVisit(visitKey, reason) {
     visitKey = String(visitKey);
     var ss   = getTargetSpreadsheet_();
 
-    // 領収書チェック（発行済みは拒否）
-    var receiptSh = ss.getSheetByName(SHEET_NAMES.RECEIPTS);
-    if (receiptSh && receiptSh.getLastRow() >= 2) {
-      var rRows = receiptSh.getRange(2, 1, receiptSh.getLastRow() - 1, 2).getValues();
-      for (var ri = 0; ri < rRows.length; ri++) {
-        if (String(rRows[ri][1]) === visitKey)
-          return { ok: false, error: "領収書が発行済みです。ゴミ箱移動はできません。" };
-      }
-    }
-
-    // 支払チェック（入金済・一部入金・paidAmount>0 は拒否）
-    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
-    if (paymentSh && paymentSh.getLastRow() >= 2) {
-      var pRows = paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues();
-      for (var pi = 0; pi < pRows.length; pi++) {
-        if (String(pRows[pi][1]) !== visitKey) continue;
-        var status  = pRows[pi][6] || "";
-        var rawPaid = pRows[pi][10];
-        var paidAmt = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined) ? (rawPaid || 0) : 0;
-        if (status === "入金済")
-          return { ok: false, error: "入金済みです。ゴミ箱移動はできません。" };
-        if (status === "一部入金")
-          return { ok: false, error: "一部入金済みです。ゴミ箱移動はできません。" };
-        if (paidAmt > 0)
-          return { ok: false, error: "入金記録があります（paidAmount=¥" + paidAmt + "）。ゴミ箱移動はできません。" };
-        break;
-      }
-    }
-
-    // SelfPayVisits を更新
     var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
     if (!visitSh || visitSh.getLastRow() < 2)
       return { ok: false, error: "SelfPayVisits シートが見つかりません" };
