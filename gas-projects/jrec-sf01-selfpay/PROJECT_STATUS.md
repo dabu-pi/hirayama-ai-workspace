@@ -3,11 +3,40 @@
 ## 現在ステータス
 
 **✅ Phase 5-C 領収書発行フロー: CLOSED**（2026-04-29 全 PASS）
-**✅ Versioned Deployment @23: 反映済み**（2026-04-29）
 **✅ Phase 6-A 患者基本情報編集: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 6-B 来院履歴ゴミ箱機能: CLOSED**（2026-04-29 全 PASS）
+**✅ Phase 6-D トップメニュー + 本日会計待ち一覧: CLOSED**（2026-04-29 全 PASS）
+**✅ Versioned Deployment @25: 反映済み**（2026-04-29）
 
-次: Phase 6-C（完全削除）または次案件
+次: Phase 6-C（来院完全削除）または Phase 5-D（カルテ連動会計フロー）
+
+---
+
+## ✅ Phase 6-D 実機確認 PASS（2026-04-29）
+
+**commit:** 5bb3e63
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| D-1 | ✅ PASS | /dev パラメータなしで home 業務メニュー表示 |
+| D-2 | ✅ PASS | home の各カードから主要ページへ遷移 |
+| D-3 | ✅ PASS | ?page=dailyCheckout で本日受付・会計一覧表示 |
+| D-4 | ✅ PASS | ?page=dailyCheckout&date=2026-04-28 で指定日一覧表示 |
+| D-5 | 本番確認待ち | versioned deployment 後に /exec パラメータなしで確認 |
+| D-6 | ✅ PASS | ?page=list で従来の患者一覧表示（後方互換維持） |
+| D-7 | ✅ PASS | ナビゲーション 4ボタン表示・遷移確認 |
+
+### CLOSED_SCOPE
+
+| 機能 | 内容 |
+|---|---|
+| default ルート変更 | パラメータなしの URL → home（業務メニュー）を表示 |
+| `?page=list` 維持 | 既存の患者一覧は後方互換として保持 |
+| `getDailyCheckoutList()` | SelfPayVisits × Patients × Payments × Receipts を join。isDeleted 除外 |
+| ソート順 | 未収→一部入金→入金済未発行→未会計→発行済（ジム側会計業務優先） |
+| 状態別ラベル・ボタン | 未会計:会計入力 / 未収・一部入金:回収・領収書 / 入金済未発行:領収書発行 / 発行済:確認 |
+| 日付ナビ | ?date=YYYY-MM-DD で指定日表示、フォームで日付変更可 |
+| ナビゲーション | ホーム / 本日の受付・会計 / 患者一覧 / ＋ 新規患者登録 の 4ボタン |
 
 ---
 
@@ -99,6 +128,7 @@
 | 2026-04-29 | @22 | `AKfycbxhtWdy...` | Phase 5-C receipt flow closed |
 | 2026-04-29 | @23 | `AKfycbxhtWdy...` | Phase 6-A patient edit closed |
 | 2026-04-29 | @24 | `AKfycbxhtWdy...` | Phase 6-B visit trash closed |
+| 2026-04-29 | @25 | `AKfycbxhtWdy...` | Phase 6-D home menu + daily checkout |
 
 **本番 /exec 確認事項（2026-04-29 @23 反映後）:**
 - `?page=detail&id=P0001` で「✏ 患者情報を編集」ボタン表示 → 実機確認待ち
