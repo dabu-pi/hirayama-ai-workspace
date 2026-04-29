@@ -6177,3 +6177,35 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 
 **STATUS: ✅ LIVE_CHECK PASS (2026-04-29)** — 重量入力即チェック/リロード保存/連続チェック/Finish 全項目PASS
 
+---
+
+## 2026-04-29 休憩タイマー通知音追加
+
+### STATUS: 実装完了 — 実機確認待ち
+
+### 実装内容
+
+| 変更 | 内容 |
+|---|---|
+| `playBeep()` 追加（module-level） | Web Audio API oscillator で音生成。失敗は silent |
+| `timerSoundEnabled` state | localStorage `restTimerSound` で ON/OFF を永続化 |
+| `timerSoundEnabledRef` | setInterval 内の stale closure を防ぐ同期 ref |
+| `audioCtxRef` | AudioContext を再利用（毎回生成しない） |
+| `lastBeepedSecRef` | 250ms ポーリングで同じ秒に二重 beep しないガード |
+| 休憩タイマー interval を拡張 | 残り 3/2/1 秒: 660Hz 0.1s / 終了時: 880Hz 0.4s |
+| 🔔/🔕 トグルボタン追加 | topBar の 計算ボタン左隣。localStorage 保存 |
+
+### 音の設計
+
+| タイミング | 周波数 | 長さ | 意図 |
+|---|---|---|---|
+| 残り 3/2/1 秒 | 660Hz | 0.1s | 軽いカウントダウン tick |
+| タイマー終了（0秒） | 880Hz | 0.4s | やや長めの通知音 |
+
+### 安全性
+
+- Web Audio API が使えない環境では try/catch で silent fail
+- `ctx.state === "running"` チェックで suspended 状態をスキップ（iOS 対策）
+- 音が鳴らなくてもタイマー表示・セット記録は正常動作
+- 既存のチェック高速化（completingSetIds）に影響なし
+

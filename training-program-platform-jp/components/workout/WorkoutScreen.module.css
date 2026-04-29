@@ -97,6 +97,20 @@
   color: #f0fdf4;
 }
 
+/* Timer notification sound toggle */
+
+.soundToggleButton {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 8px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.soundMuted {
+  opacity: 0.4;
+}
+
 @keyframes restDonePulse {
   0%   { transform: scale(1); }
   50%  { transform: scale(1.08); }

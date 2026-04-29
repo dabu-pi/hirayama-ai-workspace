@@ -517,6 +517,32 @@ function formatProgramSourceLabel(source: TrainProgramSelection["source"]) {
   return "unknown";
 }
 
+/**
+ * Plays a short beep using the Web Audio API.
+ * Fails silently if unavailable — audio is non-critical.
+ */
+function playBeep(
+  ctx: AudioContext,
+  frequency: number,
+  duration: number,
+  volume: number
+): void {
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.value = frequency;
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch {
+    // Silently ignore
+  }
+}
+
 export function WorkoutScreen({
   session,
   selectedProgram
@@ -558,6 +584,18 @@ export function WorkoutScreen({
   const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
   const restEndTimeRef = useRef<number | null>(null);
   const restDoneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Timer notification sound
+  const [timerSoundEnabled, setTimerSoundEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("restTimerSound") !== "off";
+  });
+  // Ref keeps the interval closure in sync with current state (avoids stale closure).
+  const timerSoundEnabledRef = useRef(timerSoundEnabled);
+  timerSoundEnabledRef.current = timerSoundEnabled;
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  // Track which second has already been beeped to prevent double-fire at 250ms polling.
+  const lastBeepedSecRef = useRef<number | null>(null);
 
   // Add Exercise / Swap modal
   const [isAddExerciseModalOpen, setIsAddExerciseModalOpen] = useState(false);
@@ -605,6 +643,7 @@ export function WorkoutScreen({
     setFailedAction(null);
     setErrorMessage(null);
     restEndTimeRef.current = null;
+    lastBeepedSecRef.current = null;
     clearRestDoneTimeout();
     setRestSecondsLeft(null);
   }, [session]);
@@ -646,6 +685,31 @@ export function WorkoutScreen({
     const interval = setInterval(() => {
       if (restEndTimeRef.current === null) return;
       const remaining = Math.max(0, Math.ceil((restEndTimeRef.current - Date.now()) / 1000));
+
+      // Notification beep: fire once per second at countdown 3-2-1 and at end (0).
+      // lastBeepedSecRef prevents double-fire from 250ms polling.
+      if (remaining <= 3 && remaining !== lastBeepedSecRef.current) {
+        lastBeepedSecRef.current = remaining;
+        if (timerSoundEnabledRef.current) {
+          try {
+            if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+              audioCtxRef.current = new (
+                window.AudioContext ||
+                (window as unknown as { webkitAudioContext: typeof AudioContext })
+                  .webkitAudioContext
+              )();
+            }
+            const ctx = audioCtxRef.current;
+            if (ctx.state === "running") {
+              // countdown ticks: 660Hz 0.1s / end: 880Hz 0.4s
+              playBeep(ctx, remaining === 0 ? 880 : 660, remaining === 0 ? 0.4 : 0.1, 0.35);
+            }
+          } catch {
+            // Audio unavailable — timer continues normally
+          }
+        }
+      }
+
       if (remaining === 0) {
         restEndTimeRef.current = null;
         setRestSecondsLeft(0);
@@ -667,6 +731,7 @@ export function WorkoutScreen({
 
   const startRestTimer = () => {
     clearRestDoneTimeout();
+    lastBeepedSecRef.current = null;
     restEndTimeRef.current = Date.now() + REST_DEFAULT_SEC * 1000;
     setRestSecondsLeft(REST_DEFAULT_SEC);
   };
@@ -675,6 +740,7 @@ export function WorkoutScreen({
     if (restEndTimeRef.current !== null) {
       clearRestDoneTimeout();
       restEndTimeRef.current = null;
+      lastBeepedSecRef.current = null;
       setRestSecondsLeft(null);
       return;
     }
@@ -1498,6 +1564,21 @@ export function WorkoutScreen({
           <span className={styles.toolButtonValue}>
             {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : "1:30"}
           </span>
+        </button>
+        <button
+          aria-label={timerSoundEnabled ? "タイマー音をオフにする" : "タイマー音をオンにする"}
+          className={`${styles.iconButton} ${styles.soundToggleButton}${timerSoundEnabled ? "" : ` ${styles.soundMuted}`}`}
+          title={timerSoundEnabled ? "タイマー音 ON" : "タイマー音 OFF"}
+          type="button"
+          onClick={() => {
+            const next = !timerSoundEnabled;
+            setTimerSoundEnabled(next);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("restTimerSound", next ? "on" : "off");
+            }
+          }}
+        >
+          {timerSoundEnabled ? "🔔" : "🔕"}
         </button>
         <button
           className={`${styles.iconButton} ${styles.toolButton}`}
