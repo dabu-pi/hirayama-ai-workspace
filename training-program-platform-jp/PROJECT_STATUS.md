@@ -6154,5 +6154,26 @@ icons:            icon-192.png (maskable) / icon-512.png (any)
 - `postSetAction(complete)` と in-flight `patchWorkoutSet` は異なる DB カラムを更新（競合なし）
 - 失敗時の rollback ロジックは変更なし
 
+---
 
+### 追加修正 (2026-04-29) — 初回修正は不十分、3層の ROOT_CAUSE を全修正
+
+**実機確認で判明した追加問題:**
+1. check ボタンが `disabled={isBusy || isSessionEnded}` で `isBusy = isSaving || isMutating`。`onBlur` → `markSaving` → React 再描画で **click 前にボタンが disabled** → クリック無視
+2. `pendingMutation` が全セット共通の global lock → 連続チェック完全ブロック
+3. `handleComplete` 内の `handleInputSave` は `savingSetIds` guard で no-op → 入力値が complete 側に渡らない
+
+**追加修正内容:**
+
+| 変更 | 内容 |
+|---|---|
+| `completingSetIds: string[]` 追加 | per-set complete/unlock ロック。global `pendingMutation` を廃止 |
+| check ボタン `disabled` | `isBusy → isCompleting`（`isSaving` を除去。ボタン disabled 解除） |
+| `handleComplete` guard | `pendingMutation / savingSetIds` → `completingSetIds.includes(setId)` |
+| `handleUncomplete` guard | 同上 |
+| `postCompleteSet(setId, {weightKg, repsDone})` 追加 | 入力値を complete と同時に原子保存 |
+| complete API | body から `weightKg` / `repsDone` を受け取り DB update に含める |
+| Finish / Cancel 側 | `completingSetIds.length > 0` を guard に追加 |
+
+**STATUS: 実装完了 — 実機確認待ち（2回目）**
 

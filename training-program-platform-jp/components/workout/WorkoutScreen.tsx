@@ -315,6 +315,33 @@ async function postSetAction(
   return payload as SetMutationResponse;
 }
 
+/**
+ * Complete a set and atomically save the current weight / reps at the same time.
+ * Sending values here removes the dependency on a prior onBlur save.
+ */
+async function postCompleteSet(
+  setId: string,
+  body: { weightKg: number | null; repsDone: number | null }
+) {
+  const response = await fetch(`/api/workout-sets/${setId}/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | SetMutationResponse
+    | { error?: { message?: string } }
+    | null;
+  if (!response.ok) {
+    throw new Error(
+      payload && "error" in payload && payload.error?.message
+        ? payload.error.message
+        : "セット完了に失敗しました。"
+    );
+  }
+  return payload as SetMutationResponse;
+}
+
 async function patchWorkoutSet(
   setId: string,
   payload: { weightKg: number | null; repsDone: number | null; isAutoFilled: boolean }
@@ -517,6 +544,10 @@ export function WorkoutScreen({
   const [pendingMutation, setPendingMutation] = useState<PendingMutation>(null);
   const [pendingAddExerciseId, setPendingAddExerciseId] = useState<string | null>(null);
   const [savingSetIds, setSavingSetIds] = useState<string[]>([]);
+  // Per-set lock for complete / uncomplete operations.
+  // Replaces the global pendingMutation lock for these actions so that
+  // different sets can be completed concurrently.
+  const [completingSetIds, setCompletingSetIds] = useState<string[]>([]);
   const [focusSetId, setFocusSetId] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -948,12 +979,10 @@ export function WorkoutScreen({
   };
 
   const handleComplete = async (exerciseId: string, setId: string) => {
-    // savingSetIds is intentionally excluded from this guard.
-    // If an onBlur input save is in flight for this set, we let complete proceed:
-    // handleInputSave will be a no-op (its own guard skips a duplicate save),
-    // and the in-flight save will finish independently. Both update different
-    // DB columns (weight_kg/reps_done vs is_completed/completed_at), so no conflict.
-    if (isSessionEnded || pendingMutation || isFinishing) {
+    // Per-set lock: only block if THIS set is already completing.
+    // No global pendingMutation check — other sets can complete concurrently.
+    // No savingSetIds check — we send weight/reps directly in the complete payload.
+    if (isSessionEnded || completingSetIds.includes(setId) || isFinishing) {
       return;
     }
 
@@ -963,9 +992,15 @@ export function WorkoutScreen({
 
     if (!prevSet) return;
 
+    // Capture the current draft values to send atomically with complete.
+    // This removes the dependency on a prior onBlur save.
+    const draft = getSetDraft(draftInputs, prevSet);
+    const parsedWeightKg = parseWeightKg(draft.weightKg);
+    const parsedRepsDone = parseRepsDone(draft.repsDone);
+
     const optimisticCompletedAt = new Date().toISOString();
 
-    // Optimistic update first — UI reflects complete immediately on tap.
+    // Optimistic update — UI reflects complete immediately.
     setExercises((current) =>
       updateExerciseState(current, exerciseId, (exerciseItem) => ({
         ...exerciseItem,
@@ -983,16 +1018,18 @@ export function WorkoutScreen({
     );
     setRevealedSetId((current) => (current === setId ? null : current));
     updateIncompleteSetCount(-1);
-    setPendingMutation({ setId, kind: "complete" });
+    setCompletingSetIds((current) => [...current, setId]);
     clearTransientError();
     startRestTimer();
 
     try {
-      // Input save and complete are independent — run in parallel.
-      const [, payload] = await Promise.all([
-        handleInputSave(exerciseId, setId),
-        postSetAction(setId, "complete")
-      ]);
+      // Send weight/reps together with complete in a single request.
+      const payload = await postCompleteSet(setId, {
+        weightKg: parsedWeightKg,
+        repsDone: parsedRepsDone
+      });
+
+      // Sync server-confirmed state and saved values.
       setExercises((current) =>
         updateExerciseState(current, exerciseId, (exerciseItem) => ({
           ...exerciseItem,
@@ -1002,12 +1039,22 @@ export function WorkoutScreen({
                   ...set,
                   isCompleted: payload.isCompleted ?? true,
                   isLocked: payload.isLocked ?? false,
-                  completedAt: payload.completedAt ?? optimisticCompletedAt
+                  completedAt: payload.completedAt ?? optimisticCompletedAt,
+                  weightKg: parsedWeightKg,
+                  repsDone: parsedRepsDone
                 }
               : set
           )
         }))
       );
+      // Normalize draft to match saved values (clears any partially-typed input).
+      setDraftInputs((current) => ({
+        ...current,
+        [setId]: {
+          weightKg: stringifyNumber(parsedWeightKg),
+          repsDone: stringifyNumber(parsedRepsDone)
+        }
+      }));
     } catch (error) {
       console.error("Failed to complete workout set.", error);
       setExercises((current) =>
@@ -1027,18 +1074,17 @@ export function WorkoutScreen({
       );
       updateIncompleteSetCount(1);
       setErrorMessage(error instanceof Error ? error.message : "セット完了に失敗しました。");
-      // Cancel the optimistically started rest timer — set was not actually saved.
       restEndTimeRef.current = null;
       clearRestDoneTimeout();
       setRestSecondsLeft(null);
     } finally {
-      setPendingMutation(null);
+      setCompletingSetIds((current) => current.filter((id) => id !== setId));
     }
   };
 
   const handleUncomplete = async (exerciseId: string, setId: string) => {
-    // Same reasoning as handleComplete: allow uncomplete even during an input save.
-    if (isSessionEnded || pendingMutation || isFinishing) {
+    // Per-set lock — mirror handleComplete's guard.
+    if (isSessionEnded || completingSetIds.includes(setId) || isFinishing) {
       return;
     }
 
@@ -1063,15 +1109,13 @@ export function WorkoutScreen({
     updateIncompleteSetCount(1);
     setRevealedSetId((current) => (current === setId ? null : current));
 
-    setPendingMutation({ setId, kind: "unlock" });
+    setCompletingSetIds((current) => [...current, setId]);
     clearTransientError();
 
     try {
       await postSetAction(setId, "unlock");
-      // Server confirmed — keep optimistic state. Soft refresh for consistency.
     } catch (error) {
       console.error("Failed to unlock workout set.", error);
-      // Rollback to the previous locked state.
       setExercises((current) =>
         updateExerciseState(current, exerciseId, (exerciseItem) => ({
           ...exerciseItem,
@@ -1090,7 +1134,7 @@ export function WorkoutScreen({
       updateIncompleteSetCount(-1);
       setErrorMessage(error instanceof Error ? error.message : "ロック解除に失敗しました。");
     } finally {
-      setPendingMutation(null);
+      setCompletingSetIds((current) => current.filter((id) => id !== setId));
     }
   };
 
@@ -1099,6 +1143,7 @@ export function WorkoutScreen({
       isSessionEnded ||
       isFinishing ||
       pendingMutation !== null ||
+      completingSetIds.length > 0 ||
       pendingAddExerciseId !== null ||
       savingSetIds.length > 0
     ) {
@@ -1143,6 +1188,7 @@ export function WorkoutScreen({
       isCancelling ||
       isFinishing ||
       pendingMutation !== null ||
+      completingSetIds.length > 0 ||
       savingSetIds.length > 0
     ) {
       return;
@@ -1473,6 +1519,7 @@ export function WorkoutScreen({
                 isCancelling ||
                 isFinishing ||
                 pendingMutation !== null ||
+                completingSetIds.length > 0 ||
                 savingSetIds.length > 0
               }
               onClick={handleCancel}
@@ -1494,6 +1541,7 @@ export function WorkoutScreen({
               isFinishing ||
               isCancelling ||
               pendingMutation !== null ||
+              completingSetIds.length > 0 ||
               pendingAddExerciseId !== null ||
               savingSetIds.length > 0
             }
@@ -1663,8 +1711,9 @@ export function WorkoutScreen({
                 const { weightDiff, repsDiff } = calcSetDiff(draft, prevSet);
                 const setEvalLabel = getSetEvalLabel(weightDiff, repsDiff, prevSet !== null);
                 const isSaving = savingSetIds.includes(set.id);
-                const isMutating = pendingMutation?.setId === set.id;
-                const isBusy = isSaving || isMutating;
+                const isMutating = pendingMutation?.setId === set.id; // delete in progress
+                const isCompleting = completingSetIds.includes(set.id); // complete/uncomplete in progress
+                const isBusy = isSaving || isMutating; // for delete button only
                 const isDeleteDisabled = isBusy || isSessionEnded;
 
                 return (
@@ -1761,7 +1810,7 @@ export function WorkoutScreen({
                           aria-pressed={set.isCompleted}
                           className={`${styles.actionButton} ${styles.check} ${set.isCompleted ? styles.checkDone : ""}`}
                           data-completed={set.isCompleted ? "true" : "false"}
-                          disabled={isBusy || isSessionEnded}
+                          disabled={isCompleting || isSessionEnded}
                           onClick={() =>
                             set.isCompleted
                               ? handleUncomplete(exercise.id, set.id)
@@ -1770,10 +1819,7 @@ export function WorkoutScreen({
                           type="button"
                         >
                           <span aria-hidden="true" className={styles.checkIcon}>
-                            {isMutating &&
-                            (pendingMutation?.kind === "complete" || pendingMutation?.kind === "unlock")
-                              ? "..."
-                              : "\u2713"}
+                            {isCompleting ? "..." : "\u2713"}
                           </span>
                         </button>
                       </div>

@@ -19,10 +19,18 @@ type WorkoutSetMutationRow = {
   deleted_at: string | null;
 };
 
-export async function POST(_: Request, { params }: RouteContext) {
+export async function POST(req: Request, { params }: RouteContext) {
   try {
     const routeName = "workout-set-complete";
     const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
+
+    // Optional: include weight_kg / reps_done in the same atomic update.
+    // Sent by handleComplete so a prior onBlur save is not required.
+    const body = await req.json().catch(() => ({}));
+    const incomingWeightKg =
+      typeof body?.weightKg === "number" ? body.weightKg : undefined;
+    const incomingRepsDone =
+      typeof body?.repsDone === "number" ? body.repsDone : undefined;
 
     if (!userId) {
       return NextResponse.json(
@@ -111,13 +119,19 @@ export async function POST(_: Request, { params }: RouteContext) {
     }
 
     const completedAt = targetSet.completed_at ?? new Date().toISOString();
+
+    // Build update payload — include weight/reps only when provided by the client.
+    const updatePayload: Record<string, unknown> = {
+      is_completed: true,
+      is_locked: false,
+      completed_at: completedAt
+    };
+    if (incomingWeightKg !== undefined) updatePayload.weight_kg = incomingWeightKg;
+    if (incomingRepsDone !== undefined) updatePayload.reps_done = incomingRepsDone;
+
     const { data: updatedSet, error: updateError } = await supabase
       .from("workout_sets")
-      .update({
-        is_completed: true,
-        is_locked: false,
-        completed_at: completedAt
-      })
+      .update(updatePayload)
       .eq("id", targetSet.id)
       .is("deleted_at", null)
       .select("id, is_completed, is_locked, completed_at, deleted_at")
