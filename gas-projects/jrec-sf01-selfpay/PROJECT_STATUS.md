@@ -7,7 +7,7 @@
 **✅ Phase 6-A 患者基本情報編集: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 6-B 来院履歴ゴミ箱機能: CLOSED**（2026-04-29 全 PASS）
 
-次: versioned deployment（Phase 6-B 本番反映 @24）→ Phase 6-C または次案件
+次: Phase 6-C（完全削除）または次案件
 
 ---
 
@@ -98,6 +98,7 @@
 | 2026-04-28 | @21 | `AKfycbxhtWdy...` | Phase 5-B Step 2 v2 |
 | 2026-04-29 | @22 | `AKfycbxhtWdy...` | Phase 5-C receipt flow closed |
 | 2026-04-29 | @23 | `AKfycbxhtWdy...` | Phase 6-A patient edit closed |
+| 2026-04-29 | @24 | `AKfycbxhtWdy...` | Phase 6-B visit trash closed |
 
 **本番 /exec 確認事項（2026-04-29 @23 反映後）:**
 - `?page=detail&id=P0001` で「✏ 患者情報を編集」ボタン表示 → 実機確認待ち
