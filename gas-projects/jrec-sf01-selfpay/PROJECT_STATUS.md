@@ -6,9 +6,44 @@
 **✅ Phase 6-A 患者基本情報編集: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 6-B 来院履歴ゴミ箱機能: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 6-D トップメニュー + 本日会計待ち一覧: CLOSED**（2026-04-29 全 PASS）
+**✅ Phase 5-D カルテ連動会計フロー: CLOSED**（2026-04-29 全 PASS）
 **✅ Versioned Deployment @25: 反映済み**（2026-04-29）
 
-次: Phase 6-C（来院完全削除）または Phase 5-D（カルテ連動会計フロー）
+次: versioned deployment @26（Phase 5-D 本番反映）→ Phase 6-C または次案件
+
+---
+
+## ✅ Phase 5-D 実機確認 PASS（2026-04-29）
+
+**commits:** 23b10d6 / 92a9532 / e66e1b7
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| E-1 | ✅ PASS | カルテ保存後に「患者詳細へ戻る」「会計入力へ進む →」ボタン表示・自動遷移なし |
+| E-2 | ✅ PASS | 「会計入力へ進む →」で billing-form が visitKey 付きで開く |
+| E-3 | ✅ PASS | billing-form で未収選択・保存できる |
+| E-4 | ✅ PASS | dailyCheckout に「未収」として反映される |
+| E-5 | ✅ PASS | receipt で回収 → 入金済 → R_2026_0014 発行済み |
+| G-1 | ✅ PASS | 初回保存で visitKey が1件のみ作成される |
+| G-2 | ✅ PASS | 同一画面で再保存時、ボタンが「カルテを更新する」に変わり同じ visitKey を更新 |
+| G-3 | ✅ PASS | dailyCheckout に重複行なし（SPV_20260429_P0001_011 が1件のみ） |
+| G-4 | ✅ PASS | 更新後の同じ visitKey で billing-form へ進める |
+| G-5 | ✅ PASS | 既存の未収保存・dailyCheckout 反映・receipt 回収・領収書発行フローが正常 |
+
+### CLOSED_SCOPE
+
+| 機能 | 内容 |
+|---|---|
+| カルテ保存後の2ボタン | 「患者詳細へ戻る」「🧾 会計入力へ進む →」を表示。自動遷移なし |
+| create/update 自動切り替え | `SAVED_VISIT_KEY` で初回 create / 2回目以降 update を判定 |
+| `updateVisitWithChart()` | visitKey を維持して SelfPayVisits + SelfPayChart を更新 |
+| billing-form 未収分岐 | 未収/一部入金 → dailyCheckout へ / 入金済 → 領収書発行へ |
+| 接骨院↔ジム 運用 | 接骨院で金額確定（未収保存）→ ジム側 dailyCheckout で回収・領収書発行 |
+
+### 追加修正（billing-form 初期値変更）
+
+**commit 別途**: billing-form の初期 paymentMethod を「未収（後払い）」に変更。
+接骨院側で金額確定のみ行い、支払いはジム側で行う運用を初期状態で表現する。
 
 ---
 
