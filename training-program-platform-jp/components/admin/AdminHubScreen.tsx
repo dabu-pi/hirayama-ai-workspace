@@ -49,6 +49,12 @@ const ADMIN_CARDS: AdminCard[] = [
     title: "口座振替確定管理",
     description: "翌月分の口座振替データ確定を記録。休会・退会の有効日判定に使用",
     initial: "振"
+  },
+  {
+    href: "/admin/program-stats",
+    title: "プログラム利用状況",
+    description: "プログラム別の選択数・利用中数・完了数を集計。個人名は表示しない",
+    initial: "📊"
   }
 ];
 

@@ -48,6 +48,31 @@ function resolveBody(state: ProgramListState, errorMessage: string | null | unde
   return "トレーニング・サマリー・詳細で使うプログラムを選んでください。";
 }
 
+// Slug-based recommendation metadata — no DB change required.
+// "人気No.1" is intentionally avoided until real usage data supports it.
+const PROGRAM_RECOMMENDATIONS: Record<string, { badge: string; reason: string }> = {
+  "gzclp-base": {
+    badge: "おすすめNo.1",
+    reason: "初心者に最適な定番の筋力強化プログラム"
+  },
+  "starting-strength-base": {
+    badge: "BIG3習得におすすめ",
+    reason: "スクワット中心の王道ノービスプログラム"
+  },
+  "upper-lower-base": {
+    badge: "筋量・筋力アップにおすすめ",
+    reason: "週4日の上下分割で効率的に強化"
+  },
+  "dumbbell-full-body-base": {
+    badge: "ダンベルで始められる",
+    reason: "器具が少なくても全身を鍛えられる"
+  },
+  "barbell-2day-base": {
+    badge: "週2日から始めたい方に",
+    reason: "忙しい方向けのバーベル短縮プログラム"
+  }
+};
+
 const REQUIRED_TAG_AXES: ProgramTagAxis[] = ["goal", "equipment", "split"];
 
 function findFirstTagByAxis(tags: ProgramTag[], axis: ProgramTagAxis) {
@@ -270,12 +295,20 @@ export function ProgramsScreen({
             const requiredTags = getRequiredTags(program.tags);
             const focusTag = getOptionalFocusTag(program.tags);
 
+            const rec = PROGRAM_RECOMMENDATIONS[program.slug];
+
             return (
               <Link
                 className={styles.card}
                 href={`/programs/${program.slug}`}
                 key={program.id}
               >
+                {rec && (
+                  <div className={styles.recBanner}>
+                    <span className={styles.recBadge}>⭐ {rec.badge}</span>
+                    <span className={styles.recReason}>{rec.reason}</span>
+                  </div>
+                )}
                 <div className={styles.cardTop}>
                   <div>
                     <h2 className={styles.cardTitle}>{formatProgramTitle(program.slug, program.title)}</h2>
