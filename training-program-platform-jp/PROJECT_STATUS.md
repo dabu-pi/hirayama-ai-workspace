@@ -6393,3 +6393,92 @@ Strategy 2 が paused/completed enrollment の session を拾って `/train?prog
 - archived enrollment は `archived_at IS NOT NULL` のため active enrollment 検索から除外される
 - `findOrCreateEnrollment` が新規 enrollment を Week1 Day1 で作成 → 正常動作
 
+---
+
+## 2026-04-29 日本語化対応 — progression_guide / program 説明文 / お知らせ
+
+### STATUS: 実装完了 — 実機確認 + migration 適用待ち
+
+### 対応内容
+
+#### 1. progression_guide / notes の日本語化（migration 000032）
+
+`program_days.progression_guide` と `notes` に残っていた英語表記を日本語に置換。
+
+| 対象ファイル | 修正内容 |
+|---|---|
+| `seed/programs/gzclp-base-live-correction.sql` | A1/B1/A2/B2 × 12行を日本語化 |
+| `seed/programs/gzclp-base-v2.sql` | 同上 × 12行 |
+| `seed/programs/gzclp-base-v2-4day.sql` | 同上 × 16行（週4日分） |
+| `seed/programs/gzclp-base.sql` | 旧 `->` 形式 × 12行を日本語化 |
+| `seed/programs/starting-strength-base.sql` | Day A/B × 9行を日本語化 |
+| `lib/workout/t1-progression.ts` | `"Retest"` → `"再テスト"` |
+
+**日本語化パターン:**
+- `A1 — T1 Squat: 5×3+ → ...` → `スクワット中心の日 — T1 スクワットは 5×3+ → 6×2+ → 10×1+ の順に進みます。…`
+- B1 → プレス中心の日 / A2 → ベンチプレス中心の日 / B2 → デッドリフト中心の日
+
+**既存DB反映:** `supabase/migrations/20260429_000032_translate_progression_guide_jp.sql`
+
+---
+
+#### 2. ジムお知らせ追加（migration 000033）
+
+`gym_announcements` テーブルに「GZCLプログラムの見方について」を追加。
+
+- T1/T2/T3 の役割を初心者向けに段落ごとに説明
+- A1/B1 などの内部表記なし
+- `display_order = 10`（上位表示）、`is_published = true`
+- `GymAnnouncementSection.module.css` に `white-space: pre-wrap` を追加し改行を有効化
+
+**既存DB反映:** `supabase/migrations/20260429_000033_gzcl_announcement_seed.sql`
+
+---
+
+#### 3. プログラム詳細「目標」「概要」の A1/B1/A2/B2 除去（migration 000034）
+
+スクショで確認した「GZCLP 基礎 4日/週（4週）」の「目標」「概要」に A1/B1/A2/B2 が残存。
+
+**ROOT_CAUSE:** `lib/workout/format-labels.ts` の `PROGRAM_GOAL_BY_SLUG` / `PROGRAM_OVERVIEW_BY_SLUG` が
+`ProgramDetailScreen.tsx` の「目標」「概要」を上書きする最優先ソース。
+
+| 対象ファイル | 修正内容 |
+|---|---|
+| `lib/workout/format-labels.ts` | GOAL/OVERVIEW の gzclp 系エントリを全修正。T2練習 → T2の補助種目 |
+| `lib/programs/program-catalog.ts` | モック catalog の goal / overview / sourceNotes を修正 |
+| `seed/programs/gzclp-base-v2.sql` | description を英語→日本語 |
+| `seed/programs/gzclp-base-v2-4day.sql` | 同上 |
+| `seed/programs/update-program-titles-jp.sql` | gzclp-base-v2 の description 更新を追加 |
+
+**既存DB反映:** `supabase/migrations/20260429_000034_translate_program_description_jp.sql`
+
+---
+
+### コミット一覧（2026-04-29）
+
+| hash | 内容 |
+|---|---|
+| `d5c192a` | i18n(seed): progression_guide / notes 日本語化、Retest→再テスト |
+| `221c1bc` | feat(gym): GZCLお知らせ追加、cardBody に pre-wrap |
+| `15d08f8` | i18n(programs): 「目標」「概要」から A1/B1/A2/B2 除去 |
+
+---
+
+### 次回開始時の確認事項
+
+1. **migration 適用（最優先）**
+   - `supabase/migrations/20260429_000032_translate_progression_guide_jp.sql`
+   - `supabase/migrations/20260429_000033_gzcl_announcement_seed.sql`
+   - `supabase/migrations/20260429_000034_translate_program_description_jp.sql`
+   - Supabase ダッシュボード SQL Editor または `supabase db push` で適用
+
+2. **実機確認（migration 適用後）**
+   - `/train` — ワークアウト画面の progressionGuide 欄が「スクワット中心の日 —」など日本語になっているか
+   - `/gym` — お知らせに「GZCLプログラムの見方について」が表示され、段落改行されているか
+   - `/programs/gzclp-base-v2-4day` — 「目標」「概要」から A1/B1/A2/B2 が消えているか
+   - T1 10×1+ 失敗後のフェーズバッジが「再テスト」と表示されるか
+
+3. **残存確認が不要な箇所**（修正済・問題なし）
+   - SQL コメント（`--`）内の A1/B1: 開発者向け注釈のみ
+   - `source_notes` カラム: ユーザー画面非表示（管理専用）
+
