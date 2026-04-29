@@ -518,7 +518,7 @@ function formatProgramSourceLabel(source: TrainProgramSelection["source"]) {
 }
 
 /**
- * Plays a short beep using the Web Audio API.
+ * Plays a short beep — used for countdown ticks (残り3/2/1秒).
  * Fails silently if unavailable — audio is non-critical.
  */
 function playBeep(
@@ -540,6 +540,34 @@ function playBeep(
     osc.stop(ctx.currentTime + duration);
   } catch {
     // Silently ignore
+  }
+}
+
+/**
+ * Plays a bell-like chime using 3 stacked oscillators — used for timer end (「チーン」).
+ * Quick attack + gradual decay to avoid clicks.
+ * Fails silently if unavailable.
+ */
+function playBellChime(ctx: AudioContext, volume: number): void {
+  const freqs = [880, 1320, 1760];
+  const duration = 0.6;
+  for (const freq of freqs) {
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      // Quick attack, then gradual exponential decay for bell character
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
+    } catch {
+      // Silently ignore
+    }
   }
 }
 
@@ -701,8 +729,13 @@ export function WorkoutScreen({
             }
             const ctx = audioCtxRef.current;
             if (ctx.state === "running") {
-              // countdown ticks: 660Hz 0.1s / end: 880Hz 0.4s
-              playBeep(ctx, remaining === 0 ? 880 : 660, remaining === 0 ? 0.4 : 0.1, 0.35);
+              if (remaining === 0) {
+                // End: bell chime (「チーン」) — 880/1320/1760Hz stacked, 0.6s
+                playBellChime(ctx, 0.045);
+              } else {
+                // Countdown tick (「ピッ」) — 880Hz, 0.07s
+                playBeep(ctx, 880, 0.07, 0.04);
+              }
             }
           } catch {
             // Audio unavailable — timer continues normally
