@@ -100,7 +100,7 @@ var visitCount    = timeline.length;
       </div>
       <div class="summary-item">
         <div class="label">未会計</div>
-        <div class="value" style="font-size:14px;
+        <div id="summaryUnbilled" class="value" style="font-size:14px;
           <?= (accounting && accounting.unbilledCount > 0) ? 'color:#e37400;font-weight:700;' : '' ?>">
           <? if (accounting) { ?>
             <?= accounting.unbilledCount || 0 ?>件
@@ -345,9 +345,19 @@ function handleTrash(visitKey, trashType) {
         // DOM から対象行を非表示
         var entryEl = document.querySelector('[data-visitkey="' + visitKey + '"]');
         if (entryEl) entryEl.style.display = 'none';
-        // 件数表示を更新
+        // 来院回数を更新
         var cntEl = document.getElementById('visitCount');
         if (cntEl) cntEl.textContent = Math.max((parseInt(cntEl.textContent, 10) || 1) - 1, 0);
+        // 未会計件数を更新（未会計の visit をゴミ箱移動したとき）
+        if (trashType === 'unbilled') {
+          var ubEl = document.getElementById('summaryUnbilled');
+          if (ubEl) {
+            var cur = parseInt(ubEl.textContent, 10) || 0;
+            var newUb = Math.max(cur - 1, 0);
+            ubEl.textContent = newUb + '件';
+            if (newUb === 0) { ubEl.style.color = ''; ubEl.style.fontWeight = ''; }
+          }
+        }
         // 成功メッセージ + 手動リロードボタン
         showTrashMsg_('success', 'ゴミ箱へ移動しました。' + reloadBtn_());
       } else {

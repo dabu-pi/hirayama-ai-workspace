@@ -22,12 +22,16 @@ function getPatientListStats(patientId) {
     var ss = getTargetSpreadsheet_();
 
     // SelfPayVisits: visitKey→patientId マップ + patientId ごとの totalVisits カウント
+    // isDeleted=TRUE の visit は除外（ゴミ箱の来院は集計対象外）
     var vkToPatient   = {};
     var patientTotals = {};
     var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
     if (visitSh && visitSh.getLastRow() >= 2) {
-      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, 2).getValues().forEach(function(r) {
+      var lscols = Math.min(visitSh.getLastColumn(), 12);
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, lscols).getValues().forEach(function(r) {
         if (!r[0] || !r[1]) return;
+        var isDeleted = r[11] === true || r[11] === "TRUE";
+        if (isDeleted) return;
         var vk  = String(r[0]);
         var pid = String(r[1]);
         if (patientId && pid !== String(patientId)) return;
@@ -147,14 +151,15 @@ function getPatientAccountingData(patientId) {
     if (!patientId) return { totalPaid: 0, totalOutstanding: 0, payments: {}, receipts: {} };
     var ss = getTargetSpreadsheet_();
 
-    // ── 患者の visitKey セット ───────────────────────────
+    // ── 患者の visitKey セット（isDeleted=TRUE を除外）────────────
     var visitKeySet = {};
     var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
     if (visitSh && visitSh.getLastRow() >= 2) {
-      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, 2).getValues().forEach(function(r) {
-        if (r[0] && String(r[1]) === String(patientId)) {
-          visitKeySet[String(r[0])] = true;
-        }
+      var vcols = Math.min(visitSh.getLastColumn(), 12);
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, vcols).getValues().forEach(function(r) {
+        if (!r[0] || String(r[1]) !== String(patientId)) return;
+        var isDeleted = r[11] === true || r[11] === "TRUE";
+        if (!isDeleted) visitKeySet[String(r[0])] = true;
       });
     }
 
