@@ -111,3 +111,11 @@ aios-orchestrator/dual-agent-poc/.env
 aios-orchestrator/src/__pycache__/
 aios-orchestrator/dual-agent-poc/__pycache__/
 aios-orchestrator/dual-agent-poc/.venv_phase2/
+
+# ローカル作業ディレクトリ（ネスト済みクローン・実験・バックアップ等）
+workspace/
+claude-sandbox/
+backups/
+workspace-export/
+automation/
+subsidy-grants-projects/
