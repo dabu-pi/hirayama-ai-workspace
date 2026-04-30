@@ -41,9 +41,14 @@ export function AdminProgramListScreen({ programs }: Props) {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link href="/admin" className={styles.back}>← 管理メニュー</Link>
-        <h1 className={styles.title}>プログラム管理</h1>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>プログラム管理</h1>
+          <Link href="/admin/programs/new" className={styles.newButton}>
+            + 新規登録
+          </Link>
+        </div>
         <p className={styles.subtitle}>
-          全プログラム（非公開含む）の一覧です。詳細は各行の「詳細」リンクから確認できます。編集は次フェーズ（A-1c）。
+          全プログラム（非公開含む）の一覧です。詳細・編集は各行の「詳細」リンクから確認できます。
         </p>
       </header>
 
@@ -168,7 +173,7 @@ export function AdminProgramListScreen({ programs }: Props) {
       )}
 
       <p className={styles.note}>
-        ※ 編集機能は A-1c 以降で実装予定です。
+        ※ Week / Day / Exercise の追加は seed SQL で行ってください。
       </p>
     </main>
   );

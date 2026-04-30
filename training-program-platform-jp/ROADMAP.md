@@ -57,7 +57,7 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 | **A-1a** | **Admin プログラム一覧 read only** | `/admin/programs` — 全プログラム・enrollment数・day数・種目数を確認 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1b** | **Admin プログラム詳細 read only** | `/admin/programs/[programId]` — Week/Day/Exercise 構成の詳細確認画面 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1c** | **Admin プログラム基本情報編集** | title / description / level / methodology / is_public / 頻度・期間 編集 | ✅ LIVE_CHECK PASS (2026-04-30) |
-| A-1d | Admin 新規プログラム登録（シェル） | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | 未着手 |
+| **A-1d** | **Admin 新規プログラム登録（シェル）** | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | ✅ 実装済み（LIVE_CHECK 待ち） |
 | C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |
 | — | Program recommendation UI | level/tag ベースの推奨表示 | 未着手 |
 
