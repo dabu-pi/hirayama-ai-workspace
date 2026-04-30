@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-30（A-1c Admin プログラム基本情報編集 LIVE_CHECK PASS — 次は A-1d 新規登録 または Phase 4）
+最終更新: 2026-04-30（BUG-FIX: enrollment 不整合 CONDITIONAL CLOSED — 再開時は切替→復帰テストから）
 
 ---
 
@@ -24,11 +24,27 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 
 | 項目 | 状態 | 備考 |
 |---|---|---|
+| **BUG-FIX: 切替→復帰テスト** | ⚠️ **再開時の最初のタスク** | 別プログラムへ切替→GZCLP 4日/週に再切替→Week2 Day4 から再開できるか確認。PASS で完全 CLOSED |
 | iOS PWA確認 | ⚠️ deferred | iPhone 未所持のため未確認。Android PASS |
 | D-2 退会申請フロー | ⚠️ 保留 | migration 000031 未適用。退会は窓口受付に統一 |
 | 計算ボタン（1RM/Calc） | スタブ | UIボタンあり・onClick 未実装（`WorkoutScreen.tsx`） |
 | 休憩タイマー自動起動 | 未実装 | 現状は手動起動のみ（`WorkoutScreen.tsx`） |
 | B-6: sign up 429 | 低優先 | 外部レート制限 |
+
+### 2026-04-30 終了時点の実機確認済み状態
+
+```
+ユーザー: 14205008-59cc-41a3-864a-a317e338b193
+プログラム: GZCLP 基礎 4日/週（4週）（gzclp-base-v2-4day）
+進行位置: Week2 Day3 完了 → 次: Week2 Day4
+確認済み:
+  - フリーセッションを挟んでも進行が壊れない ✅
+  - Programs 画面に「進行中: 次 Week2 Day4」表示 ✅
+  - 別プログラム切替時に確認ダイアログ表示 ✅
+  - 切替後: 旧プログラム paused / 新プログラム active ✅
+未確認:
+  - 切替 → 元プログラム（Week2 Day4）への復帰（コード上は保証済み）
+```
 
 ---
 
