@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-30（A-1a Admin プログラム一覧 LIVE_CHECK PASS — 次は A-1b 詳細 または A-1c 編集）
+最終更新: 2026-04-30（A-1b Admin プログラム詳細 LIVE_CHECK PASS — 次は A-1c 編集）
 
 ---
 
@@ -39,7 +39,7 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 | ID | タスク | 概要 | 状態 |
 |---|---|---|---|
 | **A-1a** | **Admin プログラム一覧 read only** | `/admin/programs` — 全プログラム・enrollment数・day数・種目数を確認 | ✅ LIVE_CHECK PASS (2026-04-30) |
-| A-1b | Admin プログラム詳細 read only | Week/Day/Exercise 構成の詳細確認画面 | 未着手 |
+| **A-1b** | **Admin プログラム詳細 read only** | `/admin/programs/[programId]` — Week/Day/Exercise 構成の詳細確認画面 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | A-1c | Admin プログラム基本情報編集 | is_public / title / level / methodology 編集。revalidateTag 必須 | 未着手 |
 | A-1d | Admin 新規プログラム登録（シェル） | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | 未着手 |
 | C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |

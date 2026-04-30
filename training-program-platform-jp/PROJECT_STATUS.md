@@ -1,5 +1,48 @@
 # PROJECT_STATUS
 
+## 2026-04-30 Phase 3-A-1b: Admin プログラム詳細 read only
+
+### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
+
+### 実装内容
+
+- `/admin/programs/[programId]` — 全プログラム（非公開含む）の read only 詳細画面
+- `lib/admin/program-detail.ts` — admin client で Week/Day/Exercise ツリー取得
+- `components/admin/AdminProgramDetailScreen.tsx` — 詳細 UI
+- `components/admin/AdminProgramDetailScreen.module.css`
+- `AdminProgramListScreen.tsx` — 「次フェーズ」→「詳細 →」リンクに変更
+
+実装コミット: `8687a39`
+
+### LIVE_CHECK 結果（2026-04-30）
+
+| 確認項目 | 結果 |
+|---|---|
+| /admin/programs に「詳細 →」リンク表示 | ✅ PASS |
+| 詳細リンクから /admin/programs/[programId] 遷移 | ✅ PASS |
+| 公開プログラムの詳細表示 | ✅ PASS |
+| 非公開プログラムの詳細表示 | ✅ PASS |
+| 基本情報（slug/頻度/期間/総日数/総種目数/作成日/出典情報） | ✅ PASS |
+| 概要・説明表示 | ✅ PASS |
+| タグ表示 | ✅ PASS |
+| 利用状況（累計/利用中/完了/中断） | ✅ PASS |
+| Week / Day / Exercise 構成表示 | ✅ PASS |
+| T1 / T2 / T3 バッジ表示 | ✅ PASS |
+| セット数・rep指定表示 | ✅ PASS |
+| 「← プログラム管理」戻り導線 | ✅ PASS |
+| 存在しない programId → 404 | ⚠️ 未確認 |
+| 非 admin ユーザーのブロック確認 | ⚠️ 未確認 |
+| /train への影響 | ⚠️ 未確認 |
+| スマホ表示・横スクロール | ⚠️ 未確認 |
+
+### 付記: 英語説明文が残っているプログラムあり
+
+一部プログラムの `description` / `notes` / `progressionGuide` に英語テキストが残っている。
+今回の read only 詳細画面の問題ではなく、DB 内テキストの未整備によるもの。
+A-1c または別タスクとして「プログラム説明文の日本語化・整備」を検討する。
+
+---
+
 ## 2026-04-30 Phase 3-A-1a: Admin プログラム一覧 read only
 
 ### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
