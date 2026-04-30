@@ -240,7 +240,7 @@ export function ProgramDetailScreen({
               今のプログラムを続ける
             </Link>
             <ProgramSwitchButton
-              href={trainHref}
+              targetProgramId={program!.id}
               currentProgramTitle={anyActiveEnrollment.title}
               className={styles.enrollmentSwitchCta}
             />

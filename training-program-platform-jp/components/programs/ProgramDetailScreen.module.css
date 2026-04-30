@@ -295,7 +295,16 @@
   color: var(--text-secondary);
   font-size: var(--text-xs);
   font-weight: 600;
+  font-family: inherit;
   white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: opacity 0.15s;
+}
+.enrollmentSwitchCta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ── Next workout banner (shown when enrolled in this program) ── */

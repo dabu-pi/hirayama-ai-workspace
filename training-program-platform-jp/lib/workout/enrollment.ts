@@ -650,3 +650,161 @@ export async function getTrainFallbackView(userId: string): Promise<TrainFallbac
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// switchActiveProgram
+// ---------------------------------------------------------------------------
+
+export type SwitchProgramResult = {
+  ok: boolean;
+  nextTrainUrl: string | null;
+  error?: string;
+};
+
+/**
+ * Atomically switches the active program enrollment for a user.
+ *
+ * Steps:
+ *   1. Pause current active enrollment (if for a different program)
+ *   2. For the target program:
+ *      a. Re-activate an existing paused enrollment (preserves current_program_day_id)
+ *      b. Create a new active enrollment from Day 1 if none exists
+ *   3. Apply stale day correction (correctStaleEnrollmentDay)
+ *   4. Return the next train URL for the newly active enrollment
+ *
+ * Guarantees at most 1 active, non-archived enrollment after the call.
+ * Called from switchProgramAction (Server Action) via ProgramSwitchButton.
+ */
+export async function switchActiveProgram(
+  userId: string,
+  targetProgramId: string
+): Promise<SwitchProgramResult> {
+  if (!hasSupabasePublicEnv()) {
+    return { ok: false, nextTrainUrl: null, error: "supabase_unavailable" };
+  }
+
+  try {
+    const client = createQueryClient();
+
+    // 1. Pause any active enrollment for a DIFFERENT program
+    const { data: currentActive } = await client
+      .from("program_enrollments")
+      .select("id, program_id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .is("archived_at", null)
+      .neq("program_id", targetProgramId)
+      .limit(1)
+      .maybeSingle<{ id: string; program_id: string }>();
+
+    if (currentActive) {
+      await client
+        .from("program_enrollments")
+        .update({ status: "paused", updated_at: new Date().toISOString() })
+        .eq("id", currentActive.id);
+      console.info("switchActiveProgram:paused_previous", {
+        pausedEnrollmentId: currentActive.id,
+        pausedProgramId: currentActive.program_id,
+        userId
+      });
+    }
+
+    // 2. Find existing enrollment for target program (prefer paused, then any)
+    const { data: candidates } = await client
+      .from("program_enrollments")
+      .select("id, status, current_program_day_id, archived_at")
+      .eq("user_id", userId)
+      .eq("program_id", targetProgramId)
+      .order("started_at", { ascending: false })
+      .limit(10);
+
+    type CandidateRow = {
+      id: string;
+      status: string;
+      current_program_day_id: string | null;
+      archived_at: string | null;
+    };
+
+    const rows = (candidates ?? []) as CandidateRow[];
+
+    // Prefer: paused (non-archived) → already active (archived) → any non-completed
+    const existing =
+      rows.find((r) => r.status === "paused" && r.archived_at === null) ??
+      rows.find((r) => r.status === "active" && r.archived_at !== null) ??
+      rows.find((r) => r.status === "paused");
+
+    let enrollmentId: string;
+    let currentDayId: string | null;
+
+    if (existing) {
+      // Re-activate paused enrollment (preserves progress)
+      await client
+        .from("program_enrollments")
+        .update({ status: "active", archived_at: null, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      enrollmentId = existing.id;
+      currentDayId = existing.current_program_day_id;
+      console.info("switchActiveProgram:reactivated", { enrollmentId, currentDayId, userId });
+    } else {
+      // No usable enrollment → create new from Day 1
+      const { data: weekData } = await client
+        .from("program_weeks")
+        .select("id")
+        .eq("program_id", targetProgramId)
+        .eq("week_number", 1)
+        .maybeSingle<{ id: string }>();
+
+      const firstDayId: string | null = weekData
+        ? await client
+            .from("program_days")
+            .select("id")
+            .eq("program_week_id", weekData.id)
+            .eq("day_number", 1)
+            .maybeSingle<{ id: string }>()
+            .then((r) => r.data?.id ?? null)
+        : null;
+
+      const { data: inserted } = await client
+        .from("program_enrollments")
+        .insert({
+          user_id: userId,
+          program_id: targetProgramId,
+          current_program_day_id: firstDayId,
+          status: "active"
+        })
+        .select("id, current_program_day_id")
+        .single<{ id: string; current_program_day_id: string | null }>();
+
+      if (!inserted) {
+        return { ok: false, nextTrainUrl: null, error: "enrollment_create_failed" };
+      }
+      enrollmentId = inserted.id;
+      currentDayId = inserted.current_program_day_id;
+      console.info("switchActiveProgram:created_new", { enrollmentId, currentDayId, userId });
+    }
+
+    // 3. Apply stale day correction (handles advancement failures)
+    if (currentDayId) {
+      currentDayId = await correctStaleEnrollmentDay(userId, enrollmentId, currentDayId);
+    }
+
+    // 4. Resolve next train URL
+    const { data: program } = await client
+      .from("programs")
+      .select("slug")
+      .eq("id", targetProgramId)
+      .maybeSingle<{ slug: string }>();
+
+    const slug = program?.slug ?? "";
+    const nextTrainUrl = currentDayId && slug
+      ? `/train?program=${slug}&programDayId=${currentDayId}`
+      : slug
+      ? `/train?program=${slug}`
+      : "/train";
+
+    return { ok: true, nextTrainUrl };
+  } catch (error) {
+    console.error("switchActiveProgram:failed", error);
+    return { ok: false, nextTrainUrl: null, error: "unexpected_error" };
+  }
+}
