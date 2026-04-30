@@ -13,7 +13,7 @@
 SELECT
   user_id,
   COUNT(*) AS active_count,
-  array_agg(id) AS enrollment_ids,
+  array_agg(pe.id) AS enrollment_ids,
   array_agg(p.slug) AS program_slugs
 FROM program_enrollments pe
 JOIN programs p ON p.id = pe.program_id
