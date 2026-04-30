@@ -13,7 +13,9 @@ export default async function ProgramsPage() {
       ? {
           enrollmentId: enrollmentViews[0].enrollmentId,
           title: enrollmentViews[0].programTitle,
-          continueUrl: enrollmentViews[0].continueUrl
+          continueUrl: enrollmentViews[0].continueUrl,
+          currentWeekDayLabel: enrollmentViews[0].currentWeekDayLabel,
+          programSlug: enrollmentViews[0].programSlug
         }
       : null;
 

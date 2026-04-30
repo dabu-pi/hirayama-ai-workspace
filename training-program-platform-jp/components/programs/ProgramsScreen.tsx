@@ -20,6 +20,8 @@ type ActiveEnrollmentInfo = {
   enrollmentId: string;
   title: string;
   continueUrl: string;
+  currentWeekDayLabel: string | null;
+  programSlug: string;
 };
 
 type ProgramsScreenProps = {
@@ -181,11 +183,15 @@ export function ProgramsScreen({
             <span className={styles.enrollmentBannerTitle}>
               {activeEnrollment.title}
             </span>
-            進行中のプログラムがあります
+            {activeEnrollment.currentWeekDayLabel
+              ? `次：${activeEnrollment.currentWeekDayLabel}`
+              : "進行中のプログラムがあります"}
           </div>
           <div className={styles.enrollmentBannerActions}>
             <Link className={styles.enrollmentBannerCta} href={activeEnrollment.continueUrl}>
-              続ける →
+              {activeEnrollment.currentWeekDayLabel
+                ? `${activeEnrollment.currentWeekDayLabel}へ →`
+                : "続ける →"}
             </Link>
             <button
               className={styles.enrollmentArchiveBtn}

@@ -14,6 +14,7 @@ import {
   formatProgramOverview,
   formatProgramWeekLabel
 } from "@/lib/workout/format-labels";
+import { ProgramSwitchButton } from "@/components/programs/ProgramSwitchButton";
 
 import styles from "./ProgramDetailScreen.module.css";
 
@@ -66,6 +67,7 @@ type AnyActiveEnrollment = {
   title: string;
   continueUrl: string;
   programSlug: string;
+  currentWeekDayLabel: string | null;
 };
 
 type ProgramDetailScreenProps = {
@@ -216,21 +218,32 @@ export function ProgramDetailScreen({
         </>
       )}
 
+      {enrollmentState === "this" && anyActiveEnrollment?.currentWeekDayLabel && (
+        <div className={styles.nextWorkoutBanner} role="status">
+          <span className={styles.nextWorkoutLabel}>次のワークアウト</span>
+          <span className={styles.nextWorkoutDay}>{anyActiveEnrollment.currentWeekDayLabel}</span>
+        </div>
+      )}
+
       {enrollmentState === "other" && anyActiveEnrollment && (
         <div className={styles.enrollmentWarning} role="status">
           <div className={styles.enrollmentWarningText}>
             <span className={styles.enrollmentWarningTitle}>
               進行中のプログラムがあります
             </span>
-            {anyActiveEnrollment.title} — 別のプログラムを開始する前に現在のプログラムを完了または中断してください。
+            {anyActiveEnrollment.title}
+            {anyActiveEnrollment.currentWeekDayLabel &&
+              ` — 次：${anyActiveEnrollment.currentWeekDayLabel}`}
           </div>
           <div className={styles.enrollmentWarningActions}>
             <Link className={styles.enrollmentContinueCta} href={anyActiveEnrollment.continueUrl}>
               今のプログラムを続ける
             </Link>
-            <Link className={styles.enrollmentSwitchCta} href={trainHref}>
-              このプログラムへ切り替える
-            </Link>
+            <ProgramSwitchButton
+              href={trainHref}
+              currentProgramTitle={anyActiveEnrollment.title}
+              className={styles.enrollmentSwitchCta}
+            />
           </div>
         </div>
       )}
@@ -238,7 +251,9 @@ export function ProgramDetailScreen({
       <div className={styles.actions}>
         {enrollmentState === "this" ? (
           <Link className={styles.primaryAction} href={trainHref}>
-            トレーニングを再開
+            {anyActiveEnrollment?.currentWeekDayLabel
+              ? `${anyActiveEnrollment.currentWeekDayLabel}へ進む`
+              : "トレーニングを再開"}
           </Link>
         ) : enrollmentState === "other" ? (
           <Link className={styles.secondaryAction} href="/programs">

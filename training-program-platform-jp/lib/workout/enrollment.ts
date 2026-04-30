@@ -227,14 +227,82 @@ export async function resolveStartProgramDayId(
   try {
     const enrollment = await findActiveEnrollment(programId, userId);
 
-    if (enrollment?.current_program_day_id) {
-      return {
-        startProgramDayId: enrollment.current_program_day_id,
-        hasActiveEnrollment: true
-      };
+    if (!enrollment) {
+      return { startProgramDayId: firstProgramDayId, hasActiveEnrollment: false };
     }
 
-    return { startProgramDayId: firstProgramDayId, hasActiveEnrollment: false };
+    const currentDayId = enrollment.current_program_day_id;
+
+    if (!currentDayId) {
+      return { startProgramDayId: firstProgramDayId, hasActiveEnrollment: true };
+    }
+
+    // Stale current_program_day_id guard:
+    // advanceEnrollmentAfterSessionComplete may not have run if the finish
+    // request failed mid-flight (network error, program_enrollment_id = null, etc.).
+    // Detect this by checking whether the current day already has a completed
+    // session. If so, find the actual next day and repair the enrollment so
+    // future requests immediately see the corrected state.
+    const client = createQueryClient();
+    const { data: latestSession } = await client
+      .from("workout_sessions")
+      .select("id, status")
+      .eq("user_id", userId)
+      .eq("program_day_id", currentDayId)
+      .in("status", ["in_progress", "completed"])
+      .is("archived_at", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ id: string; status: string }>();
+
+    // No session yet, or an in-progress session exists → current day is correct target
+    if (!latestSession || latestSession.status === "in_progress") {
+      return { startProgramDayId: currentDayId, hasActiveEnrollment: true };
+    }
+
+    // A completed session exists for current_program_day_id → stale state detected.
+    // Compute the actual next day and repair the enrollment.
+    let nextDayId: string | null;
+    try {
+      nextDayId = await findNextProgramDayId(currentDayId);
+    } catch (nextDayErr) {
+      console.error("resolveStartProgramDayId:findNextProgramDayId_failed", {
+        enrollmentId: enrollment.id,
+        currentDayId,
+        error: nextDayErr instanceof Error ? nextDayErr.message : String(nextDayErr)
+      });
+      // Fallback: return current day; /train will handle the completed state
+      return { startProgramDayId: currentDayId, hasActiveEnrollment: true };
+    }
+
+    if (nextDayId) {
+      // Repair: advance enrollment so subsequent requests are immediately correct
+      try {
+        await client
+          .from("program_enrollments")
+          .update({
+            current_program_day_id: nextDayId,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", enrollment.id);
+        console.info("resolveStartProgramDayId:repaired_stale_current_day", {
+          enrollmentId: enrollment.id,
+          staleDayId: currentDayId,
+          nextDayId,
+          userId
+        });
+      } catch (repairErr) {
+        // Non-fatal: return correct nextDayId even if the repair write fails
+        console.error("resolveStartProgramDayId:repair_write_failed", {
+          enrollmentId: enrollment.id,
+          error: repairErr instanceof Error ? repairErr.message : String(repairErr)
+        });
+      }
+      return { startProgramDayId: nextDayId, hasActiveEnrollment: true };
+    }
+
+    // nextDayId null → program fully completed; return last day so UI can show completion state
+    return { startProgramDayId: currentDayId, hasActiveEnrollment: true };
   } catch {
     return { startProgramDayId: firstProgramDayId, hasActiveEnrollment: false };
   }

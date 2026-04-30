@@ -298,6 +298,31 @@
   white-space: nowrap;
 }
 
+/* ── Next workout banner (shown when enrolled in this program) ── */
+
+.nextWorkoutBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: var(--radius-card);
+  margin-bottom: var(--space-4);
+}
+
+.nextWorkoutLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.nextWorkoutDay {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--accent);
+}
+
 @media (min-width: 720px) {
   .metaGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
