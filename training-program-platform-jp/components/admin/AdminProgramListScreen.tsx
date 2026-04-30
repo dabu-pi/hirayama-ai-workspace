@@ -43,7 +43,7 @@ export function AdminProgramListScreen({ programs }: Props) {
         <Link href="/admin" className={styles.back}>← 管理メニュー</Link>
         <h1 className={styles.title}>プログラム管理</h1>
         <p className={styles.subtitle}>
-          全プログラム（非公開含む）の一覧です。read only — 詳細・編集は次フェーズで対応予定。
+          全プログラム（非公開含む）の一覧です。詳細は各行の「詳細」リンクから確認できます。編集は次フェーズ（A-1c）。
         </p>
       </header>
 
@@ -153,9 +153,11 @@ export function AdminProgramListScreen({ programs }: Props) {
 
                     <td className={styles.tdDate}>{formatDate(row.createdAt)}</td>
 
-                    {/* 詳細リンク — A-1b 未実装のため非活性表示 */}
+                    {/* 詳細リンク — A-1b 実装済み */}
                     <td className={styles.tdAction}>
-                      <span className={styles.nextPhaseLabel}>次フェーズ</span>
+                      <Link href={`/admin/programs/${row.id}`} className={styles.detailLink}>
+                        詳細 →
+                      </Link>
                     </td>
                   </tr>
                 );
@@ -166,7 +168,7 @@ export function AdminProgramListScreen({ programs }: Props) {
       )}
 
       <p className={styles.note}>
-        ※ 詳細表示・編集機能は A-1b 以降で実装予定です。
+        ※ 編集機能は A-1c 以降で実装予定です。
       </p>
     </main>
   );
