@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-30（BUG-FIX: enrollment 不整合 CONDITIONAL CLOSED — 再開時は切替→復帰テストから）
+最終更新: 2026-04-30（Phase 3-A-1d 完了 — Admin プログラム管理（一覧・詳細・編集・新規）一通り完成。次回: 新規登録の実機確認 → Phase 3-A CLOSED → Phase 4）
 
 ---
 
@@ -57,7 +57,7 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 | **A-1a** | **Admin プログラム一覧 read only** | `/admin/programs` — 全プログラム・enrollment数・day数・種目数を確認 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1b** | **Admin プログラム詳細 read only** | `/admin/programs/[programId]` — Week/Day/Exercise 構成の詳細確認画面 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1c** | **Admin プログラム基本情報編集** | title / description / level / methodology / is_public / 頻度・期間 編集 | ✅ LIVE_CHECK PASS (2026-04-30) |
-| **A-1d** | **Admin 新規プログラム登録（シェル）** | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | ✅ 実装済み（LIVE_CHECK 待ち） |
+| **A-1d** | **Admin 新規プログラム登録（シェル）** | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | ✅ 実装完了 commit e48f4db（LIVE_CHECK 次回） |
 | C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |
 | — | Program recommendation UI | level/tag ベースの推奨表示 | 未着手 |
 
