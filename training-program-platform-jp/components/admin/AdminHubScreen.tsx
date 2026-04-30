@@ -55,6 +55,12 @@ const ADMIN_CARDS: AdminCard[] = [
     title: "プログラム利用状況",
     description: "プログラム別の選択数・利用中数・完了数を集計。個人名は表示しない",
     initial: "📊"
+  },
+  {
+    href: "/admin/programs",
+    title: "プログラム管理",
+    description: "全プログラム一覧（非公開含む）。enrollment数・日数・種目数を確認",
+    initial: "📋"
   }
 ];
 
