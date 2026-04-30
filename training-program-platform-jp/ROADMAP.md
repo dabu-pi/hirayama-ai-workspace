@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-04-30（Phase 2系・PWA・会員ライフサイクル管理 完了 — 次は Phase 3 コンテンツ・管理拡張 または Phase 4 会員管理強化）
+最終更新: 2026-04-30（A-1a Admin プログラム一覧 LIVE_CHECK PASS — 次は A-1b 詳細 または A-1c 編集）
 
 ---
 
@@ -34,13 +34,16 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 
 ## 次フェーズ候補（2026-04-30 更新）
 
-### Phase 3: コンテンツ・管理拡張（次の優先フェーズ）
+### Phase 3: コンテンツ・管理拡張（進行中）
 
-| ID | タスク | 概要 | 優先度 |
+| ID | タスク | 概要 | 状態 |
 |---|---|---|---|
-| A-1 | Admin プログラム登録UI | 現状 SQL 直打ちのみ。管理者が画面から新プログラムを追加できるようにする | 高 |
-| C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 中 |
-| — | Program recommendation UI | level/tag ベースの推奨表示 | 中 |
+| **A-1a** | **Admin プログラム一覧 read only** | `/admin/programs` — 全プログラム・enrollment数・day数・種目数を確認 | ✅ LIVE_CHECK PASS (2026-04-30) |
+| A-1b | Admin プログラム詳細 read only | Week/Day/Exercise 構成の詳細確認画面 | 未着手 |
+| A-1c | Admin プログラム基本情報編集 | is_public / title / level / methodology 編集。revalidateTag 必須 | 未着手 |
+| A-1d | Admin 新規プログラム登録（シェル） | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | 未着手 |
+| C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |
+| — | Program recommendation UI | level/tag ベースの推奨表示 | 未着手 |
 
 ### Phase 4: 会員管理強化
 

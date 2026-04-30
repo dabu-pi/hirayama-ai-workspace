@@ -1,5 +1,36 @@
 # PROJECT_STATUS
 
+## 2026-04-30 Phase 3-A-1a: Admin プログラム一覧 read only
+
+### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
+
+### 実装内容
+
+- `/admin/programs` — 全プログラム（is_public 問わず）の read only 一覧
+- `lib/admin/programs.ts` — admin client で全プログラム + enrollment/day/exercise 集計（5並列 + 2順次）
+- `components/admin/AdminProgramListScreen.tsx` — 一覧テーブル UI
+- `components/admin/AdminProgramListScreen.module.css`
+- `components/admin/AdminHubScreen.tsx` — 「プログラム管理」カード追加
+
+実装コミット: `59bc0bc`
+
+### LIVE_CHECK 結果（2026-04-30）
+
+| 確認項目 | 結果 |
+|---|---|
+| /admin に「プログラム管理」カード表示 | ✅ PASS |
+| admin ユーザーで /admin/programs を開ける | ✅ PASS |
+| サマリー表示（登録数10 / 公開6 / 非公開4 / 利用中4） | ✅ PASS |
+| 公開・非公開プログラムの両方が一覧表示される | ✅ PASS |
+| slug / 構成 / 累計 / 利用中 / 日数 / 種目 / 作成日 / 操作 の列表示 | ✅ PASS |
+| /programs 一般画面への影響なし | ✅ PASS（目視確認） |
+| enrollment数 / day数 / 種目数（DBとの厳密突合） | ⚠️ 概ねOK（厳密突合は未実施） |
+| 非 admin ユーザーのブロック確認 | ⚠️ 未確認 |
+| /train への影響 | ⚠️ 未確認 |
+| スマホ表示・横スクロール | ⚠️ 未確認 |
+
+---
+
 ## 2026-04-30 BUG-FIX: 自由に作成フロー（Custom Workout Entry）
 
 ### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
