@@ -1,5 +1,52 @@
 # PROJECT_STATUS
 
+## 2026-04-30 BUG-FIX: active enrollment 不整合・プログラム継続不可
+
+### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
+
+### 問題概要
+
+複数ユーザーで「進行中のプログラムと active enrollment がズレる」問題が発生。
+フリーセッション完了後に Train タブを押すとプログラム画面に戻される症状も確認。
+
+### 根本原因（複合）
+
+1. **Router Cache**（Next.js 14）が `/train → /programs` のリダイレクトをキャッシュ
+2. `current_program_day_id` が完了済み Day を指したまま（advancement 失敗）
+3. プログラム切替が `findOrCreateEnrollment`（暗黙的）と `ProgramSwitchButton`（明示的）に分散
+
+### 修正内容（コミット群）
+
+| コミット | 内容 |
+|---|---|
+| `a36296b` | stale day 検出・自動補正（`resolveStartProgramDayId`）/ Programs UX 改善 |
+| `392c6a4` | `correctStaleEnrollmentDay` 共有関数化・Train タブ Router Cache バイパス |
+| `5c85f34` | `switchActiveProgram()` 実装・Server Action 化・`ProgramSwitchButton` 統一 |
+| `bb4b6c7` | `enrollment-health-check.sql` の ambiguous column 修正 |
+
+### LIVE_CHECK 結果（2026-04-30）
+
+| 確認項目 | 結果 |
+|---|---|
+| GZCLP Week2 Day3 完了後、次 Day（Day4）へ正常に進む | ✅ PASS |
+| フリーセッションを挟んでも active program 進行が維持される | ✅ PASS |
+| Programs 画面に「現在のプログラム・次 Day」が表示される | ✅ PASS |
+| 別プログラムへの切替時に確認ダイアログが表示される | ✅ PASS |
+| 切替後: 旧プログラム paused・新プログラム active | ✅ PASS |
+| 元のプログラムへ再切替（Week2 Day4 からの復帰） | ⚠️ コード上は保証済み、実機テスト未実施 |
+
+### 残リスク（仕様として許容）
+
+- URL 直打ち（`/train?program=別slug`）で `findOrCreateEnrollment` が暗黙的切替を行う可能性
+- 通常ユーザー導線では発生しない。必要なら A-2 として対応
+
+### Data Repair
+
+- `supabase/scripts/enrollment-health-check.sql` で既存ユーザーの健全性を確認可能
+- 影響ユーザーの DB は手動修正済み（gzclp-base-v2-4day active / Week2 Day3 → Day4 進行中）
+
+---
+
 ## 2026-04-30 Phase 3-A-1c: Admin プログラム基本情報編集
 
 ### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
