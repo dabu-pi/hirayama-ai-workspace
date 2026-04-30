@@ -253,6 +253,28 @@ export function BottomTabBar() {
             <IconHistory {...iconProps} />
           );
 
+        // The Train tab uses a full navigation (window.location.assign) instead of
+        // Next.js <Link> to bypass the client-side Router Cache. Without this,
+        // a stale cached redirect from /train → /programs can be served even after
+        // the enrollment state has changed (e.g. after completing a free session).
+        if (href === "/train") {
+          return (
+            <a
+              key={href}
+              href={href}
+              className={cls}
+              aria-current={active ? "page" : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.assign("/train");
+              }}
+            >
+              {icon}
+              <span className={styles.label}>{label}</span>
+            </a>
+          );
+        }
+
         return (
           <Link key={href} href={href} className={cls} aria-current={active ? "page" : undefined}>
             {icon}

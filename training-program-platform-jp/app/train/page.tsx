@@ -10,7 +10,7 @@ import { getMembershipStatus } from "@/lib/workout/membership";
 import { getProgramDayLabel } from "@/lib/workout/start-session";
 import { resolveTrainingEntry } from "@/lib/workout/train-entry";
 import { getAuthenticatedWorkoutUserId } from "@/lib/workout/session-access";
-import { getTrainFallbackView } from "@/lib/workout/enrollment";
+import { correctStaleEnrollmentDay, getTrainFallbackView } from "@/lib/workout/enrollment";
 import { getTrainProgramSelection } from "@/lib/workout/train-selection";
 import {
   findWorkoutSessionByDayId,
@@ -210,14 +210,33 @@ export default async function TrainPage({ searchParams }: TrainPageProps) {
     // starts correctly and post-start navigation uses getCurrentWorkoutSessionView.
     // Only the "Back to Program" link degrades (links to /programs generically).
   ) {
+    // Stale day guard: detect and repair current_program_day_id that still points
+    // to a completed day (advanceEnrollmentAfterSessionComplete may have been skipped,
+    // e.g. after a free session that had program_enrollment_id = null). This ensures
+    // the user always lands on the correct next workout from the Train tab, without
+    // needing to visit the Programs page first.
+    const tStale = Date.now();
+    const resolvedDayId = await correctStaleEnrollmentDay(
+      userId,
+      primaryView.enrollmentId,
+      primaryView.currentProgramDayId
+    );
+    console.info(`${PAGE}:perf`, {
+      step: "correctStaleEnrollmentDay",
+      ms: Date.now() - tStale,
+      originalDayId: primaryView.currentProgramDayId,
+      resolvedDayId,
+      wasStale: resolvedDayId !== primaryView.currentProgramDayId
+    });
+
     console.info(`${PAGE}:branch`, {
       branch: "start_session_screen_from_enrollment",
-      programDayId: primaryView.currentProgramDayId,
+      programDayId: resolvedDayId,
       programSlug: primaryView.programSlug || "(empty)"
     });
     return (
       <StartSessionScreen
-        programDayId={primaryView.currentProgramDayId}
+        programDayId={resolvedDayId}
         programDayLabel={primaryView.currentWeekDayLabel || "Current Workout"}
         programSlug={primaryView.programSlug}
         programTitle={primaryView.programTitle}
