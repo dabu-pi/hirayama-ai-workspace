@@ -1,0 +1,132 @@
+"use server";
+
+import { revalidatePath, revalidateTag } from "next/cache";
+
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient
+} from "@/lib/supabase/server";
+
+export type ProgramUpdateInput = {
+  title: string;
+  description: string | null;
+  level: string | null;
+  methodology: string | null;
+  isPublic: boolean;
+  durationWeeks: number;
+  daysPerWeek: number;
+};
+
+export type ProgramUpdateResult = {
+  ok: boolean;
+  error?: string;
+  /** slug after save — confirmed unchanged when only basic fields are updated */
+  slug?: string;
+};
+
+/** Returns the authenticated user's ID only when role = 'admin'. */
+async function requireAdminUserId(): Promise<string | null> {
+  const client = createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await client.auth.getUser();
+  if (!user) return null;
+  const { data } = await client
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle<{ role: string }>();
+  return data?.role === "admin" ? user.id : null;
+}
+
+/**
+ * Updates basic program info (title / description / level / methodology /
+ * is_public / duration_weeks / days_per_week).
+ *
+ * Slug behavior: the DB trigger `trg_programs_assign_slug` fires on
+ * UPDATE OF title but uses `new.slug` (the existing value) as the slug
+ * source, so the slug remains unchanged after a title-only edit.
+ *
+ * Week / Day / Exercise data is never touched by this action.
+ * updated_at column does not exist; no migration is needed.
+ */
+export async function updateProgramBasicInfo(
+  programId: string,
+  input: ProgramUpdateInput
+): Promise<ProgramUpdateResult> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) return { ok: false, error: "forbidden" };
+
+  // Server-side validation
+  const title = input.title.trim();
+  if (!title) return { ok: false, error: "title_required" };
+
+  const durationWeeks = Math.round(input.durationWeeks);
+  const daysPerWeek = Math.round(input.daysPerWeek);
+  if (durationWeeks < 1 || durationWeeks > 52) {
+    return { ok: false, error: "invalid_duration_weeks" };
+  }
+  if (daysPerWeek < 1 || daysPerWeek > 7) {
+    return { ok: false, error: "invalid_days_per_week" };
+  }
+
+  const validLevels = ["beginner", "intermediate", "advanced"];
+  const level = input.level && validLevels.includes(input.level) ? input.level : null;
+
+  const validMethodologies = ["gzcl", "linear", "generic"];
+  const methodology =
+    input.methodology && validMethodologies.includes(input.methodology)
+      ? input.methodology
+      : null;
+
+  const admin = createSupabaseAdminClient();
+
+  // Verify program exists
+  const { data: existing, error: fetchErr } = await admin
+    .from("programs")
+    .select("id, slug")
+    .eq("id", programId)
+    .maybeSingle<{ id: string; slug: string }>();
+
+  if (fetchErr || !existing) {
+    return { ok: false, error: fetchErr?.message ?? "program_not_found" };
+  }
+
+  // Update basic fields only — no slug column in SET clause
+  const { error: updateErr } = await admin
+    .from("programs")
+    .update({
+      title,
+      description: input.description?.trim() || null,
+      level,
+      methodology,
+      is_public: input.isPublic,
+      duration_weeks: durationWeeks,
+      days_per_week: daysPerWeek
+    })
+    .eq("id", programId);
+
+  if (updateErr) {
+    console.error("updateProgramBasicInfo: update failed", {
+      programId,
+      error: updateErr.message
+    });
+    return { ok: false, error: updateErr.message };
+  }
+
+  // Confirm slug after save (expected: unchanged)
+  const { data: after } = await admin
+    .from("programs")
+    .select("slug")
+    .eq("id", programId)
+    .maybeSingle<{ slug: string }>();
+
+  // Invalidate program library cache (1h TTL via unstable_cache tag "program-library")
+  revalidateTag("program-library");
+  // Invalidate page caches
+  revalidatePath("/programs");
+  revalidatePath("/admin/programs");
+  revalidatePath(`/admin/programs/${programId}`);
+
+  return { ok: true, slug: after?.slug ?? existing.slug };
+}

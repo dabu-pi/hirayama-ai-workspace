@@ -80,7 +80,14 @@ export function AdminProgramDetailScreen({ program }: Props) {
             )}
           </div>
         </div>
-        <p className={styles.subtitle}>read only — 編集は次フェーズで対応予定</p>
+        <div className={styles.headerActions}>
+          <Link
+            href={`/admin/programs/${program.id}/edit`}
+            className={styles.editButton}
+          >
+            基本情報を編集
+          </Link>
+        </div>
       </header>
 
       {/* ── 基本情報 ── */}
@@ -262,7 +269,9 @@ export function AdminProgramDetailScreen({ program }: Props) {
       {/* ── フッター ── */}
       <div className={styles.footer}>
         <Link href="/admin/programs" className={styles.backBottom}>← プログラム管理に戻る</Link>
-        <span className={styles.editDisabled}>編集は次フェーズ（A-1c）で対応予定</span>
+        <Link href={`/admin/programs/${program.id}/edit`} className={styles.editButtonBottom}>
+          基本情報を編集
+        </Link>
       </div>
     </main>
   );
