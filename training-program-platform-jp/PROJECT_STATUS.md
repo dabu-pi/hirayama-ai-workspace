@@ -1,5 +1,43 @@
 # PROJECT_STATUS
 
+## 2026-04-30 Phase 3-A-1c: Admin プログラム基本情報編集
+
+### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
+
+### 実装内容
+
+- `/admin/programs/[programId]/edit` — 基本情報編集フォーム（Client Component）
+- `lib/admin/program-update.ts` — Server Action（admin 権限再検証・validation・DB 更新・cache 無効化）
+- `components/admin/AdminProgramEditScreen.tsx` / `.module.css`
+- `AdminProgramDetailScreen.tsx` — 「基本情報を編集」ボタン有効化
+
+実装コミット: `9fb1753`
+
+### LIVE_CHECK 結果（2026-04-30）
+
+| 確認項目 | 結果 |
+|---|---|
+| 詳細画面に「基本情報を編集」ボタン表示 | ✅ PASS |
+| 編集画面 /admin/programs/[id]/edit を開ける | ✅ PASS |
+| slug が表示のみ・編集不可 | ✅ PASS |
+| description 編集 → 保存 → 詳細に反映（非公開プログラム） | ✅ PASS |
+| title 編集 → 保存 → 詳細・一覧に反映 | ✅ PASS |
+| title 変更後も slug が変わらないこと | ✅ PASS |
+| /admin/programs 一覧への反映 | ✅ PASS |
+| Week / Day / Exercise 構成が変わらないこと | ✅ PASS |
+| is_public false → true の実保存 | ⚠️ 未確認（誤公開リスクのため意図的に未実施） |
+| 非 admin ユーザーの /edit 直接アクセスブロック | ⚠️ 未確認 |
+| /train への影響 | ⚠️ 未確認 |
+| スマホ表示 | ⚠️ 未確認 |
+| /programs 一般画面への即時反映（Edge キャッシュ残存可能性） | ⚠️ 既知リスクとして記録（revalidateTag 実装済み） |
+
+### 備考
+
+- 確認はすべて非公開プログラムで実施（誤公開リスク回避のため）
+- is_public の公開化は、運用上「意図的に確認対象外」とした。実際に公開設定が必要な場合は慎重に操作すること
+
+---
+
 ## 2026-04-30 Phase 3-A-1b: Admin プログラム詳細 read only
 
 ### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)
