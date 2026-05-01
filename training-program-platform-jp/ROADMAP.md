@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-05-01（Phase 3-A CLOSED / BUG-FIX 切替→復帰テスト CLOSED。次: Phase 4）
+最終更新: 2026-05-01（Phase 3-B 開始 / A-2a Week label 編集 実装済み・LIVE_CHECK 待ち）
 
 ---
 
@@ -8,7 +8,8 @@
 
 Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase M）・UX修正 はすべて完了。
 Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED。
-次フェーズは **Phase 4（会員管理強化）** が優先候補。BUG-FIX 切替→復帰テストは CLOSED 済み。
+BUG-FIX 切替→復帰テストも CLOSED。
+現在は **Phase 3-B（Admin プログラム内容編集）** 進行中。A-2a 実装済み・実機確認待ち。
 
 ### 完了済みフェーズ一覧
 
@@ -60,6 +61,10 @@ Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED
 | **A-1b** | **Admin プログラム詳細 read only** | `/admin/programs/[programId]` — Week/Day/Exercise 構成の詳細確認画面 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1c** | **Admin プログラム基本情報編集** | title / description / level / methodology / is_public / 頻度・期間 編集 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1d** | **Admin 新規プログラム登録（シェル）** | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | ✅ LIVE_CHECK PASS (2026-05-01) |
+| **A-2a** | **Admin Week label 編集** | `program_weeks.label` インライン編集（WeekLabelEditor Client Component）| ⚠️ 実装済み・LIVE_CHECK 待ち (2026-05-01) |
+| **A-2b** | **Admin Day 情報編集** | `progression_guide` / `notes` インライン編集 | 未着手 |
+| **A-2c** | **Admin 種目パラメータ編集** | `exercise_type` / `set_count` / `target_reps_text` 編集 | 未着手 |
+| **A-2d** | **Admin 種目表示順変更** | `order_index` を ↑↓ ボタンで並び替え | 未着手 |
 | C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |
 | — | Program recommendation UI | level/tag ベースの推奨表示 | 未着手 |
 

@@ -1,5 +1,58 @@
 # PROJECT_STATUS
 
+## 2026-05-01 Phase 3-B / A-2a — Admin Week label インライン編集
+
+### STATUS: 実装済み — LIVE_CHECK 待ち (2026-05-01)
+
+### 実装内容
+
+`/admin/programs/[programId]` の Week 見出しから `program_weeks.label` をインライン編集できるようにした。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `lib/admin/program-update.ts` | `updateProgramWeekLabel` Server Action 追加 |
+| `components/admin/WeekLabelEditor.tsx` | 新規 Client Component（表示・編集モード切替） |
+| `components/admin/WeekLabelEditor.module.css` | 新規 CSS |
+| `components/admin/AdminProgramDetailScreen.tsx` | `WeekLabel`（static）→ `WeekLabelEditor`（interactive）に置き換え |
+
+### 動作仕様
+
+- Week 見出しに「編集」ボタンを表示
+- クリック → input フィールドが autoFocus で展開
+- Enter で保存 / Escape でキャンセル
+- 保存成功時: state を即時更新（ページリロードなし）+ `revalidatePath` でサーバー側キャッシュ無効化
+- 空文字保存 → `label = null`（「X週目」のみ表示に戻る）
+- エラー時: 「権限がありません」/「Weekが見つかりません」/「ラベルが長すぎます」を表示
+
+### server-side guard
+
+- `requireAdminUserId()` で admin 権限確認
+- `week.program_id = programId` の帰属確認（他プログラムの week を誤更新しない）
+- label 100文字上限バリデーション
+
+### typecheck / build
+
+- `npm run typecheck`: PASS
+- `npm run build`: PASS（/admin/programs/[programId] Dynamic ビルド確認済み）
+
+### LIVE_CHECK 確認手順（次回再開時）
+
+1. Admin ログイン後、`/admin/programs/[プログラムID]` へ
+2. Week 見出しに「編集」ボタンが表示されること
+3. クリック → input が表示・autoFocus されること
+4. ラベル入力 → 「保存」でページリロードなしに表示更新されること
+5. Enter 保存 / Escape キャンセルが機能すること
+6. 空文字保存 → 「X週目」表示に戻ること
+7. 既存の read-only 表示（Day/Exercise ツリー）が崩れていないこと
+
+### commit
+
+`3ed4437` feat(A-2a): Week label inline edit — updateProgramWeekLabel server action + WeekLabelEditor client component
+
+---
+
 ## 2026-05-01 Phase 3-A CLOSED — A-1d Admin 新規プログラム登録 LIVE_CHECK PASS
 
 ### STATUS: CLOSED — LIVE_CHECK PASS (2026-05-01)
