@@ -18,9 +18,10 @@
 **✅ Phase 6-N-1 共通タブナビゲーション: CLOSED**（2026-05-02 N1-1〜N1-8 全 PASS）
 **✅ Versioned Deployment @30: 本番反映済み**（2026-05-02 Phase 6-N-1 含む）
 
+**🔄 Phase 6-H dailyCheckout 日別金額合計カード: 実装済み・HEAD実機確認待ち**（2026-05-02）
+
 次期実装候補:
-1. **Phase 6-H** dailyCheckout 日別金額合計カード ⏸
-2. **Phase 6-N 残タスク**（オプション：タブアイコン追加、レポートタブ拡張など）
+1. **Phase 6-I** 集計メニュー / 集計ページ新設 ⏸
 
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
@@ -30,7 +31,7 @@
 Phase 6-G〜6-N ロードマップ:
 - 6-G: カレンダー機能強化（前月/翌月切替）✅ CLOSED（2026-05-02）
 - 6-N: 共通タブナビゲーション整備 ✅ CLOSED（2026-05-02 @30）
-- 6-H: dailyCheckout 日別金額合計追加 ⏸
+- 6-H: dailyCheckout 日別金額合計カード 🔄 実装済み・HEAD実機確認待ち
 - 6-I: 集計メニュー / 集計ページ新設 ⏸
 - 6-J: 月別売上集計 ⏸
 - 6-K: メニュー別集計 ⏸
@@ -38,6 +39,59 @@ Phase 6-G〜6-N ロードマップ:
 - 6-M: CSV / 印刷 / 監査レポート ⏸
 
 詳細: `ROADMAP.md`（Phase 6-N セクション参照）
+
+---
+
+## 🔄 Phase 6-H dailyCheckout 日別金額合計カード（2026-05-02 実機確認待ち）
+
+### 設計メモ
+
+| 項目 | 内容 |
+|---|---|
+| 集計方式 | **B案採用**: getDailyCheckoutList(dateStr) の戻り値 list を template scriptlet で集計 |
+| DailySales 依存 | なし（DailySales シートが空でも動作） |
+| 追加シート読み取り | なし（既存の list データのみ使用） |
+| isDeleted 除外 | getDailyCheckoutList 側で保証済み |
+| 責務分離 | Phase 6-J 月次売上は DailySales / Run_Log を正本とする。本カードは当日 UI 確認用。 |
+
+### 表示項目の根拠
+
+| 表示項目 | 根拠フィールド | 元シート |
+|---|---|---|
+| 来院件数 | list.length | SelfPayVisits（isDeleted 除外済み） |
+| 未会計件数 | displayStatus === '未会計' | SelfPayVisits（Payments に対応行なし） |
+| 未収件数 | displayStatus === '未収' | Payments.paymentStatus |
+| 一部入金件数 | displayStatus === '一部入金' | Payments.paymentStatus |
+| 入金済未発行件数 | displayStatus === '入金済（領収書未発行）' | Payments + Receipts（receiptNo なし） |
+| 発行済件数 | displayStatus === '領収書発行済' | Payments + Receipts |
+| 当日請求合計 | Σ totalTaxInc | Payments.col5（税込合計） |
+| 当日入金合計 | Σ paidAmount | Payments.col11（入金済累計） |
+| 未収残高 | Σ remainingAmount | Payments（totalTaxInc - paidAmount） |
+
+### パフォーマンスメモ
+
+- getDailySalesReport(dateStr) は Run_Log 全スキャンのため **採用しない**
+- getDailyCheckoutList は既存呼び出しで取得済みのデータのみ使用 → 追加レイテンシなし
+
+### テスト項目（実機確認待ち）
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| H1-1 | ⏳ | dailyCheckout に日別金額合計カードが表示される（件数行 + 金額行） |
+| H1-2 | ⏳ | 来院件数が一覧の行数と一致する |
+| H1-3 | ⏳ | 未会計件数が一覧の「未会計」行数と一致する |
+| H1-4 | ⏳ | 未収 / 一部入金 / 未発行 / 発行済の件数が一覧と一致する |
+| H1-5 | ⏳ | 当日請求合計・入金合計・未収残高が表示される（¥表示） |
+| H1-6 | ⏳ | DailySales シートが空でも表示が壊れない（このカードは非依存） |
+| H1-7 | ⏳ | isDeleted=true の来院が集計から除外される（getDailyCheckoutList 側で保証） |
+| H1-8 | ⏳ | スマホ表示でカードが崩れない（flex-wrap で折り返し） |
+| H1-9 | ⏳ | 既存の会計入力・領収書発行・日付変更が壊れていない |
+
+### HEAD 実機確認 URL
+
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
+```
 
 ---
 

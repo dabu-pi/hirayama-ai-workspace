@@ -1,6 +1,6 @@
 # JREC-SF01 自費カルテ・会計システム — ロードマップ
 
-最終更新: 2026-05-02（Phase 6-N-1 CLOSED @30）
+最終更新: 2026-05-02（Phase 6-H 実装・実機確認待ち）
 
 ---
 
@@ -61,19 +61,20 @@
 
 ---
 
-### Phase 6-H: 日別会計集計強化 ⏸
+### Phase 6-H: 日別会計集計強化 🔄
 
 **目的:** dailyCheckout にその日の売上合計・入金状況サマリを表示する
 
-| タスク | 内容 |
-|---|---|
-| 6-H-1 | dailyCheckout に日別合計カード追加（来院数・売上合計・入金済・未収） |
-| 6-H-2 | `getDailySalesReport` を dailyCheckout ルートで呼び出して合計を渡す |
-| 6-H-3 | `getDailySalesReport` と `getDailyCheckoutList` の連携整理 |
-| 6-H-4 | （オプション）rebuildDailySales 手動実行導線を管理画面に追加 |
+| タスク | 内容 | 状態 |
+|---|---|---|
+| 6-H-1 | dailyCheckout に日別合計カード追加（来院数・請求合計・入金合計・未収残高） | 🔄 実機確認待ち |
+| 6-H-2 | ~~`getDailySalesReport` 呼び出し~~ → **B案採用**: getDailyCheckoutList の list から集計 | ✅（6-H-1 に含む） |
+| 6-H-3 | `getDailySalesReport` と `getDailyCheckoutList` の連携整理 | ⏸ 月次集計 Phase 6-J 時に判断 |
+| 6-H-4 | （オプション）rebuildDailySales 手動実行導線 | ⏸ |
 
-**変更ファイル候補:** `JREC_SF01_Main.gs` / `daily-checkout.html`  
-**リスク:** 中（`getDailySalesReport` は Run_Log 全スキャンのため速度注意）
+**変更ファイル:** `daily-checkout.html`（GAS 側変更なし）  
+**リスク対応:** getDailySalesReport（Run_Log 全スキャン）は **採用しない**。DailySales シート依存なし。  
+**Phase 6-J との責務分離:** 当 Phase は当日 UI 確認用。月次正本は Phase 6-J で DailySales / Run_Log から集計する。
 
 ---
 
@@ -208,7 +209,7 @@
 ```
 1. ✅ Phase 6-G — カレンダー前月/翌月切替（完了 @29）
 2. ✅ Phase 6-N — 共通タブナビゲーション（完了 @30）
-3. Phase 6-H — dailyCheckout 日別金額合計（既存関数連携）← 次期候補
+3. 🔄 Phase 6-H — dailyCheckout 日別金額合計カード（実機確認待ち）
 4. Phase 6-I — 集計導線ページ新設（ナビゲーション整備）
 5. Phase 6-J — 月別売上集計（経営分析の本体）
 6. Phase 6-K — メニュー別集計（施術分析）

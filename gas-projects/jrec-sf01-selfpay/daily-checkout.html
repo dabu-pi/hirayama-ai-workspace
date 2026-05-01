@@ -53,8 +53,36 @@
     .visit-key  { font-size: 10px; color: #c5c7c9; font-family: monospace; line-height: 1.2; }
     .checkout-empty { text-align: center; padding: 40px 20px; color: #9aa0a6; }
 
+    /* ── 日別金額合計カード ── */
+    .daily-summary {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .ds-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 18px;
+      align-items: flex-end;
+    }
+    .ds-row + .ds-row {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e0e0e0;
+    }
+    .ds-item { display: flex; flex-direction: column; min-width: 64px; }
+    .ds-label { font-size: 10px; color: #5f6368; margin-bottom: 2px; white-space: nowrap; }
+    .ds-val   { font-size: 15px; font-weight: 700; color: #202124; white-space: nowrap; }
+    .ds-val.money  { color: #1a73e8; font-family: monospace; }
+    .ds-val.warn   { color: #d93025; }
+    .ds-val.caution { color: #e37400; }
+    .ds-val.muted  { color: #9aa0a6; font-weight: 400; }
+
     @media (max-width: 680px) {
       .hide-sm { display: none !important; }
+      .ds-val  { font-size: 14px; }
     }
   </style>
 </head>
@@ -80,44 +108,85 @@
       </form>
     </div>
 
+    <?
+      // ── 日別金額合計カード 集計
+      // 根拠: getDailyCheckoutList が Payments(totalTaxInc/paidAmount/remainingAmount)
+      //       Receipts(receiptNo) / SelfPayVisits(visitDate, isDeleted 除外済み) を結合
+      var sumOutstanding = 0, sumPartial = 0, sumPaidNoReceipt = 0;
+      var sumUnbilled = 0, sumIssued = 0;
+      var totalBilled = 0, totalPaid = 0, totalRemaining = 0;
+      var safeList = (checkoutList && !checkoutError) ? checkoutList : [];
+      safeList.forEach(function(row) {
+        if      (row.displayStatus === '未収')                   { sumOutstanding++; }
+        else if (row.displayStatus === '一部入金')               { sumPartial++; }
+        else if (row.displayStatus === '入金済（領収書未発行）') { sumPaidNoReceipt++; }
+        else if (row.displayStatus === '未会計')                 { sumUnbilled++; }
+        else                                                     { sumIssued++; }
+        totalBilled    += (Number(row.totalTaxInc)     || 0);
+        totalPaid      += (Number(row.paidAmount)      || 0);
+        totalRemaining += (Number(row.remainingAmount) || 0);
+      });
+      var totalVisit = safeList.length;
+    ?>
+
     <? if (checkoutError) { ?>
       <div class="alert alert-error">取得エラー: <?= checkoutError ?></div>
 
-    <? } else if (!checkoutList || checkoutList.length === 0) { ?>
-      <div class="checkout-empty">
-        <p style="font-size:15px;font-weight:700;margin-bottom:6px;">来院記録なし</p>
-        <p><?= date ?> の来院記録はありません。</p>
+    <? } else { ?>
+
+      <!-- 日別金額合計カード -->
+      <div class="daily-summary">
+        <!-- 件数行 -->
+        <div class="ds-row">
+          <div class="ds-item">
+            <div class="ds-label">来院件数</div>
+            <div class="ds-val <?= totalVisit === 0 ? 'muted' : '' ?>"><?= totalVisit ?>件</div>
+          </div>
+          <div class="ds-item">
+            <div class="ds-label">未会計</div>
+            <div class="ds-val <?= sumUnbilled > 0 ? 'caution' : 'muted' ?>"><?= sumUnbilled ?>件</div>
+          </div>
+          <div class="ds-item">
+            <div class="ds-label">未収</div>
+            <div class="ds-val <?= sumOutstanding > 0 ? 'warn' : 'muted' ?>"><?= sumOutstanding ?>件</div>
+          </div>
+          <div class="ds-item">
+            <div class="ds-label">一部入金</div>
+            <div class="ds-val <?= sumPartial > 0 ? 'caution' : 'muted' ?>"><?= sumPartial ?>件</div>
+          </div>
+          <div class="ds-item">
+            <div class="ds-label">未発行</div>
+            <div class="ds-val <?= sumPaidNoReceipt > 0 ? '' : 'muted' ?>"><?= sumPaidNoReceipt ?>件</div>
+          </div>
+          <div class="ds-item">
+            <div class="ds-label">発行済</div>
+            <div class="ds-val <?= sumIssued > 0 ? '' : 'muted' ?>"><?= sumIssued ?>件</div>
+          </div>
+        </div>
+        <!-- 金額行 -->
+        <div class="ds-row">
+          <div class="ds-item">
+            <div class="ds-label">当日請求合計</div>
+            <div class="ds-val money">¥<?!= Number(totalBilled).toLocaleString() ?></div>
+          </div>
+          <div class="ds-item">
+            <div class="ds-label">当日入金合計</div>
+            <div class="ds-val money">¥<?!= Number(totalPaid).toLocaleString() ?></div>
+          </div>
+          <div class="ds-item">
+            <div class="ds-label">未収残高</div>
+            <div class="ds-val <?= totalRemaining > 0 ? 'warn' : 'money' ?>">¥<?!= Number(totalRemaining).toLocaleString() ?></div>
+          </div>
+        </div>
       </div>
 
-    <? } else {
-      // サマリ集計
-      var sumOutstanding = 0, sumPartial = 0, sumPaidNoReceipt = 0;
-      var sumUnbilled = 0, sumIssued = 0;
-      checkoutList.forEach(function(row) {
-        if      (row.displayStatus === '未収')                   sumOutstanding++;
-        else if (row.displayStatus === '一部入金')               sumPartial++;
-        else if (row.displayStatus === '入金済（領収書未発行）') sumPaidNoReceipt++;
-        else if (row.displayStatus === '未会計')                 sumUnbilled++;
-        else                                                     sumIssued++;
-      });
-    ?>
+      <? if (!checkoutList || checkoutList.length === 0) { ?>
+        <div class="checkout-empty">
+          <p style="font-size:15px;font-weight:700;margin-bottom:6px;">来院記録なし</p>
+          <p><?= date ?> の来院記録はありません。</p>
+        </div>
 
-      <!-- サマリバー -->
-      <div class="summary-bar">
-        <? if (sumOutstanding > 0) { ?>
-          <span style="color:#d93025;font-weight:700;">未収 <?= sumOutstanding ?>件</span>
-        <? } ?>
-        <? if (sumPartial > 0) { ?>
-          <span style="color:#856404;font-weight:700;">一部入金 <?= sumPartial ?>件</span>
-        <? } ?>
-        <? if (sumPaidNoReceipt > 0) { ?>
-          <span style="color:#1a73e8;font-weight:700;">領収書未発行 <?= sumPaidNoReceipt ?>件</span>
-        <? } ?>
-        <? if (sumUnbilled > 0) { ?>
-          <span style="color:#e37400;font-weight:700;">未会計 <?= sumUnbilled ?>件</span>
-        <? } ?>
-        <span style="color:#9aa0a6;margin-left:auto;">合計 <?= checkoutList.length ?>件</span>
-      </div>
+      <? } else { ?>
 
       <!-- 一覧テーブル -->
       <div class="table-wrap">
@@ -210,6 +279,8 @@
           </tbody>
         </table>
       </div>
+
+      <? } ?>
 
     <? } ?>
 
