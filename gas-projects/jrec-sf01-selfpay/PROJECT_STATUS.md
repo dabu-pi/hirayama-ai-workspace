@@ -9,8 +9,9 @@
 **✅ Phase 5-D カルテ連動会計フロー: CLOSED（完全）**（2026-04-29 H-1〜H-4 全 PASS）
 **✅ Versioned Deployment @26: 反映済み**（2026-04-29）
 **✅ Phase 6-E カルテ再編集機能 + 主訴 textarea 化: CLOSED**（2026-05-01 I-1〜I-6 全 PASS）
+**✅ Versioned Deployment @27: 本番反映済み**（2026-05-01 Phase 6-E 含む）
 
-次: Phase 6-E 後の次フェーズへ（versioned deployment @27 は Phase 6-E CLOSED 後に実施）
+次: training-platform A-2a LIVE_CHECK → jrec-sf01 次フェーズ設計
 
 ---
 
