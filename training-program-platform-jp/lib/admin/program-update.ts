@@ -186,3 +186,79 @@ export async function updateProgramWeekLabel(
 
   return { ok: true };
 }
+
+// ── Day info ──────────────────────────────────────────────────
+
+export type DayInfoUpdateResult = {
+  ok: boolean;
+  error?: string;
+};
+
+/**
+ * Updates program_days.progression_guide and notes for a single day.
+ * Verifies the day belongs to the given program (via program_weeks) before updating.
+ * null values clear the respective fields.
+ */
+export async function updateProgramDayInfo(
+  dayId: string,
+  programId: string,
+  progressionGuide: string | null,
+  notes: string | null
+): Promise<DayInfoUpdateResult> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) return { ok: false, error: "forbidden" };
+
+  const trimmedGuide =
+    typeof progressionGuide === "string" ? progressionGuide.trim() || null : null;
+  const trimmedNotes =
+    typeof notes === "string" ? notes.trim() || null : null;
+
+  if (trimmedGuide !== null && trimmedGuide.length > 1000) {
+    return { ok: false, error: "progression_guide_too_long" };
+  }
+  if (trimmedNotes !== null && trimmedNotes.length > 1000) {
+    return { ok: false, error: "notes_too_long" };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  // Fetch day to get week id
+  const { data: day, error: dayFetchErr } = await admin
+    .from("program_days")
+    .select("id, program_week_id")
+    .eq("id", dayId)
+    .maybeSingle<{ id: string; program_week_id: string }>();
+
+  if (dayFetchErr || !day) {
+    return { ok: false, error: "day_not_found" };
+  }
+
+  // Verify week belongs to program
+  const { data: week, error: weekFetchErr } = await admin
+    .from("program_weeks")
+    .select("id")
+    .eq("id", day.program_week_id)
+    .eq("program_id", programId)
+    .maybeSingle<{ id: string }>();
+
+  if (weekFetchErr || !week) {
+    return { ok: false, error: "day_not_found" };
+  }
+
+  const { error: updateErr } = await admin
+    .from("program_days")
+    .update({ progression_guide: trimmedGuide, notes: trimmedNotes })
+    .eq("id", dayId);
+
+  if (updateErr) {
+    console.error("updateProgramDayInfo: update failed", {
+      dayId,
+      error: updateErr.message
+    });
+    return { ok: false, error: updateErr.message };
+  }
+
+  revalidatePath(`/admin/programs/${programId}`);
+
+  return { ok: true };
+}

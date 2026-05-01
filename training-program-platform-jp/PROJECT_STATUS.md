@@ -1,8 +1,62 @@
 # PROJECT_STATUS
 
-## 2026-05-01 Phase 3-B / A-2a — Admin Week label インライン編集
+## 2026-05-01 Phase 3-B / A-2b — Admin Day 情報インライン編集
 
 ### STATUS: 実装済み — LIVE_CHECK 待ち (2026-05-01)
+
+### 実装内容
+
+`/admin/programs/[programId]` の Day ブロックから `program_days.progression_guide` / `notes` をインライン編集できるようにした。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `lib/admin/program-update.ts` | `updateProgramDayInfo` Server Action 追加 |
+| `components/admin/DayInfoEditor.tsx` | 新規 Client Component（表示・編集モード切替） |
+| `components/admin/DayInfoEditor.module.css` | 新規 CSS |
+| `components/admin/AdminProgramDetailScreen.tsx` | Day heading + notes 静的表示 → `DayInfoEditor` に置き換え |
+
+### 動作仕様
+
+- 各 Day ブロックの見出し行に「編集」ボタンを表示
+- クリック → 進行ガイド / メモの textarea フォームが autoFocus で展開
+- 「保存」ボタンで両フィールドを同時保存（ページリロードなし）
+- Escape でキャンセル
+- 空文字保存 → フィールド `null`（表示が消える）
+- エラー時: 「権限がありません」/「Dayが見つかりません」/「進行ガイドが長すぎます」/「メモが長すぎます」を表示
+
+### server-side guard
+
+- `requireAdminUserId()` で admin 権限確認
+- `program_days.program_week_id` → `program_weeks.program_id` の 2 ステップで帰属確認（他プログラムの day を誤更新しない）
+- progression_guide / notes それぞれ 1000文字上限バリデーション
+
+### typecheck / build
+
+- `npm run typecheck`: PASS
+- `npm run build`: PASS（/admin/programs/[programId] Dynamic ビルド確認済み）
+
+### LIVE_CHECK 確認手順（次回再開時）
+
+1. Admin ログイン後、`/admin/programs/[プログラムID]` へ
+2. 各 Day ブロック見出し行に「編集」ボタンが表示されること
+3. クリック → 進行ガイド / メモの textarea が展開・autoFocus されること
+4. 内容入力 → 「保存」でページリロードなしに表示更新されること
+5. Escape キャンセルが機能すること
+6. 空文字保存 → 該当フィールドの表示が消えること
+7. 既存の Day 表示・Exercise ツリーが崩れていないこと
+8. 既存 Week label 編集（A-2a）が引き続き動作すること（回帰確認）
+
+### commit
+
+（次のコミットで記録）
+
+---
+
+## 2026-05-01 Phase 3-B / A-2a — Admin Week label インライン編集
+
+### STATUS: ✅ LIVE_CHECK PASS — CLOSED (2026-05-01)
 
 ### 実装内容
 

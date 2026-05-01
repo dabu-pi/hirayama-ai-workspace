@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { AdminProgramDetail } from "@/lib/admin/program-detail";
 import { formatProgramTagLabel } from "@/lib/workout/format-labels";
 import { WeekLabelEditor } from "./WeekLabelEditor";
+import { DayInfoEditor } from "./DayInfoEditor";
 import styles from "./AdminProgramDetailScreen.module.css";
 
 type Props = {
@@ -203,29 +204,14 @@ export function AdminProgramDetailScreen({ program }: Props) {
                   <div className={styles.dayList}>
                     {week.days.map((day) => (
                       <div key={day.id} className={styles.dayBlock}>
-                        <h4 className={styles.dayHeading}>
-                          Day {day.dayNumber}
-                          <span className={styles.dayMeta}>
-                            {day.exercises.length}種目
-                          </span>
-                        </h4>
-
-                        {(day.progressionGuide || day.notes) && (
-                          <div className={styles.dayNotes}>
-                            {day.progressionGuide && (
-                              <p className={styles.dayNote}>
-                                <span className={styles.noteLabel}>進行ガイド:</span>
-                                {day.progressionGuide}
-                              </p>
-                            )}
-                            {day.notes && (
-                              <p className={styles.dayNote}>
-                                <span className={styles.noteLabel}>メモ:</span>
-                                {day.notes}
-                              </p>
-                            )}
-                          </div>
-                        )}
+                        <DayInfoEditor
+                          dayId={day.id}
+                          programId={program.id}
+                          dayNumber={day.dayNumber}
+                          exerciseCount={day.exercises.length}
+                          initialProgressionGuide={day.progressionGuide}
+                          initialNotes={day.notes}
+                        />
 
                         {day.exercises.length === 0 ? (
                           <p className={styles.emptyExercises}>種目がまだ登録されていません。</p>
