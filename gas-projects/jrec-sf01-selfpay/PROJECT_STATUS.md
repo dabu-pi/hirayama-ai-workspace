@@ -18,7 +18,8 @@
 **✅ Phase 6-N-1 共通タブナビゲーション: CLOSED**（2026-05-02 N1-1〜N1-8 全 PASS）
 **✅ Versioned Deployment @30: 本番反映済み**（2026-05-02 Phase 6-N-1 含む）
 
-**🔄 Phase 6-H dailyCheckout 日別金額合計カード: 実装済み・HEAD実機確認待ち**（2026-05-02）
+**✅ Phase 6-H dailyCheckout 日別金額合計カード: CLOSED**（2026-05-02 H1-1〜H1-9 + H1-FIX-1〜6 全 PASS）
+**✅ Versioned Deployment @31: 本番反映済み**（2026-05-02 Phase 6-H 含む）
 
 次期実装候補:
 1. **Phase 6-I** 集計メニュー / 集計ページ新設 ⏸
@@ -31,7 +32,7 @@
 Phase 6-G〜6-N ロードマップ:
 - 6-G: カレンダー機能強化（前月/翌月切替）✅ CLOSED（2026-05-02）
 - 6-N: 共通タブナビゲーション整備 ✅ CLOSED（2026-05-02 @30）
-- 6-H: dailyCheckout 日別金額合計カード 🔄 実装済み・HEAD実機確認待ち
+- 6-H: dailyCheckout 日別金額合計カード ✅ CLOSED（2026-05-02 @31）
 - 6-I: 集計メニュー / 集計ページ新設 ⏸
 - 6-J: 月別売上集計 ⏸
 - 6-K: メニュー別集計 ⏸
@@ -42,7 +43,7 @@ Phase 6-G〜6-N ロードマップ:
 
 ---
 
-## 🔄 Phase 6-H dailyCheckout 日別金額合計カード（2026-05-02 実機確認待ち）
+## ✅ Phase 6-H dailyCheckout 日別金額合計カード（2026-05-02 CLOSED）
 
 ### 設計メモ
 
@@ -73,19 +74,19 @@ Phase 6-G〜6-N ロードマップ:
 - getDailySalesReport(dateStr) は Run_Log 全スキャンのため **採用しない**
 - getDailyCheckoutList は既存呼び出しで取得済みのデータのみ使用 → 追加レイテンシなし
 
-### テスト項目（実機確認待ち）
+### テスト項目（実機確認結果）
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| H1-1 | ⏳ | dailyCheckout に日別金額合計カードが表示される（件数行 + 金額行） |
-| H1-2 | ⏳ | 来院件数が一覧の行数と一致する |
-| H1-3 | ⏳ | 未会計件数が一覧の「未会計」行数と一致する |
-| H1-4 | ⏳ | 未収 / 一部入金 / 未発行 / 発行済の件数が一覧と一致する |
-| H1-5 | ⏳ | 当日請求合計・入金合計・未収残高が表示される（¥表示） |
-| H1-6 | ⏳ | DailySales シートが空でも表示が壊れない（このカードは非依存） |
-| H1-7 | ⏳ | isDeleted=true の来院が集計から除外される（getDailyCheckoutList 側で保証） |
-| H1-8 | ⏳ | スマホ表示でカードが崩れない（flex-wrap で折り返し） |
-| H1-9 | ⏳ | 既存の会計入力・領収書発行・日付変更が壊れていない |
+| H1-1 | ✅ PASS | dailyCheckout に日別金額合計カードが表示される（件数行 + 金額行） |
+| H1-2 | ✅ PASS | 来院件数が一覧の行数と一致する |
+| H1-3 | ✅ PASS | 未会計件数が一覧の「未会計」行数と一致する |
+| H1-4 | ✅ PASS | 未収 / 一部入金 / 未発行 / 発行済の件数が一覧と一致する |
+| H1-5 | ✅ PASS | 当日請求合計・入金合計・未収残高が表示される（¥表示） |
+| H1-6 | ✅ PASS | DailySales シートが空でも表示が壊れない（このカードは非依存） |
+| H1-7 | ✅ PASS | isDeleted=true の来院が集計から除外される（getDailyCheckoutList 側で保証） |
+| H1-8 | ✅ PASS | スマホ表示でカードが崩れない（flex-wrap で折り返し） |
+| H1-9 | ✅ PASS | 既存の会計入力・領収書発行・日付変更が壊れていない |
 
 ### HEAD 実機確認 URL
 
@@ -106,12 +107,12 @@ https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| H1-FIX-1 | ⏳ | 未収行の患者名が読める |
-| H1-FIX-2 | ⏳ | 入金済・領収書未発行行の患者名が読める |
-| H1-FIX-3 | ⏳ | visitKey 等の補足情報も必要最低限読める |
-| H1-FIX-4 | ⏳ | 集計カードの表示・金額・件数に変化なし |
-| H1-FIX-5 | ⏳ | 会計入力・回収/領収書・領収書発行ボタンに変化なし |
-| H1-FIX-6 | ⏳ | スマホ表示でも患者名が読める |
+| H1-FIX-1 | ✅ PASS | 未収行の患者名が読める |
+| H1-FIX-2 | ✅ PASS | 入金済・領収書未発行行の患者名が読める |
+| H1-FIX-3 | ✅ PASS | visitKey 等の補足情報も必要最低限読める |
+| H1-FIX-4 | ✅ PASS | 集計カードの表示・金額・件数に変化なし |
+| H1-FIX-5 | ✅ PASS | 会計入力・回収/領収書・領収書発行ボタンに変化なし |
+| H1-FIX-6 | ✅ PASS | スマホ表示でも患者名が読める |
 
 ---
 
@@ -137,9 +138,9 @@ git status   # clean であることを確認
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
 ```
 
-本番 URL（@30 / /exec）:
+本番 URL（@31 / /exec）:
 ```
-https://script.google.com/macros/s/AKfycbw__kW0LCdKe9q726XF3UGbZnQDQWljGy2kWawC7m_qxha9uZwayf7zz6tQxdNxSwUtsg/exec
+https://script.google.com/macros/s/AKfycbys16l0WMyOYfAlDsp3R6lx_hsu56H-VZ1c0MBJxTOp87LIPr-9ZrxxMY33J5irxK1VAg/exec
 ```
 
 実装前リスク確認事項:
