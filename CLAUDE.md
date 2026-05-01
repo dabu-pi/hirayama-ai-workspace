@@ -65,7 +65,7 @@ workspace/
     └── jyu-gas-simple/
 ```
 
-> `waste-report-system/` は**企画段階・ディレクトリ未作成**。PROJECTS.md の企画メモを参照。
+> `waste-report-system/` は **HAIKI-05（廃棄物日報システム）** として稼働準備中。ディレクトリ作成済み。詳細は §5 を参照。
 
 ---
 
@@ -106,11 +106,12 @@ Google スプレッドシートをDBとして使うFlask製患者住所録管理
 慢性疼痛特化の整骨院×トレーニングジムモデルの経営戦略ドキュメント群。
 Claude APIを用いた分析・提案自動生成の実装が次フェーズ。
 
-### 5. 廃棄物日報システム
+### 5. `waste-report-system/` — 廃棄物日報システム
 
-**ステータス:** 企画段階（ディレクトリ未作成）
+**ステータス:** active_setup_pending（HAIKI-05）
 
-企画メモは PROJECTS.md を参照。ディレクトリ作成・開発着手後にここへ追記する。
+廃棄物収集業務の日報・月報を自動化するシステム。ディレクトリ作成済み・Google Drive 連携設定中。
+`ai-os/lifecycle-projects.json` で HAIKI-05 として登録済み。
 
 ---
 
