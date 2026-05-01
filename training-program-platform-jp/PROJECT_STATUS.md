@@ -1,8 +1,64 @@
 # PROJECT_STATUS
 
-## 2026-05-01 Phase 3-B / A-2b — Admin Day 情報インライン編集
+## 2026-05-01 Phase 3-B / A-2c — Admin 種目パラメータ編集
 
 ### STATUS: 実装済み — LIVE_CHECK 待ち (2026-05-01)
+
+### 実装内容
+
+`/admin/programs/[programId]` の各 Exercise 行から `program_day_exercises.exercise_type` / `set_count` / `target_reps_text` をインライン編集できるようにした。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `lib/admin/program-update.ts` | `updateExerciseParams` Server Action 追加 |
+| `components/admin/ExerciseParamEditor.tsx` | 新規 Client Component（表示・編集モード切替） |
+| `components/admin/ExerciseParamEditor.module.css` | 新規 CSS |
+| `components/admin/AdminProgramDetailScreen.tsx` | exercise 静的行 → `ExerciseParamEditor` に置き換え |
+
+### 動作仕様
+
+- 各 Exercise 行末に「編集」ボタンを表示
+- クリック → exercise_type select / set_count number input / target_reps_text text input が展開（autoFocus: type select）
+- 「保存」で 3フィールドを同時保存（ページリロードなし）
+- Escape でキャンセル
+- target_reps_text 空文字保存 → `null`（「× ~~」表示が消える）
+- エラー時: 権限/exercise不明/型無効/セット数不正/reps長すぎ を表示
+
+### server-side guard
+
+- `requireAdminUserId()` で admin 権限確認
+- exercise → program_days → program_weeks の 3ステップで program_id 帰属確認
+- exercise_type: T1 / T2 / T3 のみ許可
+- set_count: 1〜20 の整数
+- target_reps_text: null または 100文字以内
+
+### typecheck / build
+
+- `npm run typecheck`: PASS
+- `npm run build`: PASS（/admin/programs/[programId] Dynamic ビルド確認済み）
+
+### LIVE_CHECK 確認手順（次回再開時）
+
+1. Admin ログイン後、`/admin/programs/[プログラムID]` へ
+2. Exercise 行末に「編集」ボタンが表示されること
+3. クリック → T1/T2/T3 select / セット数 / reps テキストが展開・type select が autoFocus されること
+4. 値変更 → 「保存」でページリロードなしに行の表示が更新されること
+5. Escape / キャンセルが機能すること
+6. reps 空文字保存 → 「× ...」表示が消えること
+7. T1/T2/T3 バッジの色が変更後も正しく表示されること
+8. 既存の Week label 編集（A-2a）/ Day 情報編集（A-2b）が崩れていないこと
+
+### commit
+
+（次のコミットで記録）
+
+---
+
+## 2026-05-01 Phase 3-B / A-2b — Admin Day 情報インライン編集
+
+### STATUS: ✅ LIVE_CHECK PASS — CLOSED (2026-05-01)
 
 ### 実装内容
 

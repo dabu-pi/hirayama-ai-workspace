@@ -262,3 +262,99 @@ export async function updateProgramDayInfo(
 
   return { ok: true };
 }
+
+// ── Exercise params ──────────────────────────────────────────────
+
+export type ExerciseParamUpdateResult = {
+  ok: boolean;
+  error?: string;
+};
+
+const VALID_EXERCISE_TYPES = ["T1", "T2", "T3"] as const;
+
+/**
+ * Updates exercise_type / set_count / target_reps_text for a single exercise.
+ * Verifies ownership via: program_day_exercises → program_days → program_weeks → programs.
+ */
+export async function updateExerciseParams(
+  exerciseId: string,
+  programId: string,
+  exerciseType: string,
+  setCount: number,
+  targetRepsText: string | null
+): Promise<ExerciseParamUpdateResult> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) return { ok: false, error: "forbidden" };
+
+  if (!(VALID_EXERCISE_TYPES as readonly string[]).includes(exerciseType)) {
+    return { ok: false, error: "invalid_exercise_type" };
+  }
+
+  const count = Math.round(setCount);
+  if (count < 1 || count > 20) {
+    return { ok: false, error: "invalid_set_count" };
+  }
+
+  const trimmedReps =
+    typeof targetRepsText === "string" ? targetRepsText.trim() || null : null;
+  if (trimmedReps !== null && trimmedReps.length > 100) {
+    return { ok: false, error: "reps_too_long" };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  // Step 1: exercise → dayId
+  const { data: exercise, error: exFetchErr } = await admin
+    .from("program_day_exercises")
+    .select("id, program_day_id")
+    .eq("id", exerciseId)
+    .maybeSingle<{ id: string; program_day_id: string }>();
+
+  if (exFetchErr || !exercise) {
+    return { ok: false, error: "exercise_not_found" };
+  }
+
+  // Step 2: day → weekId
+  const { data: day, error: dayFetchErr } = await admin
+    .from("program_days")
+    .select("id, program_week_id")
+    .eq("id", exercise.program_day_id)
+    .maybeSingle<{ id: string; program_week_id: string }>();
+
+  if (dayFetchErr || !day) {
+    return { ok: false, error: "exercise_not_found" };
+  }
+
+  // Step 3: verify week belongs to program
+  const { data: week, error: weekFetchErr } = await admin
+    .from("program_weeks")
+    .select("id")
+    .eq("id", day.program_week_id)
+    .eq("program_id", programId)
+    .maybeSingle<{ id: string }>();
+
+  if (weekFetchErr || !week) {
+    return { ok: false, error: "exercise_not_found" };
+  }
+
+  const { error: updateErr } = await admin
+    .from("program_day_exercises")
+    .update({
+      exercise_type: exerciseType,
+      set_count: count,
+      target_reps_text: trimmedReps
+    })
+    .eq("id", exerciseId);
+
+  if (updateErr) {
+    console.error("updateExerciseParams: update failed", {
+      exerciseId,
+      error: updateErr.message
+    });
+    return { ok: false, error: updateErr.message };
+  }
+
+  revalidatePath(`/admin/programs/${programId}`);
+
+  return { ok: true };
+}

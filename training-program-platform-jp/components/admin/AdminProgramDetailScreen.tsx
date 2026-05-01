@@ -4,6 +4,7 @@ import type { AdminProgramDetail } from "@/lib/admin/program-detail";
 import { formatProgramTagLabel } from "@/lib/workout/format-labels";
 import { WeekLabelEditor } from "./WeekLabelEditor";
 import { DayInfoEditor } from "./DayInfoEditor";
+import { ExerciseParamEditor } from "./ExerciseParamEditor";
 import styles from "./AdminProgramDetailScreen.module.css";
 
 type Props = {
@@ -29,11 +30,6 @@ const SOURCE_FIDELITY_LABEL: Record<string, string> = {
   custom: "独自作成"
 };
 
-const EXERCISE_TYPE_COLOR: Record<string, string> = {
-  T1: styles.typeT1,
-  T2: styles.typeT2,
-  T3: styles.typeT3
-};
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ja-JP", {
@@ -218,26 +214,17 @@ export function AdminProgramDetailScreen({ program }: Props) {
                         ) : (
                           <div className={styles.exerciseList}>
                             {day.exercises.map((ex) => (
-                              <div key={ex.id} className={styles.exerciseRow}>
-                                <span className={styles.exOrder}>{ex.orderIndex}</span>
-                                <span
-                                  className={`${styles.exType} ${
-                                    EXERCISE_TYPE_COLOR[ex.exerciseType] ?? styles.typeT3
-                                  }`}
-                                >
-                                  {ex.exerciseType}
-                                </span>
-                                <span className={styles.exName}>
-                                  {ex.exerciseNameJa}
-                                  {ex.exerciseNameJa !== ex.exerciseNameEn && (
-                                    <span className={styles.exNameEn}> ({ex.exerciseNameEn})</span>
-                                  )}
-                                </span>
-                                <span className={styles.exSets}>
-                                  {ex.setCount}セット
-                                  {ex.targetRepsText ? ` × ${ex.targetRepsText}` : ""}
-                                </span>
-                              </div>
+                              <ExerciseParamEditor
+                                key={ex.id}
+                                exerciseId={ex.id}
+                                programId={program.id}
+                                orderIndex={ex.orderIndex}
+                                initialExerciseType={ex.exerciseType}
+                                initialSetCount={ex.setCount}
+                                initialTargetRepsText={ex.targetRepsText}
+                                exerciseNameJa={ex.exerciseNameJa}
+                                exerciseNameEn={ex.exerciseNameEn}
+                              />
                             ))}
                           </div>
                         )}
