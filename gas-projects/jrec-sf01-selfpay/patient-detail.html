@@ -28,6 +28,8 @@
     .tl-action-outstanding:hover { background:#f5c6c3; }
     .tl-action-trash { background:#f1f3f4; color:#80868b; }
     .tl-action-trash:hover { background:#e8eaed; }
+    .tl-action-edit { background:#e8f0fe; color:#1a73e8; }
+    .tl-action-edit:hover { background:#d2e3fc; }
     .tl-toggle { margin-left:auto; font-size:12px; color:#1a73e8; white-space:nowrap; border:none; background:none; cursor:pointer; padding:0; }
     .tl-detail { margin-top:10px; padding:10px 12px; background:#f8f9fa; border-radius:6px; font-size:13px; }
     .tl-row    { display:flex; gap:8px; padding:3px 0; }
@@ -189,6 +191,10 @@ var visitCount    = timeline.length;
                 <?= rec ? '領収書' : '領収書を発行' ?>
               </button>
             <? } ?>
+            <button type="button" class="tl-action-btn tl-action-edit"
+              onclick="event.stopPropagation();top.location.href=APP_URL+'?page=visitForm&id=<?= patient.patientId ?>&visitKey=<?= vk ?>'">
+              ✏️ カルテ編集
+            </button>
             <? var trashType = rec ? 'receipt' : (!pay ? 'unbilled' : payStatus === '入金済' ? 'paid' : payStatus === '一部入金' ? 'partial' : 'outstanding'); ?>
             <button type="button" class="tl-action-btn tl-action-trash"
               onclick="event.stopPropagation();handleTrash('<?= vk ?>','<?= trashType ?>')">

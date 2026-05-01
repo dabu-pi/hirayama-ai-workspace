@@ -39,11 +39,17 @@
   </div>
 
   <div class="card">
-    <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;">来院・カルテ入力</h2>
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;"><?= editVisit ? 'カルテ編集' : '来院・カルテ入力' ?></h2>
     <p style="font-size:12px;color:#9aa0a6;margin-bottom:16px;">
       SelfPayVisits（来院情報）と SelfPayChart（カルテ記録）に同時保存します
     </p>
     <div id="msg"></div>
+    <? if (editVisit) { ?>
+    <div style="background:#e8f0fe;border-left:4px solid #1a73e8;padding:10px 14px;border-radius:4px;margin-bottom:16px;font-size:13px;color:#1565c0;">
+      ✏️ カルテ編集モード — <strong><?= editVisit.selfPayVisitKey ?></strong><br>
+      <span style="font-size:12px;color:#5f6368;">会計・領収書データには影響しません</span>
+    </div>
+    <? } ?>
 
     <form id="visitForm" novalidate>
 
@@ -71,8 +77,9 @@
       <div class="form-row">
         <div class="form-group" style="flex:2;">
           <label class="form-label" for="chiefComplaint">主訴<span class="req">*</span></label>
-          <input class="form-control" id="chiefComplaint" type="text"
-                 placeholder="例: 腰部痛・右下肢しびれ" autocomplete="off">
+          <textarea class="form-control" id="chiefComplaint" rows="2"
+                    style="min-height:72px;resize:vertical;line-height:1.6;"
+                    placeholder="例: 腰部痛・右下肢しびれ"></textarea>
         </div>
         <div class="form-group">
           <label class="form-label" for="vas">VAS
@@ -167,15 +174,16 @@
           onclick="window.top.location.href = APP_URL + '?page=detail&id=<?= patient.patientId ?>'">
           キャンセル
         </button>
-        <button class="btn btn-primary" id="saveBtn" type="submit">カルテを保存する</button>
+        <button class="btn btn-primary" id="saveBtn" type="submit"><?= editVisit ? 'カルテを更新する' : 'カルテを保存する' ?></button>
       </div>
     </form>
   </div>
 </div>
 
 <script>
-var PATIENT_ID     = "<?= patient.patientId ?>";
-var SAVED_VISIT_KEY = null;  // 初回保存後に visitKey を保持。以降の保存は update になる
+var PATIENT_ID      = "<?= patient.patientId ?>";
+var EDIT_VISIT      = <?!= editVisit ? JSON.stringify(editVisit) : 'null' ?>;
+var SAVED_VISIT_KEY = EDIT_VISIT ? EDIT_VISIT.selfPayVisitKey : null;
 
 // JS初期化エラーを DOM に表示（alert がブロックされる環境でも見える）
 window.onerror = function(message, source, lineno) {
@@ -185,12 +193,29 @@ window.onerror = function(message, source, lineno) {
 };
 
 (function() {
-  // 来院日のデフォルトを今日に設定
-  var today = new Date();
-  var yyyy  = today.getFullYear();
-  var mm    = String(today.getMonth() + 1).padStart(2, '0');
-  var dd    = String(today.getDate()).padStart(2, '0');
-  document.getElementById('visitDate').value = yyyy + '-' + mm + '-' + dd;
+  if (EDIT_VISIT) {
+    // 編集モード: 既存データをフォームに設定
+    document.getElementById('visitDate').value        = EDIT_VISIT.visitDate        || '';
+    document.getElementById('visitType').value        = EDIT_VISIT.visitType        || '再診';
+    document.getElementById('chiefComplaint').value   = EDIT_VISIT.chiefComplaint   || '';
+    document.getElementById('vas').value              = EDIT_VISIT.vas              !== undefined ? EDIT_VISIT.vas : '';
+    document.getElementById('nextPlan').value         = EDIT_VISIT.nextPlan         || '';
+    document.getElementById('assessment').value       = EDIT_VISIT.assessment       || '';
+    document.getElementById('findings').value         = EDIT_VISIT.findings         || '';
+    document.getElementById('treatment').value        = EDIT_VISIT.treatment        || '';
+    document.getElementById('equipment').value        = EDIT_VISIT.equipment        || '';
+    document.getElementById('explanation').value      = EDIT_VISIT.explanation      || '';
+    document.getElementById('contraindication').value = EDIT_VISIT.contraindication || '';
+    document.getElementById('lifestyle').value        = EDIT_VISIT.lifestyle        || '';
+    document.getElementById('nextAppointment').value  = EDIT_VISIT.nextAppointment  || '';
+  } else {
+    // 新規モード: 来院日のデフォルトを今日に設定
+    var today = new Date();
+    var yyyy  = today.getFullYear();
+    var mm    = String(today.getMonth() + 1).padStart(2, '0');
+    var dd    = String(today.getDate()).padStart(2, '0');
+    document.getElementById('visitDate').value = yyyy + '-' + mm + '-' + dd;
+  }
 
   document.getElementById('visitForm').addEventListener('submit', function(e) {
     e.preventDefault();

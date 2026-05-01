@@ -61,7 +61,7 @@ function buildPage_(page, idParam, q, vkParam, dateParam) {
       }
 
       case "visitForm": {
-        Logger.log("[visitForm] idParam=" + idParam);
+        Logger.log("[visitForm] idParam=" + idParam + " vkParam=" + vkParam);
         if (!idParam) return renderError_(
           "患者IDが指定されていません。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
         );
@@ -71,8 +71,18 @@ function buildPage_(page, idParam, q, vkParam, dateParam) {
           "患者 " + idParam + " が見つかりませんでした。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
         );
         var t = HtmlService.createTemplateFromFile("visit-form");
-        t.appUrl   = appUrl;
-        t.patient  = ptv;
+        t.appUrl    = appUrl;
+        t.patient   = ptv;
+        t.editVisit = null;
+        if (vkParam) {
+          var evData = getVisitFormData(idParam, vkParam);
+          if (!evData.ok) {
+            return renderError_(evData.error +
+              "<br><a href=\"" + appUrl + "?page=detail&id=" + encodeURIComponent(idParam) + "\">患者詳細へ戻る</a>"
+            );
+          }
+          t.editVisit = evData.data;
+        }
         return evalTemplate_(t);
       }
 

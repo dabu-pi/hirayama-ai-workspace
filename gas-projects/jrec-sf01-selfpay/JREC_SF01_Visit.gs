@@ -377,6 +377,85 @@ function updateVisitWithChart(visitKey, payload) {
 }
 
 /**
+ * カルテ編集用: 来院レコード + カルテレコードを 1 件取得して返す。
+ * isDeleted=true の場合はエラーを返す（通常編集不可）。
+ * @param {string} patientId
+ * @param {string} visitKey
+ * @returns {{ ok: boolean, data?: Object, error?: string }}
+ */
+function getVisitFormData(patientId, visitKey) {
+  Logger.log("[getVisitFormData] patientId=" + patientId + " visitKey=" + visitKey);
+  try {
+    if (!visitKey) return { ok: false, error: "visitKey は必須です" };
+
+    var ss = getTargetSpreadsheet_();
+
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (!visitSh || visitSh.getLastRow() < 2)
+      return { ok: false, error: "SelfPayVisits シートが見つかりません" };
+
+    var numCols  = Math.min(visitSh.getLastColumn(), 14);
+    var rows     = visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues();
+    var visitRow = null;
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i][0]) === visitKey) { visitRow = rows[i]; break; }
+    }
+    if (!visitRow) return { ok: false, error: "来院記録が見つかりません: " + visitKey };
+
+    var isDeleted = visitRow[11] === true || visitRow[11] === "TRUE";
+    if (isDeleted) return { ok: false, error: "この来院記録はゴミ箱に入っています。復元後に編集してください。" };
+
+    var visitDate = "";
+    if (visitRow[2]) {
+      try { visitDate = Utilities.formatDate(new Date(visitRow[2]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
+    }
+
+    var data = {
+      selfPayVisitKey:  visitKey,
+      patientId:        String(visitRow[1]),
+      visitDate:        visitDate,
+      visitType:        visitRow[3] || "再診",
+      chiefComplaint:   visitRow[5] || "",
+      vas:              visitRow[6] !== "" ? String(visitRow[6]) : "",
+      nextPlan:         visitRow[7] || "",
+      billingStatus:    visitRow[8] || "未会計",
+      assessment:       "",
+      findings:         "",
+      treatment:        "",
+      equipment:        "",
+      explanation:      "",
+      contraindication: "",
+      lifestyle:        "",
+      nextAppointment:  ""
+    };
+
+    var chartSh = ss.getSheetByName(SHEET_NAMES.CHART);
+    if (chartSh && chartSh.getLastRow() >= 2) {
+      var cRows = chartSh.getRange(2, 1, chartSh.getLastRow() - 1, 12).getValues();
+      for (var ci = 0; ci < cRows.length; ci++) {
+        if (String(cRows[ci][1]) !== visitKey) continue;
+        data.assessment       = cRows[ci][2]  || "";
+        data.findings         = cRows[ci][3]  || "";
+        data.treatment        = cRows[ci][4]  || "";
+        data.equipment        = cRows[ci][5]  || "";
+        data.explanation      = cRows[ci][6]  || "";
+        data.contraindication = cRows[ci][7]  || "";
+        data.lifestyle        = cRows[ci][8]  || "";
+        data.nextAppointment  = cRows[ci][9]  || "";
+        break;
+      }
+    }
+
+    return { ok: true, data: data };
+
+  } catch (err) {
+    var m = err && err.message ? err.message : String(err);
+    Logger.log("[getVisitFormData] ERROR: " + m);
+    return { ok: false, error: m };
+  }
+}
+
+/**
  * selfPayVisitKey を採番する: SPV_YYYYMMDD_patientId_001
  */
 function generateSelfPayVisitKey_(patientId, visitDate) {
