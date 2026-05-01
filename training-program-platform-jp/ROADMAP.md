@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-05-01（Phase 3-B MVP CLOSED — A-2a/A-2b/A-2c/A-2d すべて LIVE_CHECK PASS）
+最終更新: 2026-05-01（Phase 3-B MVP CLOSED / GZCL 種目変更まわり調査完了 / Phase 3-C 計画追加）
 
 ---
 
@@ -10,7 +10,8 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED。
 BUG-FIX 切替→復帰テストも CLOSED。
 **Phase 3-B（Admin プログラム内容編集）MVP CLOSED (2026-05-01)** — A-2a/A-2b/A-2c/A-2d すべて LIVE_CHECK PASS。
-次フェーズ未定（C-9 / Phase 4 / スコープ外の A-2e 種目入れ替え等から選択）。
+GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructure が既に存在することを確認。
+次は **Phase 3-C（GZCL 種目変更・swap group 整理）** を計画済み。着手前に C-1 仕様整理から入る。
 
 ### 完了済みフェーズ一覧
 
@@ -67,11 +68,44 @@ BUG-FIX 切替→復帰テストも CLOSED。
 | **A-2b** | **Admin Day 情報編集** | `progression_guide` / `notes` インライン編集（DayInfoEditor Client Component）| ✅ LIVE_CHECK PASS (2026-05-01) |
 | **A-2c** | **Admin 種目パラメータ編集** | `exercise_type` / `set_count` / `target_reps_text` 編集（ExerciseParamEditor Client Component）| ✅ LIVE_CHECK PASS (2026-05-01) |
 | **A-2d** | **Admin 種目表示順変更** | `order_index` を ↑↓ ボタンで並び替え（ExerciseList Client Component）| ✅ LIVE_CHECK PASS (2026-05-01) |
-| A-2e | Admin 種目入れ替え（exercise_id 変更） | 別種目への差し替え | スコープ外（Phase 3-B MVP 対象外） |
-| A-2f | Admin 種目追加 | Day への種目追加 UI | スコープ外（Phase 3-B MVP 対象外） |
-| A-2g | Admin 種目削除 | Day からの種目削除 | スコープ外（Phase 3-B MVP 対象外） |
+| A-2e | Admin 種目入れ替え（exercise_id 変更） | 別種目への差し替え | → Phase 3-C / C-2 として計画済み |
+| A-2f | Admin 種目追加 | Day への種目追加 UI | → Phase 3-C / C-4 として計画済み |
+| A-2g | Admin 種目削除 | Day からの種目削除 | → Phase 3-C / C-5 として計画済み |
 | C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |
 | — | Program recommendation UI | level/tag ベースの推奨表示 | 未着手 |
+
+### Phase 3-C: GZCL 種目変更・swap group 整理（計画済み・未着手）
+
+**背景（2026-05-01 調査結果）:**
+
+`exercise_swap_groups` / `exercise_swap_group_members` テーブルは実装済みで稼働中。
+`program_day_exercises.swap_group_slug` で会員側の変更候補を制限する仕組みも存在する。
+ただし Admin 側から種目を変更・追加・削除する UI は未実装（Phase 3-B MVP スコープ外）。
+
+**GZCLP 4日/週 Week1 Day2 の現状:**
+
+| order | 種目 | type | swap_group_slug | 変更可否（会員） |
+|---|---|---|---|---|
+| 1 | オーバーヘッドプレス | T1 | NULL | 固定 |
+| 2 | デッドリフト | T2 | NULL | 固定 |
+| 3 | シーテッドロー | T3 | NULL | 固定（swap group 未設定） |
+| 4 | サイドレイズ | T3 | gzcl4-ohp-t3 | 変更可（3択） |
+| 5 | ヒップスラスト | T3 | gzcl4-deadlift-t3 | 変更可（3択） |
+
+**方針:**
+- T1/T2: Admin 変更は可能にするが、会員側は原則固定
+- T3: swap_group_slug がある枠のみ会員側で変更可能
+- Admin 側は master `exercise_id` を直接変更（セッション・履歴に影響しない）
+
+| ID | タスク | 概要 | 状態 |
+|---|---|---|---|
+| **C-1** | **GZCL 種目変更仕様整理** | T1/T2 固定・T3 swap group 方針を PROJECT_STATUS に明記。Admin 変更 vs 会員 swap の責務分離を文書化 | ✅ 調査済み（2026-05-01 本ドキュメントが C-1 相当） |
+| **C-2** | **A-2e Admin 種目入れ替え** | `program_day_exercises.exercise_id` を管理画面から変更。swap_group_slug は維持。既存セッション・履歴には影響しない | 未着手 |
+| **C-3** | **GZCLP W1D2 シーテッドロー枠 swap group 追加** | horizontal pull 系グループ新設（ベントオーバーロー / バーベルロー / ケーブルロー 等）。seed を更新して swap_group_slug を設定 | 未着手 |
+| **C-4** | **A-2f Admin 種目追加** | `program_day_exercises` に新規行 INSERT。order_index 自動採番 | 未着手 |
+| **C-5** | **A-2g Admin 種目削除** | 削除 vs 非表示フラグの方針決定 + 実装。既存セッション・履歴への影響確認 | 未着手 |
+
+**推奨着手順序:** C-2（Admin 種目入れ替え）→ C-3（seed 更新）→ C-4 → C-5
 
 ### Phase 4: 会員管理強化
 

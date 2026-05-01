@@ -1,5 +1,66 @@
 # PROJECT_STATUS
 
+## 2026-05-01 GZCL 種目変更まわり 調査記録 → Phase 3-C 計画
+
+### STATUS: 調査完了 — Phase 3-C として ROADMAP に計画済み (2026-05-01)
+
+### 調査の目的
+
+GZCLP 4日/週の T3 種目変更候補がどのように制限されているか、
+および Admin 側から種目を変更する実装に何が必要かを確認した。
+
+### DB 構造 確認結果
+
+| テーブル | 分類カラム | 備考 |
+|---|---|---|
+| exercises | category のみ | muscle_group / body_part 等はなし |
+| program_day_exercises | swap_group_slug（FK, NULL 可） | NULL = 会員が変更不可 |
+| exercise_swap_groups | slug / label | 実装済み・稼働中 |
+| exercise_swap_group_members | group_slug / exercise_id | 実装済み・稼働中 |
+| workout_session_exercises | was_swapped / swap_group_slug | 種目変更履歴管理 |
+
+### GZCLP 4日/週 Week1 Day2 の種目構成
+
+| order | 種目 | type | swap_group_slug | 会員側変更 |
+|---|---|---|---|---|
+| 1 | オーバーヘッドプレス | T1 | NULL | 不可（固定） |
+| 2 | デッドリフト | T2 | NULL | 不可（固定） |
+| 3 | シーテッドロー | T3 | NULL | 不可（swap group 未設定） |
+| 4 | サイドレイズ | T3 | gzcl4-ohp-t3 | 可（3択）|
+| 5 | ヒップスラスト | T3 | gzcl4-deadlift-t3 | 可（3択）|
+
+既存 swap groups（gzclp-base-v2-4day-swap-groups.sql）:
+- `gzcl4-ohp-t3`: サイドレイズ / リアデルトフライ / アーノルドプレス
+- `gzcl4-deadlift-t3`: ヒップスラスト / グッドモーニング / レッグカール
+- `gzcl4-squat-t3`: レッグプレス / ブルガリアンスプリットスクワット / ハックスクワット
+- `gzcl4-bench-t3`: チェストプレス / ダンベルプレス / ディップス
+
+### 判明した課題
+
+1. 3種目目（シーテッドロー）に swap_group_slug が未設定
+   → horizontal pull 系のグループを新設して設定すれば会員が背中種目から選べる（C-3）
+2. Admin 側から exercise_id を変更する UI がない（A-2e / C-2 が未実装）
+3. 種目変更 API が exercise_type を常に "T3" に上書き
+   → T1/T2 の種目を会員側から変更することは現状不可（運用で固定）
+
+### 種目変更の責務分離（方針）
+
+| 操作 | 誰が | どこで | 影響範囲 |
+|---|---|---|---|
+| Admin 種目入れ替え | admin | 管理画面（C-2） | master データのみ（既存セッション・履歴に影響なし） |
+| 会員 swap | 会員 | ワークアウト画面（既存機能） | 当該セッションのみ（was_swapped フラグ） |
+| T1/T2 変更 | — | 現状不可 | — |
+| T3 swap group 枠 | 会員 | swap_group_slug がある枠のみ | 当該セッションのみ |
+
+### Phase 3-C への引き継ぎ
+
+- C-1: 仕様整理 → **本エントリが C-1 相当（調査完了）**
+- C-2: Admin 種目入れ替え（exercise_id 変更）→ 単独実装可能、最優先
+- C-3: シーテッドロー枠の swap group 追加（seed 変更のみ）
+- C-4: Admin 種目追加 / C-5: Admin 種目削除（C-2 の後で検討）
+
+---
+
 ## 2026-05-01 Phase 3-B MVP — CLOSED
 
 ### STATUS: ✅ LIVE_CHECK PASS — CLOSED (2026-05-01)
