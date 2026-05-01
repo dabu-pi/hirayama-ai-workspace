@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-05-01（A-2c LIVE_CHECK PASS → CLOSED / A-2d 種目表示順変更 実装済み・LIVE_CHECK 待ち）
+最終更新: 2026-05-01（Phase 3-B MVP CLOSED — A-2a/A-2b/A-2c/A-2d すべて LIVE_CHECK PASS）
 
 ---
 
@@ -9,7 +9,8 @@
 Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase M）・UX修正 はすべて完了。
 Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED。
 BUG-FIX 切替→復帰テストも CLOSED。
-現在は **Phase 3-B（Admin プログラム内容編集）** 進行中。A-2a / A-2b / A-2c CLOSED / A-2d 実装済み・LIVE_CHECK 待ち。
+**Phase 3-B（Admin プログラム内容編集）MVP CLOSED (2026-05-01)** — A-2a/A-2b/A-2c/A-2d すべて LIVE_CHECK PASS。
+次フェーズ未定（C-9 / Phase 4 / スコープ外の A-2e 種目入れ替え等から選択）。
 
 ### 完了済みフェーズ一覧
 
@@ -22,6 +23,7 @@ BUG-FIX 切替→復帰テストも CLOSED。
 | UX修正 | チェック高速化 / 通知音 / 重量後続セット反映 / プログラム一覧改善 / アーカイブ連鎖修正 | ✅ 全 LIVE_CHECK PASS |
 | BUG-FIX | 自由に作成フロー（Router Cache バイパス）— custom session 作成後に `/programs` に戻される問題 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **Phase 3-A** | **Admin プログラム管理（一覧・詳細・編集・新規）** | **✅ CLOSED (2026-05-01)** |
+| **Phase 3-B MVP** | **Admin プログラム内容編集（Week label / Day 情報 / 種目パラメータ / 表示順）** | **✅ CLOSED (2026-05-01)** |
 
 ### 未完了・保留・スタブ
 
@@ -64,7 +66,10 @@ BUG-FIX 切替→復帰テストも CLOSED。
 | **A-2a** | **Admin Week label 編集** | `program_weeks.label` インライン編集（WeekLabelEditor Client Component）| ✅ LIVE_CHECK PASS (2026-05-01) |
 | **A-2b** | **Admin Day 情報編集** | `progression_guide` / `notes` インライン編集（DayInfoEditor Client Component）| ✅ LIVE_CHECK PASS (2026-05-01) |
 | **A-2c** | **Admin 種目パラメータ編集** | `exercise_type` / `set_count` / `target_reps_text` 編集（ExerciseParamEditor Client Component）| ✅ LIVE_CHECK PASS (2026-05-01) |
-| **A-2d** | **Admin 種目表示順変更** | `order_index` を ↑↓ ボタンで並び替え（ExerciseList Client Component）| ⚠️ 実装済み・LIVE_CHECK 待ち (2026-05-01) |
+| **A-2d** | **Admin 種目表示順変更** | `order_index` を ↑↓ ボタンで並び替え（ExerciseList Client Component）| ✅ LIVE_CHECK PASS (2026-05-01) |
+| A-2e | Admin 種目入れ替え（exercise_id 変更） | 別種目への差し替え | スコープ外（Phase 3-B MVP 対象外） |
+| A-2f | Admin 種目追加 | Day への種目追加 UI | スコープ外（Phase 3-B MVP 対象外） |
+| A-2g | Admin 種目削除 | Day からの種目削除 | スコープ外（Phase 3-B MVP 対象外） |
 | C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |
 | — | Program recommendation UI | level/tag ベースの推奨表示 | 未着手 |
 

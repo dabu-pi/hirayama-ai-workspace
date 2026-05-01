@@ -1,8 +1,41 @@
 # PROJECT_STATUS
 
+## 2026-05-01 Phase 3-B MVP — CLOSED
+
+### STATUS: ✅ LIVE_CHECK PASS — CLOSED (2026-05-01)
+
+### 完了範囲
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| A-2a | Week label インライン編集（`program_weeks.label`） | ✅ CLOSED |
+| A-2b | Day 情報インライン編集（`progression_guide` / `notes`） | ✅ CLOSED |
+| A-2c | 種目パラメータ編集（`exercise_type` / `set_count` / `target_reps_text`） | ✅ CLOSED |
+| A-2d | 種目表示順変更（`order_index` ↑↓ ボタン） | ✅ CLOSED |
+
+### スコープ外（Phase 3-B MVP 対象外）
+
+| タスク | 内容 | 理由 |
+|---|---|---|
+| A-2e | exercise_id 変更 / 種目入れ替え | 別種目 DB 参照変更 — 別フェーズで検討 |
+| A-2f | 種目追加 | INSERT が伴う — 別フェーズで検討 |
+| A-2g | 種目削除 | DELETE + 連鎖確認が必要 — 別フェーズで検討 |
+
+### 実装コンポーネント一覧
+
+| Component / File | 役割 |
+|---|---|
+| `WeekLabelEditor.tsx` | Week label インライン編集 |
+| `DayInfoEditor.tsx` | Day 進行ガイド / メモ編集 |
+| `ExerciseParamEditor.tsx` | 種目 type / set / reps 編集 |
+| `ExerciseList.tsx` | exercises 配列管理 + ↑↓ 並び替え |
+| `lib/admin/program-update.ts` | 上記 4 機能の Server Actions（updateProgramWeekLabel / updateProgramDayInfo / updateExerciseParams / swapExerciseOrder） |
+
+---
+
 ## 2026-05-01 Phase 3-B / A-2d — Admin 種目表示順変更
 
-### STATUS: 実装済み — LIVE_CHECK 待ち (2026-05-01)
+### STATUS: ✅ LIVE_CHECK PASS — CLOSED (2026-05-01)
 
 ### 実装内容
 
