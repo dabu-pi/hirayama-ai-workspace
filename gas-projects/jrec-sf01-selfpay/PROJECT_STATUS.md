@@ -28,6 +28,40 @@ Phase 6-G〜6-M ロードマップ:
 
 ---
 
+## ノートPC再開手順（2026-05-01 デスクトップ作業終了時点）
+
+```bash
+git checkout feature/auto-dev-phase3-loop
+git pull
+git status   # clean であることを確認
+```
+
+確認ファイル:
+- `PROJECT_STATUS.md`（このファイル）
+- `ROADMAP.md`（Phase 6-G〜6-M 一覧）
+- `docs/PHASE_6G_TO_6M_REPORTING_ROADMAP_2026-05-01.md`（設計メモ・リスク）
+
+次の作業候補:
+1. **Phase 6-G-1**: `home.html` + `JREC_SF01_Main.gs` — カレンダー前月/今月/翌月 切替
+2. **training-platform A-2a LIVE_CHECK**（別プロジェクト）
+
+実機確認 URL（HEAD deployment）:
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
+```
+
+本番 URL（@28 / /exec）:
+```
+https://script.google.com/macros/s/AKfycbzVCd5NWWXvOBwdvCr5JSFzGl9QuC87MTpfZAaTrsCOcUR7VGYPmHNKAU-ZYN_ASwnmdA/exec
+```
+
+実装前リスク確認事項:
+- DailySales シート空問題（6-H/6-J 実装時に fallback 設計が必要）
+- `getDailySalesReport` の速度（Run_Log 全スキャン）
+- SelfPayItems col3 以降の列番号を Setup.gs で確認してから 6-K に着手
+
+---
+
 ## ✅ Phase 6-F ホーム月間カレンダー + 日別来院確認（2026-05-01 CLOSED）
 
 ### 実装内容
