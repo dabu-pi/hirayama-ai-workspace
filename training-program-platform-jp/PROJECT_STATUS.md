@@ -28,7 +28,7 @@ Admin 新規プログラム登録 UI（A-1d）の LIVE_CHECK を実施。
 ### Phase 3-A 完了宣言
 
 A-1a（一覧）/ A-1b（詳細）/ A-1c（編集）/ A-1d（新規登録）すべて LIVE_CHECK PASS。
-Phase 3-A CLOSED (2026-05-01)。次フェーズは BUG-FIX 切替→復帰テスト → Phase 4。
+Phase 3-A CLOSED (2026-05-01)。BUG-FIX 切替→復帰テスト CLOSED (2026-05-01)。次フェーズは Phase 4。
 
 ---
 
@@ -65,7 +65,7 @@ Phase 3-A CLOSED (2026-05-01)。次フェーズは BUG-FIX 切替→復帰テス
 | Programs 画面に「現在のプログラム・次 Day」が表示される | ✅ PASS |
 | 別プログラムへの切替時に確認ダイアログが表示される | ✅ PASS |
 | 切替後: 旧プログラム paused・新プログラム active | ✅ PASS |
-| 元のプログラムへ再切替（Week2 Day4 からの復帰） | ⚠️ コード上は保証済み、実機テスト未実施 |
+| 元のプログラムへ再切替（Week2 Day4 からの復帰） | ✅ PASS / CLOSED (2026-05-01) — Week2 Day4 から正常再開。Week1 Day1 戻り・/programs 誤リダイレクト・enrollment 破損・progress 競合 いずれもなし |
 
 ### 残リスク（仕様として許容）
 

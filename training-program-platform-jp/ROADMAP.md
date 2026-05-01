@@ -1,6 +1,6 @@
 # ROADMAP
 
-最終更新: 2026-05-01（Phase 3-A CLOSED — A-1d LIVE_CHECK PASS / build PASS。次: BUG-FIX 切替→復帰テスト → Phase 4）
+最終更新: 2026-05-01（Phase 3-A CLOSED / BUG-FIX 切替→復帰テスト CLOSED。次: Phase 4）
 
 ---
 
@@ -8,7 +8,7 @@
 
 Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase M）・UX修正 はすべて完了。
 Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED。
-次フェーズは **Phase 4（会員管理強化）** が優先候補。BUG-FIX 切替→復帰テストを先に片付ける。
+次フェーズは **Phase 4（会員管理強化）** が優先候補。BUG-FIX 切替→復帰テストは CLOSED 済み。
 
 ### 完了済みフェーズ一覧
 
@@ -26,7 +26,7 @@ Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED
 
 | 項目 | 状態 | 備考 |
 |---|---|---|
-| **BUG-FIX: 切替→復帰テスト** | ⚠️ **再開時の最初のタスク** | 別プログラムへ切替→GZCLP 4日/週に再切替→Week2 Day4 から再開できるか確認。PASS で完全 CLOSED |
+| **BUG-FIX: 切替→復帰テスト** | ✅ **CLOSED (2026-05-01)** | 別プログラムへ切替→GZCLP 4日/週に再切替→Week2 Day4 から正常再開。NG挙動なし（Week1 Day1 戻り / /programs 誤リダイレクト / enrollment 破損 / progress 競合）|
 | iOS PWA確認 | ⚠️ deferred | iPhone 未所持のため未確認。Android PASS |
 | D-2 退会申請フロー | ⚠️ 保留 | migration 000031 未適用。退会は窓口受付に統一 |
 | 計算ボタン（1RM/Calc） | スタブ | UIボタンあり・onClick 未実装（`WorkoutScreen.tsx`） |
@@ -44,8 +44,8 @@ Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED
   - Programs 画面に「進行中: 次 Week2 Day4」表示 ✅
   - 別プログラム切替時に確認ダイアログ表示 ✅
   - 切替後: 旧プログラム paused / 新プログラム active ✅
-未確認:
-  - 切替 → 元プログラム（Week2 Day4）への復帰（コード上は保証済み）
+確認済み（2026-05-01追記）:
+  - 切替 → 元プログラム（Week2 Day4）への復帰 ✅ PASS / CLOSED
 ```
 
 ---
