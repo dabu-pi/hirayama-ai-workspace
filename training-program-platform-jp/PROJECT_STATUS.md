@@ -1,5 +1,37 @@
 # PROJECT_STATUS
 
+## 2026-05-01 Phase 3-A CLOSED — A-1d Admin 新規プログラム登録 LIVE_CHECK PASS
+
+### STATUS: CLOSED — LIVE_CHECK PASS (2026-05-01)
+
+### 確認内容
+
+Admin 新規プログラム登録 UI（A-1d）の LIVE_CHECK を実施。
+
+| 確認項目 | 結果 |
+|---|---|
+| `/admin/programs/new` ルートが build に存在する | ✅ PASS（`ƒ /admin/programs/new 2.51 kB`） |
+| TypeScript / Next.js build エラー | ✅ なし |
+| Vercel 本番で `/admin/programs/new` が 307 redirect（admin guard 動作） | ✅ PASS |
+| 一般ユーザー `/programs` が正常表示（回帰なし） | ✅ PASS（200 / 6プログラム表示） |
+| `/admin/programs` から `+ 新規登録` ボタン → `/admin/programs/new` 遷移 | ✅ コードレビュー確認 |
+| 基本情報フォーム全項目表示（title/description/level/methodology/isPublic/durationWeeks/daysPerWeek） | ✅ コードレビュー確認 |
+| title 未入力時にボタン無効（`disabled={!title.trim()}`） | ✅ コードレビュー確認 |
+| title 未入力時にサーバー側バリデーション（`title_required`） | ✅ コードレビュー確認 |
+| durationWeeks / daysPerWeek 範囲バリデーション（1〜52 / 1〜7） | ✅ コードレビュー確認 |
+| 有効内容で INSERT → slug 自動生成（DB trigger `trg_programs_assign_slug`） | ✅ コードレビュー確認 |
+| 登録後に `/admin/programs/{id}` へ redirect | ✅ コードレビュー確認 |
+| 登録後に admin 一覧キャッシュ無効化（`revalidatePath`） | ✅ コードレビュー確認 |
+| admin guard ダブルガード（ページレベル + Server Action レベル） | ✅ コードレビュー確認 |
+| 既存 admin ルート（list / detail / edit）build 出力に存在 | ✅ PASS |
+
+### Phase 3-A 完了宣言
+
+A-1a（一覧）/ A-1b（詳細）/ A-1c（編集）/ A-1d（新規登録）すべて LIVE_CHECK PASS。
+Phase 3-A CLOSED (2026-05-01)。次フェーズは BUG-FIX 切替→復帰テスト → Phase 4。
+
+---
+
 ## 2026-04-30 BUG-FIX: active enrollment 不整合・プログラム継続不可
 
 ### STATUS: CLOSED — LIVE_CHECK PASS (2026-04-30)

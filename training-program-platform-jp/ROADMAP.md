@@ -1,13 +1,14 @@
 # ROADMAP
 
-最終更新: 2026-04-30（Phase 3-A-1d 完了 — Admin プログラム管理（一覧・詳細・編集・新規）一通り完成。次回: 新規登録の実機確認 → Phase 3-A CLOSED → Phase 4）
+最終更新: 2026-05-01（Phase 3-A CLOSED — A-1d LIVE_CHECK PASS / build PASS。次: BUG-FIX 切替→復帰テスト → Phase 4）
 
 ---
 
-## 現在地（2026-04-30）
+## 現在地（2026-05-01）
 
 Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase M）・UX修正 はすべて完了。
-次フェーズは **Phase 3（コンテンツ・管理拡張）** または **Phase 4（会員管理強化）** から選択。
+Phase 3-A（Admin プログラム管理 一覧/詳細/編集/新規）も CLOSED。
+次フェーズは **Phase 4（会員管理強化）** が優先候補。BUG-FIX 切替→復帰テストを先に片付ける。
 
 ### 完了済みフェーズ一覧
 
@@ -19,6 +20,7 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 | Phase M | 会員ライフサイクル管理（休会・退会・billing_cutoff 設計〜実装） | ✅ CLOSED |
 | UX修正 | チェック高速化 / 通知音 / 重量後続セット反映 / プログラム一覧改善 / アーカイブ連鎖修正 | ✅ 全 LIVE_CHECK PASS |
 | BUG-FIX | 自由に作成フロー（Router Cache バイパス）— custom session 作成後に `/programs` に戻される問題 | ✅ LIVE_CHECK PASS (2026-04-30) |
+| **Phase 3-A** | **Admin プログラム管理（一覧・詳細・編集・新規）** | **✅ CLOSED (2026-05-01)** |
 
 ### 未完了・保留・スタブ
 
@@ -57,7 +59,7 @@ Phase 2 系・PWA化（Phase 2.7）・会員ライフサイクル管理（Phase 
 | **A-1a** | **Admin プログラム一覧 read only** | `/admin/programs` — 全プログラム・enrollment数・day数・種目数を確認 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1b** | **Admin プログラム詳細 read only** | `/admin/programs/[programId]` — Week/Day/Exercise 構成の詳細確認画面 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **A-1c** | **Admin プログラム基本情報編集** | title / description / level / methodology / is_public / 頻度・期間 編集 | ✅ LIVE_CHECK PASS (2026-04-30) |
-| **A-1d** | **Admin 新規プログラム登録（シェル）** | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | ✅ 実装完了 commit e48f4db（LIVE_CHECK 次回） |
+| **A-1d** | **Admin 新規プログラム登録（シェル）** | 基本情報のみUI登録。Day/Exercise は seed 運用継続 | ✅ LIVE_CHECK PASS (2026-05-01) |
 | C-9 | Week preview 拡張 | T1/T2/T3 折りたたみ表示、セット数・レップ数の詳細確認 | 未着手 |
 | — | Program recommendation UI | level/tag ベースの推奨表示 | 未着手 |
 
