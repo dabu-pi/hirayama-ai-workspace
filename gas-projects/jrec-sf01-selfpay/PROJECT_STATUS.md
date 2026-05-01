@@ -15,9 +15,12 @@
 **✅ Phase 6-G-1 ホームカレンダー 前月/今月/翌月 切替: CLOSED**（2026-05-02 G1-1〜G1-7 全 PASS）
 **✅ Versioned Deployment @29: 本番反映済み**（2026-05-02 Phase 6-G-1 含む）
 
-次期実装候補（2026-05-02 方針決定）:
-1. **Phase 6-N** 共通タブナビゲーション整備 🔄（実装済み・HEAD実機確認待ち）
-2. **Phase 6-H** dailyCheckout 日別金額合計カード ⏸
+**✅ Phase 6-N-1 共通タブナビゲーション: CLOSED**（2026-05-02 N1-1〜N1-8 全 PASS）
+**✅ Versioned Deployment @30: 本番反映済み**（2026-05-02 Phase 6-N-1 含む）
+
+次期実装候補:
+1. **Phase 6-H** dailyCheckout 日別金額合計カード ⏸
+2. **Phase 6-N 残タスク**（オプション：タブアイコン追加、レポートタブ拡張など）
 
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
@@ -26,7 +29,7 @@
 
 Phase 6-G〜6-N ロードマップ:
 - 6-G: カレンダー機能強化（前月/翌月切替）✅ CLOSED（2026-05-02）
-- 6-N: 共通タブナビゲーション整備 🔄 実装済み・HEAD実機確認待ち
+- 6-N: 共通タブナビゲーション整備 ✅ CLOSED（2026-05-02 @30）
 - 6-H: dailyCheckout 日別金額合計追加 ⏸
 - 6-I: 集計メニュー / 集計ページ新設 ⏸
 - 6-J: 月別売上集計 ⏸
@@ -60,9 +63,9 @@ git status   # clean であることを確認
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
 ```
 
-本番 URL（@29 / /exec）:
+本番 URL（@30 / /exec）:
 ```
-https://script.google.com/macros/s/AKfycbyL1N1d5VrBr2HtTaytYeIqpKFbMqFpdyDnn_rsfyhvSEvac68FHH8efsVlUuxcCWl_/exec
+https://script.google.com/macros/s/AKfycbw__kW0LCdKe9q726XF3UGbZnQDQWljGy2kWawC7m_qxha9uZwayf7zz6tQxdNxSwUtsg/exec
 ```
 
 実装前リスク確認事項:
@@ -72,7 +75,7 @@ https://script.google.com/macros/s/AKfycbyL1N1d5VrBr2HtTaytYeIqpKFbMqFpdyDnn_rsf
 
 ---
 
-## 🔄 Phase 6-N 共通タブナビゲーション整備（2026-05-02 実機確認待ち）
+## ✅ Phase 6-N-1 共通タブナビゲーション（2026-05-02 CLOSED）
 
 ### 実装内容
 
@@ -89,18 +92,20 @@ https://script.google.com/macros/s/AKfycbyL1N1d5VrBr2HtTaytYeIqpKFbMqFpdyDnn_rsf
 - 既存の `?page=xxx` ルーティング・ホームメニュー・カレンダー・会計ロジックは変更なし
 - タブは常に表示。ワークフロー画面（visitForm / billing / receipt / detail）では active なし
 
-### テスト項目（実機確認待ち）
+### テスト項目（実機確認結果）
+
+> 会計・集計・保存ロジックに変更なし（ルーティング・UI のみ変更）
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| N1-1 | ⏳ | ホームに共通タブが表示される（4タブ：ホーム / 本日の受付・会計 / 患者一覧 / ＋新規患者登録） |
-| N1-2 | ⏳ | 「本日の受付・会計」タブで dailyCheckout に移動できる |
-| N1-3 | ⏳ | 「患者一覧」タブで list に移動できる |
-| N1-4 | ⏳ | 「＋ 新規患者登録」タブで newPatient ページに移動できる |
-| N1-5 | ⏳ | 現在ページの active 表示が正しい（ホームでは「ホーム」タブが強調） |
-| N1-6 | ⏳ | dailyCheckout の date パラメータ付きでも「本日の受付・会計」タブが active |
-| N1-7 | ⏳ | スマホ幅でタブが崩れない（横スクロール可） |
-| N1-8 | ⏳ | 既存ホームメニュー・月間カレンダー・日付クリックが壊れていない |
+| N1-1 | ✅ PASS | ホームに共通タブが表示される（4タブ：ホーム / 本日の受付・会計 / 患者一覧 / ＋新規患者登録） |
+| N1-2 | ✅ PASS | 「本日の受付・会計」タブで dailyCheckout に移動できる |
+| N1-3 | ✅ PASS | 「患者一覧」タブで list に移動できる |
+| N1-4 | ✅ PASS | 「＋ 新規患者登録」タブで newPatient ページに移動できる |
+| N1-5 | ✅ PASS | 現在ページの active 表示が正しい（ホームでは「ホーム」タブが強調） |
+| N1-6 | ✅ PASS | dailyCheckout の date パラメータ付きでも「本日の受付・会計」タブが active |
+| N1-7 | ✅ PASS | スマホ幅でタブが崩れない（横スクロール可） |
+| N1-8 | ✅ PASS | 既存ホームメニュー・月間カレンダー・日付クリックが壊れていない |
 
 ### HEAD 実機確認 URL
 
