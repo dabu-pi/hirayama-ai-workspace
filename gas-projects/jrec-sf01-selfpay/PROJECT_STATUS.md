@@ -12,12 +12,13 @@
 **✅ Versioned Deployment @27: 本番反映済み**（2026-05-01 Phase 6-E 含む）
 **✅ Phase 6-F ホーム月間カレンダー + 日別来院確認: CLOSED**（2026-05-01 J-1〜J-6 全 PASS）
 **✅ Versioned Deployment @28: 本番反映済み**（2026-05-01 Phase 6-F 含む）
-**🔄 Phase 6-G-1 ホームカレンダー 前月/今月/翌月 切替: 実装済み・HEAD実機確認待ち**（2026-05-02）
+**✅ Phase 6-G-1 ホームカレンダー 前月/今月/翌月 切替: CLOSED**（2026-05-02 G1-1〜G1-7 全 PASS）
+**✅ Versioned Deployment @29: 本番反映済み**（2026-05-02 Phase 6-G-1 含む）
 
 次実装候補: **Phase 6-H** dailyCheckout 日別金額合計カード
 
 Phase 6-G〜6-M ロードマップ:
-- 6-G: カレンダー機能強化（前月/翌月切替）🔄 実装済み・実機確認待ち
+- 6-G: カレンダー機能強化（前月/翌月切替）✅ CLOSED（2026-05-02）
 - 6-H: dailyCheckout 日別金額合計追加 ⏸
 - 6-I: 集計メニュー / 集計ページ新設 ⏸
 - 6-J: 月別売上集計 ⏸
@@ -43,17 +44,17 @@ git status   # clean であることを確認
 - `docs/PHASE_6G_TO_6M_REPORTING_ROADMAP_2026-05-01.md`（設計メモ・リスク）
 
 次の作業候補:
-1. **Phase 6-G-1**: `home.html` + `JREC_SF01_Main.gs` — カレンダー前月/今月/翌月 切替
-2. **training-platform A-2a LIVE_CHECK**（別プロジェクト）
+1. **Phase 6-H**: `daily-checkout.html` + `JREC_SF01_Main.gs` — dailyCheckout 日別金額合計カード
+2. **Phase 6-I**: 集計メニュー / 集計ページ新設
 
 実機確認 URL（HEAD deployment）:
 ```
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
 ```
 
-本番 URL（@28 / /exec）:
+本番 URL（@29 / /exec）:
 ```
-https://script.google.com/macros/s/AKfycbzVCd5NWWXvOBwdvCr5JSFzGl9QuC87MTpfZAaTrsCOcUR7VGYPmHNKAU-ZYN_ASwnmdA/exec
+https://script.google.com/macros/s/AKfycbyL1N1d5VrBr2HtTaytYeIqpKFbMqFpdyDnn_rsfyhvSEvac68FHH8efsVlUuxcCWl_/exec
 ```
 
 実装前リスク確認事項:
@@ -63,7 +64,7 @@ https://script.google.com/macros/s/AKfycbzVCd5NWWXvOBwdvCr5JSFzGl9QuC87MTpfZAaTr
 
 ---
 
-## 🔄 Phase 6-G-1 ホームカレンダー 前月/今月/翌月 切替（2026-05-02 実機確認待ち）
+## ✅ Phase 6-G-1 ホームカレンダー 前月/今月/翌月 切替（2026-05-02 CLOSED）
 
 ### 実装内容
 
@@ -79,19 +80,19 @@ https://script.google.com/macros/s/AKfycbzVCd5NWWXvOBwdvCr5JSFzGl9QuC87MTpfZAaTr
 指定月:               ?page=home&year=2026&month=4
 ```
 
-### テスト項目（実機確認待ち）
+### テスト項目（実機確認結果）
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| G1-1 | ⏳ | home 初期表示で現在月（2026年5月）が表示される |
-| G1-2 | ⏳ | 2026年5月から「◀ 前月」で 2026年4月 に移動できる |
-| G1-3 | ⏳ | 2026年5月から「翌月 ▶」で 2026年6月 に移動できる |
-| G1-4 | ⏳ | 別月表示中に「今月」で現在月に戻る |
-| G1-5 | ⏳ | 2026年1月の前月が 2025年12月 / 2026年12月の翌月が 2027年1月 |
-| G1-6 | ⏳ | 月移動後も来院ありの日付クリックで dailyCheckout に date 付き遷移できる |
-| G1-7 | ⏳ | 月移動ボタン追加後もスマホ幅で7列カレンダーが崩れない |
+| G1-1 | ✅ PASS | home 初期表示で現在月（2026年5月）が表示される |
+| G1-2 | ✅ PASS | 2026年5月から「◀ 前月」で 2026年4月 に移動できる |
+| G1-3 | ✅ PASS | 2026年5月から「翌月 ▶」で 2026年6月 に移動できる |
+| G1-4 | ✅ PASS | 別月表示中に「今月」で現在月に戻る |
+| G1-5 | ✅ PASS | 年またぎ動作確認済み |
+| G1-6 | ✅ PASS | 月移動後も来院ありの日付クリックで dailyCheckout に date 付き遷移できる |
+| G1-7 | ✅ PASS | 月移動ボタン追加後もスマホ幅で7列カレンダーが崩れない |
 
-### HEAD 実機確認 URL
+### 実機確認 URL（HEAD）
 
 ```
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
