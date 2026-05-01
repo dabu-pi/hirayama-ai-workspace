@@ -8,15 +8,16 @@
 **✅ Phase 6-D トップメニュー + 本日会計待ち一覧: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 5-D カルテ連動会計フロー: CLOSED（完全）**（2026-04-29 H-1〜H-4 全 PASS）
 **✅ Versioned Deployment @26: 反映済み**（2026-04-29）
-**🔄 Phase 6-E カルテ再編集機能 + 主訴 textarea 化: 実装完了・実機確認待ち**（2026-05-01）
+**✅ Phase 6-E カルテ再編集機能 + 主訴 textarea 化: CLOSED**（2026-05-01 I-1〜I-6 全 PASS）
 
-次: Phase 6-E 実機確認（I-1〜I-6）→ PASS 後 CLOSED
+次: Phase 6-E 後の次フェーズへ（versioned deployment @27 は Phase 6-E CLOSED 後に実施）
 
 ---
 
-## 🔄 Phase 6-E カルテ再編集機能 + 主訴 textarea 化（2026-05-01 実装完了）
+## ✅ Phase 6-E カルテ再編集機能 + 主訴 textarea 化（2026-05-01 CLOSED）
 
-**commit:** f62b737
+**実装 commit:** f62b737  
+**CLOSED commit:** ※このコミット
 
 ### 実装内容
 
@@ -35,20 +36,22 @@
 編集: ?page=visitForm&id=P0001&visitKey=SPV_YYYYMMDD_P0001_001
 ```
 
-### テスト項目（実機確認待ち）
+### 実機確認結果（HEAD URL / 2026-05-01）
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| I-1 | ⏸ | 新規カルテ保存が従来通り動く（visitKey 新規発行・患者詳細に表示） |
-| I-2 | ⏸ | 患者詳細の「✏️ カルテ編集」ボタンから visit-form に遷移・既存値が表示される |
-| I-3 | ⏸ | 編集保存で同じ visitKey が更新される（新 visitKey 作成なし） |
-| I-4 | ⏸ | 会計済み・領収書発行済みの来院でもカルテ編集できる（Payments/Receipts 影響なし） |
-| I-5 | ⏸ | 主訴欄で複数行・改行入力できる（保存後も保持される） |
-| I-6 | ⏸ | ゴミ箱入り来院の通常編集導線が出ない |
+| I-1 | ✅ PASS | 新規カルテ保存が従来通り動く（visitKey 新規発行・患者詳細に表示） |
+| I-2 | ✅ PASS | 患者詳細の「✏️ カルテ編集」ボタンから visit-form に遷移・既存値プリフィル確認。「カルテ編集モード — SPV_20260501_P0002_001」バナー表示あり |
+| I-3 | ✅ PASS | 編集保存で「更新しました（SPV_20260501_P0002_001）」表示。患者詳細の来院件数が増えず、同 visitKey が更新された |
+| I-4 | ✅ PASS | 会計済み来院行に「✏️ カルテ編集」ボタン表示・クリックで visit-form 遷移・保存できた（Payments/Receipts 影響なし） |
+| I-5 | ✅ PASS | 主訴欄が textarea（複数行）に変更済み。改行入力・保存後の改行保持を確認 |
+| I-6 | ✅ PASS | ゴミ箱入り来院には「✏️ カルテ編集」ボタンが表示されないことを確認 |
 
-### 未解決事項
+### 備考
 
-- 特になし。isDeleted=true の場合は `getVisitFormData` がエラーを返し renderError_ で安全に処理済み。
+- 実機確認は HEAD deployment URL で実施（@26 固定デプロイ URL では Phase 6-E 未反映のため）
+- 本番 /exec への反映は次回 versioned deployment（@27 相当）で実施予定
+- I-2 調査中に発見: @26 URL + /dev では HEAD コードが反映されない → 以降の実機確認は HEAD URL を使うこと
 
 ---
 
