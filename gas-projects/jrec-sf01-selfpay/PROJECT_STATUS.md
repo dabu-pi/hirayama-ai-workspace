@@ -8,8 +8,47 @@
 **✅ Phase 6-D トップメニュー + 本日会計待ち一覧: CLOSED**（2026-04-29 全 PASS）
 **✅ Phase 5-D カルテ連動会計フロー: CLOSED（完全）**（2026-04-29 H-1〜H-4 全 PASS）
 **✅ Versioned Deployment @26: 反映済み**（2026-04-29）
+**🔄 Phase 6-E カルテ再編集機能 + 主訴 textarea 化: 実装完了・実機確認待ち**（2026-05-01）
 
-次: Phase 6-C（来院完全削除）または次案件
+次: Phase 6-E 実機確認（I-1〜I-6）→ PASS 後 CLOSED
+
+---
+
+## 🔄 Phase 6-E カルテ再編集機能 + 主訴 textarea 化（2026-05-01 実装完了）
+
+**commit:** f62b737
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Visit.gs` | `getVisitFormData(patientId, visitKey)` 追加 — SelfPayVisits+SelfPayChart を一括取得 |
+| `JREC_SF01_Main.gs` | visitForm case: vkParam があれば editVisit をテンプレートへ注入 |
+| `visit-form.html` | editVisit あり時にプリフィル・編集モードバナー表示・SAVED_VISIT_KEY 初期化 |
+| `visit-form.html` | chiefComplaint を `<input>`→`<textarea>`（min-height:72px, resize:vertical）に変更 |
+| `patient-detail.html` | 各来院行に「✏️ カルテ編集」ボタンを追加 |
+
+### URL 形式
+
+```
+新規: ?page=visitForm&id=P0001
+編集: ?page=visitForm&id=P0001&visitKey=SPV_YYYYMMDD_P0001_001
+```
+
+### テスト項目（実機確認待ち）
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| I-1 | ⏸ | 新規カルテ保存が従来通り動く（visitKey 新規発行・患者詳細に表示） |
+| I-2 | ⏸ | 患者詳細の「✏️ カルテ編集」ボタンから visit-form に遷移・既存値が表示される |
+| I-3 | ⏸ | 編集保存で同じ visitKey が更新される（新 visitKey 作成なし） |
+| I-4 | ⏸ | 会計済み・領収書発行済みの来院でもカルテ編集できる（Payments/Receipts 影響なし） |
+| I-5 | ⏸ | 主訴欄で複数行・改行入力できる（保存後も保持される） |
+| I-6 | ⏸ | ゴミ箱入り来院の通常編集導線が出ない |
+
+### 未解決事項
+
+- 特になし。isDeleted=true の場合は `getVisitFormData` がエラーを返し renderError_ で安全に処理済み。
 
 ---
 
