@@ -13,7 +13,18 @@
 **✅ Phase 6-F ホーム月間カレンダー + 日別来院確認: CLOSED**（2026-05-01 J-1〜J-6 全 PASS）
 **✅ Versioned Deployment @28: 本番反映済み**（2026-05-01 Phase 6-F 含む）
 
-次: training-platform A-2a LIVE_CHECK → jrec-sf01 Phase 6-G 検討（カレンダー前月/翌月切替）
+次実装候補: **Phase 6-G-1** ホームカレンダー 前月/今月/翌月 切替
+
+Phase 6-G〜6-M ロードマップ:
+- 6-G: カレンダー機能強化（前月/翌月切替）⏸
+- 6-H: dailyCheckout 日別金額合計追加 ⏸
+- 6-I: 集計メニュー / 集計ページ新設 ⏸
+- 6-J: 月別売上集計 ⏸
+- 6-K: メニュー別集計 ⏸
+- 6-L: 未収・回収管理レポート ⏸
+- 6-M: CSV / 印刷 / 監査レポート ⏸
+
+詳細: `ROADMAP.md` / `docs/PHASE_6G_TO_6M_REPORTING_ROADMAP_2026-05-01.md`
 
 ---
 
