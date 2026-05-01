@@ -89,6 +89,27 @@
     @media (max-width: 480px) {
       .cal-day, button.cal-day { min-height: 44px; font-size: 12px; }
     }
+
+    /* ── カレンダー月移動ナビ ── */
+    .cal-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .cal-nav-btn {
+      padding: 5px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      background: #fff;
+      color: #1a73e8;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .cal-nav-btn:hover { background: #e8f0fe; border-color: #1a73e8; }
+    .cal-nav-btn-today { background: #f0f4ff; border-color: #c5d8fb; }
   </style>
 </head>
 <body>
@@ -134,7 +155,23 @@
 
   <!-- 月間来院カレンダー -->
   <div class="card">
+    <?
+      var _prevMonth = calMonth - 1;
+      var _prevYear  = calYear;
+      if (_prevMonth < 1) { _prevMonth = 12; _prevYear--; }
+      var _nextMonth = calMonth + 1;
+      var _nextYear  = calYear;
+      if (_nextMonth > 12) { _nextMonth = 1; _nextYear++; }
+    ?>
     <div class="cal-title">月間来院カレンダー — <?= calYear ?>年<?= calMonth ?>月</div>
+    <div class="cal-nav">
+      <button type="button" class="cal-nav-btn"
+        onclick="top.location.href=APP_URL+'?page=home&year=<?= _prevYear ?>&month=<?= _prevMonth ?>'">◀ 前月</button>
+      <button type="button" class="cal-nav-btn cal-nav-btn-today"
+        onclick="top.location.href=APP_URL+'?page=home'">今月</button>
+      <button type="button" class="cal-nav-btn"
+        onclick="top.location.href=APP_URL+'?page=home&year=<?= _nextYear ?>&month=<?= _nextMonth ?>'">翌月 ▶</button>
+    </div>
     <div class="cal-grid">
       <div class="cal-weekday">日</div>
       <div class="cal-weekday">月</div>

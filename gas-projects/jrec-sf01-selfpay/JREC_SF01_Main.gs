@@ -7,10 +7,12 @@ function doGet(e) {
   var idParam   = (e && e.parameter && (e.parameter.id || e.parameter.patientId)) || "";
   var q         = (e && e.parameter && e.parameter.q)                             || "";
   var vkParam   = (e && e.parameter && (e.parameter.visitKey || e.parameter.vk))  || "";
-  var dateParam = (e && e.parameter && e.parameter.date)                           || "";
+  var dateParam  = (e && e.parameter && e.parameter.date)                          || "";
+  var yearParam  = (e && e.parameter && e.parameter.year)                          || "";
+  var monthParam = (e && e.parameter && e.parameter.month)                         || "";
 
   try {
-    var output = buildPage_(page, idParam, q, vkParam, dateParam);
+    var output = buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam);
     return output
       .setTitle("JREC-SF01 自費カルテ・会計")
       .addMetaTag("viewport", "width=device-width, initial-scale=1.0")
@@ -20,7 +22,7 @@ function doGet(e) {
   }
 }
 
-function buildPage_(page, idParam, q, vkParam, dateParam) {
+function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam) {
   var appUrl = getAppUrl_();
 
   try {
@@ -152,12 +154,18 @@ function buildPage_(page, idParam, q, vkParam, dateParam) {
       }
 
       case "home": {
-        var nowHome   = new Date();
-        var tz        = "Asia/Tokyo";
-        var calYear   = parseInt(Utilities.formatDate(nowHome, tz, "yyyy"), 10);
-        var calMonth  = parseInt(Utilities.formatDate(nowHome, tz, "MM"),   10);
-        var todayStr  = Utilities.formatDate(nowHome, tz, "yyyy-MM-dd");
-        var calData   = getMonthlyVisitCalendar(calYear, calMonth);
+        var nowHome  = new Date();
+        var tz       = "Asia/Tokyo";
+        var nowYear  = parseInt(Utilities.formatDate(nowHome, tz, "yyyy"), 10);
+        var nowMonth = parseInt(Utilities.formatDate(nowHome, tz, "MM"),   10);
+        var todayStr = Utilities.formatDate(nowHome, tz, "yyyy-MM-dd");
+
+        var _yp = parseInt(yearParam,  10);
+        var _mp = parseInt(monthParam, 10);
+        var calYear  = (_yp >= 2020 && _yp <= 2035) ? _yp : nowYear;
+        var calMonth = (_mp >= 1    && _mp <= 12)   ? _mp : nowMonth;
+
+        var calData  = getMonthlyVisitCalendar(calYear, calMonth);
         var th = HtmlService.createTemplateFromFile("home");
         th.appUrl    = appUrl;
         th.calYear   = calYear;

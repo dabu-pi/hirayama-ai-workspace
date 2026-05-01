@@ -12,11 +12,12 @@
 **✅ Versioned Deployment @27: 本番反映済み**（2026-05-01 Phase 6-E 含む）
 **✅ Phase 6-F ホーム月間カレンダー + 日別来院確認: CLOSED**（2026-05-01 J-1〜J-6 全 PASS）
 **✅ Versioned Deployment @28: 本番反映済み**（2026-05-01 Phase 6-F 含む）
+**🔄 Phase 6-G-1 ホームカレンダー 前月/今月/翌月 切替: 実装済み・HEAD実機確認待ち**（2026-05-02）
 
-次実装候補: **Phase 6-G-1** ホームカレンダー 前月/今月/翌月 切替
+次実装候補: **Phase 6-H** dailyCheckout 日別金額合計カード
 
 Phase 6-G〜6-M ロードマップ:
-- 6-G: カレンダー機能強化（前月/翌月切替）⏸
+- 6-G: カレンダー機能強化（前月/翌月切替）🔄 実装済み・実機確認待ち
 - 6-H: dailyCheckout 日別金額合計追加 ⏸
 - 6-I: 集計メニュー / 集計ページ新設 ⏸
 - 6-J: 月別売上集計 ⏸
@@ -59,6 +60,42 @@ https://script.google.com/macros/s/AKfycbzVCd5NWWXvOBwdvCr5JSFzGl9QuC87MTpfZAaTr
 - DailySales シート空問題（6-H/6-J 実装時に fallback 設計が必要）
 - `getDailySalesReport` の速度（Run_Log 全スキャン）
 - SelfPayItems col3 以降の列番号を Setup.gs で確認してから 6-K に着手
+
+---
+
+## 🔄 Phase 6-G-1 ホームカレンダー 前月/今月/翌月 切替（2026-05-02 実機確認待ち）
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Main.gs` | `doGet` で `yearParam`/`monthParam` を受け取り `buildPage_` に渡す。`case "home"` でバリデーション（year: 2020〜2035, month: 1〜12）してカレンダー年月を決定 |
+| `home.html` | 前月/次月年月をサーバーサイドで計算し、◀ 前月 / 今月 / 翌月 ▶ の 3 ボタンを cal-title 直下に追加。`.cal-nav` / `.cal-nav-btn` CSS 追加 |
+
+### URL 形式
+
+```
+当月（パラメータなし）: ?page=home
+指定月:               ?page=home&year=2026&month=4
+```
+
+### テスト項目（実機確認待ち）
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| G1-1 | ⏳ | home 初期表示で現在月（2026年5月）が表示される |
+| G1-2 | ⏳ | 2026年5月から「◀ 前月」で 2026年4月 に移動できる |
+| G1-3 | ⏳ | 2026年5月から「翌月 ▶」で 2026年6月 に移動できる |
+| G1-4 | ⏳ | 別月表示中に「今月」で現在月に戻る |
+| G1-5 | ⏳ | 2026年1月の前月が 2025年12月 / 2026年12月の翌月が 2027年1月 |
+| G1-6 | ⏳ | 月移動後も来院ありの日付クリックで dailyCheckout に date 付き遷移できる |
+| G1-7 | ⏳ | 月移動ボタン追加後もスマホ幅で7列カレンダーが崩れない |
+
+### HEAD 実機確認 URL
+
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
+```
 
 ---
 
