@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { AdminProgramDetail } from "@/lib/admin/program-detail";
 import { formatProgramTagLabel } from "@/lib/workout/format-labels";
+import { WeekLabelEditor } from "./WeekLabelEditor";
 import styles from "./AdminProgramDetailScreen.module.css";
 
 type Props = {
@@ -40,13 +41,6 @@ function formatDate(iso: string) {
     month: "2-digit",
     day: "2-digit"
   });
-}
-
-function WeekLabel({ weekNumber, label }: { weekNumber: number; label: string | null }) {
-  const base = `${weekNumber}週目`;
-  if (!label) return <>{base}</>;
-  if (/^Week\s*\d+$/i.test(label.trim())) return <>{base}</>;
-  return <>{base} — {label}</>;
 }
 
 export function AdminProgramDetailScreen({ program }: Props) {
@@ -192,7 +186,12 @@ export function AdminProgramDetailScreen({ program }: Props) {
             {weeks.map((week) => (
               <div key={week.id} className={styles.weekBlock}>
                 <h3 className={styles.weekHeading}>
-                  <WeekLabel weekNumber={week.weekNumber} label={week.label} />
+                  <WeekLabelEditor
+                    weekId={week.id}
+                    programId={program.id}
+                    weekNumber={week.weekNumber}
+                    initialLabel={week.label}
+                  />
                   <span className={styles.weekMeta}>
                     {week.days.length}日
                   </span>

@@ -130,3 +130,59 @@ export async function updateProgramBasicInfo(
 
   return { ok: true, slug: after?.slug ?? existing.slug };
 }
+
+// ── Week label ──────────────────────────────────────────────────
+
+export type WeekLabelUpdateResult = {
+  ok: boolean;
+  error?: string;
+};
+
+/**
+ * Updates program_weeks.label for a single week.
+ * Verifies the week belongs to the given program before updating.
+ * label = null clears the label (week shows as "X週目" only).
+ */
+export async function updateProgramWeekLabel(
+  weekId: string,
+  programId: string,
+  label: string | null
+): Promise<WeekLabelUpdateResult> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) return { ok: false, error: "forbidden" };
+
+  const trimmedLabel = typeof label === "string" ? label.trim() || null : null;
+  if (trimmedLabel !== null && trimmedLabel.length > 100) {
+    return { ok: false, error: "label_too_long" };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: week, error: fetchErr } = await admin
+    .from("program_weeks")
+    .select("id")
+    .eq("id", weekId)
+    .eq("program_id", programId)
+    .maybeSingle<{ id: string }>();
+
+  if (fetchErr || !week) {
+    return { ok: false, error: "week_not_found" };
+  }
+
+  const { error: updateErr } = await admin
+    .from("program_weeks")
+    .update({ label: trimmedLabel })
+    .eq("id", weekId);
+
+  if (updateErr) {
+    console.error("updateProgramWeekLabel: update failed", {
+      weekId,
+      error: updateErr.message
+    });
+    return { ok: false, error: updateErr.message };
+  }
+
+  revalidatePath(`/admin/programs/${programId}`);
+
+  return { ok: true };
+}
