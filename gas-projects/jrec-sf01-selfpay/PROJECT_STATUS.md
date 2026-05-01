@@ -10,8 +10,38 @@
 **✅ Versioned Deployment @26: 反映済み**（2026-04-29）
 **✅ Phase 6-E カルテ再編集機能 + 主訴 textarea 化: CLOSED**（2026-05-01 I-1〜I-6 全 PASS）
 **✅ Versioned Deployment @27: 本番反映済み**（2026-05-01 Phase 6-E 含む）
+**🔄 Phase 6-F ホーム月間カレンダー + 日別来院確認: 実装完了・実機確認待ち**（2026-05-01）
 
-次: training-platform A-2a LIVE_CHECK → jrec-sf01 次フェーズ設計
+次: Phase 6-F 実機確認（J-1〜J-6）→ PASS 後 CLOSED → @28 デプロイ
+
+---
+
+## 🔄 Phase 6-F ホーム月間カレンダー + 日別来院確認（2026-05-01 実装完了）
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Billing.gs` | `getMonthlyVisitCalendar(year, month)` 追加 — 月単位で来院件数を日付集計、isDeleted 除外 |
+| `JREC_SF01_Main.gs` | home ルートで当月カレンダーデータを取得し template に渡す |
+| `home.html` | 業務メニュー下に月間カレンダー section 追加。来院ありの日は ●件数 + クリックで dailyCheckout に遷移 |
+
+### テスト項目（実機確認待ち）
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| J-1 | ⏸ | ホーム画面に月間カレンダーが表示される（年月・曜日・日付） |
+| J-2 | ⏸ | 来院がある日に ● 件数マークが表示される（isDeleted 除外） |
+| J-3 | ⏸ | 来院あり日をクリックで `?page=dailyCheckout&date=YYYY-MM-DD` に遷移 |
+| J-4 | ⏸ | dailyCheckout 側でその日の来院者・会計状況が表示される |
+| J-5 | ⏸ | 来院なし日は誤表示されない |
+| J-6 | ⏸ | スマホ幅でもカレンダーが崩れない（7列維持） |
+
+### 備考
+
+- サーバーサイドレンダリング（google.script.run 不使用）
+- 前月/翌月切替は次回候補（Phase 6-G 以降）
+- dailyCheckout 側に変更なし（date パラメータ受け取りは既存実装で対応済み）
 
 ---
 

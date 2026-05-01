@@ -152,8 +152,18 @@ function buildPage_(page, idParam, q, vkParam, dateParam) {
       }
 
       case "home": {
+        var nowHome   = new Date();
+        var tz        = "Asia/Tokyo";
+        var calYear   = parseInt(Utilities.formatDate(nowHome, tz, "yyyy"), 10);
+        var calMonth  = parseInt(Utilities.formatDate(nowHome, tz, "MM"),   10);
+        var todayStr  = Utilities.formatDate(nowHome, tz, "yyyy-MM-dd");
+        var calData   = getMonthlyVisitCalendar(calYear, calMonth);
         var th = HtmlService.createTemplateFromFile("home");
-        th.appUrl = appUrl;
+        th.appUrl    = appUrl;
+        th.calYear   = calYear;
+        th.calMonth  = calMonth;
+        th.today     = todayStr;
+        th.calDays   = calData.days;
         return evalTemplate_(th);
       }
 

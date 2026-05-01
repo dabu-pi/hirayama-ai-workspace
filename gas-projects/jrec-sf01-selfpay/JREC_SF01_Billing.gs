@@ -1198,3 +1198,58 @@ function getDailyCheckoutList(dateStr) {
     return { ok: false, error: m, date: dateStr || "", list: [] };
   }
 }
+
+// ============================================================
+// PUBLIC — 月間来院カレンダー集計（Phase 6-F）
+// ============================================================
+
+/**
+ * 指定年月の SelfPayVisits を日付ごとに集計して返す。
+ * isDeleted=TRUE の来院は除外する。
+ *
+ * @param {number} year  例: 2026
+ * @param {number} month 例: 5
+ * @returns {{
+ *   ok: boolean,
+ *   year: number, month: number,
+ *   days: Object.<string, {visitCount:number, hasVisit:boolean}>,
+ *   error?: string
+ * }}
+ */
+function getMonthlyVisitCalendar(year, month) {
+  Logger.log("[getMonthlyVisitCalendar] year=" + year + " month=" + month);
+  try {
+    var ss      = getTargetSpreadsheet_();
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    var data    = visitSh.getDataRange().getValues();
+    var tz      = "Asia/Tokyo";
+
+    var monthStr = year + "-" + ("0" + month).slice(-2); // "2026-05"
+    var days = {};
+
+    for (var i = 1; i < data.length; i++) {
+      var r = data[i];
+      if (!r[0]) continue;
+
+      var isDeleted = r[11] === true || r[11] === "TRUE";
+      if (isDeleted) continue;
+
+      var visitDate = "";
+      if (r[2]) {
+        try { visitDate = Utilities.formatDate(new Date(r[2]), tz, "yyyy-MM-dd"); } catch(e) {}
+      }
+      if (!visitDate || visitDate.slice(0, 7) !== monthStr) continue;
+
+      if (!days[visitDate]) days[visitDate] = { visitCount: 0, hasVisit: false };
+      days[visitDate].visitCount++;
+      days[visitDate].hasVisit = true;
+    }
+
+    Logger.log("[getMonthlyVisitCalendar] days with visits=" + Object.keys(days).length);
+    return { ok: true, year: year, month: month, days: days };
+  } catch (err) {
+    var m = err && err.message ? err.message : String(err);
+    Logger.log("[getMonthlyVisitCalendar] ERROR: " + m);
+    return { ok: false, error: m, year: year, month: month, days: {} };
+  }
+}
