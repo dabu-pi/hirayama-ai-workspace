@@ -93,6 +93,26 @@ Phase 6-G〜6-N ロードマップ:
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
 ```
 
+### H1 UI視認性修正（2026-05-02）
+
+**不具合:** 患者名ボタンに `.btn-ghost`（`color:#fff`）が残存。白/淡色背景の行で患者名が白文字となり読めない。
+
+**修正:** `btn-ghost` クラスを除去し `color:#202124; background:transparent;` をインラインで指定。
+- 対象: `daily-checkout.html` 患者名 `<button>` 1箇所
+- `.visit-key`（visitKey 補足）は `color:#c5c7c9` で補足情報として視認性許容範囲。変更なし。
+- 集計カード・金額・会計ロジックに変更なし。
+
+**修正後確認項目:**
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| H1-FIX-1 | ⏳ | 未収行の患者名が読める |
+| H1-FIX-2 | ⏳ | 入金済・領収書未発行行の患者名が読める |
+| H1-FIX-3 | ⏳ | visitKey 等の補足情報も必要最低限読める |
+| H1-FIX-4 | ⏳ | 集計カードの表示・金額・件数に変化なし |
+| H1-FIX-5 | ⏳ | 会計入力・回収/領収書・領収書発行ボタンに変化なし |
+| H1-FIX-6 | ⏳ | スマホ表示でも患者名が読める |
+
 ---
 
 ## ノートPC再開手順（2026-05-01 デスクトップ作業終了時点）
