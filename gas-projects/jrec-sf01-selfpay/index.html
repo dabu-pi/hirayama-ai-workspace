@@ -1,29 +1,41 @@
 <!-- ============================================================
      index.html — 共通ナビゲーションヘッダー
      使い方: <?!= include('index') ?> で各ページに埋め込む
-     APP_URL は呼び出し元ページで window.APP_URL として定義する
+     APP_URL / CURRENT_PAGE は呼び出し元ページの <head> で定義する
      ============================================================ -->
 <header class="app-header">
   <div>
     <h1>JREC-SF01 自費カルテ・会計</h1>
     <div class="subtitle">平山接骨院</div>
   </div>
-  <nav>
-    <button type="button" class="btn btn-ghost"
-      onclick="window.top.location.href = (typeof APP_URL !== 'undefined' ? APP_URL : '/')">
-      ホーム
-    </button>
-    <button type="button" class="btn btn-ghost"
-      onclick="window.top.location.href = (typeof APP_URL !== 'undefined' ? APP_URL : '/') + '?page=dailyCheckout'">
-      本日の受付・会計
-    </button>
-    <button type="button" class="btn btn-ghost"
-      onclick="window.top.location.href = (typeof APP_URL !== 'undefined' ? APP_URL : '/') + '?page=list'">
-      患者一覧
-    </button>
-    <button type="button" class="btn" style="background:#fff;color:#1a73e8;margin-left:8px;"
-      onclick="window.top.location.href = (typeof APP_URL !== 'undefined' ? APP_URL : '/') + '?page=newPatient'">
-      ＋ 新規患者登録
-    </button>
-  </nav>
 </header>
+<nav class="tab-nav" id="tab-nav">
+  <button type="button" class="tab-btn" data-page="home"
+    onclick="window.top.location.href=(typeof APP_URL!=='undefined'?APP_URL:'/')">
+    ホーム
+  </button>
+  <button type="button" class="tab-btn" data-page="dailyCheckout"
+    onclick="window.top.location.href=(typeof APP_URL!=='undefined'?APP_URL:'/')+'?page=dailyCheckout'">
+    本日の受付・会計
+  </button>
+  <button type="button" class="tab-btn" data-page="list"
+    onclick="window.top.location.href=(typeof APP_URL!=='undefined'?APP_URL:'/')+'?page=list'">
+    患者一覧
+  </button>
+  <button type="button" class="tab-btn" data-page="newPatient"
+    onclick="window.top.location.href=(typeof APP_URL!=='undefined'?APP_URL:'/')+'?page=newPatient'">
+    ＋ 新規患者登録
+  </button>
+</nav>
+<script>
+(function() {
+  var cp = (typeof CURRENT_PAGE !== 'undefined') ? CURRENT_PAGE : '';
+  if (!cp) return;
+  var btns = document.querySelectorAll('#tab-nav .tab-btn');
+  for (var i = 0; i < btns.length; i++) {
+    if (btns[i].getAttribute('data-page') === cp) {
+      btns[i].classList.add('tab-active');
+    }
+  }
+})();
+</script>

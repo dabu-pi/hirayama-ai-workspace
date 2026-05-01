@@ -13,14 +13,35 @@
     background: #1a73e8;
     color: #fff;
     padding: 12px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
   }
   .app-header h1 { font-size: 17px; font-weight: 600; }
   .app-header .subtitle { font-size: 12px; opacity: 0.8; margin-top: 2px; }
-  .app-header nav { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+  /* ── Tab Navigation ── */
+  .tab-nav {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 0 0 auto;
+    padding: 11px 16px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #5f6368;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s, background 0.12s;
+  }
+  .tab-btn:hover { color: #1a73e8; background: #f8f9fa; }
+  .tab-btn.tab-active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 700; }
 
   /* ── Container ── */
   .container { max-width: 980px; margin: 0 auto; padding: 20px 16px; }
@@ -202,5 +223,6 @@
     th, td { padding: 8px 8px; font-size: 12px; }
     .form-row { flex-direction: column; }
     .form-row .form-group { min-width: unset; }
+    .tab-btn { padding: 10px 12px; font-size: 12px; }
   }
 </style>

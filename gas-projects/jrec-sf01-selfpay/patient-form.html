@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <? var _isEdit = (mode === 'edit'); ?>
   <title><?= _isEdit ? '患者情報編集' : '新規患者登録' ?> — JREC-SF01</title>
-  <script>var APP_URL = "<?= appUrl ?>";</script>
+  <script>var APP_URL = "<?= appUrl ?>"; var CURRENT_PAGE = "<?= currentPage ?>";</script>
   <?!= include('styles') ?>
 </head>
 <body>

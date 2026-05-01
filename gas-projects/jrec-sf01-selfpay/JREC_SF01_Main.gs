@@ -40,9 +40,10 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
 
       case "newPatient": {
         var t = HtmlService.createTemplateFromFile("patient-form");
-        t.appUrl   = appUrl;
-        t.mode     = "new";
-        t.patient  = null;
+        t.appUrl       = appUrl;
+        t.mode         = "new";
+        t.patient      = null;
+        t.currentPage  = "newPatient";
         return evalTemplate_(t);
       }
 
@@ -56,9 +57,10 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
           "患者 " + idParam + " が見つかりませんでした。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
         );
         var t = HtmlService.createTemplateFromFile("patient-form");
-        t.appUrl   = appUrl;
-        t.mode     = "edit";
-        t.patient  = pte;
+        t.appUrl      = appUrl;
+        t.mode        = "edit";
+        t.patient     = pte;
+        t.currentPage = "";
         return evalTemplate_(t);
       }
 
@@ -73,9 +75,10 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
           "患者 " + idParam + " が見つかりませんでした。<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
         );
         var t = HtmlService.createTemplateFromFile("visit-form");
-        t.appUrl    = appUrl;
-        t.patient   = ptv;
-        t.editVisit = null;
+        t.appUrl      = appUrl;
+        t.patient     = ptv;
+        t.editVisit   = null;
+        t.currentPage = "";
         if (vkParam) {
           var evData = getVisitFormData(idParam, vkParam);
           if (!evData.ok) {
@@ -104,6 +107,7 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
         t.timeline        = fullTl.timeline;
         t.deletedTimeline = fullTl.deletedTimeline;
         t.accounting      = getPatientAccountingData(idParam);
+        t.currentPage     = "";
         return evalTemplate_(t);
       }
 
@@ -124,10 +128,11 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
           "　<a href=\"" + appUrl + "?page=detail&id=" + bd.visit.patientId + "\">患者詳細へ戻る</a>"
         );
         var t = HtmlService.createTemplateFromFile("billing-form");
-        t.appUrl  = appUrl;
-        t.visit   = bd.visit;
-        t.patient = bd.patient;
-        t.menus   = getActiveMenus();
+        t.appUrl      = appUrl;
+        t.visit       = bd.visit;
+        t.patient     = bd.patient;
+        t.menus       = getActiveMenus();
+        t.currentPage = "";
         return evalTemplate_(t);
       }
 
@@ -143,13 +148,14 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
           "<br><a href=\"" + appUrl + "\">一覧に戻る</a>"
         );
         var t = HtmlService.createTemplateFromFile("receipt");
-        t.appUrl     = appUrl;
-        t.visit      = rd.visit;
-        t.patient    = rd.patient;
-        t.items      = rd.items;
-        t.payment    = rd.payment;
-        t.receipt    = rd.receipt;      // null = 未発行
-        t.clinicName = rd.clinicName;
+        t.appUrl      = appUrl;
+        t.visit       = rd.visit;
+        t.patient     = rd.patient;
+        t.items       = rd.items;
+        t.payment     = rd.payment;
+        t.receipt     = rd.receipt;      // null = 未発行
+        t.clinicName  = rd.clinicName;
+        t.currentPage = "";
         return evalTemplate_(t);
       }
 
@@ -167,11 +173,12 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
 
         var calData  = getMonthlyVisitCalendar(calYear, calMonth);
         var th = HtmlService.createTemplateFromFile("home");
-        th.appUrl    = appUrl;
-        th.calYear   = calYear;
-        th.calMonth  = calMonth;
-        th.today     = todayStr;
-        th.calDays   = calData.days;
+        th.appUrl       = appUrl;
+        th.calYear      = calYear;
+        th.calMonth     = calMonth;
+        th.today        = todayStr;
+        th.calDays      = calData.days;
+        th.currentPage  = "home";
         return evalTemplate_(th);
       }
 
@@ -185,6 +192,7 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
         tco.today         = today;
         tco.checkoutList  = coData.list;
         tco.checkoutError = coData.error || null;
+        tco.currentPage   = "dailyCheckout";
         return evalTemplate_(tco);
       }
 
@@ -197,15 +205,17 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
           p.unbilledCount = s.unbilledCount;
         });
         var tl = HtmlService.createTemplateFromFile("patient-list");
-        tl.appUrl    = appUrl;
-        tl.patients  = pts;
-        tl.query     = q;
+        tl.appUrl       = appUrl;
+        tl.patients     = pts;
+        tl.query        = q;
+        tl.currentPage  = "list";
         return evalTemplate_(tl);
       }
 
       default: {
         var td = HtmlService.createTemplateFromFile("home");
-        td.appUrl = appUrl;
+        td.appUrl      = appUrl;
+        td.currentPage = "home";
         return evalTemplate_(td);
       }
     }
