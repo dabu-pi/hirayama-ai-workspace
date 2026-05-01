@@ -4,7 +4,7 @@ import type { AdminProgramDetail } from "@/lib/admin/program-detail";
 import { formatProgramTagLabel } from "@/lib/workout/format-labels";
 import { WeekLabelEditor } from "./WeekLabelEditor";
 import { DayInfoEditor } from "./DayInfoEditor";
-import { ExerciseParamEditor } from "./ExerciseParamEditor";
+import { ExerciseList } from "./ExerciseList";
 import styles from "./AdminProgramDetailScreen.module.css";
 
 type Props = {
@@ -212,21 +212,10 @@ export function AdminProgramDetailScreen({ program }: Props) {
                         {day.exercises.length === 0 ? (
                           <p className={styles.emptyExercises}>種目がまだ登録されていません。</p>
                         ) : (
-                          <div className={styles.exerciseList}>
-                            {day.exercises.map((ex) => (
-                              <ExerciseParamEditor
-                                key={ex.id}
-                                exerciseId={ex.id}
-                                programId={program.id}
-                                orderIndex={ex.orderIndex}
-                                initialExerciseType={ex.exerciseType}
-                                initialSetCount={ex.setCount}
-                                initialTargetRepsText={ex.targetRepsText}
-                                exerciseNameJa={ex.exerciseNameJa}
-                                exerciseNameEn={ex.exerciseNameEn}
-                              />
-                            ))}
-                          </div>
+                          <ExerciseList
+                            programId={program.id}
+                            initialExercises={day.exercises}
+                          />
                         )}
                       </div>
                     ))}

@@ -1,8 +1,63 @@
 # PROJECT_STATUS
 
-## 2026-05-01 Phase 3-B / A-2c — Admin 種目パラメータ編集
+## 2026-05-01 Phase 3-B / A-2d — Admin 種目表示順変更
 
 ### STATUS: 実装済み — LIVE_CHECK 待ち (2026-05-01)
+
+### 実装内容
+
+`/admin/programs/[programId]` の各 Exercise 行に ↑/↓ ボタンを追加し、同じ Day 内で `order_index` を並び替えられるようにした。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `lib/admin/program-update.ts` | `swapExerciseOrder` Server Action 追加 |
+| `components/admin/ExerciseList.tsx` | 新規 Client Component（exercises 配列を state 管理 + ↑/↓ ボタン） |
+| `components/admin/ExerciseList.module.css` | 新規 CSS |
+| `components/admin/AdminProgramDetailScreen.tsx` | 直接 exercise 列挙 → `ExerciseList` に置き換え |
+
+### 動作仕様
+
+- 各 Exercise 行の右端に ↑ / ↓ ボタンを表示
+- 最上位の ↑ ボタン・最下位の ↓ ボタンは disabled
+- クリック → Server Action で DB の order_index を 3ステップでスワップ（unique constraint 耐性あり）
+- 成功後: ページリロードなしに ExerciseList の state を更新して表示順を即時切り替え
+- スワップ中は全 ↑↓ ボタンを disabled（二重操作防止）
+- ExerciseParamEditor（A-2c）は変更なし。ExerciseList がラップして ↑/↓ を付与
+
+### server-side guard
+
+- `requireAdminUserId()` で admin 権限確認
+- 両 exercise の `program_day_id` が一致することを確認（異 Day 間のスワップ防止）
+- day → week → program の 3ステップで programId 帰属確認
+- 3ステップ swap: A→temp(999999)→ B位置, B→A位置, A→B位置（unique constraint 安全）
+
+### typecheck / build
+
+- `npm run typecheck`: PASS
+- `npm run build`: PASS（/admin/programs/[programId] Dynamic ビルド確認済み）
+
+### LIVE_CHECK 確認手順（次回再開時）
+
+1. Admin ログイン後、`/admin/programs/[プログラムID]` へ
+2. Day に複数 Exercise がある場合、↑/↓ ボタンが各行右端に表示されること
+3. 最上位行の ↑ ボタンが disabled であること
+4. 最下位行の ↓ ボタンが disabled であること
+5. ↑ または ↓ クリック → ページリロードなしに表示順が切り替わること
+6. 再読み込み後も並び替え後の順序が保たれること
+7. ExerciseParamEditor（A-2c）の編集機能が崩れていないこと（回帰確認）
+8. Week label 編集（A-2a）/ Day 情報編集（A-2b）回帰確認
+
+### commit
+
+（次のコミットで記録）
+
+---
+
+## 2026-05-01 Phase 3-B / A-2c — Admin 種目パラメータ編集
+
+### STATUS: ✅ LIVE_CHECK PASS — CLOSED (2026-05-01)
 
 ### 実装内容
 

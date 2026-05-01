@@ -358,3 +358,95 @@ export async function updateExerciseParams(
 
   return { ok: true };
 }
+
+// ── Exercise order swap ──────────────────────────────────────────
+
+export type SwapExerciseOrderResult = {
+  ok: boolean;
+  error?: string;
+};
+
+/**
+ * Swaps order_index between two exercises in the same Day.
+ * Uses a 3-step swap via a large temporary index (999999) to remain safe
+ * even when a unique constraint exists on (program_day_id, order_index).
+ * Verifies both exercises belong to the same day and to the given program.
+ */
+export async function swapExerciseOrder(
+  exerciseIdA: string,
+  exerciseIdB: string,
+  programId: string
+): Promise<SwapExerciseOrderResult> {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) return { ok: false, error: "forbidden" };
+
+  const admin = createSupabaseAdminClient();
+
+  // Fetch both exercises in parallel
+  const [{ data: exA }, { data: exB }] = await Promise.all([
+    admin
+      .from("program_day_exercises")
+      .select("id, program_day_id, order_index")
+      .eq("id", exerciseIdA)
+      .maybeSingle<{ id: string; program_day_id: string; order_index: number }>(),
+    admin
+      .from("program_day_exercises")
+      .select("id, program_day_id, order_index")
+      .eq("id", exerciseIdB)
+      .maybeSingle<{ id: string; program_day_id: string; order_index: number }>(),
+  ]);
+
+  if (!exA || !exB) return { ok: false, error: "exercise_not_found" };
+  if (exA.program_day_id !== exB.program_day_id) {
+    return { ok: false, error: "different_day" };
+  }
+
+  // Verify day → week → program
+  const { data: day } = await admin
+    .from("program_days")
+    .select("program_week_id")
+    .eq("id", exA.program_day_id)
+    .maybeSingle<{ program_week_id: string }>();
+
+  if (!day) return { ok: false, error: "exercise_not_found" };
+
+  const { data: week } = await admin
+    .from("program_weeks")
+    .select("id")
+    .eq("id", day.program_week_id)
+    .eq("program_id", programId)
+    .maybeSingle<{ id: string }>();
+
+  if (!week) return { ok: false, error: "exercise_not_found" };
+
+  // 3-step swap to handle potential unique constraint on (program_day_id, order_index)
+  const TEMP_INDEX = 999999;
+
+  const { error: e1 } = await admin
+    .from("program_day_exercises")
+    .update({ order_index: TEMP_INDEX })
+    .eq("id", exerciseIdA);
+  if (e1) return { ok: false, error: e1.message };
+
+  const { error: e2 } = await admin
+    .from("program_day_exercises")
+    .update({ order_index: exA.order_index })
+    .eq("id", exerciseIdB);
+  if (e2) {
+    await admin
+      .from("program_day_exercises")
+      .update({ order_index: exA.order_index })
+      .eq("id", exerciseIdA);
+    return { ok: false, error: e2.message };
+  }
+
+  const { error: e3 } = await admin
+    .from("program_day_exercises")
+    .update({ order_index: exB.order_index })
+    .eq("id", exerciseIdA);
+  if (e3) return { ok: false, error: e3.message };
+
+  revalidatePath(`/admin/programs/${programId}`);
+
+  return { ok: true };
+}
