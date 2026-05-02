@@ -8,31 +8,39 @@ versioned deployment: 未実施（HEAD /dev 確認後に @36 として実施）
 
 LC-2 PASS: 2026-05-02（smoke 16 passed / auth.json CDP 方式で取得済み）
 LC-3 実装: 2026-05-02（ai1.spec.ts 作成。実行: npm run test:jrec:ai1）
-LC-3 修正: 2026-05-02（frameLocator廃止 → page.locator() + AI1-4 SKIP条件追加）
+LC-3 修正: 2026-05-03（2段 frameLocator gasAppFrame ヘルパーに統一）
+LC-3 PASS: 2026-05-03（auth 再取得後 → 4 passed / 6 skipped / 0 failed）
 
 HEAD /dev URL:
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
 
 ---
 
-## 現在の実行結果（2026-05-02 時点・作業中断）
+## 確定した実行結果（2026-05-03 auth 再取得後）
 
 ```
 npm run test:jrec:ai1
-9 tests
-1 passed  (AI1-7: dailyCheckout #dateForm)
-4 failed  (AI1-1a/b/c, AI1-7旧体制の残存影響)
-4 skipped (AI1-3, AI1-4a/b, AI1-8/9 参照)
+10 tests
+4 passed
+6 skipped
+0 failed
 ```
 
-**失敗原因の切り分け状況:**
+**PASS:**
+- AI1-1a: newPatient — #occupation 入力欄が存在する
+- AI1-1b: newPatient — #medicalHistory 入力欄が存在する
+- AI1-1c: newPatient — 「AI補助判定用情報」セクションタイトルが存在する
+- AI1-7:  dailyCheckout — 日付フォーム(#dateForm)が描画される
 
-| 原因候補 | 状態 |
-|---|---|
-| frameLocator 誤用 | ✅ 修正済み（page.locator() に変更）|
-| visitForm patientId 必須 | ✅ 修正済み（AI1-4 は SKIP に変更） |
-| clasp push 未反映 | 不明（commit 記録では実施済みだが要確認） |
-| page.locator() での再実行結果 | ⏸ **未実行（作業中断）** |
+**SKIP（想定通り）:**
+- AI1-3:  patientIdForVisitForm 未設定（手動確認または config 設定で自動化可）
+- AI1-4a: patientIdForVisitForm 未設定
+- AI1-4b: patientIdForVisitForm 未設定
+- AI1-7ボタン: カルテ保存後に出現のため手動確認推奨
+- AI1-8:  smoke.spec.ts で確認済み（参照 SKIP）
+- AI1-9:  smoke.spec.ts で確認済み（参照 SKIP）
+
+**→ LC-3 自動化対象は全て PASS。visitForm 系は patientId 未設定による想定 SKIP。**
 
 **iframe 構造の確定知見（2026-05-03 error-context.md スナップショットより）:**
 
@@ -55,29 +63,19 @@ function gasAppFrame(page: Page) {
 }
 ```
 
-**次回再開時の最初にやること（auth 再取得が必要）:**
+**次回再開時の任意タスク:**
 
-2026-05-03 実行結果: smoke 16 SKIPPED / ai1 10 SKIPPED
-→ auth.json の Google セッションが失効している（cookie 期限とは別）
+- AI1-3/AI1-4 を自動化する場合: `config.json` の `testData.patientIdForVisitForm` に実在する患者IDを設定して再実行
+- versioned deployment @36: HEAD /dev 確認が全 PASS のため、任意のタイミングで実施可能
+- auth.json の有効期限は 1〜2 週間。期限切れの場合は `npm run save-auth` で再取得
 
-auth 再取得手順:
+auth 再取得手順（期限切れ時）:
 ```powershell
-# 1. Chrome を専用プロファイルで起動
 $dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
 Start-Process "chrome" @("--remote-debugging-port=9222", "--user-data-dir=$dir") -PassThru
-
-# 2. Chrome で Google にログイン → JREC /dev を開いて権限確認
-# 3. 別ターミナルで auth.json を保存（Chrome は閉じない）
+# Chrome で Google ログイン → JREC /dev を開く
 npm run save-auth
-
-# 4. smoke + ai1 両方を実行して PASS を確認
-npm run test:jrec:smoke
-npm run test:jrec:ai1
 ```
-
-期待結果（auth 有効時）:
-- smoke: 16 PASS
-- ai1: AI1-1a/b/c + AI1-7(dateForm) = 4 PASS、AI1-3/4a/4b/7ボタン/8/9 = 6 SKIP
 
 ---
 

@@ -34,11 +34,12 @@
 **✅ Versioned Deployment @35: 本番反映済み**（2026-05-02 Phase 6-L 含む）
 
 **✅ Phase AI-0 AI補助判定 設計調査: CLOSED**（2026-05-02 コード実装なし・設計書のみ）
-**🔄 Phase AI-1 患者マスター・カルテ項目追加: LC-3 ai1.spec.ts 初回実行済み・selector修正中**（2026-05-02/03）
-  - LC-2 smoke: ✅ 16 PASS（auth.json CDP 方式・認証済み）
-  - LC-3 ai1.spec.ts 初回実行: 1 passed / 4 failed / 4 skipped
-  - 失敗原因: GAS /dev の2段 iframe 構造に対する selector が不正確（要修正）
-  - 詳細: `tools/live-check-runner/docs/GAS_LIVE_CHECK_NOTES.md`
+**✅ Phase AI-1 患者マスター・カルテ項目追加: HEAD /dev LiveCheck PASS**（2026-05-03）
+  - LC-2 smoke: ✅ 16 PASS
+  - LC-3 ai1.spec.ts: ✅ 4 passed / 6 skipped（想定） / 0 failed
+  - PASS 項目: AI1-1a/b/c（#occupation, #medicalHistory, セクションタイトル）, AI1-7（#dateForm）
+  - SKIP 項目: AI1-3/AI1-4（patientId未設定）, AI1-7ボタン（手動確認推奨）, AI1-8/9（smoke参照）
+  - versioned deployment @36: 任意タイミングで実施可能（HEAD確認済み）
 
 次期実装候補:
 1. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
@@ -52,7 +53,7 @@
 
 AI補助判定ロードマップ（Phase AI 系列）:
 - AI-0: 設計調査 ✅ CLOSED（2026-05-02 コード実装なし）
-- AI-1: 患者マスター・カルテ項目追加 🔄 clasp push 済み・HEAD確認待ち（2026-05-02）
+- AI-1: 患者マスター・カルテ項目追加 ✅ HEAD /dev LiveCheck PASS（2026-05-03）
 - AI-2: AI補助判定UI枠追加 ⏸
 - AI-3: OpenAI API連携 ⏸
 - AI-4: AI補助判定保存・レビュー ⏸
