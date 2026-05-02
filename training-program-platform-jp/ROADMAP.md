@@ -119,6 +119,28 @@ GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructu
 
 **推奨着手順序:** C-2（Admin 種目入れ替え）→ C-3（seed 更新）→ C-4 → C-5
 
+### Phase S: ユーザー設定・アカウント管理（2026-05-02 設計完了）
+
+> 設計ドキュメント:
+> - `docs/ACCOUNT_SETTINGS_ROADMAP.md` — ロードマップ・ログアウト設計
+> - `docs/ACCOUNT_DELETE_DESIGN.md` — アカウント削除設計メモ
+
+| ID | タスク | 概要 | 状態 |
+|---|---|---|---|
+| **S-1** | **設定画面の設計** | 現状調査・ログアウト設計・削除設計・フェーズ整理 | **✅ 設計完了 (2026-05-02)** |
+| **S-2** | **ログアウト機能実装** | `/profile` 下部にログアウトボタン追加。`signOut()` + `/login` 遷移 | **次に着手** |
+| S-3 | アカウント削除の詳細設計 | FK/CASCADE 確認・文言確定・DB スキーマ確認 | 未着手 |
+| S-4 | アカウント削除申請 UI 実装 | ユーザー側申請フォーム。管理者審査フローは既存 `/admin/account-deletion-requests` を活用 | 未着手（S-3 完了後） |
+
+**S-2 実装スコープ（最小）:**
+- `components/profile/ProfileScreen.tsx` にログアウトセクション追加
+- `createSupabaseBrowserClient().auth.signOut()` → `window.location.href = "/login"`
+- DB変更なし・新規ルートなし
+
+**アカウント削除 ≠ ジム退会（必須前提）:**
+アカウント削除してもジムの会員契約・会費・休会・退会手続きは完了しない。
+ユーザー画面に確認文言を必ず表示する。
+
 ### Phase 4: 会員管理強化
 
 | ID | タスク | 概要 |
