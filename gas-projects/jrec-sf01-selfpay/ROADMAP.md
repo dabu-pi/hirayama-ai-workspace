@@ -1,6 +1,6 @@
 # JREC-SF01 自費カルテ・会計システム — ロードマップ
 
-最終更新: 2026-05-02（Phase 6-J 実装・HEAD実機確認待ち）
+最終更新: 2026-05-02（Phase 6-J CLOSED @33）
 
 ---
 
@@ -8,7 +8,8 @@
 
 | デプロイ | 内容 |
 |---|---|
-| @32 | Phase 6-I 集計メニュー / reports ページ 含む（**最新本番** `AKfycbx67In4...gnw`） |
+| @33 | Phase 6-J 月別売上集計 / monthlyReport ページ 含む（**最新本番** `AKfycbwKgRxP...Hag`） |
+| @32 | Phase 6-I 集計メニュー / reports ページ 含む |
 | @31 | Phase 6-H dailyCheckout 日別金額合計カード 含む |
 | @30 | Phase 6-N-1 共通タブナビゲーション 含む |
 | @29 | Phase 6-G-1 カレンダー月移動ナビ 含む |
@@ -44,6 +45,7 @@
 | Phase 6-N-1 | 共通タブナビゲーション | ✅ 2026-05-02 |
 | Phase 6-H | dailyCheckout 日別金額合計カード | ✅ 2026-05-02 |
 | Phase 6-I | 集計メニュー / reports ページ新設 | ✅ 2026-05-02 |
+| Phase 6-J | 月別売上集計 / monthlyReport ページ | ✅ 2026-05-02 |
 
 > Phase 6-C（来院完全削除）は保留中。集計系フェーズ後に判断。
 
@@ -99,7 +101,7 @@
 
 ---
 
-### Phase 6-J: 月別売上集計 🔄（実装済み・HEAD実機確認待ち）
+### Phase 6-J: 月別売上集計 ✅（CLOSED 2026-05-02）
 
 **目的:** 月単位で売上・入金・未収を確認できるページを作る
 
@@ -119,11 +121,11 @@
 
 | タスク | 内容 |
 |---|---|
-| 6-J-1 | `getMonthlyRevenueSummary(year, month)` を `Billing.gs` に追加（visitDate ベース、DailySales 非依存） | 🔄 実機確認待ち |
-| 6-J-2 | 月間サマリーカード（来院件数・請求合計・入金合計・未収残高・件数内訳） | 🔄（含む） |
-| 6-J-3 | 日別内訳テーブル + dailyCheckout 日付リンク | 🔄（含む） |
-| 6-J-4 | 月別レポート画面（`?page=monthlyReport`）を新設。月移動ナビ（◀ 前月 / 今月 / 翌月 ▶） | 🔄（含む） |
-| 6-J-5 | reports.html の「月次売上レポート」カードを有効化（`?page=monthlyReport` リンクに更新） | 🔄（含む） |
+| 6-J-1 | `getMonthlyRevenueSummary(year, month)` を `Billing.gs` に追加（visitDate ベース、DailySales 非依存） | ✅ CLOSED 2026-05-02 @33 |
+| 6-J-2 | 月間サマリーカード（来院件数・請求合計・入金合計・未収残高・件数内訳） | ✅（含む） |
+| 6-J-3 | 日別内訳テーブル + dailyCheckout 日付リンク | ✅（含む） |
+| 6-J-4 | 月別レポート画面（`?page=monthlyReport`）を新設。月移動ナビ（◀ 前月 / 今月 / 翌月 ▶） | ✅（含む） |
+| 6-J-5 | reports.html の「月次売上レポート」カードを有効化（`?page=monthlyReport` リンクに更新） | ✅（含む） |
 
 **変更ファイル:** `JREC_SF01_Billing.gs` / `JREC_SF01_Main.gs` / `monthly-report.html`（新規）/ `reports.html`  
 **設計詳細:** `docs/PHASE_6J_MONTHLY_SALES_DESIGN_2026-05-02.md`
@@ -231,7 +233,7 @@
 2. ✅ Phase 6-N — 共通タブナビゲーション（完了 @30）
 3. ✅ Phase 6-H — dailyCheckout 日別金額合計カード（完了 @31）
 4. ✅ Phase 6-I — 集計導線ページ新設（完了 @32）
-5. Phase 6-J — 月別売上集計（経営分析の本体）
+5. ✅ Phase 6-J — 月別売上集計（完了 @33）
 6. Phase 6-K — メニュー別集計（施術分析）
 7. Phase 6-L — 未収・回収管理（財務リスク対応）
 8. Phase 6-M — CSV・印刷・監査（出力整備）
