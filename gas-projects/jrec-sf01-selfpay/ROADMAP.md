@@ -251,6 +251,121 @@
 
 ---
 
+## AI補助判定ロードマップ（Phase AI 系列）
+
+> Phase 6-M 等の既存ロードマップとは独立した系列。
+> 自費カルテへの AI補助判定機能追加を段階的に実装する計画。
+> 設計書: `docs/PHASE_AI_CHART_ASSIST_DESIGN_2026-05-02.md`
+
+---
+
+### Phase AI-0: 設計調査 ✅（CLOSED 2026-05-02）
+
+**目的:** 現状構造確認・影響範囲確認・設計書作成
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| AI-0-1 | 現状シート構造確認（Patients / SelfPayVisits / SelfPayChart） | ✅ |
+| AI-0-2 | 現状画面構造確認（visit-form.html / patient-form.html） | ✅ |
+| AI-0-3 | 追加候補項目の影響範囲分析 | ✅ |
+| AI-0-4 | AI入力・出力データ設計 | ✅ |
+| AI-0-5 | AI_Assessments 保存設計 | ✅ |
+| AI-0-6 | 実装ロードマップ作成 | ✅ |
+| AI-0-7 | 設計書作成 `docs/PHASE_AI_CHART_ASSIST_DESIGN_2026-05-02.md` | ✅ |
+
+**コード変更なし。clasp push なし。**
+
+---
+
+### Phase AI-1: 患者マスター・カルテ項目追加 ⏸
+
+**目的:** AI補助判定が活用する入力情報の基盤を整備する
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| AI-1-1 | JREC_SF01_Setup.gs: Patients ヘッダーに occupation / medicalHistory 追加 | ⏸ |
+| AI-1-2 | JREC_SF01_Patient.gs: `getPatientById` 読取列数を 13 へ拡張 | ⏸ |
+| AI-1-3 | JREC_SF01_Patient.gs: `createPatient` に occupation / medicalHistory 追加 | ⏸ |
+| AI-1-4 | JREC_SF01_Patient.gs: `updatePatient` に occupation / medicalHistory 更新処理追加 | ⏸ |
+| AI-1-5 | patient-form.html: 職業（select+その他）・既往歴（textarea）の入力欄追加 | ⏸ |
+| AI-1-6 | JREC_SF01_Setup.gs: SelfPayVisits ヘッダーに injuryTrigger / relatedHistoryNote 追加 | ⏸ |
+| AI-1-7 | JREC_SF01_Visit.gs: 読取列数を 16 へ拡張。戻り値に追加 | ⏸ |
+| AI-1-8 | JREC_SF01_Visit.gs: `createVisitWithChart` / `updateVisitWithChart` に追加 | ⏸ |
+| AI-1-9 | visit-form.html: 患者情報参照欄（年齢・性別・職業・患者マスター既往歴）追加 | ⏸ |
+| AI-1-10 | visit-form.html: 受傷起点・今回追記既往歴の入力欄追加 | ⏸ |
+| AI-1-11 | JREC_SF01_Main.gs: `t.patient` に occupation / medicalHistory が渡っているか確認 | ⏸ |
+
+**変更ファイル候補:** Setup.gs / Patient.gs / Visit.gs / Main.gs / patient-form.html / visit-form.html
+**既存会計・集計への影響:** なし
+
+---
+
+### Phase AI-2: AI補助判定UI枠追加 ⏸
+
+**目的:** visit-form.html にAI補助判定セクションを追加する（API連携なし）
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| AI-2-1 | visit-form.html: AI補助判定セクション追加（カルテ保存後に有効化） | ⏸ |
+| AI-2-2 | visit-form.html: カルテ保存前は AI ボタンを disabled 制御 | ⏸ |
+| AI-2-3 | visit-form.html: AI出力表示枠（summary / 問診不足 / 検査提案 / 赤旗 / 記録不足 / disclaimer） | ⏸ |
+| AI-2-4 | styles.html: AI補助判定セクション用スタイル追加 | ⏸ |
+
+**変更ファイル候補:** visit-form.html / styles.html
+
+---
+
+### Phase AI-3: OpenAI API連携 ⏸
+
+**目的:** カルテ入力内容と患者マスター情報をAIに送り、補助判定を取得する
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| AI-3-1 | JREC_SF01_Main.gs: `runAIAssessment(visitKey)` 関数追加 | ⏸ |
+| AI-3-2 | JREC_SF01_Main.gs: API Key は ScriptProperties から取得 | ⏸ |
+| AI-3-3 | JREC_SF01_Main.gs: 入力データ収集（visit + chart + patient 結合） | ⏸ |
+| AI-3-4 | JREC_SF01_Main.gs: 年齢層変換（dob → ageBand）・個人情報除去 | ⏸ |
+| AI-3-5 | JREC_SF01_Main.gs: UrlFetchApp で OpenAI Chat Completion API 呼び出し | ⏸ |
+| AI-3-6 | visit-form.html: `google.script.run.runAIAssessment(visitKey)` 呼び出し | ⏸ |
+| AI-3-7 | visit-form.html: AI出力を各セクションに表示する JS 実装 | ⏸ |
+
+**変更ファイル候補:** JREC_SF01_Main.gs / visit-form.html
+**API候補:** OpenAI gpt-4o-mini（初期推奨）/ gpt-4o / Claude API（要ユーザー確認）
+
+---
+
+### Phase AI-4: AI補助判定保存・レビュー ⏸
+
+**目的:** AI判定を AI_Assessments シートに保存し、先生がレビューできるようにする
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| AI-4-1 | JREC_SF01_Setup.gs: AI_Assessments シート新規追加 | ⏸ |
+| AI-4-2 | JREC_SF01_Main.gs: `saveAIAssessment(visitKey, inputSnapshot, aiOutput)` 追加 | ⏸ |
+| AI-4-3 | JREC_SF01_Main.gs: `getAIAssessmentsByVisitKey(visitKey)` 追加 | ⏸ |
+| AI-4-4 | visit-form.html: 「この判定を保存する」ボタン + reviewStatus select 追加 | ⏸ |
+| AI-4-5 | visit-form.html: adoptedMemo テキストエリア追加 | ⏸ |
+| AI-4-6 | visit-form.html: カルテ再編集時に過去のAI判定を表示 | ⏸ |
+
+**変更ファイル候補:** JREC_SF01_Setup.gs / JREC_SF01_Main.gs / visit-form.html
+**既存会計・集計への影響:** なし（AI_Assessments は独立した新規シート）
+
+---
+
+### Phase AI-5: 運用改善 ⏸
+
+**目的:** 実際の運用からのフィードバックでプロンプト・UIを改善する
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| AI-5-1 | 部位別プロンプト調整（肩・腰・膝・首・肘・足首） | ⏸ |
+| AI-5-2 | 年齢層・職業別注意点の強化 | ⏸ |
+| AI-5-3 | 赤旗チェックリスト精度向上 | ⏸ |
+| AI-5-4 | 過去カルテとの比較（同患者の前回AI判定との差分） | ⏸ |
+| AI-5-5 | 院内標準パッケージ化の検討 | ⏸ |
+
+---
+
 ## 保留フェーズ
 
 | フェーズ | 内容 | 保留理由 |
