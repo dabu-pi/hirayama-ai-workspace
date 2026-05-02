@@ -21,7 +21,8 @@
 **✅ Phase 6-H dailyCheckout 日別金額合計カード: CLOSED**（2026-05-02 H1-1〜H1-9 + H1-FIX-1〜6 全 PASS）
 **✅ Versioned Deployment @31: 本番反映済み**（2026-05-02 Phase 6-H 含む）
 
-**🔄 Phase 6-I 集計メニュー / 集計ページ新設: 実装済み・HEAD実機確認待ち**（2026-05-02）
+**✅ Phase 6-I 集計メニュー / 集計ページ新設: CLOSED**（2026-05-02 I1-1〜I1-8 全 PASS）
+**✅ Versioned Deployment @32: 本番反映済み**（2026-05-02 Phase 6-I 含む）
 
 次期実装候補:
 1. **Phase 6-J** 月別売上集計 ⏸
@@ -35,7 +36,7 @@ Phase 6-G〜6-N ロードマップ:
 - 6-G: カレンダー機能強化（前月/翌月切替）✅ CLOSED（2026-05-02）
 - 6-N: 共通タブナビゲーション整備 ✅ CLOSED（2026-05-02 @30）
 - 6-H: dailyCheckout 日別金額合計カード ✅ CLOSED（2026-05-02 @31）
-- 6-I: 集計メニュー / 集計ページ新設 🔄 実装済み・HEAD実機確認待ち
+- 6-I: 集計メニュー / 集計ページ新設 ✅ CLOSED（2026-05-02 @32）
 - 6-J: 月別売上集計 ⏸
 - 6-K: メニュー別集計 ⏸
 - 6-L: 未収・回収管理レポート ⏸
@@ -45,7 +46,7 @@ Phase 6-G〜6-N ロードマップ:
 
 ---
 
-## 🔄 Phase 6-I 集計メニュー / 集計ページ新設（2026-05-02 実機確認待ち）
+## ✅ Phase 6-I 集計メニュー / 集計ページ新設（2026-05-02 CLOSED）
 
 ### 実装内容
 
@@ -68,23 +69,30 @@ Phase 6-G〜6-N ロードマップ:
 理由: `.tab-nav` に `overflow-x: auto` があるためスマホでも横スクロール対応済み。
 既存4タブと同一パターンで実装し、`data-page="reports"` で active 表示に対応。
 
-### テスト項目（実機確認待ち）
+### テスト項目（実機確認結果）
+
+> Phase 6-J 以降への入口整備として完了。新規集計計算・DailySales/Run_Log 依存なし。
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| I1-1 | ⏳ | ホームに「売上・レポート」カードが表示される |
-| I1-2 | ⏳ | カードから `?page=reports` に移動できる |
-| I1-3 | ⏳ | reports ページに集計メニューが表示される（5カード） |
-| I1-4 | ⏳ | 日別売上確認から dailyCheckout に移動できる |
-| I1-5 | ⏳ | 未実装メニュー（月次/メニュー別/未収/CSV）が「Phase X-X 予定」と表示され操作不可 |
-| I1-6 | ⏳ | 共通タブナビに「売上・レポート」タブが表示され、reports ページで active になる |
-| I1-7 | ⏳ | スマホ幅でカード・タブが崩れない（タブは横スクロール） |
-| I1-8 | ⏳ | 既存ホーム・カレンダー・dailyCheckout・患者一覧が壊れていない |
+| I1-1 | ✅ PASS | ホームに「売上・レポート」カードが表示される |
+| I1-2 | ✅ PASS | カードから `?page=reports` に移動できる |
+| I1-3 | ✅ PASS | reports ページに集計メニューが表示される（5カード） |
+| I1-4 | ✅ PASS | 日別売上確認から dailyCheckout に移動できる |
+| I1-5 | ✅ PASS | 未実装メニュー（月次/メニュー別/未収/CSV）が「Phase X-X 予定」と表示され操作不可 |
+| I1-6 | ✅ PASS | 共通タブナビに「売上・レポート」タブが表示され、reports ページで active になる |
+| I1-7 | ✅ PASS | スマホ幅でカード・タブが崩れない（タブは横スクロール） |
+| I1-8 | ✅ PASS | 既存ホーム・カレンダー・dailyCheckout・患者一覧が壊れていない |
 
 ### HEAD 実機確認 URL
 
 ```
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
+```
+
+### 本番 URL（@32 / /exec）:
+```
+https://script.google.com/macros/s/AKfycbx67In4nZX24KHTteXFE8UxZmZuLWvyLY-vOb5zVkqL9GRBjCAqbsR_lKtnOBr7CAZgnw/exec
 ```
 
 ---
