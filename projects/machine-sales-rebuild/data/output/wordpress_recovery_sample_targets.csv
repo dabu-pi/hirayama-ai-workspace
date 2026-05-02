@@ -1,7 +1,0 @@
-sd_product_code,slug,product_url,selection_reason,expected_image_count_guess
-HYCY26924AT,hycy26924at,https://machine-group.net/products/hycy26924at/,png系かつ複数枚ありそうな代表サンプル,2
-HYNT23899AT,hynt23899at,https://machine-group.net/products/hynt23899at/,jpg系かつ複数枚ありそうな代表サンプル,2
-HYMX26923AT,hymx26923at,https://machine-group.net/products/hymx26923at/,png系の別コードサンプル,1
-HNOT24914AT,hnot24914at,https://machine-group.net/products/hnot24914at/,jpg系の別コードサンプル,1
-HYNT23900AT,hynt23900at,https://machine-group.net/products/hynt23900at/,同系列コードでの再現性確認,1
-HYOT23888AT,hyot23888at,https://machine-group.net/products/hyot23888at/,メーカーやカテゴリ差分を含む確認用,1

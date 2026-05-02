@@ -1,4 +1,0 @@
-sd_product_code,slug,image_status,list_view_expected,detail_view_expected,review_result,notes
-HYEL15009AT,hyel15009at,placeholder,画像準備中を表示し、通常画像は出さない,gallery を通常表示せず、画像準備中表示へ切り替える,ok,displayUrl は保持するが、フロントでは hasRealImage=false を優先して分岐する
-OOEL15011AT,ooel15011at,placeholder,画像準備中を表示し、通常画像は出さない,gallery を通常表示せず、画像準備中表示へ切り替える,ok,displayUrl は保持するが、フロントでは hasRealImage=false を優先して分岐する
-HYKT16087AT,hykt16087at,placeholder,画像準備中を表示し、通常画像は出さない,gallery を通常表示せず、画像準備中表示へ切り替える,ok,displayUrl は保持するが、フロントでは hasRealImage=false を優先して分岐する

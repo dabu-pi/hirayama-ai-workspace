@@ -1,3 +1,0 @@
-# Keep the local clasp config out of pushes.
-.clasp.json
-.claspignore
