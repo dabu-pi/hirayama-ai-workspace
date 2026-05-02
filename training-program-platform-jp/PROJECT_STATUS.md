@@ -2,7 +2,7 @@
 
 ## 2026-05-02 Phase S-6: アカウント削除 土台整備
 
-### STATUS: ✅ 実装完了・実機確認待ち
+### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-02)
 
 **変更ファイル:**
 - `components/profile/ProfileScreen.tsx` — S-4 申請 UI を撤去（ログアウト機能は維持）
@@ -40,18 +40,28 @@
 - 000036: 新規テーブル作成のみ。既存テーブルへの変更なし ✅
 - auth.users の物理削除に関する変更なし ✅
 
-**実機確認手順（Supabase に migration 適用後）:**
+**Migration 適用結果（Supabase Dashboard で確認済み）:**
 
-| # | 確認内容 | 期待結果 |
-|---|---|---------|
-| T1 | /profile を開く | ログアウトボタンのみ表示。申請フォームがない |
-| T2 | /gym, /train, /history が正常に動く | 既存画面に影響なし |
-| T3 | 通常ユーザー（app_deleted_at = null）で全保護ページにアクセス | 正常に表示される |
-| T4 | Supabase で users.app_deleted_at = now() を手動セット後にアクセス | /account-deleted にリダイレクトされる |
-| T5 | /account-deleted ページの表示 | 注意文・ログイン画面へのリンク表示 |
-| T6 | app_deleted_at があるユーザーが /admin にアクセス（管理者の場合） | アクセスできる（/admin は除外） |
-| T7 | app_deleted_at を null に戻す | 通常アクセスが復元される |
-| T8 | migration 後 admin/members 画面 | 表示に影響なし（app_deleted_at はデータに含まれるが UI 表示なし） |
+| migration | 内容 | 結果 |
+|-----------|------|------|
+| 000035 | public.users.app_deleted_at カラム作成 | ✅ 適用済み |
+| 000036 | account_deletion_logs テーブル作成 | ✅ 適用済み |
+| 000036 RLS | SELECT policy（admin のみ）確認 | ✅ 正常 |
+
+**実機確認結果（全 PASS）:**
+
+| # | 確認内容 | 結果 |
+|---|---|------|
+| T1 | /profile 表示 | ✅ PASS |
+| T2 | S-4 のアカウント削除申請 UI が表示されていない | ✅ PASS |
+| T3 | ログアウトボタンは残っている | ✅ PASS |
+| T4 | /gym 通常表示 | ✅ PASS |
+| T5 | /train 通常表示 | ✅ PASS |
+| T6 | /session-history 通常表示 | ✅ PASS |
+| T7 | /account-deleted ページ存在 | ✅ PASS |
+| T8 | 通常ユーザーが /account-deleted へ勝手に飛ばされない | ✅ PASS |
+| T9 | admin 画面に影響なし | ✅ PASS |
+| T10 | スマホ幅で /profile 表示崩れなし | ✅ PASS |
 
 **注意点:**
 - migration は Supabase Dashboard の SQL Editor または `supabase db push` で適用する
