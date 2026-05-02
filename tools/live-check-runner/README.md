@@ -172,7 +172,8 @@ tools/live-check-runner/
 ├─ projects/
 │  ├─ jrec-sf01/
 │  │  ├─ config.json
-│  │  ├─ smoke.spec.ts
+│  │  ├─ smoke.spec.ts     ← LC-2 PASS 済み (16 passed)
+│  │  ├─ ai1.spec.ts       ← LC-3 実装済み・selector修正中
 │  │  └─ ai1.todo.md
 │  ├─ training-platform/
 │  │  ├─ config.json

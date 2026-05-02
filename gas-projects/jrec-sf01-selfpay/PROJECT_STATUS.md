@@ -34,7 +34,11 @@
 **✅ Versioned Deployment @35: 本番反映済み**（2026-05-02 Phase 6-L 含む）
 
 **✅ Phase AI-0 AI補助判定 設計調査: CLOSED**（2026-05-02 コード実装なし・設計書のみ）
-**🔄 Phase AI-1 患者マスター・カルテ項目追加: clasp push 済み・HEAD /dev 実機確認待ち**（2026-05-02）
+**🔄 Phase AI-1 患者マスター・カルテ項目追加: LC-3 ai1.spec.ts 初回実行済み・selector修正中**（2026-05-02/03）
+  - LC-2 smoke: ✅ 16 PASS（auth.json CDP 方式・認証済み）
+  - LC-3 ai1.spec.ts 初回実行: 1 passed / 4 failed / 4 skipped
+  - 失敗原因: GAS /dev の2段 iframe 構造に対する selector が不正確（要修正）
+  - 詳細: `tools/live-check-runner/docs/GAS_LIVE_CHECK_NOTES.md`
 
 次期実装候補:
 1. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸

@@ -34,21 +34,31 @@ npm run test:jrec:ai1
 | clasp push 未反映 | 不明（commit 記録では実施済みだが要確認） |
 | page.locator() での再実行結果 | ⏸ **未実行（作業中断）** |
 
-**次回再開時の最初にやること:**
-```powershell
-cd C:\hirayama-ai-workspace\workspace\tools\live-check-runner
-npm run test:jrec:ai1
+**iframe 構造の確定知見（2026-05-03 error-context.md スナップショットより）:**
+
+GAS /dev は 2段入れ子 iframe 構造:
+```
+page (top)
+└─ iframe (outer)          ← frameLocator('iframe').first()
+   └─ iframe (inner)       ← .frameLocator('iframe').first()
+      └─ GAS コンテンツ（#occupation 等はここ）
 ```
 
-期待結果:
-- AI1-1a/b/c: PASS（#occupation, #medicalHistory, AI補助判定用情報）
-- AI1-3/AI1-4: SKIP（patientIdForVisitForm 未設定のため）
-- AI1-7: PASS（#dateForm）
-- AI1-8/9: SKIP（smoke.spec.ts 参照）
+- `page.locator('#occupation')` → ❌ フレームを越えられない
+- `frameLocator('iframe[src*="googleusercontent"]').first()` → ❌ 外側 iframe（内側にアクセスできない）
+- 正しい候補: `page.frameLocator('iframe').first().frameLocator('iframe').first().locator('#occupation')`
 
-それでも AI1-1 が FAIL する場合:
-→ clasp push が Phase AI-1 後に反映されていない可能性
-→ `cd gas-projects/jrec-sf01-selfpay && clasp push` を実行して再テスト
+**次回再開時の最初にやること:**
+
+1. ai1.spec.ts の frameLocator を 2段構造に修正する
+2. `npm run test:jrec:ai1` を実行して AI1-1 PASS を確認
+3. AI1-4 も patientId 付きで実行できれば確認する
+
+修正候補コード（ai1.spec.ts）:
+```typescript
+const gasFrame = page.frameLocator('iframe').first().frameLocator('iframe').first();
+await expect(gasFrame.locator('#occupation')).toBeVisible({ timeout: 25_000 });
+```
 
 ---
 
