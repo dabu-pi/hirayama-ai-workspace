@@ -44,7 +44,7 @@
 | 元パス | 退避先 | 理由 |
 |---|---|---|
 | `workspace/tmp/jrec-clasp-recover/` | `_archive_workspace_cleanup_20260502/tmp/jrec-clasp-recover/` | git-ignored、2026-03-19 の旧GASバックアップ（Ver3_core.js: 112KB。現在の gas-projects 版は 251KB でずっと新しい） |
-| `workspace/ai-invest/` | `_archive_workspace_cleanup_20260502/ai-invest/` | 【**方針変更 2026-05-02**】一度退避したが、オーナーが「今後使用予定あり・KEEP」と判断。**現在は archive に物理ファイルあり・workspace には存在しない状態。要復元。** 復元手順: `_archive_workspace_cleanup_20260502/ai-invest/` → `workspace/ai-invest/` へ Move-Item 後、`git checkout HEAD -- ai-invest/` または `git add ai-invest/` でインデックスを復元する |
+| `workspace/ai-invest/` | ~~`_archive_workspace_cleanup_20260502/ai-invest/`~~ | 【**復元済み 2026-05-02**】一度退避したが方針変更。`workspace/ai-invest/` へ復元済み・git 追加済み（commit `a4cf696`）。archive 側は `ai-invest_restore_backup_20260502/` として backup のみ残る。AINV-07 KEEP。 |
 
 退避先: `C:\hirayama-ai-workspace\_archive_workspace_cleanup_20260502\`
 
@@ -75,14 +75,10 @@
 ### 2. CLAUDE.md の waste-report-system 記述の不整合 → **解決済み（2026-05-02）**
 - **対応済み:** CLAUDE.md §5 を「active_setup_pending（HAIKI-05）」に修正済み・commit 済み
 
-### 3. `ai-invest/` の扱い → **要フォルダー復元（未解決）**
-- **方針決定:** KEEP（オーナーが今後使用予定ありと判断）
-- **現在の物理状態:** `_archive_workspace_cleanup_20260502/ai-invest/` に存在。workspace には存在しない
-- **未対応:** フォルダーを workspace に戻す作業が必要（別途フォルダー移動セッションで実施）
-- **復元手順:**
-  1. `Move-Item "_archive_workspace_cleanup_20260502\ai-invest" "workspace\ai-invest"`
-  2. `cd workspace && git checkout HEAD -- ai-invest/` でインデックスを復元
-  3. `git add ai-invest/` + `git commit` で復元をコミット
+### 3. `ai-invest/` の扱い → **解決済み（2026-05-02）**
+- **方針:** KEEP（AINV-07）
+- **復元完了:** `workspace/ai-invest/` に Move-Item で復元・`git add` + commit `a4cf696`
+- **backup:** `_archive_workspace_cleanup_20260502/ai-invest_restore_backup_20260502/` に残存（手動削除可）
 
 ### 4. `msk-assessment-platform/` → **解決済み（2026-05-02）**
 - **判断:** KEEP・退避禁止（稼働中の実シート・GAS 連携あり）
