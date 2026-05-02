@@ -159,6 +159,13 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
         return evalTemplate_(t);
       }
 
+      case "reports": {
+        var tr = HtmlService.createTemplateFromFile("reports");
+        tr.appUrl      = appUrl;
+        tr.currentPage = "reports";
+        return evalTemplate_(tr);
+      }
+
       case "home": {
         var nowHome  = new Date();
         var tz       = "Asia/Tokyo";
