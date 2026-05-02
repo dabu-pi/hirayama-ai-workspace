@@ -189,6 +189,29 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
         return evalTemplate_(tmr);
       }
 
+      case "menuSalesReport": {
+        var nowMS  = new Date();
+        var tzMS   = "Asia/Tokyo";
+        var nowMSY = parseInt(Utilities.formatDate(nowMS, tzMS, "yyyy"), 10);
+        var nowMSM = parseInt(Utilities.formatDate(nowMS, tzMS, "MM"),   10);
+
+        var _yp3 = parseInt(yearParam,  10);
+        var _mp3 = parseInt(monthParam, 10);
+        var msYear  = (_yp3 >= 2020 && _yp3 <= 2035) ? _yp3 : nowMSY;
+        var msMonth = (_mp3 >= 1    && _mp3 <= 12)   ? _mp3 : nowMSM;
+
+        var msData = getMenuSalesSummary(msYear, msMonth);
+        var tms = HtmlService.createTemplateFromFile("menu-sales-report");
+        tms.appUrl      = appUrl;
+        tms.currentPage = "reports";   // 売上・レポートタブを active に
+        tms.msYear      = msYear;
+        tms.msMonth     = msMonth;
+        tms.summary     = msData.summary || {};
+        tms.menus       = msData.menus   || [];
+        tms.msError     = msData.error   || null;
+        return evalTemplate_(tms);
+      }
+
       case "home": {
         var nowHome  = new Date();
         var tz       = "Asia/Tokyo";

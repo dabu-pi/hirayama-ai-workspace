@@ -27,8 +27,10 @@
 **✅ Phase 6-J 月別売上集計: CLOSED**（2026-05-02 J1-1〜J1-12 全 PASS）
 **✅ Versioned Deployment @33: 本番反映済み**（2026-05-02 Phase 6-J 含む）
 
+**🔄 Phase 6-K メニュー別売上分析: 実装済み・HEAD実機確認待ち**（2026-05-02）
+
 次期実装候補:
-1. **Phase 6-K** メニュー別売上分析 ⏸
+1. **Phase 6-L** 未収・回収管理レポート ⏸
 
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
@@ -41,11 +43,65 @@ Phase 6-G〜6-N ロードマップ:
 - 6-H: dailyCheckout 日別金額合計カード ✅ CLOSED（2026-05-02 @31）
 - 6-I: 集計メニュー / 集計ページ新設 ✅ CLOSED（2026-05-02 @32）
 - 6-J: 月別売上集計 ✅ CLOSED（2026-05-02 @33）
-- 6-K: メニュー別集計 ⏸
+- 6-K: メニュー別売上分析 🔄 実装済み・HEAD実機確認待ち
 - 6-L: 未収・回収管理レポート ⏸
 - 6-M: CSV / 印刷 / 監査レポート ⏸
 
 詳細: `ROADMAP.md`（Phase 6-N セクション参照）
+
+---
+
+## 🔄 Phase 6-K メニュー別売上分析（2026-05-02 実機確認待ち）
+
+### SelfPayItems 列構造確認結果（2026-05-02）
+
+| col | r[idx] | フィールド | 型 | 集計利用 |
+|---|---|---|---|---|
+| 1 | r[0] | itemId | 文字列 | — |
+| 2 | r[1] | selfPayVisitKey | 文字列 | JOIN キー |
+| 3 | r[2] | menuCode | 文字列 | グループキー |
+| 4 | r[3] | メニュー名 | 文字列 | 表示 |
+| 5 | r[4] | 数量 | 数値 | Σ totalQty |
+| 6 | r[5] | 単価（税別） | 数値 | — |
+| 7 | r[6] | 税区分 | 文字列 | — |
+| 8 | r[7] | 小計（税別） | 数値 | — |
+| 9 | r[8] | 消費税額 | 数値 | — |
+| 10 | r[9] | **小計（税込）** | 数値 | **Σ totalSales** |
+| 11 | r[10] | createdAt | 日時 | — |
+
+カテゴリ列なし（menuCode + menuName のみで集計）。
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Billing.gs` | `getMenuSalesSummary(year, month)` を追加。visitKey セット方式で isDeleted 除外 |
+| `JREC_SF01_Main.gs` | `case "menuSalesReport"` を追加。currentPage = "reports" |
+| `menu-sales-report.html` | 新規作成。月移動ナビ + サマリーカード + メニュー別テーブル（売上降順） |
+| `reports.html` | メニュー別売上分析カードを有効化（`?page=menuSalesReport`） |
+
+### テスト項目（実機確認待ち）
+
+> DailySales / Run_Log / getDailySalesReport 非依存。請求ベース集計。会計・保存ロジック変更なし。
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| K1-1 | ⏳ | reports からメニュー別売上分析カードで menuSalesReport に移動できる |
+| K1-2 | ⏳ | menuSalesReport に対象年月のサマリーカードが表示される |
+| K1-3 | ⏳ | メニュー別テーブルが売上降順で表示される |
+| K1-4 | ⏳ | 売上合計が monthlyReport の月間請求合計と一致する |
+| K1-5 | ⏳ | isDeleted=true の来院が除外される |
+| K1-6 | ⏳ | 0件月でも 0件 / ¥0 表示で壊れない |
+| K1-7 | ⏳ | ◀ 前月 / 今月 / 翌月 ▶ ナビが動作する |
+| K1-8 | ⏳ | DailySales / Run_Log / getDailySalesReport 非依存 |
+| K1-9 | ⏳ | 既存 reports / monthlyReport / dailyCheckout / home に影響なし |
+| K1-10 | ⏳ | スマホ表示で大きく崩れない（件数列は hide-sm-ms） |
+
+### HEAD 実機確認 URL
+
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
+```
 
 ---
 

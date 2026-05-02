@@ -1407,3 +1407,133 @@ function getMonthlyRevenueSummary(year, month) {
     return { ok: false, year: year, month: month, error: em, summary: {}, days: {} };
   }
 }
+
+// ============================================================
+// PUBLIC — メニュー別売上サマリー（Phase 6-K）
+// ============================================================
+
+/**
+ * 指定年月のメニュー別売上サマリーを返す。
+ *
+ * ─── 集計方式 ─────────────────────────────────────────────────
+ *   DailySales / Run_Log / getDailySalesReport 非依存。
+ *   SelfPayVisits(visitDate) → validVisitKey セット → SelfPayItems 集計。
+ *
+ * ─── 集計基準 ─────────────────────────────────────────────────
+ *   visitDate（来院日）が対象月 かつ isDeleted=false の来院に紐づく明細のみ集計。
+ *   請求ベース（入金済/未収問わず）。subtotalInc（小計税込）を売上として使用。
+ *
+ * ─── monthlyReport との整合 ───────────────────────────────────
+ *   getMonthlyRevenueSummary の totalBilled は Payments.totalTaxInc を合算。
+ *   本関数の totalSales は SelfPayItems.subtotalInc を合算。
+ *   savePaymentWithItems が totalTaxInc = Σ(subtotalInc) を保証するため原則一致する。
+ *
+ * @param {number} year  例: 2026（2020〜2035）
+ * @param {number} month 例: 5（1〜12）
+ * @returns {{
+ *   ok: boolean, year: number, month: number,
+ *   summary: { menuCount, totalLines, totalQty, totalSales },
+ *   menus: Array<{
+ *     menuCode, menuName, lineCount, visitCount, totalQty, totalSales, avgUnitPrice
+ *   }>,
+ *   error?: string
+ * }}
+ */
+function getMenuSalesSummary(year, month) {
+  Logger.log("[getMenuSalesSummary] year=" + year + " month=" + month);
+  try {
+    var y = parseInt(year,  10);
+    var m = parseInt(month, 10);
+    if (isNaN(y) || y < 2020 || y > 2035) return { ok: false, error: "year が範囲外: " + year,  summary: {}, menus: [] };
+    if (isNaN(m) || m < 1   || m > 12)   return { ok: false, error: "month が範囲外: " + month, summary: {}, menus: [] };
+
+    var monthStr = y + "-" + ("0" + m).slice(-2);
+    var ss       = getTargetSpreadsheet_();
+
+    // ── Step 1: 対象月・isDeleted 除外の visitKey セットを構築 ──
+    var validVisitKeys = {};
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (visitSh && visitSh.getLastRow() >= 2) {
+      var numCols = Math.min(visitSh.getLastColumn(), 12);
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues().forEach(function(r) {
+        if (!r[0]) return;
+        var isDeleted = r[11] === true || r[11] === "TRUE";
+        if (isDeleted) return;
+        var visitDate = "";
+        if (r[2]) {
+          try { visitDate = Utilities.formatDate(new Date(r[2]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
+        }
+        if (!visitDate || visitDate.slice(0, 7) !== monthStr) return;
+        validVisitKeys[String(r[0])] = true;
+      });
+    }
+
+    // ── Step 2: SelfPayItems を読み取り、対象 visitKey のみ集計 ──
+    // 列: itemId(0) / selfPayVisitKey(1) / menuCode(2) / メニュー名(3) /
+    //     数量(4) / 単価税別(5) / 税区分(6) / 小計税別(7) / 消費税(8) / 小計税込(9) / createdAt(10)
+    var menuMap = {};
+    var itemSh  = ss.getSheetByName(SHEET_NAMES.ITEMS);
+    if (itemSh && itemSh.getLastRow() >= 2) {
+      itemSh.getRange(2, 1, itemSh.getLastRow() - 1, 10).getValues().forEach(function(r) {
+        if (!r[0] || !r[1]) return;
+        var vk = String(r[1]);
+        if (!validVisitKeys[vk]) return;
+
+        var menuCode = String(r[2] || "");
+        var menuName = String(r[3] || menuCode);
+        var qty      = Number(r[4]) || 1;
+        var salesInc = Number(r[9]) || 0;
+
+        if (!menuMap[menuCode]) {
+          menuMap[menuCode] = {
+            menuCode:  menuCode,
+            menuName:  menuName,
+            lineCount: 0,
+            visitKeys: {},
+            totalQty:  0,
+            totalSales: 0
+          };
+        }
+        var entry = menuMap[menuCode];
+        entry.lineCount++;
+        entry.visitKeys[vk] = true;
+        entry.totalQty   += qty;
+        entry.totalSales += salesInc;
+      });
+    }
+
+    // ── Step 3: メニュー配列に変換（売上降順ソート）────────────
+    var menus = Object.keys(menuMap).map(function(code) {
+      var e          = menuMap[code];
+      var visitCount = Object.keys(e.visitKeys).length;
+      var avgUnit    = (e.totalQty > 0) ? Math.round(e.totalSales / e.totalQty) : 0;
+      return {
+        menuCode:    e.menuCode,
+        menuName:    e.menuName,
+        lineCount:   e.lineCount,
+        visitCount:  visitCount,
+        totalQty:    e.totalQty,
+        totalSales:  e.totalSales,
+        avgUnitPrice: avgUnit
+      };
+    });
+    menus.sort(function(a, b) { return b.totalSales - a.totalSales; });
+
+    // ── Step 4: 月次サマリー ────────────────────────────────
+    var summary = { menuCount: menus.length, totalLines: 0, totalQty: 0, totalSales: 0 };
+    menus.forEach(function(e) {
+      summary.totalLines += e.lineCount;
+      summary.totalQty   += e.totalQty;
+      summary.totalSales += e.totalSales;
+    });
+
+    Logger.log("[getMenuSalesSummary] " + monthStr +
+      " menus=" + menus.length + " sales=¥" + summary.totalSales);
+    return { ok: true, year: y, month: m, summary: summary, menus: menus };
+
+  } catch(err) {
+    var em = err && err.message ? err.message : String(err);
+    Logger.log("[getMenuSalesSummary] ERROR: " + em);
+    return { ok: false, year: year, month: month, error: em, summary: {}, menus: [] };
+  }
+}
