@@ -44,7 +44,7 @@
 | 元パス | 退避先 | 理由 |
 |---|---|---|
 | `workspace/tmp/jrec-clasp-recover/` | `_archive_workspace_cleanup_20260502/tmp/jrec-clasp-recover/` | git-ignored、2026-03-19 の旧GASバックアップ（Ver3_core.js: 112KB。現在の gas-projects 版は 251KB でずっと新しい） |
-| `workspace/ai-invest/` | `_archive_workspace_cleanup_20260502/ai-invest/` | AINV-07。Phase 0 完了後 2026-03-10 から進捗なし（約7週間）。ライブシートなし・依存なし・git-clean 確認済み。2026-05-02 追加退避（git-tracked 14ファイルをインデックスからも削除済み）|
+| `workspace/ai-invest/` | `_archive_workspace_cleanup_20260502/ai-invest/` | 【**方針変更 2026-05-02**】一度退避したが、オーナーが「今後使用予定あり・KEEP」と判断。**現在は archive に物理ファイルあり・workspace には存在しない状態。要復元。** 復元手順: `_archive_workspace_cleanup_20260502/ai-invest/` → `workspace/ai-invest/` へ Move-Item 後、`git checkout HEAD -- ai-invest/` または `git add ai-invest/` でインデックスを復元する |
 
 退避先: `C:\hirayama-ai-workspace\_archive_workspace_cleanup_20260502\`
 
@@ -68,26 +68,25 @@
 ## NEEDS_REVIEW
 人間確認が必要な事項
 
-### 1. `projects/machine-sales-rebuild/` の扱い
-- **状況:** `projects/` という中間フォルダー内に存在。git管理済み（実データ多数含む）。最終更新 2026-04-05。
-- **内容:** 中古医療機器販売サイト（machine-group.net）の商品データ・WordPress画像・フロントエンド
-- **問題:** PROJECTS.md にプロジェクトIDが登録されていない
-- **選択肢:** ① workspace 直下に昇格（`workspace/machine-sales-rebuild/`）② `projects/machine-sales-rebuild/` のまま維持 ③ 保留
-- **判断が必要な理由:** プロジェクトID未登録・`projects/` ラッパーの必要性が不明確
+### 1. `projects/machine-sales-rebuild/` → **解決済み（2026-05-02）**
+- **判断:** KEEP・projects/ 配下維持
+- **対応済み:** PROJECTS.md に MSRB-01 として正式登録済み
 
-### 2. CLAUDE.md の waste-report-system 記述の不整合
-- **状況:** CLAUDE.md §5「廃棄物日報システム」に「企画段階（**ディレクトリ未作成**）」と記載されているが、`waste-report-system/` は実際には存在し、HAIKI-05 として `ai-os/lifecycle-projects.json` から参照済み
-- **対応:** CLAUDE.md の該当箇所を「active_setup_pending・HAIKI-05」に修正すべき
-- **リスク:** 放置すると次回の Claude Code セッションで「ディレクトリが存在しない」という誤認識が起きる
+### 2. CLAUDE.md の waste-report-system 記述の不整合 → **解決済み（2026-05-02）**
+- **対応済み:** CLAUDE.md §5 を「active_setup_pending（HAIKI-05）」に修正済み・commit 済み
 
-### 3. `ai-invest/` の活性度確認
-- **状況:** AINV-07 (registration_candidate)。最終更新 2026-03-10（2ヶ月前）
-- **内容:** ペーパートレード準備中で止まっている
-- **質問:** このプロジェクトは現在も進める予定がありますか？
+### 3. `ai-invest/` の扱い → **要フォルダー復元（未解決）**
+- **方針決定:** KEEP（オーナーが今後使用予定ありと判断）
+- **現在の物理状態:** `_archive_workspace_cleanup_20260502/ai-invest/` に存在。workspace には存在しない
+- **未対応:** フォルダーを workspace に戻す作業が必要（別途フォルダー移動セッションで実施）
+- **復元手順:**
+  1. `Move-Item "_archive_workspace_cleanup_20260502\ai-invest" "workspace\ai-invest"`
+  2. `cd workspace && git checkout HEAD -- ai-invest/` でインデックスを復元
+  3. `git add ai-invest/` + `git commit` で復元をコミット
 
-### 4. `msk-assessment-platform/` のステータス確認
-- **状況:** 最終更新 2026-03-27（約5週間前）。GASコードと詳細仕様書あり
-- **質問:** このプロジェクトは現在も継続中ですか？稼働中のシートがありますか？
+### 4. `msk-assessment-platform/` → **解決済み（2026-05-02）**
+- **判断:** KEEP・退避禁止（稼働中の実シート・GAS 連携あり）
+- **対応済み:** PROJECTS.md に JASSESS-01 として正式登録済み
 
 ### 5. `aios-orchestrator/dual-agent-poc/.env` に秘密情報あり
 - **状況:** `.env` ファイルが gitignore 対象として存在（363バイト）
