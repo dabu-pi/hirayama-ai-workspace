@@ -1,6 +1,6 @@
 # JREC-SF01 自費カルテ・会計システム — ロードマップ
 
-最終更新: 2026-05-02（Phase 6-I CLOSED @32）
+最終更新: 2026-05-02（Phase 6-J 設計調査完了・実装未着手）
 
 ---
 
@@ -99,19 +99,34 @@
 
 ---
 
-### Phase 6-J: 月別売上集計 ⏸
+### Phase 6-J: 月別売上集計 ⏸（設計調査完了・2026-05-02）
 
 **目的:** 月単位で売上・入金・未収を確認できるページを作る
 
+**設計方針（2026-05-02 確定）:**
+
+| 項目 | 決定内容 |
+|---|---|
+| 集計方式 | **候補B採用**: SelfPayVisits + Payments + Receipts から月次直接集計 |
+| 集計基準 | visitDate（来院日）ベース |
+| getDailySalesReport | **使用しない**（Run_Log 全スキャン × 31日 = タイムアウトリスク） |
+| DailySales 依存 | **なし**（空問題を完全回避） |
+| DailySales/Run_Log の位置づけ | Phase 6-M 監査レポートで活用。Phase 6-J では不使用 |
+
+**リスク解消:**
+- getDailySalesReport を月次でループ呼び出しすると Run_Log を31回全スキャン → タイムアウト確実。採用しない。
+- DailySales シートは rebuildDailySales 実行済み日のみ行が存在。未実行日は欠損。Phase 6-J では非依存。
+
 | タスク | 内容 |
 |---|---|
-| 6-J-1 | `getMonthlyRevenueSummary(year, month)` を追加（DailySales シートまたは Payments 直集計） |
-| 6-J-2 | 月内の来院数・売上合計・入金済・未収残高・領収書数を集計 |
-| 6-J-3 | DailySales シートの活用方針を確定（データが空の場合の fallback 設計） |
-| 6-J-4 | 月別レポート画面（`?page=monthlyReport`）を新設 |
+| 6-J-1 | `getMonthlyRevenueSummary(year, month)` を `Billing.gs` に追加（visitDate ベース、DailySales 非依存） |
+| 6-J-2 | 月間サマリーカード（来院件数・請求合計・入金合計・未収残高・件数内訳） |
+| 6-J-3 | 日別内訳テーブル + dailyCheckout 日付リンク |
+| 6-J-4 | 月別レポート画面（`?page=monthlyReport`）を新設。月移動ナビ（◀ 前月 / 今月 / 翌月 ▶） |
+| 6-J-5 | reports.html の「月次売上レポート」カードを有効化（`?page=monthlyReport` リンクに更新） |
 
-**変更ファイル候補:** `JREC_SF01_DailySales.gs` or `JREC_SF01_Billing.gs` / `JREC_SF01_Main.gs` / `monthly-report.html`（新規）  
-**リスク:** 中（DailySales シートの空問題・Speed）
+**変更ファイル:** `JREC_SF01_Billing.gs` / `JREC_SF01_Main.gs` / `monthly-report.html`（新規）/ `reports.html`  
+**設計詳細:** `docs/PHASE_6J_MONTHLY_SALES_DESIGN_2026-05-02.md`
 
 ---
 

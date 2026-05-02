@@ -46,6 +46,45 @@ Phase 6-G〜6-N ロードマップ:
 
 ---
 
+## ⏸ Phase 6-J 月別売上集計（2026-05-02 設計調査完了・実装未着手）
+
+### 設計調査結果サマリー
+
+**採用方針: 候補B（Payments 等から月次直接集計）**
+
+| 項目 | 結論 |
+|---|---|
+| 集計正本 | SelfPayVisits + Payments + Receipts から直接集計 |
+| 集計基準 | visitDate（来院日）ベース |
+| getDailySalesReport の利用 | **禁止**（Run_Log 全スキャン × 31日 = タイムアウト確実） |
+| DailySales 依存 | **なし**（空問題を完全回避） |
+| 新規関数 | `getMonthlyRevenueSummary(year, month)` を Billing.gs に追加 |
+| page 名 | `?page=monthlyReport`（year/month パラメータ付き） |
+
+### getDailySalesReport 速度リスク記録
+
+- Run_Log を**全件スキャン**してから日付フィルタする設計
+- 月次で31回呼ぶと Run_Log 行数 × 31 のスキャンが発生
+- GAS 実行上限（6分）に抵触するリスクが高い → **Phase 6-J では使用しない**
+- getDailySalesReport は監査証跡目的（Phase 6-M）に温存する
+
+### DailySales 空問題の記録
+
+- DailySales シートは `rebuildDailySales(dateStr)` を手動実行した日のみ行が存在する
+- 未実行日は「来院 0件」と誤判定するリスクがある
+- Phase 6-J では DailySales を使わないため、この問題を完全回避する
+
+### 実装候補手順
+
+1. `JREC_SF01_Billing.gs` に `getMonthlyRevenueSummary(year, month)` を追加
+2. `JREC_SF01_Main.gs` に `case "monthlyReport"` を追加
+3. `monthly-report.html` を新規作成（月移動ナビ + サマリーカード + 日別内訳テーブル）
+4. `reports.html` の月次カードを有効化（`?page=monthlyReport` リンクに更新）
+
+設計詳細: `docs/PHASE_6J_MONTHLY_SALES_DESIGN_2026-05-02.md`
+
+---
+
 ## ✅ Phase 6-I 集計メニュー / 集計ページ新設（2026-05-02 CLOSED）
 
 ### 実装内容
