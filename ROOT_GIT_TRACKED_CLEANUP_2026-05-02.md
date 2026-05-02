@@ -1,7 +1,7 @@
 # Root Git Tracked Cleanup 2026-05-02
 
 ## STATUS
-完了（9件すべて git rm 実施・commit/push 済み）
+完了（9件 git rm 済み + 追加736件 staged 削除コミット済み + gas-projects 残骸削除済み）
 
 ---
 
@@ -67,7 +67,7 @@
 | `_archive_root_cleanup_20260502/` | 完全無変更 ✓ |
 | `_archive_workspace_cleanup_20260502/` | 完全無変更 ✓ |
 | `.claude/` | 完全無変更 ✓ |
-| `削除可__*` 各フォルダー | 完全無変更 ✓（前回リネーム済み） |
+| `削除可__*` 各フォルダー | ユーザー手動削除済み（残存なし）✓ |
 
 ---
 
@@ -87,15 +87,18 @@
 | workspace/patient-management 正本存在 | ✓ True |
 | workspace/freee-automation 正本存在 | ✓ True |
 | workspace/config 正本存在 | ✓ True |
-| git rm staged deletions 件数 | 509件 ✓ |
-| Remove-Item / 手動削除 ゼロ | ✓ |
+| git rm staged deletions 件数（第1回: 9フォルダー）| 509件 ✓ |
+| git add staged deletions 件数（第2回: 削除可__後手動削除分）| 736件 ✓ |
+| gas-projects 残骸（.clasp.json）削除 | ✓ |
+| gas-projects 空ディレクトリ残存 | プロセスロックで残存（git 影響なし）|
+| 削除可__ フォルダー残存 | ゼロ ✓（ユーザー手動削除済み）|
+| Remove-Item による重要ファイル削除 | ゼロ ✓ |
 
 ---
 
 ## NEXT
 残作業
 
-1. **手動確認推奨:** `C:\hirayama-ai-workspace\gas-projects\` ディレクトリに `.clasp.json` が残存。不要なら `Remove-Item "C:\hirayama-ai-workspace\gas-projects" -Recurse -Force` で手動削除可
-2. **将来対応:** root git の unstaged D エントリ（前回 `削除可__` リネーム由来 ~700件）を git rm または git clean で整理する
-3. **将来対応:** root の `削除可__*` フォルダー9件を手動確認後に `Remove-Item -Recurse -Force` で削除
-4. **将来対応:** `_archive_workspace_cleanup_20260502/ai-invest_restore_backup_20260502/` を確認後に手動削除
+1. **手動確認推奨:** `C:\hirayama-ai-workspace\gas-projects\jrec-sf01-selfpay\` 空ディレクトリがプロセスロックで残存。次回 PC 再起動後に `Remove-Item "C:\hirayama-ai-workspace\gas-projects" -Recurse -Force` で手動削除可。.clasp.json は削除済み。
+2. **将来対応:** `_archive_workspace_cleanup_20260502/ai-invest_restore_backup_20260502/` を確認後に手動削除
+3. root git に残る unstaged M（AGENTS.md, CLAUDE.md, README.md, .claude/settings.json）は root .md ファイルの更新差分。root 側は今後正式な作業ディレクトリとして使わない前提なら放置可。
