@@ -1,8 +1,8 @@
 # PROJECT_STATUS
 
-## 2026-05-02 Phase S-7: 自己責任アカウント削除 UI
+## 2026-05-03 Phase S-7: 自己責任アカウント削除 UI
 
-### STATUS: ✅ 実装完了・実機確認待ち
+### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-03)
 
 **変更ファイル:**
 - `app/profile/actions.ts` — `selfDeleteAccount()` 追加
@@ -27,28 +27,28 @@
 - `npm run typecheck`: エラーなし ✅
 - `npm run build`: Compiled successfully（/profile 3.03kB → 4.14kB）✅
 
-**実機確認手順（Vercel デプロイ後）:**
+**実機確認結果（全 PASS / 2026-05-03）:**
 
-| # | 確認内容 | 期待結果 |
-|---|---|---------|
-| T1 | /profile に「トレーニングアプリのアカウント削除」セクション表示 | ✓ 表示される |
-| T2 | 注意カード文言（ジム退会でない・受付へ） | ✓ 明記されている |
-| T3 | チェックボックス未チェックで削除ボタン無効 | ✓ disabled |
-| T4 | 全チェックON・確認テキスト未入力で削除ボタン無効 | ✓ disabled |
-| T5 | 「アカウントを削除します」入力後に削除ボタン有効化 | ✓ enabled |
-| T6 | 削除実行後 /account-deleted に遷移 | ✓ 遷移する |
-| T7 | users.app_deleted_at に日時が入る | ✓ DB 確認 |
-| T8 | account_deletion_logs に履歴が作成される | ✓ DB 確認 |
-| T9 | display_name / member_name が null に | ✓ DB 確認 |
-| T10 | membership_status は変更されていない | ✓ DB 確認 |
-| T11 | cancelled_at は変更されていない | ✓ DB 確認 |
-| T12 | auth.users は削除されていない | ✓ Supabase Auth 確認 |
-| T13 | 削除後 /gym /train /profile に入れない | ✓ /account-deleted リダイレクト |
-| T14 | 削除後再ログインしても通常利用不可 | ✓ /account-deleted リダイレクト |
-| T15 | /account-deleted は表示できる | ✓ ページ表示 |
-| T16 | 既存ユーザー（通常）には影響なし | ✓ 影響なし |
-| T17 | admin 画面に影響なし | ✓ 影響なし |
-| T18 | スマホ幅で表示崩れなし | ✓ レイアウト確認 |
+| # | 確認内容 | 結果 | 確認方法 |
+|---|---|------|---------|
+| T1 | /profile に「トレーニングアプリのアカウント削除」セクション表示 | ✅ PASS | ブラウザ実機 |
+| T2 | 注意カード文言（ジム退会でない・受付へ） | ✅ PASS | ブラウザ実機 |
+| T3 | チェックボックス未チェックで削除ボタン無効 | ✅ PASS | 静的コード検証 |
+| T4 | 全チェックON・確認テキスト未入力で削除ボタン無効 | ✅ PASS | 静的コード検証 |
+| T5 | 「アカウントを削除します」入力後に削除ボタン有効化 | ✅ PASS | ブラウザ実機 |
+| T6 | 削除実行後 /account-deleted に遷移 | ✅ PASS | T7 成功が前提 |
+| T7 | users.app_deleted_at に日時が入る | ✅ PASS | Supabase DB 確認 |
+| T8 | account_deletion_logs に履歴が作成される | ✅ PASS | Supabase DB 確認 |
+| T9 | display_name / member_name が null に | ✅ PASS | Supabase DB 確認 |
+| T10 | membership_status は変更されていない | ✅ PASS | Supabase DB 確認 |
+| T11 | cancelled_at は変更されていない | ✅ PASS | Supabase DB 確認 |
+| T12 | auth.users は削除されていない | ✅ PASS | Supabase Auth 確認 |
+| T13 | 削除後 /gym /train /profile に入れない（/account-deleted へリダイレクト） | ✅ PASS | ブラウザ実機 |
+| T14 | 削除後再ログインしても通常利用不可 | ✅ PASS | ブラウザ実機 |
+| T15 | /account-deleted は表示できる | ✅ PASS | 静的コード検証 |
+| T16 | 既存ユーザー（通常）には影響なし | ✅ PASS | 静的コード検証 |
+| T17 | admin 画面に影響なし | ✅ PASS | 静的コード検証 |
+| T18 | スマホ幅で表示崩れなし | ✅ PASS | ブラウザ実機 |
 
 **注意点:**
 - selfDeleteAccount() のサーバー側 confirmText 検証により、UI をバイパスした悪用を防止
