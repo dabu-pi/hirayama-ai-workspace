@@ -1,5 +1,68 @@
 # PROJECT_STATUS
 
+## 2026-05-02 Phase S-5: 自己責任即時削除 調査・設計
+
+### STATUS: ✅ 設計完了 / CLOSED (2026-05-02)
+
+**変更ファイル:**
+- `docs/SELF_SERVICE_ACCOUNT_DELETE_DESIGN.md` — 新規作成（即時削除の完全設計書）
+- `docs/ACCOUNT_DELETE_DESIGN.md` — 方針変更ノートを先頭に追記
+- `ROADMAP.md` — S-4 保留・S-5〜S-8 追加
+
+**方針変更の概要:**
+
+| 変更前 | 変更後 |
+|--------|--------|
+| 申請フロー（S-4）が最終方式 | 自己責任即時削除（S-7）が最終方式 |
+| 申請 → 管理者審査 → 承認 | ユーザー自身が即時実行 |
+| S-4 本番デプロイ予定 | **S-4 本番デプロイ保留** |
+
+**S-5 調査の主要結論:**
+
+| 確認項目 | 結果 |
+|---------|------|
+| 推奨方式 | 方式B（ソフトデリート）: `app_deleted_at` カラム追加 |
+| 物理削除（方式A）の実現性 | 6箇所の FK BLOCK で現状不可 |
+| membership_status の扱い | **変更しない**（ジム会員状態は別管理） |
+| cancelled_at の扱い | **変更しない**（ジム退会日とは無関係） |
+| S-4 の扱い | 実装済みだが本番デプロイ保留。UI は S-7 で置き換え |
+| admin 画面 | 維持する |
+
+**FK/CASCADE BLOCK 箇所（物理削除の場合）:**
+
+| # | テーブル.カラム | 現状 | S-8 向け解消方法 |
+|---|---|---|---|
+| 1 | account_deletion_requests.user_id | NO ACTION | ON DELETE SET NULL |
+| 2 | account_deletion_requests.reviewed_by | NO ACTION | ON DELETE SET NULL |
+| 3 | membership_pause_requests.user_id | NO ACTION | ON DELETE SET NULL |
+| 4 | membership_pause_requests.reviewed_by | NO ACTION | ON DELETE SET NULL |
+| 5 | billing_cutoff_records.confirmed_by | NO ACTION | ON DELETE SET NULL |
+| 6 | workout_session_exercises.user_exercise_id | RESTRICT | ON DELETE SET NULL |
+
+**推奨削除方式の確認文言（Phase S-7 向け）:**
+
+```
+確認テキスト入力: 「アカウントを削除します」
+ボタン文言: 「アカウントを削除する」
+チェックボックス: 3項目（ログイン不可・履歴閲覧不可・ジム退会は別手続き）
+```
+
+**S-6 で必要な DB 変更:**
+- `public.users.app_deleted_at TIMESTAMPTZ` カラム追加
+- `account_deletion_logs` テーブル新設
+- middleware + Server Components の `app_deleted_at` チェック追加
+
+**今後やること：**
+- S-6: DB 整備（migration + middleware 更新）
+- S-7: 削除 UI 実装
+- S-4 の UI は S-7 で置き換え（コードは削除しない）
+
+**今後やらないこと：**
+- S-4 の実機確認・本番デプロイ（最終方式が変わるため）
+- auth.users の物理削除（S-8 として将来検討、現時点では不要）
+
+---
+
 ## 2026-05-02 Phase S-4: アカウント削除申請 UI
 
 ### STATUS: ✅ 実装完了・実機確認待ち

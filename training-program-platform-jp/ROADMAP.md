@@ -130,7 +130,7 @@ GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructu
 | **S-1** | **設定画面の設計** | 現状調査・ログアウト設計・削除設計・フェーズ整理 | **✅ 設計完了 (2026-05-02)** |
 | **S-2** | **ログアウト機能実装** | `/profile` 下部にログアウトボタン追加。`signOut()` + `/login` 遷移 | **✅ LIVE_CHECK PASS / CLOSED (2026-05-02)** |
 | **S-3** | **アカウント削除の詳細設計** | FK/CASCADE 全マップ・方式C確定・Phase S-4 実装仕様確定 | **✅ 設計完了 (2026-05-02)** |
-| **S-4** | **アカウント削除申請 UI 実装** | ユーザー側申請フォーム（`submitDeletionRequest` / `cancelDeletionRequest`）。DB migration 不要 | **✅ 実装完了・実機確認待ち (2026-05-02)** |
+| **S-4** | **アカウント削除申請 UI 実装** | 申請フロー実装（コード完成）。**ただし最終方式を即時削除方式に変更するため本番デプロイ保留** | **⚠️ 実装済み・本番デプロイ保留 (2026-05-02)** |
 
 **S-2 実装スコープ（最小）:**
 - `components/profile/ProfileScreen.tsx` にログアウトセクション追加
@@ -140,6 +140,29 @@ GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructu
 **アカウント削除 ≠ ジム退会（必須前提）:**
 アカウント削除してもジムの会員契約・会費・休会・退会手続きは完了しない。
 ユーザー画面に確認文言を必ず表示する。
+
+**S-4 の扱い（2026-05-02 方針変更）:**
+S-4 はコード実装済みだが、最終方式を S-7「自己責任即時削除」に変更したため本番デプロイ保留。
+管理者向け `/admin/account-deletion-requests` 画面は維持。ユーザー向け UI は S-7 で置き換え。
+
+### Phase S（続き）: 即時削除方式への移行
+
+> 設計ドキュメント: `docs/SELF_SERVICE_ACCOUNT_DELETE_DESIGN.md`
+
+| ID | タスク | 概要 | 状態 |
+|---|---|---|---|
+| **S-5** | **自己責任即時削除の調査・設計** | 方式比較・FK 影響・推奨方式・UI 文言・ロードマップ確定 | **✅ 設計完了 (2026-05-02)** |
+| S-6 | 削除に必要な DB / RLS / admin 整備 | `app_deleted_at` カラム追加 / `account_deletion_logs` 新設 / middleware 更新 / admin 表示調整 | 未着手（次候補） |
+| S-7 | 自己責任削除 UI 実装 | `/profile` に削除確認 UI / `selfDeleteAccount()` Server Action / 削除完了ページ | 未着手（S-6 完了後） |
+| S-8 | auth.users 物理削除対応（任意） | FK 変更 migration / 物理削除 Server Action / GDPR 対応が必要な場合に着手 | 見送り可能 |
+
+**推奨削除方式（S-5 調査結果）: 方式B ソフトデリート**
+- `public.users.app_deleted_at = now()` をセット
+- `display_name` / `member_name` を null 化
+- `membership_status` は**変更しない**（ジム会員状態は別管理）
+- `cancelled_at` は**変更しない**（ジム退会日とは無関係）
+- auth.users は残す（Supabase Auth レベルでは存在する）
+- アプリ側で `app_deleted_at` を確認してアクセスを遮断
 
 ### Phase 4: 会員管理強化
 
