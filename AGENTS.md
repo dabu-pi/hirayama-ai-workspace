@@ -31,6 +31,9 @@ Codex は作業開始時に次の順で確認すること。
 
 - GitHub を正本とする
 - 正本・作業場所・commit / push は `C:\hirayama-ai-workspace\workspace` のみ。root では Git 作業しない
+- **【2026-05-02】root git の remote は削除済み。root で git push / pull / fetch しない**
+- 作業開始前に必ず `git rev-parse --show-toplevel` で workspace git root であることを確認する
+- git root が `C:/hirayama-ai-workspace/workspace` でない場合は作業停止
 - 作業開始前に `git status` と `git pull` を確認する
 - 作業終了時は状態ファイルを更新してから commit / push する
 - 完成版だけでなく、別PCで再開価値がある途中状態も WIP commit / push の対象とする

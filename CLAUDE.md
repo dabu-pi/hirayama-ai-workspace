@@ -136,6 +136,33 @@ C:\hirayama-ai-workspace\
 
 > 正本・作業場所・commit / push は `C:\hirayama-ai-workspace\workspace` のみ。root では Git 作業しない。
 
+> **【2026-05-02 追記】root git の remote 削除済み:**
+> `C:\hirayama-ai-workspace`（root）の git remote は削除した。
+> root と workspace が同一 GitHub remote を向いており、root からの誤 push で
+> workspace 最新作業が上書きされるリスクがあったため。
+> root はローカル専用メタ管理 repo になった。commit / push / pull は workspace のみ。
+
+### 作業開始前の必須確認（Claude Code 向け・2026-05-02 追加）
+
+**すべての git 作業を開始する前に、以下を必ず確認すること:**
+
+| 確認項目 | 正しい値 | NG の場合 |
+|---|---|---|
+| `git rev-parse --show-toplevel` | `C:/hirayama-ai-workspace/workspace` | **作業停止** |
+| `git remote -v` | `origin → .../hirayama-ai-workspace.git` が表示される | **作業停止** |
+| root での git 操作 | 禁止（remote 削除済み） | 絶対にしない |
+
+PowerShell での作業パターン（推奨）:
+```powershell
+$repo = "C:\hirayama-ai-workspace\workspace"
+& git -C $repo rev-parse --show-toplevel
+& git -C $repo remote -v
+& git -C $repo branch --show-current
+& git -C $repo status
+```
+
+Bash ツールを使う場合は毎回 workspace パスを指定してから作業する。
+
 ### workspace（本番）で行うこと
 
 - プロジェクトのソースコード実装・修正
