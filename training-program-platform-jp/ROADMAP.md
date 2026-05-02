@@ -1,6 +1,14 @@
 # ROADMAP
 
-最終更新: 2026-05-01（Phase 3-B MVP CLOSED / GZCL 種目変更まわり調査完了 / Phase 3-C 計画追加）
+最終更新: 2026-05-02（ソース復旧・archive API修正・本番反映・会員2名復旧完了）
+
+---
+
+## 現在地（2026-05-02）
+
+archive API バグ（`status='active' + archived_at IS NOT NULL` 矛盾）を修正し、
+ソース復旧・本番デプロイ・DB矛盾行0件確認・会員2名復旧まで完了。
+次は関さん・emeraldさんの実機確認、その後 Phase 3-C（GZCL 種目変更）または休憩タイマー改善へ。
 
 ---
 
@@ -25,6 +33,7 @@ GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructu
 | BUG-FIX | 自由に作成フロー（Router Cache バイパス）— custom session 作成後に `/programs` に戻される問題 | ✅ LIVE_CHECK PASS (2026-04-30) |
 | **Phase 3-A** | **Admin プログラム管理（一覧・詳細・編集・新規）** | **✅ CLOSED (2026-05-01)** |
 | **Phase 3-B MVP** | **Admin プログラム内容編集（Week label / Day 情報 / 種目パラメータ / 表示順）** | **✅ CLOSED (2026-05-01)** |
+| **BUG-FIX: archive API** | **archive時 status='active'→'paused' 修正 / ソース復旧 / 本番反映 / 会員2名復旧** | **✅ CLOSED (2026-05-02)** |
 
 ### 未完了・保留・スタブ
 
@@ -34,7 +43,10 @@ GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructu
 | iOS PWA確認 | ⚠️ deferred | iPhone 未所持のため未確認。Android PASS |
 | D-2 退会申請フロー | ⚠️ 保留 | migration 000031 未適用。退会は窓口受付に統一 |
 | 計算ボタン（1RM/Calc） | スタブ | UIボタンあり・onClick 未実装（`WorkoutScreen.tsx`） |
+| **休憩タイマー任意変更** | **📋 次候補** | **60/90/120/180秒プリセット + ±15秒調整。localStorage保存。DB変更なし** |
 | 休憩タイマー自動起動 | 未実装 | 現状は手動起動のみ（`WorkoutScreen.tsx`） |
+| root/workspace remote整理 | 📋 要対応 | 両git が同一 remote を向いており誤作業リスクあり。CLAUDE.md に作業場所ルール明文化 |
+| DB CHECK 制約 | 保留 | `status='active' AND archived_at IS NOT NULL` を DB 側で禁止。別フェーズで判断 |
 | B-6: sign up 429 | 低優先 | 外部レート制限 |
 
 ### 2026-04-30 終了時点の実機確認済み状態

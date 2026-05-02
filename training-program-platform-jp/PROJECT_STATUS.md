@@ -1,8 +1,8 @@
 # PROJECT_STATUS
 
-## 2026-05-02 ソース復元 + archive API 根本修正
+## 2026-05-02 ソース復元 + archive API 根本修正 + 本番反映 + 会員復旧
 
-### STATUS: ✅ 完了 — typecheck/build PASS / push 前停止中 (2026-05-02)
+### STATUS: ✅ 完了 — 本番反映済み・DB矛盾行0件確認・会員2名復旧済み (2026-05-02)
 
 ### 背景
 
@@ -51,8 +51,56 @@ active enrollment を終了した場合の結果:
 **確認:**
 - typecheck: ✅ PASS
 - build: ✅ PASS
-- 本番 DB 更新: なし
-- push: 未実施（ChatGPT 判断待ち）
+- 本番 DB 更新: なし（archive API 修正のみ）
+
+### 本番反映
+
+- recovery/restore-training-platform-source → feature/auto-dev-phase3-loop へ fast-forward merge 済み
+- commit: `574a23a4d133ec7ceb88f1d91d4e3f4635ebcdea`
+- push 済み
+- **Vercel production build: ✅ success**（Vercel status API で確認済み）
+
+### 本番 DB 確認結果
+
+- 確認対象: `status='active' AND archived_at IS NOT NULL` の矛盾行
+- **結果: 0 件**（Supabase REST API でライブ本番 DB に直接確認）
+- active 件数: 5件（全て `archived_at IS NULL` の正常状態）
+- DB UPDATE 不要
+
+### 会員復旧（2026-05-02）
+
+| 会員 | 本来プログラム | 最終状態 | 復旧 |
+|---|---|---|---|
+| 関 正弘さん | GZCLP 4日/週（gzclp-base-v2-4day） | status='active', archived_at=null | ✅ 復旧完了 |
+| 田路吾子さん（emerald.green.kira2@gmail.com） | BIG3 2日/週（6週） | active, GZCLP=paused, active_count=1 | ✅ 復旧完了 |
+
+**会員対応:**
+- 関さんには友人向けのラフな文面で案内予定:
+  「ごめん、こっち側のプログラム設定がちょっと変になってたっぽい🙏
+   GZCLP 4日/週に戻るように直したので、またトレーニング開いてみて！
+   まだおかしかったらまた教えて〜」
+- emeraldさんにもトレーニングタブ確認を依頼する予定
+
+### 次にやること
+
+1. **実機確認**（関さん・emeraldさん）
+   - トレーニングタブから正しいプログラムに入れるか
+   - /programs に戻されないか
+   - 次のワークアウトに進めるか
+
+2. **休憩タイマー任意変更**
+   - 現在: 1分30秒固定
+   - 変更内容: 60秒 / 90秒 / 120秒 / 180秒 プリセット + ±15秒調整
+   - 初期値: 90秒
+   - 保存: localStorage でよい
+   - DB変更なし
+
+3. **root git / workspace git 同一 remote 問題の整理**
+   - 誤作業防止のため CLAUDE.md / AGENTS.md に作業場所ルールを明文化
+
+4. **DB CHECK 制約検討（別フェーズ）**
+   - `status='active' AND archived_at IS NOT NULL` をDB側で禁止する制約
+   - 今回は未実施・別フェーズで判断
 
 ---
 
