@@ -1,6 +1,6 @@
 # JREC-SF01 自費カルテ・会計システム — ロードマップ
 
-最終更新: 2026-05-02（Phase 6-L 実装・HEAD実機確認待ち）
+最終更新: 2026-05-02（Phase 6-L CLOSED @35）
 
 ---
 
@@ -8,7 +8,8 @@
 
 | デプロイ | 内容 |
 |---|---|
-| @34 | Phase 6-K メニュー別売上分析 / menuSalesReport ページ 含む（**最新本番** `AKfycbxwdjQ0...5bf`） |
+| @35 | Phase 6-L 未収・回収管理 / outstandingReport ページ 含む（**最新本番** `AKfycbzX8wau...LyA`） |
+| @34 | Phase 6-K メニュー別売上分析 / menuSalesReport ページ 含む |
 | @33 | Phase 6-J 月別売上集計 / monthlyReport ページ 含む |
 | @32 | Phase 6-I 集計メニュー / reports ページ 含む |
 | @31 | Phase 6-H dailyCheckout 日別金額合計カード 含む |
@@ -48,6 +49,7 @@
 | Phase 6-I | 集計メニュー / reports ページ新設 | ✅ 2026-05-02 |
 | Phase 6-J | 月別売上集計 / monthlyReport ページ | ✅ 2026-05-02 |
 | Phase 6-K | メニュー別売上分析 / menuSalesReport ページ | ✅ 2026-05-02 |
+| Phase 6-L | 未収・回収管理 / outstandingReport ページ | ✅ 2026-05-02 |
 
 > Phase 6-C（来院完全削除）は保留中。集計系フェーズ後に判断。
 
@@ -152,7 +154,7 @@
 
 ---
 
-### Phase 6-L: 未収・回収管理レポート 🔄（実装済み・HEAD実機確認待ち）
+### Phase 6-L: 未収・回収管理レポート ✅（CLOSED 2026-05-02）
 
 **目的:** 未収・一部入金の残高を管理し、回収漏れを防ぐ
 
@@ -162,9 +164,9 @@
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 6-L-1 | 未収一覧を来院日昇順・患者別で確認できるページ | 🔄 実機確認待ち |
-| 6-L-2 | 一部入金残高・支払済との差額確認（paidAmount / remainingAmount 表示） | 🔄（含む） |
-| 6-L-3 | ~~`getAllOutstandingByPatient()` の活用~~ → **新規 `getOutstandingReport()`** を追加 | 🔄（含む） |
+| 6-L-1 | 未収一覧を来院日昇順・患者別で確認できるページ | ✅ CLOSED 2026-05-02 @35 |
+| 6-L-2 | 一部入金残高・支払済との差額確認（paidAmount / remainingAmount 表示） | ✅（含む） |
+| 6-L-3 | ~~`getAllOutstandingByPatient()` の活用~~ → **新規 `getOutstandingReport()`** を追加 | ✅（含む） |
 | 6-L-4 | 月末未収残高レポート |
 
 **変更ファイル候補:** `JREC_SF01_Billing.gs` / `JREC_SF01_Main.gs` / html 追加  
@@ -243,7 +245,7 @@
 4. ✅ Phase 6-I — 集計導線ページ新設（完了 @32）
 5. ✅ Phase 6-J — 月別売上集計（完了 @33）
 6. ✅ Phase 6-K — メニュー別集計（完了 @34）
-7. 🔄 Phase 6-L — 未収・回収管理（実機確認待ち）
+7. ✅ Phase 6-L — 未収・回収管理（完了 @35）
 8. Phase 6-M — CSV・印刷・監査（出力整備）
 ```
 

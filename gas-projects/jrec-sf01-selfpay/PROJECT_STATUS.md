@@ -55,7 +55,7 @@ Phase 6-G〜6-N ロードマップ:
 
 ---
 
-## 🔄 Phase 6-L 未収・回収管理レポート（2026-05-02 実機確認待ち）
+## ✅ Phase 6-L 未収・回収管理レポート（2026-05-02 CLOSED）
 
 ### 既存関数の再利用可否確認（2026-05-02）
 
@@ -76,24 +76,40 @@ Phase 6-G〜6-N ロードマップ:
 | `outstanding-report.html` | 新規作成。サマリーカード + 患者別サマリー + 未収明細テーブル + 回収・領収書導線 |
 | `reports.html` | 未収・回収管理カードを有効化（`?page=outstandingReport`） |
 
-### テスト項目（実機確認待ち）
+### テスト項目（実機確認結果）
 
 > DailySales / Run_Log 非依存。会計・保存ロジック変更なし。getAllOutstandingByPatient() は変更なし。
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| L1-1 | ⏳ | reports から未収・回収管理カードで outstandingReport に移動できる |
-| L1-2 | ⏳ | outstandingReport にサマリーカードが表示される（患者数・件数・残高合計・最古日） |
-| L1-3 | ⏳ | 未収患者数・未収件数・未収残高合計が表示される |
-| L1-4 | ⏳ | 患者別サマリーが表示される（患者名リンク → 患者詳細） |
-| L1-5 | ⏳ | 未収明細一覧が来院日昇順で表示される |
-| L1-6 | ⏳ | 未収 / 一部入金のみ表示。入金済・未会計は除外される |
-| L1-7 | ⏳ | isDeleted=true の来院が除外される |
-| L1-8 | ⏳ | 「回収・領収書」ボタンで receipt ページに遷移できる |
-| L1-9 | ⏳ | 未収0件でも「未収はありません」表示で壊れない |
-| L1-10 | ⏳ | DailySales / Run_Log / getDailySalesReport 非依存 |
-| L1-11 | ⏳ | 既存 reports / monthlyReport / menuSalesReport / dailyCheckout に影響なし |
-| L1-12 | ⏳ | スマホ表示で大きく崩れない（主訴・入金額列は hide-sm-or） |
+| L1-1 | ✅ PASS | reports から未収・回収管理カードで outstandingReport に移動できる |
+| L1-2 | ✅ PASS | outstandingReport にサマリーカードが表示される（患者数・件数・残高合計・最古日） |
+| L1-3 | ✅ PASS | 未収患者数・未収件数・未収残高合計が表示される |
+| L1-4 | ✅ PASS | 患者別サマリーが表示される（患者名リンク → 患者詳細） |
+| L1-5 | ✅ PASS | 未収明細一覧が来院日昇順で表示される |
+| L1-6 | ✅ PASS | 未収 / 一部入金のみ表示。入金済・未会計は除外される |
+| L1-7 | ✅ PASS | isDeleted=true の来院が除外される |
+| L1-8 | ✅ PASS | 「回収・領収書」ボタンで receipt ページに遷移できる |
+| L1-9 | ✅ PASS | 未収0件でも「未収はありません」表示で壊れない |
+| L1-10 | ✅ PASS | DailySales / Run_Log / getDailySalesReport 非依存 |
+| L1-11 | ✅ PASS | 既存 reports / monthlyReport / menuSalesReport / dailyCheckout に影響なし |
+| L1-12 | ✅ PASS | スマホ表示で大きく崩れない（主訴・入金額列は hide-sm-or） |
+
+### 実測値（実機確認時）
+
+| 項目 | 値 |
+|---|---|
+| 未収患者数 | 1名 |
+| 未収件数 | 1件 |
+| 未収残高合計 | ¥5,500 |
+| 最古未収日 | 2026-05-02 |
+| 患者別 | 藤次正久 / 1件 / ¥5,500 |
+| 明細 | 2026-05-02 / 未収 / 請求¥5,500 / 残高¥5,500 |
+
+### 本番 URL（@35 / /exec）:
+```
+https://script.google.com/macros/s/AKfycbzX8wauxGE0ucFeBd6JtCZ8CJkJ94rKT3D4P88DCP8KQ0ALCkh6azBKpDPkTcaHmWBLyA/exec
+```
 
 ### HEAD 実機確認 URL
 
