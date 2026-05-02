@@ -242,7 +242,12 @@ function createVisitWithChart(payload) {
       payload.nextPlan     ? String(payload.nextPlan).trim()     : "",
       "未会計",
       now,
-      now
+      now,
+      false,  // col12: isDeleted
+      "",     // col13: deletedAt
+      "",     // col14: deleteReason
+      payload.injuryTrigger      ? String(payload.injuryTrigger).trim()      : "",
+      payload.relatedHistoryNote ? String(payload.relatedHistoryNote).trim() : ""
     ]);
     Logger.log("[createVisitWithChart] SelfPayVisits 保存完了");
 
@@ -317,6 +322,8 @@ function updateVisitWithChart(visitKey, payload) {
       visitSh.getRange(rowNum, 7).setValue(vas);
       visitSh.getRange(rowNum, 8).setValue(payload.nextPlan ? String(payload.nextPlan).trim() : "");
       visitSh.getRange(rowNum, 11).setValue(now);  // updatedAt
+      visitSh.getRange(rowNum, 15).setValue(payload.injuryTrigger      ? String(payload.injuryTrigger).trim()      : "");
+      visitSh.getRange(rowNum, 16).setValue(payload.relatedHistoryNote ? String(payload.relatedHistoryNote).trim() : "");
       visitFound = true;
       Logger.log("[updateVisitWithChart] SelfPayVisits row " + rowNum + " updated");
       break;
@@ -394,7 +401,7 @@ function getVisitFormData(patientId, visitKey) {
     if (!visitSh || visitSh.getLastRow() < 2)
       return { ok: false, error: "SelfPayVisits シートが見つかりません" };
 
-    var numCols  = Math.min(visitSh.getLastColumn(), 14);
+    var numCols  = Math.min(visitSh.getLastColumn(), 16);
     var rows     = visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues();
     var visitRow = null;
     for (var i = 0; i < rows.length; i++) {
@@ -411,22 +418,24 @@ function getVisitFormData(patientId, visitKey) {
     }
 
     var data = {
-      selfPayVisitKey:  visitKey,
-      patientId:        String(visitRow[1]),
-      visitDate:        visitDate,
-      visitType:        visitRow[3] || "再診",
-      chiefComplaint:   visitRow[5] || "",
-      vas:              visitRow[6] !== "" ? String(visitRow[6]) : "",
-      nextPlan:         visitRow[7] || "",
-      billingStatus:    visitRow[8] || "未会計",
-      assessment:       "",
-      findings:         "",
-      treatment:        "",
-      equipment:        "",
-      explanation:      "",
-      contraindication: "",
-      lifestyle:        "",
-      nextAppointment:  ""
+      selfPayVisitKey:    visitKey,
+      patientId:          String(visitRow[1]),
+      visitDate:          visitDate,
+      visitType:          visitRow[3] || "再診",
+      chiefComplaint:     visitRow[5] || "",
+      vas:                visitRow[6] !== "" ? String(visitRow[6]) : "",
+      nextPlan:           visitRow[7] || "",
+      billingStatus:      visitRow[8] || "未会計",
+      injuryTrigger:      visitRow[14] || "",
+      relatedHistoryNote: visitRow[15] || "",
+      assessment:         "",
+      findings:           "",
+      treatment:          "",
+      equipment:          "",
+      explanation:        "",
+      contraindication:   "",
+      lifestyle:          "",
+      nextAppointment:    ""
     };
 
     var chartSh = ss.getSheetByName(SHEET_NAMES.CHART);

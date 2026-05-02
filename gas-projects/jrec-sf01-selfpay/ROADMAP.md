@@ -277,26 +277,30 @@
 
 ---
 
-### Phase AI-1: 患者マスター・カルテ項目追加 ⏸
+### Phase AI-1: 患者マスター・カルテ項目追加 🔄（clasp push 済み・HEAD確認待ち 2026-05-02）
 
 **目的:** AI補助判定が活用する入力情報の基盤を整備する
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| AI-1-1 | JREC_SF01_Setup.gs: Patients ヘッダーに occupation / medicalHistory 追加 | ⏸ |
-| AI-1-2 | JREC_SF01_Patient.gs: `getPatientById` 読取列数を 13 へ拡張 | ⏸ |
-| AI-1-3 | JREC_SF01_Patient.gs: `createPatient` に occupation / medicalHistory 追加 | ⏸ |
-| AI-1-4 | JREC_SF01_Patient.gs: `updatePatient` に occupation / medicalHistory 更新処理追加 | ⏸ |
-| AI-1-5 | patient-form.html: 職業（select+その他）・既往歴（textarea）の入力欄追加 | ⏸ |
-| AI-1-6 | JREC_SF01_Setup.gs: SelfPayVisits ヘッダーに injuryTrigger / relatedHistoryNote 追加 | ⏸ |
-| AI-1-7 | JREC_SF01_Visit.gs: 読取列数を 16 へ拡張。戻り値に追加 | ⏸ |
-| AI-1-8 | JREC_SF01_Visit.gs: `createVisitWithChart` / `updateVisitWithChart` に追加 | ⏸ |
-| AI-1-9 | visit-form.html: 患者情報参照欄（年齢・性別・職業・患者マスター既往歴）追加 | ⏸ |
-| AI-1-10 | visit-form.html: 受傷起点・今回追記既往歴の入力欄追加 | ⏸ |
-| AI-1-11 | JREC_SF01_Main.gs: `t.patient` に occupation / medicalHistory が渡っているか確認 | ⏸ |
+| AI-1-1 | JREC_SF01_Setup.gs: Patients ヘッダーに occupation / medicalHistory 追加 | ✅ |
+| AI-1-2 | JREC_SF01_Patient.gs: `getPatientById` 読取列数を 13 へ拡張 | ✅ |
+| AI-1-3 | JREC_SF01_Patient.gs: `createPatient` に occupation / medicalHistory 追加 | ✅ |
+| AI-1-4 | JREC_SF01_Patient.gs: `updatePatient` に occupation / medicalHistory 更新処理追加 | ✅ |
+| AI-1-5 | patient-form.html: 職業（text）・既往歴（textarea）の入力欄追加 | ✅ |
+| AI-1-6 | JREC_SF01_Setup.gs: SelfPayVisits ヘッダーに injuryTrigger / relatedHistoryNote 追加 | ✅ |
+| AI-1-7 | JREC_SF01_Visit.gs: `getVisitFormData` 読取列数を 16 へ拡張。戻り値に追加 | ✅ |
+| AI-1-8 | JREC_SF01_Visit.gs: `createVisitWithChart` / `updateVisitWithChart` に追加 | ✅ |
+| AI-1-9 | visit-form.html: 患者情報参照欄（年齢・性別・職業・患者マスター既往歴）追加 | ✅ |
+| AI-1-10 | visit-form.html: 受傷起点・今回追記既往歴の入力欄追加 | ✅ |
+| AI-1-11 | patient-detail.html: 患者基本情報カード（職業・既往歴）追加 | ✅ |
 
-**変更ファイル候補:** Setup.gs / Patient.gs / Visit.gs / Main.gs / patient-form.html / visit-form.html
+**変更ファイル:** Setup.gs / Patient.gs / Visit.gs / patient-form.html / visit-form.html / patient-detail.html
 **既存会計・集計への影響:** なし
+**clasp push:** ✅ 実施済み（2026-05-02）
+**versioned deployment:** ⏸ 未実施（HEAD /dev 実機確認 AI1-1〜AI1-9 PASS 後に @36 を実施）
+
+**事前実行必須:** GAS エディタから `runAddPatientColumns()` / `runAddVisitColumns()` を手動実行してシートに列を追加してください。
 
 ---
 

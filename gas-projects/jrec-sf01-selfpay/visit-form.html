@@ -36,6 +36,41 @@
         ← 患者詳細に戻る
       </button>
     </div>
+
+    <!-- 患者情報参照（AI補助判定用） -->
+    <?
+    var _age = '';
+    if (patient.dob) {
+      try {
+        var _today = new Date();
+        var _birth = new Date(patient.dob);
+        var _ageNum = _today.getFullYear() - _birth.getFullYear();
+        var _dm = _today.getMonth() - _birth.getMonth();
+        if (_dm < 0 || (_dm === 0 && _today.getDate() < _birth.getDate())) _ageNum--;
+        _age = _ageNum + '歳';
+      } catch(e) {}
+    }
+    var _hasPatientContext = patient.gender || _age || patient.occupation || patient.medicalHistory;
+    ?>
+    <? if (_hasPatientContext) { ?>
+    <div style="margin-top:12px;padding:10px 14px;background:#f8f9fa;border-radius:6px;font-size:13px;border-left:3px solid #dadce0;">
+      <div style="font-size:11px;color:#9aa0a6;font-weight:600;margin-bottom:6px;letter-spacing:0.5px;">患者情報参照</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;">
+        <? if (_age || patient.gender) { ?>
+        <span>
+          <? if (_age) { ?><strong><?= _age ?></strong><? } ?>
+          <? if (patient.gender) { ?><span style="color:#5f6368;margin-left:4px;"><?= patient.gender ?></span><? } ?>
+        </span>
+        <? } ?>
+        <? if (patient.occupation) { ?>
+        <span><span style="color:#9aa0a6;">職業:</span> <strong><?= patient.occupation ?></strong></span>
+        <? } ?>
+      </div>
+      <? if (patient.medicalHistory) { ?>
+      <div style="margin-top:6px;"><span style="color:#9aa0a6;">患者マスター既往歴:</span> <span style="white-space:pre-wrap;"><?= patient.medicalHistory ?></span></div>
+      <? } ?>
+    </div>
+    <? } ?>
   </div>
 
   <div class="card">
@@ -97,6 +132,24 @@
         <label class="form-label" for="nextPlan">次回方針</label>
         <input class="form-control" id="nextPlan" type="text"
                placeholder="例: 1週間後。同様の施術方針" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="injuryTrigger">受傷起点
+          <span class="hint">（いつ・何をして・どの動作で、任意）</span>
+        </label>
+        <textarea class="form-control" id="injuryTrigger" rows="2"
+                  style="resize:vertical;"
+                  placeholder="例: 2週間前、懸垂・腕立て・空手動作で誘発。1か月休むと軽減するが再開すると再発。"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="relatedHistoryNote">今回追記既往歴
+          <span class="hint">（今回症状に関係する既往・補足、任意）</span>
+        </label>
+        <textarea class="form-control" id="relatedHistoryNote" rows="2"
+                  style="resize:vertical;"
+                  placeholder="例: 林業でチェーンソー作業あり。1年前にも同部位の痛みで来院歴あり。"></textarea>
       </div>
 
       <!-- ── カルテ記録 ── -->
@@ -195,19 +248,21 @@ window.onerror = function(message, source, lineno) {
 (function() {
   if (EDIT_VISIT) {
     // 編集モード: 既存データをフォームに設定
-    document.getElementById('visitDate').value        = EDIT_VISIT.visitDate        || '';
-    document.getElementById('visitType').value        = EDIT_VISIT.visitType        || '再診';
-    document.getElementById('chiefComplaint').value   = EDIT_VISIT.chiefComplaint   || '';
-    document.getElementById('vas').value              = EDIT_VISIT.vas              !== undefined ? EDIT_VISIT.vas : '';
-    document.getElementById('nextPlan').value         = EDIT_VISIT.nextPlan         || '';
-    document.getElementById('assessment').value       = EDIT_VISIT.assessment       || '';
-    document.getElementById('findings').value         = EDIT_VISIT.findings         || '';
-    document.getElementById('treatment').value        = EDIT_VISIT.treatment        || '';
-    document.getElementById('equipment').value        = EDIT_VISIT.equipment        || '';
-    document.getElementById('explanation').value      = EDIT_VISIT.explanation      || '';
-    document.getElementById('contraindication').value = EDIT_VISIT.contraindication || '';
-    document.getElementById('lifestyle').value        = EDIT_VISIT.lifestyle        || '';
-    document.getElementById('nextAppointment').value  = EDIT_VISIT.nextAppointment  || '';
+    document.getElementById('visitDate').value          = EDIT_VISIT.visitDate          || '';
+    document.getElementById('visitType').value          = EDIT_VISIT.visitType          || '再診';
+    document.getElementById('chiefComplaint').value     = EDIT_VISIT.chiefComplaint     || '';
+    document.getElementById('vas').value                = EDIT_VISIT.vas                !== undefined ? EDIT_VISIT.vas : '';
+    document.getElementById('nextPlan').value           = EDIT_VISIT.nextPlan           || '';
+    document.getElementById('injuryTrigger').value      = EDIT_VISIT.injuryTrigger      || '';
+    document.getElementById('relatedHistoryNote').value = EDIT_VISIT.relatedHistoryNote || '';
+    document.getElementById('assessment').value         = EDIT_VISIT.assessment         || '';
+    document.getElementById('findings').value           = EDIT_VISIT.findings           || '';
+    document.getElementById('treatment').value          = EDIT_VISIT.treatment          || '';
+    document.getElementById('equipment').value          = EDIT_VISIT.equipment          || '';
+    document.getElementById('explanation').value        = EDIT_VISIT.explanation        || '';
+    document.getElementById('contraindication').value   = EDIT_VISIT.contraindication   || '';
+    document.getElementById('lifestyle').value          = EDIT_VISIT.lifestyle          || '';
+    document.getElementById('nextAppointment').value    = EDIT_VISIT.nextAppointment    || '';
   } else {
     // 新規モード: 来院日のデフォルトを今日に設定
     var today = new Date();
@@ -237,20 +292,22 @@ window.onerror = function(message, source, lineno) {
     clearMsg();
 
     var payload = {
-      patientId:       PATIENT_ID,
-      visitDate:       vd,
-      visitType:       document.getElementById('visitType').value,
-      chiefComplaint:  cc,
-      vas:             vasVal,
-      nextPlan:        document.getElementById('nextPlan').value.trim(),
-      assessment:      document.getElementById('assessment').value.trim(),
-      findings:        document.getElementById('findings').value.trim(),
-      treatment:       document.getElementById('treatment').value.trim(),
-      equipment:       document.getElementById('equipment').value.trim(),
-      explanation:     document.getElementById('explanation').value.trim(),
-      contraindication:document.getElementById('contraindication').value,
-      lifestyle:       document.getElementById('lifestyle').value.trim(),
-      nextAppointment: document.getElementById('nextAppointment').value.trim()
+      patientId:          PATIENT_ID,
+      visitDate:          vd,
+      visitType:          document.getElementById('visitType').value,
+      chiefComplaint:     cc,
+      vas:                vasVal,
+      nextPlan:           document.getElementById('nextPlan').value.trim(),
+      injuryTrigger:      document.getElementById('injuryTrigger').value.trim(),
+      relatedHistoryNote: document.getElementById('relatedHistoryNote').value.trim(),
+      assessment:         document.getElementById('assessment').value.trim(),
+      findings:           document.getElementById('findings').value.trim(),
+      treatment:          document.getElementById('treatment').value.trim(),
+      equipment:          document.getElementById('equipment').value.trim(),
+      explanation:        document.getElementById('explanation').value.trim(),
+      contraindication:   document.getElementById('contraindication').value,
+      lifestyle:          document.getElementById('lifestyle').value.trim(),
+      nextAppointment:    document.getElementById('nextAppointment').value.trim()
     };
 
     console.log('[visitForm] payload:', JSON.stringify(payload));

@@ -113,6 +113,14 @@ var visitCount    = timeline.length;
       </div>
     </div>
 
+    <? if (patient.occupation || patient.medicalHistory) { ?>
+    <div style="margin-top:10px;padding:10px 14px;background:#f8f9fa;border-radius:6px;font-size:13px;border-left:3px solid #dadce0;">
+      <div style="font-size:11px;color:#9aa0a6;font-weight:600;margin-bottom:4px;">患者基本情報</div>
+      <? if (patient.occupation) { ?><div><span style="color:#5f6368;">職業:</span> <?= patient.occupation ?></div><? } ?>
+      <? if (patient.medicalHistory) { ?><div style="margin-top:2px;"><span style="color:#5f6368;">既往歴:</span> <span style="white-space:pre-wrap;"><?= patient.medicalHistory ?></span></div><? } ?>
+    </div>
+    <? } ?>
+
     <? if (timeline.length > 0) { ?>
       <div style="margin-top:10px;padding:10px 12px;background:#f1f3f4;border-radius:6px;font-size:13px;">
         <span style="color:#5f6368;">最新主訴:</span>

@@ -73,6 +73,24 @@
                   placeholder="例: 高血圧既往あり"></textarea>
       </div>
 
+      <p class="form-section-title">AI補助判定用情報（任意）</p>
+
+      <div class="form-group">
+        <label class="form-label" for="occupation">職業
+          <span class="hint">（身体負荷・作業環境の参考情報）</span>
+        </label>
+        <input class="form-control" id="occupation" type="text"
+               placeholder="例: 林業、介護職、デスクワーク、学生" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="medicalHistory">既往歴
+          <span class="hint">（施術判断に関係する既往・通院・服薬状況など）</span>
+        </label>
+        <textarea class="form-control" id="medicalHistory" rows="3"
+                  placeholder="例: 5年前に腰椎椎間板ヘルニア手術歴あり。高血圧で服薬中。"></textarea>
+      </div>
+
       <p class="form-section-title">JREC連携（任意）</p>
 
       <div class="form-group">
@@ -110,14 +128,16 @@ var PATIENT = <?!= JSON.stringify(patient).replace(/<\//g, '<\\/') ?>;
 
   // edit モード: フォームにプリフィル
   if (MODE === 'edit' && PATIENT) {
-    document.getElementById('name').value    = PATIENT.name            || '';
-    document.getElementById('kana').value    = PATIENT.kana            || '';
-    document.getElementById('dob').value     = PATIENT.dob             || '';
-    document.getElementById('gender').value  = PATIENT.gender          || '';
-    document.getElementById('phone').value   = PATIENT.phone           || '';
-    document.getElementById('address').value = PATIENT.address         || '';
-    document.getElementById('note').value    = PATIENT.note            || '';
-    document.getElementById('jrecPatientId').value = PATIENT.jrecPatientId || '';
+    document.getElementById('name').value          = PATIENT.name            || '';
+    document.getElementById('kana').value          = PATIENT.kana            || '';
+    document.getElementById('dob').value           = PATIENT.dob             || '';
+    document.getElementById('gender').value        = PATIENT.gender          || '';
+    document.getElementById('phone').value         = PATIENT.phone           || '';
+    document.getElementById('address').value       = PATIENT.address         || '';
+    document.getElementById('note').value          = PATIENT.note            || '';
+    document.getElementById('occupation').value    = PATIENT.occupation      || '';
+    document.getElementById('medicalHistory').value = PATIENT.medicalHistory || '';
+    document.getElementById('jrecPatientId').value = PATIENT.jrecPatientId   || '';
   }
 
   // Enter キーによる誤送信を防止（textarea は改行のため除外）
@@ -143,14 +163,16 @@ var PATIENT = <?!= JSON.stringify(patient).replace(/<\//g, '<\\/') ?>;
     clearMsg();
 
     var payload = {
-      name:          name,
-      kana:          document.getElementById('kana').value.trim(),
-      dob:           document.getElementById('dob').value,
-      gender:        document.getElementById('gender').value,
-      phone:         document.getElementById('phone').value.trim(),
-      address:       document.getElementById('address').value.trim(),
-      note:          document.getElementById('note').value.trim(),
-      jrecPatientId: document.getElementById('jrecPatientId').value.trim()
+      name:           name,
+      kana:           document.getElementById('kana').value.trim(),
+      dob:            document.getElementById('dob').value,
+      gender:         document.getElementById('gender').value,
+      phone:          document.getElementById('phone').value.trim(),
+      address:        document.getElementById('address').value.trim(),
+      note:           document.getElementById('note').value.trim(),
+      occupation:     document.getElementById('occupation').value.trim(),
+      medicalHistory: document.getElementById('medicalHistory').value.trim(),
+      jrecPatientId:  document.getElementById('jrecPatientId').value.trim()
     };
 
     var btnLabel = MODE === 'edit' ? '更新する' : '保存する';

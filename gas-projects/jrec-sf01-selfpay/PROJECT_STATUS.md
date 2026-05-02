@@ -34,10 +34,12 @@
 **✅ Versioned Deployment @35: 本番反映済み**（2026-05-02 Phase 6-L 含む）
 
 **✅ Phase AI-0 AI補助判定 設計調査: CLOSED**（2026-05-02 コード実装なし・設計書のみ）
+**🔄 Phase AI-1 患者マスター・カルテ項目追加: clasp push 済み・HEAD /dev 実機確認待ち**（2026-05-02）
 
 次期実装候補:
 1. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
-2. **Phase AI-1** AI補助判定 患者マスター・カルテ項目追加 ⏸
+2. **Phase AI-1** HEAD /dev 実機確認 AI1-1〜AI1-9 ← **現在ここ**
+3. **Phase AI-2** AI補助判定UI枠追加 ⏸
 
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
@@ -46,7 +48,7 @@
 
 AI補助判定ロードマップ（Phase AI 系列）:
 - AI-0: 設計調査 ✅ CLOSED（2026-05-02 コード実装なし）
-- AI-1: 患者マスター・カルテ項目追加 ⏸
+- AI-1: 患者マスター・カルテ項目追加 🔄 clasp push 済み・HEAD確認待ち（2026-05-02）
 - AI-2: AI補助判定UI枠追加 ⏸
 - AI-3: OpenAI API連携 ⏸
 - AI-4: AI補助判定保存・レビュー ⏸
@@ -3517,6 +3519,65 @@ patient-list.html / styles.html
 
 ---
 
+## 🔄 Phase AI-1 患者マスター・カルテ項目追加（2026-05-02 clasp push 済み・HEAD確認待ち）
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Setup.gs` | `setupPatients_` ヘッダーに職業（col12）・既往歴（col13）追加。`setupSelfPayVisits_` ヘッダーに受傷起点（col15）・今回追記既往歴（col16）追加。`runAddPatientColumns()` / `runAddVisitColumns()` 手動実行用ヘルパー追加 |
+| `JREC_SF01_Patient.gs` | `getPatientById` 読取列数を 13 へ拡張。戻り値に occupation / medicalHistory 追加。`createPatient` appendRow に追加。`updatePatient` に col12 / col13 更新処理追加 |
+| `JREC_SF01_Visit.gs` | `getVisitFormData` 読取列数を 16 へ拡張。戻り値に injuryTrigger / relatedHistoryNote 追加。`createVisitWithChart` appendRow に col12-16 追加（col12=false, col13-14=""）。`updateVisitWithChart` に col15 / col16 更新処理追加 |
+| `patient-form.html` | 「AI補助判定用情報」セクション追加。職業（text）・既往歴（textarea）入力欄追加。編集時プリフィル対応。保存 payload に追加 |
+| `visit-form.html` | 患者情報参照欄（年齢・性別・職業・患者マスター既往歴）追加（読み取り専用）。受傷起点（textarea）・今回追記既往歴（textarea）入力欄追加。payload / 編集時復元対応 |
+| `patient-detail.html` | 患者基本情報カード（職業・既往歴）追加 |
+
+### 追加列
+
+| シート | col | 内容 | 既存データ影響 |
+|---|---|---|---|
+| Patients | 12 | occupation（職業） | 既存行は空欄。エラーなし |
+| Patients | 13 | medicalHistory（既往歴） | 既存行は空欄。エラーなし |
+| SelfPayVisits | 15 | injuryTrigger（受傷起点） | 既存行は空欄。エラーなし |
+| SelfPayVisits | 16 | relatedHistoryNote（今回追記既往歴） | 既存行は空欄。エラーなし |
+
+### シート追加列の適用方法
+
+GAS エディタから以下を手動実行してください（1回のみ）:
+
+```
+runAddPatientColumns()  → Patients に職業/既往歴列を追加
+runAddVisitColumns()    → SelfPayVisits に受傷起点/今回追記既往歴列を追加
+```
+
+または `runSetupAll()` を再実行してもヘッダーのみ更新されます（既存データは保持）。
+
+### clasp push / デプロイ状態
+
+| 項目 | 状態 |
+|---|---|
+| clasp push | ✅ 実施済み（2026-05-02） |
+| versioned deployment | ⏸ 未実施（HEAD /dev 実機確認後に実施） |
+| HEAD /dev | https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev |
+
+### 実機確認項目 AI1-1〜AI1-9（未確認）
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| AI1-1 | ⏸ | 新規患者登録画面に「職業」「既往歴」が表示される。入力して保存できる |
+| AI1-2 | ⏸ | 既存患者編集で「職業」「既往歴」が復元される。修正して保存できる |
+| AI1-3 | ⏸ | カルテ入力画面で患者情報参照欄（年齢・性別・職業・既往歴）が見える。空欄患者でも壊れない |
+| AI1-4 | ⏸ | カルテ入力に「受傷起点」「今回追記既往歴」が表示される。入力して保存できる |
+| AI1-5 | ⏸ | カルテ再編集時に「受傷起点」「今回追記既往歴」が復元される |
+| AI1-6 | ⏸ | 既存患者（職業・既往歴空欄）でエラーにならない。既存カルテ（受傷起点空欄）でもエラーにならない |
+| AI1-7 | ⏸ | カルテ保存後の「会計入力へ進む」導線が壊れていない |
+| AI1-8 | ⏸ | home / dailyCheckout / monthlyReport / menuSalesReport / outstandingReport が開く |
+| AI1-9 | ⏸ | スマホ表示で追加項目が大きく崩れていない |
+
+> **次はユーザー実機確認 AI1-1〜AI1-9。全 PASS 後に versioned deployment @36 を実施。**
+
+---
+
 ## ✅ Phase AI-0 AI補助判定 設計調査（2026-05-02 CLOSED）
 
 ### 概要
@@ -3577,3 +3638,4 @@ Phase 6-M（CSV/印刷/監査）との優先順位はユーザーが決定する
 | 2026-04-27 | Phase 2 MVP 実装。JREC_SF01_Main.gs / JREC_SF01_Patient.gs / 5 HTML + styles.html 作成。clasp push 完了（9ファイル）。 |
 | 2026-04-27 | Phase 3 実装。JREC_SF01_Visit.gs / visit-form.html 作成。patient-detail.html・JREC_SF01_Main.gs 更新。clasp push（11ファイル）。 |
 | 2026-05-02 | Phase AI-0 設計調査完了。`docs/PHASE_AI_CHART_ASSIST_DESIGN_2026-05-02.md` 作成。コード実装なし・clasp push なし。AI補助判定機能の全設計（患者マスター追加/カルテ項目追加/入力設計/出力設計/保存設計/ロードマップ）を記録。 |
+| 2026-05-02 | Phase AI-1 患者マスター・カルテ項目追加 実装完了・clasp push 済み。Patients に職業/既往歴（col12-13）・SelfPayVisits に受傷起点/今回追記既往歴（col15-16）追加。patient-form/visit-form/patient-detail 対応。HEAD /dev 実機確認待ち。 |

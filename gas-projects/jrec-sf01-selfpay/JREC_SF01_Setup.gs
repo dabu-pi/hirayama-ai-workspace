@@ -177,13 +177,33 @@ function setupSettings_(ss) {
 function setupPatients_(ss) {
   var sh = getOrCreateSheet_(ss, SHEET_NAMES.PATIENTS);
 
-  var headers = [["patientId", "氏名", "フリガナ", "生年月日", "性別", "電話番号", "住所", "備考", "jrecPatientId", "createdAt", "updatedAt"]];
-  setHeaders_(sh, headers, [80, 120, 120, 110, 70, 130, 200, 200, 120, 160, 160]);
+  var headers = [["patientId", "氏名", "フリガナ", "生年月日", "性別", "電話番号", "住所", "備考", "jrecPatientId", "createdAt", "updatedAt", "職業", "既往歴"]];
+  setHeaders_(sh, headers, [80, 120, 120, 110, 70, 130, 200, 200, 120, 160, 160, 130, 260]);
 
   // 性別プルダウン
   applyDropdown_(sh, 2, 5, 200, ["男性", "女性", "その他"]);
 
   sh.setFrozenRows(1);
+}
+
+/**
+ * Patients シートに職業・既往歴列（col 12-13）を追加する（Phase AI-1 導入時に手動実行）。
+ * 列が既に存在する場合はスキップして ok:true を返す。
+ */
+function runAddPatientColumns() {
+  var sh = getTargetSpreadsheet_().getSheetByName(SHEET_NAMES.PATIENTS);
+  if (!sh) return { ok: false, message: "Patients シートが見つかりません" };
+  var lastCol = sh.getLastColumn();
+  if (lastCol >= 12) {
+    Logger.log("[runAddPatientColumns] 既に " + lastCol + " 列あります。スキップ。");
+    return { ok: true, message: "既に列が存在します（" + lastCol + " 列）。スキップしました。" };
+  }
+  sh.getRange(1, 12).setValue("職業");
+  sh.getRange(1, 13).setValue("既往歴");
+  sh.setColumnWidth(12, 130);
+  sh.setColumnWidth(13, 260);
+  Logger.log("[runAddPatientColumns] 職業 / 既往歴 追加完了");
+  return { ok: true, message: "職業 / 既往歴 列を追加しました" };
 }
 
 // ============================================================
@@ -193,8 +213,8 @@ function setupPatients_(ss) {
 function setupSelfPayVisits_(ss) {
   var sh = getOrCreateSheet_(ss, SHEET_NAMES.VISITS);
 
-  var headers = [["selfPayVisitKey", "patientId", "来院日", "来院区分", "担当者", "主訴", "VAS", "次回方針", "会計状態", "createdAt", "updatedAt", "isDeleted", "deletedAt", "deleteReason"]];
-  setHeaders_(sh, headers, [200, 80, 100, 80, 90, 260, 50, 200, 80, 160, 160, 80, 160, 200]);
+  var headers = [["selfPayVisitKey", "patientId", "来院日", "来院区分", "担当者", "主訴", "VAS", "次回方針", "会計状態", "createdAt", "updatedAt", "isDeleted", "deletedAt", "deleteReason", "受傷起点", "今回追記既往歴"]];
+  setHeaders_(sh, headers, [200, 80, 100, 80, 90, 260, 50, 200, 80, 160, 160, 80, 160, 200, 220, 260]);
 
   // 来院区分プルダウン
   applyDropdown_(sh, 2, 4, 200, ["初診", "再診"]);
@@ -204,6 +224,26 @@ function setupSelfPayVisits_(ss) {
   sh.getRange(2, 12, 200, 1).insertCheckboxes();
 
   sh.setFrozenRows(1);
+}
+
+/**
+ * SelfPayVisits シートに受傷起点・今回追記既往歴列（col 15-16）を追加する（Phase AI-1 導入時に手動実行）。
+ * 列が既に存在する場合はスキップして ok:true を返す。
+ */
+function runAddVisitColumns() {
+  var sh = getTargetSpreadsheet_().getSheetByName(SHEET_NAMES.VISITS);
+  if (!sh) return { ok: false, message: "SelfPayVisits シートが見つかりません" };
+  var lastCol = sh.getLastColumn();
+  if (lastCol >= 15) {
+    Logger.log("[runAddVisitColumns] 既に " + lastCol + " 列あります。スキップ。");
+    return { ok: true, message: "既に列が存在します（" + lastCol + " 列）。スキップしました。" };
+  }
+  sh.getRange(1, 15).setValue("受傷起点");
+  sh.getRange(1, 16).setValue("今回追記既往歴");
+  sh.setColumnWidth(15, 220);
+  sh.setColumnWidth(16, 260);
+  Logger.log("[runAddVisitColumns] 受傷起点 / 今回追記既往歴 追加完了");
+  return { ok: true, message: "受傷起点 / 今回追記既往歴 列を追加しました" };
 }
 
 /**

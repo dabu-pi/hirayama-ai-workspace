@@ -46,7 +46,7 @@ function getPatientById(patientId) {
   var sh = ss.getSheetByName(SHEET_NAMES.PATIENTS);
   if (!sh || sh.getLastRow() < 2) return null;
 
-  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 11).getValues();
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 13).getValues();
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     if (String(r[0]) !== String(patientId)) continue;
@@ -68,7 +68,9 @@ function getPatientById(patientId) {
       address:       r[6]  || "",
       note:          r[7]  || "",
       jrecPatientId: r[8]  || "",
-      createdAt:     createdAt
+      createdAt:     createdAt,
+      occupation:    r[11] || "",
+      medicalHistory: r[12] || ""
     };
   }
   return null;
@@ -92,15 +94,17 @@ function createPatient(payload) {
     sh.appendRow([
       pid,
       name,
-      payload.kana          ? payload.kana.trim()          : "",
-      payload.dob           ? payload.dob                   : "",
-      payload.gender        ? payload.gender                 : "",
-      payload.phone         ? String(payload.phone).trim()  : "",
-      payload.address       ? payload.address.trim()        : "",
-      payload.note          ? payload.note.trim()           : "",
-      payload.jrecPatientId ? payload.jrecPatientId.trim()  : "",
+      payload.kana           ? payload.kana.trim()           : "",
+      payload.dob            ? payload.dob                    : "",
+      payload.gender         ? payload.gender                  : "",
+      payload.phone          ? String(payload.phone).trim()   : "",
+      payload.address        ? payload.address.trim()         : "",
+      payload.note           ? payload.note.trim()            : "",
+      payload.jrecPatientId  ? payload.jrecPatientId.trim()   : "",
       now,
-      now
+      now,
+      payload.occupation     ? payload.occupation.trim()      : "",
+      payload.medicalHistory ? payload.medicalHistory.trim()  : ""
     ]);
     appendRunLog_("PATIENT_CREATE", pid, "氏名: " + name);
     return { ok: true, patientId: pid };
@@ -168,13 +172,15 @@ function updatePatient(patientId, payload) {
       var rowNum = i + 2;
       var now    = new Date();
       sh.getRange(rowNum, 2).setValue(name);
-      sh.getRange(rowNum, 3).setValue(payload.kana    ? String(payload.kana).trim()    : "");
-      sh.getRange(rowNum, 4).setValue(payload.dob     ? String(payload.dob)            : "");
-      sh.getRange(rowNum, 5).setValue(payload.gender  ? String(payload.gender)         : "");
-      sh.getRange(rowNum, 6).setValue(payload.phone   ? String(payload.phone).trim()   : "");
-      sh.getRange(rowNum, 7).setValue(payload.address ? String(payload.address).trim() : "");
-      sh.getRange(rowNum, 8).setValue(payload.note    ? String(payload.note).trim()    : "");
+      sh.getRange(rowNum, 3).setValue(payload.kana           ? String(payload.kana).trim()           : "");
+      sh.getRange(rowNum, 4).setValue(payload.dob            ? String(payload.dob)                   : "");
+      sh.getRange(rowNum, 5).setValue(payload.gender         ? String(payload.gender)                 : "");
+      sh.getRange(rowNum, 6).setValue(payload.phone          ? String(payload.phone).trim()           : "");
+      sh.getRange(rowNum, 7).setValue(payload.address        ? String(payload.address).trim()         : "");
+      sh.getRange(rowNum, 8).setValue(payload.note           ? String(payload.note).trim()            : "");
       sh.getRange(rowNum, 11).setValue(now);
+      sh.getRange(rowNum, 12).setValue(payload.occupation     ? String(payload.occupation).trim()     : "");
+      sh.getRange(rowNum, 13).setValue(payload.medicalHistory ? String(payload.medicalHistory).trim() : "");
       Logger.log("[updatePatient] row " + rowNum + " updated: " + name);
       appendRunLog_("PATIENT_UPDATE", String(patientId), "氏名: " + name);
       return { ok: true, patientId: String(patientId) };
