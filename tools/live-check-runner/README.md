@@ -1,5 +1,11 @@
 # live-check-runner
 
+> **正規作業場所:**
+> ```
+> C:\hirayama-ai-workspace\workspace\tools\live-check-runner
+> ```
+> JREC-SF01 や他のプロジェクトフォルダから live-check-runner の作業を行わないこと。
+
 workspace 全プロジェクト共通の LiveCheck（HEAD /dev 動作確認）自動化ツール。
 
 Playwright を使い、各プロジェクトのページ到達・主要要素の存在確認・スクリーンショット保存を行う。
