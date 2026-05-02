@@ -1,6 +1,6 @@
 # JREC-SF01 自費カルテ・会計システム — ロードマップ
 
-最終更新: 2026-05-02（Phase 6-K 実装・HEAD実機確認待ち）
+最終更新: 2026-05-02（Phase 6-K CLOSED @34）
 
 ---
 
@@ -8,7 +8,8 @@
 
 | デプロイ | 内容 |
 |---|---|
-| @33 | Phase 6-J 月別売上集計 / monthlyReport ページ 含む（**最新本番** `AKfycbwKgRxP...Hag`） |
+| @34 | Phase 6-K メニュー別売上分析 / menuSalesReport ページ 含む（**最新本番** `AKfycbxwdjQ0...5bf`） |
+| @33 | Phase 6-J 月別売上集計 / monthlyReport ページ 含む |
 | @32 | Phase 6-I 集計メニュー / reports ページ 含む |
 | @31 | Phase 6-H dailyCheckout 日別金額合計カード 含む |
 | @30 | Phase 6-N-1 共通タブナビゲーション 含む |
@@ -46,6 +47,7 @@
 | Phase 6-H | dailyCheckout 日別金額合計カード | ✅ 2026-05-02 |
 | Phase 6-I | 集計メニュー / reports ページ新設 | ✅ 2026-05-02 |
 | Phase 6-J | 月別売上集計 / monthlyReport ページ | ✅ 2026-05-02 |
+| Phase 6-K | メニュー別売上分析 / menuSalesReport ページ | ✅ 2026-05-02 |
 
 > Phase 6-C（来院完全削除）は保留中。集計系フェーズ後に判断。
 
@@ -132,7 +134,7 @@
 
 ---
 
-### Phase 6-K: メニュー別集計 🔄（実装済み・HEAD実機確認待ち）
+### Phase 6-K: メニュー別集計 ✅（CLOSED 2026-05-02）
 
 **目的:** 自費メニューごとの件数・売上を分析できるようにする
 
@@ -140,9 +142,9 @@
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 6-K-1 | `getMenuSalesSummary(year, month)` を Billing.gs に追加（visitDate ベース・isDeleted 除外・請求ベース） | 🔄 実機確認待ち |
-| 6-K-2 | 月指定でメニュー別分析（売上降順・来院数・明細行数・数量・平均単価） | 🔄（含む） |
-| 6-K-3 | メニュー別集計画面（`?page=menuSalesReport`）を新設 | 🔄（含む） |
+| 6-K-1 | `getMenuSalesSummary(year, month)` を Billing.gs に追加（visitDate ベース・isDeleted 除外・請求ベース） | ✅ CLOSED 2026-05-02 @34 |
+| 6-K-2 | 月指定でメニュー別分析（売上降順・来院数・明細行数・数量・平均単価） | ✅（含む） |
+| 6-K-3 | メニュー別集計画面（`?page=menuSalesReport`）を新設 | ✅（含む） |
 | 6-K-4 | 自費メニュー改善・補助金効果測定への活用 |
 
 **変更ファイル候補:** `JREC_SF01_Billing.gs` / `JREC_SF01_Main.gs` / html 追加  
@@ -236,7 +238,7 @@
 3. ✅ Phase 6-H — dailyCheckout 日別金額合計カード（完了 @31）
 4. ✅ Phase 6-I — 集計導線ページ新設（完了 @32）
 5. ✅ Phase 6-J — 月別売上集計（完了 @33）
-6. 🔄 Phase 6-K — メニュー別集計（実機確認待ち）
+6. ✅ Phase 6-K — メニュー別集計（完了 @34）
 7. Phase 6-L — 未収・回収管理（財務リスク対応）
 8. Phase 6-M — CSV・印刷・監査（出力整備）
 ```

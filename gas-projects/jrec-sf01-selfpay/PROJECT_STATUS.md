@@ -27,7 +27,8 @@
 **✅ Phase 6-J 月別売上集計: CLOSED**（2026-05-02 J1-1〜J1-12 全 PASS）
 **✅ Versioned Deployment @33: 本番反映済み**（2026-05-02 Phase 6-J 含む）
 
-**🔄 Phase 6-K メニュー別売上分析: 実装済み・HEAD実機確認待ち**（2026-05-02）
+**✅ Phase 6-K メニュー別売上分析: CLOSED**（2026-05-02 K1-1〜K1-10 全 PASS）
+**✅ Versioned Deployment @34: 本番反映済み**（2026-05-02 Phase 6-K 含む）
 
 次期実装候補:
 1. **Phase 6-L** 未収・回収管理レポート ⏸
@@ -43,7 +44,7 @@ Phase 6-G〜6-N ロードマップ:
 - 6-H: dailyCheckout 日別金額合計カード ✅ CLOSED（2026-05-02 @31）
 - 6-I: 集計メニュー / 集計ページ新設 ✅ CLOSED（2026-05-02 @32）
 - 6-J: 月別売上集計 ✅ CLOSED（2026-05-02 @33）
-- 6-K: メニュー別売上分析 🔄 実装済み・HEAD実機確認待ち
+- 6-K: メニュー別売上分析 ✅ CLOSED（2026-05-02 @34）
 - 6-L: 未収・回収管理レポート ⏸
 - 6-M: CSV / 印刷 / 監査レポート ⏸
 
@@ -51,7 +52,7 @@ Phase 6-G〜6-N ロードマップ:
 
 ---
 
-## 🔄 Phase 6-K メニュー別売上分析（2026-05-02 実機確認待ち）
+## ✅ Phase 6-K メニュー別売上分析（2026-05-02 CLOSED）
 
 ### SelfPayItems 列構造確認結果（2026-05-02）
 
@@ -80,22 +81,38 @@ Phase 6-G〜6-N ロードマップ:
 | `menu-sales-report.html` | 新規作成。月移動ナビ + サマリーカード + メニュー別テーブル（売上降順） |
 | `reports.html` | メニュー別売上分析カードを有効化（`?page=menuSalesReport`） |
 
-### テスト項目（実機確認待ち）
+### テスト項目（実機確認結果）
 
-> DailySales / Run_Log / getDailySalesReport 非依存。請求ベース集計。会計・保存ロジック変更なし。
+> DailySales / Run_Log / getDailySalesReport 非依存。請求ベース集計（小計税込 r[9]）。会計・保存ロジック変更なし。
 
 | Test | 判定 | 確認内容 |
 |---|---|---|
-| K1-1 | ⏳ | reports からメニュー別売上分析カードで menuSalesReport に移動できる |
-| K1-2 | ⏳ | menuSalesReport に対象年月のサマリーカードが表示される |
-| K1-3 | ⏳ | メニュー別テーブルが売上降順で表示される |
-| K1-4 | ⏳ | 売上合計が monthlyReport の月間請求合計と一致する |
-| K1-5 | ⏳ | isDeleted=true の来院が除外される |
-| K1-6 | ⏳ | 0件月でも 0件 / ¥0 表示で壊れない |
-| K1-7 | ⏳ | ◀ 前月 / 今月 / 翌月 ▶ ナビが動作する |
-| K1-8 | ⏳ | DailySales / Run_Log / getDailySalesReport 非依存 |
-| K1-9 | ⏳ | 既存 reports / monthlyReport / dailyCheckout / home に影響なし |
-| K1-10 | ⏳ | スマホ表示で大きく崩れない（件数列は hide-sm-ms） |
+| K1-1 | ✅ PASS | reports からメニュー別売上分析カードで menuSalesReport に移動できる |
+| K1-2 | ✅ PASS | menuSalesReport に対象年月のサマリーカードが表示される |
+| K1-3 | ✅ PASS | メニュー別テーブルが売上降順で表示される |
+| K1-4 | ✅ PASS | 売上合計が monthlyReport の月間請求合計と一致する（¥16,500） |
+| K1-5 | ✅ PASS | isDeleted=true の来院が除外される |
+| K1-6 | ✅ PASS | 0件月でも 0件 / ¥0 表示で壊れない |
+| K1-7 | ✅ PASS | ◀ 前月 / 今月 / 翌月 ▶ ナビが動作する |
+| K1-8 | ✅ PASS | DailySales / Run_Log / getDailySalesReport 非依存 |
+| K1-9 | ✅ PASS | 既存 reports / monthlyReport / dailyCheckout / home に影響なし |
+| K1-10 | ✅ PASS | スマホ表示で大きく崩れない（件数列は hide-sm-ms） |
+
+### 実測値（2026年5月）
+
+| 項目 | menuSalesReport | monthlyReport 請求合計 | 一致 |
+|---|---|---|---|
+| 売上合計 | ¥16,500 | ¥16,500 | ✅ |
+| メニュー種類 | 1種 | — | — |
+| 明細行数 | 3行 | — | — |
+| 数量合計 | 3点 | — | — |
+
+メニュー内訳: 初回標準施術（SELF_PAY_INITIAL_FULL）: 3件・3行・3点・¥16,500・平均単価 ¥5,500
+
+### 本番 URL（@34 / /exec）:
+```
+https://script.google.com/macros/s/AKfycbxwdjQ0ZOO4S-UfDGwQhTPWZwo9QqUVhX2NTIHm539lO9sj6Qupi3fultFo4d1tq5bf/exec
+```
 
 ### HEAD 実機確認 URL
 
