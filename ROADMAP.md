@@ -45,6 +45,23 @@
 
 ---
 
+## 共通 LiveCheck 基盤（tools/live-check-runner）
+
+> workspace 全プロジェクト共通の HEAD /dev 動作確認自動化ツール。
+
+| # | タスク | 内容 | ステータス |
+|---|---|---|---|
+| LC-1 | 初期スキャフォールド作成 | Playwright + ディレクトリ構成 + jrec/training/subsidy config + smoke spec + docs | ✅ 2026-05-02 |
+| LC-2 | JREC-SF01 Phase AI-1 確認 spec 実装 | ai1.spec.ts（AI1-1〜AI1-9 自動化対象） | ⏸ |
+| LC-3 | 認証セッション管理 | storageState による Google ログイン済みセッション再利用 | ⏸ |
+| LC-4 | レポート → PROJECT_STATUS 自動反映 | make-report.ts 完成 + CI 連携 | ⏸ |
+| LC-5 | orchestrator 連携 | automation/ から CLI として呼び出す設計 | ⏸ |
+
+**配置:** `C:\hirayama-ai-workspace\workspace\tools\live-check-runner`
+**設計書:** `tools/live-check-runner/docs/LIVE_CHECK_RUNNER_DESIGN.md`
+
+---
+
 ## AI 開発環境（インフラ）
 
 > workspace 全体で使う開発自動化スクリプト群。プロジェクト作業の前提基盤。

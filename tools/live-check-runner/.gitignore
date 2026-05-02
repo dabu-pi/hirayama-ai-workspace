@@ -1,0 +1,9 @@
+node_modules/
+reports/html/
+reports/screenshots/
+reports/*.json
+reports/*.xml
+test-results/
+playwright-report/
+.env
+*.local

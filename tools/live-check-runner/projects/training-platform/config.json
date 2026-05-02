@@ -1,0 +1,12 @@
+{
+  "name": "training-program-platform-jp",
+  "type": "nextjs",
+  "localUrl": "http://localhost:3000",
+  "prodUrl": "",
+  "notes": [
+    "Next.js/Vercel系のLiveCheck対象",
+    "prodUrl は確定次第設定する",
+    "ログインが必要な画面は後続 Phase で扱う",
+    "localUrl は npm run dev でサーバーを起動してから実行する"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "subsidy-grants-projects",
+  "type": "docs",
+  "repoPath": "C:/hirayama-ai-workspace/workspace/subsidy-grants-projects",
+  "notes": [
+    "独立 repo（github: dabu-pi/subsidy-grants-projects）",
+    "LiveCheck runner からはファイル存在・Markdown 整合性チェックを行う想定",
+    "Web アプリではないため Playwright の直接実行対象外",
+    "docs-check.todo.md にチェック項目を記録する"
+  ]
+}
