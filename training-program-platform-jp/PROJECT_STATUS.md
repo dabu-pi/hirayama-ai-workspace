@@ -1,5 +1,65 @@
 # PROJECT_STATUS
 
+## 2026-05-02 Phase S-6: アカウント削除 土台整備
+
+### STATUS: ✅ 実装完了・実機確認待ち
+
+**変更ファイル:**
+- `components/profile/ProfileScreen.tsx` — S-4 申請 UI を撤去（ログアウト機能は維持）
+- `app/profile/page.tsx` — S-4 用の deletion request 取得を削除（S-4 前の状態に戻す）
+- `middleware.ts` — `app_deleted_at` チェック追加・matcher 拡張
+- `lib/admin/members.ts` — `app_deleted_at` をクエリ・型に追加
+
+**作成ファイル:**
+- `app/account-deleted/page.tsx` — 削除済みユーザー向け案内ページ（新規）
+- `supabase/migrations/20260502_000035_users_app_deleted_at.sql`
+- `supabase/migrations/20260502_000036_account_deletion_logs.sql`
+
+**実装内容:**
+
+| 項目 | 内容 |
+|------|------|
+| S-4 申請 UI | ProfileScreen から完全撤去（管理者 admin 画面は維持） |
+| app_deleted_at | public.users に TIMESTAMPTZ カラム追加（migration 000035） |
+| account_deletion_logs | 削除監査ログテーブル新設（migration 000036） |
+| middleware | app_deleted_at 非 null → /account-deleted へリダイレクト |
+| middleware matcher | /train・/session-history・/profile・/gym・/my-exercises に拡張 |
+| /account-deleted | 削除済みユーザー向けシンプル案内ページ |
+| admin/members | app_deleted_at を型・クエリに追加（UI バッジは S-7 以降） |
+| membership_status | 変更なし |
+| cancelled_at | 変更なし |
+| auth.users | 削除なし |
+
+**typecheck / build:**
+- `npm run typecheck`: エラーなし ✅
+- `npm run build`: Compiled successfully（28ページ、/account-deleted 追加）✅
+- `/profile` サイズ: 4.09kB → 3.03kB（S-4 UI 撤去の効果）
+
+**migration 安全確認:**
+- 000035: ADD COLUMN のみ。既存データへの破壊的変更なし ✅
+- 000036: 新規テーブル作成のみ。既存テーブルへの変更なし ✅
+- auth.users の物理削除に関する変更なし ✅
+
+**実機確認手順（Supabase に migration 適用後）:**
+
+| # | 確認内容 | 期待結果 |
+|---|---|---------|
+| T1 | /profile を開く | ログアウトボタンのみ表示。申請フォームがない |
+| T2 | /gym, /train, /history が正常に動く | 既存画面に影響なし |
+| T3 | 通常ユーザー（app_deleted_at = null）で全保護ページにアクセス | 正常に表示される |
+| T4 | Supabase で users.app_deleted_at = now() を手動セット後にアクセス | /account-deleted にリダイレクトされる |
+| T5 | /account-deleted ページの表示 | 注意文・ログイン画面へのリンク表示 |
+| T6 | app_deleted_at があるユーザーが /admin にアクセス（管理者の場合） | アクセスできる（/admin は除外） |
+| T7 | app_deleted_at を null に戻す | 通常アクセスが復元される |
+| T8 | migration 後 admin/members 画面 | 表示に影響なし（app_deleted_at はデータに含まれるが UI 表示なし） |
+
+**注意点:**
+- migration は Supabase Dashboard の SQL Editor または `supabase db push` で適用する
+- `app_deleted_at` はアプリ削除のみ。ジム退会（cancelled_at / membership_status）とは完全に別
+- admin ユーザーは app_deleted_at があっても /admin に入れる設計（RISK として文書化済み）
+
+---
+
 ## 2026-05-02 Phase S-5: 自己責任即時削除 調査・設計
 
 ### STATUS: ✅ 設計完了 / CLOSED (2026-05-02)

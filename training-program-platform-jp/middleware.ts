@@ -57,6 +57,30 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (user) {
+    // Check whether the user has soft-deleted their app account (Phase S-6).
+    // /admin routes are excluded so admins retain access even if app_deleted_at is set.
+    // Fail open on DB error to prevent false lockouts.
+    const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
+    if (!isAdminRoute) {
+      try {
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("app_deleted_at")
+          .eq("id", user.id)
+          .maybeSingle<{ app_deleted_at: string | null }>();
+
+        if (userRow?.app_deleted_at) {
+          const deletedUrl = request.nextUrl.clone();
+          deletedUrl.pathname = "/account-deleted";
+          deletedUrl.search = "";
+          return NextResponse.redirect(deletedUrl);
+        }
+      } catch {
+        // DB query failed — fail open so legitimate users are not locked out.
+        console.error("middleware: app_deleted_at check failed, failing open.");
+      }
+    }
+
     return response;
   }
 
@@ -71,5 +95,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/workout-summary/:path*", "/exercise-history/:path*"]
+  matcher: [
+    "/train",
+    "/session-history/:path*",
+    "/workout-summary/:path*",
+    "/exercise-history/:path*",
+    "/profile",
+    "/gym",
+    "/my-exercises"
+  ]
 };

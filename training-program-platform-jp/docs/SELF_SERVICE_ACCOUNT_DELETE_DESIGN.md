@@ -436,8 +436,40 @@ Phase S-8 は以下がすべて揃った場合にのみ着手する：
 
 ---
 
+---
+
+## Phase S-6 実装記録（2026-05-02）
+
+### 実装済み
+
+| 項目 | 実装内容 |
+|------|---------|
+| S-4 申請 UI 撤去 | ProfileScreen から申請フォームを削除。管理者画面は維持 |
+| app_deleted_at | migration 000035: `public.users.app_deleted_at TIMESTAMPTZ` |
+| account_deletion_logs | migration 000036: 削除監査ログテーブル新設 |
+| middleware | app_deleted_at 非 null → `/account-deleted` リダイレクト |
+| matcher 拡張 | /train・/session-history・/profile・/gym・/my-exercises |
+| /account-deleted | 削除済みユーザー向け案内ページ |
+| admin/members | app_deleted_at をクエリ・型に追加（UI バッジは S-7） |
+
+### admin ユーザーの app_deleted_at リスク
+
+admin ロールのユーザーが app_deleted_at を持つ場合、現在の設計では `/admin` へのアクセスが可能。  
+これは意図的な設計（管理者が自分のアカウントを削除してもシステム管理できる）だが、  
+将来的に管理者の app 削除を禁止する制御を追加することを検討する。
+
+### S-7 向け残作業
+
+- `selfDeleteAccount()` Server Action 実装（app_deleted_at セット + ログ記録）
+- 削除確認 UI（チェックボックス + 「アカウントを削除します」入力）
+- 削除完了後: signOut → /account-deleted 遷移
+- admin/members に「アプリ削除済み」バッジ追加
+
+---
+
 ## 更新履歴
 
 | 日付 | 内容 |
 |------|------|
 | 2026-05-02 | Phase S-5: 新規作成（自己責任即時削除の調査・設計） |
+| 2026-05-02 | Phase S-6: 実装記録を追記 |

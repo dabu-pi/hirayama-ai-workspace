@@ -152,7 +152,7 @@ S-4 はコード実装済みだが、最終方式を S-7「自己責任即時削
 | ID | タスク | 概要 | 状態 |
 |---|---|---|---|
 | **S-5** | **自己責任即時削除の調査・設計** | 方式比較・FK 影響・推奨方式・UI 文言・ロードマップ確定 | **✅ 設計完了 (2026-05-02)** |
-| S-6 | 削除に必要な DB / RLS / admin 整備 | `app_deleted_at` カラム追加 / `account_deletion_logs` 新設 / middleware 更新 / admin 表示調整 | 未着手（次候補） |
+| **S-6** | **削除に必要な DB / RLS / admin 整備** | `app_deleted_at` カラム追加 / `account_deletion_logs` 新設 / middleware 更新 / S-4 申請 UI 撤去 | **✅ 実装完了・実機確認待ち (2026-05-02)** |
 | S-7 | 自己責任削除 UI 実装 | `/profile` に削除確認 UI / `selfDeleteAccount()` Server Action / 削除完了ページ | 未着手（S-6 完了後） |
 | S-8 | auth.users 物理削除対応（任意） | FK 変更 migration / 物理削除 Server Action / GDPR 対応が必要な場合に着手 | 見送り可能 |
 

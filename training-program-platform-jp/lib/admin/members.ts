@@ -14,6 +14,7 @@ export type MemberRow = {
   email: string | null;
   role: string;
   membership_status: MembershipStatus;
+  app_deleted_at: string | null;
   created_at: string;
   last_sign_in_at: string | null;
   training_started_count: number;
@@ -76,7 +77,7 @@ export async function getAllMembersData(): Promise<AdminMembersData> {
     await Promise.all([
       admin
         .from("users")
-        .select("id, member_name, display_name, role, membership_status, created_at")
+        .select("id, member_name, display_name, role, membership_status, app_deleted_at, created_at")
         .order("created_at", { ascending: true }),
       admin.auth.admin.listUsers({ perPage: 1000 }),
       admin
@@ -151,6 +152,7 @@ export async function getAllMembersData(): Promise<AdminMembersData> {
     display_name: string | null;
     role: string;
     membership_status: MembershipStatus;
+    app_deleted_at: string | null;
     created_at: string;
   };
 
