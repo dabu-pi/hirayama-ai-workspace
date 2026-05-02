@@ -2,6 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 
+import {
+  createSupabaseServerClient,
+  hasSupabasePublicEnv
+} from "@/lib/supabase/server";
 import { getActiveProgramView } from "@/lib/workout/active-program";
 
 /**
@@ -22,6 +26,25 @@ export default async function HomePage() {
 
   if (!isAuthenticated) {
     redirect("/login");
+  }
+
+  // Block soft-deleted users from reaching app content via the home router.
+  // This catches re-login after app_deleted_at is set (middleware doesn't cover /).
+  if (hasSupabasePublicEnv()) {
+    const client = createSupabaseServerClient();
+    const {
+      data: { user }
+    } = await client.auth.getUser();
+    if (user) {
+      const { data: userRow } = await client
+        .from("users")
+        .select("app_deleted_at")
+        .eq("id", user.id)
+        .maybeSingle<{ app_deleted_at: string | null }>();
+      if (userRow?.app_deleted_at) {
+        redirect("/account-deleted");
+      }
+    }
   }
 
   // Only redirect to /train when there is an in-progress session to resume.

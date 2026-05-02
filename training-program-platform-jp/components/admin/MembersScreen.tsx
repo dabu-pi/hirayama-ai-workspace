@@ -318,6 +318,9 @@ function MemberRowItem({ member, isSelf }: MemberRowItemProps) {
             ) : (
               <span className={styles.noName}>（未設定）</span>
             )}
+            {member.app_deleted_at && (
+              <span className={styles.appDeletedBadge}>アプリ削除済み</span>
+            )}
             {memberFeedback && (
               <span
                 className={`${styles.nameFeedback} ${

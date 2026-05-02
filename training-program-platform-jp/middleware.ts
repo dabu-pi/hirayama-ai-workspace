@@ -56,11 +56,15 @@ export async function middleware(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser();
 
+  // /programs is a public page — unauthenticated users may access it freely.
+  // But authenticated users with app_deleted_at must still be redirected.
+  const isPublicRoute = request.nextUrl.pathname.startsWith("/programs");
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
+
   if (user) {
     // Check whether the user has soft-deleted their app account (Phase S-6).
     // /admin routes are excluded so admins retain access even if app_deleted_at is set.
     // Fail open on DB error to prevent false lockouts.
-    const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
     if (!isAdminRoute) {
       try {
         const { data: userRow } = await supabase
@@ -84,6 +88,12 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // No authenticated user.
+  // Public routes (/programs) are accessible without login.
+  if (isPublicRoute) {
+    return response;
+  }
+
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
   loginUrl.searchParams.set(
@@ -102,6 +112,8 @@ export const config = {
     "/exercise-history/:path*",
     "/profile",
     "/gym",
-    "/my-exercises"
+    "/my-exercises",
+    "/programs",
+    "/programs/:path*"
   ]
 };

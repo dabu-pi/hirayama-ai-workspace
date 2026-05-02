@@ -1,5 +1,118 @@
 # PROJECT_STATUS
 
+## 2026-05-03 Phase S-7b: アカウント削除後のアクセス制御バグ修正
+
+### STATUS: ✅ 実装完了・実機確認待ち
+
+**発見された不具合:**
+1. /programs が削除済みユーザーでアクセス可能（middleware matcher 未登録）
+2. 再ログイン後 / → /programs にリダイレクトされる（app_deleted_at 未チェック）
+3. /login の useEffect が削除済みセッションを / へ自動リダイレクト
+4. /account-deleted の「ログイン画面へ」がセッションを残したまま /login に遷移
+5. 管理画面で削除済みユーザーが active のまま視覚的に区別できない
+
+**変更ファイル:**
+
+| ファイル | 修正内容 |
+|---------|---------|
+| `middleware.ts` | `/programs`, `/programs/:path*` を matcher に追加。未認証ユーザーは通過、削除済み認証ユーザーは /account-deleted へ |
+| `app/page.tsx` | isAuthenticated 後に app_deleted_at チェック追加。削除済みなら /account-deleted へ |
+| `app/login/page.tsx` | useEffect で getUser 後に app_deleted_at チェック追加。削除済みなら signOut → ログイン画面に留まる |
+| `app/account-deleted/page.tsx` | "use client" 化。「ログイン画面へ」ボタンで signOut() → window.location.href = "/login" |
+| `components/admin/MembersScreen.tsx` | 「アプリ削除済み」バッジを会員氏名欄に追加 |
+| `components/admin/MembersScreen.module.css` | `.appDeletedBadge` スタイル追加 |
+
+**typecheck / build:** エラーなし ✅ / Compiled successfully ✅
+
+**削除済みユーザーの期待フロー（修正後）:**
+
+```
+削除済みユーザーが /gym を開く
+  → middleware: app_deleted_at 検出 → /account-deleted ✅
+
+削除済みユーザーが /programs を直接開く
+  → middleware: app_deleted_at 検出 → /account-deleted ✅
+
+削除済みユーザーが /account-deleted で「ログイン画面へ」を押す
+  → signOut() → /login（セッションなし）✅
+
+削除済みメールで再ログインする
+  → signIn 成功（auth.users 残存） → /
+  → app/page.tsx: app_deleted_at 検出 → /account-deleted ✅
+
+削除済みメールで /login アクセス（セッションあり）
+  → login useEffect: app_deleted_at 検出 → signOut → ログイン画面に留まる ✅
+```
+
+**実機確認手順:**
+
+| # | 確認内容 | 期待結果 |
+|---|---|---------|
+| B1 | 削除済みユーザーで /programs に直接アクセス | /account-deleted にリダイレクト |
+| B2 | 削除済みユーザーで /programs/[slug] に直接アクセス | /account-deleted にリダイレクト |
+| B3 | 削除済みメールで再ログイン後 /programs への遷移なし | /account-deleted に留まる |
+| B4 | /account-deleted の「ログイン画面へ」押下後 /programs への遷移なし | /login が表示される |
+| B5 | 未ログインユーザーが /programs にアクセス | 正常に表示される（ログイン要求されない） |
+| B6 | 未ログインユーザーが /programs/[slug] にアクセス | 正常に表示される |
+| B7 | 通常ログインユーザーが /programs にアクセス | 正常に表示される |
+| B8 | 管理画面の会員一覧で削除済みユーザーに「アプリ削除済み」バッジ表示 | バッジが表示される |
+| B9 | 既存通常ユーザーの動作に影響なし | すべての画面が正常動作 |
+
+**signup 重複問題（今回スコープ外・調査SQL を別途記載）:**
+- Supabase の signup 設定依存のため、今回のコード修正では対応しない
+- 下記の SELECT SQL で現在の重複状態を確認すること
+- 重複行は管理者が Supabase Dashboard で手動対処する
+
+**Supabase 確認用 SQL（SELECT のみ・実行はユーザーが行う）:**
+
+```sql
+-- 1. 対象メールの public.users 行一覧（email は auth.users 側にある）
+SELECT
+  u.id, u.display_name, u.member_name,
+  u.membership_status, u.role,
+  u.app_deleted_at, u.cancelled_at, u.created_at
+FROM public.users u
+WHERE u.id IN (
+  SELECT id FROM auth.users WHERE email = '対象メールアドレス'
+);
+
+-- 2. 対象メールの auth.users 行一覧
+SELECT
+  id, email, created_at, last_sign_in_at,
+  email_confirmed_at,
+  raw_user_meta_data->>'display_name' AS display_name_meta
+FROM auth.users
+WHERE email = '対象メールアドレス';
+
+-- 3. 同じメールのユーザーが複数件あるか確認
+SELECT au.email, COUNT(*) AS auth_count
+FROM auth.users au
+GROUP BY au.email
+HAVING COUNT(*) > 1;
+
+-- 4. app_deleted_at があるユーザー一覧
+SELECT
+  u.id, au.email, u.display_name,
+  u.membership_status, u.app_deleted_at
+FROM public.users u
+JOIN auth.users au ON u.id = au.id
+WHERE u.app_deleted_at IS NOT NULL;
+
+-- 5. account_deletion_logs の履歴（最新20件）
+SELECT *
+FROM public.account_deletion_logs
+ORDER BY deleted_at DESC
+LIMIT 20;
+
+-- 6. auth.users に対応しない public.users の孤立行
+SELECT pu.id, pu.display_name, pu.created_at, pu.app_deleted_at
+FROM public.users pu
+LEFT JOIN auth.users au ON pu.id = au.id
+WHERE au.id IS NULL;
+```
+
+---
+
 ## 2026-05-03 Phase S-7: 自己責任アカウント削除 UI
 
 ### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-03)

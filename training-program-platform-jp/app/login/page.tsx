@@ -33,18 +33,32 @@ export default function LoginPage() {
 
     let isActive = true;
 
-    supabase.auth
-      .getUser()
-      .then(({ data, error }) => {
-        if (!isActive || error) return;
-        if (data.user) {
-          router.replace("/");
-          router.refresh();
+    (async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (!isActive || error || !data.user) return;
+
+        // Before auto-redirecting, check whether this user has soft-deleted
+        // their app account. If so, sign them out and stay on the login page.
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("app_deleted_at")
+          .eq("id", data.user.id)
+          .maybeSingle<{ app_deleted_at: string | null }>();
+
+        if (!isActive) return;
+
+        if (userRow?.app_deleted_at) {
+          await supabase.auth.signOut();
+          return; // Stay on login page — do not auto-redirect
         }
-      })
-      .catch(() => {
-        // Ignore initial auth lookup failure and let the user continue manually.
-      });
+
+        router.replace("/");
+        router.refresh();
+      } catch {
+        // Ignore auth lookup failure and let the user continue manually.
+      }
+    })();
 
     return () => {
       isActive = false;

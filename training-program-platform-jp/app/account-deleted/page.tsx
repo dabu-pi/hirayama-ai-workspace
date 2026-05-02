@@ -1,3 +1,18 @@
+"use client";
+
+import { createSupabaseBrowserClient, hasSupabaseBrowserEnv } from "@/lib/supabase/client";
+
+async function handleGoToLogin() {
+  if (hasSupabaseBrowserEnv()) {
+    try {
+      await createSupabaseBrowserClient().auth.signOut();
+    } catch {
+      // signOut failure is non-critical — navigate to /login regardless
+    }
+  }
+  window.location.href = "/login";
+}
+
 export default function AccountDeletedPage() {
   return (
     <main
@@ -51,10 +66,12 @@ export default function AccountDeletedPage() {
         再度アプリをご利用希望の場合は、受付までお問い合わせください。
       </p>
 
-      <a
-        href="/login"
+      <button
+        onClick={handleGoToLogin}
+        type="button"
         style={{
           display: "block",
+          width: "100%",
           textAlign: "center",
           padding: "14px 24px",
           background: "transparent",
@@ -63,11 +80,11 @@ export default function AccountDeletedPage() {
           fontSize: "0.875rem",
           fontWeight: 600,
           color: "inherit",
-          textDecoration: "none"
+          cursor: "pointer"
         }}
       >
         ログイン画面へ
-      </a>
+      </button>
     </main>
   );
 }
