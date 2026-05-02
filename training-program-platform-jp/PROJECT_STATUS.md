@@ -1,5 +1,51 @@
 # PROJECT_STATUS
 
+## 2026-05-02 Phase S-2: ログアウト機能
+
+### STATUS: ✅ 実装完了・実機確認待ち
+
+**変更ファイル:**
+- `components/profile/ProfileScreen.tsx` — ログアウトボタン追加
+- `components/profile/ProfileScreen.module.css` — アカウントセクション・ログアウトボタンのスタイル追加
+
+**実装内容:**
+- `ProfileScreen.tsx` に `handleLogout` 関数追加
+  - `window.confirm("ログアウトしますか？")` で確認
+  - `createSupabaseBrowserClient().auth.signOut()` を実行
+  - 成功・失敗問わず `window.location.href = "/login"` へ遷移（Router Cache flush のため location.href 使用）
+  - 連打防止: `isLoggingOut` フラグで二重実行を防ぐ
+  - 処理中はボタンを `disabled` + "ログアウト中…" 表示
+- アカウントセクション（`<section className={styles.accountSection}`）を `/nav.links` と `/休会・退会` セクションの間に追加
+  - 見出し: 「アカウント」
+  - 説明文: 「この端末からログアウトします。再度利用する場合は、ログインが必要です。」
+  - ボタン: 「ログアウト」（赤くない・削除操作と混同しないデザイン）
+
+**typecheck / build:**
+- `npm run typecheck`: エラーなし ✅
+- `npm run build`: ✅ Compiled successfully（全27ページ正常）
+
+**DB変更:** なし
+**新規ルート:** なし
+**middleware変更:** なし
+**admin画面影響:** なし
+
+**実機確認手順:**
+
+| # | 確認内容 | 期待結果 |
+|---|---|---------|
+| T1 | `/profile` を開く | ページ下部に「アカウント」セクションとログアウトボタンが表示される |
+| T2 | ログアウトボタンをタップ | 「ログアウトしますか？」確認ダイアログが出る |
+| T3 | 確認ダイアログでキャンセル | 何も起きない。/profile に留まる |
+| T4 | 確認ダイアログで OK | ログアウト中… → /login へ遷移 |
+| T5 | ログアウト後に `/train` へ直接アクセス | /login へリダイレクトされる |
+| T6 | ログアウト後に `/profile` へ直接アクセス | /login へリダイレクトされる |
+| T7 | ログアウト後に再ログイン | 通常通りログインできる |
+| T8 | スマホ幅でボタン確認 | タップしやすいサイズ（min-height 48px）・レイアウト崩れなし |
+| T9 | 「退会」「削除」「会費停止」の文言がない | ログアウトセクションに混同する言葉がない |
+| T10 | admin ログアウト後の挙動 | /login へ遷移のみ。admin 画面・データに影響なし |
+
+---
+
 ## 2026-05-02 休憩タイマー任意変更機能
 
 ### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-02)

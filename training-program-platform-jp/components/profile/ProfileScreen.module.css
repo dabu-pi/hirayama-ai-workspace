@@ -137,6 +137,48 @@
   text-decoration: underline;
 }
 
+/* ── S-2: Logout / Account section ── */
+
+.accountSection {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.accountTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-3);
+}
+
+.accountDescription {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4);
+}
+
+.logoutButton {
+  display: block;
+  width: 100%;
+  padding: 14px var(--space-4);
+  min-height: 48px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.logoutButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── D-1: Deletion request section ── */
 
 .deletionSection {

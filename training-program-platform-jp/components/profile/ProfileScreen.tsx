@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 
 import { updateOwnDisplayName } from "@/app/profile/actions";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import styles from "./ProfileScreen.module.css";
 
@@ -33,6 +34,23 @@ export function ProfileScreen({
     message: string;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    if (!window.confirm("ログアウトしますか？")) return;
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      await createSupabaseBrowserClient().auth.signOut();
+    } catch {
+      // signOut failed — navigate to /login anyway to reset UI state
+    }
+
+    window.location.href = "/login";
+  }
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -108,6 +126,21 @@ export function ProfileScreen({
           マイ種目（カスタム種目の管理）→
         </a>
       </nav>
+
+      <section className={styles.accountSection}>
+        <h2 className={styles.accountTitle}>アカウント</h2>
+        <p className={styles.accountDescription}>
+          この端末からログアウトします。再度利用する場合は、ログインが必要です。
+        </p>
+        <button
+          className={styles.logoutButton}
+          disabled={isLoggingOut}
+          onClick={handleLogout}
+          type="button"
+        >
+          {isLoggingOut ? "ログアウト中…" : "ログアウト"}
+        </button>
+      </section>
 
       {/* 休会・退会: アプリ申請は停止中。受付で対応 */}
       <section className={styles.deletionSection}>
