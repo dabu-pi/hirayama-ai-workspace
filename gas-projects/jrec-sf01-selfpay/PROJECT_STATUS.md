@@ -30,8 +30,10 @@
 **✅ Phase 6-K メニュー別売上分析: CLOSED**（2026-05-02 K1-1〜K1-10 全 PASS）
 **✅ Versioned Deployment @34: 本番反映済み**（2026-05-02 Phase 6-K 含む）
 
+**🔄 Phase 6-L 未収・回収管理レポート: 実装済み・HEAD実機確認待ち**（2026-05-02）
+
 次期実装候補:
-1. **Phase 6-L** 未収・回収管理レポート ⏸
+1. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
@@ -45,10 +47,58 @@ Phase 6-G〜6-N ロードマップ:
 - 6-I: 集計メニュー / 集計ページ新設 ✅ CLOSED（2026-05-02 @32）
 - 6-J: 月別売上集計 ✅ CLOSED（2026-05-02 @33）
 - 6-K: メニュー別売上分析 ✅ CLOSED（2026-05-02 @34）
-- 6-L: 未収・回収管理レポート ⏸
+- 6-L: 未収・回収管理レポート 🔄 実装済み・HEAD実機確認待ち
 - 6-M: CSV / 印刷 / 監査レポート ⏸
 
 詳細: `ROADMAP.md`（Phase 6-N セクション参照）
+
+---
+
+## 🔄 Phase 6-L 未収・回収管理レポート（2026-05-02 実機確認待ち）
+
+### 既存関数の再利用可否確認（2026-05-02）
+
+| 関数 | 内容 | 採用可否 |
+|---|---|---|
+| `getAllOutstandingByPatient()` | 患者別合計のみ。visitKey / visitDate / chiefComplaint なし | ✖ 詳細テーブルに使えない |
+| `getPatientListStats()` | 患者別合計のみ（同上） | ✖ |
+| `getPatientAccountingData(patientId)` | 患者単体。全患者一括取得に不適 | ✖ |
+
+→ **新規 `getOutstandingReport()` を追加**（既存関数の破壊的変更なし）
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Billing.gs` | `getOutstandingReport()` を新規追加。Patients + SelfPayVisits(isDeleted 除外) + Payments(未収/一部入金) を結合。来院日昇順ソート |
+| `JREC_SF01_Main.gs` | `case "outstandingReport"` を追加。currentPage = "reports" |
+| `outstanding-report.html` | 新規作成。サマリーカード + 患者別サマリー + 未収明細テーブル + 回収・領収書導線 |
+| `reports.html` | 未収・回収管理カードを有効化（`?page=outstandingReport`） |
+
+### テスト項目（実機確認待ち）
+
+> DailySales / Run_Log 非依存。会計・保存ロジック変更なし。getAllOutstandingByPatient() は変更なし。
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| L1-1 | ⏳ | reports から未収・回収管理カードで outstandingReport に移動できる |
+| L1-2 | ⏳ | outstandingReport にサマリーカードが表示される（患者数・件数・残高合計・最古日） |
+| L1-3 | ⏳ | 未収患者数・未収件数・未収残高合計が表示される |
+| L1-4 | ⏳ | 患者別サマリーが表示される（患者名リンク → 患者詳細） |
+| L1-5 | ⏳ | 未収明細一覧が来院日昇順で表示される |
+| L1-6 | ⏳ | 未収 / 一部入金のみ表示。入金済・未会計は除外される |
+| L1-7 | ⏳ | isDeleted=true の来院が除外される |
+| L1-8 | ⏳ | 「回収・領収書」ボタンで receipt ページに遷移できる |
+| L1-9 | ⏳ | 未収0件でも「未収はありません」表示で壊れない |
+| L1-10 | ⏳ | DailySales / Run_Log / getDailySalesReport 非依存 |
+| L1-11 | ⏳ | 既存 reports / monthlyReport / menuSalesReport / dailyCheckout に影響なし |
+| L1-12 | ⏳ | スマホ表示で大きく崩れない（主訴・入金額列は hide-sm-or） |
+
+### HEAD 実機確認 URL
+
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
+```
 
 ---
 

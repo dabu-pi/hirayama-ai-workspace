@@ -1537,3 +1537,160 @@ function getMenuSalesSummary(year, month) {
     return { ok: false, year: year, month: month, error: em, summary: {}, menus: [] };
   }
 }
+
+// ============================================================
+// PUBLIC — 未収・回収管理レポート（Phase 6-L）
+// ============================================================
+
+/**
+ * 現時点で未収/一部入金の来院をすべて返す（月次フィルタなし）。
+ *
+ * ─── 集計方式 ─────────────────────────────────────────────────
+ *   DailySales / Run_Log 非依存。
+ *   Patients + SelfPayVisits(isDeleted 除外) + Payments + Receipts を直接結合。
+ *
+ * ─── 未収判定 ─────────────────────────────────────────────────
+ *   Payments.paymentStatus === "未収" または "一部入金" の行のみ対象。
+ *   会計未入力（Payments なし）は含まない。
+ *   isDeleted=true の visit は除外。
+ *
+ * @returns {{
+ *   ok: boolean,
+ *   summary: { outstandingPatientCount, outstandingVisitCount, totalRemaining, oldestVisitDate },
+ *   details: Array<{
+ *     visitKey, patientId, patientName, visitDate, chiefComplaint,
+ *     paymentStatus, totalTaxInc, paidAmount, remainingAmount
+ *   }>,
+ *   patients: Array<{
+ *     patientId, patientName, visitCount, totalRemaining, oldestVisitDate
+ *   }>,
+ *   error?: string
+ * }}
+ */
+function getOutstandingReport() {
+  Logger.log("[getOutstandingReport] START");
+  try {
+    var ss = getTargetSpreadsheet_();
+
+    // ── Patients をインデックス化 ─────────────────────────
+    var patientMap = {};
+    var patientSh  = ss.getSheetByName(SHEET_NAMES.PATIENTS);
+    if (patientSh && patientSh.getLastRow() >= 2) {
+      patientSh.getRange(2, 1, patientSh.getLastRow() - 1, 2).getValues().forEach(function(r) {
+        if (r[0]) patientMap[String(r[0])] = String(r[1] || "");
+      });
+    }
+
+    // ── SelfPayVisits をインデックス化（isDeleted 除外）────
+    var visitMap = {};
+    var visitSh  = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (visitSh && visitSh.getLastRow() >= 2) {
+      var numCols = Math.min(visitSh.getLastColumn(), 12);
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues().forEach(function(r) {
+        if (!r[0]) return;
+        var isDeleted = r[11] === true || r[11] === "TRUE";
+        if (isDeleted) return;
+        var visitDate = "";
+        if (r[2]) {
+          try { visitDate = Utilities.formatDate(new Date(r[2]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
+        }
+        visitMap[String(r[0])] = {
+          patientId:      String(r[1] || ""),
+          visitDate:      visitDate,
+          chiefComplaint: String(r[5] || "")
+        };
+      });
+    }
+
+    // ── Payments を読み取り、未収/一部入金のみ抽出 ──────────
+    var details = [];
+    var paymentSh = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (paymentSh && paymentSh.getLastRow() >= 2) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
+        if (!r[0] || !r[1]) return;
+        var status = String(r[6] || "");
+        if (status !== "未収" && status !== "一部入金") return;
+
+        var vk = String(r[1]);
+        var visit = visitMap[vk];
+        if (!visit) return;   // isDeleted の visit は visitMap にない
+
+        var totalInc  = r[4] || 0;
+        var rawPaid   = r[10];
+        var paidAmt   = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+          ? (rawPaid || 0) : 0;
+        var remaining = Math.max(totalInc - paidAmt, 0);
+        if (remaining <= 0) return;   // 残高なし（データ不整合）はスキップ
+
+        details.push({
+          visitKey:       vk,
+          patientId:      visit.patientId,
+          patientName:    patientMap[visit.patientId] || visit.patientId,
+          visitDate:      visit.visitDate,
+          chiefComplaint: visit.chiefComplaint,
+          paymentStatus:  status,
+          totalTaxInc:    totalInc,
+          paidAmount:     paidAmt,
+          remainingAmount: remaining
+        });
+      });
+    }
+
+    // ── 来院日昇順ソート（最古の未収が上）────────────────
+    details.sort(function(a, b) {
+      return a.visitDate < b.visitDate ? -1 : a.visitDate > b.visitDate ? 1 : 0;
+    });
+
+    // ── 患者別集計 ────────────────────────────────────────
+    var patientAgg = {};
+    details.forEach(function(d) {
+      if (!patientAgg[d.patientId]) {
+        patientAgg[d.patientId] = {
+          patientId:    d.patientId,
+          patientName:  d.patientName,
+          visitCount:   0,
+          totalRemaining: 0,
+          oldestVisitDate: d.visitDate
+        };
+      }
+      var p = patientAgg[d.patientId];
+      p.visitCount++;
+      p.totalRemaining += d.remainingAmount;
+      if (d.visitDate && (!p.oldestVisitDate || d.visitDate < p.oldestVisitDate)) {
+        p.oldestVisitDate = d.visitDate;
+      }
+    });
+
+    var patients = Object.keys(patientAgg).map(function(pid) {
+      return patientAgg[pid];
+    }).sort(function(a, b) {
+      return a.oldestVisitDate < b.oldestVisitDate ? -1 : 1;
+    });
+
+    // ── サマリー ────────────────────────────────────────
+    var totalRemaining  = 0;
+    var oldestVisitDate = "";
+    details.forEach(function(d) {
+      totalRemaining += d.remainingAmount;
+      if (!oldestVisitDate || (d.visitDate && d.visitDate < oldestVisitDate)) {
+        oldestVisitDate = d.visitDate;
+      }
+    });
+
+    var summary = {
+      outstandingPatientCount: patients.length,
+      outstandingVisitCount:   details.length,
+      totalRemaining:          totalRemaining,
+      oldestVisitDate:         oldestVisitDate
+    };
+
+    Logger.log("[getOutstandingReport] patients=" + patients.length +
+      " details=" + details.length + " total=¥" + totalRemaining);
+    return { ok: true, summary: summary, details: details, patients: patients };
+
+  } catch(err) {
+    var em = err && err.message ? err.message : String(err);
+    Logger.log("[getOutstandingReport] ERROR: " + em);
+    return { ok: false, error: em, summary: {}, details: [], patients: [] };
+  }
+}

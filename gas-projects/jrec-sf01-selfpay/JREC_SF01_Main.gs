@@ -166,6 +166,18 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
         return evalTemplate_(tr);
       }
 
+      case "outstandingReport": {
+        var orData = getOutstandingReport();
+        var tor = HtmlService.createTemplateFromFile("outstanding-report");
+        tor.appUrl      = appUrl;
+        tor.currentPage = "reports";   // 売上・レポートタブを active に
+        tor.summary     = orData.summary  || {};
+        tor.details     = orData.details  || [];
+        tor.patients    = orData.patients || [];
+        tor.orError     = orData.error    || null;
+        return evalTemplate_(tor);
+      }
+
       case "monthlyReport": {
         var nowMR  = new Date();
         var tzMR   = "Asia/Tokyo";
