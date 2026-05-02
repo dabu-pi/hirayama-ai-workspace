@@ -36,6 +36,8 @@
 
 ## 開発環境
 
+- 正本・作業場所・commit / push は `C:\hirayama-ai-workspace\workspace` のみ。root では Git 作業しない
+
 - OS: Windows 11
 - ワークスペースルート: `C:\hirayama-ai-workspace\workspace`
 - バージョン管理: Git / GitHub（通常作業ブランチ: `feature/auto-dev-phase3-loop`）
