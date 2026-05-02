@@ -121,3 +121,8 @@ backups/
 workspace-export/
 automation/
 subsidy-grants-projects/
+
+# ローカル専用バックアップ・整理アーカイブ
+local-secret-backups/
+_archive_workspace_cleanup_20260502/
+_archive_root_cleanup_20260502/
