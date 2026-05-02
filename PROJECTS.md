@@ -398,7 +398,7 @@ latest operational view until the Dashboard Projects sheet is updated.
 | JWEB-03 | 患者管理Webアプリ | `workspace/patient-management` | `整骨院 電子カルテ` | migration_target | archive_candidate |
 | JBIZ-04 | 接骨院経営戦略AI | `workspace/hirayama-jyusei-strategy` | `平山接骨院 慢性疼痛強化プロジェクト 管理表` | active_needs_sheet_check | keep |
 | HAIKI-05 | 廃棄物日報システム | `workspace/waste-report-system` | `【UI日報・月報】2026年一般廃棄物業務報告書（日報・月報）` | active_setup_pending | keep |
-| AINV-07 | AI投資プロジェクト | `_archive_workspace_cleanup_20260502/ai-invest` | `AI投資用スプレッドシート` | inactive | archived_2026-05-02 |
+| AINV-07 | AI投資プロジェクト | `workspace/ai-invest` | `AI投資用スプレッドシート` | registration_candidate | keep |
 | TPPJ-08 | トレーニングプログラムプラットフォーム | `workspace/training-program-platform-jp` | — (Supabase / Vercel) | active_limited_release | keep |
 | MSRB-01 | 中古マシン販売システム再構築 | `workspace/projects/machine-sales-rebuild` | — (local data / products.json) | active_paused | keep |
 | JASSESS-01 | 運動器初期評価システム | `workspace/msk-assessment-platform` | `平山接骨院_運動器初期評価システム_JASSESS-01` | active_paused | keep |
@@ -411,6 +411,6 @@ Notes:
 - `HAIKI-05` now adopts `workspace/waste-report-system` as the canonical local
   folder path, even if the local implementation is still being prepared.
 - `TPPJ-08` 2026-04-17 障害対応完了: /train mock ID 流入防止・created_at query 修正・Cancel後ループ修正の3件を本番確認済み。フォローアップ: 1〜2週間後に診断ログ削減PR検討。
-- `AINV-07` archived 2026-05-02. Phase 0 complete. Folder moved to `_archive_workspace_cleanup_20260502/ai-invest`. Re-activate by restoring folder and updating scripts.
+- `AINV-07` KEEP（今後使用予定あり）。Phase 0 complete, Phase 1（ペーパートレード）未着手。**要対応:** 2026-05-02 に誤って archive へ退避済み。`_archive_workspace_cleanup_20260502/ai-invest/` から `workspace/ai-invest/` へ復元が必要。復元後に `git restore ai-invest/` または再 add でインデックスに戻すこと。
 - `MSRB-01` 新規登録 2026-05-02。STRONG DEPOT 中古マシン販売 WordPress 依存排除・products.json 再構築プロジェクト。Phase 5B 完了、本番 baseImageUrl 切り替えが次フェーズ。
 - `JASSESS-01` 新規登録 2026-05-02。PROJECTS.md §7 として既存記載。実クリニカルシート稼働中・実臨床テスト開始可。
