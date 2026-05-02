@@ -24,8 +24,10 @@
 **✅ Phase 6-I 集計メニュー / 集計ページ新設: CLOSED**（2026-05-02 I1-1〜I1-8 全 PASS）
 **✅ Versioned Deployment @32: 本番反映済み**（2026-05-02 Phase 6-I 含む）
 
+**🔄 Phase 6-J 月別売上集計: 実装済み・HEAD実機確認待ち**（2026-05-02）
+
 次期実装候補:
-1. **Phase 6-J** 月別売上集計 ⏸
+1. **Phase 6-K** メニュー別売上分析 ⏸
 
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
@@ -37,12 +39,56 @@ Phase 6-G〜6-N ロードマップ:
 - 6-N: 共通タブナビゲーション整備 ✅ CLOSED（2026-05-02 @30）
 - 6-H: dailyCheckout 日別金額合計カード ✅ CLOSED（2026-05-02 @31）
 - 6-I: 集計メニュー / 集計ページ新設 ✅ CLOSED（2026-05-02 @32）
-- 6-J: 月別売上集計 ⏸
+- 6-J: 月別売上集計 🔄 実装済み・HEAD実機確認待ち
 - 6-K: メニュー別集計 ⏸
 - 6-L: 未収・回収管理レポート ⏸
 - 6-M: CSV / 印刷 / 監査レポート ⏸
 
 詳細: `ROADMAP.md`（Phase 6-N セクション参照）
+
+---
+
+## 🔄 Phase 6-J 月別売上集計（2026-05-02 実機確認待ち）
+
+### 実装内容
+
+| ファイル | 変更内容 |
+|---|---|
+| `JREC_SF01_Billing.gs` | `getMonthlyRevenueSummary(year, month)` を追加。visitDate ベース、DailySales/Run_Log 非依存 |
+| `JREC_SF01_Main.gs` | `case "monthlyReport"` を追加。currentPage = "reports"（売上・レポートタブを active に） |
+| `monthly-report.html` | 新規作成。月移動ナビ + 月次サマリーカード + 日別内訳テーブル + dailyCheckout リンク |
+| `reports.html` | 月次売上レポートカードを有効化（`?page=monthlyReport` リンクに更新） |
+
+### currentPage の設計判断
+
+`monthlyReport` ページは `currentPage = "reports"` とした。
+理由: 月次レポートは「売上・レポート」カテゴリの子ページであり、タブナビの「売上・レポート」が active のままの方がパンくず的に自然。
+reports ページ → monthlyReport ページ の遷移で active タブが変わらないことで UX が一貫する。
+
+### テスト項目（実機確認待ち）
+
+> DailySales / Run_Log 非依存。getDailySalesReport 未使用。会計・保存ロジック変更なし。
+
+| Test | 判定 | 確認内容 |
+|---|---|---|
+| J1-1 | ⏳ | reports から月次売上レポートカードをクリックして monthlyReport に移動できる |
+| J1-2 | ⏳ | monthlyReport に対象年月のサマリーカードが表示される |
+| J1-3 | ⏳ | 月間請求合計・入金合計・未収残高が表示される（¥表示） |
+| J1-4 | ⏳ | 来院件数 / 未会計 / 未収 / 一部入金 / 未発行 / 発行済 件数が表示される |
+| J1-5 | ⏳ | 日別内訳テーブルが表示される（来院あり日のみ行が出る） |
+| J1-6 | ⏳ | 日別行の日付クリックで dailyCheckout の該当日に移動できる |
+| J1-7 | ⏳ | ◀ 前月 / 今月 / 翌月 ▶ ナビが動作する（年またぎも含む） |
+| J1-8 | ⏳ | 0件月でも 0件 / ¥0 表示で壊れない |
+| J1-9 | ⏳ | isDeleted=true の来院が集計から除外される |
+| J1-10 | ⏳ | DailySales シートが空でも表示が壊れない（非依存） |
+| J1-11 | ⏳ | 既存 reports / dailyCheckout / home / 患者一覧が壊れていない |
+| J1-12 | ⏳ | スマホ表示でカード・日別テーブルが大きく崩れない（テーブルは hide-sm-mr で件数列を非表示） |
+
+### HEAD 実機確認 URL
+
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev
+```
 
 ---
 

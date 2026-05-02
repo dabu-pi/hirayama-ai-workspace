@@ -1253,3 +1253,157 @@ function getMonthlyVisitCalendar(year, month) {
     return { ok: false, error: m, year: year, month: month, days: {} };
   }
 }
+
+// ============================================================
+// PUBLIC — 月次売上サマリー（Phase 6-J）
+// ============================================================
+
+/**
+ * 指定年月の月次売上サマリーを返す。
+ *
+ * ─── 集計方式 ─────────────────────────────────────────────────
+ *   DailySales / Run_Log 非依存。
+ *   SelfPayVisits(visitDate) + Payments + Receipts から直接集計。
+ *   getDailyCheckoutList と同じ displayStatus 判定ロジックを使用。
+ *
+ * ─── 集計基準 ─────────────────────────────────────────────────
+ *   visitDate（来院日）が対象月の来院を集計対象とする。
+ *   isDeleted=true の来院は除外。
+ *
+ * @param {number} year  例: 2026（2020〜2035）
+ * @param {number} month 例: 5（1〜12）
+ * @returns {{
+ *   ok: boolean, year: number, month: number,
+ *   summary: {
+ *     visitCount, unbilledCount, unpaidCount, partialCount,
+ *     paidNoReceiptCount, issuedCount,
+ *     totalBilled, totalPaid, totalRemaining
+ *   },
+ *   days: Object.<string, {
+ *     date, visitCount, unbilledCount, unpaidCount, partialCount,
+ *     paidNoReceiptCount, issuedCount, totalBilled, totalPaid, totalRemaining
+ *   }>,
+ *   error?: string
+ * }}
+ */
+function getMonthlyRevenueSummary(year, month) {
+  Logger.log("[getMonthlyRevenueSummary] year=" + year + " month=" + month);
+  try {
+    var y = parseInt(year,  10);
+    var m = parseInt(month, 10);
+    if (isNaN(y) || y < 2020 || y > 2035) return { ok: false, error: "year が範囲外: " + year,  summary: {}, days: {} };
+    if (isNaN(m) || m < 1   || m > 12)   return { ok: false, error: "month が範囲外: " + month, summary: {}, days: {} };
+
+    var monthStr = y + "-" + ("0" + m).slice(-2);   // 例: "2026-05"
+    var ss       = getTargetSpreadsheet_();
+
+    // ── Payments をインデックス化（visitKey → payment）────────
+    var paymentMap = {};
+    var paymentSh  = ss.getSheetByName(SHEET_NAMES.PAYMENTS);
+    if (paymentSh && paymentSh.getLastRow() >= 2) {
+      paymentSh.getRange(2, 1, paymentSh.getLastRow() - 1, 11).getValues().forEach(function(r) {
+        if (!r[0] || !r[1]) return;
+        var vk      = String(r[1]);
+        var status  = String(r[6] || "");
+        var totalInc = r[4] || 0;
+        var rawPaid  = r[10];
+        var paidAmt  = (rawPaid !== "" && rawPaid !== null && rawPaid !== undefined)
+          ? (rawPaid || 0) : (status === "入金済" ? totalInc : 0);
+        paymentMap[vk] = {
+          totalTaxInc:     totalInc,
+          paymentStatus:   status,
+          paidAmount:      paidAmt,
+          remainingAmount: Math.max(totalInc - paidAmt, 0)
+        };
+      });
+    }
+
+    // ── Receipts をインデックス化（visitKey → receiptNo）──────
+    var receiptMap = {};
+    var receiptSh  = ss.getSheetByName(SHEET_NAMES.RECEIPTS);
+    if (receiptSh && receiptSh.getLastRow() >= 2) {
+      receiptSh.getRange(2, 1, receiptSh.getLastRow() - 1, 3).getValues().forEach(function(r) {
+        if (!r[0] || !r[1]) return;
+        var vk = String(r[1]);
+        if (!receiptMap[vk]) receiptMap[vk] = String(r[2]);
+      });
+    }
+
+    // ── 対象月の SelfPayVisits を抽出（isDeleted 除外）────────
+    var days   = {};
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (visitSh && visitSh.getLastRow() >= 2) {
+      var numCols = Math.min(visitSh.getLastColumn(), 12);
+      visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues().forEach(function(r) {
+        if (!r[0]) return;
+        var isDeleted = r[11] === true || r[11] === "TRUE";
+        if (isDeleted) return;
+
+        var visitDate = "";
+        if (r[2]) {
+          try { visitDate = Utilities.formatDate(new Date(r[2]), "Asia/Tokyo", "yyyy-MM-dd"); } catch(e) {}
+        }
+        if (!visitDate || visitDate.slice(0, 7) !== monthStr) return;
+
+        var vk  = String(r[0]);
+        var pay = paymentMap[vk] || null;
+        var rec = receiptMap[vk] || null;
+
+        // displayStatus 判定（getDailyCheckoutList と同一ロジック）
+        var displayStatus;
+        if (!pay)                                                { displayStatus = "未会計"; }
+        else if (pay.paymentStatus === "未収")                  { displayStatus = "未収"; }
+        else if (pay.paymentStatus === "一部入金")              { displayStatus = "一部入金"; }
+        else if (pay.paymentStatus === "入金済" && !rec)        { displayStatus = "入金済（領収書未発行）"; }
+        else                                                     { displayStatus = "領収書発行済"; }
+
+        if (!days[visitDate]) {
+          days[visitDate] = {
+            date: visitDate, visitCount: 0,
+            unbilledCount: 0, unpaidCount: 0, partialCount: 0,
+            paidNoReceiptCount: 0, issuedCount: 0,
+            totalBilled: 0, totalPaid: 0, totalRemaining: 0
+          };
+        }
+        var d = days[visitDate];
+        d.visitCount++;
+        if      (displayStatus === "未会計")                   { d.unbilledCount++;     }
+        else if (displayStatus === "未収")                     { d.unpaidCount++;       }
+        else if (displayStatus === "一部入金")                 { d.partialCount++;      }
+        else if (displayStatus === "入金済（領収書未発行）")   { d.paidNoReceiptCount++; }
+        else                                                   { d.issuedCount++;       }
+        d.totalBilled    += (pay ? (Number(pay.totalTaxInc)     || 0) : 0);
+        d.totalPaid      += (pay ? (Number(pay.paidAmount)      || 0) : 0);
+        d.totalRemaining += (pay ? (Number(pay.remainingAmount) || 0) : 0);
+      });
+    }
+
+    // ── 月次サマリーを集計 ────────────────────────────────────
+    var summary = {
+      visitCount: 0, unbilledCount: 0, unpaidCount: 0, partialCount: 0,
+      paidNoReceiptCount: 0, issuedCount: 0,
+      totalBilled: 0, totalPaid: 0, totalRemaining: 0
+    };
+    Object.keys(days).forEach(function(date) {
+      var d = days[date];
+      summary.visitCount        += d.visitCount;
+      summary.unbilledCount     += d.unbilledCount;
+      summary.unpaidCount       += d.unpaidCount;
+      summary.partialCount      += d.partialCount;
+      summary.paidNoReceiptCount += d.paidNoReceiptCount;
+      summary.issuedCount       += d.issuedCount;
+      summary.totalBilled       += d.totalBilled;
+      summary.totalPaid         += d.totalPaid;
+      summary.totalRemaining    += d.totalRemaining;
+    });
+
+    Logger.log("[getMonthlyRevenueSummary] " + monthStr +
+      " visits=" + summary.visitCount + " billed=¥" + summary.totalBilled);
+    return { ok: true, year: y, month: m, summary: summary, days: days };
+
+  } catch(err) {
+    var em = err && err.message ? err.message : String(err);
+    Logger.log("[getMonthlyRevenueSummary] ERROR: " + em);
+    return { ok: false, year: year, month: month, error: em, summary: {}, days: {} };
+  }
+}
