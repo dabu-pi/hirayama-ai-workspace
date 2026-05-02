@@ -44,6 +44,7 @@
 | 元パス | 退避先 | 理由 |
 |---|---|---|
 | `workspace/tmp/jrec-clasp-recover/` | `_archive_workspace_cleanup_20260502/tmp/jrec-clasp-recover/` | git-ignored、2026-03-19 の旧GASバックアップ（Ver3_core.js: 112KB。現在の gas-projects 版は 251KB でずっと新しい） |
+| `workspace/ai-invest/` | `_archive_workspace_cleanup_20260502/ai-invest/` | AINV-07。Phase 0 完了後 2026-03-10 から進捗なし（約7週間）。ライブシートなし・依存なし・git-clean 確認済み。2026-05-02 追加退避（git-tracked 14ファイルをインデックスからも削除済み）|
 
 退避先: `C:\hirayama-ai-workspace\_archive_workspace_cleanup_20260502\`
 
