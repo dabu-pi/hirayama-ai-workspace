@@ -1,5 +1,56 @@
 # PROJECT_STATUS
 
+## 2026-05-02 Phase S-4: アカウント削除申請 UI
+
+### STATUS: ✅ 実装完了・実機確認待ち
+
+**変更ファイル:**
+- `app/profile/actions.ts` — `submitDeletionRequest()` / `cancelDeletionRequest()` 追加
+- `app/profile/page.tsx` — 削除申請状態を userRow と並行取得し props に追加
+- `components/profile/ProfileScreen.tsx` — アカウント削除申請セクション追加
+- `components/profile/ProfileScreen.module.css` — `.deletionReq*` スタイル追加
+
+**実装内容:**
+
+| 項目 | 内容 |
+|------|------|
+| submitDeletionRequest(reason) | server client + RLS INSERT。pending 重複は UNIQUE エラー(23505)で検出 |
+| cancelDeletionRequest(requestId) | admin client + self-guard（user_id=自分 AND status=pending）|
+| /profile 状態分岐 | null/cancelled_by_user→フォーム / pending→申請中+取消 / approved→承認済み / rejected→問い合わせ案内 |
+| 確認テキスト | 「申請する」と完全一致入力でボタン有効化 |
+| アカウント削除 ≠ ジム退会 | 注意文を常時表示（黄色ボーダーカード） |
+| DB migration | なし（テーブル・RLS は既存） |
+| membership_status の変更 | なし（申請だけ。管理者承認時のみ変更） |
+| auth.users の削除 | なし |
+
+**typecheck / build:**
+- `npm run typecheck`: エラーなし ✅
+- `npm run build`: Compiled successfully（/profile のサイズ 2.74kB → 4.09kB）✅
+
+**実機確認手順:**
+
+| # | 確認内容 | 期待結果 |
+|---|---|---------|
+| T1 | /profile を開く | 「アカウント削除申請」セクションが表示される |
+| T2 | 注意文の内容確認 | 「ジム退会ではない」「受付まで」が明記されている |
+| T3 | 「申請する」未入力 | 申請ボタンが押せない（disabled） |
+| T4 | 「申請する」入力後 | 申請ボタンが有効化される |
+| T5 | 申請送信 | pending ステータス表示に切り替わる |
+| T6 | pending 状態で「申請を取り消す」 | 確認ダイアログ → OK → cancelled_by_user 表示に切り替わる |
+| T7 | cancelled_by_user 状態 | 再申請フォームが表示される |
+| T8 | 管理者画面確認 | /admin/account-deletion-requests に申請が表示される |
+| T9 | ログアウト機能が動作する | 既存のログアウトボタンが正常に動作する |
+| T10 | /gym /train /history が正常 | 既存画面に影響なし |
+| T11 | スマホ幅で確認 | 表示が崩れない・ボタンが押しやすい |
+| T12 | 申請時の membership_status | 変更されていない（admin 画面で確認） |
+
+**注意点:**
+- 申請取り消し（cancelDeletionRequest）は admin client を使用するが、`user_id = auth.user.id AND status = 'pending'` の self-guard で他人の申請に触れない
+- rejected 状態は再申請フォームを出さない（受付問い合わせのみ）
+- 二重申請は UNIQUE インデックス（one pending per user）で DB 側でも防止
+
+---
+
 ## 2026-05-02 Phase S-3: アカウント削除機能 詳細設計
 
 ### STATUS: ✅ 設計完了 / CLOSED (2026-05-02)

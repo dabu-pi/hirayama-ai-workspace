@@ -130,7 +130,7 @@ GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructu
 | **S-1** | **設定画面の設計** | 現状調査・ログアウト設計・削除設計・フェーズ整理 | **✅ 設計完了 (2026-05-02)** |
 | **S-2** | **ログアウト機能実装** | `/profile` 下部にログアウトボタン追加。`signOut()` + `/login` 遷移 | **✅ LIVE_CHECK PASS / CLOSED (2026-05-02)** |
 | **S-3** | **アカウント削除の詳細設計** | FK/CASCADE 全マップ・方式C確定・Phase S-4 実装仕様確定 | **✅ 設計完了 (2026-05-02)** |
-| S-4 | アカウント削除申請 UI 実装 | ユーザー側申請フォーム（`submitDeletionRequest` / `cancelDeletionRequest`）。DB migration 不要 | 次候補 |
+| **S-4** | **アカウント削除申請 UI 実装** | ユーザー側申請フォーム（`submitDeletionRequest` / `cancelDeletionRequest`）。DB migration 不要 | **✅ 実装完了・実機確認待ち (2026-05-02)** |
 
 **S-2 実装スコープ（最小）:**
 - `components/profile/ProfileScreen.tsx` にログアウトセクション追加
