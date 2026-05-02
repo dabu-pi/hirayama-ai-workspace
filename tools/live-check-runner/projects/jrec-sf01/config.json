@@ -20,5 +20,9 @@
     "monthlyReport": "?page=monthlyReport",
     "menuSalesReport": "?page=menuSalesReport",
     "outstandingReport": "?page=outstandingReport"
+  },
+  "testData": {
+    "patientIdForVisitForm": "",
+    "note": "有効な患者IDを設定するとAI1-3/AI1-4のvisitFormテストが実行される。例: P001。空の場合はスキップ。"
   }
 }
