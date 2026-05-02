@@ -43,7 +43,7 @@ GZCL 種目変更まわりを調査し（2026-05-01）、swap group infrastructu
 | iOS PWA確認 | ⚠️ deferred | iPhone 未所持のため未確認。Android PASS |
 | D-2 退会申請フロー | ⚠️ 保留 | migration 000031 未適用。退会は窓口受付に統一 |
 | 計算ボタン（1RM/Calc） | スタブ | UIボタンあり・onClick 未実装（`WorkoutScreen.tsx`） |
-| **休憩タイマー任意変更** | **📋 次候補** | **60/90/120/180秒プリセット + ±15秒調整。localStorage保存。DB変更なし** |
+| **休憩タイマー任意変更** | **✅ CLOSED (2026-05-02)** | **プリセット4種 + ±15秒調整。localStorage保存。DB変更なし** |
 | 休憩タイマー自動起動 | 未実装 | 現状は手動起動のみ（`WorkoutScreen.tsx`） |
 | root/workspace remote整理 | 📋 要対応 | 両git が同一 remote を向いており誤作業リスクあり。CLAUDE.md に作業場所ルール明文化 |
 | DB CHECK 制約 | 保留 | `status='active' AND archived_at IS NOT NULL` を DB 側で禁止。別フェーズで判断 |

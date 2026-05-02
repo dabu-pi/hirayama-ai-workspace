@@ -1,5 +1,33 @@
 # PROJECT_STATUS
 
+## 2026-05-02 休憩タイマー任意変更機能
+
+### STATUS: ✅ 完了 — typecheck/build PASS (2026-05-02)
+
+**変更ファイル:**
+- `components/workout/WorkoutScreen.tsx`
+- `components/workout/WorkoutScreen.module.css`
+
+**実装内容:**
+- `restDurationSec` state 追加（初期値 90秒、localStorage から復元）
+- localStorage key: `restTimerDuration`
+- `applyRestDuration(sec)` ヘルパー追加（MIN=15秒、MAX=600秒でクランプ、localStorage保存）
+- `startRestTimer()` を `restDurationSecRef` 使用に変更（stale closure 回避）
+- topBar の休憩ボタン表示を動的化（設定値を反映）
+- タイマーアイドル時にのみ表示する `restDurationBar` を topBar 直後に追加
+  - プリセット: 1:00 / 1:30 / 2:00 / 3:00
+  - 微調整: −15秒 / +15秒
+  - 現在設定値を中央に表示
+  - タイマー動作中は非表示
+
+**既存挙動への影響:**
+- トレーニング完了処理: 変更なし
+- 次のワークアウト導線: 変更なし
+- 音声通知: 変更なし
+- archive API: 変更なし
+
+---
+
 ## 2026-05-02 ソース復元 + archive API 根本修正 + 本番反映 + 会員復旧
 
 ### STATUS: ✅ 完了 — 本番反映済み・DB矛盾行0件確認・会員2名復旧済み (2026-05-02)

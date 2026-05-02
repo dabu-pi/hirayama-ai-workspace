@@ -609,9 +609,24 @@ export function WorkoutScreen({
   const [failedAction, setFailedAction] = useState<FailedAction>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const REST_DEFAULT_SEC = 90;
+  const REST_MIN_SEC = 15;
+  const REST_MAX_SEC = 600;
+  const REST_DURATION_KEY = "restTimerDuration";
+  const REST_DURATION_PRESETS = [60, 90, 120, 180] as const;
+
   const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
   const restEndTimeRef = useRef<number | null>(null);
   const restDoneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [restDurationSec, setRestDurationSec] = useState<number>(() => {
+    if (typeof window === "undefined") return REST_DEFAULT_SEC;
+    const stored = parseInt(localStorage.getItem(REST_DURATION_KEY) ?? "", 10);
+    return !isNaN(stored) && stored >= REST_MIN_SEC && stored <= REST_MAX_SEC
+      ? stored
+      : REST_DEFAULT_SEC;
+  });
+  const restDurationSecRef = useRef(restDurationSec);
+  restDurationSecRef.current = restDurationSec;
 
   // Timer notification sound
   const [timerSoundEnabled, setTimerSoundEnabled] = useState<boolean>(() => {
@@ -762,11 +777,21 @@ export function WorkoutScreen({
     };
   }, []);
 
+  const applyRestDuration = (sec: number) => {
+    const clamped = Math.min(REST_MAX_SEC, Math.max(REST_MIN_SEC, sec));
+    setRestDurationSec(clamped);
+    restDurationSecRef.current = clamped;
+    if (typeof window !== "undefined") {
+      localStorage.setItem(REST_DURATION_KEY, String(clamped));
+    }
+  };
+
   const startRestTimer = () => {
     clearRestDoneTimeout();
     lastBeepedSecRef.current = null;
-    restEndTimeRef.current = Date.now() + REST_DEFAULT_SEC * 1000;
-    setRestSecondsLeft(REST_DEFAULT_SEC);
+    const dur = restDurationSecRef.current;
+    restEndTimeRef.current = Date.now() + dur * 1000;
+    setRestSecondsLeft(dur);
   };
 
   const handleRestTimer = () => {
@@ -1597,12 +1622,12 @@ export function WorkoutScreen({
         <button
           className={`${styles.iconButton} ${styles.toolButton}${restSecondsLeft !== null ? ` ${restSecondsLeft === 0 ? styles.restDone : styles.restActive}` : ""}`}
           onClick={handleRestTimer}
-          title={restSecondsLeft !== null ? "タップでキャンセル" : "レスト開始 (1:30)"}
+          title={restSecondsLeft !== null ? "タップでキャンセル" : `レスト開始 (${formatRestTime(restDurationSec)})`}
           type="button"
         >
           <span className={styles.toolButtonLabel}>休憩</span>
           <span className={styles.toolButtonValue}>
-            {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : "1:30"}
+            {restSecondsLeft !== null ? formatRestTime(restSecondsLeft) : formatRestTime(restDurationSec)}
           </span>
         </button>
         <button
@@ -1679,6 +1704,43 @@ export function WorkoutScreen({
           </button>
         </div>
       </div>
+
+      {/* Rest duration settings — hidden while timer is running */}
+      {restSecondsLeft === null && (
+        <div className={styles.restDurationBar}>
+          <div className={styles.restPresets}>
+            {REST_DURATION_PRESETS.map((sec) => (
+              <button
+                key={sec}
+                type="button"
+                className={`${styles.restPresetBtn}${restDurationSec === sec ? ` ${styles.restPresetBtnActive}` : ""}`}
+                onClick={() => applyRestDuration(sec)}
+              >
+                {formatRestTime(sec)}
+              </button>
+            ))}
+          </div>
+          <div className={styles.restAdjuster}>
+            <button
+              type="button"
+              className={styles.restAdjBtn}
+              disabled={restDurationSec <= REST_MIN_SEC}
+              onClick={() => applyRestDuration(restDurationSec - 15)}
+            >
+              −15秒
+            </button>
+            <span className={styles.restDurCurrent}>{formatRestTime(restDurationSec)}</span>
+            <button
+              type="button"
+              className={styles.restAdjBtn}
+              disabled={restDurationSec >= REST_MAX_SEC}
+              onClick={() => applyRestDuration(restDurationSec + 15)}
+            >
+              +15秒
+            </button>
+          </div>
+        </div>
+      )}
 
       <section className={styles.programCard}>
         {session.programWeekLabel ? (
