@@ -9,6 +9,7 @@
     "test:training": "playwright test projects/training-platform",
     "livecheck": "tsx scripts/run-livecheck.ts",
     "setup-auth": "tsx scripts/setup-auth.ts",
+    "save-auth": "tsx scripts/save-auth-from-chrome.ts",
     "report": "playwright show-report reports/html"
   },
   "devDependencies": {

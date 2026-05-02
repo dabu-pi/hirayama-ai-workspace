@@ -7,6 +7,23 @@ test-results/
 playwright-report/
 .env
 *.local
+
+# ────────────────────────────────────────────────
 # Google 認証セッション（絶対コミット禁止）
+# これらのファイル・ディレクトリには
+# Googleアカウントのセッション情報が含まれます
+# ────────────────────────────────────────────────
+
+# CDP 経由で保存した storageState
 auth.json
 auth-*.json
+*.auth.json
+
+# 専用 Chrome プロファイルディレクトリ
+.chrome-profile/
+.chrome-profile-*/
+
+# storageState 系ディレクトリ
+.auth/
+storageState/
+storageState*.json

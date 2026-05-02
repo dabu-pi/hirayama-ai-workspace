@@ -29,21 +29,36 @@ npx playwright install chromium
 GAS /dev は Google ログイン済みセッションが必要です。
 `auth.json` がない場合、GAS 関連テストは自動的に skip されます（エラーなし）。
 
-### 手順
+### ❌ 使わない方式（Googleにブロックされる）
 
 ```powershell
-# 1. セットアップガイドを表示
+# NG: Playwright codegen では Google ログインできない
+npx playwright codegen --save-storage=auth.json https://accounts.google.com
+```
+
+### ✅ 採用方式: Chrome remote debugging + CDP セッション保存
+
+```powershell
+# 1. セットアップガイドを表示（Chrome パスも確認できる）
 npm run setup-auth
 
-# 2. ヘッドフルブラウザで Google ログイン → セッション保存
-npx playwright codegen --save-storage=auth.json https://accounts.google.com
+# 2. 専用 Chrome を起動（別ターミナルで実行、開けたまま）
+$dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
+Start-Process "chrome" @("--remote-debugging-port=9222", "--user-data-dir=$dir") -PassThru
 
-# 3. 再テスト
+# 3. 開いた Chrome で手動ログイン
+#   https://accounts.google.com → JREC オーナーアカウントでログイン
+#   JREC-SF01 /dev を開いて権限確認まで済ませる
+
+# 4. 別ターミナルで auth.json を保存（Chrome は閉じない）
+npm run save-auth
+
+# 5. smoke テスト実行
 npm run test:jrec
 ```
 
-> **注意:** `auth.json` は Git に**コミットしない**こと（`.gitignore` で除外済み）。
-> セッションは 1〜2 週間で期限切れ。再作成は `npm run setup-auth` の手順に従う。
+> **注意:** `auth.json` / `.chrome-profile/` は Git に**コミットしない**こと（`.gitignore` で除外済み）。
+> セッションは 1〜2 週間で期限切れ。再作成は Step 2〜4 を再実行する。
 
 ### 認証状態による動作の違い
 
