@@ -1,7 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
+import fs from "fs";
 import path from "path";
 
 const reportsDir = path.join(__dirname, "reports");
+
+// auth.json が存在する場合だけ storageState を使う
+// auth.json がない場合は未認証状態で実行（smoke は skipIfLoginRequired で安全に skip する）
+const authFile = path.join(__dirname, "auth.json");
+const storageState = fs.existsSync(authFile) ? authFile : undefined;
+
+if (storageState) {
+  console.log("[playwright.config] ✅ auth.json を検出。storageState 有効。");
+} else {
+  console.log("[playwright.config] ⚠ auth.json が見つかりません。未認証モードで実行します。");
+  console.log("[playwright.config]   GAS /dev テストは skip されます。");
+  console.log("[playwright.config]   認証セットアップ手順: docs/GAS_LIVE_CHECK_NOTES.md");
+}
 
 export default defineConfig({
   testDir: "./projects",
@@ -21,14 +35,8 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "off",
     trace: "off",
-    // スクリーンショット保存先
-    screenshotPath: (testInfo) =>
-      path.join(
-        reportsDir,
-        "screenshots",
-        testInfo.project.name,
-        `${testInfo.titlePath.join("__").replace(/\s+/g, "_")}.png`
-      ),
+    // auth.json があれば Google ログイン済みセッションを使う
+    storageState,
   },
 
   projects: [
@@ -42,8 +50,4 @@ export default defineConfig({
       testMatch: "**/smoke.spec.ts",
     },
   ],
-
-  // GAS /dev はログイン済みブラウザが必要な場合があるため、
-  // storageState を設定して認証セッションを再利用できる構造にしている
-  // 実際の認証設定は projects/*/config.json の storageStatePath を参照する
 });

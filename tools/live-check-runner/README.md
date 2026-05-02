@@ -24,6 +24,35 @@ npm install
 npx playwright install chromium
 ```
 
+## Google 認証セットアップ（GAS /dev テスト用）
+
+GAS /dev は Google ログイン済みセッションが必要です。
+`auth.json` がない場合、GAS 関連テストは自動的に skip されます（エラーなし）。
+
+### 手順
+
+```powershell
+# 1. セットアップガイドを表示
+npm run setup-auth
+
+# 2. ヘッドフルブラウザで Google ログイン → セッション保存
+npx playwright codegen --save-storage=auth.json https://accounts.google.com
+
+# 3. 再テスト
+npm run test:jrec
+```
+
+> **注意:** `auth.json` は Git に**コミットしない**こと（`.gitignore` で除外済み）。
+> セッションは 1〜2 週間で期限切れ。再作成は `npm run setup-auth` の手順に従う。
+
+### 認証状態による動作の違い
+
+| 状態 | 動作 |
+|---|---|
+| `auth.json` あり（有効） | GAS /dev にログイン済みでアクセス → PASS 期待 |
+| `auth.json` あり（期限切れ） | ログイン画面リダイレクト → SKIP（メッセージあり） |
+| `auth.json` なし | ログイン画面リダイレクト → SKIP（エラーなし） |
+
 ---
 
 ## 実行方法

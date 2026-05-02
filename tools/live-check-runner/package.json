@@ -8,6 +8,7 @@
     "test:jrec": "playwright test projects/jrec-sf01",
     "test:training": "playwright test projects/training-platform",
     "livecheck": "tsx scripts/run-livecheck.ts",
+    "setup-auth": "tsx scripts/setup-auth.ts",
     "report": "playwright show-report reports/html"
   },
   "devDependencies": {

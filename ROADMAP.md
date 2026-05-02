@@ -52,7 +52,7 @@
 | # | タスク | 内容 | ステータス |
 |---|---|---|---|
 | LC-1 | 初期スキャフォールド作成 + 初回実行確認 | Playwright scaffold + smoke 実行 → **Scenario D 確認（skip 設計正常動作）** | ✅ 2026-05-02 |
-| LC-2 | storageState 認証設定 + smoke PASS | auth.json 作成手順 → smoke 全テスト PASS | ⏸ |
+| LC-2 | storageState 認証設定 | playwright.config.ts に条件分岐実装済み。auth.json 作成（人間操作）待ち。smoke PASS は auth.json 作成後 | 🔄 コード完了・auth.json 作成待ち |
 | LC-3 | JREC-SF01 Phase AI-1 確認 spec 実装 | ai1.spec.ts（AI1-1〜AI1-9 自動化対象）| ⏸ |
 | LC-4 | レポート → PROJECT_STATUS 自動反映 | make-report.ts 完成 + CI 連携 | ⏸ |
 | LC-5 | orchestrator 連携 | automation/ から CLI として呼び出す設計 | ⏸ |
