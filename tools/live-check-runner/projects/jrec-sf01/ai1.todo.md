@@ -46,19 +46,38 @@ page (top)
 
 - `page.locator('#occupation')` → ❌ フレームを越えられない
 - `frameLocator('iframe[src*="googleusercontent"]').first()` → ❌ 外側 iframe（内側にアクセスできない）
-- 正しい候補: `page.frameLocator('iframe').first().frameLocator('iframe').first().locator('#occupation')`
+- ✅ 修正済み: `gasAppFrame(page)` ヘルパーで2段アクセス（ai1.spec.ts commit 反映済み）
 
-**次回再開時の最初にやること:**
-
-1. ai1.spec.ts の frameLocator を 2段構造に修正する
-2. `npm run test:jrec:ai1` を実行して AI1-1 PASS を確認
-3. AI1-4 も patientId 付きで実行できれば確認する
-
-修正候補コード（ai1.spec.ts）:
+**ai1.spec.ts 修正内容（2026-05-03）:**
 ```typescript
-const gasFrame = page.frameLocator('iframe').first().frameLocator('iframe').first();
-await expect(gasFrame.locator('#occupation')).toBeVisible({ timeout: 25_000 });
+function gasAppFrame(page: Page) {
+  return page.frameLocator("iframe").first().frameLocator("iframe").first();
+}
 ```
+
+**次回再開時の最初にやること（auth 再取得が必要）:**
+
+2026-05-03 実行結果: smoke 16 SKIPPED / ai1 10 SKIPPED
+→ auth.json の Google セッションが失効している（cookie 期限とは別）
+
+auth 再取得手順:
+```powershell
+# 1. Chrome を専用プロファイルで起動
+$dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
+Start-Process "chrome" @("--remote-debugging-port=9222", "--user-data-dir=$dir") -PassThru
+
+# 2. Chrome で Google にログイン → JREC /dev を開いて権限確認
+# 3. 別ターミナルで auth.json を保存（Chrome は閉じない）
+npm run save-auth
+
+# 4. smoke + ai1 両方を実行して PASS を確認
+npm run test:jrec:smoke
+npm run test:jrec:ai1
+```
+
+期待結果（auth 有効時）:
+- smoke: 16 PASS
+- ai1: AI1-1a/b/c + AI1-7(dateForm) = 4 PASS、AI1-3/4a/4b/7ボタン/8/9 = 6 SKIP
 
 ---
 
