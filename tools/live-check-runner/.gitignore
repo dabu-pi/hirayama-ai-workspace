@@ -7,3 +7,6 @@ test-results/
 playwright-report/
 .env
 *.local
+# Google 認証セッション（絶対コミット禁止）
+auth.json
+auth-*.json
