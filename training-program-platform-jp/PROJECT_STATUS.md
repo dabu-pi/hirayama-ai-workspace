@@ -1,5 +1,55 @@
 # PROJECT_STATUS
 
+## 2026-05-02 Phase S-3: アカウント削除機能 詳細設計
+
+### STATUS: ✅ 設計完了 / CLOSED (2026-05-02)
+
+**変更ファイル:**
+- `docs/ACCOUNT_DELETE_DESIGN.md` — Phase S-1 の設計案を調査結果に基づき全面更新
+- `ROADMAP.md` — Phase S-3 完了・S-4 を次候補に更新
+
+**調査対象ファイル:**
+- `supabase/migrations/20260428_000027_account_deletion_requests.sql`
+- `supabase/migrations/20260429_000031_account_deletion_cancel_fields.sql`
+- `supabase/migrations/20260411_000001_initial_schema.sql`
+- `supabase/migrations/20260428_000028_users_cancelled_at.sql`
+- `supabase/migrations/20260429_000029_billing_cutoff_records.sql`
+- `supabase/migrations/20260429_000030_membership_pause_requests.sql`
+- `supabase/migrations/20260427_000026_user_exercises.sql`
+- `app/admin/account-deletion-requests/page.tsx`
+- `app/admin/account-deletion-requests/actions.ts`
+- `components/admin/DeletionRequestsScreen.tsx`
+
+**主要調査結果:**
+
+| 確認項目 | 結果 |
+|---------|------|
+| account_deletion_requests テーブル | migration 000027+000031 で完全適用済み |
+| status の正確な値 | 'pending' / 'approved' / 'rejected' / 'cancelled_by_user' |
+| ユーザー UPDATE RLS | なし（申請取り消しは Server Action + admin client 必要） |
+| 管理者側 UI / Server Actions | 完全実装済み |
+| auth.users 物理削除の可否 | RESTRICT FK 6箇所で阻止される（現行スキーマでは不可） |
+| Phase S-4 の新規 migration | 不要 |
+
+**FK/CASCADE の全マップ（RESTRICT 箇所）:**
+
+| テーブル | カラム | 影響 |
+|---------|--------|------|
+| account_deletion_requests | user_id | 申請があれば public.users 削除ブロック |
+| account_deletion_requests | reviewed_by | 管理者が審査済みなら削除ブロック |
+| billing_cutoff_records | confirmed_by | 口座振替確定操作をした場合ブロック |
+| membership_pause_requests | user_id | 休会申請があれば削除ブロック |
+| membership_pause_requests | reviewed_by | 管理者が審査済みなら削除ブロック |
+| workout_session_exercises | user_exercise_id → user_exercises | カスタム種目使用セッションがあれば削除ブロック |
+
+**確定決定:**
+- 削除方式: **方式C（申請フロー）確定採用**
+- 推奨理由: テーブル・RLS・管理者 UI が実装済み / 物理削除は FK RESTRICT で現状不可
+- Phase S-4 で実装すること: `submitDeletionRequest()` + `cancelDeletionRequest()` + `/profile` 内 UI
+- Phase S-4 で実装しないこと: DB migration・auth.users 物理削除・管理者通知
+
+---
+
 ## 2026-05-02 Phase S-2: ログアウト機能
 
 ### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-02)
