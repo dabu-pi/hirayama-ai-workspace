@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 
-import { updateOwnDisplayName } from "@/app/profile/actions";
+import { selfDeleteAccount, updateOwnDisplayName } from "@/app/profile/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import styles from "./ProfileScreen.module.css";
+
+const SELF_DELETE_CONFIRM_WORD = "アカウントを削除します";
 
 type StatusLevel = "active" | "paused" | "cancelled";
 
@@ -36,6 +38,56 @@ export function ProfileScreen({
   const [isPending, startTransition] = useTransition();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Self-delete state
+  const [selfDelChecks, setSelfDelChecks] = useState({
+    notGymExit: false,
+    noAppAccess: false,
+    noRestore: false
+  });
+  const [selfDelConfirmText, setSelfDelConfirmText] = useState("");
+  const [selfDelReason, setSelfDelReason] = useState("");
+  const [isSelfDeleting, setIsSelfDeleting] = useState(false);
+  const [selfDelError, setSelfDelError] = useState<string | null>(null);
+
+  const allChecked =
+    selfDelChecks.notGymExit &&
+    selfDelChecks.noAppAccess &&
+    selfDelChecks.noRestore;
+  const canSelfDelete =
+    allChecked &&
+    selfDelConfirmText === SELF_DELETE_CONFIRM_WORD &&
+    !isSelfDeleting;
+
+  function toggleSelfDelCheck(key: keyof typeof selfDelChecks) {
+    setSelfDelChecks((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  async function handleSelfDelete(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSelfDelete) return;
+
+    setIsSelfDeleting(true);
+    setSelfDelError(null);
+
+    const result = await selfDeleteAccount({
+      confirmText: selfDelConfirmText,
+      reason: selfDelReason
+    });
+
+    if (result.ok) {
+      try {
+        await createSupabaseBrowserClient().auth.signOut();
+      } catch {
+        // signOut failure is non-critical — navigate away regardless
+      }
+      window.location.href = "/account-deleted";
+      return;
+    }
+
+    setSelfDelError("アカウント削除に失敗しました。時間をおいて再度お試しください。");
+    setIsSelfDeleting(false);
+  }
 
   async function handleLogout() {
     if (!window.confirm("ログアウトしますか？")) return;
@@ -140,6 +192,109 @@ export function ProfileScreen({
         >
           {isLoggingOut ? "ログアウト中…" : "ログアウト"}
         </button>
+      </section>
+
+      {/* S-7: Self-service account deletion */}
+      <section className={styles.selfDeleteSection}>
+        <h2 className={styles.selfDeleteTitle}>トレーニングアプリのアカウント削除</h2>
+
+        <div className={styles.selfDeleteNotice}>
+          <p className={styles.selfDeleteNoticeText}>
+            この操作は、トレーニングアプリのアカウント削除です。
+            ジムの会員契約・会費・休会・退会手続きは、この操作だけでは完了しません。
+            退会・休会・会費に関する手続きは、受付までお申し出ください。
+          </p>
+        </div>
+
+        <p className={styles.selfDeleteDescription}>
+          削除を実行すると、このアプリにはログインして利用できなくなります。
+          トレーニング履歴や登録情報はアプリ上で確認できなくなります。
+          削除後の復元はできません。
+        </p>
+
+        <form className={styles.selfDeleteForm} onSubmit={handleSelfDelete}>
+          <div className={styles.selfDeleteChecklist}>
+            <label className={styles.selfDeleteCheckItem}>
+              <input
+                className={styles.selfDeleteCheckbox}
+                checked={selfDelChecks.notGymExit}
+                disabled={isSelfDeleting}
+                type="checkbox"
+                onChange={() => toggleSelfDelCheck("notGymExit")}
+              />
+              <span className={styles.selfDeleteCheckLabel}>
+                この操作はジム退会ではないことを理解しました
+              </span>
+            </label>
+            <label className={styles.selfDeleteCheckItem}>
+              <input
+                className={styles.selfDeleteCheckbox}
+                checked={selfDelChecks.noAppAccess}
+                disabled={isSelfDeleting}
+                type="checkbox"
+                onChange={() => toggleSelfDelCheck("noAppAccess")}
+              />
+              <span className={styles.selfDeleteCheckLabel}>
+                削除後、このアプリを利用できなくなることを理解しました
+              </span>
+            </label>
+            <label className={styles.selfDeleteCheckItem}>
+              <input
+                className={styles.selfDeleteCheckbox}
+                checked={selfDelChecks.noRestore}
+                disabled={isSelfDeleting}
+                type="checkbox"
+                onChange={() => toggleSelfDelCheck("noRestore")}
+              />
+              <span className={styles.selfDeleteCheckLabel}>
+                削除後の復元ができないことを理解しました
+              </span>
+            </label>
+          </div>
+
+          <div className={styles.selfDeleteField}>
+            <label className={styles.selfDeleteLabel} htmlFor="self-del-reason">
+              削除の理由（任意）
+            </label>
+            <textarea
+              id="self-del-reason"
+              className={styles.selfDeleteReasonTextarea}
+              disabled={isSelfDeleting}
+              maxLength={500}
+              placeholder="例：アプリを使わなくなったため"
+              rows={2}
+              value={selfDelReason}
+              onChange={(e) => setSelfDelReason(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.selfDeleteField}>
+            <label className={styles.selfDeleteLabel} htmlFor="self-del-confirm">
+              確認のため「アカウントを削除します」と入力してください
+            </label>
+            <input
+              id="self-del-confirm"
+              className={styles.selfDeleteConfirmInput}
+              disabled={isSelfDeleting}
+              placeholder="アカウントを削除します"
+              type="text"
+              value={selfDelConfirmText}
+              onChange={(e) => setSelfDelConfirmText(e.target.value)}
+            />
+          </div>
+
+          {selfDelError && (
+            <p className={styles.selfDeleteError}>{selfDelError}</p>
+          )}
+
+          <button
+            className={styles.selfDeleteSubmitButton}
+            disabled={!canSelfDelete}
+            type="submit"
+          >
+            {isSelfDeleting ? "削除中…" : "アカウントを削除する"}
+          </button>
+        </form>
       </section>
 
       {/* 休会・退会: アプリ申請は停止中。受付で対応 */}

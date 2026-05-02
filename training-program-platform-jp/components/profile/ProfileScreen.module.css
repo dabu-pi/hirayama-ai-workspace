@@ -331,6 +331,150 @@
   margin: 0;
 }
 
+/* ── S-7: Self-service Account Deletion section ── */
+
+.selfDeleteSection {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.selfDeleteTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-3);
+}
+
+.selfDeleteNotice {
+  padding: var(--space-3) var(--space-4);
+  background: rgba(249, 115, 22, 0.06);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: 8px;
+  margin-bottom: var(--space-4);
+}
+
+.selfDeleteNoticeText {
+  font-size: var(--text-xs);
+  color: #fb923c;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.selfDeleteDescription {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4);
+}
+
+.selfDeleteForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.selfDeleteChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.selfDeleteCheckItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.selfDeleteCheckbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #fb923c;
+}
+
+.selfDeleteCheckbox:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.selfDeleteCheckLabel {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.selfDeleteField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.selfDeleteLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+.selfDeleteReasonTextarea {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.selfDeleteReasonTextarea:disabled { opacity: 0.6; }
+
+.selfDeleteConfirmInput {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px var(--space-3);
+  font-size: var(--text-sm);
+  box-sizing: border-box;
+}
+
+.selfDeleteConfirmInput:disabled { opacity: 0.6; }
+
+.selfDeleteSubmitButton {
+  display: block;
+  width: 100%;
+  padding: 14px var(--space-4);
+  min-height: 48px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.selfDeleteSubmitButton:not(:disabled) {
+  border-color: rgba(249, 115, 22, 0.5);
+  color: #fb923c;
+}
+
+.selfDeleteSubmitButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.selfDeleteError {
+  font-size: var(--text-sm);
+  color: var(--danger);
+  margin: 0;
+}
+
 /* ── D-1: Deletion request section ── */
 
 .deletionSection {

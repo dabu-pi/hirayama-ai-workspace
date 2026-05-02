@@ -1,5 +1,62 @@
 # PROJECT_STATUS
 
+## 2026-05-02 Phase S-7: 自己責任アカウント削除 UI
+
+### STATUS: ✅ 実装完了・実機確認待ち
+
+**変更ファイル:**
+- `app/profile/actions.ts` — `selfDeleteAccount()` 追加
+- `components/profile/ProfileScreen.tsx` — 自己責任削除セクション追加
+- `components/profile/ProfileScreen.module.css` — `.selfDel*` スタイル追加
+- `app/account-deleted/page.tsx` — 再登録案内テキスト追記
+
+**実装内容:**
+
+| 項目 | 内容 |
+|------|------|
+| selfDeleteAccount() | confirmText サーバー側検証 / 二重実行防止 / audit log INSERT → app_deleted_at + 匿名化 UPDATE の順 |
+| 匿名化対象 | display_name = null / member_name = null |
+| 変更しないもの | membership_status / cancelled_at / auth.users / workout_sessions / program_enrollments |
+| account_deletion_logs | user_id / email_snapshot / display_name_snapshot / membership_status_snapshot / deletion_method='self_service' / reason / deleted_at を記録 |
+| /profile UI | 注意カード + 説明文 + チェックボックス3個 + 理由任意入力 + 確認テキスト + 削除ボタン |
+| 削除ボタン有効化条件 | 全チェックON + 「アカウントを削除します」完全一致入力 |
+| 削除後の挙動 | signOut() → window.location.href = "/account-deleted"（Router Cache 回避） |
+| /account-deleted | 再登録案内テキスト追記 |
+
+**typecheck / build:**
+- `npm run typecheck`: エラーなし ✅
+- `npm run build`: Compiled successfully（/profile 3.03kB → 4.14kB）✅
+
+**実機確認手順（Vercel デプロイ後）:**
+
+| # | 確認内容 | 期待結果 |
+|---|---|---------|
+| T1 | /profile に「トレーニングアプリのアカウント削除」セクション表示 | ✓ 表示される |
+| T2 | 注意カード文言（ジム退会でない・受付へ） | ✓ 明記されている |
+| T3 | チェックボックス未チェックで削除ボタン無効 | ✓ disabled |
+| T4 | 全チェックON・確認テキスト未入力で削除ボタン無効 | ✓ disabled |
+| T5 | 「アカウントを削除します」入力後に削除ボタン有効化 | ✓ enabled |
+| T6 | 削除実行後 /account-deleted に遷移 | ✓ 遷移する |
+| T7 | users.app_deleted_at に日時が入る | ✓ DB 確認 |
+| T8 | account_deletion_logs に履歴が作成される | ✓ DB 確認 |
+| T9 | display_name / member_name が null に | ✓ DB 確認 |
+| T10 | membership_status は変更されていない | ✓ DB 確認 |
+| T11 | cancelled_at は変更されていない | ✓ DB 確認 |
+| T12 | auth.users は削除されていない | ✓ Supabase Auth 確認 |
+| T13 | 削除後 /gym /train /profile に入れない | ✓ /account-deleted リダイレクト |
+| T14 | 削除後再ログインしても通常利用不可 | ✓ /account-deleted リダイレクト |
+| T15 | /account-deleted は表示できる | ✓ ページ表示 |
+| T16 | 既存ユーザー（通常）には影響なし | ✓ 影響なし |
+| T17 | admin 画面に影響なし | ✓ 影響なし |
+| T18 | スマホ幅で表示崩れなし | ✓ レイアウト確認 |
+
+**注意点:**
+- selfDeleteAccount() のサーバー側 confirmText 検証により、UI をバイパスした悪用を防止
+- 削除は audit log INSERT → user UPDATE の順（ログ先行でスナップショットを確実に保存）
+- account_deletion_logs には member_name_snapshot カラムがないため、member_name は logs に記録しない（migration 000036 のスキーマに準拠）
+
+---
+
 ## 2026-05-02 Phase S-6: アカウント削除 土台整備
 
 ### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-02)

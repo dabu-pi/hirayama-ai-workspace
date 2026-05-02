@@ -47,6 +47,10 @@ export default function AccountDeletedPage() {
         </p>
       </div>
 
+      <p style={{ fontSize: "0.75rem", color: "#888", lineHeight: 1.6, margin: 0 }}>
+        再度アプリをご利用希望の場合は、受付までお問い合わせください。
+      </p>
+
       <a
         href="/login"
         style={{
