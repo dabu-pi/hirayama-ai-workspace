@@ -55,22 +55,33 @@ export async function updateOwnDisplayName(
 const SELF_DELETE_CONFIRM_WORD = "アカウントを削除します";
 
 /**
- * Immediately soft-deletes the authenticated user's app account.
+ * Phase S-8: Physically deletes the authenticated user's app account.
  *
- * What this does:
- *   - Sets public.users.app_deleted_at = now()
- *   - Anonymises display_name and member_name (set to null)
- *   - Inserts a row into account_deletion_logs for audit
+ * Deletion order:
+ *   1. Fetch display_name / membership_status for audit snapshot
+ *   2. INSERT account_deletion_logs (snapshot preserved even after auth.users is gone)
+ *   3. supabase.auth.admin.deleteUser(user.id)
+ *      → CASCADE: public.users → program_enrollments, workout_sessions,
+ *                 workout_session_exercises, workout_sets, user_exercises,
+ *                 t1_progression_states
+ *      → SET NULL: account_deletion_requests.user_id / reviewed_by,
+ *                  membership_pause_requests.user_id / reviewed_by,
+ *                  billing_cutoff_records.confirmed_by,
+ *                  account_deletion_logs.user_id,
+ *                  gym_consultation_requests.user_id,
+ *                  gym_announcements.created_by
  *
- * What this does NOT do:
- *   - Does NOT delete auth.users
- *   - Does NOT change membership_status (gym membership is managed separately)
- *   - Does NOT change cancelled_at
- *   - Does NOT delete workout_sessions, program_enrollments, or any training data
+ * What this does NOT change:
+ *   - membership_status: gym membership is managed separately from app accounts
+ *   - cancelled_at: gym cancellation date, unrelated to app deletion
+ *
+ * After deletion:
+ *   - auth.users is gone → same email can be used to register a new account
+ *   - account_deletion_logs row is preserved with user_id = null
  *
  * Security:
  *   - confirmText is validated server-side to prevent CSRF-style misuse.
- *   - admin client UPDATE is scoped to WHERE id = user.id (self-guard).
+ *   - deleteUser() uses service_role key via admin client (server-side only).
  */
 export async function selfDeleteAccount(input: {
   confirmText: string;
@@ -97,29 +108,21 @@ export async function selfDeleteAccount(input: {
 
   const admin = createSupabaseAdminClient();
 
-  // Fetch current row before any mutation (snapshot for audit log)
+  // Fetch snapshot data for audit log (display_name / membership_status only)
   const { data: userRow } = await admin
     .from("users")
-    .select("display_name, member_name, membership_status, app_deleted_at")
+    .select("display_name, membership_status")
     .eq("id", user.id)
     .maybeSingle<{
       display_name: string | null;
-      member_name: string | null;
       membership_status: string;
-      app_deleted_at: string | null;
     }>();
-
-  // Guard: prevent double-execution
-  if (userRow?.app_deleted_at) {
-    console.warn("selfDeleteAccount: already deleted.", { userId: user.id });
-    return { ok: false, error: "already_deleted" };
-  }
 
   const now = new Date().toISOString();
 
-  // 1. Insert audit log BEFORE mutating the user row so the snapshot is accurate.
-  //    account_deletion_logs columns: user_id, email_snapshot, display_name_snapshot,
-  //    membership_status_snapshot, deletion_method, reason, deleted_at
+  // Step 1: Insert audit log BEFORE physical deletion.
+  //   After deleteUser(), account_deletion_logs.user_id becomes SET NULL
+  //   (migration 000037), so the row is preserved as a permanent audit record.
   const { error: logError } = await admin
     .from("account_deletion_logs")
     .insert({
@@ -140,26 +143,23 @@ export async function selfDeleteAccount(input: {
     return { ok: false, error: logError.message };
   }
 
-  // 2. Soft-delete + anonymise: set app_deleted_at and clear display fields.
-  //    membership_status, cancelled_at, role are intentionally NOT touched.
-  const { error: updateError } = await admin
-    .from("users")
-    .update({
-      app_deleted_at: now,
-      display_name: null,
-      member_name: null
-    })
-    .eq("id", user.id);
+  // Step 2: Physical deletion of auth.users.
+  //   Cascades through all user-owned tables as documented above.
+  //   membership_status and cancelled_at are NOT touched — gym membership
+  //   is completely separate from app account management.
+  const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
 
-  if (updateError) {
-    console.error("selfDeleteAccount: user update failed.", {
+  if (deleteError) {
+    console.error("selfDeleteAccount: deleteUser failed.", {
       userId: user.id,
-      errorMessage: updateError.message
+      errorMessage: deleteError.message
     });
-    return { ok: false, error: updateError.message };
+    return { ok: false, error: deleteError.message };
   }
 
-  console.info("selfDeleteAccount: success.", { userId: user.id });
+  console.info("selfDeleteAccount: success (physical deletion).", {
+    userId: user.id
+  });
   return { ok: true };
 }
 

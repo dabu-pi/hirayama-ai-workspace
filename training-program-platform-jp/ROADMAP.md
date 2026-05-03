@@ -155,7 +155,7 @@ S-4 はコード実装済みだが、最終方式を S-7「自己責任即時削
 | **S-6** | **削除に必要な DB / RLS / admin 整備** | `app_deleted_at` カラム追加 / `account_deletion_logs` 新設 / middleware 更新 / S-4 申請 UI 撤去 | **✅ LIVE_CHECK PASS / CLOSED (2026-05-02)** |
 | **S-7** | **自己責任削除 UI 実装** | `/profile` に削除確認 UI / `selfDeleteAccount()` Server Action / 削除完了ページ | **✅ LIVE_CHECK PASS / CLOSED (2026-05-03)** |
 | **S-7b** | **削除後アクセス制御バグ修正** | /programs を middleware に追加 / home page app_deleted_at チェック / login ループ修正 / account-deleted signOut / admin バッジ | **✅ 実装完了・実機確認待ち (2026-05-03)** |
-| **S-8** | **auth.users 物理削除対応** | アプリ削除はジム退会と無関係。FK migration 000037 作成済み（BLOCK 6箇所）。本番 DB 適用後に `deleteUser()` 実装 | **✅ migration 作成済み・DB 適用待ち (2026-05-03)** |
+| **S-8** | **auth.users 物理削除対応** | アプリ削除はジム退会と無関係。migration 000037 本番 DB 適用済み。`selfDeleteAccount()` 物理削除方式に更新済み | **✅ 実装完了・実機確認待ち (2026-05-03)** |
 
 **推奨削除方式（S-5 調査結果）: 方式B ソフトデリート**
 - `public.users.app_deleted_at = now()` をセット
