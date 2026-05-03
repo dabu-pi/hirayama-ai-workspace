@@ -1,5 +1,90 @@
 # PROJECT_STATUS
 
+## 2026-05-03 Phase S-8: auth.users 物理削除方式 調査
+
+### STATUS: ✅ 調査完了・実装承認待ち
+
+**背景:**
+S-7 の soft delete（app_deleted_at）方式では、auth.users が残るため同メールでの重複登録リスクや /login ループが発生した。
+S-8 では `supabase.auth.admin.deleteUser()` による物理削除に移行する。
+
+**調査対象ファイル:**
+- `supabase/migrations/20260411_000001_initial_schema.sql`
+- `supabase/migrations/20260427_000026_user_exercises.sql`
+- `supabase/migrations/20260428_000027_account_deletion_requests.sql`
+- `supabase/migrations/20260429_000029_billing_cutoff_records.sql`
+- `supabase/migrations/20260429_000030_membership_pause_requests.sql`
+- `supabase/migrations/20260502_000036_account_deletion_logs.sql`
+
+**FK BLOCK 箇所（現状 deleteUser() が失敗する原因）:**
+
+| テーブル | カラム | 問題 | 解消方法 |
+|---------|--------|------|---------|
+| account_deletion_requests | user_id（NOT NULL） | NO ACTION + NOT NULL | `DROP NOT NULL` → FK を SET NULL に |
+| account_deletion_requests | reviewed_by | NO ACTION | FK を SET NULL に |
+| membership_pause_requests | user_id（NOT NULL） | NO ACTION + NOT NULL | `DROP NOT NULL` → FK を SET NULL に |
+| membership_pause_requests | reviewed_by | NO ACTION | FK を SET NULL に |
+| billing_cutoff_records | confirmed_by | NO ACTION | FK を SET NULL に |
+| workout_session_exercises | user_exercise_id | RESTRICT | FK を CASCADE に |
+
+**必要な migration: 1ファイル（`20260503_000037_s8_fix_fk_for_auth_delete.sql`）**
+- 詳細 SQL は `docs/SELF_SERVICE_ACCOUNT_DELETE_DESIGN.md` を参照
+
+**削除時のデータ処理（移行後）:**
+
+| データ | 結果 |
+|--------|------|
+| auth.users | 物理削除 |
+| public.users / workout_sessions / enrollments / sets | CASCADE 全削除 |
+| account_deletion_logs | user_id = null で保持（監査ログ永続）|
+| gym_consultation_requests / announcements | SET NULL（記録は残る）|
+| account_deletion_requests / pause_requests | user_id = null で保持 |
+
+**JWT 残存:** middleware が `auth.getUser()` でサーバー検証するため、削除直後から未認証扱い。さらに signOut() でローカルも消去。
+
+**再登録:** auth.users 削除後は同メールで新規登録可能（新 user_id で完全新規）。
+
+**S-7 との差分:**
+- `app_deleted_at` セット → 不要（物理削除のため）
+- `display_name / member_name = null` → 不要（CASCADE 削除のため）
+- `admin.auth.admin.deleteUser()` を Server Action に追加
+- migration で FK を SET NULL / CASCADE に変更が前提
+
+**実装前の必須確認:**
+1. migration の constraint 名が本番 DB と一致するか（`pg_constraint` で確認）
+2. テスト用ユーザーで migration 適用 + 削除フロー確認
+3. account_deletion_requests.user_id の NOT NULL 解除で既存データに影響がないか
+
+**Supabase 確認用 SQL（constraint 名確認・SELECT のみ）:**
+```sql
+SELECT conname, contype, confdeltype,
+       a.attname AS column_name,
+       c2.relname AS ref_table
+FROM pg_constraint pc
+JOIN pg_class c ON pc.conrelid = c.oid
+JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(pc.conkey)
+JOIN pg_class c2 ON pc.confrelid = c2.oid
+WHERE pc.contype = 'f'
+  AND c.relname IN (
+    'account_deletion_requests',
+    'membership_pause_requests',
+    'billing_cutoff_records',
+    'workout_session_exercises'
+  )
+  AND c2.relname IN ('users', 'user_exercises')
+ORDER BY c.relname, a.attname;
+```
+
+**次の実装ステップ:**
+1. 上記 SQL で constraint 名を確認
+2. migration ファイル作成（`20260503_000037_s8_fix_fk_for_auth_delete.sql`）
+3. ステージング / テスト環境で適用確認
+4. `selfDeleteAccount()` を更新（`app_deleted_at` 削除 → `deleteUser()` 追加）
+5. typecheck / build
+6. テストユーザーで実機確認
+
+---
+
 ## 2026-05-03 Phase S-7b: アカウント削除後のアクセス制御バグ修正
 
 ### STATUS: ✅ 実装完了・実機確認待ち

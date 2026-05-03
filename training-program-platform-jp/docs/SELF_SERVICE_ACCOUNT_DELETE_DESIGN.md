@@ -1,8 +1,282 @@
 # 自己責任即時アカウント削除 設計ドキュメント
 
 > 作成: 2026-05-02（Phase S-5 調査）  
-> ステータス: **Phase S-5 設計完了**（実装は Phase S-6〜S-7）  
+> 更新: 2026-05-03（Phase S-8 物理削除方式 調査追加）  
+> ステータス: **Phase S-8 設計完了・実装承認待ち**  
 > 関連: `docs/ACCOUNT_DELETE_DESIGN.md`（申請方式の設計）
+
+---
+
+## Phase S-8: auth.users 物理削除方式 調査結果（2026-05-03）
+
+### 背景と方針変更
+
+S-7（ソフトデリート）では `app_deleted_at` をセットするのみで `auth.users` を残す方式を採用した。  
+しかし以下の課題が発覚したため、**S-8 では auth.users を物理削除する方式**に移行する。
+
+| S-7 方式の問題 | S-8 方式で解決 |
+|--------------|-------------|
+| 同じメールで再ログインできてしまう | auth.users 削除後は同メールアドレスで再登録可能になる |
+| signup 時に ghost ユーザーが作られる可能性 | auth.users が存在しないため重複なし |
+| /login ループが発生する | セッション自体が消える |
+| 「アカウント削除したのにメールが残る」UX | 完全消去 |
+
+---
+
+### FK / CASCADE 完全マップ（deleteUser() 実行時）
+
+```
+supabase.auth.admin.deleteUser(userId) を呼ぶと:
+
+auth.users (削除)
+  │
+  ├─ CASCADE ──→ public.users (削除)
+  │               ├─ CASCADE ──→ program_enrollments    ✅ 全件削除
+  │               │               └─ CASCADE ──→ t1_progression_states ✅
+  │               ├─ CASCADE ──→ workout_sessions        ✅ 全件削除
+  │               │               └─ CASCADE ──→ workout_session_exercises ✅
+  │               │                               └─ CASCADE ──→ workout_sets ✅
+  │               ├─ SET NULL ─→ programs.creator_user_id ✅ null 化
+  │               │
+  │               ├─ NO ACTION → account_deletion_requests.user_id     ⚠️ BLOCK
+  │               ├─ NO ACTION → account_deletion_requests.reviewed_by ⚠️ BLOCK (adminが審査済み時)
+  │               ├─ NO ACTION → membership_pause_requests.user_id     ⚠️ BLOCK
+  │               ├─ NO ACTION → membership_pause_requests.reviewed_by ⚠️ BLOCK (adminが審査済み時)
+  │               ├─ NO ACTION → billing_cutoff_records.confirmed_by   ⚠️ BLOCK (adminユーザーの場合)
+  │               └─ SET NULL  → account_deletion_logs.user_id         ✅ null 化（監査ログ保持）
+  │
+  ├─ CASCADE ──→ user_exercises (削除)
+  │               └─ RESTRICT ← workout_session_exercises.user_exercise_id ⚠️ BLOCK
+  │                  (カスタム種目を使ったセッション行が存在する場合)
+  │
+  ├─ SET NULL ─→ gym_consultation_requests.user_id  ✅ null 化
+  └─ SET NULL ─→ gym_announcements.created_by        ✅ null 化
+```
+
+### BLOCK 箇所の一覧と解消方法
+
+| テーブル | カラム | 現状 | 解消方法 | 影響 |
+|---------|--------|------|---------|------|
+| account_deletion_requests | user_id | NO ACTION | ON DELETE SET NULL | 申請記録は残る（user_id が null になる） |
+| account_deletion_requests | reviewed_by | NO ACTION | ON DELETE SET NULL | 審査者情報は null になる |
+| membership_pause_requests | user_id | NO ACTION | ON DELETE SET NULL | 休会記録は残る |
+| membership_pause_requests | reviewed_by | NO ACTION | ON DELETE SET NULL | 同上 |
+| billing_cutoff_records | confirmed_by | NO ACTION | ON DELETE SET NULL | 確定者情報は null になる |
+| workout_session_exercises | user_exercise_id | RESTRICT | ON DELETE CASCADE | カスタム種目使用セッション行も削除 |
+
+---
+
+### 削除されるデータ / 残るデータ
+
+| テーブル | 結果 | 備考 |
+|---------|------|------|
+| auth.users | 物理削除 | |
+| public.users | CASCADE 削除 | |
+| program_enrollments | CASCADE 削除 | |
+| workout_sessions | CASCADE 削除 | |
+| workout_session_exercises | CASCADE 削除 | |
+| workout_sets | CASCADE 削除 | |
+| user_exercises | CASCADE 削除 | |
+| t1_progression_states | CASCADE 削除 | |
+| gym_consultation_requests.user_id | SET NULL | 相談記録は残る |
+| gym_announcements.created_by | SET NULL | お知らせ記録は残る |
+| account_deletion_requests | user_id = null | 申請記録は残る |
+| membership_pause_requests | user_id = null | 休会記録は残る |
+| billing_cutoff_records.confirmed_by | SET NULL | 請求記録は残る |
+| **account_deletion_logs** | **user_id = null で保持** | **監査ログは永続保持** |
+
+---
+
+### 必要な migration（1ファイル）
+
+```sql
+-- Phase S-8: Fix NO ACTION FKs to allow auth.users physical deletion
+-- Changes RESTRICT/NO ACTION to SET NULL or CASCADE
+
+-- account_deletion_requests
+ALTER TABLE public.account_deletion_requests
+  DROP CONSTRAINT IF EXISTS account_deletion_requests_user_id_fkey;
+ALTER TABLE public.account_deletion_requests
+  ADD CONSTRAINT account_deletion_requests_user_id_fkey
+  FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+ALTER TABLE public.account_deletion_requests
+  DROP CONSTRAINT IF EXISTS account_deletion_requests_reviewed_by_fkey;
+ALTER TABLE public.account_deletion_requests
+  ADD CONSTRAINT account_deletion_requests_reviewed_by_fkey
+  FOREIGN KEY (reviewed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+-- membership_pause_requests
+ALTER TABLE public.membership_pause_requests
+  DROP CONSTRAINT IF EXISTS membership_pause_requests_user_id_fkey;
+ALTER TABLE public.membership_pause_requests
+  ADD CONSTRAINT membership_pause_requests_user_id_fkey
+  FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+ALTER TABLE public.membership_pause_requests
+  DROP CONSTRAINT IF EXISTS membership_pause_requests_reviewed_by_fkey;
+ALTER TABLE public.membership_pause_requests
+  ADD CONSTRAINT membership_pause_requests_reviewed_by_fkey
+  FOREIGN KEY (reviewed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+-- billing_cutoff_records
+ALTER TABLE public.billing_cutoff_records
+  DROP CONSTRAINT IF EXISTS billing_cutoff_records_confirmed_by_fkey;
+ALTER TABLE public.billing_cutoff_records
+  ADD CONSTRAINT billing_cutoff_records_confirmed_by_fkey
+  FOREIGN KEY (confirmed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+-- workout_session_exercises: user_exercise_id → CASCADE
+-- When user_exercises is deleted (via auth.users CASCADE),
+-- workout_session_exercises rows using that custom exercise are also deleted.
+ALTER TABLE public.workout_session_exercises
+  DROP CONSTRAINT IF EXISTS workout_session_exercises_user_exercise_id_fkey;
+ALTER TABLE public.workout_session_exercises
+  ADD CONSTRAINT workout_session_exercises_user_exercise_id_fkey
+  FOREIGN KEY (user_exercise_id) REFERENCES public.user_exercises(id) ON DELETE CASCADE;
+```
+
+**migration 適用前の確認 SQL（SELECT のみ）:**
+```sql
+-- 既存の constraint 名を確認（DROP IF EXISTS のため事前確認は任意）
+SELECT conname, contype, confdeltype
+FROM pg_constraint
+WHERE conrelid IN (
+  'public.account_deletion_requests'::regclass,
+  'public.membership_pause_requests'::regclass,
+  'public.billing_cutoff_records'::regclass,
+  'public.workout_session_exercises'::regclass
+)
+AND contype = 'f';
+```
+
+---
+
+### S-8 Server Action の設計
+
+```typescript
+export async function selfDeleteAccount(input: {
+  confirmText: string;
+  reason?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  // 1. confirmText 検証（サーバー側）
+  // 2. getUser() で認証確認
+  // 3. 二重実行防止チェック
+  
+  // 4. 削除ログを先に作成（auth.users 削除後は account_deletion_logs.user_id が SET NULL になる）
+  await admin.from("account_deletion_logs").insert({
+    user_id: user.id,
+    email_snapshot: user.email,
+    display_name_snapshot: userRow.display_name,
+    membership_status_snapshot: userRow.membership_status,
+    deletion_method: "self_service",
+    reason: input.reason,
+  });
+
+  // 5. auth.users を物理削除
+  //    → CASCADE: public.users → 全トレーニングデータ
+  //    → SET NULL: 監査ログ・請求記録のFK
+  const { error } = await adminClient.auth.admin.deleteUser(user.id);
+  
+  if (error) return { ok: false, error: error.message };
+  
+  return { ok: true };
+  // 呼び出し元: signOut() → window.location.href = "/account-deleted"
+}
+```
+
+**注意: S-7 の app_deleted_at 更新は不要になる（auth.users が消えるため middleware でも検出不要）**
+
+---
+
+### JWT 残存問題への対応
+
+- `deleteUser()` 後、Supabase サーバーはそのユーザーの JWT を即時無効化する
+- middleware の `supabase.auth.getUser()` はサーバー側で検証するため、削除直後から正しく「未認証」として扱われる
+- クライアント側: `selfDeleteAccount()` 呼び出し後に `supabase.auth.signOut()` を呼ぶことでローカル cookie を消去
+- これで JWT 残存問題は実質的に解決される
+
+---
+
+### 再登録の扱い
+
+| ケース | S-7 方式 | S-8 方式 |
+|--------|---------|---------|
+| 同じメールで再ログイン | セッションあり→/account-deleted ループ | ❌ Invalid credentials（auth.users なし） |
+| 同じメールで新規登録 | ghost ユーザー重複リスク | ✅ 通常の新規登録フロー（新しい user_id） |
+| 過去のデータ引き継ぎ | app_deleted_at で参照可能 | なし（CASCADE 削除のため） |
+
+---
+
+### S-8 実装可否判断
+
+**実装してよい条件:**
+1. ✅ migration を Supabase にて適用済み
+2. ✅ constraint 名が確認できている（DROP CONSTRAINT が正確）
+3. ✅ テスト用ユーザーで動作確認済み
+4. ✅ app_deleted_at ベースの S-7 middleware ガードは削除不要（auth.users 削除後は middleware が自動的に未認証扱いにする）
+
+**実装後に不要になるもの（段階的に整理）:**
+- `public.users.app_deleted_at` チェック（middleware / app/page.tsx / login page） → auth.users が消えるため不要になる
+- S-6 の middleware の app_deleted_at ロジック → 簡略化できる
+- `/account-deleted` へのリダイレクト → `/login` への通常リダイレクトで代替可能
+
+**リスク:**
+- 全トレーニングデータが消える（不可逆）
+- 管理者がテスト用ユーザーを誤削除した場合の復元不可
+- `account_deletion_requests.user_id` が NOT NULL 制約を持つ場合は migration で nullable 化も必要（現状確認要）
+
+---
+
+### account_deletion_requests.user_id の NOT NULL 確認
+
+migration 000027 を確認:
+```sql
+user_id uuid NOT NULL REFERENCES public.users(id),
+```
+`NOT NULL` が付いているため、ON DELETE SET NULL にする前に `DROP NOT NULL` も必要。
+
+**正しい migration:**
+```sql
+-- user_id を nullable にしてから FK を SET NULL に変更
+ALTER TABLE public.account_deletion_requests
+  ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE public.account_deletion_requests
+  DROP CONSTRAINT IF EXISTS account_deletion_requests_user_id_fkey;
+ALTER TABLE public.account_deletion_requests
+  ADD CONSTRAINT account_deletion_requests_user_id_fkey
+  FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+```
+
+同様に membership_pause_requests.user_id も `NOT NULL` があるため同じ処理が必要。
+
+---
+
+### 推奨実装手順（Phase S-8 着手時）
+
+```
+Step 1: migration 作成
+  - 20260503_000037_s8_fix_fk_for_auth_delete.sql
+  - BLOCK FKs を SET NULL / CASCADE に変更
+  - NOT NULL 制約を先に DROP
+
+Step 2: Supabase Dashboard で migration 適用
+  - 本番前にステージング環境でテスト
+
+Step 3: selfDeleteAccount() を更新
+  - admin.from("users").update({app_deleted_at}) → 削除
+  - admin.auth.admin.deleteUser(userId) を追加
+  - display_name/member_name null 化は不要（CASCADE 削除されるため）
+
+Step 4: S-7 の app_deleted_at ガードを整理（省略可能、段階的に）
+  - middleware の app_deleted_at チェックは残しておいても害なし
+  - 将来的に簡略化してよい
+
+Step 5: テスト用ユーザーで確認
+  - T7': auth.users が削除されている
+  - T7'': 同じメールで新規登録できる
+  - T7''': account_deletion_logs が保持されている（user_id は null）
+```
 
 ---
 
