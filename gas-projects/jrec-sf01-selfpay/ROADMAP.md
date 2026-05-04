@@ -8,7 +8,8 @@
 
 | デプロイ | 内容 |
 |---|---|
-| @35 | Phase 6-L 未収・回収管理 / outstandingReport ページ 含む（**最新本番** `AKfycbzX8wau...LyA`） |
+| @36 | Phase AI-1 + AI-2: 患者マスター・カルテ項目追加 + AI評価補助UI 含む（**最新本番** `AKfycbxP9beCl8tZ4t41irDgFa...YA`） |
+| @35 | Phase 6-L 未収・回収管理 / outstandingReport ページ 含む |
 | @34 | Phase 6-K メニュー別売上分析 / menuSalesReport ページ 含む |
 | @33 | Phase 6-J 月別売上集計 / monthlyReport ページ 含む |
 | @32 | Phase 6-I 集計メニュー / reports ページ 含む |

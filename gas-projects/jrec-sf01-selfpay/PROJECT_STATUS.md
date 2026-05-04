@@ -34,24 +34,26 @@
 **✅ Versioned Deployment @35: 本番反映済み**（2026-05-02 Phase 6-L 含む）
 
 **✅ Phase AI-0 AI補助判定 設計調査: CLOSED**（2026-05-02 コード実装なし・設計書のみ）
-**✅ Phase AI-1 患者マスター・カルテ項目追加: HEAD /dev LiveCheck PASS**（2026-05-03）
+**✅ Phase AI-1 患者マスター・カルテ項目追加: CLOSED**（2026-05-03）
   - LC-2 smoke: ✅ 16 PASS
-  - LC-3 ai1.spec.ts: ✅ 4 passed / 6 skipped（想定） / 0 failed
-  - PASS 項目: AI1-1a/b/c（#occupation, #medicalHistory, セクションタイトル）, AI1-7（#dateForm）
-  - SKIP 項目: AI1-3/AI1-4（patientId未設定）, AI1-7ボタン（手動確認推奨）, AI1-8/9（smoke参照）
-  - versioned deployment @36: 任意タイミングで実施可能（HEAD確認済み）
-**✅ Phase AI-2 AI評価補助UI追加: LiveCheck PASS**（2026-05-04）
-  - visit-form.html: AI評価補助セクション追加（#aiAssistCard / 7種の出力枠 / 免責文）
+  - LC-3 ai1.spec.ts: ✅ 7 passed / 3 skipped / 0 failed（patientId=P0001）
+  - PASS 項目: AI1-1a/b/c, AI1-3, AI1-4a/b, AI1-7(#dateForm)
+  - SKIP 項目: AI1-7ボタン（手動確認推奨）, AI1-8/9（smoke参照）
+  - commit: c32bd4b
+**✅ Phase AI-2 AI評価補助UI追加: CLOSED**（2026-05-04）
+  - visit-form.html: AI評価補助セクション追加（#aiAssistCard / 7種の出力枠 / 免責文 / 保存前disabled）
   - カルテ保存後にボタン有効化（Phase AI-3 実行はプレースホルダー表示のみ）
   - API呼び出し・外部通信は未実装（Phase AI-3 で実装予定）
-  - LC-4 ai2.spec.ts: ✅ 4 passed / 2 skipped（手動確認項目）/ 0 failed
-  - LC-3 ai1.spec.ts: ✅ 7 passed / 3 skipped（patientId=P0001 設定後・向上）/ 0 failed
-  - smoke: ✅ 16 passed / 0 failed
+  - LC-4 ai2.spec.ts: ✅ 4 passed / 2 skipped（手動確認）/ 0 failed
+  - smoke: ✅ 16 passed / ai1: ✅ 7 passed / ai2: ✅ 4 passed
+  - commit: 7f048e6（実装）/ c32bd4b（LiveCheck PASS）
+**✅ Versioned Deployment @36: 本番反映済み**（2026-05-04 Phase AI-1 + AI-2 含む）
+  - deploymentId: AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA
+  - /exec 確認: home HTTP 200 ✅ / patient-list ✅ / visitForm ✅ / #aiAssistCard ✅ / 免責文 ✅ / btn disabled ✅ / dailyCheckout ✅
 
 次期実装候補:
 1. **Phase AI-3** OpenAI API 連携（AI評価補助の本実装）← **次はここ**
-2. **versioned deployment @36** Phase AI-1 本番反映（任意タイミング）
-3. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
+2. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
@@ -60,8 +62,8 @@
 
 AI補助判定ロードマップ（Phase AI 系列）:
 - AI-0: 設計調査 ✅ CLOSED（2026-05-02 コード実装なし）
-- AI-1: 患者マスター・カルテ項目追加 ✅ HEAD /dev LiveCheck PASS（2026-05-03）
-- AI-2: AI評価補助UI追加 ✅ clasp push 済み（2026-05-04）
+- AI-1: 患者マスター・カルテ項目追加 ✅ CLOSED（2026-05-03）
+- AI-2: AI評価補助UI追加 ✅ CLOSED + @36 本番反映済み（2026-05-04）
 - AI-3: OpenAI API連携 ⏸
 - AI-4: AI補助判定保存・レビュー ⏸
 - AI-5: 運用改善 ⏸
