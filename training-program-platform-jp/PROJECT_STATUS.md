@@ -1,5 +1,47 @@
 # PROJECT_STATUS
 
+## 2026-05-04 BUG-FIX: カスタム種目への SWAP エラー
+
+### STATUS: ✅ 修正完了・実機確認待ち
+
+**不具合の再現条件:**
+1. マイ種目でカスタム種目を作成
+2. トレーニング画面で種目入れ替え（SWAP）ダイアログを開く
+3. そのカスタム種目を選択する
+4. 404 "Exercise was not found" エラーが発生
+
+**根本原因:**
+`PATCH /api/workout-sessions/[id]/exercises/[exerciseId]` が `exercise_id` のみを受け付け、`user_exercise_id` をサポートしていなかった。カスタム種目を SWAP に選択すると、`exercises` テーブルではなく `user_exercises` テーブルにある UUID を渡すが、API が `exercises` テーブルにしか問い合わせないため 404。
+
+**追加の判明事項:**
+- 種目の「追加」（ADD）フローは正常動作（POST API は `user_exercise_id` に対応済み）
+- 種目の「入れ替え」（SWAP）フローのみが未対応
+
+**変更ファイル:**
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `app/api/workout-sessions/[id]/exercises/[exerciseId]/route.ts` | `SwapRequestBody` に `user_exercise_id` 追加 / `user_exercises` テーブルへの分岐ルックアップ / UPDATE で `exercise_id` ↔ `user_exercise_id` を正しく切り替え |
+| `types/workout.ts` | `SwapExerciseResponse.sessionExercise.exerciseId` を `string \| null` に / `userExerciseId: string \| null` を追加 |
+| `components/workout/WorkoutScreen.tsx` | `postSwapExercise` に `source` 追加 / `handleSwapExercise` に `source` 追加 / 呼び出し箇所で `item.source` を渡す / swap 結果のブロック更新で `userExerciseId ?? exerciseId` に統一 |
+
+**DB変更:** なし
+
+**typecheck / build:** エラーなし ✅ / Compiled successfully ✅
+
+**実機確認手順:**
+
+| # | 確認内容 | 期待結果 |
+|---|---|---------|
+| R1 | マイ種目でカスタム種目を作成 | 一覧に表示される |
+| R2 | トレーニング画面の種目入れ替えダイアログでカスタム種目を選択 | エラーなし・種目が変わる |
+| R3 | 種目入れ替え後にセットを操作できる | 正常動作 |
+| R4 | カスタム種目を「追加」してセットを操作できる | 変更なし・正常動作 |
+| R5 | 既存の通常種目への SWAP は引き続き動作する | 影響なし |
+| R6 | スマホ幅で表示が崩れていない | 影響なし |
+
+---
+
 ## 2026-05-03 Phase S-8: auth.users 物理削除方式 調査
 
 ### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-04)

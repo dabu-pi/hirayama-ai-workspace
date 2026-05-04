@@ -469,14 +469,19 @@ async function postAddExercise(
 async function postSwapExercise(
   sessionId: string,
   sessionExerciseId: string,
-  newExerciseId: string
+  newExerciseId: string,
+  source: "library" | "user" = "library"
 ) {
+  const body =
+    source === "user"
+      ? { user_exercise_id: newExerciseId }
+      : { exercise_id: newExerciseId };
   const response = await fetch(
     `/api/workout-sessions/${sessionId}/exercises/${sessionExerciseId}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exercise_id: newExerciseId })
+      body: JSON.stringify(body)
     }
   );
   const payload = (await response.json().catch(() => null)) as
@@ -1547,7 +1552,10 @@ export function WorkoutScreen({
     }
   };
 
-  const handleSwapExercise = async (newExerciseId: string) => {
+  const handleSwapExercise = async (
+    newExerciseId: string,
+    source: "library" | "user" = "library"
+  ) => {
     if (!swapTargetBlockId || isAddingExerciseId) return;
     setIsAddingExerciseId(newExerciseId);
     setAddExerciseError(null);
@@ -1556,7 +1564,8 @@ export function WorkoutScreen({
       const result = await postSwapExercise(
         sessionMeta.id,
         swapTargetBlockId,
-        newExerciseId
+        newExerciseId,
+        source
       );
 
       if (!result.noOp) {
@@ -1567,7 +1576,10 @@ export function WorkoutScreen({
               block.id === swapTargetBlockId
                 ? {
                     ...block,
-                    exerciseId: sessionExercise.exerciseId,
+                    exerciseId:
+                      sessionExercise.userExerciseId ??
+                      sessionExercise.exerciseId ??
+                      "",
                     exerciseSlug: sessionExercise.exerciseSlug,
                     exerciseNameJa: sessionExercise.exerciseNameJa,
                     exerciseNameEn: sessionExercise.exerciseNameEn,
@@ -2157,7 +2169,7 @@ export function WorkoutScreen({
                       onClick={() =>
                         exerciseModalMode === "add"
                           ? handleAddExercise(item.id, item.source === "user" ? "user" : "library")
-                          : handleSwapExercise(item.id)
+                          : handleSwapExercise(item.id, item.source === "user" ? "user" : "library")
                       }
                       type="button"
                     >

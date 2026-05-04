@@ -17,12 +17,15 @@ type RouteContext = {
 
 type SwapRequestBody = {
   exercise_id?: string;
+  /** Set when swapping to a user-created custom exercise (user_exercises table). */
+  user_exercise_id?: string;
 };
 
 type SessionExerciseRow = {
   id: string;
   workout_session_id: string;
-  exercise_id: string;
+  exercise_id: string | null;
+  user_exercise_id: string | null;
   exercise_type: string;
   order_index: number;
   was_swapped: boolean;
@@ -33,6 +36,11 @@ type ExerciseRow = {
   slug: string;
   name_ja: string;
   name_en: string;
+};
+
+type UserExerciseRow = {
+  id: string;
+  name: string;
 };
 
 type SetCheckRow = {
@@ -73,18 +81,26 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   try {
     const body = (await request.json().catch(() => ({}))) as SwapRequestBody;
     const newExerciseId = body.exercise_id;
+    const newUserExerciseId = body.user_exercise_id;
 
-    if (!newExerciseId || typeof newExerciseId !== "string") {
+    // Exactly one of exercise_id or user_exercise_id must be provided.
+    if (
+      (!newExerciseId && !newUserExerciseId) ||
+      (newExerciseId && newUserExerciseId)
+    ) {
       return NextResponse.json(
         {
           error: {
             code: "invalid_request",
-            message: "exercise_id is required."
+            message: "Exactly one of exercise_id or user_exercise_id is required."
           }
         },
         { status: 400 }
       );
     }
+
+    const isUserExercise = Boolean(newUserExerciseId);
+    const effectiveNewId = (newUserExerciseId ?? newExerciseId)!;
 
     const { client: supabase, userId } = await getAuthenticatedWorkoutContext();
 
@@ -147,7 +163,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     const { data: sessionExercise, error: sessionExerciseError } = await supabase
       .from("workout_session_exercises")
-      .select("id, workout_session_id, exercise_id, exercise_type, order_index, was_swapped")
+      .select("id, workout_session_id, exercise_id, user_exercise_id, exercise_type, order_index, was_swapped")
       .eq("id", params.exerciseId)
       .eq("workout_session_id", session.id)
       .maybeSingle<SessionExerciseRow>();
@@ -176,55 +192,132 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
-    if (sessionExercise.exercise_id === newExerciseId) {
-      const { data: currentExercise } = await supabase
-        .from("exercises")
-        .select("id, slug, name_ja, name_en")
-        .eq("id", sessionExercise.exercise_id)
-        .maybeSingle<ExerciseRow>();
+    // noOp check: is the target the same as the current exercise?
+    const currentIsUserExercise = Boolean(sessionExercise.user_exercise_id);
+    const currentEffectiveId = sessionExercise.user_exercise_id ?? sessionExercise.exercise_id;
+    if (currentIsUserExercise === isUserExercise && currentEffectiveId === effectiveNewId) {
+      // Return current state without modifying anything.
+      let currentSlug = currentEffectiveId ?? "";
+      let currentNameJa = "Exercise";
+      let currentNameEn = "Exercise";
+
+      if (currentIsUserExercise && sessionExercise.user_exercise_id) {
+        const { data: ue } = await supabase
+          .from("user_exercises")
+          .select("id, name")
+          .eq("id", sessionExercise.user_exercise_id)
+          .maybeSingle<UserExerciseRow>();
+        if (ue) {
+          currentSlug = ue.id;
+          currentNameJa = ue.name;
+          currentNameEn = ue.name;
+        }
+      } else if (sessionExercise.exercise_id) {
+        const { data: e } = await supabase
+          .from("exercises")
+          .select("id, slug, name_ja, name_en")
+          .eq("id", sessionExercise.exercise_id)
+          .maybeSingle<ExerciseRow>();
+        if (e) {
+          currentSlug = e.slug;
+          currentNameJa = e.name_ja;
+          currentNameEn = e.name_en;
+        }
+      }
 
       return NextResponse.json({
         noOp: true,
         sessionExercise: {
           id: sessionExercise.id,
           exerciseId: sessionExercise.exercise_id,
-          exerciseSlug: currentExercise?.slug ?? sessionExercise.exercise_id,
-          exerciseNameJa: currentExercise?.name_ja ?? "Exercise",
-          exerciseNameEn: currentExercise?.name_en ?? "Exercise",
+          userExerciseId: sessionExercise.user_exercise_id,
+          exerciseSlug: currentSlug,
+          exerciseNameJa: currentNameJa,
+          exerciseNameEn: currentNameEn,
           exerciseType: sessionExercise.exercise_type,
           wasSwapped: sessionExercise.was_swapped
         }
       });
     }
 
-    const { data: newExercise, error: newExerciseError } = await supabase
-      .from("exercises")
-      .select("id, slug, name_ja, name_en")
-      .eq("id", newExerciseId)
-      .maybeSingle<ExerciseRow>();
+    // Look up the new exercise from the appropriate table.
+    let newExerciseDisplay: {
+      id: string;
+      slug: string;
+      name_ja: string;
+      name_en: string;
+    };
 
-    if (newExerciseError) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "exercise_lookup_failed",
-            message: "Exercise lookup failed."
-          }
-        },
-        { status: 500 }
-      );
-    }
+    if (isUserExercise) {
+      const { data: userExercise, error: ueLookupError } = await supabase
+        .from("user_exercises")
+        .select("id, name")
+        .eq("id", effectiveNewId)
+        .eq("user_id", userId)
+        .maybeSingle<UserExerciseRow>();
 
-    if (!newExercise) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "exercise_not_found",
-            message: "Exercise was not found."
-          }
-        },
-        { status: 404 }
-      );
+      if (ueLookupError) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "exercise_lookup_failed",
+              message: "User exercise lookup failed."
+            }
+          },
+          { status: 500 }
+        );
+      }
+
+      if (!userExercise) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "exercise_not_found",
+              message: "User exercise was not found."
+            }
+          },
+          { status: 404 }
+        );
+      }
+
+      newExerciseDisplay = {
+        id: userExercise.id,
+        slug: userExercise.id,
+        name_ja: userExercise.name,
+        name_en: userExercise.name
+      };
+    } else {
+      const { data: newExercise, error: newExerciseError } = await supabase
+        .from("exercises")
+        .select("id, slug, name_ja, name_en")
+        .eq("id", effectiveNewId)
+        .maybeSingle<ExerciseRow>();
+
+      if (newExerciseError) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "exercise_lookup_failed",
+              message: "Exercise lookup failed."
+            }
+          },
+          { status: 500 }
+        );
+      }
+
+      if (!newExercise) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "exercise_not_found",
+              message: "Exercise was not found."
+            }
+          },
+          { status: 404 }
+        );
+      }
+
+      newExerciseDisplay = newExercise;
     }
 
     const { data: setsForCheck, error: blockingSetsError } = await supabase
@@ -272,13 +365,25 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       );
     }
 
+    // Update the session exercise row.
+    // Enforce the DB constraint: exactly one of exercise_id / user_exercise_id must be non-null.
+    const updatePayload = isUserExercise
+      ? {
+          exercise_id: null,
+          user_exercise_id: effectiveNewId,
+          exercise_type: "T3" as const,
+          was_swapped: true
+        }
+      : {
+          exercise_id: effectiveNewId,
+          user_exercise_id: null,
+          exercise_type: "T3" as const,
+          was_swapped: true
+        };
+
     const { error: updateError } = await supabase
       .from("workout_session_exercises")
-      .update({
-        exercise_id: newExerciseId,
-        exercise_type: "T3",
-        was_swapped: true
-      })
+      .update(updatePayload)
       .eq("id", sessionExercise.id);
 
     if (updateError) {
@@ -295,23 +400,25 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     revalidatePath("/train");
 
-    // Fetch previous sets for the new exercise (always T3 after swap) so the
-    // client can update previousSets without a full reload.
-    const previousSets = await fetchPreviousSetsForExercise(
-      supabase,
-      userId,
-      newExercise.id,
-      "T3"
-    ).catch(() => []);
+    // Fetch previous sets only for library exercises (user exercise history not yet supported).
+    const previousSets = !isUserExercise
+      ? await fetchPreviousSetsForExercise(
+          supabase,
+          userId,
+          newExerciseDisplay.id,
+          "T3"
+        ).catch(() => [])
+      : [];
 
     return NextResponse.json({
       noOp: false,
       sessionExercise: {
         id: sessionExercise.id,
-        exerciseId: newExercise.id,
-        exerciseSlug: newExercise.slug,
-        exerciseNameJa: newExercise.name_ja,
-        exerciseNameEn: newExercise.name_en,
+        exerciseId: isUserExercise ? null : newExerciseDisplay.id,
+        userExerciseId: isUserExercise ? newExerciseDisplay.id : null,
+        exerciseSlug: newExerciseDisplay.slug,
+        exerciseNameJa: newExerciseDisplay.name_ja,
+        exerciseNameEn: newExerciseDisplay.name_en,
         exerciseType: "T3",
         wasSwapped: true
       },

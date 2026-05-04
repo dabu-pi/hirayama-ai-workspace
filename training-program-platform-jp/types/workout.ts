@@ -142,7 +142,8 @@ export type SwapExerciseResponse = {
   noOp: boolean;
   sessionExercise: {
     id: string;
-    exerciseId: string;
+    exerciseId: string | null;
+    userExerciseId: string | null;
     exerciseSlug: string;
     exerciseNameJa: string;
     exerciseNameEn: string;
