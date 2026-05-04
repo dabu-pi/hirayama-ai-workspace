@@ -1,0 +1,242 @@
+# ROADMAP — ワイルドボア会員管理システム
+
+最終更新：2026-05-04
+
+## フェーズ一覧
+
+| フェーズ | 名称 | ステータス |
+|---|---|---|
+| Phase 0 | 設計資料作成 | 進行中 |
+| Phase 1 | スプレッドシート設計・初期セットアップ | 未着手 |
+| Phase 2 | 入会フォーム実装 | 未着手 |
+| Phase 3 | スタッフ確認・会員登録機能 | 未着手 |
+| Phase 4 | 会員一覧・検索・詳細表示 | 未着手 |
+| Phase 5 | 休会・退会・再開処理 | 未着手 |
+| Phase 6 | 初回費用計算・請求管理 | 未着手 |
+| Phase 7 | リコーリース集金代行エクスポート | 未着手 |
+| Phase 8 | PDF出力・書類生成 | 未着手 |
+| Phase 9 | 月別集計・ダッシュボード | 未着手 |
+| Phase 10 | Next.js フロントエンド構築 | 未着手 |
+| Phase 11 | Supabase PostgreSQL 移行 | 未着手 |
+| Phase 12 | 本番リリース・GAS版廃止 | 未着手 |
+
+---
+
+## Phase 0 — 設計資料作成
+
+**目標:** 実装に入る前に設計を完成させる。後続フェーズのAI引き継ぎプロンプトも整備する。
+
+**ステータス:** 進行中
+
+### タスク
+
+- [x] プロジェクトディレクトリ作成
+- [x] README.md 作成
+- [x] ROADMAP.md 作成
+- [x] PROJECT_STATUS.md 作成
+- [x] CONTEXT.md 作成
+- [x] AI_RULES.md 作成
+- [x] docs/CURRENT_WORKFLOW_ANALYSIS.md 作成
+- [x] docs/DATA_MODEL.md 作成
+- [x] docs/MEMBER_FIELDS.md 作成
+- [x] docs/MEMBERSHIP_RULES.md 作成
+- [x] docs/FEE_CALCULATION_RULES.md 作成
+- [x] docs/INTAKE_FORM_DESIGN.md 作成
+- [x] docs/STAFF_REVIEW_FLOW.md 作成
+- [x] docs/PAUSE_WITHDRAWAL_RESTART_FLOW.md 作成
+- [x] docs/RICOH_LEASE_EXPORT_DESIGN.md 作成
+- [x] docs/PRIVACY_SECURITY_POLICY.md 作成
+- [x] docs/WEBAPP_FINAL_ARCHITECTURE.md 作成
+- [x] docs/DATABASE_SCHEMA_WEBAPP.md 作成
+- [x] docs/WEBAPP_MIGRATION_PLAN.md 作成
+- [x] docs/GAS_TO_SUPABASE_MAPPING.md 作成
+- [x] gas-project/ スタブファイル群作成
+- [x] sheets/ スキーマ・移行計画作成
+- [x] tests/ チェックリスト作成
+- [x] prompts/ 引き継ぎプロンプト作成
+
+---
+
+## Phase 1 — スプレッドシート設計・初期セットアップ
+
+**目標:** Google Sheetsに必要なシートをすべて作成し、ヘッダー・入力規則・保護設定を整える。
+
+**前提条件:** Phase 0の全設計資料が完成していること
+
+### タスク
+
+- [ ] Google Sheetsの新規スプレッドシートを作成
+- [ ] 全シートの作成（Members, IntakeApplications, MembershipPlans, FeeRules, Payments, StatusHistory, KeyCards, Referrals, BillingExports, AuditLogs, Settings）
+- [ ] 各シートのヘッダー行設定
+- [ ] 入力規則（ドロップダウン・バリデーション）設定
+- [ ] シート保護（スタッフのみ編集可）設定
+- [ ] MembershipPlansシートへのコースマスタ初期データ投入
+- [ ] FeeRulesシートへの料金ルール初期データ投入
+- [ ] Settingsシートへのシステム設定初期データ投入
+- [ ] GASプロジェクトをスプレッドシートに紐付け
+- [ ] Config.gsにスプレッドシートID・シート名を設定
+- [ ] SheetService.gsの基本関数を実装・動作確認
+- [ ] INITIAL_SETTINGS.mdの手順どおりに設定できることを確認
+
+---
+
+## Phase 2 — 入会フォーム実装
+
+**目標:** タブレットから入力できる入会申込フォームを実装する。
+
+**前提条件:** Phase 1が完了していること
+
+### タスク
+
+- [ ] intake-form.html の実装（ステップ1：個人情報）
+- [ ] intake-form.html の実装（ステップ2：緊急連絡先）
+- [ ] intake-form.html の実装（ステップ3：コース選択）
+- [ ] intake-confirm.html の実装（確認画面）
+- [ ] フォーム送信後の完了メッセージ実装
+- [ ] IntakeService.gs の申込データ保存処理を実装
+- [ ] ValidationService.gs のバリデーション実装
+- [ ] タブレット表示確認（iPad 等で動作テスト）
+- [ ] 入力内容が IntakeApplications シートに正しく保存されることを確認
+
+---
+
+## Phase 3 — スタッフ確認・会員登録機能
+
+**目標:** スタッフが入会申込を確認し、正式な会員として登録できる画面を実装する。
+
+**前提条件:** Phase 2が完了していること
+
+### タスク
+
+- [ ] member-list.html の申込一覧表示（未確認フィルタ）
+- [ ] member-detail.html の申込詳細表示
+- [ ] スタッフ確認フォーム（会員番号・鍵番号・コース確定）
+- [ ] MemberService.gs の会員登録処理を実装
+- [ ] 会員番号自動採番ロジックを実装
+- [ ] 鍵番号管理（KeyCardsシート）との連携
+- [ ] FeeService.gs の初回費用計算を実装
+- [ ] AuditLogService.gs の操作ログ記録を実装
+- [ ] 却下・差し戻し機能
+
+---
+
+## Phase 4 — 会員一覧・検索・詳細表示
+
+**目標:** 登録済み会員の一覧・検索・詳細表示・編集ができる管理画面を実装する。
+
+### タスク
+
+- [ ] member-list.html の会員一覧実装（全会員・フィルタ付き）
+- [ ] 検索機能（氏名・会員番号・電話番号）
+- [ ] member-detail.html の会員詳細表示
+- [ ] member-edit.html の会員情報編集
+- [ ] 編集履歴の AuditLog 記録
+
+---
+
+## Phase 5 — 休会・退会・再開処理
+
+**目標:** 休会・退会・再開の申請受付から処理完了までをシステム上で管理する。
+
+### タスク
+
+- [ ] status-change.html の実装
+- [ ] StatusService.gs の休会処理を実装
+- [ ] StatusService.gs の退会処理を実装
+- [ ] StatusService.gs の再開処理を実装
+- [ ] StatusHistory シートへの履歴記録
+- [ ] 月別集計への影響反映
+
+---
+
+## Phase 6 — 初回費用計算・請求管理
+
+**目標:** 初回費用の自動計算と支払い記録管理を実装する。
+
+### タスク
+
+- [ ] FeeService.gs の日割り計算を実装
+- [ ] billing-dashboard.html の請求ダッシュボード実装
+- [ ] Payments シートへの記録
+- [ ] 支払い状況の管理画面
+
+---
+
+## Phase 7 — リコーリース集金代行エクスポート
+
+**目標:** 毎月のリコーリース集金代行用データを自動生成・エクスポートできる機能を実装する。
+
+### タスク
+
+- [ ] RicohLeaseService.gs の実装
+- [ ] 月次対象者（休会・退会除外）の抽出ロジック
+- [ ] CSV エクスポート機能
+- [ ] BillingExports シートへの記録
+- [ ] エクスポート前確認画面
+
+---
+
+## Phase 8 — PDF出力・書類生成
+
+**目標:** 入会申込書・領収書等のPDF出力機能を実装する。
+
+### タスク
+
+- [ ] PdfService.gs の実装
+- [ ] 入会申込書PDF生成
+- [ ] 領収書PDF生成
+
+---
+
+## Phase 9 — 月別集計・ダッシュボード
+
+**目標:** 会員数・売上・入退会状況等の月別集計とダッシュボードを実装する。
+
+### タスク
+
+- [ ] 月別会員数集計
+- [ ] 月別入会・退会・休会人数集計
+- [ ] 売上集計
+- [ ] ダッシュボード画面
+
+---
+
+## Phase 10 — Next.js フロントエンド構築
+
+**目標:** Next.js 14+ でフロントエンドを再構築する。GAS版と並行稼働。
+
+### タスク
+
+- [ ] Next.js プロジェクト初期化
+- [ ] Supabase 接続設定
+- [ ] 認証（Supabase Auth）
+- [ ] 各画面の実装（会員一覧・詳細・入会申込・休会退会・請求）
+
+---
+
+## Phase 11 — Supabase PostgreSQL 移行
+
+**目標:** Google SheetsのデータをSupabaseに移行する。
+
+### タスク
+
+- [ ] Supabaseプロジェクト作成
+- [ ] テーブル作成（DATABASE_SCHEMA_WEBAPP.md のSQL実行）
+- [ ] RLSポリシー設定
+- [ ] データエクスポート・クレンジング
+- [ ] データインポート
+- [ ] 移行後検証
+
+---
+
+## Phase 12 — 本番リリース・GAS版廃止
+
+**目標:** WebアプリをVercelにデプロイし、GAS版を廃止する。
+
+### タスク
+
+- [ ] Vercel デプロイ
+- [ ] ドメイン設定
+- [ ] スタッフへの操作説明
+- [ ] GAS版の読み取り専用化（一定期間後に廃止）
+- [ ] 最終データ整合確認
