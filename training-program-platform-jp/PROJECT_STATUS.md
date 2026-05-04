@@ -91,6 +91,53 @@ Playwright live-check（`custom-exercise-add.spec.ts`・本番エンドポイン
 
 ---
 
+## live-check-runner 標準テストユーザー運用方針（training-platform）
+
+### 概要
+
+`training-program-platform-jp` の実機確認・E2E確認・live-check-runner確認では、
+Claude Code 専用の標準テストユーザーを使用する。
+
+### 認証情報の管理
+
+| 変数名 | 内容 |
+|--------|------|
+| `TRAINING_TEST_EMAIL` | テストユーザーのメールアドレス |
+| `TRAINING_TEST_PASSWORD` | テストユーザーのパスワード |
+
+- **絶対に git commit しない**（`.env`・ローカル設定ファイル・spec 内への直書き禁止）
+- ローカル環境変数または `.env.local`（`.gitignore` 除外済み）で管理する
+- live-check-runner 実行時は環境変数として渡す: `TRAINING_TEST_EMAIL=... TRAINING_TEST_PASSWORD=... npm run test:training`
+
+### 標準テストユーザーの使用範囲
+
+以下の確認では標準テストユーザーを使用する:
+
+- ログイン確認
+- `/programs` / `/train` / `/gym` / `/profile` などの画面確認
+- カスタム種目作成・追加・SWAP 確認
+- 自由作成セッション確認
+- 通常の E2E / live-check-runner 確認
+
+### 削除系・破壊的テストの扱い
+
+| テスト種別 | 使用するアカウント |
+|-----------|-----------------|
+| 通常実機確認・E2E | 標準テストユーザー（`TRAINING_TEST_EMAIL`） |
+| アカウント削除・auth.users 物理削除など | 別途 disposable テストユーザーを都度作成・削除 |
+| 既存会員・管理者アカウント | 破壊的テスト禁止 |
+
+disposable ユーザーは Supabase admin API（`SUPABASE_SERVICE_ROLE_KEY`）で作成し、テスト後に削除する。
+詳細は `tools/live-check-runner/projects/training-platform/README.md` を参照。
+
+### テストデータの命名規則
+
+- カスタム種目・セッション等のテストデータには `テスト` または `Claude確認` を含めた名前をつける
+- 例: `テスト種目_R7_<timestamp>`, `Claude確認用カスタムセッション`
+- 必要に応じてテスト後にアーカイブ・整理する
+
+---
+
 ## 2026-05-03 Phase S-8: auth.users 物理削除方式 調査
 
 ### STATUS: ✅ LIVE_CHECK PASS / CLOSED (2026-05-04)
