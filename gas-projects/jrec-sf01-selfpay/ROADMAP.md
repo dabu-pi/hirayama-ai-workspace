@@ -350,9 +350,9 @@
 
 **変更ファイル:** visit-form.html（clasp push 済み 2026-05-04）
 **API実装:** なし（Phase AI-3 で実装予定）
-**LiveCheck:** ai2.spec.ts 追加済み（auth + patientId 再取得後に実行可能）
+**LiveCheck:** ✅ ai2.spec.ts 4 PASS / 2 SKIP（手動確認）/ 0 FAIL（2026-05-04）
 
-> **ステータス:** ✅ clasp push 済み / LiveCheck 確認は auth 再取得後
+> **ステータス:** ✅ CLOSED（clasp push 済み / LiveCheck PASS 2026-05-04）
 
 ---
 

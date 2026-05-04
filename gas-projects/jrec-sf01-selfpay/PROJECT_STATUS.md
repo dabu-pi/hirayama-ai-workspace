@@ -40,11 +40,13 @@
   - PASS 項目: AI1-1a/b/c（#occupation, #medicalHistory, セクションタイトル）, AI1-7（#dateForm）
   - SKIP 項目: AI1-3/AI1-4（patientId未設定）, AI1-7ボタン（手動確認推奨）, AI1-8/9（smoke参照）
   - versioned deployment @36: 任意タイミングで実施可能（HEAD確認済み）
-**✅ Phase AI-2 AI評価補助UI追加: clasp push 済み・LiveCheck auth 再取得待ち**（2026-05-04）
+**✅ Phase AI-2 AI評価補助UI追加: LiveCheck PASS**（2026-05-04）
   - visit-form.html: AI評価補助セクション追加（#aiAssistCard / 7種の出力枠 / 免責文）
   - カルテ保存後にボタン有効化（Phase AI-3 実行はプレースホルダー表示のみ）
   - API呼び出し・外部通信は未実装（Phase AI-3 で実装予定）
-  - ai2.spec.ts: LC-4 LiveCheck 追加（auth + patientId 要設定で実行可能）
+  - LC-4 ai2.spec.ts: ✅ 4 passed / 2 skipped（手動確認項目）/ 0 failed
+  - LC-3 ai1.spec.ts: ✅ 7 passed / 3 skipped（patientId=P0001 設定後・向上）/ 0 failed
+  - smoke: ✅ 16 passed / 0 failed
 
 次期実装候補:
 1. **Phase AI-3** OpenAI API 連携（AI評価補助の本実装）← **次はここ**
