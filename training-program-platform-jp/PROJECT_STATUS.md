@@ -2,7 +2,7 @@
 
 ## 2026-05-04 BUG-FIX: カスタム種目への SWAP エラー
 
-### STATUS: ✅ 修正完了・実機確認待ち
+### STATUS: ✅ API確認PASS・ブラウザ操作 R1〜R6 は手動確認待ち
 
 **不具合の再現条件:**
 1. マイ種目でカスタム種目を作成
@@ -29,16 +29,44 @@
 
 **typecheck / build:** エラーなし ✅ / Compiled successfully ✅
 
-**実機確認手順:**
+**Claude Code による自動確認（2026-05-04）:**
 
-| # | 確認内容 | 期待結果 |
-|---|---|---------|
-| R1 | マイ種目でカスタム種目を作成 | 一覧に表示される |
-| R2 | トレーニング画面の種目入れ替えダイアログでカスタム種目を選択 | エラーなし・種目が変わる |
-| R3 | 種目入れ替え後にセットを操作できる | 正常動作 |
-| R4 | カスタム種目を「追加」してセットを操作できる | 変更なし・正常動作 |
-| R5 | 既存の通常種目への SWAP は引き続き動作する | 影響なし |
-| R6 | スマホ幅で表示が崩れていない | 影響なし |
+Vercel デプロイ: ✅ commit `cc79c96` 本番 SUCCESS
+
+Playwright smoke テスト（live-check-runner）:
+
+| # | 内容 | 結果 |
+|---|------|------|
+| smoke-1 | 本番 URL 到達可能（Desktop Chrome） | ✅ PASS |
+| smoke-2 | ページタイトルが存在する（Desktop Chrome） | ✅ PASS |
+| smoke-3 | 本番 URL 到達可能（Mobile/Pixel5） | ✅ PASS |
+| smoke-4 | ページタイトルが存在する（Mobile/Pixel5） | ✅ PASS |
+
+API レベル検証（Node.js fetch・本番エンドポイント直撃）:
+
+| # | 内容 | 結果 |
+|---|------|------|
+| API-T1 | PATCH body なし → 400 invalid_request | ✅ PASS |
+| API-T2 | PATCH 両方指定 → 400 invalid_request | ✅ PASS |
+| API-T3 | exercise_id のみ・未認証 → 401 unauthenticated | ✅ PASS |
+| **API-T4** | **user_exercise_id のみ・未認証 → 401 unauthenticated ★修正核心** | **✅ PASS** |
+| API-T5 | 非 UUID セッション ID → 400 | ✅ PASS |
+| API-T6 | ADD: user_exercise_id・未認証 → 401 | ✅ PASS |
+| API-T7 | ADD: exercise_id・未認証 → 401 | ✅ PASS |
+| API-T8 | ADD: body なし → 400 | ✅ PASS |
+
+**T4 の意味:** 修正前は `user_exercise_id` が validation で 400 になっていた（`exercise_id` 必須扱い）。修正後は受け付けられ 401（認証チェック）まで到達。`user_exercise_id` のサポートが正常に組み込まれた証拠。
+
+**ブラウザ操作の手動確認項目（テスト認証情報がないため Claude Code 実行不可）:**
+
+| # | 確認内容 | 手動確認手順 |
+|---|---------|---------|
+| R1 | カスタム種目を作成できる | テストユーザーで /my-exercises → 種目追加 |
+| R2 | カスタム種目へ SWAP できる（★最重要） | /train → T3 種目 → 入れ替え → カスタム種目選択 |
+| R3 | 種目名がカスタム名に変わる | 画面上の種目名を目視確認 |
+| R4 | セット入力・保存できる | 入れ替え後カスタム種目でセット操作 |
+| R5 | リロード後も残る | ページ更新後の状態確認 |
+| R6 | 通常種目 SWAP が壊れていない | 通常マスター種目へのSWAPも試す |
 
 ---
 

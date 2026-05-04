@@ -2,7 +2,7 @@
   "name": "training-program-platform-jp",
   "type": "nextjs",
   "localUrl": "http://localhost:3000",
-  "prodUrl": "",
+  "prodUrl": "https://training-program-platform-jp.vercel.app",
   "notes": [
     "Next.js/Vercel系のLiveCheck対象",
     "prodUrl は確定次第設定する",
