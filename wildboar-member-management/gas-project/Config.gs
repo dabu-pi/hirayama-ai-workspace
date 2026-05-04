@@ -47,7 +47,7 @@ var SHEET_NAMES = {
  */
 var MEMBER_STATUS = {
   ACTIVE:    'active',    // 在籍中
-  PAUSE:     'pause',     // 休会中
+  PAUSED:    'paused',    // 休会中
   WITHDRAWN: 'withdrawn', // 退会済み
 };
 

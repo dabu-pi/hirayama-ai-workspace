@@ -6,8 +6,8 @@
 
 | フェーズ | 名称 | ステータス |
 |---|---|---|
-| Phase 0 | 設計資料作成 | 進行中 |
-| Phase 1 | スプレッドシート設計・初期セットアップ | 未着手 |
+| Phase 0 | 設計資料作成 | 完了 |
+| Phase 1 | スプレッドシート基盤構築 | 完了（GASコード実装済み・オーナー実行待ち） |
 | Phase 2 | 入会フォーム実装 | 未着手 |
 | Phase 3 | スタッフ確認・会員登録機能 | 未着手 |
 | Phase 4 | 会員一覧・検索・詳細表示 | 未着手 |
@@ -26,7 +26,7 @@
 
 **目標:** 実装に入る前に設計を完成させる。後続フェーズのAI引き継ぎプロンプトも整備する。
 
-**ステータス:** 進行中
+**ステータス:** 完了（2026-05-04）
 
 ### タスク
 
@@ -57,26 +57,34 @@
 
 ---
 
-## Phase 1 — スプレッドシート設計・初期セットアップ
+## Phase 1 — スプレッドシート基盤構築
 
-**目標:** Google Sheetsに必要なシートをすべて作成し、ヘッダー・入力規則・保護設定を整える。
+**目標:** GASセットアップコードを実装し、setupSpreadsheet()一発で11シートを構築できるようにする。
+
+**ステータス:** GASコード実装完了（2026-05-04）。オーナーがスプレッドシートを作成して実行する待ち。
 
 **前提条件:** Phase 0の全設計資料が完成していること
 
-### タスク
+### タスク（AIが完了したもの）
 
-- [ ] Google Sheetsの新規スプレッドシートを作成
-- [ ] 全シートの作成（Members, IntakeApplications, MembershipPlans, FeeRules, Payments, StatusHistory, KeyCards, Referrals, BillingExports, AuditLogs, Settings）
-- [ ] 各シートのヘッダー行設定
-- [ ] 入力規則（ドロップダウン・バリデーション）設定
-- [ ] シート保護（スタッフのみ編集可）設定
-- [ ] MembershipPlansシートへのコースマスタ初期データ投入
-- [ ] FeeRulesシートへの料金ルール初期データ投入
-- [ ] Settingsシートへのシステム設定初期データ投入
-- [ ] GASプロジェクトをスプレッドシートに紐付け
-- [ ] Config.gsにスプレッドシートID・シート名を設定
-- [ ] SheetService.gsの基本関数を実装・動作確認
-- [ ] INITIAL_SETTINGS.mdの手順どおりに設定できることを確認
+- [x] SetupService.gs 新規作成（setupSpreadsheet / createRequiredSheets / setupHeaders / setupInitialSettings / setupMembershipPlans / setupFeeRules / setupValidations）
+- [x] SheetService.gs 実装（getSheetData / appendRow / findRowByKey / updateRowByKey / getSetting / generateId / nowIso）
+- [x] Config.gs 修正（MEMBER_STATUS.PAUSED = 'paused' に統一）
+- [x] 全ドキュメントのステータス表記を pause → paused に統一
+- [x] StatusHistory フィールド名を status_before/status_after → previous_status/new_status に統一
+- [x] SHEET_SCHEMA.md 全11シートのヘッダー・入力規則確定
+- [x] INITIAL_SETTINGS.md セットアップ手順書完成
+
+### タスク（オーナーが実行するもの）
+
+- [ ] 新規スプレッドシートを作成する（既存シートとは別に）
+- [ ] GASプロジェクトを作成し、gas-project/ のコードをコピーする
+- [ ] スクリプトプロパティに SPREADSHEET_ID を設定する
+- [ ] setupSpreadsheet() を実行する
+- [ ] MembershipPlansシートの金額を実際の値に更新する
+- [ ] Settingsシートの仮値を実際の値に更新する
+- [ ] KeyCardsシートに鍵番号を手動登録する
+- [ ] GASをWebアプリとしてデプロイする（Phase 2の前に）
 
 ---
 

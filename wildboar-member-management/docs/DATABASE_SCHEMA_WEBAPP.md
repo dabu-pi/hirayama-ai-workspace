@@ -198,7 +198,7 @@ CREATE TABLE members (
   key_card_id UUID REFERENCES key_cards(id),
   join_date DATE NOT NULL,
   status TEXT NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active', 'pause', 'withdrawn')),
+    CHECK (status IN ('active', 'paused', 'withdrawn')),
   referrer_member_id UUID REFERENCES members(id),
   intake_application_id UUID REFERENCES intake_applications(id),
   notes TEXT,
@@ -231,13 +231,13 @@ CREATE TABLE status_histories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   member_id UUID NOT NULL REFERENCES members(id),
   change_type TEXT NOT NULL CHECK (change_type IN ('pause', 'withdraw', 'restart')),
-  status_before TEXT NOT NULL CHECK (status_before IN ('active', 'pause', 'withdrawn')),
-  status_after TEXT NOT NULL CHECK (status_after IN ('active', 'pause', 'withdrawn')),
+  previous_status TEXT NOT NULL CHECK (previous_status IN ('active', 'paused', 'withdrawn')),
+  new_status TEXT NOT NULL CHECK (new_status IN ('active', 'paused', 'withdrawn')),
   effective_date DATE NOT NULL,
   end_date DATE,                           -- 休会終了予定日
   reason TEXT,
-  processed_by UUID REFERENCES auth.users(id),
   notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

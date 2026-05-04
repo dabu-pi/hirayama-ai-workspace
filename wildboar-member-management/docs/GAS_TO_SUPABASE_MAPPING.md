@@ -33,7 +33,7 @@ GAS版（Google Sheets）の各シートとSupabase PostgreSQLのテーブル・
 | plan_id | TEXT | plan_id | UUID | MembershipPlansのplan_codeからUUIDに変換 |
 | key_card_number | TEXT | key_card_id | UUID | KeyCardsのkey_card_codeからUUIDに変換 |
 | join_date | DATE | join_date | DATE | YYYY-MM-DD に統一 |
-| status | TEXT | status | TEXT | 在籍→active, 休会→pause, 退会→withdrawn |
+| status | TEXT | status | TEXT | 在籍→active, 休会→paused, 退会→withdrawn |
 | referrer_member_id | TEXT | referrer_member_id | UUID | member_codeからUUIDに変換（NULLに変換） |
 | intake_application_id | TEXT | intake_application_id | UUID | application_codeからUUIDに変換 |
 | notes | TEXT | notes | TEXT | そのまま（NULLに変換） |
@@ -117,14 +117,14 @@ GAS版（Google Sheets）の各シートとSupabase PostgreSQLのテーブル・
 | history_id | （なし） | Supabase側ではUUID自動生成 |
 | member_id | member_id | member_codeからUUIDに変換 |
 | change_type | change_type | pause/withdraw/restart をそのまま |
-| status_before | status_before | active/pause/withdrawnをそのまま |
-| status_after | status_after | active/pause/withdrawnをそのまま |
+| previous_status | previous_status | active/paused/withdrawnをそのまま |
+| new_status | new_status | active/paused/withdrawnをそのまま |
 | effective_date | effective_date | DATE型に変換 |
 | end_date | end_date | DATE型に変換（NULLに変換） |
 | reason | reason | NULLに変換 |
-| processed_by | processed_by | メールアドレスからauth.users.idに変換（変換不可→NULL） |
-| created_at | created_at | UTCに変換 |
 | notes | notes | NULLに変換 |
+| created_at | created_at | UTCに変換 |
+| created_by | created_by | メールアドレスからauth.users.idに変換（変換不可→NULL） |
 
 ---
 

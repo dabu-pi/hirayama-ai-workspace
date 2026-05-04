@@ -100,7 +100,7 @@
 
 テスト会員を作成して（Phase 3 の手順で作成）、以下を確認する。
 
-1. テスト会員に休会処理を行う → Membersのstatus = pause を確認
+1. テスト会員に休会処理を行う → Membersのstatus = paused を確認
 2. StatusHistoryに記録されることを確認する
 3. テスト会員に再開処理を行う → Membersのstatus = active を確認
 4. StatusHistoryに記録されることを確認する

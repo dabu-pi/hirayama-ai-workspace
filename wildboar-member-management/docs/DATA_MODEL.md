@@ -53,7 +53,7 @@ Supabase版のスキーマは DATABASE_SCHEMA_WEBAPP.md を参照。
 | plan_id | TEXT | コースID（外部キー） | 必須 | MembershipPlans.plan_id参照 |
 | key_card_number | TEXT | 鍵番号（外部キー） | 必須 | KeyCards.key_card_number参照 |
 | join_date | DATE | 入会日 | 必須 | YYYY-MM-DD形式 |
-| status | TEXT | ステータス | 必須 | active / pause / withdrawn |
+| status | TEXT | ステータス | 必須 | active / paused / withdrawn |
 | referrer_member_id | TEXT | 紹介者会員番号 | 任意 | Members.member_id参照 |
 | intake_application_id | TEXT | 申込ID（外部キー） | 必須 | IntakeApplications.application_id参照 |
 | notes | TEXT | 備考 | 任意 | |
@@ -167,14 +167,14 @@ Supabase版のスキーマは DATABASE_SCHEMA_WEBAPP.md を参照。
 | history_id | TEXT | 履歴ID（主キー） | 必須 | |
 | member_id | TEXT | 会員番号（外部キー） | 必須 | Members.member_id参照 |
 | change_type | TEXT | 変更種別 | 必須 | pause / withdraw / restart |
-| status_before | TEXT | 変更前ステータス | 必須 | active / pause / withdrawn |
-| status_after | TEXT | 変更後ステータス | 必須 | active / pause / withdrawn |
+| previous_status | TEXT | 変更前ステータス | 必須 | active / paused / withdrawn |
+| new_status | TEXT | 変更後ステータス | 必須 | active / paused / withdrawn |
 | effective_date | DATE | 適用日 | 必須 | |
 | end_date | DATE | 終了予定日 | 任意 | 休会の場合に設定 |
 | reason | TEXT | 理由 | 任意 | |
-| processed_by | TEXT | 処理スタッフ | 必須 | |
-| created_at | DATETIME | 記録日時 | 必須 | |
 | notes | TEXT | 備考 | 任意 | |
+| created_at | DATETIME | 記録日時 | 必須 | |
+| created_by | TEXT | 処理スタッフ | 必須 | |
 
 ---
 

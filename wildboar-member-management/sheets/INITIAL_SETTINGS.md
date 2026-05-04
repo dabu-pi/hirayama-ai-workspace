@@ -1,220 +1,184 @@
 # スプレッドシート初期設定手順
 
 作成日：2026-05-04
-対象：Phase 1 のスプレッドシート作成・設定作業
+更新日：2026-05-04（Phase 1 — セットアップ手順確定）
 
 ---
 
-## 事前準備
+## 前提
 
-- Googleアカウントにログインしている状態であること
-- オーナーのGoogleドライブにアクセスできること
-- MEMBERSHIP_RULES.md の料金・コース情報がオーナーによって確定済みであること
-- KeyCardsシートに登録する鍵番号の一覧（全鍵の番号）が手元にあること
-
----
-
-## 手順1：新規スプレッドシートの作成
-
-1. Googleドライブを開く
-2. 「新規」→「Googleスプレッドシート」→「空白のスプレッドシート」
-3. スプレッドシートの名前を「ワイルドボア会員管理」に変更する
-4. スプレッドシートのURLからIDを取得しておく
-   - URL例：`https://docs.google.com/spreadsheets/d/[スプレッドシートID]/edit`
+- Google スプレッドシートが新規作成済みであること
+- GASプロジェクトが作成済みで、`gas-project/` 配下のコードがコピー済みであること
+- スプレッドシートIDがGASプロジェクトのスクリプトプロパティに設定済みであること
 
 ---
 
-## 手順2：シートの作成
+## 手順1：新規スプレッドシートを作成する
 
-デフォルトの「シート1」を最初のシートに流用する。
+1. Google ドライブを開く
+2. 「新規 → Google スプレッドシート」を選択する
+3. タイトルを「ワイルドボア会員管理システム」に変更する
+4. URLからスプレッドシートIDをコピーする
+   - 例：`https://docs.google.com/spreadsheets/d/**1ABC...xyz**/edit` の太字部分
 
-### 作成するシート（タブ）一覧
-
-| 作成順 | シート名 | 操作 |
-|---|---|---|
-| 1 | Members | シート1の名前を変更する |
-| 2 | IntakeApplications | 新規シートを追加 |
-| 3 | MembershipPlans | 新規シートを追加 |
-| 4 | FeeRules | 新規シートを追加 |
-| 5 | Payments | 新規シートを追加 |
-| 6 | StatusHistory | 新規シートを追加 |
-| 7 | KeyCards | 新規シートを追加 |
-| 8 | Referrals | 新規シートを追加 |
-| 9 | BillingExports | 新規シートを追加 |
-| 10 | AuditLogs | 新規シートを追加 |
-| 11 | Settings | 新規シートを追加 |
+> **注意：** 既存の会員名簿・料金表スプレッドシートとは別の、新規スプレッドシートを作成すること。
 
 ---
 
-## 手順3：各シートのヘッダー行設定
+## 手順2：GASプロジェクトを作成する
 
-SHEET_SCHEMA.md のヘッダー行をコピーして、各シートの1行目に貼り付ける。
-ヘッダー行（1行目）はフォントを太字にして背景色（薄いグレー）を設定する。
-
-### 各シートのヘッダー（1行目 A列から順番に入力する）
-
-#### Members シート
-```
-member_id, family_name, given_name, family_name_kana, given_name_kana, birth_date, gender, postal_code, prefecture, city, address1, address2, phone_home, phone_mobile, email, emergency_contact_name, emergency_contact_relation, emergency_contact_phone, occupation, plan_id, key_card_number, join_date, status, referrer_member_id, intake_application_id, notes, created_at, updated_at, created_by
-```
-
-#### IntakeApplications シート
-```
-application_id, application_date, family_name, given_name, family_name_kana, given_name_kana, birth_date, gender, postal_code, prefecture, city, address1, address2, phone_home, phone_mobile, email, emergency_contact_name, emergency_contact_relation, emergency_contact_phone, occupation, plan_id, referrer_member_id, notes, privacy_agreed, review_status, reviewed_by, reviewed_at, assigned_member_id, assigned_key_card_number, rejection_reason
-```
-
-#### MembershipPlans シート
-```
-plan_id, plan_name, monthly_fee, enrollment_fee, card_key_fee, description, is_active, display_order, created_at, updated_at
-```
-
-#### FeeRules シート
-```
-rule_id, rule_name, rule_type, value, unit, description, effective_from, effective_to
-```
-
-#### Payments シート
-```
-payment_id, member_id, payment_type, payment_date, amount, breakdown, payment_method, billing_month, notes, created_at, created_by
-```
-
-#### StatusHistory シート
-```
-history_id, member_id, change_type, status_before, status_after, effective_date, end_date, reason, processed_by, created_at, notes
-```
-
-#### KeyCards シート
-```
-key_card_number, status, member_id, issued_date, returned_date, notes, updated_at
-```
-
-#### Referrals シート
-```
-referral_id, referrer_member_id, referred_member_id, referral_date, benefit_applied, benefit_description, notes
-```
-
-#### BillingExports シート
-```
-export_id, billing_month, export_date, exported_by, member_count, total_amount, file_name, status, submitted_date, notes
-```
-
-#### AuditLogs シート
-```
-log_id, log_date, operator, action, target_sheet, target_id, field_name, old_value, new_value, description
-```
-
-#### Settings シート
-```
-setting_key, setting_value, description, updated_at
-```
+1. 新規スプレッドシートを開く
+2. 「拡張機能 → Apps Script」を選択する
+3. 既存の `コード.gs` を削除する
+4. `gas-project/` 配下のすべての `.gs` ファイルの内容をコピーして貼り付ける
+   - ファイル名は拡張子なしで同じ名前にする（例：`Code`、`Config`、`SetupService`）
+5. HTMLファイル（`html/` 配下）もコピーする
+   - 「ファイルを追加 → HTML」でファイルを作成し、`html/ファイル名` で保存する
 
 ---
 
-## 手順4：入力規則の設定
+## 手順3：スクリプトプロパティを設定する
 
-以下の列にドロップダウンの入力規則を設定する。
+1. GASエディタで「プロジェクト設定（歯車アイコン）」を開く
+2. 「スクリプトプロパティ」の「プロパティを追加」をクリックする
+3. 以下を設定する：
 
-| シート | 列（アルファベット） | 入力規則の値 |
-|---|---|---|
-| Members | W列（status） | active,pause,withdrawn |
-| Members | G列（gender） | male,female,other |
-| IntakeApplications | Y列（review_status） | pending,approved,rejected |
-| IntakeApplications | H列（gender） | male,female,other |
-| KeyCards | B列（status） | in_use,available,lost,damaged |
-| StatusHistory | C列（change_type） | pause,withdraw,restart |
-| Payments | C列（payment_type） | initial,monthly,other |
-| Payments | G列（payment_method） | cash,bank_transfer |
+| プロパティ名 | 値 |
+|---|---|
+| SPREADSHEET_ID | 手順1でコピーしたスプレッドシートID |
 
-入力規則の設定方法：
-1. 対象のセル（2行目以降を全選択）を選択する
-2. メニュー「データ」→「データの入力規則」
-3. 条件「リストをアイテムで指定」を選択する
-4. 値を入力する（カンマ区切り）
+> スプレッドシートIDをコードに直接書かないこと（セキュリティリスク）。
 
 ---
 
-## 手順5：初期データの投入
+## 手順4：setupSpreadsheet() を実行する
 
-### MembershipPlans シートへの初期データ投入
+1. GASエディタで関数選択ドロップダウンから `setupSpreadsheet` を選択する
+2. 「実行」ボタンをクリックする
+3. 「権限の確認」が求められた場合は「許可する」をクリックする
+4. 実行ログを確認する（「実行ログ」タブ）
 
-MEMBERSHIP_RULES.md のコース情報を参照してオーナーが入力する。
+### 期待されるログ出力
 
-- 2行目以降に各コースを1行ずつ入力する
-- is_active は TRUE を入力する
-- created_at, updated_at は入力した日時を入力する
+```
+=== ワイルドボア会員管理 スプレッドシートセットアップ開始 ===
+対象スプレッドシート: ワイルドボア会員管理システム (ID: ...)
+[1/6] シート作成...
+  作成: Members
+  作成: IntakeApplications
+  作成: MembershipPlans
+  作成: FeeRules
+  作成: Payments
+  作成: StatusHistory
+  作成: KeyCards
+  作成: Referrals
+  作成: BillingExports
+  作成: AuditLogs
+  作成: Settings
+[2/6] ヘッダー行設定...
+  ヘッダー設定: Members (30列)
+  ヘッダー設定: IntakeApplications (32列)
+  ヘッダー設定: MembershipPlans (11列)
+  ヘッダー設定: FeeRules (11列)
+  ヘッダー設定: Payments (10列)
+  ヘッダー設定: StatusHistory (11列)
+  ヘッダー設定: KeyCards (8列)
+  ヘッダー設定: Referrals (7列)
+  ヘッダー設定: BillingExports (10列)
+  ヘッダー設定: AuditLogs (10列)
+  ヘッダー設定: Settings (7列)
+[3/6] 初期設定データ投入...
+  Settings: 13件追加（0件スキップ）
+[4/6] コースマスタ投入...
+  MembershipPlans: 6件追加（0件スキップ）
+[5/6] 料金ルール投入...
+  FeeRules: 6件追加（0件スキップ）
+[6/6] 入力規則設定...
+  入力規則設定完了（15箇所）
+=== セットアップ完了 ===
 
-### FeeRules シートへの初期データ投入
+[重要] 金額はすべて仮値（0円）で投入しています。
+以下のシートで実際の金額・設定値を入力してください：
+  - MembershipPlans: monthly_fee, enrollment_fee, card_key_fee
+  - Settings: card_key_issue_fee, default_join_fee, billing_cutoff_day, pause_max_months
+```
 
-- 2行目：RULE-001, 日割り端数処理, prorating, 0, -, 切り捨て, 2026-05-01,（空白）
+### 2回目以降の実行（冪等性の確認）
 
-### KeyCards シートへの初期データ投入
-
-- ジムにある全鍵番号を1つずつ入力する
-- status は全て available を入力する
-- 例：K-001, available,（member_idは空白）, ...
-
-### Settings シートへの初期データ投入
-
-INITIAL_SETTINGS.md の「Settings シート初期データ」表を参考に入力する。
-金額・日数はオーナーが確定した値を入力する。
-
----
-
-## 手順6：行の固定設定
-
-各シートで1行目（ヘッダー行）を固定する。
-
-1. 1行目を選択する
-2. メニュー「表示」→「固定」→「1行」
-
----
-
-## 手順7：シートの保護設定
-
-### ヘッダー行の保護（全シート共通）
-
-各シートの1行目を保護して、スクリプト実行中の誤操作を防ぐ。
-
-1. 1行目を選択する
-2. メニュー「データ」→「シートと範囲を保護」
-3. 「範囲を追加」で1行目を指定する
-4. 説明を「ヘッダー行（変更禁止）」とする
-5. 「権限を設定」→「自分のみ」に設定する
-
-### AuditLogsシートの保護
-
-操作ログは手動変更を禁止する。
-
-1. AuditLogs シートを選択する
-2. メニュー「データ」→「シートと範囲を保護」
-3. 「シート」タブで保護する
-4. 説明を「操作ログ（変更禁止）」とする
-5. 「権限を設定」→「自分のみ」に設定する
+同じ関数を再度実行しても「既存」表示になり、重複データは作成されない。
 
 ---
 
-## 手順8：GASプロジェクトの紐付け
+## 手順5：金額・設定値を実際の値に更新する
 
-1. スプレッドシートのメニュー「拡張機能」→「Apps Script」を開く
-2. GASエディタが開く
-3. GASプロジェクト名を「ワイルドボア会員管理」に設定する
-4. スクリプトプロパティに SPREADSHEET_ID を設定する
-   - 「プロジェクト設定」→「スクリプト プロパティ」
-   - キー：SPREADSHEET_ID
-   - 値：手順1で取得したスプレッドシートのID
+セットアップ完了後、以下のシートで仮値を実際の値に更新する。
+
+### MembershipPlans シート
+
+各コースの以下の列を実際の金額に更新する：
+
+| フィールド | 説明 |
+|---|---|
+| monthly_fee | 月会費（円） |
+| enrollment_fee | 入会金（円） |
+| card_key_fee | カードキー発行料（円） |
+
+### Settings シート
+
+| setting_key | 更新する値 |
+|---|---|
+| card_key_issue_fee | 実際のカードキー発行料（円） |
+| default_join_fee | 実際のデフォルト入会金（円） |
+| billing_cutoff_day | 請求締め日（何日か） |
+| pause_max_months | 最長休会月数 |
+| pause_fee_enabled | 休会中に月会費を徴収するか（TRUE/FALSE） |
 
 ---
 
-## 手順9：動作確認
+## 手順6：KeyCards シートに鍵番号を登録する
 
-設定完了後、以下を確認する。
+鍵番号の一覧を手動でKeyCardsシートに入力する。
 
-- [ ] 全シートが作成されている（11シート）
-- [ ] 各シートのヘッダー行が正しい列名になっている
-- [ ] 入力規則が設定されている（ドロップダウンで値が選択できる）
-- [ ] MembershipPlansシートにコースデータが入力されている
-- [ ] KeyCardsシートに全鍵番号が入力されている
-- [ ] Settingsシートに初期設定値が入力されている
-- [ ] 1行目が固定されている
-- [ ] GASプロジェクトが紐付けられている
-- [ ] ScriptProperties に SPREADSHEET_ID が設定されている
+| フィールド | 値 |
+|---|---|
+| key_card_number | K-001, K-002, ... |
+| status | available |
+| member_id | （空欄） |
+| created_at | 入力日時 |
+
+> 鍵番号の範囲（何番まであるか）はオーナーが確認して入力すること。
+
+---
+
+## 手順7：WebアプリとしてデプロイするGAS設定
+
+Phase 2（入会フォーム実装）の前に以下を設定する：
+
+1. GASエディタで「デプロイ → 新しいデプロイ」を選択する
+2. 種類「ウェブアプリ」を選択する
+3. 以下を設定する：
+
+| 設定項目 | 値 |
+|---|---|
+| 次のユーザーとして実行 | 自分（オーナー） |
+| アクセスできるユーザー | 全員（タブレットからアクセスするため） |
+
+4. デプロイURLをメモする（入会フォームのURL）
+
+> アクセスできるユーザーを「全員」にするのは入会フォーム用。管理画面は別途認証を設ける（Phase 3）。
+
+---
+
+## チェックリスト
+
+手順完了後に以下を確認する。
+
+- [ ] 11シートが正しく作成されている
+- [ ] 各シートにヘッダー行（青背景・太字・1行目固定）が設定されている
+- [ ] Settingsシートに13件の初期設定が入っている
+- [ ] MembershipPlansシートに6件のコースデータが入っている
+- [ ] FeeRulesシートに6件のルールデータが入っている
+- [ ] ドロップダウン入力規則が設定されている（Members.statusなど）
+- [ ] 金額列（monthly_fee等）が実際の値に更新されている
+- [ ] KeyCardsシートに鍵番号が登録されている
+- [ ] 既存のスプレッドシートは変更していない

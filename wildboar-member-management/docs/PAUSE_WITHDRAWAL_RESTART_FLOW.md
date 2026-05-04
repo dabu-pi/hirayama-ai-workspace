@@ -34,11 +34,11 @@
 
 1. StatusHistory に記録を追加する
    - change_type: pause
-   - status_before: active
-   - status_after: pause
+   - previous_status: active
+   - new_status: paused
    - effective_date: 入力された休会開始日
    - end_date: 入力された休会終了予定日
-2. Members シートの status を pause に更新する
+2. Members シートの status を paused に更新する
 3. Members シートの updated_at を更新する
 4. 鍵を返却する場合は KeyCards シートの status を available に変更する
 5. AuditLogs に操作を記録する
@@ -78,8 +78,8 @@
 
 1. StatusHistory に記録を追加する
    - change_type: withdraw
-   - status_before: active（または pause）
-   - status_after: withdrawn
+   - previous_status: active（または paused）
+   - new_status: withdrawn
    - effective_date: 入力された退会日
 2. Members シートの status を withdrawn に更新する
 3. Members シートの updated_at を更新する
@@ -120,8 +120,8 @@
 
 1. StatusHistory に記録を追加する
    - change_type: restart
-   - status_before: pause
-   - status_after: active
+   - previous_status: paused
+   - new_status: active
    - effective_date: 入力された再開日
 2. Members シートの status を active に更新する
 3. Members シートの updated_at を更新する
@@ -144,14 +144,14 @@ StatusHistory シートへの記録フォーマット：
 | history_id | STATUS-yyyymmdd-XXXXX（自動採番） |
 | member_id | 対象会員番号 |
 | change_type | pause / withdraw / restart |
-| status_before | active / pause / withdrawn |
-| status_after | active / pause / withdrawn |
+| previous_status | active / paused / withdrawn |
+| new_status | active / paused / withdrawn |
 | effective_date | 変更適用日 |
 | end_date | 休会の終了予定日（休会の場合のみ） |
 | reason | 理由（任意） |
-| processed_by | 操作したスタッフのGoogleアカウント |
-| created_at | 操作日時 |
 | notes | メモ |
+| created_at | 操作日時 |
+| created_by | 操作したスタッフのGoogleアカウント |
 
 ---
 
@@ -171,14 +171,14 @@ StatusHistory シートへの記録フォーマット：
 ## 状態遷移図
 
 ```
-[active] ---(休会申請)---> [pause] ---(再開申請)---> [active]
-   |                         |
-   +--------(退会申請)--------+-----(退会申請)--------> [withdrawn]
+[active] ---(休会申請)---> [paused] ---(再開申請)---> [active]
+   |                          |
+   +--------(退会申請)---------+-----(退会申請)--------> [withdrawn]
 ```
 
 注意：
 - withdrawn（退会済み）からの再入会は、新規の IntakeApplication として処理する（再開申請ではなく新規入会）
-- withdrawn から active / pause には直接遷移しない
+- withdrawn から active / paused には直接遷移しない
 
 ---
 
@@ -187,6 +187,6 @@ StatusHistory シートへの記録フォーマット：
 | ケース | 対応 |
 |---|---|
 | 退会後に鍵が見つかった | KeyCards シートの returned_date と status を手動更新し、AuditLog に記録する |
-| 休会中に退会を希望した | 休会状態から直接退会処理を行う（status_before = pause） |
+| 休会中に退会を希望した | 休会状態から直接退会処理を行う（previous_status = paused） |
 | 最長休会期間を超えた | システムが警告を表示する。スタッフが退会処理または延長を判断する |
 | 再開後に再度休会したい | 通常の休会申請と同様に処理する |
