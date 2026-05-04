@@ -342,12 +342,17 @@
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| AI-2-1 | visit-form.html: AI評価補助セクション追加（カルテ保存後に有効化） | ⏸ |
-| AI-2-2 | visit-form.html: カルテ保存前は AI ボタンを disabled 制御 | ⏸ |
-| AI-2-3 | visit-form.html: AI出力表示枠（評価観点 / 鑑別方向 / 危険サイン / 追加問診 / 施術方針案 / 受診勧奨 / カルテ下書き / disclaimer） | ⏸ |
-| AI-2-4 | styles.html: AI評価補助セクション用スタイル追加 | ⏸ |
+| AI-2-1 | visit-form.html: AI評価補助セクション追加（#aiAssistCard / 免責文 / 7種の出力プレースホルダー） | ✅ 2026-05-04 |
+| AI-2-2 | visit-form.html: カルテ保存前は AI ボタンを disabled 制御・保存後に enableAiAssist() で有効化 | ✅ 2026-05-04 |
+| AI-2-3 | visit-form.html: AI出力枠（評価観点 / 鑑別方向 / 危険サイン / 追加問診 / 施術方針案 / 受診勧奨 / カルテ下書き / disclaimer） | ✅ 2026-05-04 |
+| AI-2-4 | styles.html: スタイル変更なし（インラインスタイルで対応） | — 不要 |
+| AI-2-5 | live-check-runner: ai2.spec.ts 追加（LC-4 確認） | ✅ 2026-05-04 |
 
-**変更ファイル候補:** visit-form.html / styles.html
+**変更ファイル:** visit-form.html（clasp push 済み 2026-05-04）
+**API実装:** なし（Phase AI-3 で実装予定）
+**LiveCheck:** ai2.spec.ts 追加済み（auth + patientId 再取得後に実行可能）
+
+> **ステータス:** ✅ clasp push 済み / LiveCheck 確認は auth 再取得後
 
 ---
 

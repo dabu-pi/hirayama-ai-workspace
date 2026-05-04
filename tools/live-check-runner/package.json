@@ -8,6 +8,7 @@
     "test:jrec": "playwright test projects/jrec-sf01",
     "test:jrec:smoke": "playwright test projects/jrec-sf01/smoke.spec.ts",
     "test:jrec:ai1": "playwright test projects/jrec-sf01/ai1.spec.ts",
+    "test:jrec:ai2": "playwright test projects/jrec-sf01/ai2.spec.ts",
     "test:training": "playwright test projects/training-platform",
     "livecheck": "tsx scripts/run-livecheck.ts",
     "setup-auth": "tsx scripts/setup-auth.ts",

@@ -231,6 +231,77 @@
       </div>
     </form>
   </div>
+
+  <!-- ── AI評価補助セクション（Phase AI-2: UI枠のみ / API連携は Phase AI-3）── -->
+  <div class="card" id="aiAssistCard">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+      <h2 style="font-size:15px;font-weight:700;margin:0;">AI評価補助</h2>
+      <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:#fce8b2;color:#7a4f00;">
+        Phase AI-3 で有効化予定
+      </span>
+    </div>
+
+    <div style="font-size:12px;padding:8px 12px;background:#fff8e1;border-left:3px solid #fbbc04;border-radius:4px;margin-bottom:12px;color:#5f4b00;line-height:1.6;">
+      ⚠️ <strong>参考情報</strong> —
+      この内容は施術者の判断を補助するための参考情報であり、診断の確定ではありません。
+      最終判断は必ず施術者が行ってください。
+    </div>
+
+    <p style="font-size:12px;color:#9aa0a6;margin-bottom:14px;line-height:1.6;">
+      主訴・症状・患者情報をもとに評価観点・鑑別方向・危険サイン等を提示します。<br>
+      個人情報（氏名・住所・電話番号・生年月日）は外部 API に送信しません。
+    </p>
+
+    <div id="aiStatusMsg" style="font-size:12px;color:#9aa0a6;margin-bottom:10px;">
+      ※ カルテを保存後に実行できます
+    </div>
+
+    <button id="aiAssistBtn" type="button" disabled
+      style="padding:7px 18px;font-size:13px;font-weight:600;border:none;border-radius:4px;
+             background:#e8eaed;color:#9aa0a6;cursor:not-allowed;margin-bottom:16px;"
+      onclick="runAiAssist()">
+      AI評価補助を実行する
+    </button>
+
+    <div id="aiAssistResult" style="display:none;margin-bottom:12px;"></div>
+
+    <div id="aiAssistPlaceholder">
+      <div style="font-size:11px;color:#bdc1c6;margin-bottom:8px;text-align:center;letter-spacing:0.5px;font-weight:600;">
+        PHASE AI-3 で以下の補助情報が生成されます（現在は未連携）
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <div style="flex:1;min-width:140px;padding:10px;background:#f8f9fa;border-radius:6px;border:1px solid #e8eaed;font-size:12px;">
+          <div style="font-weight:600;color:#9aa0a6;margin-bottom:4px;">📋 評価の観点整理</div>
+          <div style="color:#dadce0;font-size:11px;">— 未連携 —</div>
+        </div>
+        <div style="flex:1;min-width:140px;padding:10px;background:#f8f9fa;border-radius:6px;border:1px solid #e8eaed;font-size:12px;">
+          <div style="font-weight:600;color:#9aa0a6;margin-bottom:4px;">🔍 鑑別の方向性</div>
+          <div style="color:#dadce0;font-size:11px;">— 未連携 —</div>
+        </div>
+        <div style="flex:1;min-width:140px;padding:10px;background:#fff8e1;border-radius:6px;border:1px solid #fce8b2;font-size:12px;">
+          <div style="font-weight:600;color:#c4770b;margin-bottom:4px;">⚠️ 危険サイン確認</div>
+          <div style="color:#dadce0;font-size:11px;">— 未連携 —</div>
+        </div>
+        <div style="flex:1;min-width:140px;padding:10px;background:#f8f9fa;border-radius:6px;border:1px solid #e8eaed;font-size:12px;">
+          <div style="font-weight:600;color:#9aa0a6;margin-bottom:4px;">💬 追加問診候補</div>
+          <div style="color:#dadce0;font-size:11px;">— 未連携 —</div>
+        </div>
+        <div style="flex:1;min-width:140px;padding:10px;background:#f8f9fa;border-radius:6px;border:1px solid #e8eaed;font-size:12px;">
+          <div style="font-weight:600;color:#9aa0a6;margin-bottom:4px;">🎯 施術方針案</div>
+          <div style="color:#dadce0;font-size:11px;">— 未連携 —</div>
+        </div>
+        <div style="flex:1;min-width:140px;padding:10px;background:#f8f9fa;border-radius:6px;border:1px solid #e8eaed;font-size:12px;">
+          <div style="font-weight:600;color:#9aa0a6;margin-bottom:4px;">🏥 受診勧奨の目安</div>
+          <div style="color:#dadce0;font-size:11px;">— 未連携 —</div>
+        </div>
+        <div style="flex:1;min-width:100%;padding:10px;background:#f8f9fa;border-radius:6px;border:1px solid #e8eaed;font-size:12px;">
+          <div style="font-weight:600;color:#9aa0a6;margin-bottom:4px;">📝 カルテ下書き</div>
+          <div style="color:#dadce0;font-size:11px;">— 未連携 —</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /aiAssistCard -->
+
 </div>
 
 <script>
@@ -263,6 +334,8 @@ window.onerror = function(message, source, lineno) {
     document.getElementById('contraindication').value   = EDIT_VISIT.contraindication   || '';
     document.getElementById('lifestyle').value          = EDIT_VISIT.lifestyle          || '';
     document.getElementById('nextAppointment').value    = EDIT_VISIT.nextAppointment    || '';
+    // 編集モード: visitKey 確定済みのため AI評価補助ボタンを有効化
+    enableAiAssist(EDIT_VISIT.selfPayVisitKey);
   } else {
     // 新規モード: 来院日のデフォルトを今日に設定
     var today = new Date();
@@ -342,6 +415,7 @@ window.onerror = function(message, source, lineno) {
             if (!SAVED_VISIT_KEY) {
               SAVED_VISIT_KEY = savedKey;  // 初回保存後に visitKey を保持
             }
+            enableAiAssist(savedKey);  // AI評価補助ボタンを有効化
             btn.disabled    = false;
             btn.textContent = 'カルテを更新する';  // 次回以降は update
             var actionWord = isUpdate ? '更新しました' : '保存しました';
@@ -427,6 +501,46 @@ function appendField(fieldId, text) {
   var el = document.getElementById(fieldId);
   el.value = el.value ? el.value + '・' + text : text;
   el.focus();
+}
+
+// ── AI評価補助（Phase AI-2: UI枠のみ / API連携は Phase AI-3）──────
+
+/**
+ * カルテ保存後にAI評価補助ボタンを有効化する。
+ * Phase AI-3 で実際の API 呼び出しに切り替える。
+ */
+function enableAiAssist(visitKey) {
+  var btn    = document.getElementById('aiAssistBtn');
+  var status = document.getElementById('aiStatusMsg');
+  if (!btn) return;
+  btn.disabled = false;
+  btn.style.cssText =
+    'padding:7px 18px;font-size:13px;font-weight:600;border:none;border-radius:4px;' +
+    'background:#1a73e8;color:#fff;cursor:pointer;margin-bottom:16px;';
+  if (status) {
+    status.innerHTML =
+      '対象カルテ: <code style="font-size:11px;background:#f1f3f4;padding:1px 5px;border-radius:3px;">' +
+      visitKey + '</code>';
+  }
+}
+
+/**
+ * AI評価補助の実行ハンドラ。
+ * Phase AI-2 では API 呼び出しを行わず、Phase AI-3 未実装の旨を表示する。
+ */
+function runAiAssist() {
+  var result = document.getElementById('aiAssistResult');
+  if (!result) return;
+  result.style.display = 'block';
+  result.innerHTML =
+    '<div style="padding:10px 14px;background:#e8f0fe;border-left:3px solid #1a73e8;' +
+    'border-radius:4px;font-size:13px;color:#1565c0;line-height:1.6;">' +
+    '🔄 <strong>Phase AI-3 で有効化予定</strong><br>' +
+    '<span style="font-size:12px;color:#5f6368;">' +
+    'OpenAI API と連携する実装は Phase AI-3 で追加されます。<br>' +
+    '現在はUI枠のみで、外部API への通信は行っていません。' +
+    '</span>' +
+    '</div>';
 }
 </script>
 </body>
