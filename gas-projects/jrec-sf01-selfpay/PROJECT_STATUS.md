@@ -55,6 +55,15 @@
 1. **Phase AI-3** OpenAI API 連携（AI評価補助の本実装）← **次はここ**
 2. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 
+**Phase AI-3 設計プロンプト作成済み（2026-05-04）:**
+  - `docs/PHASE_AI3_DESIGN_PROMPT_2026-05-04.md`
+  - GAS `runAIAssessment(visitKey)` 関数のコードドラフト含む
+  - `visit-form.html` の `runAiAssist()` 置き換えコード含む
+  - AI 出力表示関数（`displayAiResult` / `showAiError` / `resetAiBtn`）含む
+  - OpenAI API Key 管理方針（ScriptProperties）明記
+  - ai3.spec.ts 追加計画含む
+  - 次回セッションはこのプロンプトをそのまま流せば実装開始できる
+
 > **Phase 6-N を先に検討・実装候補化した理由（2026-05-02 方針）:**
 > 現在のホームメニューは page パラメータによるフル画面遷移で、主要機能への行き来にホーム経由が必要。
 > 共通タブ型ナビゲーションを導入することで、各画面から直接他機能へ移動できるようにする。
