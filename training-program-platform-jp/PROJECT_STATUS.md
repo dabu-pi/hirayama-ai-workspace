@@ -2,7 +2,7 @@
 
 ## 2026-05-04 BUG-FIX: カスタム種目への SWAP エラー
 
-### STATUS: ✅ 修正完了（BUG追記）・実機確認待ち
+### STATUS: ✅ 修正完了 v2・実機確認待ち
 
 **不具合の再現条件:**
 1. マイ種目でカスタム種目を作成
@@ -25,27 +25,62 @@
 | `types/workout.ts` | `SwapExerciseResponse.sessionExercise.exerciseId` を `string \| null` に / `userExerciseId: string \| null` を追加 |
 | `components/workout/WorkoutScreen.tsx` | `postSwapExercise` に `source` 追加 / `handleSwapExercise` に `source` 追加 / 呼び出し箇所で `item.source` を渡す / swap 結果のブロック更新で `userExerciseId ?? exerciseId` に統一 |
 
-**追加バグ修正（2026-05-04 第2回）:**
+**追加バグ修正（2026-05-04 第2回・第3回）:**
 
-「トレーニング中にカスタム種目を使おうとすると exercise was not found になる」の根本原因を特定・修正。
+**第2回修正: exercise-history リンク問題（実機確認後に第3回修正へ）**
+種目名リンクが `/exercise-history/[UUID]` へ遷移し not found になる問題を修正。
+しかし実機確認で「種目追加モーダルで ADD API が "Exercise was not found." を返す」問題が判明。
 
-**根本原因:**
-カスタム種目（user_exercises）は `exerciseSlug = user_exercise_id`（UUID）として WorkoutExerciseBlock に格納される。  
-WorkoutScreen の種目名は `<Link href="/exercise-history/[UUID]">` になっており、種目名をクリックすると `/exercise-history/[UUID]` に遷移する。  
-しかし `selectExerciseBySlug` は `exercises`（ライブラリ）テーブルしか見ておらず、UUID で検索すると not found になり  
-「The requested exercise could not be found.」が表示される。これが「exercise was not found」として報告された。
+**第3回修正（正しい本丸）:**
+
+**根本原因（確定）:**
+`POST /api/workout-sessions/[id]/exercises` でユーザー種目の lookup が失敗していた。
+
+コードは正しく `{ user_exercise_id: UUID }` を送り、ADD API 内で `isUserExercise = true` に分岐する。  
+しかし user_exercises の SELECT は `supabase`（token client）を使用しており、  
+RLS `user_id = auth.uid()` との組み合わせで、token client 経由ではユーザー種目が見つからない状態だった。
+
+これは `updateOwnDisplayName` や `cancelDeletionRequest` が admin client + self-guard を使っているのと不整合。
+
+**修正（第3回）: ADD API の user_exercises lookup を admin client に変更**
+
+```typescript
+// Before（token client → RLS で見つからない）:
+supabase.from("user_exercises")...eq("user_id", userId!)
+
+// After（admin client + explicit self-guard）:
+createSupabaseAdminClient()
+  .from("user_exercises")
+  .select("id, name, category")
+  .eq("id", userExerciseId!)
+  .eq("user_id", userId!)   // ← 所有権チェックは明示的に維持
+  .maybeSingle()
+```
 
 **修正ファイル（追加）:**
 
 | ファイル | 修正内容 |
 |---------|---------|
-| `components/workout/WorkoutScreen.tsx` | ユーザー種目（`slug === exerciseId`）は非リンク span 表示。「履歴へ」ヒントも非表示 |
-| `lib/workout/exercise-history.ts` | `selectExerciseBySlug`: exercises 未発見時に user_exercises も検索 |
-| `lib/workout/exercise-history.ts` | `selectWorkoutSessionExercises`: `isUserExercise` フラグで `user_exercise_id` カラムを使用 |
+| `app/api/workout-sessions/[id]/exercises/route.ts` | user_exercises lookup を admin client + `.eq("user_id", userId)` に変更 |
+| `components/workout/WorkoutScreen.tsx` | ユーザー種目（`slug === exerciseId`）は非リンク span 表示（第2回修正も維持） |
+| `lib/workout/exercise-history.ts` | user_exercises 対応（第2回修正も維持） |
 
 **DB変更:** なし
 
 **typecheck / build:** エラーなし ✅ / Compiled successfully ✅
+
+**実機確認手順（v3 最終）:**
+
+| # | 確認内容 | 期待結果 |
+|---|---|---------|
+| R1 | 自由作成セッションで「新しい種目を作成」→「テストカスタムロー」作成 | 作成成功 |
+| R2 | 種目追加モーダルで「テストカスタムロー」（「自分」ラベル）を選択 | **Exercise was not found. が出ない ★最重要** |
+| R3 | カスタム種目がトレーニング画面に追加される | 種目ブロックが表示される |
+| R4 | 重量・回数入力・セット完了できる | 正常動作 |
+| R5 | リロード後もカスタム種目が残っている | セッション継続可能 |
+| R6 | マイ種目にも「テストカスタムロー」が表示される | 正常 |
+| R7 | 通常種目の追加も壊れていない | 影響なし |
+| R8 | SWAP でカスタム種目への入れ替えも動作する | 影響なし |
 
 **Claude Code による自動確認（2026-05-04）:**
 

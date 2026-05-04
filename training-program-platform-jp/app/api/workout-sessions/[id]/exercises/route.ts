@@ -2,6 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
+  createSupabaseAdminClient,
+  hasSupabasePublicEnv
+} from "@/lib/supabase/server";
+import {
   findOwnedWorkoutSession,
   getAuthenticatedWorkoutContext,
   isLikelyUuid
@@ -167,6 +171,15 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const isCustomSession = session.program_day_id === null;
 
+    // For user exercises, look up via admin client with an explicit user_id guard.
+    // This is consistent with other owner-scoped writes in this codebase
+    // (e.g. updateOwnDisplayName, cancelDeletionRequest) and avoids potential
+    // RLS edge-cases with the token client.  The .eq("user_id", userId!) guard
+    // provides the same ownership guarantee as the RLS policy.
+    const adminForLookup = isUserExercise && hasSupabasePublicEnv()
+      ? createSupabaseAdminClient()
+      : null;
+
     // Fetch exercise metadata + current max order_index in parallel.
     // User exercises don't support previous-set history in U-1 (deferred to U-4).
     const [
@@ -175,7 +188,12 @@ export async function POST(request: Request, { params }: RouteContext) {
       previousSets
     ] = await Promise.all([
       isUserExercise
-        ? supabase.from("user_exercises").select("id, name, category").eq("id", userExerciseId!).eq("user_id", userId!).maybeSingle<UserExerciseRow>()
+        ? (adminForLookup ?? supabase)
+            .from("user_exercises")
+            .select("id, name, category")
+            .eq("id", userExerciseId!)
+            .eq("user_id", userId!)
+            .maybeSingle<UserExerciseRow>()
         : supabase.from("exercises").select("id, slug, name_ja, name_en").eq("id", exerciseId!).maybeSingle<ExerciseRow>(),
       supabase.from("workout_session_exercises").select("order_index").eq("workout_session_id", session.id).order("order_index", { ascending: false }).limit(1),
       isCustomSession && !isUserExercise
