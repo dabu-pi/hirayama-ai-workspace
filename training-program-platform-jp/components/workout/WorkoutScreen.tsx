@@ -1839,15 +1839,24 @@ export function WorkoutScreen({
               {exercise.exerciseRoleLabel ? (
                 <span className={typeClassName(exercise.exerciseType)}>{exercise.exerciseRoleLabel}</span>
               ) : null}
-              <Link className={styles.exerciseLink} href={`/exercise-history/${exercise.exerciseSlug}`}>
-                <span>{exercise.exerciseNameJa || exercise.exerciseNameEn}</span>
-                <span aria-hidden="true">→</span>
-              </Link>
+              {/* User-created exercises have slug === exerciseId (UUID).
+                  Library exercises have a human-readable slug (e.g. "bench-press").
+                  Only library exercises have a working exercise-history page. */}
+              {exercise.exerciseSlug !== exercise.exerciseId ? (
+                <Link className={styles.exerciseLink} href={`/exercise-history/${exercise.exerciseSlug}`}>
+                  <span>{exercise.exerciseNameJa || exercise.exerciseNameEn}</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              ) : (
+                <span className={styles.exerciseLink}>
+                  <span>{exercise.exerciseNameJa || exercise.exerciseNameEn}</span>
+                </span>
+              )}
               {exercise.wasSwapped ? (
                 <span className={styles.swappedBadge}>置換済</span>
-              ) : (
+              ) : exercise.exerciseSlug !== exercise.exerciseId ? (
                 <span className={styles.headerHint}>履歴へ</span>
-              )}
+              ) : null}
             </div>
 
             {exercise.exerciseType === "T1" && exercise.t1ProgressionHint && (

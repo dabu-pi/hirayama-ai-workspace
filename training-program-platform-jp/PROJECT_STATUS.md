@@ -2,7 +2,7 @@
 
 ## 2026-05-04 BUG-FIX: カスタム種目への SWAP エラー
 
-### STATUS: ✅ API確認PASS・ブラウザ操作 R1〜R6 は手動確認待ち
+### STATUS: ✅ 修正完了（BUG追記）・実機確認待ち
 
 **不具合の再現条件:**
 1. マイ種目でカスタム種目を作成
@@ -24,6 +24,24 @@
 | `app/api/workout-sessions/[id]/exercises/[exerciseId]/route.ts` | `SwapRequestBody` に `user_exercise_id` 追加 / `user_exercises` テーブルへの分岐ルックアップ / UPDATE で `exercise_id` ↔ `user_exercise_id` を正しく切り替え |
 | `types/workout.ts` | `SwapExerciseResponse.sessionExercise.exerciseId` を `string \| null` に / `userExerciseId: string \| null` を追加 |
 | `components/workout/WorkoutScreen.tsx` | `postSwapExercise` に `source` 追加 / `handleSwapExercise` に `source` 追加 / 呼び出し箇所で `item.source` を渡す / swap 結果のブロック更新で `userExerciseId ?? exerciseId` に統一 |
+
+**追加バグ修正（2026-05-04 第2回）:**
+
+「トレーニング中にカスタム種目を使おうとすると exercise was not found になる」の根本原因を特定・修正。
+
+**根本原因:**
+カスタム種目（user_exercises）は `exerciseSlug = user_exercise_id`（UUID）として WorkoutExerciseBlock に格納される。  
+WorkoutScreen の種目名は `<Link href="/exercise-history/[UUID]">` になっており、種目名をクリックすると `/exercise-history/[UUID]` に遷移する。  
+しかし `selectExerciseBySlug` は `exercises`（ライブラリ）テーブルしか見ておらず、UUID で検索すると not found になり  
+「The requested exercise could not be found.」が表示される。これが「exercise was not found」として報告された。
+
+**修正ファイル（追加）:**
+
+| ファイル | 修正内容 |
+|---------|---------|
+| `components/workout/WorkoutScreen.tsx` | ユーザー種目（`slug === exerciseId`）は非リンク span 表示。「履歴へ」ヒントも非表示 |
+| `lib/workout/exercise-history.ts` | `selectExerciseBySlug`: exercises 未発見時に user_exercises も検索 |
+| `lib/workout/exercise-history.ts` | `selectWorkoutSessionExercises`: `isUserExercise` フラグで `user_exercise_id` カラムを使用 |
 
 **DB変更:** なし
 

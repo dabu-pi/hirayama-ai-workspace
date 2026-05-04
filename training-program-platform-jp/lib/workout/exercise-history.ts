@@ -143,7 +143,26 @@ async function selectExerciseBySlug(
     throw new Error(`Failed to load exercise: ${error.message}`);
   }
 
-  return data;
+  if (data) return data;
+
+  // If not found in library exercises, check user_exercises.
+  // User-created exercises use their UUID as slug.
+  const { data: ue } = await client
+    .from("user_exercises")
+    .select("id, name")
+    .eq("id", exerciseSlug)
+    .maybeSingle<{ id: string; name: string }>();
+
+  if (ue) {
+    return {
+      id: ue.id,
+      slug: ue.id,
+      name_ja: ue.name,
+      name_en: ue.name
+    } satisfies ExerciseRow;
+  }
+
+  return null;
 }
 
 async function selectRecentUserSessions(client: DatabaseClient, userId: string) {
@@ -166,17 +185,21 @@ async function selectRecentUserSessions(client: DatabaseClient, userId: string) 
 async function selectWorkoutSessionExercises(
   client: DatabaseClient,
   workoutSessionIds: string[],
-  exerciseId: string
+  exerciseId: string,
+  isUserExercise = false
 ) {
   if (workoutSessionIds.length === 0) {
     return [] as WorkoutSessionExerciseRow[];
   }
 
-  const { data, error } = await client
+  const query = client
     .from("workout_session_exercises")
     .select("id, workout_session_id, exercise_type, order_index")
-    .eq("exercise_id", exerciseId)
     .in("workout_session_id", workoutSessionIds);
+
+  const { data, error } = isUserExercise
+    ? await query.eq("user_exercise_id", exerciseId)
+    : await query.eq("exercise_id", exerciseId);
 
   if (error) {
     throw new Error(
@@ -303,12 +326,17 @@ export async function getExerciseHistoryView(
       };
     }
 
+    // User-created exercises have slug === UUID (their own id).
+    // Library exercises have a human-readable slug distinct from their UUID.
+    const isUserExercise = exercise.slug === exercise.id;
+
     const recentSessions = await selectRecentUserSessions(queryClient, userId);
     const recentSessionIds = recentSessions.map((session) => session.id);
     const workoutSessionExercises = await selectWorkoutSessionExercises(
       queryClient,
       recentSessionIds,
-      exercise.id
+      exercise.id,
+      isUserExercise
     );
 
     const latestExerciseType =
