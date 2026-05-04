@@ -235,14 +235,34 @@ Googleスプレッドシートの入力（収集運搬一覧）から、**提出
 
 ---
 
-## 11. GAS ファイル構成（確定）
+## 11. GAS ファイル構成（実装済み・clasp clone 確認済み）
 
-| ファイル | 役割 |
+| ファイル | prefix | 役割 |
+|---|---|---|
+| `appsscript.json` | — | V8 runtime / Asia/Tokyo タイムゾーン設定 |
+| `WR_main.gs.js` | `WR_` | 日報作成・月報作成（B案: 日報参照）・PDF出力・ログ・ユーティリティ |
+| `WR_main.gs.js` | `WR2_` | 年度積算（指定YYYY-MM月分）: 年度開始〜指定月の累計を月報テンプレ1枚で生成 |
+| `WR_main.gs.js` | `WR2V2_` | 年度積算 v2（設定の年度選択）: 9社/ページ分割・ページ別PDF対応 |
+| `WR_autoSubmit.js` | `WR_AUTO_` | 月1回トリガー・前月分年度積算→PDF→Gmail下書き作成 |
+
+> **注意（旧 SPEC との差異）:** 仕様書 v2026-02-25 では `WR_core.gs` と記載していたが、実際のファイル名は `WR_main.gs.js`。
+
+**関数一覧（主要）:**
+
+| 関数名 | 用途 |
 |---|---|
-| `WR_core.gs` | 日報作成・月報作成・年度積算・PDF出力・設定読取・ログ・ユーティリティ |
-| `WR_autoSubmit.gs` | トリガー管理・前月分年度積算→PDF→Gmail下書き作成 |
+| `onOpen` | スプレッドシート開時にメニュー追加 |
+| `WR_buildDailySheet(ym)` | 日報_YYYY-MM 生成 |
+| `WR_buildMonthlyReport(ym)` | 月報_YYYY-MM 生成 + PDF出力 |
+| `WR2_buildFiscalMonthlyReport(ym)` | 年度積算_YYYY-MM月分 生成（手動） |
+| `WR2V2_buildFiscalReport_fromSettings()` | 年度積算 v2（設定シートの年度選択から自動） |
+| `WR_AUTO_runMonthlyFiscalDraft()` | 月1回自動: 前月分年度積算→PDF→Gmail下書き |
+| `WR_AUTO_installMonthlyTrigger()` | 毎月1日21:00トリガーを設定（1回だけ実行） |
 
-**注意:** Apps Script は .gs 全体が同一グローバル名前空間のため、同名 const/function は SyntaxError で全停止する。オプション機能（年度全体ページ分割版v2）を追加する場合は prefix を必ず分離すること（例: `WRY_` / `WRP_`）。
+**名前空間ルール:**
+- Apps Script は .gs 全体が同一グローバル名前空間
+- `WR_` / `WR2_` / `WR2V2_` / `WR_AUTO_` の prefix で衝突を防止
+- 新機能追加時は必ず別 prefix を使うこと（例: `WRP_` / `WRY_`）
 
 ---
 
