@@ -136,19 +136,31 @@
       font-size: 13px;
     }
 
-    /* 自費明細リンク */
-    .btn-selfpay {
+    /* アクションボタン群 */
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-action {
       display: inline-block;
-      background: #27ae60;
-      color: #fff;
-      border: none;
-      padding: 8px 16px;
+      padding: 9px 16px;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       text-decoration: none;
-      margin-top: 10px;
+      border: none;
+    }
+    .btn-visit-new {
+      background: #3498db;
+      color: #fff;
+    }
+    .btn-visit-new:hover { background: #2980b9; }
+    .btn-selfpay {
+      background: #27ae60;
+      color: #fff;
     }
     .btn-selfpay:hover { background: #229954; }
   </style>
@@ -174,7 +186,10 @@
           <div class="info-value" id="pt-dob"></div>
         </div>
       </div>
-      <a id="btn-selfpay" class="btn-selfpay" style="display:none">自費明細入力 →</a>
+      <div class="action-row" id="action-row" style="display:none">
+        <a id="btn-visit-new" class="btn-action btn-visit-new">来院記録を追加 →</a>
+        <a id="btn-selfpay"   class="btn-action btn-selfpay">自費明細入力 →</a>
+      </div>
     </div>
 
     <div class="card">
@@ -222,12 +237,13 @@
       document.getElementById("pt-id").textContent   = p.patientId;
       document.getElementById("pt-dob").textContent  = p.birthday || "—";
 
-      // 今日の visitKey で自費明細リンクを生成
-      var todayVK = p.patientId + "_" + todayYMD();
-      var selfpayUrl = APP_BASE_URL + "?page=selfpay&visitKey=" + encodeURIComponent(todayVK);
-      var btnSP = document.getElementById("btn-selfpay");
-      btnSP.href = selfpayUrl;
-      btnSP.style.display = "inline-block";
+      // アクションボタン群（来院記録追加 / 自費明細入力）
+      var todayVK    = p.patientId + "_" + todayYMD();
+      var visitNewUrl = APP_BASE_URL + "?page=visitNew&patientId=" + encodeURIComponent(p.patientId);
+      var selfpayUrl  = APP_BASE_URL + "?page=selfpay&visitKey="   + encodeURIComponent(todayVK);
+      document.getElementById("btn-visit-new").href = visitNewUrl;
+      document.getElementById("btn-selfpay").href   = selfpayUrl;
+      document.getElementById("action-row").style.display = "flex";
 
       // 来院履歴
       var tbody = document.getElementById("visit-rows");

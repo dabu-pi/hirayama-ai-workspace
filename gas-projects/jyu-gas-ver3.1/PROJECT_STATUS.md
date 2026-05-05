@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-05 (WEB-1B)  
+最終更新: 2026-05-06 (WEB-2 MVP)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -8,10 +8,11 @@
 
 ## 現在の状態
 
-**稼働中 + Phase WEB-1 完了**
+**稼働中 + Phase WEB-1 完了 + Phase WEB-2 MVP 完了**
 
 スプレッドシート運用は継続中。  
-Web UI 化 Phase WEB-1（読み取り専用 Web 入口）を実装・clasp push 済み。
+Web UI から来院記録を登録できる状態（金額未算定・要確認フラグあり）。  
+実機確認は現場スマホで実施すること（→ WEB1/WEB2 LIVECHECK docs 参照）。
 
 ---
 
@@ -126,14 +127,83 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 
 ---
 
+## Phase WEB-2 実装内容（2026-05-06）
+
+### 追加ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `web-visit-new.html` | 来院記録登録フォーム（WEB-2 新規） |
+| `docs/WEB1_LIVECHECK_2026-05-06.md` | WEB-1 コードレビュー LiveCheck 記録 |
+| `docs/WEB2_LIVECHECK_2026-05-06.md` | WEB-2 コードレビュー LiveCheck 記録 |
+
+### Ver3_core.js 追加関数
+
+| 関数 | 行番号 | 役割 |
+|---|---|---|
+| `getPrevVisitData_V3(patientId)` | 5831 | 前回来院データを JSON 返却（読み取りのみ） |
+| `findLatestCaseKeyForPatient_(caseSh, caseMap, pid, caseNo)` | 5924 | 最新 caseKey 取得ヘルパー |
+| `saveVisitFromWeb_V3(payload)` | 5976 | 来院を来院ケース+来院ヘッダに保存（UI シート非依存） |
+
+### doGet 変更
+
+| page= | HTML | 状態 |
+|---|---|---|
+| `visitNew` | `web-visit-new.html` | WEB-2 追加 |
+
+### web-patient-detail.html 変更
+
+- 「来院記録を追加 →」ボタンを追加（`?page=visitNew&patientId=xxx` へ遷移）
+- 「自費明細入力 →」ボタンは変更なし
+
+### WEB-2 の制約（意図的・スコープ外）
+
+| 制約 | 理由 |
+|---|---|
+| 金額計算なし（来院合計=0, 要確認=true） | calcVisitAmounts_V3_ はシート依存が深い（WEB-2.5 予定） |
+| ケース1のみ（ケース2は未対応） | MVP に不要（WEB-2.5 予定） |
+| keikaNow / shoken 入力なし | セル結合の複雑さ（WEB-2.5 予定） |
+| 保険算定なし | スプレッドシートで従来通り実施 |
+
+---
+
+## 現在の doGet ルーティング
+
+| `page=` | HTML | 状態 |
+|---|---|---|
+| `search`（デフォルト） | `patientSearch.html` | 稼働中 |
+| `selfpay` | `selfPayWeb.html` | 稼働中 |
+| `home` | `web-home.html` | WEB-1 追加（実機未確認） |
+| `detail` | `web-patient-detail.html` | WEB-1 追加（実機未確認） |
+| `visitNew` | `web-visit-new.html` | WEB-2 追加（実機未確認） |
+
+---
+
+## 要実機確認（現場スマホ）
+
+**WEB-1:**
+1. `?page=home` → ナビゲーション表示
+2. `?page=search` → 検索・選択・自費明細リンク動作
+3. `?page=detail&patientId=実在ID` → 患者情報・来院履歴表示
+4. `?page=detail` → 「来院記録を追加」「自費明細入力」ボタン動作
+
+**WEB-2:**
+1. `?page=visitNew&patientId=実在ID` → フォーム表示
+2. 「前回引き継ぎ」→ 前回データがセットされる
+3. フォーム入力 → 確認モーダル → 登録実行
+4. 来院ケースシート・来院ヘッダシートに行が追加されることを確認
+5. 来院ヘッダの 要確認=TRUE / 来院合計=0 を確認
+
+---
+
 ## 次フェーズ候補
 
-### Phase WEB-2
-Web から来院記録を新規登録する。
+### Phase WEB-2.5
+Web 登録後の金額算定と拡張。
 
-- 患者選択 → 来院日選択 → 区分候補表示
-- 部位・施術内容入力 → 保存前確認 → visitKey 発行
-- 監査ログ記録
+- `saveVisitFromWeb_V3` から `calcVisitAmounts_V3_` を呼び出す
+- ケース2入力対応
+- keikaNow / shoken 入力フォーム
 
 ### Phase WEB-3
 Web から施術録・申請書生成へ。
@@ -141,6 +211,8 @@ Web から施術録・申請書生成へ。
 - 月次申請対象者一覧
 - 申請書プレビュー・生成
 - PDF / 印刷導線
+
+---
 
 ---
 

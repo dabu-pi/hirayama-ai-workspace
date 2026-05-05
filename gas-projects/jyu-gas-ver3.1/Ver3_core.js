@@ -5448,6 +5448,18 @@ function doGet(e) {
   var appBaseUrl = ScriptApp.getService().getUrl();
   Logger.log("[doGet] page=" + page + " appBaseUrl=" + appBaseUrl);
 
+  // Phase WEB-2: 来院記録登録
+  if (page === "visitNew") {
+    var vPid = String((e && e.parameter && e.parameter.patientId) || "").trim();
+    Logger.log("[doGet] visitNew patientId=" + (vPid ? "[set]" : "[empty]"));
+    var tmplVisit = HtmlService.createTemplateFromFile("web-visit-new");
+    tmplVisit.patientId  = vPid;
+    tmplVisit.appBaseUrl = appBaseUrl;
+    return tmplVisit.evaluate()
+      .setTitle("来院記録 — JREC-01")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   // Phase WEB-1: Web ホーム
   if (page === "home") {
     var tmplHome = HtmlService.createTemplateFromFile("web-home");
@@ -5805,6 +5817,342 @@ function buildZeroInsuranceAmounts_V3_() {
  * @param {string} patientId
  * @returns {{patient:Object, recentVisits:Array}|{error:string}}
  */
+/* =======================================================================
+   Phase WEB-2 — Web UI 来院登録（UI シート非依存）
+   ======================================================================= */
+
+/**
+ * 指定患者の最新来院ケースデータを JSON で返す（読み取りのみ）。
+ * autofillFromPreviousVisit_V3 の Web 版（シートへの書き込みなし）。
+ * @param {string} patientId
+ * @returns {{ok:boolean, patientId?:string, lastVisitDate?:string,
+ *            cases?:Array, error?:string}}
+ */
+function getPrevVisitData_V3(patientId) {
+  try {
+    var pid = String(patientId || "").trim();
+    if (!pid) return { ok: false, error: "patientId が空です" };
+
+    var ss     = SpreadsheetApp.getActiveSpreadsheet();
+    var caseSh = ss.getSheetByName(SHEETS.cases);
+    if (!caseSh || caseSh.getLastRow() < 2) {
+      return { ok: true, patientId: pid, lastVisitDate: null, cases: [] };
+    }
+
+    var n       = caseSh.getLastRow() - 1;
+    var headers = caseSh.getRange(1, 1, 1, caseSh.getLastColumn()).getValues()[0];
+    var allData = caseSh.getRange(2, 1, n, caseSh.getLastColumn()).getValues();
+
+    var idx = {};
+    for (var h = 0; h < headers.length; h++) {
+      var hName = String(headers[h] || "").trim();
+      if (hName) idx[hName] = h;
+    }
+
+    var pidIdx  = idx["患者ID"];
+    var dateIdx = idx["施術日"];
+    if (pidIdx === undefined || dateIdx === undefined) {
+      return { ok: true, patientId: pid, lastVisitDate: null, cases: [] };
+    }
+
+    var matched = [];
+    for (var r = 0; r < allData.length; r++) {
+      if (String(allData[r][pidIdx] || "").trim() !== pid) continue;
+      var d = allData[r][dateIdx];
+      matched.push({ row: allData[r], treatDate: d instanceof Date ? d : null });
+    }
+    if (matched.length === 0) {
+      return { ok: true, patientId: pid, lastVisitDate: null, cases: [] };
+    }
+
+    matched.sort(function(a, b) {
+      if (!a.treatDate && !b.treatDate) return 0;
+      if (!a.treatDate) return 1;
+      if (!b.treatDate) return -1;
+      return b.treatDate.getTime() - a.treatDate.getTime();
+    });
+
+    var latestDate    = matched[0].treatDate;
+    var latestDateStr = latestDate ? fmt_(latestDate, "yyyy-MM-dd") : null;
+
+    var latestRows = matched.filter(function(m) {
+      if (!m.treatDate || !latestDate) return false;
+      return fmt_(m.treatDate, "yyyy-MM-dd") === latestDateStr;
+    });
+
+    function getVal(row, col) { return idx[col] !== undefined ? row[idx[col]] : ""; }
+
+    var casesResult = latestRows.map(function(m) {
+      var row      = m.row;
+      var inj1     = getVal(row, "受傷日_部位1");
+      var start1   = getVal(row, "施術開始日_部位1");
+      var end1     = getVal(row, "施術終了日_部位1");
+      return {
+        caseNo:     Number(getVal(row, "caseNo")    || 1),
+        kubun:      String(getVal(row, "区分")       || ""),
+        bodyPart:   String(getVal(row, "部位_部位1") || ""),
+        disease:    String(getVal(row, "傷病_部位1") || ""),
+        injuryDate: inj1  instanceof Date ? fmt_(inj1,  "yyyy-MM-dd") : String(inj1  || ""),
+        cold:       !!getVal(row, "冷罨法_部位1"),
+        warm:       !!getVal(row, "温罨法_部位1"),
+        elec:       !!getVal(row, "電療_部位1"),
+        startDate:  start1 instanceof Date ? fmt_(start1, "yyyy-MM-dd") : String(start1 || ""),
+        endDate:    end1   instanceof Date ? fmt_(end1,   "yyyy-MM-dd") : String(end1   || ""),
+        tenki:      String(getVal(row, "転帰_部位1") || ""),
+      };
+    });
+    casesResult.sort(function(a, b) { return a.caseNo - b.caseNo; });
+
+    Logger.log("[getPrevVisitData_V3] patientId=" + pid
+      + " lastVisitDate=" + latestDateStr + " cases=" + casesResult.length);
+    return { ok: true, patientId: pid, lastVisitDate: latestDateStr, cases: casesResult };
+  } catch (e) {
+    Logger.log("[getPrevVisitData_V3] error=" + e.message);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * 指定患者・ケース番号の最新 caseKey を来院ケースシートから取得。
+ * episodeStartDate 解決に使う（初検以外）。
+ * @param {Sheet} caseSh
+ * @param {Object} caseMap
+ * @param {string} patientId
+ * @param {number} caseNo
+ * @returns {string|null} caseKey または null
+ */
+function findLatestCaseKeyForPatient_(caseSh, caseMap, patientId, caseNo) {
+  var lastRow = caseSh.getLastRow();
+  if (lastRow < 2) return null;
+  var pidCol  = caseMap[CASE_COLS.patientId];
+  var noCol   = caseMap[CASE_COLS.caseNo];
+  var keyCol  = caseMap[CASE_COLS.caseKey];
+  var dateCol = caseMap[CASE_COLS.treatDate];
+  if (!pidCol || !noCol || !keyCol || !dateCol) return null;
+  var n     = lastRow - 1;
+  var pids  = caseSh.getRange(2, pidCol,  n, 1).getValues().flat();
+  var nos   = caseSh.getRange(2, noCol,   n, 1).getValues().flat();
+  var keys  = caseSh.getRange(2, keyCol,  n, 1).getValues().flat();
+  var dates = caseSh.getRange(2, dateCol, n, 1).getValues().flat();
+  var latest = null, latestDate = null;
+  for (var i = 0; i < n; i++) {
+    if (String(pids[i] || "").trim() !== patientId) continue;
+    if (Number(nos[i] || 0) !== caseNo) continue;
+    var d = dates[i] instanceof Date ? dates[i] : null;
+    if (d && (!latestDate || d.getTime() > latestDate.getTime())) {
+      latestDate = d;
+      latest     = String(keys[i] || "");
+    }
+  }
+  return latest || null;
+}
+
+/**
+ * Web UI から来院を登録する（患者画面シート非依存版）。
+ * 保険金額算定は行わず、要確認フラグを立てて保存する。
+ * @param {Object} payload
+ * @param {string} payload.patientId
+ * @param {string} payload.visitDate        - "YYYY-MM-DD"
+ * @param {string} [payload.accountingType] - "保険のみ"|"保険+自費"|"自費のみ"|""
+ * @param {boolean} [payload.gymMemberFlag]
+ * @param {boolean} [payload.chronicCandidateFlag]
+ * @param {boolean} [payload.nextReservation]
+ * @param {string} [payload.firstVisitType] - "保険新規"|"自費直新規"|"再来"|""
+ * @param {Object[]} payload.cases          - 最大2件
+ * @param {number}  payload.cases[].caseNo - 1 or 2
+ * @param {string}  payload.cases[].kubun  - "初検"|"再検"|"後療"
+ * @param {string}  payload.cases[].bodyPart
+ * @param {string}  payload.cases[].disease
+ * @param {string}  [payload.cases[].injuryDate] - "YYYY-MM-DD"
+ * @param {boolean} [payload.cases[].cold]
+ * @param {boolean} [payload.cases[].warm]
+ * @param {boolean} [payload.cases[].elec]
+ * @param {string}  [payload.cases[].startDate]  - "YYYY-MM-DD"
+ * @param {string}  [payload.cases[].endDate]    - "YYYY-MM-DD"
+ * @param {string}  [payload.cases[].tenki]
+ * @returns {{ok:boolean, visitKey?:string, patientId?:string,
+ *            message?:string, reasonCode?:string}}
+ */
+function saveVisitFromWeb_V3(payload) {
+  try {
+    var pid = String((payload && payload.patientId) || "").trim();
+    if (!pid) {
+      return { ok: false, reasonCode: "MISSING_REQUIRED", message: "患者IDが未指定です" };
+    }
+
+    var visitDateStr = String((payload && payload.visitDate) || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDateStr)) {
+      return { ok: false, reasonCode: "INVALID_DATE", message: "来院日の形式が不正です（YYYY-MM-DD）" };
+    }
+    var visitDate = new Date(visitDateStr + "T00:00:00+09:00");
+
+    var cases = Array.isArray(payload && payload.cases) ? payload.cases : [];
+    if (cases.length === 0) {
+      return { ok: false, reasonCode: "MISSING_REQUIRED", message: "ケース情報が未入力です" };
+    }
+
+    var ss       = SpreadsheetApp.getActiveSpreadsheet();
+    var masterSh = ss.getSheetByName(SHEETS.master);
+    var caseSh   = ss.getSheetByName(SHEETS.cases);
+    var headSh   = ss.getSheetByName(SHEETS.header);
+    if (!masterSh || !caseSh || !headSh) {
+      return { ok: false, reasonCode: "SYSTEM_ERROR", message: "必要シートが見つかりません" };
+    }
+
+    // 患者存在確認
+    var patientOk = false;
+    if (masterSh.getLastRow() >= 2) {
+      var mVals = masterSh.getDataRange().getValues();
+      var mHdr  = mVals[0];
+      var mPidIdx = -1;
+      for (var mh = 0; mh < mHdr.length; mh++) {
+        if (String(mHdr[mh] || "").trim() === "患者ID") { mPidIdx = mh; break; }
+      }
+      if (mPidIdx >= 0) {
+        for (var mr = 1; mr < mVals.length; mr++) {
+          if (String(mVals[mr][mPidIdx] || "").trim() === pid) { patientOk = true; break; }
+        }
+      }
+    }
+    if (!patientOk) {
+      return { ok: false, reasonCode: "PATIENT_NOT_FOUND", message: "患者ID " + pid + " が見つかりません" };
+    }
+
+    var visitKey = buildVisitKey_(pid, visitDate);
+    var caseMap  = buildHeaderColMap_(caseSh);
+    var headMap  = buildHeaderColMap_(headSh);
+
+    // 二重登録チェック
+    var existing = findRowByKey_(headSh, headMap, HEADER_COLS.visitKey, visitKey);
+    if (existing > 0) {
+      return {
+        ok: false,
+        reasonCode: "DUPLICATE_VISIT",
+        message: "同日来院が既に登録されています（visitKey: " + visitKey + "）"
+      };
+    }
+
+    var now           = new Date();
+    var kubunLabel    = "";
+    var caseKeysByNo  = {};
+
+    for (var ci = 0; ci < cases.length && ci < 2; ci++) {
+      var c      = cases[ci];
+      var caseNo = Number(c.caseNo || 1);
+      var kubun  = String(c.kubun  || "").trim();
+      if (!kubunLabel && kubun) kubunLabel = kubun;
+
+      // episodeStartDate: 初検→ visitDate、それ以外→既存 caseKey から解析
+      var episodeStartDate = visitDate;
+      if (kubun !== "初検") {
+        var latestKey = findLatestCaseKeyForPatient_(caseSh, caseMap, pid, caseNo);
+        if (latestKey) {
+          var keyParts = latestKey.split("_");
+          if (keyParts.length >= 3) {
+            var dateCandidate = keyParts[keyParts.length - 2];
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateCandidate)) {
+              episodeStartDate = new Date(dateCandidate + "T00:00:00+09:00");
+            }
+          }
+        }
+      }
+      var caseKey = buildCaseKey_(pid, episodeStartDate, caseNo);
+      caseKeysByNo[caseNo] = caseKey;
+
+      var injDateStr = String(c.injuryDate || "").trim();
+      var injDate    = /^\d{4}-\d{2}-\d{2}$/.test(injDateStr)
+        ? new Date(injDateStr + "T00:00:00+09:00") : "";
+
+      var rowIdx = findCaseRowByVisitKeyAndCaseNo_(caseSh, caseMap, visitKey, caseNo);
+      if (rowIdx === 0) {
+        var rowArr = new Array(caseSh.getLastColumn()).fill("");
+        setByName_(rowArr, caseMap, CASE_COLS.visitKey,  visitKey);
+        setByName_(rowArr, caseMap, CASE_COLS.treatDate, visitDate);
+        setByName_(rowArr, caseMap, CASE_COLS.patientId, pid);
+        setByName_(rowArr, caseMap, CASE_COLS.caseNo,    caseNo);
+        setByName_(rowArr, caseMap, CASE_COLS.caseKey,   caseKey);
+        setByName_(rowArr, caseMap, CASE_COLS.kubun,     kubun);
+        setByName_(rowArr, caseMap, CASE_COLS.p1,        String(c.bodyPart || "").trim());
+        setByName_(rowArr, caseMap, CASE_COLS.d1,        String(c.disease  || "").trim());
+        if (injDate) {
+          setByName_(rowArr, caseMap, CASE_COLS.inj1,        injDate);
+          setByName_(rowArr, caseMap, CASE_COLS.injuryFixed,  injDate);
+        }
+        setByName_(rowArr, caseMap, CASE_COLS.cold1, !!c.cold);
+        setByName_(rowArr, caseMap, CASE_COLS.warm1, !!c.warm);
+        setByName_(rowArr, caseMap, CASE_COLS.elec1, !!c.elec);
+        if (c.startDate && /^\d{4}-\d{2}-\d{2}$/.test(c.startDate)) {
+          setByName_(rowArr, caseMap, CASE_COLS.start1, new Date(c.startDate + "T00:00:00+09:00"));
+        } else if (kubun === "初検") {
+          setByName_(rowArr, caseMap, CASE_COLS.start1, visitDate);
+        }
+        if (c.endDate && /^\d{4}-\d{2}-\d{2}$/.test(c.endDate)) {
+          setByName_(rowArr, caseMap, CASE_COLS.end1, new Date(c.endDate + "T00:00:00+09:00"));
+        }
+        if (c.tenki) setByName_(rowArr, caseMap, CASE_COLS.tenki1, String(c.tenki));
+        setByName_(rowArr, caseMap, CASE_COLS.createdAt, now);
+        caseSh.appendRow(rowArr);
+        Logger.log("[saveVisitFromWeb_V3] action=CASE_CREATE visitKey=" + visitKey
+          + " caseNo=" + caseNo + " kubun=" + kubun);
+      }
+    }
+
+    // 来院ヘッダ保存（金額未算定: visitTotal=0, needCheck=true）
+    var lastVisit = findLastVisitDateInHeader_(headSh, headMap, pid, visitDate);
+    var gapDays   = (lastVisit instanceof Date) ? daysBetween_(lastVisit, visitDate) : "";
+    var hCaseKey  = caseKeysByNo[1] || caseKeysByNo[2] || "";
+    var hCaseIdx  = caseKeysByNo[1] ? 1 : (caseKeysByNo[2] ? 2 : 0);
+    var hCaseKey2 = (caseKeysByNo[1] && caseKeysByNo[2]) ? caseKeysByNo[2] : "";
+
+    appendHeaderRow_V3_(headSh, headMap, {
+      visitKey:            visitKey,
+      treatDate:           visitDate,
+      patientId:           pid,
+      kubun:               kubunLabel,
+      injuryVisit:         "",
+      initFee:             0,
+      reFee:               0,
+      supportFee:          0,
+      detailSum:           0,
+      visitTotal:          0,
+      windowPay:           0,
+      claimPay:            0,
+      lastVisit:           lastVisit || "",
+      gapDays:             gapDays,
+      needCheck:           true,
+      needCheckReason:     "Web UI 登録（金額未算定）",
+      createdAt:           now,
+      caseKey:             hCaseKey,
+      caseIndex:           hCaseIdx,
+      caseKey2:            hCaseKey2,
+      billedKubun:         "",
+      mixedFlag:           "",
+      case1Summary:        "",
+      case2Summary:        "",
+      chargeReason:        "",
+      accountingType:      String((payload && payload.accountingType)      || ""),
+      chronicCandidateFlag: !!(payload && payload.chronicCandidateFlag),
+      nextReservation:      !!(payload && payload.nextReservation),
+      firstVisitType:       String((payload && payload.firstVisitType)     || ""),
+      gymMemberFlag:        !!(payload && payload.gymMemberFlag),
+    });
+
+    Logger.log("[saveVisitFromWeb_V3] action=WEB_VISIT_CREATE patientId=" + pid
+      + " visitKey=" + visitKey + " result=OK");
+    return {
+      ok:        true,
+      visitKey:  visitKey,
+      patientId: pid,
+      message:   "来院を登録しました（要確認フラグあり: スプレッドシートで金額を算定してください）"
+    };
+  } catch (e) {
+    Logger.log("[saveVisitFromWeb_V3] error=" + e.message);
+    return { ok: false, reasonCode: "SYSTEM_ERROR", message: e.message };
+  }
+}
+
+/* ======================================================================= */
+
 function getPatientDetail_V3(patientId) {
   try {
     var pid = String(patientId || "").trim();
