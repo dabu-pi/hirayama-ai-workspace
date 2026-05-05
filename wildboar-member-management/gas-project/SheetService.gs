@@ -10,10 +10,26 @@
 /**
  * スプレッドシートオブジェクトを取得する
  *
+ * コンテナバインド時は getActiveSpreadsheet() を優先する。
+ * スタンドアロン実行時のみ Config.gs の SPREADSHEET_ID（またはスクリプトプロパティ）を使う。
+ *
  * @returns {SpreadsheetApp.Spreadsheet}
+ * @throws {Error} ID が未設定の場合
  */
 function getSpreadsheet() {
-  return SpreadsheetApp.openById(getSpreadsheetId());
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+
+  var id = getSpreadsheetId();
+  if (!id || id === 'YOUR_SPREADSHEET_ID_HERE') {
+    throw new Error(
+      '[Config.gs の SPREADSHEET_ID が未設定です]\n' +
+      'スタンドアロン実行時は以下のいずれかを設定してください：\n' +
+      '1. GASエディタ → プロジェクト設定 → スクリプトプロパティ → SPREADSHEET_ID = <スプレッドシートID>\n' +
+      '2. Config.gs の getSpreadsheetId() のフォールバック値を実際のIDに変更'
+    );
+  }
+  return SpreadsheetApp.openById(id);
 }
 
 /**
