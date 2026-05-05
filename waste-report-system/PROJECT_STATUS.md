@@ -29,6 +29,7 @@
 | 2026-05-05 | 旧名称検索完了（GAS コード内ヒットなし） |
 | 2026-05-05 | J16（月報テンプレ）を「あさご暮らしサポート」に変更（ユーザー実施） |
 | 2026-05-05 | README.md・SPEC.md・PROJECT_STATUS.md 整備完了 |
+| 2026-05-05 | Dashboard 反映完了（Projects / Run_Log / Task_Queue）|
 
 ---
 
