@@ -183,12 +183,18 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 
 **スペック:** `tools/live-check-runner/projects/jyu-gas-ver31/`
 
-| スペック | コマンド | 結果 | SKIP 理由 |
+| スペック | コマンド | 最終結果 | SKIP 理由 |
 |---|---|---|---|
-| `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | 26 SKIP / 0 FAIL | Google Account Chooser |
-| `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | 16 SKIP / 0 FAIL | Google Account Chooser |
+| `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | 26 SKIP / 0 FAIL | RTS 期限切れ |
+| `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | 16 SKIP / 0 FAIL | RTS 期限切れ |
 
-**SKIP はエラーではない** — テスト構造は正常。auth 更新で PASS に変わる。
+**FAIL ゼロ** — テスト構造は正常。auth 更新で PASS に変わる。
+
+### 根本原因（2026-05-06 診断）
+
+`__Secure-1PSIDRTS` / `__Secure-3PSIDRTS`（Google セッション・ローテーショントークン）が  
+2026-05-04 01:08 UTC に期限切れ → 全 GAS アクセスで Account Chooser が発生。  
+影響範囲: JYU-GAS / JREC-SF01 両プロジェクト共通。
 
 ### auth 更新手順（次回確認時）
 
@@ -197,15 +203,18 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 $dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
 Start-Process "chrome" "--remote-debugging-port=9222 --user-data-dir=`"$dir`""
 
-# 2. Chrome で JYU-GAS dev URL を開く・Account Chooser で pinshanka24@gmail.com を選択
-#    https://script.google.com/macros/s/AKfycbzj47fbRvTlVixUrUiV_25xkevfyI_HXhFaBKYodB2B/dev
+# 2. Chrome で以下を開く（順番通りに実行）
+#    a) https://accounts.google.com でログイン確認（RTS 更新のため必須）
+#    b) JYU-GAS dev URL を開き Account Chooser で pinshanka24@gmail.com を選択
+#    c) GAS ページが表示されるまで待つ（この確認が重要）
 
-# 3. auth.json 更新
+# 3. GAS ページ表示確認後に save-auth
 cd C:\hirayama-ai-workspace\workspace\tools\live-check-runner
 npm run save-auth
 
 # 4. テスト実行
 npm run test:jyu
+npm run test:jrec:smoke
 ```
 
 ### testData.patientId が必要なテスト

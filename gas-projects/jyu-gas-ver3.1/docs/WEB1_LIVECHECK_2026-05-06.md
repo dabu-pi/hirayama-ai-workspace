@@ -6,48 +6,81 @@
 
 ---
 
-## Playwright LiveCheck 実行結果（2026-05-06）
+## Playwright LiveCheck 実行結果（2026-05-06 第1回・第2回）
 
 **スペックファイル:** `tools/live-check-runner/projects/jyu-gas-ver31/smoke.spec.ts`  
 **実行コマンド:** `npm run test:jyu:smoke`
 
+### 第1回（Account Chooser 問題）
 | 結果 | 件数 |
 |---|---|
 | PASS | 0 |
 | FAIL | 0 |
 | SKIP | 26（全件） |
+SKIP 理由: auth.json に JYU-GAS セッションなし
 
-**SKIP 理由:** Google Account Chooser に遷移（`title: "Google Drive: Sign-in"`）
+### 第2回（auth 更新後・RTS 期限切れ判明）
+| 結果 | 件数 |
+|---|---|
+| PASS | 0 |
+| FAIL | 0 |
+| SKIP | 26（全件）・JREC-SF01 も同様 |
+SKIP 理由: `__Secure-1PSIDRTS` / `__Secure-3PSIDRTS` 期限切れ（2026-05-04 01:08 UTC）
 
-### SKIP の原因と対処
+---
+
+## auth 失敗の根本原因（2026-05-06 診断）
+
+### 診断結果
 
 ```
-現象: GAS dev URL → accounts.google.com/v3/signin/accountchooser にリダイレクト
-原因: auth.json は JREC-SF01 のログインで作成されており、JYU-GAS の URL を Chrome で
-      一度も開いていないため Account Chooser が表示される
-対処: 以下の手順で auth.json を更新する
+実行: tsx scripts/diag-jyu-auth.ts
+確認パターン: dev/exec × normal/stealth × authuser=0/1 — 全 5 パターン FAIL
+全パターン: accounts.google.com/v3/signin/accountchooser にリダイレクト
+影響範囲: JYU-GAS と JREC-SF01 の両方が SKIP（auth 問題はプロジェクト横断）
 ```
 
-**auth 更新手順（Chrome CDP 方式）:**
+### 期限切れクッキー
+
+| クッキー名 | domain | 期限 | 状態 |
+|---|---|---|---|
+| `__Secure-1PSIDRTS` | `.google.com` | 2026-05-04 01:08 UTC | **期限切れ** |
+| `__Secure-3PSIDRTS` | `.google.com` | 2026-05-04 01:08 UTC | **期限切れ** |
+
+`PSIDRTS` = Google セッションのローテーショントークン（有効期間: 約24時間）。  
+このトークンが期限切れになると、セッションが再検証のために Account Chooser を表示する。
+
+### 正しい save-auth 手順（RTS 更新を含む）
+
+**手順の重要ポイント:**
+- Chrome を起動したあと、**必ず Google のページをアクティブに開いて**  
+  RTS が更新されてから save-auth を実行する
+- save-auth の直前に Chrome で Google ページが開いていることを確認すること
+
 ```powershell
-# 1. Chrome を remote debugging で起動（.chrome-profile の既存セッションを使用）
-cd C:\hirayama-ai-workspace\workspace\tools\live-check-runner
-$dir = "$(Get-Location)\.chrome-profile"
+# === save-auth 正しい手順 ===
+
+# 1. Chrome を remote debugging で起動
+$dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
 Start-Process "chrome" "--remote-debugging-port=9222 --user-data-dir=`"$dir`""
 
-# 2. 開いた Chrome で JYU-GAS dev URL を開く
-#    https://script.google.com/macros/s/AKfycbzj47fbRvTlVixUrUiV_25xkevfyI_HXhFaBKYodB2B/dev
-#    → Account Chooser が出たら pinshanka24@gmail.com を選択
+# 2. Chrome で以下を順番に開く（ログイン状態の確認 + RTS 更新）
+#    a) https://accounts.google.com   ← まずここでセッション更新
+#    b) pinshanka24@gmail.com でログイン確認
+#    c) https://script.google.com/macros/s/AKfycbzj47fbRvTlVixUrUiV_25xkevfyI_HXhFaBKYodB2B/dev
+#       → Account Chooser が出たら pinshanka24@gmail.com を選択
+#       → GAS ページが表示されるまで待つ（重要）
 
-# 3. auth.json を更新
+# 3. GAS ページが表示されたのを確認してから save-auth 実行
 cd C:\hirayama-ai-workspace\workspace\tools\live-check-runner
 npm run save-auth
 
-# 4. テスト再実行
-npm run test:jyu:smoke
+# 4. テスト実行（JYU + JREC の両方を確認）
+npm run test:jyu
+npm run test:jrec:smoke
 ```
 
-**期待結果（auth 更新後）:** 26 PASS / 0 FAIL / 0 SKIP
+**期待結果（save-auth 完了後）:** 42 PASS / 0 FAIL / 0 SKIP（testData.patientId 設定分は SKIP）
 
 ---
 
