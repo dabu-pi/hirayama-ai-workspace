@@ -7,7 +7,7 @@
 | 項目 | 内容 |
 |---|---|
 | 現在フェーズ | **Phase 2（入会フォーム実装）** |
-| ステータス | Phase 1 DEV実行確認完了 → Phase 2 開始準備中 |
+| ステータス | GASコード実装完了・clasp push済み・Webアプリデプロイ待ち |
 | 担当 | Claude Code（AI） + 平山克司（オーナー） |
 
 ---
@@ -102,14 +102,40 @@
 
 ---
 
+## Phase 2 実装済み内容（2026-05-05）
+
+| ファイル | 実装内容 |
+|---|---|
+| `gas-project/IntakeService.gs` | `getMembershipPlans()` / `generateApplicationId()` / `saveIntakeApplication()` 実装 |
+| `gas-project/ValidationService.gs` | `validateIntakeForm()` 全バリデーション実装 |
+| `gas-project/html/intake-form.html` | 5ステップ入会フォーム + 確認画面 + 完了画面（1ファイル完結） |
+
+**intake-form.html 実装内容:**
+- Step 1: 基本情報（氏名・フリガナ・生年月日・性別・職業）
+- Step 2: 住所（郵便番号自動検索 / zipcloud API 使用）
+- Step 3: 連絡先（携帯・自宅・メール）
+- Step 4: 緊急連絡先（氏名・続柄・電話番号）
+- Step 5: コース選択（MembershipPlansから動的取得）+ プライバシー同意
+- 確認画面: 全入力内容の一覧表示
+- 完了画面: 受付番号表示
+- sessionStorage によるステップ間データ保持
+- フロントエンド + バックエンド二重バリデーション
+- 二重送信防止（submitting フラグ + ボタン disabled）
+- 個人情報をログに出力しない設計
+
+**採番ロジック（generateApplicationId）:**
+- フォーマット: `APP-YYYYMMDD-XXXX`（当日連番・4桁ゼロ埋め）
+- 既存IDを参照して重複を防ぐ
+
 ## Phase 2（入会フォーム実装）開始条件
 
 | 条件 | 状態 |
 |---|---|
 | DEVスプレッドシートで 11シート作成確認済み | ✅ 完了（2026-05-05） |
 | setupSpreadsheet() 冪等性確認済み | ✅ 完了（2026-05-05） |
+| フォーム・バックエンドコード実装 | ✅ 完了（2026-05-05） |
 | GAS を Webアプリとしてデプロイ | ⏸ オーナー作業待ち |
-| MembershipPlans 金額確定 | ⏸ 仮値のままでも開発は可能 |
+| MembershipPlans 金額確定 | ⏸ 仮値のままでも動作確認は可能 |
 
 ---
 
@@ -157,3 +183,4 @@
 | 2026-05-05 | clasp コンテナバインド作成・24ファイル push |
 | 2026-05-05 | SheetService.gs バグ修正（getActiveSpreadsheet() 優先化） |
 | 2026-05-05 | **Phase 1 DEV実行確認完了**（setupSpreadsheet() 全項目PASS・冪等性確認済み） |
+| 2026-05-05 | Phase 2 入会フォーム実装（IntakeService.gs / ValidationService.gs / intake-form.html）|

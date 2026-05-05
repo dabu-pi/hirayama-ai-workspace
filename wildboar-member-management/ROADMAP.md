@@ -8,7 +8,7 @@
 |---|---|---|
 | Phase 0 | 設計資料作成 | ✅ 完了（2026-05-04） |
 | Phase 1 | スプレッドシート基盤構築 | ✅ 完了（2026-05-05 DEV実行確認済み） |
-| Phase 2 | 入会フォーム実装 | 🔄 開始準備中 |
+| Phase 2 | 入会フォーム実装 | 🔄 実装完了・Webアプリデプロイ確認待ち |
 | Phase 3 | スタッフ確認・会員登録機能 | 未着手 |
 | Phase 4 | 会員一覧・検索・詳細表示 | 未着手 |
 | Phase 5 | 休会・退会・再開処理 | 未着手 |
@@ -99,19 +99,27 @@
 
 **目標:** タブレットから入力できる入会申込フォームを実装する。
 
+**ステータス:** GASコード実装・clasp push 完了（2026-05-05）。Webアプリデプロイ後に動作確認。
+
 **前提条件:** Phase 1が完了していること
 
-### タスク
+### タスク（完了）
 
-- [ ] intake-form.html の実装（ステップ1：個人情報）
-- [ ] intake-form.html の実装（ステップ2：緊急連絡先）
-- [ ] intake-form.html の実装（ステップ3：コース選択）
-- [ ] intake-confirm.html の実装（確認画面）
-- [ ] フォーム送信後の完了メッセージ実装
-- [ ] IntakeService.gs の申込データ保存処理を実装
-- [ ] ValidationService.gs のバリデーション実装
-- [ ] タブレット表示確認（iPad 等で動作テスト）
-- [ ] 入力内容が IntakeApplications シートに正しく保存されることを確認
+- [x] intake-form.html の実装（Step 1〜5 + 確認画面 + 完了画面を1ファイルに実装）
+- [x] フォーム送信後の完了メッセージ・受付番号表示実装
+- [x] IntakeService.gs: getMembershipPlans / generateApplicationId / saveIntakeApplication 実装
+- [x] ValidationService.gs: validateIntakeForm 全バリデーション実装
+- [x] 郵便番号自動検索（zipcloud API）実装
+- [x] sessionStorage によるステップ間データ保持
+- [x] 二重送信防止・ローディングオーバーレイ
+- [x] 個人情報ログ出力防止
+
+### タスク（オーナー動作確認待ち）
+
+- [ ] GAS Webアプリとしてデプロイする（「新しいデプロイ」→「種類：Webアプリ」→「アクセス：全員」）
+- [ ] タブレットでフォームを開いてStep 1〜完了まで通し確認
+- [ ] IntakeApplications シートに申込データが保存されることを確認
+- [ ] 2回送信しても application_id が重複しないことを確認
 
 ---
 
