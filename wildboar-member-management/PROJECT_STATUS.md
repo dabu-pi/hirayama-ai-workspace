@@ -1,6 +1,6 @@
 # PROJECT_STATUS — ワイルドボア会員管理システム
 
-最終更新：2026-05-05
+最終更新：2026-05-05（Phase 2 live check 実施・BUG-01 修正済み）
 
 ## 現在の状態
 
@@ -173,6 +173,53 @@
 
 ---
 
+---
+
+## Phase 2 Live Check 結果（2026-05-05）
+
+### 実施方法
+
+GAS WebApp 未デプロイのため Playwright 実機実行は未実施。
+全 Phase 2 ファイルの静的コード分析（目視確認）を実施。
+Playwright spec は `tests/intake/phase2.spec.js` に追加済み（デプロイ後に実行可能）。
+
+### 発見バグ・修正済み
+
+| バグID | 深刻度 | 内容 | 修正 |
+|---|---|---|---|
+| BUG-01 | **重大** | `appsscript.json` の `executeAs` が `USER_ACCESSING`。匿名ユーザー（Google未ログイン入会希望者）がフォーム送信するとスプレッドシート書き込みエラーになる | `USER_DEPLOYING` に修正・clasp push 済み |
+
+### 静的確認結果サマリー
+
+| カテゴリ | 件数 | 結果 |
+|---|---|---|
+| 静的確認チェック総数 | 20 | PASS: 19 / BUG修正: 1 |
+| 個人情報ログ出力 | 確認 | **PII なし（application_id のみ）** |
+| 二重送信防止 | 確認 | **submitting フラグ + ボタン disabled** |
+| フロント/バックエンド二重バリデーション | 確認 | **両方実装済み** |
+| XSS 対策 | 確認 | **esc() 関数でエスケープ済み** |
+
+### 実機確認が必要な残タスク（デプロイ後）
+
+| # | 内容 | 確認方法 |
+|---|---|---|
+| RT-01 | GAS WebApp として「全員」アクセス・デプロイ後にフォームが開くこと | Playwright test / 手動 |
+| RT-02 | getMembershipPlans() でコース一覧が表示されること | Playwright test |
+| RT-03 | 送信後に IntakeApplications シートに行が追加されること | シート目視確認 |
+| RT-04 | review_status = pending で保存されること | シート目視確認 |
+| RT-05 | GAS 実行ログに個人情報が出力されていないこと | GASエディタ ログ確認 |
+| RT-06 | 二重送信しても application_id が重複しないこと | Playwright test |
+
+### デプロイ手順（オーナー向け）
+
+1. GASエディタ → 「デプロイ」→「新しいデプロイ」
+2. 種類：「ウェブアプリ」
+3. 実行ユーザー：**「自分（開発者）」**（USER_DEPLOYING に修正済み）
+4. アクセス権限：「全員」
+5. 「デプロイ」→ URL をメモして `WEBAPP_URL` として共有
+
+---
+
 ## 変更履歴
 
 | 日付 | 変更内容 |
@@ -184,3 +231,5 @@
 | 2026-05-05 | SheetService.gs バグ修正（getActiveSpreadsheet() 優先化） |
 | 2026-05-05 | **Phase 1 DEV実行確認完了**（setupSpreadsheet() 全項目PASS・冪等性確認済み） |
 | 2026-05-05 | Phase 2 入会フォーム実装（IntakeService.gs / ValidationService.gs / intake-form.html）|
+| 2026-05-05 | **BUG-01 修正**: appsscript.json executeAs USER_ACCESSING → USER_DEPLOYING（匿名ユーザー送信不可バグ）clasp push 済み |
+| 2026-05-05 | Phase 2 静的確認実施・Playwright spec 追加（tests/intake/phase2.spec.js）|

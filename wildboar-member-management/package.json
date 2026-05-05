@@ -1,0 +1,13 @@
+{
+  "name": "wildboar-member-management-tests",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for wildboar member management GAS webapp",
+  "scripts": {
+    "test": "playwright test",
+    "test:phase2": "playwright test tests/intake/phase2.spec.js",
+    "install-browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

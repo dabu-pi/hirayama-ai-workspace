@@ -1,7 +1,7 @@
 # 手動テストチェックリスト
 
 作成日：2026-05-04
-最終更新：2026-05-05
+最終更新：2026-05-05（Phase 2 静的確認追記）
 
 各フェーズの実装後に実施する手動テストのチェックリスト。
 
@@ -25,22 +25,63 @@
 
 ---
 
+---
+
+## Phase 2 静的確認（コードレビュー） — 2026-05-05
+
+**実施方法:** GAS Webアプリ未デプロイのため、Playwright 実機実行は未実施。
+ソースコードの静的分析（全ファイル目視確認）で確認。
+
+### 発見された重大バグ
+
+| # | 内容 | ファイル | 修正状態 |
+|---|---|---|---|
+| BUG-01 | `appsscript.json` の `executeAs` が `USER_ACCESSING`（匿名ユーザーがフォーム送信時にスプレッドシート書き込みエラーになる） | `gas-project/appsscript.json` | **修正済み → `USER_DEPLOYING` に変更・clasp push 実施** |
+
+### 静的確認チェックリスト
+
+| # | 確認内容 | 確認方法 | 結果 | 備考 |
+|---|---|---|---|---|
+| SC-01 | `?page=intake-form` ルーティング存在 | Code.gs switch case | PASS | |
+| SC-02 | Step 1〜5 HTML要素が定義されている | intake-form.html | PASS | id=step1〜step5 |
+| SC-03 | Step 1: 氏名・フリガナ・生年月日・性別・職業フィールド | intake-form.html | PASS | 全フィールド実装済み |
+| SC-04 | Step 2: 郵便番号・都道府県・市区町村・番地・建物名フィールド | intake-form.html | PASS | 全フィールド実装済み |
+| SC-05 | Step 2: zipcloud API フォールバック（失敗時は手入力可能） | intake-form.html L764 | PASS | catch → エラー表示のみ |
+| SC-06 | Step 3: 携帯・自宅電話・メールフィールド | intake-form.html | PASS | 全フィールド実装済み |
+| SC-07 | Step 4: 緊急連絡先氏名・続柄・電話番号フィールド | intake-form.html | PASS | 全フィールド実装済み |
+| SC-08 | Step 5: getMembershipPlans() でコース動的取得 | IntakeService.gs L16 | PASS | アクティブ・表示順でフィルタ |
+| SC-09 | Step 5: プライバシー同意チェックボックス | intake-form.html L401 | PASS | |
+| SC-10 | 確認画面: fillConfirmScreen() で全項目表示 | intake-form.html L798 | PASS | 全フィールドマッピング確認 |
+| SC-11 | 送信: submitForm() → saveIntakeApplication() 呼び出し | intake-form.html L877 | PASS | |
+| SC-12 | 完了画面: receiptId に受付番号を表示 | intake-form.html L881 | PASS | |
+| SC-13 | 受付番号形式 APP-YYYYMMDD-XXXX | IntakeService.gs L118 | PASS | 当日連番・4桁ゼロ埋め |
+| SC-14 | IntakeApplications シートへの appendRow() 呼び出し | IntakeService.gs L96 | PASS | |
+| SC-15 | review_status = 'pending' で保存 | IntakeService.gs L88 | PASS | |
+| SC-16 | 二重送信防止: submitting フラグ + ボタン disabled | intake-form.html L842 | PASS | |
+| SC-17 | 個人情報ログ出力なし: Logger.log に氏名・住所・電話なし | IntakeService.gs L59, L97 | PASS | application_id のみ |
+| SC-18 | バックエンドバリデーション (validateIntakeForm) 実装済み | ValidationService.gs L18 | PASS | フロント・バックで二重チェック |
+| SC-19 | sessionStorage でステップ間データ保持 | intake-form.html L772 | PASS | 送信完了後に clear() |
+| SC-20 | XSS 対策: esc() 関数でコースカード HTML をエスケープ | intake-form.html L903 | PASS | |
+
+---
+
 ## Phase 2 テスト — 入会フォーム
 
 **前提:** GAS Webアプリとしてデプロイ済みであること
+**実機テスト状態:** ⏸ URL未設定のため未実施（Playwright spec は `tests/intake/phase2.spec.js` に追加済み）
 
 ### 正常ケース
 
 | # | テスト内容 | 期待結果 | 実施日 | 結果 |
 |---|---|---|---|---|
-| 2-1 | Step1で全項目を入力して「次へ」をタップ | エラーなくStep2に進む | | |
-| 2-2 | Step2で郵便番号を入力して「住所を検索」 | 都道府県・市区町村が自動入力される | | |
-| 2-3 | Step5で「確認画面へ」をタップ | 入力した全内容が確認画面に表示される | | |
-| 2-4 | 確認画面で「この内容で申し込む」をタップ | ローディング表示 → 受付番号が表示される | | |
-| 2-5 | 申込完了後、IntakeApplicationsシートを確認 | 最新行に申込データが保存されている | | |
-| 2-6 | review_status が pending になっている | シートの review_status 列で確認できる | | |
-| 2-7 | 受付番号の形式が APP-YYYYMMDD-XXXX になっている | 例: APP-20260505-0001 | | |
-| 2-8 | 「ホームへ戻る」をタップ | ホーム画面に遷移する | | |
+| 2-1 | Step1で全項目を入力して「次へ」をタップ | エラーなくStep2に進む | | SKIP（URL未設定） |
+| 2-2 | Step2で郵便番号を入力して「住所を検索」 | 都道府県・市区町村が自動入力される | | SKIP（URL未設定） |
+| 2-3 | Step5で「確認画面へ」をタップ | 入力した全内容が確認画面に表示される | | SKIP（URL未設定） |
+| 2-4 | 確認画面で「この内容で申し込む」をタップ | ローディング表示 → 受付番号が表示される | | SKIP（URL未設定） |
+| 2-5 | 申込完了後、IntakeApplicationsシートを確認 | 最新行に申込データが保存されている | | SKIP（URL未設定） |
+| 2-6 | review_status が pending になっている | シートの review_status 列で確認できる | | SKIP（URL未設定） |
+| 2-7 | 受付番号の形式が APP-YYYYMMDD-XXXX になっている | 例: APP-20260505-0001 | | SKIP（URL未設定） |
+| 2-8 | 「ホームへ戻る」をタップ | ホーム画面に遷移する | | SKIP（URL未設定） |
 
 ### バリデーションチェック
 

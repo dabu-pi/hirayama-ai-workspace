@@ -8,7 +8,7 @@
 |---|---|---|
 | Phase 0 | 設計資料作成 | ✅ 完了（2026-05-04） |
 | Phase 1 | スプレッドシート基盤構築 | ✅ 完了（2026-05-05 DEV実行確認済み） |
-| Phase 2 | 入会フォーム実装 | 🔄 実装完了・Webアプリデプロイ確認待ち |
+| Phase 2 | 入会フォーム実装 | 🔄 実装完了・BUG-01修正済み・Webアプリデプロイ後に実機確認待ち |
 | Phase 3 | スタッフ確認・会員登録機能 | 未着手 |
 | Phase 4 | 会員一覧・検索・詳細表示 | 未着手 |
 | Phase 5 | 休会・退会・再開処理 | 未着手 |
@@ -99,7 +99,7 @@
 
 **目標:** タブレットから入力できる入会申込フォームを実装する。
 
-**ステータス:** GASコード実装・clasp push 完了（2026-05-05）。Webアプリデプロイ後に動作確認。
+**ステータス:** GASコード実装・静的確認・BUG-01修正・clasp push 完了（2026-05-05）。Webアプリデプロイ後に実機確認。
 
 **前提条件:** Phase 1が完了していること
 
@@ -113,12 +113,16 @@
 - [x] sessionStorage によるステップ間データ保持
 - [x] 二重送信防止・ローディングオーバーレイ
 - [x] 個人情報ログ出力防止
+- [x] **BUG-01 修正**: appsscript.json の executeAs を USER_DEPLOYING に修正・clasp push 済み
+- [x] 静的コード分析（20項目・全PASS）
+- [x] Playwright spec 追加（tests/intake/phase2.spec.js）
 
 ### タスク（オーナー動作確認待ち）
 
-- [ ] GAS Webアプリとしてデプロイする（「新しいデプロイ」→「種類：Webアプリ」→「アクセス：全員」）
-- [ ] タブレットでフォームを開いてStep 1〜完了まで通し確認
+- [ ] GAS Webアプリとしてデプロイする（「新しいデプロイ」→「種類：Webアプリ」→「実行ユーザー：自分」→「アクセス：全員」）
+- [ ] WILDBOAR_WEBAPP_URL を設定して Playwright テストを実行: `WILDBOAR_WEBAPP_URL=<URL> npx playwright test tests/intake/phase2.spec.js`
 - [ ] IntakeApplications シートに申込データが保存されることを確認
+- [ ] GAS 実行ログに個人情報が出力されていないことを確認
 - [ ] 2回送信しても application_id が重複しないことを確認
 
 ---
