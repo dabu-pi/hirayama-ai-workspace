@@ -1,0 +1,7 @@
+# Phase 1: 標準ライブラリのみ（追加インストール不要）
+# tkinter は Python 標準付属
+# Python 3.10+ 推奨
+
+# Phase 2 以降で追加予定:
+# keyboard==0.13.5   # ホットキー対応
+# pywin32==306       # Windowsデスクトップ番号取得
