@@ -1,9 +1,48 @@
 # WEB-2 LiveCheck 記録
 
 実施日: 2026-05-06  
-実施者: Claude Code (コードレビュー方式)  
+実施者: Claude Code  
 対象: Phase WEB-2 実装内容（来院記録登録 MVP）  
 clasp push: 完了（15ファイル）
+
+---
+
+## Playwright LiveCheck 実行結果（2026-05-06）
+
+**スペックファイル:** `tools/live-check-runner/projects/jyu-gas-ver31/web2.spec.ts`  
+**実行コマンド:** `npm run test:jyu:web2`
+
+| 結果 | 件数 |
+|---|---|
+| PASS | 0 |
+| FAIL | 0 |
+| SKIP | 16（全件） |
+
+**SKIP 理由:** Google Account Chooser に遷移（WEB-1 と同じ auth 問題）
+
+### SKIP 内訳
+
+| テスト | SKIP 理由 |
+|---|---|
+| W2-1a/b: page=visitNew 到達 | auth |
+| W2-2a〜g: フォーム要素確認（7件） | auth |
+| W2-3a: patientId なし → 未指定表示 | auth |
+| W2-3b: patientId あり → chip 表示 | auth + testData.patientId 未設定 |
+| W2-4a: #inheritBtn 存在 | auth |
+| W2-4b: 前回引き継ぎ応答 | auth + testData.patientId 未設定 |
+| W2-5: バリデーション確認 | auth |
+| W2-6/7: モーダル確認 | auth + testData.patientId 未設定 |
+| W2-8: コンソールエラー確認 | auth |
+
+### auth 更新後に追加で必要な設定
+
+`tools/live-check-runner/projects/jyu-gas-ver31/config.json` の `testData.patientId` に  
+実在する患者IDを設定すること（例: `"PT001"`）。  
+設定後に `npm run test:jyu:web2` を再実行する。
+
+**期待結果（auth + patientId 設定後）:**
+- W2-1a/b, W2-2a〜g, W2-3a, W2-4a, W2-5, W2-8: PASS
+- W2-3b, W2-4b, W2-6/7: PASS（patientId 設定 + 患者存在時）
 
 ---
 

@@ -3,6 +3,10 @@
   "screenshotsDirName": "screenshots",
   "defaultTimeoutMs": 30000,
   "projects": {
+    "jyu-gas-ver31": {
+      "type": "gas-webapp",
+      "configPath": "projects/jyu-gas-ver31/config.json"
+    },
     "jrec-sf01": {
       "type": "gas-webapp",
       "configPath": "projects/jrec-sf01/config.json"

@@ -179,6 +179,42 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 
 ---
 
+## Playwright LiveCheck 状況（2026-05-06）
+
+**スペック:** `tools/live-check-runner/projects/jyu-gas-ver31/`
+
+| スペック | コマンド | 結果 | SKIP 理由 |
+|---|---|---|---|
+| `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | 26 SKIP / 0 FAIL | Google Account Chooser |
+| `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | 16 SKIP / 0 FAIL | Google Account Chooser |
+
+**SKIP はエラーではない** — テスト構造は正常。auth 更新で PASS に変わる。
+
+### auth 更新手順（次回確認時）
+
+```powershell
+# 1. Chrome を remote debugging で起動
+$dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
+Start-Process "chrome" "--remote-debugging-port=9222 --user-data-dir=`"$dir`""
+
+# 2. Chrome で JYU-GAS dev URL を開く・Account Chooser で pinshanka24@gmail.com を選択
+#    https://script.google.com/macros/s/AKfycbzj47fbRvTlVixUrUiV_25xkevfyI_HXhFaBKYodB2B/dev
+
+# 3. auth.json 更新
+cd C:\hirayama-ai-workspace\workspace\tools\live-check-runner
+npm run save-auth
+
+# 4. テスト実行
+npm run test:jyu
+```
+
+### testData.patientId が必要なテスト
+
+`projects/jyu-gas-ver31/config.json` の `testData.patientId` に実在 ID を設定後:
+- W2-3b, W2-4b, W2-6/7, S-6a/b が PASS になる
+
+---
+
 ## 要実機確認（現場スマホ）
 
 **WEB-1:**

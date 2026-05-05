@@ -1,0 +1,26 @@
+{
+  "name": "JYU-GAS-VER31",
+  "type": "gas-webapp",
+  "scriptId": "1LROlc63TPr4Y2uV3nT6tAwOc-T0bOFflF0aXNzTlLEM_C3QbydHxCTzH",
+  "devUrl": "https://script.google.com/macros/s/AKfycbzj47fbRvTlVixUrUiV_25xkevfyI_HXhFaBKYodB2B/dev",
+  "prodUrl": "https://script.google.com/macros/s/AKfycbxODNWJNcCJVQnDXHzzWck237hnUIIXR_Ilt8SS5P5zodfF2dnmKeqso8BL8hcinVEBrQ/exec",
+  "currentDeployment": "@9",
+  "notes": [
+    "access: MYSELF — スクリプトオーナー(pinshanka24@gmail.com)のみアクセス可",
+    "auth.json が必要。save-auth で取得。",
+    "GAS iframe 構造: page > iframe[outer] > iframe[inner] > GAS コンテンツ",
+    "page=search がデフォルト(変更禁止)",
+    "saveVisitFromWeb_V3 はテストでは確認モーダルまでで止める(実データ書き込み禁止)"
+  ],
+  "pages": {
+    "search": "",
+    "home": "?page=home",
+    "detail": "?page=detail",
+    "visitNew": "?page=visitNew",
+    "selfpay": "?page=selfpay"
+  },
+  "testData": {
+    "patientId": "",
+    "note": "実在する患者IDを設定するとpatient-detail/visitNewの詳細テストが実行される。空の場合はそれらのテストをスキップ。例: PT001"
+  }
+}
