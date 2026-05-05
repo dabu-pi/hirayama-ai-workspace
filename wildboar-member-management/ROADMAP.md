@@ -9,7 +9,7 @@
 | Phase 0 | 設計資料作成 | ✅ 完了（2026-05-04） |
 | Phase 1 | スプレッドシート基盤構築 | ✅ 完了（2026-05-05 DEV実行確認済み） |
 | Phase 2 | 入会フォーム実装 | 🔄 実装完了・BUG-01修正済み・Webアプリデプロイ後に実機確認待ち |
-| Phase 3 | スタッフ確認・会員登録機能 | 未着手 |
+| Phase 3 | スタッフ確認・会員登録機能 | 🔄 実装完了・Webアプリデプロイ後に実機確認待ち |
 | Phase 4 | 会員一覧・検索・詳細表示 | 未着手 |
 | Phase 5 | 休会・退会・再開処理 | 未着手 |
 | Phase 6 | 初回費用計算・請求管理 | 未着手 |
@@ -131,19 +131,33 @@
 
 **目標:** スタッフが入会申込を確認し、正式な会員として登録できる画面を実装する。
 
+**ステータス:** GASコード実装・clasp push 完了（2026-05-05）。Webアプリデプロイ後に実機確認。
+
 **前提条件:** Phase 2が完了していること
 
-### タスク
+### タスク（完了）
 
-- [ ] member-list.html の申込一覧表示（未確認フィルタ）
-- [ ] member-detail.html の申込詳細表示
-- [ ] スタッフ確認フォーム（会員番号・鍵番号・コース確定）
-- [ ] MemberService.gs の会員登録処理を実装
-- [ ] 会員番号自動採番ロジックを実装
-- [ ] 鍵番号管理（KeyCardsシート）との連携
-- [ ] FeeService.gs の初回費用計算を実装
-- [ ] AuditLogService.gs の操作ログ記録を実装
-- [ ] 却下・差し戻し機能
+- [x] member-list.html の申込一覧表示（フィルタタブ・ステータスバッジ・再読み込み）
+- [x] member-detail.html の申込詳細表示（2カラムレイアウト）
+- [x] スタッフ確認フォーム（会員番号・鍵番号・コース確定・入会日・支払い方法・メモ）
+- [x] MemberService.gs: createMember / generateNextMemberId / getAvailableKeyCards 実装
+- [x] FeeService.gs: calcInitialFee / getDaysInMonth / getRemainingDays 等 実装
+- [x] AuditLogService.gs: log() / generateLogId() 実装
+- [x] IntakeService.gs: getIntakeApplications / getIntakeApplicationById /
+      approveIntakeApplication / rejectIntakeApplication 実装
+- [x] Code.gs: member-detail ルートに applicationId テンプレート変数追加
+- [x] 正式登録ダイアログ・差し戻しダイアログ実装
+- [x] 初回費用自動計算（コース・入会日変更時にリアルタイム更新）
+- [x] AuditLog 記録（承認・差し戻し操作）
+
+### タスク（オーナー確認待ち）
+
+- [ ] GAS Webアプリとしてデプロイする（Phase 2と同じデプロイを更新）
+- [ ] `?page=member-list` で申込一覧が表示されることを確認
+- [ ] 未確認申込の「確認する」ボタンで詳細画面に遷移することを確認
+- [ ] 「正式登録する」で会員登録・KeyCards更新・Payments記録されることを確認
+- [ ] 差し戻しで IntakeApplications の review_status が rejected になることを確認
+- [ ] AuditLogs シートに操作ログが記録されることを確認
 
 ---
 
