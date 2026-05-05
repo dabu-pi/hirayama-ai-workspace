@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-05  
+最終更新: 2026-05-05 (WEB-1B)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -56,6 +56,46 @@ Web UI 化 Phase WEB-1（読み取り専用 Web 入口）を実装・clasp push 
 - 既存シート構造は変更していない
 - 既存 GAS 関数は変更していない（doGet の既存ルートも変更なし）
 - スプレッドシート操作（保存・帳票出力）は従来通り動作する
+
+---
+
+## Phase WEB-1B 入口整理・設計固め（2026-05-05）
+
+### 実施内容
+
+| 項目 | 内容 |
+|---|---|
+| `patientSearch.html` | 「← Web ホームへ」リンクを追加（最小差分） |
+| デフォルト URL 方針 | `page=search` のまま維持（変更しない） |
+| 設計 Markdown 作成 | `docs/PHASE_WEB2_VISIT_CREATE_DESIGN_2026-05-05.md` |
+
+### デフォルト URL をまだ変更しない理由
+
+`patientSearch.html` → `selfPayWeb.html` はスマホ実地テスト済みの稼働導線。
+`web-home.html` は実機未確認のため、デフォルトに変更すると既存運用が止まるリスクがある。
+条件リスト（PHASE_WEB2 設計 §8）が揃ったタイミングで変更する。
+
+### `saveVisitFromWeb_V3` が必要な理由
+
+既存の `saveVisit_V3` はスプレッドシートの患者画面シート（C2, B4, A12:H13 等）からデータを読むため、
+Web App の google.script.run から呼んでも意図した値が読めない。
+JSON 引数で受け取る専用関数 `saveVisitFromWeb_V3(payload)` を新規実装する必要がある。
+
+### `setPatientAndDate_V3` を Web 保存処理に流用しない理由
+
+B2（患者表示名）と B4（来院日）を **シートに書き込む副作用** がある。
+Web セッションと並行してスプレッドシートを開いている場合に干渉する。
+Web UI からの来院登録では、シートを経由しない保存経路（`saveVisitFromWeb_V3`）を使う。
+
+### 次の実装候補（Phase WEB-2）
+
+```
+1. getPrevVisitData_V3(patientId)  ← 前回来院データ JSON 返却
+2. web-visit-new.html              ← 来院登録フォーム
+3. doGet に page=visitNew 追加
+4. saveVisitFromWeb_V3(payload)    ← 来院登録保存（UIシート非依存）
+5. web-patient-detail.html に「来院記録を追加」ボタン
+```
 
 ---
 

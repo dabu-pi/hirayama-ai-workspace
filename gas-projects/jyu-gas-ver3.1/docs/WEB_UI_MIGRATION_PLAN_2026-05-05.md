@@ -1,7 +1,8 @@
 # 柔整保険申請書 Ver3.1 Web UI 移行計画
 
 作成日: 2026-05-05  
-フェーズ: WEB-1 完了  
+最終更新: 2026-05-05 (WEB-1B)  
+フェーズ: WEB-1B 完了  
 対象プロジェクト: JREC-01 (jyu-gas-ver3.1)
 
 ---
@@ -98,6 +99,39 @@
 ---
 
 ## 5. フェーズ設計
+
+### Phase WEB-1B（完了: 2026-05-05）— 入口整理・設計固め
+
+- [x] `patientSearch.html` に「← Web ホームへ」リンク追加
+- [x] `docs/PHASE_WEB2_VISIT_CREATE_DESIGN_2026-05-05.md`: `saveVisitFromWeb_V3` / `getPrevVisitData_V3` の設計
+- [x] `web-home.html` は当面サブ入口（デフォルト URL は変更しない）
+- [x] デフォルト route は `search` のまま維持（実地テスト済み導線を保護）
+- [x] `web-home.html` default 化の条件を定義
+
+**default route 方針:**
+
+```
+現在: page=search (patientSearch.html) がデフォルト → 維持
+条件リスト(§web-home default化条件)が揃ったら page=home に変更する
+```
+
+**既存稼働導線（保護対象）:**
+
+```
+patientSearch.html → 患者選択 → setPatientAndDate_V3 → selfPayWeb.html → 自費明細保存
+```
+
+この導線は実地テスト済み。Phase WEB-2 以降も変更しない。
+
+**web-home を default にする条件（将来）:**
+1. `web-home.html` 実機確認 PASS
+2. `patientSearch.html` にホームリンク追加済み（WEB-1B で実施）
+3. `selfPayWeb.html` 既存導線が壊れていない
+4. `web-patient-detail.html` 実機確認 PASS
+5. 来院登録の基本導線が安定（Phase WEB-2 完了後）
+6. 現場スマホ操作で実績
+
+---
 
 ### Phase WEB-1（完了: 2026-05-05）
 
