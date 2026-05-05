@@ -1,14 +1,14 @@
 # ROADMAP — ワイルドボア会員管理システム
 
-最終更新：2026-05-04
+最終更新：2026-05-05
 
 ## フェーズ一覧
 
 | フェーズ | 名称 | ステータス |
 |---|---|---|
-| Phase 0 | 設計資料作成 | 完了 |
-| Phase 1 | スプレッドシート基盤構築 | 完了（GASコード実装済み・オーナー実行待ち） |
-| Phase 2 | 入会フォーム実装 | 未着手 |
+| Phase 0 | 設計資料作成 | ✅ 完了（2026-05-04） |
+| Phase 1 | スプレッドシート基盤構築 | ✅ 完了（2026-05-05 DEV実行確認済み） |
+| Phase 2 | 入会フォーム実装 | 🔄 開始準備中 |
 | Phase 3 | スタッフ確認・会員登録機能 | 未着手 |
 | Phase 4 | 会員一覧・検索・詳細表示 | 未着手 |
 | Phase 5 | 休会・退会・再開処理 | 未着手 |
@@ -61,7 +61,7 @@
 
 **目標:** GASセットアップコードを実装し、setupSpreadsheet()一発で11シートを構築できるようにする。
 
-**ステータス:** GASコード実装完了（2026-05-04）。オーナーがスプレッドシートを作成して実行する待ち。
+**ステータス:** ✅ 完了（2026-05-05 DEV実行確認済み）
 
 **前提条件:** Phase 0の全設計資料が完成していること
 
@@ -69,22 +69,29 @@
 
 - [x] SetupService.gs 新規作成（setupSpreadsheet / createRequiredSheets / setupHeaders / setupInitialSettings / setupMembershipPlans / setupFeeRules / setupValidations）
 - [x] SheetService.gs 実装（getSheetData / appendRow / findRowByKey / updateRowByKey / getSetting / generateId / nowIso）
+- [x] SheetService.gs バグ修正（getSpreadsheet() を getActiveSpreadsheet() 優先に変更）
 - [x] Config.gs 修正（MEMBER_STATUS.PAUSED = 'paused' に統一）
 - [x] 全ドキュメントのステータス表記を pause → paused に統一
 - [x] StatusHistory フィールド名を status_before/status_after → previous_status/new_status に統一
 - [x] SHEET_SCHEMA.md 全11シートのヘッダー・入力規則確定
 - [x] INITIAL_SETTINGS.md セットアップ手順書完成
+- [x] Google Drive `00_会員管理システム/` フォルダ構成作成（6サブフォルダ）
+- [x] DEVスプレッドシート作成（`02_開発・テスト/` 内）
+- [x] clasp コンテナバインド Apps Script プロジェクト作成・24ファイル push
 
-### タスク（オーナーが実行するもの）
+### タスク（オーナーが完了したもの）
 
-- [ ] 新規スプレッドシートを作成する（既存シートとは別に）
-- [ ] GASプロジェクトを作成し、gas-project/ のコードをコピーする
-- [ ] スクリプトプロパティに SPREADSHEET_ID を設定する
-- [ ] setupSpreadsheet() を実行する
-- [ ] MembershipPlansシートの金額を実際の値に更新する
+- [x] DEVスプレッドシートで setupSpreadsheet() を実行
+- [x] 11シート作成確認
+- [x] ヘッダー・初期データ確認
+- [x] 2回実行でも重複なし（冪等性）確認
+
+### 残タスク（Phase 2 開始前）
+
+- [ ] GASをWebアプリとしてデプロイする
+- [ ] MembershipPlansシートの金額を実際の値に更新する（仮値のままでも開発は可能）
 - [ ] Settingsシートの仮値を実際の値に更新する
 - [ ] KeyCardsシートに鍵番号を手動登録する
-- [ ] GASをWebアプリとしてデプロイする（Phase 2の前に）
 
 ---
 
