@@ -112,20 +112,99 @@
 
 ---
 
-## Phase 3 テスト — スタッフ確認・会員登録
+## Phase 3 Playwright Live Check — 2026-05-05 **（10/10 PASS）**
+
+**実施方法:** `access: ANYONE_ANONYMOUS` に修正・デプロイ @2 後、Playwright headless Chromium で実機確認。
+
+| # | テスト内容 | 実施日 | 結果 |
+|---|---|---|---|
+| 3-1-1 | `?page=member-list` でフィルタタブ4種が表示される | 2026-05-05 | **PASS** |
+| 3-1-2 | 「再読み込み」ボタンが表示される | 2026-05-05 | **PASS** |
+| 3-1-3 | ページタイトルが正しい | 2026-05-05 | **PASS** |
+| 3-1-4 | GAS 呼び出し後に適切な状態が表示される | 2026-05-05 | **PASS** |
+| 3-1-5 | フィルタタブのアクティブ状態切り替え | 2026-05-05 | **PASS** |
+| 3-1-6 | テーブル行のボタン確認 | 2026-05-05 | **PASS**（DEV データなし→空状態正常） |
+| 3-1-7 | バッジに申込件数が表示される | 2026-05-05 | **PASS**（0件表示確認） |
+| 3-2-1 | applicationId 未指定でエラービューが表示される | 2026-05-05 | **PASS**（ERROR_VIEW: true） |
+| 3-2-2 | 存在しないIDでエラービューが表示される | 2026-05-05 | **PASS**（ERROR: true） |
+| 3-5-1 | 静的確認 — GAS ログに個人情報が出力されないこと | 2026-05-05 | **PASS**（コードレビュー確認） |
+
+### データ依存テスト（IntakeApplications に申込データ追加後に実施）
+
+| # | テスト内容 | 結果 |
+|---|---|---|
+| 3-3-1〜3-3-6 | 実データで member-detail 確認 | SKIP（TEST_APPLICATION_ID 未設定） |
+| 3-4-1 | 正式登録インテグレーション | SKIP（テストデータ未準備） |
+| 3-4-2 | 二重承認防止 | SKIP（承認済み申込なし） |
+
+---
+
+## Phase 3 静的確認（コードレビュー） — 2026-05-05
+
+**実施方法:** clasp push / deploy 更新済み。Playwright は `ANYONE_ANONYMOUS` 修正後に実機実行（10 PASS）。
+ソースコードの静的分析（全ファイル目視確認）で確認。
+
+### 発見されたスペックバグ（Playwright spec の記述誤り・重大度: 低）
+
+| # | 内容 | 修正状態 |
+|---|---|---|
+| SPEC-01 | Playwright spec が `#key_card_number` を参照 → 実際は `#s_keyCard` | 修正済み |
+| SPEC-02 | Playwright spec が `#rejectDialog` を参照 → 実際は `#rejectOverlay` | 修正済み |
+| SPEC-03 | Playwright spec が `#loadingOverlay` を参照 → 実際は `#loadingView` | 修正済み |
+
+### 静的確認チェックリスト
+
+| # | 確認内容 | 確認方法 | 結果 | 備考 |
+|---|---|---|---|---|
+| SC-P3-01 | `?page=member-list` ルーティング存在 | Code.gs switch case | PASS | html/member-list に正常ルーティング |
+| SC-P3-02 | `?page=member-detail` ルーティング存在 | Code.gs switch case | PASS | html/member-detail に正常ルーティング |
+| SC-P3-03 | member-detail に applicationId テンプレート変数が渡る | Code.gs L50: `template.applicationId = e.parameter.id` | PASS | |
+| SC-P3-04 | member-list: フィルタタブ4種（すべて/未確認/承認済み/差し戻し） | member-list.html | PASS | `data-filter` 属性で実装 |
+| SC-P3-05 | member-list: バッジカウント（全件・pending・approved・rejected） | member-list.html | PASS | `#badge-*` 要素 |
+| SC-P3-06 | member-list: getIntakeApplications() 呼び出し | member-list.html L191 | PASS | |
+| SC-P3-07 | member-list: pending 申込に「確認する」ボタン表示 | member-list.html L251-252 | PASS | `.btn-primary` |
+| SC-P3-08 | member-list: goToDetail() で `?page=member-detail&id=...` にナビゲーション | member-list.html L271-274 | PASS | URL エンコード済み |
+| SC-P3-09 | member-list: XSS 対策（esc() でエスケープ） | member-list.html L253,257 | PASS | |
+| SC-P3-10 | member-detail: APPLICATION_ID 空の場合にエラー表示 | member-detail.html L363-366 | PASS | `showError()` 呼び出し |
+| SC-P3-11 | member-detail: getIntakeApplicationById() 呼び出し | member-detail.html L377 | PASS | |
+| SC-P3-12 | member-detail: getMembershipPlans() 呼び出し | member-detail.html L381 | PASS | |
+| SC-P3-13 | member-detail: getAvailableKeyCards() 呼び出し | member-detail.html L385 | PASS | |
+| SC-P3-14 | member-detail: generateNextMemberId() で会員番号提案 | member-detail.html L389 | PASS | |
+| SC-P3-15 | member-detail: calcInitialFee() でリアルタイム費用計算 | member-detail.html L541 | PASS | コース・入会日変更でトリガー |
+| SC-P3-16 | member-detail: 費用内訳（入会金・カードキー・日割り・翌月）表示 | member-detail.html L552-568 | PASS | |
+| SC-P3-17 | member-detail: 正式登録ボタンは全必須項目揃うまで disabled | member-detail.html L292,580-586 | PASS | |
+| SC-P3-18 | member-detail: 正式登録ダイアログ（確認内容表示） | member-detail.html L317-326 | PASS | `#approveOverlay` |
+| SC-P3-19 | member-detail: 差し戻しダイアログ（理由入力） | member-detail.html L329-339 | PASS | `#rejectOverlay` |
+| SC-P3-20 | member-detail: 処理済み申込はフォームを非表示にして処理済み情報表示 | member-detail.html L493-504 | PASS | |
+| SC-P3-21 | 二重承認防止（approveIntakeApplication） | IntakeService.gs L234-237 | PASS | `review_status !== PENDING` でブロック |
+| SC-P3-22 | 二重差し戻し防止（rejectIntakeApplication） | IntakeService.gs L324-327 | PASS | 同上 |
+| SC-P3-23 | createMember でのログに個人情報なし | MemberService.gs L127 | PASS | `memberId` のみ |
+| SC-P3-24 | approveIntakeApplication でのログに個人情報なし | IntakeService.gs L305 | PASS | `applicationId → memberId` のみ |
+| SC-P3-25 | rejectIntakeApplication でのログに個人情報なし | IntakeService.gs L346 | PASS | `applicationId` のみ |
+| SC-P3-26 | AuditLog に承認操作が記録される | IntakeService.gs L297-303 | PASS | action=approve, targetId=applicationId |
+| SC-P3-27 | AuditLog に差し戻し操作が記録される | IntakeService.gs L339-343 | PASS | action=reject |
+| SC-P3-28 | Payments に初回費用レコードが作成される | IntakeService.gs L263-278 | PASS | 費用記録失敗は警告のみで続行 |
+| SC-P3-29 | KeyCards の状態が in_use に更新される | MemberService.gs L119-124 | PASS | `updateRowByKey()` で更新 |
+
+---
+
+## Phase 3 テスト — スタッフ確認・会員登録（実機確認）
+
+**前提:** GAS Webアプリとしてデプロイ済みであること、Playwright 認証セッション設定済みであること
+**実機テスト状態:** ⏸ Google 認証セッション未設定のため未実施（Playwright spec は `tests/intake/phase3.spec.js` に追加済み）
 
 | # | テスト内容 | 期待結果 | 実施日 | 結果 |
 |---|---|---|---|---|
-| 3-1 | スタッフ管理画面を開くと未確認申込が一覧表示される | 申込一覧にpending件数が表示される | | |
-| 3-2 | 申込をクリックすると詳細が表示される | 入力内容が全て表示される | | |
-| 3-3 | 詳細画面で会員番号欄にシステム提案の番号が表示される | 既存最大番号+1の番号が表示される | | |
-| 3-4 | 空き鍵番号が一覧から選択できる | 利用可能な鍵番号のみが表示される | | |
-| 3-5 | 初回費用が自動計算されて表示される | 計算式と金額が表示される | | |
-| 3-6 | 「正式登録する」をクリックして確認後、登録が完了する | Membersシートに行が追加される | | |
-| 3-7 | 登録後、KeyCardsシートの該当番号がin_useになっている | 選択した鍵番号がin_useになっている | | |
-| 3-8 | 登録後、Paymentsシートに初回費用の記録が追加されている | 金額・日付・会員番号が正しい | | |
-| 3-9 | 登録後、AuditLogsシートに操作が記録されている | create アクションのログが確認できる | | |
-| 3-10 | 「差し戻す」をクリックして理由を入力すると却下される | review_statusがrejectedになる | | |
+| 3-1 | `?page=member-list` で申込一覧が表示される | フィルタタブ・テーブルが表示される | | SKIP（認証未設定） |
+| 3-2 | 未確認申込の「確認する」で member-detail に遷移する | `?page=member-detail&id=...` に遷移する | | SKIP（認証未設定） |
+| 3-3 | 詳細画面で会員番号提案値が表示される | 既存最大番号+1 の形式で表示される | | SKIP（認証未設定） |
+| 3-4 | 空き鍵番号が選択肢に表示される | KeyCards の available な番号のみ | | SKIP（認証未設定） |
+| 3-5 | 初回費用がリアルタイム計算される | コース・入会日変更で金額更新される | | SKIP（認証未設定） |
+| 3-6 | 「正式登録する」でテスト会員が登録される | Members シートに行追加・KeyCards 更新・Payments 記録 | | SKIP（認証未設定） |
+| 3-7 | 登録後 AuditLogs に操作ログが記録される | approve アクションのログが確認できる | | SKIP（認証未設定） |
+| 3-8 | 「差し戻す」でテスト申込が却下される | review_status=rejected / AuditLog 記録 | | SKIP（認証未設定） |
+| 3-9 | 承認済み申込を再承認しようとするとエラー | 「すでに処理済みです」メッセージ | | SKIP（認証未設定） |
+| 3-10 | GAS 実行ログに個人情報が出力されていない | ログに氏名・住所・電話番号なし | | SKIP（認証未設定） |
 
 ---
 

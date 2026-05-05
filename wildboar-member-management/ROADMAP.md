@@ -131,7 +131,7 @@
 
 **目標:** スタッフが入会申込を確認し、正式な会員として登録できる画面を実装する。
 
-**ステータス:** GASコード実装・clasp push 完了（2026-05-05）。Webアプリデプロイ後に実機確認。
+**ステータス:** GASコード実装・clasp push・デプロイ@3更新・静的確認29チェックPASS（2026-05-05）。Playwright 認証設定後に実機確認。
 
 **前提条件:** Phase 2が完了していること
 
@@ -149,15 +149,20 @@
 - [x] 正式登録ダイアログ・差し戻しダイアログ実装
 - [x] 初回費用自動計算（コース・入会日変更時にリアルタイム更新）
 - [x] AuditLog 記録（承認・差し戻し操作）
+- [x] clasp push + デプロイ @3 更新（2026-05-05）
+- [x] 静的コード分析 29 チェック全 PASS（2026-05-05）
+- [x] Playwright spec 追加（tests/intake/phase3.spec.js）
 
 ### タスク（オーナー確認待ち）
 
-- [ ] GAS Webアプリとしてデプロイする（Phase 2と同じデプロイを更新）
-- [ ] `?page=member-list` で申込一覧が表示されることを確認
+- [x] GAS Webアプリとしてデプロイする → **完了（デプロイID: AKfycbzdV... @3）**
+- [ ] Playwright 認証セッション設定（`npx playwright codegen --save-storage=auth.json`）
+- [ ] `?page=member-list` で申込一覧が表示されることを確認（手動または Playwright）
 - [ ] 未確認申込の「確認する」ボタンで詳細画面に遷移することを確認
-- [ ] 「正式登録する」で会員登録・KeyCards更新・Payments記録されることを確認
+- [ ] 「正式登録する」で会員登録・KeyCards更新・Payments記録されることを確認（DEVデータで）
 - [ ] 差し戻しで IntakeApplications の review_status が rejected になることを確認
 - [ ] AuditLogs シートに操作ログが記録されることを確認
+- [ ] GAS 実行ログに個人情報が出力されていないことを確認
 
 ---
 

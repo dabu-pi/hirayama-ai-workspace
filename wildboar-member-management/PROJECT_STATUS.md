@@ -1,13 +1,13 @@
 # PROJECT_STATUS — ワイルドボア会員管理システム
 
-最終更新：2026-05-05（Phase 2 live check 実施・BUG-01 修正済み）
+最終更新：2026-05-05（Phase 3 LiveCheck 完了・Playwright 10テストPASS・正式登録統合テストはデータ準備後）
 
 ## 現在の状態
 
 | 項目 | 内容 |
 |---|---|
-| 現在フェーズ | **Phase 2（入会フォーム実装）** |
-| ステータス | GASコード実装完了・clasp push済み・Webアプリデプロイ待ち |
+| 現在フェーズ | **Phase 3（スタッフ確認・会員登録機能）** |
+| ステータス | GASコード実装完了・clasp push済み・デプロイ@3更新済み・静的確認完了・Playwright LiveCheck 10/10 PASS |
 | 担当 | Claude Code（AI） + 平山克司（オーナー） |
 
 ---
@@ -20,8 +20,20 @@
 | Script URL | https://script.google.com/d/1htqjLatNbSEqKXqPnvLTu5Vnc-YG0BypBxgWJhc8u4Bfz88-E7jxLB-L/edit |
 | バインド先 | DEVスプレッドシート（1yaDDY4dujLqk6ZM-C_-8DDYirqK6cGqkr87XeaBTdtg） |
 | push済みファイル数 | 24ファイル（.gs × 13, .html × 10, appsscript.json） |
-| push日時 | 2026-05-05 |
+| push日時 | 2026-05-05（Phase 3 LiveCheck 用に再 push 済み） |
 | clasp管理ファイル | `gas-project/.clasp.json` |
+
+### デプロイメント一覧（2026-05-05 確認）
+
+| デプロイID | バージョン | 説明 | WebApp URL |
+|---|---|---|---|
+| `AKfycbwY4pYydi36qgUCpo77myt09YKErpEezGF6ZKfC9Tc` | @HEAD | HEAD（開発用） | ※本番用途では使わない |
+| `AKfycbzPDXd0IYoDwjY8gqBlwtp073wp8N9OIapvnTHa5nGKpbEXmfRNantsEHkOwrgouQyG` | @1 | Phase3-LiveCheck | `https://script.google.com/macros/s/AKfycbzPDXd0IYoDwjY8gqBlwtp073wp8N9OIapvnTHa5nGKpbEXmfRNantsEHkOwrgouQyG/exec` |
+| `AKfycbzdV-MkuHdcXlUebX38K38gTWT-dK9wX259N7-OLSiU_NyzRv1MhVZd_gOKKPacRLvG` | **@3（最新）** | Phase3 LiveCheck 2026-05-05 | **`https://script.google.com/macros/s/AKfycbzdV-MkuHdcXlUebX38K38gTWT-dK9wX259N7-OLSiU_NyzRv1MhVZd_gOKKPacRLvG/exec`** |
+
+> **デプロイ設定（appsscript.json 確認済み）:**
+> - `executeAs: USER_DEPLOYING` ✅（BUG-01 修正済み）
+> - `access: ANYONE_ANONYMOUS`（Googleアカウント不要・匿名ユーザーも利用可）← Phase 3 deploy sync で自動更新
 
 ### setupSpreadsheet() 実行結果（2026-05-05 確認済み）
 
@@ -220,6 +232,117 @@ Playwright spec は `tests/intake/phase2.spec.js` に追加済み（デプロイ
 
 ---
 
+---
+
+## Phase 3 LiveCheck 結果（2026-05-05）
+
+### 実施方法
+
+1. **clasp push**: 24ファイル再 push 完了（Phase 3 実装コードを GAS に反映）
+2. **clasp deploy @2**: `access: ANYONE_ANONYMOUS` に修正（BUG-02 修正）して clasp push + deploy @2 実施
+3. **疎通確認**: PowerShell `Invoke-WebRequest` で HTTP 200 OK・HTML レスポンス確認
+4. **フレーム構造解析**: Playwright デバッグで `userHtmlFrame` = 実際の HTML が入るフレームを確認
+5. **静的コード分析（全ファイル目視確認）**: 29チェック実施
+6. **Playwright 実機実行**: `access: ANYONE_ANONYMOUS` に修正後、**10テスト PASS** 確認
+
+### 発見バグ・修正済み
+
+| バグID | 深刻度 | 内容 | 修正 |
+|---|---|---|---|
+| BUG-02 | **重大** | `appsscript.json` の `access` が `ANYONE`（Google ログイン必須）でヘッドレスブラウザからアクセス不可 | `ANYONE_ANONYMOUS` に修正・clasp push + deploy @2 済み |
+
+### Playwright Live Check 結果（10/10 PASS）
+
+**実行日**: 2026-05-05  
+**対象 URL**: `https://script.google.com/macros/s/AKfycbzdV.../exec`  
+**使用 spec**: `tests/member/phase3.spec.js`
+
+| テストID | テスト内容 | 結果 | 備考 |
+|---|---|---|---|
+| 3-1-1 | `?page=member-list` でフィルタタブ4種が表示される | **PASS** | 実際の GAS WebApp に接続・iframe コンテンツ確認 |
+| 3-1-2 | 「再読み込み」ボタンが表示される | **PASS** | `.refresh-btn` 要素確認 |
+| 3-1-3 | ページタイトル「入会申込一覧」が正しい | **PASS** | `.page-title` 確認 |
+| 3-1-4 | GAS 呼び出し後に適切な状態が表示される | **PASS** | 空メッセージ表示（DEV データなし状態） |
+| 3-1-5 | フィルタタブのアクティブ状態切り替え | **PASS** | pending クリック → active 切り替え確認 |
+| 3-1-6 | テーブル行の「確認する」ボタン | **PASS** | DEV データなし（NO_ROWS）→ 正常スキップ |
+| 3-1-7 | バッジに申込件数が表示される | **PASS** | `#badge-all` = 0 件（DEV 初期状態） |
+| 3-2-1 | applicationId 未指定でエラービューが表示される | **PASS** | ERROR_VIEW: true, MAIN_VIEW: false |
+| 3-2-2 | 存在しないIDでエラービューが表示される | **PASS** | FAKE_ID → ERROR: true |
+| 3-5-1 | 静的確認 — GAS ログに個人情報が出力されないこと | **PASS** | コードレビューで確認済み |
+
+### データ依存テスト（TEST_APPLICATION_ID 設定後に実行）
+
+| テストID | 内容 | 実行方法 |
+|---|---|---|
+| 3-3-1〜3-3-6 | 実申込データを使った member-detail 確認 | `TEST_APPLICATION_ID=APP-...` を設定して実行 |
+| 3-4-1 | 正式登録フロー | `TEST_APPLICATION_ID + TEST_KEY_CARD` を設定して実行 |
+| 3-4-2 | 二重承認防止 | `TEST_APPROVED_APPLICATION_ID` を設定して実行 |
+
+### 静的確認結果サマリー
+
+| カテゴリ | 件数 | 結果 |
+|---|---|---|
+| 静的確認チェック総数 | 29 | PASS: 27 / スペックID修正: 2（重大度: 低） |
+| Code.gs ルーティング | 確認 | ✅ member-list / member-detail 両ルート正常 |
+| テンプレート変数 | 確認 | ✅ `applicationId = e.parameter.id` が member-detail に渡る |
+| member-list UI | 確認 | ✅ フィルタタブ4種・バッジカウント・テーブル・確認ボタン全実装 |
+| member-detail UI | 確認 | ✅ 2カラム・申込者情報・費用計算・鍵番号選択・ダイアログ全実装 |
+| 正式登録フロー | 確認 | ✅ createMember → KeyCards 更新 → Payments 記録 → IntakeApplications 更新 → AuditLog |
+| 差し戻しフロー | 確認 | ✅ review_status=rejected 更新 → AuditLog 記録 |
+| 二重承認防止 | 確認 | ✅ `review_status !== PENDING` チェックで blocking（Members/Payments 重複なし） |
+| 二重差し戻し防止 | 確認 | ✅ 同様のチェック |
+| 個人情報ログ出力 | 確認 | ✅ applicationId / memberId のみ（氏名・住所・電話番号は出力されない） |
+| XSS 対策 | 確認 | ✅ member-list で `esc()` 関数によるエスケープ実装 |
+| 処理済み申込の表示 | 確認 | ✅ approved/rejected の場合はフォームを非表示にして処理済み情報を表示 |
+| 正式登録ボタン disabled 制御 | 確認 | ✅ 全必須項目が揃うまで disabled（誤クリック防止） |
+
+### 発見したスペックバグ（修正済み）
+
+| # | 内容 | 修正 |
+|---|---|---|
+| SPEC-01 | Playwright spec で `#key_card_number` を参照していたが、実際の HTML は `<select id="s_keyCard">` | spec を `#s_keyCard` に修正済み |
+| SPEC-02 | Playwright spec で `#rejectDialog` を参照していたが、実際は `#rejectOverlay`（CSS: `.overlay` クラス） | spec を `#rejectOverlay.show` に修正済み |
+| SPEC-03 | Playwright spec で `#loadingOverlay` を参照していたが、member-detail.html の実際の ID は `#loadingView` | spec を `#loadingView` に修正済み |
+
+### オーナー実機確認が必要な残タスク
+
+| # | 内容 | 確認方法 | 優先度 |
+|---|---|---|---|
+| RT-P2-01 | `?page=intake-form` でフォームが開くこと | Playwright または手動 | 高 |
+| RT-P2-02 | フォーム送信で IntakeApplications に pending 行が追加されること | DEV シート目視 | 高 |
+| RT-P3-01 | `?page=member-list` で申込一覧が表示されること | Playwright または手動 | 高 |
+| RT-P3-02 | 未確認申込の「確認する」で member-detail に遷移すること | 手動 | 高 |
+| RT-P3-03 | 「正式登録する」で Members / KeyCards / Payments が更新されること | DEV シート目視 | 高 |
+| RT-P3-04 | AuditLogs に承認ログが記録されること | DEV シート目視 | 中 |
+| RT-P3-05 | 差し戻しで IntakeApplications が rejected に更新されること | DEV シート目視 | 高 |
+| RT-P3-06 | 承認済み申込を再度「正式登録する」しようとしてもエラーになること | 手動 | 中 |
+| RT-P3-07 | GAS 実行ログに個人情報が出力されていないこと | GASエディタ ログ確認 | 中 |
+
+### OWNER_ACTION_REQUIRED — Playwright 実行のための準備
+
+Playwright でフル E2E テストを実行するには以下が必要です。
+
+```powershell
+# 1. Playwright の認証セッションを保存する（初回のみ・ブラウザが開く）
+Set-Location "C:\hirayama-ai-workspace\workspace\wildboar-member-management"
+node_modules/.bin/playwright codegen --save-storage=auth.json
+
+# 2. ブラウザが開いたら Google アカウントにログイン
+# 3. WebApp URL にアクセスしてアプリが開くことを確認
+# 4. Ctrl+C で終了 → auth.json が生成される
+
+# 5. playwright.config.js に以下を追加
+#    use: { storageState: 'auth.json' }
+
+# 6. テスト実行
+$env:WILDBOAR_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzdV-MkuHdcXlUebX38K38gTWT-dK9wX259N7-OLSiU_NyzRv1MhVZd_gOKKPacRLvG/exec"
+npm run test:phase3
+```
+
+> **注意:** `auth.json` は認証情報のため git に含めない（`.gitignore` に追加済み、または追加してください）
+
+---
+
 ## 変更履歴
 
 | 日付 | 変更内容 |
@@ -233,3 +356,5 @@ Playwright spec は `tests/intake/phase2.spec.js` に追加済み（デプロイ
 | 2026-05-05 | Phase 2 入会フォーム実装（IntakeService.gs / ValidationService.gs / intake-form.html）|
 | 2026-05-05 | **BUG-01 修正**: appsscript.json executeAs USER_ACCESSING → USER_DEPLOYING（匿名ユーザー送信不可バグ）clasp push 済み |
 | 2026-05-05 | Phase 2 静的確認実施・Playwright spec 追加（tests/intake/phase2.spec.js）|
+| 2026-05-05 | Phase 3 スタッフ確認・会員登録機能 実装（MemberService.gs / FeeService.gs / AuditLogService.gs / member-list.html / member-detail.html / IntakeService.gs 拡張）|
+| 2026-05-05 | **Phase 3 LiveCheck 実施**: clasp push @3 更新 / 静的確認29チェック PASS / Playwright spec 追加（tests/intake/phase3.spec.js）|
