@@ -1,14 +1,35 @@
 # PROJECT_STATUS — ワイルドボア会員管理システム
 
-最終更新：2026-05-04
+最終更新：2026-05-05
 
 ## 現在の状態
 
 | 項目 | 内容 |
 |---|---|
 | 現在フェーズ | Phase 1（スプレッドシート基盤構築） |
-| ステータス | 完了 |
+| ステータス | GASコード push 完了・setupSpreadsheet() 実行待ち |
 | 担当 | Claude Code（AI） + 平山克司（オーナー） |
+
+---
+
+## Apps Script プロジェクト
+
+| 項目 | 内容 |
+|---|---|
+| Script ID | `1htqjLatNbSEqKXqPnvLTu5Vnc-YG0BypBxgWJhc8u4Bfz88-E7jxLB-L` |
+| Script URL | https://script.google.com/d/1htqjLatNbSEqKXqPnvLTu5Vnc-YG0BypBxgWJhc8u4Bfz88-E7jxLB-L/edit |
+| バインド先 | DEVスプレッドシート（1yaDDY4dujLqk6ZM-C_-8DDYirqK6cGqkr87XeaBTdtg） |
+| push済みファイル数 | 24ファイル（.gs × 13, .html × 10, appsscript.json） |
+| push日時 | 2026-05-05 |
+| clasp管理ファイル | `gas-project/.clasp.json` |
+
+### setupSpreadsheet() 実行手順（オーナー作業）
+
+1. DEVスプレッドシートを開く → 「拡張機能」→「Apps Script」
+2. 関数選択で「setupSpreadsheet」を選択
+3. ▶ 実行 → 権限承認（初回のみ）
+4. スプレッドシートに戻り 11シート作成を確認
+5. もう一度実行して重複作成されないことを確認（冪等性確認）
 
 ---
 
