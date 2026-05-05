@@ -2,7 +2,8 @@
  * ワイルドボア会員管理システム — 操作ログ記録サービス
  *
  * すべての操作（会員情報変更・申込確認・ステータス変更等）を
- * AuditLogsシートに記録する。
+ * AuditLogs シートに記録する。
+ * ログ記録自体が失敗してもメイン処理を止めないようにする。
  *
  * 依存：Config.gs, SheetService.gs
  */
@@ -10,65 +11,86 @@
 /**
  * 操作ログを記録する
  *
- * @param {Object} logData - ログデータ
- * @param {string} logData.action - 操作種別（LOG_ACTION参照）
- * @param {string} logData.targetSheet - 対象シート名（SHEET_NAMES参照）
- * @param {string} logData.targetId - 対象レコードのID
- * @param {string} [logData.fieldName] - 変更フィールド名（更新操作の場合）
- * @param {string} [logData.oldValue] - 変更前の値（更新操作の場合）
- * @param {string} [logData.newValue] - 変更後の値（更新操作の場合）
- * @param {string} [logData.description] - 操作の説明
- * @returns {string} 記録されたログID
+ * @param {Object} logData
+ * @param {string} logData.action       - 操作種別（LOG_ACTION 参照）
+ * @param {string} logData.targetSheet  - 対象シート名（SHEET_NAMES 参照）
+ * @param {string} logData.targetId     - 対象レコードの主キー
+ * @param {string} [logData.fieldName]  - 変更フィールド名
+ * @param {string} [logData.oldValue]   - 変更前の値
+ * @param {string} [logData.newValue]   - 変更後の値
+ * @param {string} [logData.description]- 操作の説明
+ * @returns {string} 記録されたログID（失敗時は空文字）
  */
 function log(logData) {
-  // TODO: Phase 1 または Phase 3 で実装する
-  // 1. log_id を採番する
-  // 2. 操作者（GASのセッションユーザー）を取得する
-  // 3. AuditLogsシートに行を追加する
-  // 4. ログIDを返す
+  try {
+    var logId    = generateLogId();
+    var now      = new Date().toISOString();
+    var operator = getCurrentOperator();
 
-  // 注意：このログ自体が失敗してもメインの処理を止めないようにする
-  // try-catch で囲んでエラーをLogger.logに出力するにとどめる
-  throw new Error('未実装: AuditLogService.log');
+    appendRow(SHEET_NAMES.AUDIT_LOGS, {
+      log_id:       logId,
+      action:       String(logData.action       || ''),
+      table_name:   String(logData.targetSheet  || ''),
+      record_id:    String(logData.targetId     || ''),
+      field_name:   String(logData.fieldName    || ''),
+      old_value:    String(logData.oldValue     || ''),
+      new_value:    String(logData.newValue     || ''),
+      performed_by: operator,
+      performed_at: now,
+      notes:        String(logData.description  || ''),
+    });
+
+    return logId;
+  } catch (e) {
+    Logger.log('[AuditLogService.log] ログ記録失敗: ' + e.message);
+    return '';
+  }
 }
 
 /**
  * ログIDを採番する
  *
- * フォーマット：LOG-yyyyMMdd-XXXXX
+ * フォーマット：LOG-yyyyMMdd-XXXXX（当日連番・5桁）
  *
- * @returns {string} 新しいログID
+ * @returns {string}
  */
 function generateLogId() {
-  // TODO: 実装する
-  throw new Error('未実装: AuditLogService.generateLogId');
+  var today  = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd');
+  var prefix = 'LOG-' + today + '-';
+
+  var ss    = getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAMES.AUDIT_LOGS);
+  if (!sheet || sheet.getLastRow() < 2) return prefix + '00001';
+
+  var ids = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  var seqs = ids
+    .map(function(r) { return String(r[0]); })
+    .filter(function(id) { return id.indexOf(prefix) === 0; })
+    .map(function(id) { return parseInt(id.slice(prefix.length), 10) || 0; });
+
+  var maxSeq = seqs.length > 0 ? Math.max.apply(null, seqs) : 0;
+  var seq = String(maxSeq + 1);
+  while (seq.length < 5) seq = '0' + seq;
+  return prefix + seq;
 }
 
 /**
  * 現在のセッションユーザー（スタッフ）のメールアドレスを取得する
  *
- * @returns {string} メールアドレス
+ * @returns {string} メールアドレス（取得不可時は 'staff'）
  */
 function getCurrentOperator() {
-  // TODO: 実装する
-  // Session.getActiveUser().getEmail() で取得する
-  // GASの実行権限によっては取得できない場合があることに注意する
   try {
-    return Session.getActiveUser().getEmail();
+    var email = Session.getActiveUser().getEmail();
+    return email || 'staff';
   } catch (e) {
-    return 'unknown';
+    return 'staff';
   }
 }
 
 /**
- * 対象の操作ログを取得する
- *
- * @param {string} [targetSheet] - 対象シート名（省略時は全シート）
- * @param {string} [targetId] - 対象レコードID（省略時は全レコード）
- * @param {number} [limit] - 取得件数（省略時は100件）
- * @returns {Object[]} ログの配列（新しい順）
+ * 操作ログを取得する（Phase 4 以降で実装）
  */
 function getAuditLogs(targetSheet, targetId, limit) {
-  // TODO: Phase 4 以降で実装する
-  throw new Error('未実装: AuditLogService.getAuditLogs');
+  throw new Error('未実装: AuditLogService.getAuditLogs（Phase 4 で実装）');
 }

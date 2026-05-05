@@ -47,6 +47,7 @@ function doGet(e) {
       break;
     case 'member-detail':
       template = HtmlService.createTemplateFromFile('html/member-detail');
+      template.applicationId = (e && e.parameter && e.parameter.id) ? String(e.parameter.id) : '';
       break;
     case 'member-edit':
       template = HtmlService.createTemplateFromFile('html/member-edit');

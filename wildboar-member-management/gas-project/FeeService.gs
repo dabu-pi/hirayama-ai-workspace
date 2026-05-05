@@ -2,116 +2,176 @@
  * ワイルドボア会員管理システム — 初回費用計算サービス
  *
  * 初回費用（入会金・カードキー発行料・日割り月会費・翌月月会費）の計算を担当する。
- * 金額はすべてSettingsシートまたはMembershipPlansシートから取得する。
+ * 金額はすべて MembershipPlans シートまたは Settings / FeeRules シートから取得する。
  * コードに金額をハードコードしない。
  *
  * 依存：Config.gs, SheetService.gs
  */
 
+// =============================================================================
+// 公開関数（google.script.run から呼ぶ）
+// =============================================================================
+
 /**
  * 初回費用を計算する
  *
- * @param {string} planId - コースID
- * @param {Date} joinDate - 入会日
+ * @param {string} planId       - コースID
+ * @param {string} joinDateStr  - 入会日（YYYY-MM-DD）
  * @returns {Object} 初回費用の内訳と合計
- * @returns {number} result.enrollmentFee - 入会金
- * @returns {number} result.cardKeyFee - カードキー発行料
- * @returns {number} result.proratedMonthlyFee - 入会月の日割り月会費
- * @returns {number} result.nextMonthFee - 翌月の月会費
- * @returns {number} result.total - 合計
- * @returns {Object} result.breakdown - 計算の詳細（日数等）
  */
-function calcInitialFee(planId, joinDate) {
-  // TODO: Phase 3 または Phase 6 で実装する
-  // 1. MembershipPlansシートからplanIdに対応するenrollment_fee, monthly_feeを取得する
-  // 2. Settingsシートからcard_key_feeを取得する
-  // 3. FeeRulesシートからprorating_roundingルールを取得する
-  // 4. joinDateの月の日数を計算する
-  // 5. 残日数を計算する（月末日 - joinDate + 1）
-  // 6. 日割り月会費を計算する（monthly_fee * 残日数 / 当月日数）
-  // 7. 端数処理を適用する
-  // 8. 合計を計算して返す
-  throw new Error('未実装: FeeService.calcInitialFee');
+function calcInitialFee(planId, joinDateStr) {
+  try {
+    var d = new Date(joinDateStr);
+    var year  = d.getFullYear();
+    var month = d.getMonth() + 1; // 1-based
+
+    var monthlyFee    = getMonthlyFee(planId);
+    var enrollmentFee = getEnrollmentFee(planId);
+    var cardKeyFeeAmt = getCardKeyFee();
+
+    // FeeRules から設定を取得（取得失敗時はデフォルト値）
+    var proratingEnabled  = getFeeRule('prorating_enabled')    !== 'FALSE';
+    var proratingRounding = getFeeRule('prorating_rounding')   || 'floor';
+    var prepayNextMonth   = getFeeRule('prepay_next_month')    !== 'FALSE';
+    var joinFeeEnabled    = getFeeRule('join_fee_enabled')     !== 'FALSE';
+    var cardKeyFeeEnabled = getFeeRule('card_key_fee_enabled') !== 'FALSE';
+
+    var actualEnrollmentFee = joinFeeEnabled    ? enrollmentFee : 0;
+    var actualCardKeyFee    = cardKeyFeeEnabled ? cardKeyFeeAmt : 0;
+
+    // 日割り計算
+    var daysInMonth   = getDaysInMonth(year, month);
+    var remainingDays = getRemainingDays(joinDateStr);
+    var proratedFee   = proratingEnabled
+      ? applyRounding(monthlyFee * remainingDays / daysInMonth, proratingRounding)
+      : monthlyFee;
+
+    // 翌月
+    var nextYear     = month === 12 ? year + 1 : year;
+    var nextMonth    = month === 12 ? 1 : month + 1;
+    var nextMonthFee = prepayNextMonth ? monthlyFee : 0;
+
+    var total = actualEnrollmentFee + actualCardKeyFee + proratedFee + nextMonthFee;
+
+    return {
+      enrollmentFee:      actualEnrollmentFee,
+      cardKeyFee:         actualCardKeyFee,
+      proratedMonthlyFee: proratedFee,
+      nextMonthFee:       nextMonthFee,
+      total:              total,
+      breakdown: {
+        daysInMonth:    daysInMonth,
+        remainingDays:  remainingDays,
+        joinMonth:      year + '-' + _pad2(month),
+        nextMonth:      nextYear + '-' + _pad2(nextMonth),
+        monthlyFee:     monthlyFee,
+        roundingMethod: proratingRounding,
+      },
+    };
+  } catch (e) {
+    Logger.log('[calcInitialFee] エラー: ' + e.message);
+    throw e;
+  }
 }
 
+// =============================================================================
+// 内部ユーティリティ
+// =============================================================================
+
 /**
- * 指定月の日数を取得する
+ * 指定月の日数を取得する（うるう年対応）
  *
- * うるう年にも対応する。
- *
- * @param {number} year - 年（例：2026）
+ * @param {number} year  - 年
  * @param {number} month - 月（1〜12）
- * @returns {number} 当月の日数（28〜31）
+ * @returns {number} 当月の日数
  */
 function getDaysInMonth(year, month) {
-  // TODO: Phase 2 以降で実装する
-  // new Date(year, month, 0).getDate() で取得できる
-  throw new Error('未実装: FeeService.getDaysInMonth');
+  return new Date(year, month, 0).getDate();
 }
 
 /**
- * 入会日から月末までの残日数を計算する
+ * 入会日から月末までの残日数（入会日を1日目として数える）
  *
- * 入会日を1日目として数える。
- *
- * @param {Date} joinDate - 入会日
- * @returns {number} 残日数
+ * @param {string} joinDateStr - YYYY-MM-DD
+ * @returns {number}
  */
-function getRemainingDays(joinDate) {
-  // TODO: Phase 2 以降で実装する
-  // 月末日 - 入会日(日) + 1 で計算する
-  throw new Error('未実装: FeeService.getRemainingDays');
+function getRemainingDays(joinDateStr) {
+  var d     = new Date(joinDateStr);
+  var year  = d.getFullYear();
+  var month = d.getMonth() + 1;
+  var day   = d.getDate();
+  return getDaysInMonth(year, month) - day + 1;
 }
 
 /**
  * 端数処理を行う
  *
- * FeeRulesシートのprorating_roundingルールに従って処理する。
- *
- * @param {number} value - 端数処理する金額
- * @param {string} rounding - 端数処理方法（'floor', 'ceil', 'round'）
- * @returns {number} 端数処理後の金額
+ * @param {number} value    - 端数処理する金額
+ * @param {string} rounding - 'floor' | 'ceil' | 'round'
+ * @returns {number}
  */
 function applyRounding(value, rounding) {
-  // TODO: Phase 2 以降で実装する
   switch (rounding) {
     case 'floor': return Math.floor(value);
     case 'ceil':  return Math.ceil(value);
     case 'round': return Math.round(value);
-    default: return Math.floor(value); // デフォルトは切り捨て
+    default:      return Math.floor(value);
   }
 }
 
 /**
  * コースIDから月会費を取得する
  *
- * @param {string} planId - コースID
- * @returns {number} 月会費（円）
+ * @param {string} planId
+ * @returns {number}
  */
 function getMonthlyFee(planId) {
-  // TODO: Phase 3 で実装する
-  // SheetService でMembershipPlansシートを検索してmonthly_feeを返す
-  throw new Error('未実装: FeeService.getMonthlyFee');
+  var plan = findRowByKey(SHEET_NAMES.MEMBERSHIP_PLANS, 'plan_id', planId);
+  if (!plan) throw new Error('コースが見つかりません: ' + planId);
+  return Number(plan.monthly_fee) || 0;
 }
 
 /**
  * コースIDから入会金を取得する
  *
- * @param {string} planId - コースID
- * @returns {number} 入会金（円）
+ * @param {string} planId
+ * @returns {number}
  */
 function getEnrollmentFee(planId) {
-  // TODO: Phase 3 で実装する
-  throw new Error('未実装: FeeService.getEnrollmentFee');
+  var plan = findRowByKey(SHEET_NAMES.MEMBERSHIP_PLANS, 'plan_id', planId);
+  if (!plan) throw new Error('コースが見つかりません: ' + planId);
+  return Number(plan.enrollment_fee) || 0;
 }
 
 /**
- * カードキー発行料を取得する（全コース共通）
+ * カードキー発行料を取得する（Settings シート・全コース共通）
  *
- * @returns {number} カードキー発行料（円）
+ * @returns {number}
  */
 function getCardKeyFee() {
-  // TODO: Phase 3 で実装する
-  // Settingsシートからcard_key_feeを取得する
-  throw new Error('未実装: FeeService.getCardKeyFee');
+  try {
+    return Number(getSetting('card_key_issue_fee')) || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/**
+ * FeeRules から指定キーのルール値を取得する
+ *
+ * @param {string} ruleKey
+ * @returns {string|null}
+ */
+function getFeeRule(ruleKey) {
+  try {
+    var rule = findRowByKey(SHEET_NAMES.FEE_RULES, 'rule_key', ruleKey);
+    return rule ? String(rule.rule_value) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 2桁ゼロ埋め */
+function _pad2(n) {
+  return n < 10 ? '0' + n : String(n);
 }

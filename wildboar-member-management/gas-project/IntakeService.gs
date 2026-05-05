@@ -139,47 +139,216 @@ function generateApplicationId() {
 }
 
 // =============================================================================
-// Phase 3 以降で実装するスタブ
+// Phase 3 実装
 // =============================================================================
 
 /**
- * 申込一覧を取得する（Phase 3 で実装）
+ * 申込一覧を取得する（スタッフ画面 member-list.html から呼ぶ）
  *
- * @param {string} [reviewStatus] - フィルタするステータス（省略時は全件）
- * @returns {Object[]} 申込オブジェクトの配列
+ * @param {string} [reviewStatus] - 'pending' | 'approved' | 'rejected' | 省略で全件
+ * @returns {Object[]} 申込サマリーの配列（新しい順）
  */
 function getIntakeApplications(reviewStatus) {
-  throw new Error('未実装: IntakeService.getIntakeApplications（Phase 3 で実装）');
+  try {
+    var data  = getSheetData(SHEET_NAMES.INTAKE_APPLICATIONS);
+    var plans = getSheetData(SHEET_NAMES.MEMBERSHIP_PLANS);
+
+    // plan_id → plan_name のマップ
+    var planMap = {};
+    plans.forEach(function(p) { planMap[String(p.plan_id)] = String(p.plan_name); });
+
+    var list = (reviewStatus && reviewStatus !== 'all')
+      ? data.filter(function(a) { return String(a.review_status) === reviewStatus; })
+      : data;
+
+    return list
+      .sort(function(a, b) {
+        return new Date(b.application_date).getTime() - new Date(a.application_date).getTime();
+      })
+      .map(function(a) {
+        return {
+          application_id:     String(a.application_id),
+          application_date:   String(a.application_date),
+          family_name:        String(a.family_name),
+          given_name:         String(a.given_name),
+          plan_id:            String(a.plan_id),
+          plan_name:          planMap[String(a.plan_id)] || String(a.plan_id),
+          review_status:      String(a.review_status),
+          reviewed_at:        String(a.reviewed_at || ''),
+          assigned_member_id: String(a.assigned_member_id || ''),
+        };
+      });
+  } catch (e) {
+    Logger.log('[getIntakeApplications] エラー: ' + e.message);
+    throw e;
+  }
 }
 
 /**
- * 申込IDで申込データを取得する（Phase 3 で実装）
+ * 申込IDで申込データを取得する（スタッフ画面 member-detail.html から呼ぶ）
  *
  * @param {string} applicationId - 申込ID
- * @returns {Object|null}
+ * @returns {Object|null} 申込オブジェクト（_rowIndex を除く）
  */
 function getIntakeApplicationById(applicationId) {
-  throw new Error('未実装: IntakeService.getIntakeApplicationById（Phase 3 で実装）');
+  try {
+    var app = findRowByKey(SHEET_NAMES.INTAKE_APPLICATIONS, 'application_id', applicationId);
+    if (!app) return null;
+
+    // _rowIndex を除去して返す（GAS → フロントエンド間のシリアライズ対策）
+    var result = {};
+    Object.keys(app).forEach(function(k) {
+      if (k !== '_rowIndex') result[k] = app[k];
+    });
+    return result;
+  } catch (e) {
+    Logger.log('[getIntakeApplicationById] エラー: ' + e.message);
+    throw e;
+  }
 }
 
 /**
- * 申込を承認して会員登録する（Phase 3 で実装）
+ * 申込を承認して会員登録する（スタッフ画面から呼ぶ）
+ *
+ * 処理フロー:
+ *   1. 申込取得・ステータス確認
+ *   2. createMember() → Members 追加 + KeyCards 更新
+ *   3. Payments 初回費用記録
+ *   4. IntakeApplications を approved に更新
+ *   5. AuditLog 記録
  *
  * @param {string} applicationId
  * @param {Object} staffData
- * @returns {Object}
+ * @param {string} staffData.memberId        - 確定した会員番号
+ * @param {string} staffData.keyCardNumber   - 選択した鍵番号
+ * @param {string} staffData.planId          - 確定コースID
+ * @param {string} staffData.joinDate        - 入会日（YYYY-MM-DD）
+ * @param {string} [staffData.paymentMethod] - 支払い方法（cash / bank_transfer）
+ * @param {string} [staffData.staffNotes]    - スタッフメモ
+ * @returns {{ success: boolean, member_id?: string, message?: string }}
  */
 function approveIntakeApplication(applicationId, staffData) {
-  throw new Error('未実装: IntakeService.approveIntakeApplication（Phase 3 で実装）');
+  try {
+    // 1. 申込取得・ステータス確認
+    var app = findRowByKey(SHEET_NAMES.INTAKE_APPLICATIONS, 'application_id', applicationId);
+    if (!app) return { success: false, message: '申込が見つかりません: ' + applicationId };
+    if (String(app.review_status) !== REVIEW_STATUS.PENDING) {
+      return { success: false, message: 'この申込はすでに処理済みです' };
+    }
+
+    // staffData バリデーション
+    if (!staffData.memberId)      return { success: false, message: '会員番号を入力してください' };
+    if (!staffData.keyCardNumber) return { success: false, message: '鍵番号を選択してください' };
+    if (!staffData.planId)        return { success: false, message: 'コースを選択してください' };
+    if (!staffData.joinDate)      return { success: false, message: '入会日を入力してください' };
+
+    var now      = new Date().toISOString();
+    var operator = getCurrentOperator();
+
+    // 2. 会員登録（Members + KeyCards）
+    createMember(
+      applicationId,
+      staffData.memberId,
+      staffData.keyCardNumber,
+      staffData.planId,
+      staffData.joinDate,
+      staffData.staffNotes || '',
+      operator
+    );
+
+    // 3. 初回費用の記録（Payments）
+    try {
+      var feeResult = calcInitialFee(staffData.planId, staffData.joinDate);
+      var paymentId = 'PAY-' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd')
+                    + '-' + generateId().slice(0, 8).toUpperCase();
+      appendRow(SHEET_NAMES.PAYMENTS, {
+        payment_id:     paymentId,
+        member_id:      staffData.memberId,
+        payment_type:   PAYMENT_TYPE.INITIAL,
+        amount:         feeResult.total,
+        payment_method: staffData.paymentMethod || PAYMENT_METHOD.CASH,
+        payment_date:   staffData.joinDate,
+        target_month:   staffData.joinDate.slice(0, 7),
+        notes: [
+          '入会金: ' + feeResult.enrollmentFee + '円',
+          'カードキー: ' + feeResult.cardKeyFee + '円',
+          '日割り(' + feeResult.breakdown.remainingDays + '日): ' + feeResult.proratedMonthlyFee + '円',
+          '翌月(' + feeResult.breakdown.nextMonth + '): ' + feeResult.nextMonthFee + '円',
+        ].join(' / '),
+        created_at: now,
+        created_by: operator,
+      });
+    } catch (feeErr) {
+      // 費用記録失敗は警告のみ（会員登録は完了しているため続行）
+      Logger.log('[approveIntakeApplication] Payments 記録失敗（続行）: ' + feeErr.message);
+    }
+
+    // 4. IntakeApplications ステータス更新
+    updateRowByKey(SHEET_NAMES.INTAKE_APPLICATIONS, 'application_id', applicationId, {
+      review_status:            REVIEW_STATUS.APPROVED,
+      reviewed_by:              operator,
+      reviewed_at:              now,
+      assigned_member_id:       staffData.memberId,
+      assigned_key_card_number: staffData.keyCardNumber,
+      updated_at:               now,
+    });
+
+    // 5. AuditLog
+    log({
+      action:      LOG_ACTION.APPROVE,
+      targetSheet: SHEET_NAMES.INTAKE_APPLICATIONS,
+      targetId:    applicationId,
+      newValue:    staffData.memberId,
+      description: '入会申込承認 → 会員登録: ' + staffData.memberId,
+    });
+
+    Logger.log('[approveIntakeApplication] 承認完了: ' + applicationId + ' → ' + staffData.memberId);
+    return { success: true, member_id: staffData.memberId };
+
+  } catch (e) {
+    Logger.log('[approveIntakeApplication] エラー: ' + e.message);
+    return { success: false, message: 'システムエラー: ' + e.message };
+  }
 }
 
 /**
- * 申込を却下する（Phase 3 で実装）
+ * 申込を差し戻す（スタッフ画面から呼ぶ）
  *
  * @param {string} applicationId
- * @param {string} reason
- * @returns {boolean}
+ * @param {string} reason - 差し戻し理由
+ * @returns {{ success: boolean, message?: string }}
  */
 function rejectIntakeApplication(applicationId, reason) {
-  throw new Error('未実装: IntakeService.rejectIntakeApplication（Phase 3 で実装）');
+  try {
+    var app = findRowByKey(SHEET_NAMES.INTAKE_APPLICATIONS, 'application_id', applicationId);
+    if (!app) return { success: false, message: '申込が見つかりません' };
+    if (String(app.review_status) !== REVIEW_STATUS.PENDING) {
+      return { success: false, message: 'この申込はすでに処理済みです' };
+    }
+
+    var now      = new Date().toISOString();
+    var operator = getCurrentOperator();
+
+    updateRowByKey(SHEET_NAMES.INTAKE_APPLICATIONS, 'application_id', applicationId, {
+      review_status:    REVIEW_STATUS.REJECTED,
+      rejection_reason: reason || '',
+      reviewed_by:      operator,
+      reviewed_at:      now,
+      updated_at:       now,
+    });
+
+    log({
+      action:      LOG_ACTION.REJECT,
+      targetSheet: SHEET_NAMES.INTAKE_APPLICATIONS,
+      targetId:    applicationId,
+      description: '入会申込差し戻し: ' + (reason || '理由未記入'),
+    });
+
+    Logger.log('[rejectIntakeApplication] 差し戻し完了: ' + applicationId);
+    return { success: true };
+
+  } catch (e) {
+    Logger.log('[rejectIntakeApplication] エラー: ' + e.message);
+    return { success: false, message: 'システムエラー: ' + e.message };
+  }
 }
