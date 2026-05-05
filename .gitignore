@@ -127,3 +127,8 @@ subsidy-grants-projects/
 local-secret-backups/
 _archive_workspace_cleanup_20260502/
 _archive_root_cleanup_20260502/
+
+# 独立 repo 化済みプロジェクト（2026-05-05）
+# それぞれ専用 GitHub private repo で管理
+/training-program-platform-jp/
+/wildboar-member-management/
