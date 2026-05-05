@@ -59,6 +59,33 @@ Web UI 化 Phase WEB-1（読み取り専用 Web 入口）を実装・clasp push 
 
 ---
 
+## Phase WEB-1 後 既存 Web UI 棚卸し（2026-05-05）
+
+詳細は `docs/WEB_UI_EXISTING_INVENTORY_2026-05-05.md` 参照。
+
+### 棚卸し結果サマリ
+
+- 既存稼働中導線: `patientSearch.html` → `selfPayWeb.html`（スマホ操作・実地テスト済み）
+- Phase WEB-1 の位置づけ: **部分延長 + 部分並列**
+  - 延長: `patientSearch.html` に「患者詳細を見る」追加
+  - 並列: `web-home.html` は `?page=home` 指定でのみアクセス可能（デフォルト URL は変更なし）
+- 既存スプレッドシートUI専用関数（Web から直接呼べない）: `saveVisit_V3`, `autofillFromPreviousVisit_V3`, `openSelfPayDialog_V3`
+
+### Phase WEB-2 前に決めること
+
+1. **デフォルト URL の方針**（`web-home.html` をデフォルトにするか）
+2. **来院登録の設計**（`saveVisitFromWeb_V3` 新関数の引数・バリデーション方針）
+3. **実機確認**（`web-home.html` / `web-patient-detail.html` の動作確認）
+
+### Phase WEB-2 で必要な新関数
+
+| 関数 | 役割 |
+|---|---|
+| `saveVisitFromWeb_V3(params)` | JSON 引数で来院登録（`saveVisit_V3` の Web 版） |
+| `getPrevVisitData_V3(patientId, treatDate)` | 前回来院データの JSON 返却 |
+
+---
+
 ## 次フェーズ候補
 
 ### Phase WEB-2
