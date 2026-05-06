@@ -135,3 +135,9 @@ _archive_root_cleanup_20260502/
 
 # desktop-work-status-overlay は独立 git repo で管理
 desktop-work-status-overlay/
+
+# 独立 repo 化済みプロジェクト（2026-05-06）
+/training-trend-analyzer/
+
+# 一時テストファイル（コミット対象外）
+gas-projects/jyu-gas-ver3.1/test_d6.xlsx
