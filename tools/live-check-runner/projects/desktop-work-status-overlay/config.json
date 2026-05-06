@@ -1,0 +1,7 @@
+{
+  "name": "desktop-work-status-overlay",
+  "type": "desktop-tkinter",
+  "projectRoot": "C:\\hirayama-ai-workspace\\workspace\\desktop-work-status-overlay",
+  "description": "Work Status Overlay — Tkinter desktop app for Claude/GPT runtime monitoring",
+  "notes": "No browser automation. Tests use Node child_process + PowerShell + Python."
+}

@@ -135,6 +135,8 @@ _archive_root_cleanup_20260502/
 
 # desktop-work-status-overlay は独立 git repo で管理
 desktop-work-status-overlay/
+# ただし live-check-runner 内のテストプロジェクトは除外しない
+!tools/live-check-runner/projects/desktop-work-status-overlay/
 
 # 独立 repo 化済みプロジェクト（2026-05-06）
 /training-trend-analyzer/
