@@ -6266,3 +6266,4 @@ function getPatientDetail_V3(patientId) {
     return { error: e.message };
   }
 }
+
