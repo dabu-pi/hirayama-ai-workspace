@@ -5973,6 +5973,15 @@ function findLatestCaseKeyForPatient_(caseSh, caseMap, patientId, caseNo) {
  * @returns {{ok:boolean, visitKey?:string, patientId?:string,
  *            message?:string, reasonCode?:string}}
  */
+/**
+ * Web UI から来院を登録する（WEB-2.5: kubun 自動判定 + 候補金額算定）。
+ *
+ * 設計方針:
+ * - kubun は calcEpisodeForCase_（30日ルール）で自動判定する
+ * - calcHeaderAmountsByVisitKey_V3_ で候補金額を算定し来院ヘッダに保存する
+ * - needCheck は常に true（請求確定はスプレッドシートUIで人間確認後）
+ * - 施術明細・初検情報履歴は MVP スコープ外（needCheckReason に記録）
+ */
 function saveVisitFromWeb_V3(payload) {
   try {
     var pid = String((payload && payload.patientId) || "").trim();
@@ -5991,6 +6000,9 @@ function saveVisitFromWeb_V3(payload) {
       return { ok: false, reasonCode: "MISSING_REQUIRED", message: "ケース情報が未入力です" };
     }
 
+    var acctType        = String((payload && payload.accountingType) || "");
+    var isInsuranceVisit = (acctType !== "自費のみ");
+
     var ss       = SpreadsheetApp.getActiveSpreadsheet();
     var masterSh = ss.getSheetByName(SHEETS.master);
     var caseSh   = ss.getSheetByName(SHEETS.cases);
@@ -6002,8 +6014,8 @@ function saveVisitFromWeb_V3(payload) {
     // 患者存在確認
     var patientOk = false;
     if (masterSh.getLastRow() >= 2) {
-      var mVals = masterSh.getDataRange().getValues();
-      var mHdr  = mVals[0];
+      var mVals   = masterSh.getDataRange().getValues();
+      var mHdr    = mVals[0];
       var mPidIdx = -1;
       for (var mh = 0; mh < mHdr.length; mh++) {
         if (String(mHdr[mh] || "").trim() === "患者ID") { mPidIdx = mh; break; }
@@ -6032,30 +6044,23 @@ function saveVisitFromWeb_V3(payload) {
       };
     }
 
-    var now           = new Date();
-    var kubunLabel    = "";
-    var caseKeysByNo  = {};
+    var now          = new Date();
+    var caseKeysByNo = {};
+    var kubunByNo    = {};   // caseNo → 自動判定 kubun
+    var hasInitKubun = false;
 
+    // ── ① 来院ケース保存（kubun を calcEpisodeForCase_ で自動判定）──────────
     for (var ci = 0; ci < cases.length && ci < 2; ci++) {
       var c      = cases[ci];
       var caseNo = Number(c.caseNo || 1);
-      var kubun  = String(c.kubun  || "").trim();
-      if (!kubunLabel && kubun) kubunLabel = kubun;
 
-      // episodeStartDate: 初検→ visitDate、それ以外→既存 caseKey から解析
-      var episodeStartDate = visitDate;
-      if (kubun !== "初検") {
-        var latestKey = findLatestCaseKeyForPatient_(caseSh, caseMap, pid, caseNo);
-        if (latestKey) {
-          var keyParts = latestKey.split("_");
-          if (keyParts.length >= 3) {
-            var dateCandidate = keyParts[keyParts.length - 2];
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dateCandidate)) {
-              episodeStartDate = new Date(dateCandidate + "T00:00:00+09:00");
-            }
-          }
-        }
-      }
+      // kubun 自動判定（30日ルール準拠 / saveVisit_V3 と同一ロジック）
+      var ep = calcEpisodeForCase_(caseSh, caseMap, pid, visitDate, caseNo);
+      var kubun = ep.kubun;
+      var episodeStartDate = ep.episodeStartDate;
+      kubunByNo[caseNo] = kubun;
+      if (kubun === "初検") hasInitKubun = true;
+
       var caseKey = buildCaseKey_(pid, episodeStartDate, caseNo);
       caseKeysByNo[caseNo] = caseKey;
 
@@ -6075,8 +6080,8 @@ function saveVisitFromWeb_V3(payload) {
         setByName_(rowArr, caseMap, CASE_COLS.p1,        String(c.bodyPart || "").trim());
         setByName_(rowArr, caseMap, CASE_COLS.d1,        String(c.disease  || "").trim());
         if (injDate) {
-          setByName_(rowArr, caseMap, CASE_COLS.inj1,        injDate);
-          setByName_(rowArr, caseMap, CASE_COLS.injuryFixed,  injDate);
+          setByName_(rowArr, caseMap, CASE_COLS.inj1,       injDate);
+          setByName_(rowArr, caseMap, CASE_COLS.injuryFixed, injDate);
         }
         setByName_(rowArr, caseMap, CASE_COLS.cold1, !!c.cold);
         setByName_(rowArr, caseMap, CASE_COLS.warm1, !!c.warm);
@@ -6097,7 +6102,26 @@ function saveVisitFromWeb_V3(payload) {
       }
     }
 
-    // 来院ヘッダ保存（金額未算定: visitTotal=0, needCheck=true）
+    // ── ② 候補金額算定（来院ケース保存後に呼ぶ）──────────────────────────
+    var kubun1 = kubunByNo[1] || "";
+    var kubun2 = kubunByNo[2] || "";
+    var kubunLabel = kubun1 || kubun2;
+
+    var amounts;
+    if (isInsuranceVisit) {
+      amounts = calcHeaderAmountsByVisitKey_V3_(ss, visitKey, pid, visitDate, kubun1, kubun2);
+    } else {
+      amounts = buildZeroInsuranceAmounts_V3_();
+    }
+
+    // ── ③ needCheck=true 維持 + 要確認理由構築 ────────────────────────────
+    var reasonParts = ["Web UI 登録"];
+    if (amounts.needCheckReason) reasonParts.push(amounts.needCheckReason);
+    reasonParts.push("施術明細未記録（Web MVP）");
+    if (hasInitKubun) reasonParts.push("初検情報履歴未記録（Web MVP）");
+    var needCheckReason = reasonParts.join(";");
+
+    // ── ④ 来院ヘッダ保存（候補金額あり）──────────────────────────────────
     var lastVisit = findLastVisitDateInHeader_(headSh, headMap, pid, visitDate);
     var gapDays   = (lastVisit instanceof Date) ? daysBetween_(lastVisit, visitDate) : "";
     var hCaseKey  = caseKeysByNo[1] || caseKeysByNo[2] || "";
@@ -6110,40 +6134,56 @@ function saveVisitFromWeb_V3(payload) {
       patientId:           pid,
       kubun:               kubunLabel,
       injuryVisit:         "",
-      initFee:             0,
-      reFee:               0,
-      supportFee:          0,
-      detailSum:           0,
-      visitTotal:          0,
-      windowPay:           0,
-      claimPay:            0,
+      initFee:             amounts.initFee    || 0,
+      reFee:               amounts.reFee      || 0,
+      supportFee:          amounts.supportFee || 0,
+      detailSum:           amounts.detailSum  || 0,
+      visitTotal:          amounts.visitTotal  || 0,
+      windowPay:           amounts.windowPay  || 0,
+      claimPay:            amounts.claimPay   || 0,
       lastVisit:           lastVisit || "",
       gapDays:             gapDays,
-      needCheck:           true,
-      needCheckReason:     "Web UI 登録（金額未算定）",
+      needCheck:           true,              // Web 登録は常に要確認
+      needCheckReason:     needCheckReason,
       createdAt:           now,
       caseKey:             hCaseKey,
       caseIndex:           hCaseIdx,
       caseKey2:            hCaseKey2,
-      billedKubun:         "",
-      mixedFlag:           "",
-      case1Summary:        "",
-      case2Summary:        "",
-      chargeReason:        "",
-      accountingType:      String((payload && payload.accountingType)      || ""),
+      billedKubun:         amounts.billedKubun   || "",
+      mixedFlag:           amounts.mixedFlag     || "",
+      case1Summary:        amounts.case1Summary  || "",
+      case2Summary:        amounts.case2Summary  || "",
+      chargeReason:        amounts.chargeReason  || "",
+      accountingType:      acctType,
       chronicCandidateFlag: !!(payload && payload.chronicCandidateFlag),
       nextReservation:      !!(payload && payload.nextReservation),
-      firstVisitType:       String((payload && payload.firstVisitType)     || ""),
+      firstVisitType:       String((payload && payload.firstVisitType) || ""),
       gymMemberFlag:        !!(payload && payload.gymMemberFlag),
     });
 
     Logger.log("[saveVisitFromWeb_V3] action=WEB_VISIT_CREATE patientId=" + pid
-      + " visitKey=" + visitKey + " result=OK");
+      + " visitKey=" + visitKey
+      + " kubun1=" + kubun1 + " kubun2=" + kubun2
+      + " visitTotal=" + (amounts.visitTotal || 0)
+      + " needCheck=true reason=" + needCheckReason
+      + " result=OK");
+
     return {
-      ok:        true,
-      visitKey:  visitKey,
-      patientId: pid,
-      message:   "来院を登録しました（要確認フラグあり: スプレッドシートで金額を算定してください）"
+      ok:         true,
+      visitKey:   visitKey,
+      patientId:  pid,
+      kubun:      kubunLabel,
+      amounts: {
+        visitTotal:      amounts.visitTotal  || 0,
+        windowPay:       amounts.windowPay   || 0,
+        claimPay:        amounts.claimPay    || 0,
+        initFee:         amounts.initFee     || 0,
+        reFee:           amounts.reFee       || 0,
+        needCheck:       true,
+        needCheckReason: needCheckReason,
+        billedKubun:     amounts.billedKubun || "",
+      },
+      message: "来院を登録しました（候補金額算定済み。要確認: " + needCheckReason + "）"
     };
   } catch (e) {
     Logger.log("[saveVisitFromWeb_V3] error=" + e.message);

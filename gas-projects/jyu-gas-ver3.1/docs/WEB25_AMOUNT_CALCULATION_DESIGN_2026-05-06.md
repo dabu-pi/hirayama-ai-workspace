@@ -377,6 +377,56 @@ Step 6: git commit / push
 
 ---
 
+## 14. WEB-2.5 実装結果（2026-05-06）
+
+### 実装完了ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `Ver3_core.js` | `saveVisitFromWeb_V3` 改修（kubun 自動判定 + 候補金額算定） |
+| `web-visit-new.html` | 成功画面に候補金額表示 / kubun を参考入力に変更 / 警告文更新 |
+| `tools/live-check-runner/projects/jyu-gas-ver31/web25.spec.ts` | WEB-2.5 Playwright テスト追加 |
+
+### LiveCheck 実行結果
+
+**実行コマンド:** `npm run test:jyu:web25 -- --project=chromium`
+
+| テスト | 結果 |
+|---|---|
+| W2.5-1: kubun 未選択でもモーダルが開く | ✅ PASS |
+| W2.5-2: モーダルに「システムが自動判定」表示 | ✅ PASS |
+| W2.5-3: 「請求確定ではありません」警告表示 | ✅ PASS |
+| W2.5-4: 保存実行 + 候補金額表示 | ✅ PASS |
+| W2.5-5: 二重保存防止（DUPLICATE_VISIT） | ✅ PASS |
+
+**既存 42 テスト:** 全件 PASS（変更なし確認）
+
+### W2.5-4 テスト実行ログ
+
+```
+visitKey:        hirayamaka_2999-12-31（テスト用固定日付）
+区分（自動判定）: 初検（calcEpisodeForCase_ による判定）
+来院合計（候補）: ¥2,410
+窓口負担（候補）: ¥720
+保険請求（候補）: ¥1,690
+要確認理由:      Web UI 登録;温罨法 算定不可（初検日特例：捻挫）;
+                 施術明細未記録（Web MVP）;初検情報履歴未記録（Web MVP）
+二重保存防止:    W2.5-5 で DUPLICATE_VISIT 確認
+```
+
+**温罨法 算定不可** は初検日特例（捻挫：初検日から5日未満は温罨法不可）を正しく適用した結果。  
+これはレセプト事故防止のため設計通り `needCheckReason` に記録されている。
+
+### テストデータの確認と削除
+
+W2.5-4 で書き込まれたテストデータ（`hirayamaka_2999-12-31`）:
+- **来院ケース:** patientId=hirayamaka / treatDate=2999-12-31 の行
+- **来院ヘッダ:** visitKey=hirayamaka_2999-12-31 の行
+- **識別方法:** 施術日が2999年のため容易に識別可能
+- **削除方法:** スプレッドシートで手動削除（または識別記録として残す）
+
+---
+
 ## 13. 参考: `saveVisit_V3` との差分マップ
 
 | 機能 | `saveVisit_V3`（SS UI） | `saveVisitFromWeb_V3` WEB-2 | WEB-2.5 計画 |

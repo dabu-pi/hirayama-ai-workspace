@@ -303,9 +303,9 @@
     </button>
 
     <div class="form-row">
-      <label for="kubun">区分</label>
+      <label for="kubun">区分（参考入力 — 登録時にシステムが自動判定）</label>
       <select id="kubun">
-        <option value="">（選択してください）</option>
+        <option value="">（空欄でも可・システムが30日ルールで判定）</option>
         <option value="初検">初検</option>
         <option value="再検">再検</option>
         <option value="後療">後療</option>
@@ -343,8 +343,9 @@
       <div class="modal-title">登録内容の確認</div>
       <table class="confirm-table" id="confirmTable"></table>
       <div class="warn-box">
-        &#x26A0;&#xFE0F; 金額算定は行われません。<br>
-        登録後、スプレッドシートで金額を確認・算定してください。
+        &#x26A0;&#xFE0F; <b>区分はシステムが30日ルールで自動判定</b>します。<br>
+        候補金額を算定して保存しますが、<b>請求確定ではありません</b>。<br>
+        月次申請前にスプレッドシートで必ず確認してください。
       </div>
       <div class="modal-btns">
         <button class="btn-cancel" onclick="closeConfirm()">修正する</button>
@@ -421,7 +422,7 @@
 
       if (!PATIENT_ID) { alert("患者IDが未指定です。"); return; }
       if (!visitDate)  { alert("来院日を入力してください。"); return; }
-      if (!kubun)      { alert("区分を選択してください。"); return; }
+      // 区分はシステムが自動判定するため必須チェックから除外
       if (!bodyPart)   { alert("部位を入力してください。"); return; }
       if (!disease)    { alert("傷病名を入力してください。"); return; }
 
@@ -430,7 +431,7 @@
         ["来院日", visitDate],
         ["会計区分", document.getElementById("accountingType").value || "（未選択）"],
         ["新規区分", document.getElementById("firstVisitType").value || "（未選択）"],
-        ["区分",    kubun],
+        ["区分",    document.getElementById("kubun").value || "（システムが自動判定）"],
         ["部位",    bodyPart],
         ["傷病名",  disease],
         ["受傷日",  document.getElementById("injuryDate").value || "（未入力）"],
@@ -498,11 +499,40 @@
           if (res && res.ok) {
             panel.className = "";
             panel.style.display = "block";
+
+            // 候補金額の表示（amounts があれば表示）
+            var amts     = res.amounts || {};
+            var total    = typeof amts.visitTotal === "number"
+              ? "¥" + Number(amts.visitTotal).toLocaleString() : "—";
+            var winPay   = typeof amts.windowPay === "number"
+              ? "¥" + Number(amts.windowPay).toLocaleString()  : "—";
+            var claimPay = typeof amts.claimPay === "number"
+              ? "¥" + Number(amts.claimPay).toLocaleString()   : "—";
+            var kubunResult = esc(res.kubun || "—");
+            var reasonText  = esc(amts.needCheckReason || "");
+
             panel.innerHTML =
               "<div class='result-icon'>&#x2705;</div>" +
               "<div class='result-msg'>来院を登録しました</div>" +
-              "<div class='result-sub'>visitKey: " + esc(res.visitKey) + "<br>" +
-              "スプレッドシートで金額を算定してください</div>";
+              "<div class='result-sub' style='text-align:left;margin-top:8px;'>" +
+              "<table style='width:100%;font-size:13px;border-collapse:collapse;'>" +
+              "<tr><td style='color:#888;padding:3px 0;'>visitKey</td>" +
+              "    <td style='font-weight:600;padding:3px 0;'>" + esc(res.visitKey) + "</td></tr>" +
+              "<tr><td style='color:#888;padding:3px 0;'>区分（自動判定）</td>" +
+              "    <td style='font-weight:600;padding:3px 0;'>" + kubunResult + "</td></tr>" +
+              "<tr><td style='color:#888;padding:3px 0;'>来院合計（候補）</td>" +
+              "    <td style='font-weight:600;padding:3px 0;'>" + total + "</td></tr>" +
+              "<tr><td style='color:#888;padding:3px 0;'>窓口負担（候補）</td>" +
+              "    <td style='padding:3px 0;'>" + winPay + "</td></tr>" +
+              "<tr><td style='color:#888;padding:3px 0;'>保険請求（候補）</td>" +
+              "    <td style='padding:3px 0;'>" + claimPay + "</td></tr>" +
+              "</table>" +
+              "<div style='margin-top:10px;padding:8px 10px;background:#fff3cd;" +
+              "border:1px solid #ffc107;border-radius:6px;font-size:12px;color:#856404;'>" +
+              "&#x26A0;&#xFE0F; <b>請求確定ではありません。</b><br>" +
+              "月次申請前に必ずスプレッドシートで確認してください。<br>" +
+              "要確認理由: " + reasonText + "</div>" +
+              "</div>";
             document.getElementById("saveBtn").style.display = "none";
 
             // 患者詳細へのリンクを追加

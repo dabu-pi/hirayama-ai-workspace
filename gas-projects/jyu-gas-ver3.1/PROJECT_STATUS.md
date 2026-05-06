@@ -129,7 +129,7 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 
 ## Phase WEB-2.5 調査・設計（2026-05-06）
 
-**ステータス: 設計完了・実装待ち**
+**ステータス: 実装完了 / LiveCheck 5 PASS**
 
 設計書: `docs/WEB25_AMOUNT_CALCULATION_DESIGN_2026-05-06.md`
 
@@ -143,13 +143,26 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 | kubun を自動判定できるか | ✅ `calcEpisodeForCase_` で30日ルール準拠 |
 | 施術明細・初検情報履歴の書き込みが必要か | △ MVP では省略可能（needCheckReason で記録） |
 
-### WEB-2.5 MVP 実装内容（次フェーズ）
+### WEB-2.5 実装内容（2026-05-06）
 
-1. `saveVisitFromWeb_V3` 改修: kubun を `calcEpisodeForCase_` で自動判定
-2. `saveVisitFromWeb_V3` 改修: `calcHeaderAmountsByVisitKey_V3_` で候補金額算定
-3. 来院ヘッダに **候補金額** 保存（needCheck=true + 理由付き・ゼロではない）
-4. `web-visit-new.html` 成功画面に候補金額表示
-5. LiveCheck（W2.5 テスト）
+| 実装 | 結果 |
+|---|---|
+| `saveVisitFromWeb_V3` 改修: kubun を `calcEpisodeForCase_` で自動判定 | ✅ 完了 |
+| `saveVisitFromWeb_V3` 改修: `calcHeaderAmountsByVisitKey_V3_` で候補金額算定 | ✅ 完了 |
+| 来院ヘッダに候補金額保存（needCheck=true + 理由付き） | ✅ 完了 |
+| `web-visit-new.html` 成功画面に候補金額表示 | ✅ 完了 |
+| LiveCheck（W2.5-1〜5 全 PASS） | ✅ 完了 |
+| clasp push | ✅ 完了 |
+
+**LiveCheck テスト visitKey（要手動確認）:** `hirayamaka_2999-12-31`
+
+### 実装後の動作仕様
+
+- kubun は `calcEpisodeForCase_`（30日ルール）で自動判定（user input は参考のみ）
+- 来院ヘッダに候補金額（initFee / reFee / visitTotal / windowPay / claimPay）を記録
+- `needCheck=true` は常に維持
+- `needCheckReason` = "Web UI 登録;（算定抑制理由）;施術明細未記録（Web MVP）;（初検時: 初検情報履歴未記録）"
+- 成功画面: visitKey / 区分（自動判定）/ 来院合計 / 窓口負担 / 保険請求 / 要確認理由を表示
 
 ### 実装前オーナー確認事項
 
