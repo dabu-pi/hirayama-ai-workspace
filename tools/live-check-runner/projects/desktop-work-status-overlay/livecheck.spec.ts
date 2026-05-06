@@ -347,4 +347,196 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  // ── DWSO-3E: highlight_selector 自動確認 ───────────────────────────────────
+
+  test("DWSO-3E-1: highlight_selector selects ERROR slot correctly", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+from runtime_status import DesktopRuntimeStatus, ToolRuntimeStatus, ToolStatus, Confidence, DetectionSource
+from highlight_selector import select_highlight
+
+def make_tool(status, conf=Confidence.HIGH):
+    return ToolRuntimeStatus(
+        tool='claude', status=status, confidence=conf,
+        source=DetectionSource.TERMINAL_MONITOR,
+        last_seen_at='2026-05-06T20:00:00+09:00',
+    )
+
+def make_drs(slot, claude_status=ToolStatus.IDLE, gpt_status=ToolStatus.IDLE):
+    return DesktopRuntimeStatus(
+        desktop_slot=slot,
+        claude=make_tool(claude_status),
+        gpt=make_tool(gpt_status),
+    )
+
+# D2 ERROR, D3 RUNNING → D2 を選ぶ
+statuses = {
+    1: make_drs(1),
+    2: make_drs(2, claude_status=ToolStatus.ERROR),
+    3: make_drs(3, claude_status=ToolStatus.RUNNING),
+    4: make_drs(4),
+}
+result = select_highlight(statuses)
+assert result is not None, "Should have a highlight"
+assert result.slot == 2, f"Expected slot=2, got {result.slot}"
+assert result.priority == 1, f"Expected priority=1, got {result.priority}"
+assert result.label == 'ERR', f"Expected label=ERR, got {result.label}"
+print(f"slot={result.slot} priority={result.priority} label={result.label} color={result.color}")
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3E-1]", r.stderr);
+    console.log("[DWSO-3E-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3E-2: highlight_selector selects RUNNING slot when no ERROR", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+from runtime_status import DesktopRuntimeStatus, ToolRuntimeStatus, ToolStatus, Confidence, DetectionSource
+from highlight_selector import select_highlight
+
+def make_tool(status, conf=Confidence.HIGH):
+    return ToolRuntimeStatus(
+        tool='claude', status=status, confidence=conf,
+        source=DetectionSource.TERMINAL_MONITOR,
+        last_seen_at='2026-05-06T20:00:00+09:00',
+    )
+
+def make_drs(slot, claude_status=ToolStatus.IDLE):
+    return DesktopRuntimeStatus(
+        desktop_slot=slot,
+        claude=make_tool(claude_status),
+        gpt=make_tool(ToolStatus.IDLE),
+    )
+
+# D2 RUNNING, others IDLE → D2 を選ぶ
+statuses = {i: make_drs(i) for i in range(1, 5)}
+statuses[2] = make_drs(2, claude_status=ToolStatus.RUNNING)
+result = select_highlight(statuses)
+assert result is not None, "Should have a highlight"
+assert result.slot == 2, f"Expected slot=2, got {result.slot}"
+assert result.priority == 3, f"Expected priority=3, got {result.priority}"
+assert result.label == 'RUN'
+print(f"slot={result.slot} priority={result.priority} label={result.label}")
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3E-2]", r.stderr);
+    console.log("[DWSO-3E-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3E-3: highlight_selector returns None when all IDLE", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+from runtime_status import DesktopRuntimeStatus, ToolRuntimeStatus, ToolStatus, Confidence, DetectionSource
+from highlight_selector import select_highlight
+
+def make_tool(status=ToolStatus.IDLE):
+    return ToolRuntimeStatus(
+        tool='claude', status=status, confidence=Confidence.HIGH,
+        source=DetectionSource.TERMINAL_MONITOR,
+        last_seen_at='2026-05-06T20:00:00+09:00',
+    )
+
+statuses = {
+    i: DesktopRuntimeStatus(
+        desktop_slot=i,
+        claude=make_tool(),
+        gpt=make_tool(),
+    )
+    for i in range(1, 5)
+}
+result = select_highlight(statuses)
+assert result is None, f"Expected None for all-idle, got {result}"
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3E-3]", r.stderr);
+    console.log("[DWSO-3E-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3E-4: highlight_selector COMPLETED recent from real claude-d2 JSON", () => {
+    // テスト用 runtime JSON (slot 9) を書いて completed 判定を確認
+    const pyScript = String.raw`
+import sys, json, pathlib
+from datetime import datetime, timezone, timedelta
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+# 3分前に完了した JSON を書く
+jst = timezone(timedelta(hours=9))
+completed_ts = (datetime.now(jst) - timedelta(minutes=3)).strftime('%Y-%m-%dT%H:%M:%S+09:00')
+now_ts = datetime.now(jst).strftime('%Y-%m-%dT%H:%M:%S+09:00')
+
+test_json = {
+    "schemaVersion": 1, "desktopSlot": 9, "tool": "claude",
+    "status": "completed", "confidence": "high", "source": "terminal_monitor",
+    "startedAt": completed_ts, "lastSeenAt": now_ts,
+    "completedAt": completed_ts, "exitCode": 0, "pid": None,
+    "durationSec": 120, "errorMessage": None,
+    "launchCommand": "claude --dangerously-skip-permissions"
+}
+p = pathlib.Path(r'${TEST_JSON}')
+p.write_text(json.dumps(test_json), encoding='utf-8')
+
+from claude_runtime_reader import runtime_to_tool_status
+from highlight_selector import select_highlight
+from runtime_status import DesktopRuntimeStatus, ToolRuntimeStatus, ToolStatus, Confidence, DetectionSource
+
+# D9 の status を読む
+claude_status = runtime_to_tool_status(9)
+assert claude_status is not None, "reader returned None"
+assert claude_status.status == ToolStatus.COMPLETED, f"Expected COMPLETED, got {claude_status.status}"
+
+idle_tool = ToolRuntimeStatus(
+    tool='gpt', status=ToolStatus.IDLE, confidence=Confidence.HIGH,
+    source=DetectionSource.NONE, last_seen_at=now_ts
+)
+statuses = {
+    9: DesktopRuntimeStatus(desktop_slot=9, claude=claude_status, gpt=idle_tool)
+}
+result = select_highlight(statuses, completed_recent_sec=300)
+assert result is not None, "Expected highlight for COMPLETED recent"
+assert result.slot == 9
+assert result.priority == 2, f"Expected priority=2 (COMPLETED recent), got {result.priority}"
+assert result.label == 'DONE'
+print(f"slot={result.slot} priority={result.priority} label={result.label} color={result.color}")
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3E-4]", r.stderr);
+    console.log("[DWSO-3E-4]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
+
