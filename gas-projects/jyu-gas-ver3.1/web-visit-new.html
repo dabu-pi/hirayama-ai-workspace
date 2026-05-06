@@ -249,7 +249,7 @@
   </style>
 </head>
 <body>
-  <a class="back-link" id="back-link" href="#">&#8592; 患者詳細に戻る</a>
+  <a class="back-link" id="back-link" href="#" target="_top">&#8592; 患者詳細に戻る</a>
   <div class="page-title">来院記録 — 新規登録</div>
   <div class="patient-chip" id="patient-chip">患者 ID: …</div>
 
@@ -537,7 +537,8 @@
 
             // 患者詳細へのリンクを追加
             var link = document.createElement("a");
-            link.href  = APP_BASE_URL + "?page=detail&patientId=" + encodeURIComponent(PATIENT_ID);
+            link.href   = APP_BASE_URL + "?page=detail&patientId=" + encodeURIComponent(PATIENT_ID);
+            link.target = "_top";
             link.style.cssText =
               "display:block;margin-top:14px;text-align:center;" +
               "color:#3498db;font-size:14px;text-decoration:none;";

@@ -25,7 +25,20 @@ Web UI から来院記録の登録・候補金額算定まで実装済み（need
 | 既存導線 | patientSearch / selfPayWeb は変更なし |
 | deployment | @9 → @10 に更新（同一 deploymentId） |
 
-**重要: clasp push だけでは /exec は更新されない**  
+**重要: clasp push だけでは /exec は更新されない**
+
+### 白画面バグ修正（2026-05-06）
+
+**原因:** GAS Web App の 2 段 iframe 構造内で `<a href>` をクリックすると、
+トップウィンドウではなく内側 iframe 内で遷移してしまい、GAS 構造が入れ子になる。
+
+**修正:** 全ページ遷移リンクに `target="_top"` を追加。
+- `patientSearch.html`: 「← Web ホームへ」「患者詳細を見る」「自費明細入力」
+- `web-home.html`: 「患者検索」カード
+- `web-patient-detail.html`: 「患者検索に戻る」「来院記録を追加」「自費明細入力」
+- `web-visit-new.html`: 「患者詳細に戻る」（静的 + JS 生成）
+
+**本番反映:** deployment @10 → @11 （clasp deploy -i）  
 `clasp push` は HEAD のみ更新。`/exec` の反映には `clasp deploy -i <deploymentId>` が必要。
 
 **本番確認コマンド:**
