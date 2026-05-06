@@ -6052,6 +6052,7 @@ function saveVisitFromWeb_V3(payload) {
     var now          = new Date();
     var caseKeysByNo = {};
     var kubunByNo    = {};   // caseNo → 自動判定 kubun
+    var epByNo       = {};   // caseNo → ep オブジェクト（WEB-2.5.1 施術明細upsert用）
     var hasInitKubun = false;
 
     // ── ① 来院ケース保存（kubun を calcEpisodeForCase_ で自動判定）──────────
@@ -6064,6 +6065,7 @@ function saveVisitFromWeb_V3(payload) {
       var kubun = ep.kubun;
       var episodeStartDate = ep.episodeStartDate;
       kubunByNo[caseNo] = kubun;
+      epByNo[caseNo] = ep;
       if (kubun === "初検") hasInitKubun = true;
 
       var caseKey = buildCaseKey_(pid, episodeStartDate, caseNo);
@@ -6120,9 +6122,10 @@ function saveVisitFromWeb_V3(payload) {
     }
 
     // ── ③ needCheck=true 維持 + 要確認理由構築 ────────────────────────────
+    var willWriteDetails = isInsuranceVisit && !!(amounts.details);
     var reasonParts = ["Web UI 登録"];
     if (amounts.needCheckReason) reasonParts.push(amounts.needCheckReason);
-    reasonParts.push("施術明細未記録（Web MVP）");
+    if (!willWriteDetails) reasonParts.push("施術明細未記録");
     if (hasInitKubun) reasonParts.push("初検情報履歴未記録（Web MVP）");
     var needCheckReason = reasonParts.join(";");
 
@@ -6165,6 +6168,28 @@ function saveVisitFromWeb_V3(payload) {
       firstVisitType:       String((payload && payload.firstVisitType) || ""),
       gymMemberFlag:        !!(payload && payload.gymMemberFlag),
     });
+
+    // ── ④.5 施術明細upsert（WEB-2.5.1: 候補金額算定済みの明細を自動書き込み）──
+    if (willWriteDetails) {
+      var detailSh = ss.getSheetByName(SHEETS.detail);
+      if (detailSh) {
+        var detailMap = buildHeaderColMap_(detailSh);
+        upsertDetailRows_V3_(detailSh, detailMap, {
+          visitKey:  visitKey,
+          patientId: pid,
+          treatDate: visitDate,
+          kubun1:    kubun1,
+          kubun2:    kubun2,
+          amounts:   amounts,
+          ep1:       epByNo[1] || { episodeStartDate: visitDate },
+          ep2:       epByNo[2] || { episodeStartDate: visitDate },
+          now:       now,
+        });
+        Logger.log("[saveVisitFromWeb_V3] action=DETAIL_UPSERT visitKey=" + visitKey
+          + " case1Parts=" + (amounts.details.case1Parts || []).length
+          + " case2Parts=" + (amounts.details.case2Parts || []).length);
+      }
+    }
 
     Logger.log("[saveVisitFromWeb_V3] action=WEB_VISIT_CREATE patientId=" + pid
       + " visitKey=" + visitKey

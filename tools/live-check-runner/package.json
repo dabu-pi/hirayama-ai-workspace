@@ -13,6 +13,7 @@
     "test:jyu:smoke": "playwright test projects/jyu-gas-ver31/smoke.spec.ts",
     "test:jyu:web2": "playwright test projects/jyu-gas-ver31/web2.spec.ts",
     "test:jyu:web25": "playwright test projects/jyu-gas-ver31/web25.spec.ts",
+    "test:jyu:web251": "playwright test projects/jyu-gas-ver31/web251.spec.ts",
     "test:jyu:mobile-field": "playwright test projects/jyu-gas-ver31/mobile-field.spec.ts",
     "test:training": "playwright test projects/training-platform",
     "test:desktop-overlay": "playwright test projects/desktop-work-status-overlay",

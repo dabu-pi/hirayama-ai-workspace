@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-06 (デフォルト URL を page=home に変更)  
+最終更新: 2026-05-07 (WEB-2.5.1 施術明細自動生成 実装完了)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -8,7 +8,7 @@
 
 ## 現在の状態
 
-**稼働中 + WEB-1 / WEB-2 / WEB-2.5 完了 + デフォルト URL = page=home**
+**稼働中 + WEB-1 / WEB-2 / WEB-2.5 / WEB-2.5.1 完了 + デフォルト URL = page=home**
 
 スプレッドシート運用は継続中。  
 Web UI から来院記録の登録・候補金額算定まで実装済み（needCheck=TRUE / 要確認）。  
@@ -49,7 +49,9 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 ### 次のアクション
 
 **→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）**  
-**→ 完了後: WEB-2.5.1（施術明細自動生成）へ**
+**→ WEB-2.5.1 実装済み。auth 更新後に `npm run test:jyu:web251` で LiveCheck を実施すること**  
+**→ 施術明細シートへの書き込み確認はスプレッドシートで手動確認（visitKey: 任意患者_2998-12-31）**  
+**→ 次候補: WEB-3（施術録・申請書生成）**
 
 ---
 
@@ -61,7 +63,7 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 | WEB-2 | Web UI 来院登録（金額=0・要確認） | ✅ 完了 |
 | WEB-2.5 | Web UI 来院登録 × 候補金額算定 | ✅ 完了 |
 | スマホ実機確認 | 現場スマホでの動作確認 | ✅ Playwright mobile PASS / 実機確認待ち |
-| WEB-2.5.1 | 施術明細自動生成 | 📋 未着手 |
+| WEB-2.5.1 | 施術明細自動生成 | ✅ 実装完了 / LiveCheck 待ち（auth 期限切れ） |
 | WEB-3 | 施術録・申請書生成 | 📋 未着手 |
 
 ---
@@ -307,9 +309,10 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 
 | スペック | コマンド | **最終結果** | 備考 |
 |---|---|---|---|
-| `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | **26 PASS / 0 FAIL** | 全件 PASS |
-| `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | **16 PASS / 0 FAIL** | 全件 PASS |
-| **合計** | `npm run test:jyu` | **42 PASS / 0 FAIL / 0 SKIP** | ✅ 完了 |
+| `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | **26 PASS / 0 FAIL** | 全件 PASS（2026-05-06） |
+| `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | **16 PASS / 0 FAIL** | 全件 PASS（2026-05-06） |
+| **合計（〜2026-05-06）** | `npm run test:jyu` | **42 PASS / 0 FAIL / 0 SKIP** | ✅ 完了 |
+| `web251.spec.ts`（WEB-2.5.1 W2.5.1-1〜4） | `npm run test:jyu:web251` | **未実施（auth 期限切れ）** | 2026-05-07 auth 更新後に実施 |
 
 ### テスト修正一覧（2026-05-06）
 
@@ -363,6 +366,73 @@ npm run test:jrec:smoke
 3. フォーム入力 → 確認モーダル → 登録実行
 4. 来院ケースシート・来院ヘッダシートに行が追加されることを確認
 5. 来院ヘッダの 要確認=TRUE / 来院合計=0 を確認
+
+---
+
+---
+
+## Phase WEB-2.5.1 実装内容（2026-05-07）
+
+**ステータス: 実装完了 / LiveCheck 待ち（auth 期限切れ）**
+
+### 概要
+
+`saveVisitFromWeb_V3` に施術明細シートへの自動 upsert を追加した。
+WEB-2.5 で算定済みの `amounts.details`（部位別明細）を、既存の `upsertDetailRows_V3_` 関数を使って施術明細シートに書き込む。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `Ver3_core.js` | `saveVisitFromWeb_V3` に 3 箇所変更（最小差分） |
+
+### 変更内容（Ver3_core.js）
+
+| 変更種別 | 内容 |
+|---|---|
+| 変数追加 | `var epByNo = {}` — caseNo→ep オブジェクトの保持 |
+| ループ内追加 | `epByNo[caseNo] = ep` — 施術明細 upsert に必要な episodeStartDate を保持 |
+| 理由文変更 | `"施術明細未記録（Web MVP）"` → `willWriteDetails が false のときのみ "施術明細未記録"` |
+| ステップ④.5追加 | `upsertDetailRows_V3_` 呼び出し（保険来院かつ amounts.details が存在する場合） |
+
+### 設計上の重要点
+
+| 項目 | 内容 |
+|---|---|
+| 保険来院のみ | `isInsuranceVisit && amounts.details` の場合のみ施術明細を書く |
+| 自費のみ来院 | `buildZeroInsuranceAmounts_V3_()` は details なし → 施術明細未記録が needCheckReason に残る |
+| ep1/ep2 の保証 | ケースが1つのみの場合でも fallback `{ episodeStartDate: visitDate }` で安全 |
+| needCheck=true | 施術明細を書いても needCheck は常に true（月次確認必須の原則を維持） |
+| `upsertDetailRows_V3_` の再利用 | saveVisit_V3（スプレッドシートUI）と完全に同じ関数を使用 |
+
+### clasp push
+
+完了（2026-05-07 08:38:48）
+
+### LiveCheck
+
+| コマンド | 状態 |
+|---|---|
+| `npm run test:jyu:web251` | スペック追加済み / auth 期限切れのため SKIP 中 |
+
+**auth 更新手順（次回確認時）:**
+```powershell
+$dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
+Start-Process "chrome" "--remote-debugging-port=9222 --user-data-dir=`"$dir`""
+# Chrome で pinshanka24@gmail.com でログイン → GAS dev URL を開く
+cd C:\hirayama-ai-workspace\workspace\tools\live-check-runner
+npm run save-auth
+npm run test:jyu:web251
+```
+
+テスト後は 来院ケース・来院ヘッダ・施術明細シートの `visitKey = {patientId}_2998-12-31` の行を削除すること。
+
+### 施術明細シートへの書き込み手動確認手順
+
+1. GAS dev URL の visitNew フォームから実際に来院登録
+2. スプレッドシートの「施術明細」シートを開く
+3. 該当 visitKey の行が追加されていることを確認
+4. 各列（bui / byomei / kubun / 金額列）が正しく入っていることを確認
 
 ---
 
