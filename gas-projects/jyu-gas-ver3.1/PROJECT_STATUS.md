@@ -23,6 +23,15 @@ Web UI から来院記録の登録・候補金額算定まで実装済み（need
 | 変更後 | `/exec` → web-home.html |
 | page=search | `/exec?page=search` で従来通りアクセス可能 |
 | 既存導線 | patientSearch / selfPayWeb は変更なし |
+| deployment | @9 → @10 に更新（同一 deploymentId） |
+
+**重要: clasp push だけでは /exec は更新されない**  
+`clasp push` は HEAD のみ更新。`/exec` の反映には `clasp deploy -i <deploymentId>` が必要。
+
+**本番確認コマンド:**
+```powershell
+npx tsx tools/live-check-runner/scripts/check-exec-home.ts
+```
 
 ### 次のアクション
 
