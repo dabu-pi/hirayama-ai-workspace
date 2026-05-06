@@ -20,29 +20,47 @@ clasp push: 完了（15ファイル）
 
 **SKIP 理由:** Google Account Chooser に遷移（WEB-1 と同じ auth 問題）
 
-### SKIP 内訳
+### 最終結果（auth 再取得後）★
 
-| テスト | SKIP 理由 |
+| 結果 | 件数 |
 |---|---|
-| W2-1a/b: page=visitNew 到達 | auth |
-| W2-2a〜g: フォーム要素確認（7件） | auth |
-| W2-3a: patientId なし → 未指定表示 | auth |
-| W2-3b: patientId あり → chip 表示 | auth + testData.patientId 未設定 |
-| W2-4a: #inheritBtn 存在 | auth |
-| W2-4b: 前回引き継ぎ応答 | auth + testData.patientId 未設定 |
-| W2-5: バリデーション確認 | auth |
-| W2-6/7: モーダル確認 | auth + testData.patientId 未設定 |
-| W2-8: コンソールエラー確認 | auth |
+| **PASS** | **24** |
+| FAIL | **0** |
+| SKIP | **5**（testData.patientId 未設定） |
 
-### auth 更新後に追加で必要な設定
+**WEB-2 PASS 確認項目（web2.spec.ts）:**
 
-`tools/live-check-runner/projects/jyu-gas-ver31/config.json` の `testData.patientId` に  
-実在する患者IDを設定すること（例: `"PT001"`）。  
-設定後に `npm run test:jyu:web2` を再実行する。
+| テスト | chromium | 確認内容 |
+|---|---|---|
+| W2-1a: page=visitNew 到達 (HTTP<400) | ✅ | ページ到達 |
+| W2-1b: ページタイトルに「来院記録」 | ✅ | doGet page=visitNew 正常 |
+| W2-2a: #visitDate 存在 | ✅ | 来院日入力欄 |
+| W2-2b: #accountingType 存在 | ✅ | 会計区分セレクト |
+| W2-2c: #kubun 存在 | ✅ | 区分セレクト |
+| W2-2d: #bodyPart 存在 | ✅ | 部位入力欄 |
+| W2-2e: #disease 存在 | ✅ | 傷病名入力欄 |
+| W2-2f: #injuryDate 存在 | ✅ | 受傷日入力欄 |
+| W2-2g: .btn-save 存在 | ✅ | 「来院を登録する」ボタン |
+| W2-3a: patientId なし → #patient-chip「未指定」 | ✅ | patientId 引き継ぎ |
+| W2-3b: patientId あり → chip 表示 | - SKIP | testData.patientId 未設定 |
+| W2-4a: #inheritBtn 存在 | ✅ | 前回引き継ぎボタン |
+| W2-4b: 前回引き継ぎ応答 | - SKIP | testData.patientId 未設定 |
+| W2-5: 必須未入力 → モーダル開かない | ✅ | バリデーション動作確認 |
+| W2-6/7: 必須入力 → モーダル → キャンセル | - SKIP | testData.patientId 未設定 |
+| W2-8: コンソールエラーなし | ✅ | 重大エラーなし確認 |
 
-**期待結果（auth + patientId 設定後）:**
-- W2-1a/b, W2-2a〜g, W2-3a, W2-4a, W2-5, W2-8: PASS
-- W2-3b, W2-4b, W2-6/7: PASS（patientId 設定 + 患者存在時）
+**W2-5 実行ログ:**
+```
+[W2-5] validation alert: "患者IDが未指定です。"
+```
+→ 必須項目未入力時に `alert()` が発火し、モーダルが開かないことを確認。
+
+**SKIP 理由（W2-3b / W2-4b / W2-6/7）:**
+`testData.patientId` 未設定。実在患者ID確定後に以下を設定して再実行。
+```json
+// tools/live-check-runner/projects/jyu-gas-ver31/config.json
+"testData": { "patientId": "実在患者ID" }
+```
 
 ---
 

@@ -183,18 +183,17 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 
 **スペック:** `tools/live-check-runner/projects/jyu-gas-ver31/`
 
-| スペック | コマンド | 最終結果 | SKIP 理由 |
+| スペック | コマンド | **最終結果** | 備考 |
 |---|---|---|---|
-| `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | 26 SKIP / 0 FAIL | RTS 期限切れ |
-| `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | 16 SKIP / 0 FAIL | RTS 期限切れ |
+| `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | **22 PASS / 0 FAIL / 4 SKIP** | S-6 は patientId 未設定 |
+| `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | **13 PASS / 0 FAIL / 3 SKIP** | W2-3b/4b/6/7 は patientId 未設定 |
+| **合計** | `npm run test:jyu` | **35 PASS / 0 FAIL / 7 SKIP** | — |
 
-**FAIL ゼロ** — テスト構造は正常。auth 更新で PASS に変わる。
+### S-3 FAIL の原因と修正（2026-05-06）
 
-### 根本原因（2026-05-06 診断）
-
-`__Secure-1PSIDRTS` / `__Secure-3PSIDRTS`（Google セッション・ローテーショントークン）が  
-2026-05-04 01:08 UTC に期限切れ → 全 GAS アクセスで Account Chooser が発生。  
-影響範囲: JYU-GAS / JREC-SF01 両プロジェクト共通。
+**原因:** `isVisible({ timeout })` はリトライなし評価のため、内側 iframe の描画完了前に `false` を返した。  
+**修正:** `waitFor({ state: "visible", timeout })` に変更（リトライ付きの待機）。  
+**コード変更:** GAS コードの変更は不要。doGet のデフォルトルート（page=search）は正常。
 
 ### auth 更新手順（次回確認時）
 
