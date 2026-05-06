@@ -20,13 +20,15 @@ clasp push: 完了（15ファイル）
 
 **SKIP 理由:** Google Account Chooser に遷移（WEB-1 と同じ auth 問題）
 
-### 最終結果（auth 再取得後）★
+### 最終結果（testData.patientId 設定・全テスト実行）★
 
 | 結果 | 件数 |
 |---|---|
-| **PASS** | **24** |
+| **PASS** | **16（全件）** |
 | FAIL | **0** |
-| SKIP | **5**（testData.patientId 未設定） |
+| SKIP | **0** |
+
+**npm run test:jyu 全体: 42 passed / 0 failed / 0 skipped**
 
 **WEB-2 PASS 確認項目（web2.spec.ts）:**
 
@@ -42,25 +44,24 @@ clasp push: 完了（15ファイル）
 | W2-2f: #injuryDate 存在 | ✅ | 受傷日入力欄 |
 | W2-2g: .btn-save 存在 | ✅ | 「来院を登録する」ボタン |
 | W2-3a: patientId なし → #patient-chip「未指定」 | ✅ | patientId 引き継ぎ |
-| W2-3b: patientId あり → chip 表示 | - SKIP | testData.patientId 未設定 |
+| W2-3b: patientId あり → chip 表示 | ✅ | patientId が chip に表示される |
 | W2-4a: #inheritBtn 存在 | ✅ | 前回引き継ぎボタン |
-| W2-4b: 前回引き継ぎ応答 | - SKIP | testData.patientId 未設定 |
+| W2-4b: 前回引き継ぎ応答 | ✅ | getPrevVisitData_V3 正常応答 |
 | W2-5: 必須未入力 → モーダル開かない | ✅ | バリデーション動作確認 |
-| W2-6/7: 必須入力 → モーダル → キャンセル | - SKIP | testData.patientId 未設定 |
+| W2-6/7: 必須入力 → モーダル → キャンセル | ✅ | 確認モーダル開閉確認 |
 | W2-8: コンソールエラーなし | ✅ | 重大エラーなし確認 |
 
-**W2-5 実行ログ:**
+**W2-4b 実行ログ（前回来院データあり確認）:**
+```
+[W2-4b] dialog: 前回来院（2026-04-19）のデータを引き継ぎました。内容を確認・修正してください。
+```
+→ `getPrevVisitData_V3` が来院ケースシートから前回データを正常取得。
+
+**W2-5 実行ログ（バリデーション確認）:**
 ```
 [W2-5] validation alert: "患者IDが未指定です。"
 ```
 → 必須項目未入力時に `alert()` が発火し、モーダルが開かないことを確認。
-
-**SKIP 理由（W2-3b / W2-4b / W2-6/7）:**
-`testData.patientId` 未設定。実在患者ID確定後に以下を設定して再実行。
-```json
-// tools/live-check-runner/projects/jyu-gas-ver31/config.json
-"testData": { "patientId": "実在患者ID" }
-```
 
 ---
 

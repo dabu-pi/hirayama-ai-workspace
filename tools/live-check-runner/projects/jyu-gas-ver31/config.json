@@ -20,7 +20,7 @@
     "selfpay": "?page=selfpay"
   },
   "testData": {
-    "patientId": "",
-    "note": "実在する患者IDを設定するとpatient-detail/visitNewの詳細テストが実行される。空の場合はそれらのテストをスキップ。例: PT001"
+    "patientId": "hirayamaka",
+    "note": "患者マスタに実在するIDを設定。find-patient-id.ts スクリプトで取得。"
   }
 }

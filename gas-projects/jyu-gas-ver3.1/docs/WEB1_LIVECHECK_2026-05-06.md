@@ -27,12 +27,12 @@ SKIP 理由: auth.json に JYU-GAS セッションなし
 | SKIP | 26（全件）・JREC-SF01 も同様 |
 SKIP 理由: `__Secure-1PSIDRTS` / `__Secure-3PSIDRTS` 期限切れ（2026-05-04 01:08 UTC）
 
-### 第3回（auth 再取得後・S-3 修正後）★最終
+### 第4回（testData.patientId 設定・S-6 修正後）★最終
 | 結果 | 件数 |
 |---|---|
-| **PASS** | **35** |
+| **PASS** | **42（全件）** |
 | FAIL | **0** |
-| SKIP | 7（testData.patientId 未設定） |
+| SKIP | **0** |
 
 **WEB-1 PASS 確認項目（smoke.spec.ts）:**
 
@@ -49,10 +49,10 @@ SKIP 理由: `__Secure-1PSIDRTS` / `__Secure-3PSIDRTS` 期限切れ（2026-05-04
 | S-4a: モバイル水平スクロールなし (search) | ✅ | ✅ |
 | S-4b: モバイル水平スクロールなし (home) | ✅ | ✅ |
 | S-5: page=detail (patientId なし) graceful | ✅ | ✅ |
-| S-6: page=detail with patientId | - SKIP | - SKIP |
-| S-6b: 「来院記録を追加」ボタン | - SKIP | - SKIP |
+| S-6: page=detail — 患者情報表示 | ✅ | ✅ |
+| S-6b: 「来院記録を追加」ボタン存在 | ✅ | ✅ |
 
-**SKIP 理由（S-6a/b）:** `testData.patientId` 未設定。実在患者ID確定後に設定。
+**testData.patientId:** 検証用実在ID（find-patient-id.ts スクリプトで取得）を config.json に設定済み。
 
 ---
 
