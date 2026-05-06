@@ -74,7 +74,8 @@ async function handleAuthRedirect(page: Page) {
   }
 }
 
-// ── S-1: page=search (デフォルト) ────────────────────────────────
+// ── S-1: page=search ─────────────────────────────────────────────
+// デフォルトは page=home に変更済み（2026-05-06）のため ?page=search を明示
 
 test.describe(`JYU-GAS S-1: page=search 到達確認 [auth: ${HAS_AUTH ? "あり" : "なし"}]`, () => {
   test.beforeEach(async ({ page }) => {
@@ -88,7 +89,7 @@ test.describe(`JYU-GAS S-1: page=search 到達確認 [auth: ${HAS_AUTH ? "あり
   });
 
   test("S-1b: page=search — タイトルに「患者検索」が含まれる", async ({ page }) => {
-    await page.goto(DEV_URL, { waitUntil: "domcontentloaded" });
+    await page.goto(`${DEV_URL}?page=search`, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
 
     const frame = gasAppFrame(page);
@@ -96,7 +97,7 @@ test.describe(`JYU-GAS S-1: page=search 到達確認 [auth: ${HAS_AUTH ? "あり
   });
 
   test("S-1c: page=search — #keyword 入力欄が存在する", async ({ page }) => {
-    await page.goto(DEV_URL, { waitUntil: "domcontentloaded" });
+    await page.goto(`${DEV_URL}?page=search`, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
 
     const frame = gasAppFrame(page);
@@ -104,7 +105,7 @@ test.describe(`JYU-GAS S-1: page=search 到達確認 [auth: ${HAS_AUTH ? "あり
   });
 
   test("S-1d: page=search — #searchBtn が存在する", async ({ page }) => {
-    await page.goto(DEV_URL, { waitUntil: "domcontentloaded" });
+    await page.goto(`${DEV_URL}?page=search`, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
 
     const frame = gasAppFrame(page);
@@ -142,28 +143,29 @@ test.describe(`JYU-GAS S-2: page=home 到達確認 [auth: ${HAS_AUTH ? "あり" 
   });
 });
 
-// ── S-3: デフォルト URL は page=search のまま ─────────────────────
+// ── S-3: デフォルト URL は page=home（2026-05-06 変更）──────────────
 
 test.describe(`JYU-GAS S-3: デフォルト URL 確認 [auth: ${HAS_AUTH ? "あり" : "なし"}]`, () => {
-  test("S-3: devUrl (パラメータなし) は page=search を表示する", async ({ page }) => {
+  test("S-3: devUrl (パラメータなし) は page=home を表示する", async ({ page }) => {
     page.setDefaultTimeout(LOAD_TIMEOUT);
     await page.goto(DEV_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
 
     const frame = gasAppFrame(page);
 
-    // isVisible() はリトライなしで即時評価されるため、内側 iframe の描画タイミングで
-    // false を返すことがある。waitFor({ state: "visible" }) を使い確実に描画を待つ。
-    const hasKeyword = await frame.locator("#keyword")
+    // デフォルトが page=home であることを確認:
+    //   1. "JREC-01" 見出しが表示される（home 固有）
+    //   2. #keyword が表示されない（search 固有の要素）
+    const hasHomeText = await frame.getByText("JREC-01", { exact: false })
       .waitFor({ state: "visible", timeout: LOAD_TIMEOUT })
       .then(() => true)
       .catch(() => false);
 
-    // #keyword が確認できた時点で page は読み込み完了 → .section-label は即時チェックで十分
-    const hasHomeGrid = await frame.locator(".section-label").isVisible().catch(() => false);
+    // waitFor 完了後に #keyword が存在しないことを確認（同期的チェックで十分）
+    const hasKeyword = await frame.locator("#keyword").isVisible().catch(() => false);
 
-    expect(hasKeyword).toBe(true);
-    expect(hasHomeGrid).toBe(false);
+    expect(hasHomeText).toBe(true);   // home の "JREC-01" 見出しが存在
+    expect(hasKeyword).toBe(false);   // search の #keyword は存在しない
   });
 });
 

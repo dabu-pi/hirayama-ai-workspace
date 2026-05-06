@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-06 (WEB-2.5 完了・スマホ実機確認待ち)  
+最終更新: 2026-05-06 (デフォルト URL を page=home に変更)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -8,18 +8,26 @@
 
 ## 現在の状態
 
-**稼働中 + WEB-1 / WEB-2 / WEB-2.5 完了**
+**稼働中 + WEB-1 / WEB-2 / WEB-2.5 完了 + デフォルト URL = page=home**
 
 スプレッドシート運用は継続中。  
-Web UI から来院記録の登録・候補金額算定まで実装済み（needCheck=TRUE / 要確認）。
+Web UI から来院記録の登録・候補金額算定まで実装済み（needCheck=TRUE / 要確認）。  
+`/exec` のデフォルトを `page=home`（ナビゲーションハブ）に変更済み。  
+`/exec?page=search` で患者検索、`/exec?page=selfpay` で自費明細は従来通り。
+
+### デフォルト URL 変更（2026-05-06）
+
+| 変更 | 内容 |
+|---|---|
+| 変更前 | `/exec` → patientSearch.html |
+| 変更後 | `/exec` → web-home.html |
+| page=search | `/exec?page=search` で従来通りアクセス可能 |
+| 既存導線 | patientSearch / selfPayWeb は変更なし |
 
 ### 次のアクション
 
-**→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）**
-
-実機確認完了後に以下を判断:
-- デフォルト URL を `page=home` に変更するか
-- WEB-2.5.1（施術明細自動生成）に進むか
+**→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）**  
+**→ 完了後: WEB-2.5.1（施術明細自動生成）へ**
 
 ---
 

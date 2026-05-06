@@ -5439,11 +5439,16 @@ function searchPatients_V3(keyword) {
  *   page=search (default) → patientSearch.html
  *   page=selfpay&visitKey=xxx  → selfPayWeb.html
  *
+ * デフォルト（page 未指定）: web-home.html（2026-05-06 変更）
+ *   旧デフォルト: patientSearch.html → page=search として引き続きアクセス可能
+ *
  * 両ページとも createTemplateFromFile を使い、appBaseUrl（/exec URL）を
  * サーバー側から埋め込む。クライアント側で window.location を使わない。
  */
 function doGet(e) {
-  var page = (e && e.parameter && e.parameter.page) || "search";
+  // デフォルト入口を page=home に変更（2026-05-06）
+  // page=search は /exec?page=search で従来通りアクセス可能
+  var page = (e && e.parameter && e.parameter.page) || "home";
   // /exec URL を取得（クライアントへの URL 生成に使用）
   var appBaseUrl = ScriptApp.getService().getUrl();
   Logger.log("[doGet] page=" + page + " appBaseUrl=" + appBaseUrl);

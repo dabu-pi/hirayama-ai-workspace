@@ -47,6 +47,7 @@ async function noHScroll(page: Page): Promise<boolean> {
 }
 
 // ── A. 既存稼働導線 ─────────────────────────────────────────────────
+// デフォルト(page=home)変更後は ?page=search を明示して既存導線を確認
 
 test.describe(`[Mobile] A-1: page=search 表示 [auth: ${HAS_AUTH ? "あり" : "なし"}]`, () => {
   test("A-1a: /exec がスマホ幅で到達できる", async ({ page }) => {
@@ -56,27 +57,27 @@ test.describe(`[Mobile] A-1: page=search 表示 [auth: ${HAS_AUTH ? "あり" : "
     expect(res?.status()).toBeLessThan(400);
   });
 
-  test("A-1b: 横スクロールが出ない", async ({ page }) => {
+  test("A-1b: /exec がデフォルトで page=home を表示する", async ({ page }) => {
     page.setDefaultTimeout(LOAD_TIMEOUT);
     await page.goto(DEV_URL, { waitUntil: "domcontentloaded" });
     await handleAuth(page);
-    expect(await noHScroll(page)).toBe(true);
+    const frame = gasFrame(page);
+    await expect(frame.getByText("JREC-01", { exact: false })).toBeVisible({ timeout: LOAD_TIMEOUT });
   });
 
-  test("A-1c: 検索欄 #keyword が表示される", async ({ page }) => {
+  test("A-1c: /exec?page=search — 検索欄 #keyword が表示される", async ({ page }) => {
     page.setDefaultTimeout(LOAD_TIMEOUT);
-    await page.goto(DEV_URL, { waitUntil: "domcontentloaded" });
+    await page.goto(`${DEV_URL}?page=search`, { waitUntil: "domcontentloaded" });
     await handleAuth(page);
     const frame = gasFrame(page);
     await expect(frame.locator("#keyword")).toBeVisible({ timeout: LOAD_TIMEOUT });
   });
 
-  test("A-1d: 検索ボタン #searchBtn が表示される", async ({ page }) => {
+  test("A-1d: /exec?page=search — 横スクロールが出ない", async ({ page }) => {
     page.setDefaultTimeout(LOAD_TIMEOUT);
-    await page.goto(DEV_URL, { waitUntil: "domcontentloaded" });
+    await page.goto(`${DEV_URL}?page=search`, { waitUntil: "domcontentloaded" });
     await handleAuth(page);
-    const frame = gasFrame(page);
-    await expect(frame.locator("#searchBtn")).toBeVisible({ timeout: LOAD_TIMEOUT });
+    expect(await noHScroll(page)).toBe(true);
   });
 });
 
