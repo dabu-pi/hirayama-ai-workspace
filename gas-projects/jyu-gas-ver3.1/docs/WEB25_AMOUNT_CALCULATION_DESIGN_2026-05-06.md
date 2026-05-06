@@ -421,12 +421,12 @@ visitKey:        hirayamaka_2999-12-31（テスト用固定日付）
 
 **確認方法:** Playwright スクリプト（`scripts/check-web25-visitkey.ts`）で `page=detail` 経由で確認。
 
-| 確認項目 | 結果 |
-|---|---|
-| 来院ヘッダ存在 | ✅ あり（`hirayamaka_2999-12-31`） |
-| 来院合計（¥2,410） | ✅ 一致 |
-| needCheck=TRUE | ✅ 確認 |
-| 区分（初検） | ✅ 自動判定 |
+| 確認項目 | 結果 | 状態 |
+|---|---|---|
+| 来院ヘッダ存在 | あり（`hirayamaka_2999-12-31`） | ⚠️ 未削除 |
+| 来院合計（¥2,410） | 一致 | ✅ |
+| needCheck=TRUE | 確認 | ✅ |
+| 区分（初検） | 自動判定 | ✅ |
 
 **テストデータの安全性:**
 - 施術日 = 2999-12-31（遠い未来日）→ 実来院データと明確に区別可能
@@ -447,7 +447,24 @@ visitKey:        hirayamaka_2999-12-31（テスト用固定日付）
 ```
 
 削除後、`page=detail` で確認してもそのエントリが見えなくなれば完了。  
-（削除せず残した場合も安全性に問題なし）
+削除後に `npm run test:jyu:web25 -- --project=chromium` を実行し、  
+W2.5-4 が「新規保存 PASS」になることで削除完了を確認できる。
+
+**削除せず残した場合:** needCheck=TRUE かつ施術日 2999 年のため安全性に問題なし。  
+W2.5-4 は DUPLICATE_VISIT を検出して PASS する（テスト自体は壊れない）。
+
+### auth.json の有効期間について（知見）
+
+`__Secure-1PSIDRTS` / `__Secure-3PSIDRTS` の有効期間は約 1〜24 時間。  
+`save-auth` 実行直後でも Chrome が Google ページを最近開いていない場合、  
+キャプチャ時点で期限まで 1 時間未満の RTS が保存されることがある。
+
+**推奨手順:**
+1. Chrome で Google のページ（google.com など）を開く
+2. JYU-GAS dev URL を開く
+3. ページが正常表示されてから 30 秒以上待つ
+4. `npm run save-auth`
+5. 直後に `npm run test:jyu` を実行
 
 ---
 
