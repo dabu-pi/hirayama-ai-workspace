@@ -15,6 +15,7 @@
     "test:jyu:web25": "playwright test projects/jyu-gas-ver31/web25.spec.ts",
     "test:jyu:mobile-field": "playwright test projects/jyu-gas-ver31/mobile-field.spec.ts",
     "test:training": "playwright test projects/training-platform",
+    "test:desktop-overlay": "playwright test projects/desktop-work-status-overlay",
     "livecheck": "tsx scripts/run-livecheck.ts",
     "setup-auth": "tsx scripts/setup-auth.ts",
     "save-auth": "tsx scripts/save-auth-from-chrome.ts",

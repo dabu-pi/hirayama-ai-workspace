@@ -18,6 +18,10 @@
     "subsidy-grants": {
       "type": "docs",
       "configPath": "projects/subsidy-grants/config.json"
+    },
+    "desktop-work-status-overlay": {
+      "type": "desktop-tkinter",
+      "configPath": "projects/desktop-work-status-overlay/config.json"
     }
   }
 }
