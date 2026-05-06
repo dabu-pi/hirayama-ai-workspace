@@ -132,3 +132,6 @@ _archive_root_cleanup_20260502/
 # それぞれ専用 GitHub private repo で管理
 /training-program-platform-jp/
 /wildboar-member-management/
+
+# desktop-work-status-overlay は独立 git repo で管理
+desktop-work-status-overlay/
