@@ -47,7 +47,7 @@ export default defineConfig({
     {
       name: "mobile",
       use: { ...devices["Pixel 5"] },
-      testMatch: "**/smoke.spec.ts",
+      testMatch: "**/{smoke,mobile-field}.spec.ts",
     },
   ],
 });

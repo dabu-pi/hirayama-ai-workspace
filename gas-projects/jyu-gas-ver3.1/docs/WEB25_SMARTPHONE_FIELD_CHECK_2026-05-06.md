@@ -8,6 +8,43 @@
 
 ---
 
+## Playwright mobile LiveCheck 結果（2026-05-06 実施済み）
+
+**テストファイル:** `tools/live-check-runner/projects/jyu-gas-ver31/mobile-field.spec.ts`  
+**実行コマンド:** `npm run test:jyu:mobile-field -- --project=mobile`  
+**デバイス:** Pixel 5（393×851px）
+
+| テスト | 結果 |
+|---|---|
+| A-1: page=search 到達・横スクロールなし・検索欄 | ✅ 4/4 PASS |
+| B-1: page=home 横スクロールなし・患者検索カード | ✅ 2/2 PASS |
+| B-2: page=detail 表示・来院履歴・追加ボタン | ✅ 4/4 PASS |
+| C-1: visitNew フォーム要素・chip・前回引き継ぎ | ✅ 6/6 PASS |
+| C-2: 必須バリデーション（保存されない） | ✅ 1/1 PASS |
+| C-3: 確認モーダル（自動判定・請求確定ではない・キャンセル・エラーなし） | ✅ 5/5 PASS |
+| D-1: 成功画面（候補金額・請求確定ではない表示） | ✅ 1/1 PASS（新規保存） |
+| **合計** | **23 passed / 0 failed / 0 skipped** |
+
+**mobile 回帰テスト（smoke）:** 36 passed / 0 failed
+
+**D-1 保存ログ:**
+```
+✅ 来院を登録しました
+区分（自動判定）: 初検  来院合計（候補）: ¥2,410
+窓口負担（候補）: ¥720  保険請求（候補）: ¥1,690
+請求確定ではありません。月次申請前に必ずスプレッドシートで確認してください。
+TEST_VK: hirayamaka_2999-12-31（テストデータ再作成・手動削除推奨）
+```
+
+**Playwright mobile PASS の意味:**
+- Pixel 5 幅（393px）でレイアウト崩れなし
+- タップ可能なボタン・入力欄が適切に表示
+- WEB-1〜WEB-2.5 の全主要導線が機能
+- 「請求確定ではありません」が確認モーダル・成功画面の両方に表示
+- 現場スマホ実機確認に進める状態と判断
+
+---
+
 ## Web App URL
 
 | 用途 | URL |
