@@ -127,6 +127,41 @@ Web UI からの来院登録では、シートを経由しない保存経路（`
 
 ---
 
+## Phase WEB-2.5 調査・設計（2026-05-06）
+
+**ステータス: 設計完了・実装待ち**
+
+設計書: `docs/WEB25_AMOUNT_CALCULATION_DESIGN_2026-05-06.md`
+
+### 調査結論
+
+| 確認事項 | 結論 |
+|---|---|
+| `calcHeaderAmountsByVisitKey_V3_` を Web から呼べるか | ✅ 全シート読み取りのみ・UIシート依存なし |
+| `calcEpisodeForCase_` を Web から呼べるか | ✅ 来院ケースのみ読み取り・UIシート依存なし |
+| `saveVisit_V3` のロジックを流用できるか | △ UIシート部分を除外し、算定関数のみ再利用 |
+| kubun を自動判定できるか | ✅ `calcEpisodeForCase_` で30日ルール準拠 |
+| 施術明細・初検情報履歴の書き込みが必要か | △ MVP では省略可能（needCheckReason で記録） |
+
+### WEB-2.5 MVP 実装内容（次フェーズ）
+
+1. `saveVisitFromWeb_V3` 改修: kubun を `calcEpisodeForCase_` で自動判定
+2. `saveVisitFromWeb_V3` 改修: `calcHeaderAmountsByVisitKey_V3_` で候補金額算定
+3. 来院ヘッダに **候補金額** 保存（needCheck=true + 理由付き・ゼロではない）
+4. `web-visit-new.html` 成功画面に候補金額表示
+5. LiveCheck（W2.5 テスト）
+
+### 実装前オーナー確認事項
+
+| 確認 | 内容 |
+|---|---|
+| A | Web 登録の needCheck=true を月次申請前に必ず確認する運用を合意 |
+| B | 施術明細なしヘッダが既存処理に影響しないこと |
+| C | Web 登録の kubun を後変更する手順（`saveVisit_V3` で上書き可） |
+| D | W2.5 テスト実施時のデータ削除手順 |
+
+---
+
 ## Phase WEB-2 実装内容（2026-05-06）
 
 ### 追加ファイル
