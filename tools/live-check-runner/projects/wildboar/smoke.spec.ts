@@ -189,6 +189,65 @@ test.describe("WILDBOAR W-2: 入会フォーム", () => {
     const formExists = await frame!.locator("form, #intake-form, .form-container").count();
     expect(formExists + planNames.length).toBeGreaterThan(0);
   });
+
+  test("W-2d: 郵便番号 6793424 — 住所検索でフォームが壊れない", async ({ page }) => {
+    const errors = attachErrorCollector(page);
+    await page.goto(PROD_URL + "?page=intake-form", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const frame = await getReadyFrame(page);
+    expect(frame).not.toBeNull();
+    await page.waitForTimeout(3_000);
+
+    // 郵便番号を入力
+    await frame!.locator("#postal_code").fill("6793424");
+
+    // 住所検索ボタンをクリック
+    const searchBtn = frame!.locator(".btn-lookup");
+    await searchBtn.click();
+
+    // GAS 処理待ち（UrlFetchApp は最大数秒かかる）
+    await page.waitForTimeout(GAS_WAIT_MS + 3000);
+
+    // フォームが壊れていないこと: 郵便番号欄が引き続き存在する
+    const postalExists = await frame!.locator("#postal_code").count();
+    expect(postalExists).toBeGreaterThan(0);
+
+    // 都道府県が設定されているか（成功ケース）、または失敗メッセージが出ているか
+    // 成功メッセージは5秒で消えるため、prefecture 値で成功を判定する
+    const prefValue     = await frame!.locator("#prefecture").inputValue().catch(() => "");
+    const successVisible = await frame!.locator("#lookupSuccessMsg.show").count();
+    const failVisible    = await frame!.locator("#lookupFailMsg.show").count();
+    expect(
+      prefValue.length + successVisible + failVisible,
+      "住所検索結果（都道府県設定 or メッセージ）が確認できること"
+    ).toBeGreaterThan(0);
+
+    expect(errors, "コンソールエラーなし").toHaveLength(0);
+  });
+
+  test("W-2e: 郵便番号 6793441 — 住所検索でフォームが壊れない（fallback or API）", async ({ page }) => {
+    const errors = attachErrorCollector(page);
+    await page.goto(PROD_URL + "?page=intake-form", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const frame = await getReadyFrame(page);
+    expect(frame).not.toBeNull();
+    await page.waitForTimeout(3_000);
+
+    await frame!.locator("#postal_code").fill("6793441");
+    await frame!.locator(".btn-lookup").click();
+    await page.waitForTimeout(GAS_WAIT_MS + 3000);
+
+    // フォームが壊れていないこと
+    const postalExists = await frame!.locator("#postal_code").count();
+    expect(postalExists).toBeGreaterThan(0);
+
+    // 都道府県欄が兵庫県になっているか、または失敗メッセージが出ているか
+    const prefValue = await frame!.locator("#prefecture").inputValue().catch(() => "");
+    const failMsg   = await frame!.locator("#lookupFailMsg.show").count();
+    const successMsg= await frame!.locator("#lookupSuccessMsg.show").count();
+    // どちらか一方が成立すればOK（fallback or 手入力案内）
+    expect(prefValue.length + failMsg + successMsg, "住所検索 or 失敗案内のどちらかが動作すること").toBeGreaterThan(0);
+
+    expect(errors, "コンソールエラーなし").toHaveLength(0);
+  });
 });
 
 // ── W-3: 申込一覧 ─────────────────────────────────────────────────────
