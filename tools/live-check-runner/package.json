@@ -20,6 +20,7 @@
     "test:jyu:b2": "playwright test projects/jyu-gas-ver31/b2_transfer.spec.ts",
     "test:jyu:findmonths": "playwright test projects/jyu-gas-ver31/find_months.spec.ts",
     "test:jyu:b2real": "playwright test projects/jyu-gas-ver31/b2_realdata.spec.ts",
+    "test:jyu:getpdfurl": "playwright test projects/jyu-gas-ver31/get_pdf_url.spec.ts",
     "test:jyu:mobile-field": "playwright test projects/jyu-gas-ver31/mobile-field.spec.ts",
     "test:training": "playwright test projects/training-platform",
     "test:desktop-overlay": "playwright test projects/desktop-work-status-overlay/livecheck.spec.ts",

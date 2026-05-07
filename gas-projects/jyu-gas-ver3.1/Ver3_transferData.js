@@ -1729,10 +1729,24 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   }
 
   // ===== 負傷名(1)-(5): case1部位1, case1部位2, case2部位1, case2部位2 =====
+  // ★書き込み前に全 5 行を clearContent（fix: 2026-05-07）
+  //   前回書き込み値が残りラベルなし重複が生じる問題を防ぐ
   // ★空行詰め: 名前が空のエントリを除外してから連続行に書き込む（fix: 2026-05-07）
-  // 修正前: continue でスキップしたまま i が進み、injRows[i] = テンプレート行がずれていた
-  // 修正後: 有効データのみを先に抽出し、injRows[0] から詰めて書き込む
   const injRows = CM.負傷名;
+
+  // 先に全行クリア
+  for (let ci = 0; ci < injRows.length; ci++) {
+    const cm = injRows[ci];
+    sh.getRange(cm.name).clearContent();
+    [cm.injY, cm.injM, cm.injD,
+     cm.iniY, cm.iniM, cm.iniD,
+     cm.stY,  cm.stM,  cm.stD,
+     cm.edY,  cm.edM,  cm.edD,
+     cm.days].forEach(function(cell) {
+      if (cell) sh.getRange(cell).clearContent();
+    });
+  }
+
   const injData    = V3TR_buildInjuryRows_(row1, row2);
   const validInj   = injData.filter(function(d) { return !!d.name; });
 
