@@ -1,0 +1,47 @@
+{
+  "name": "WILDBOAR-MEMBER-MGMT",
+  "type": "gas-webapp",
+  "scriptId": "1wWhFryw2Nb1zXFY5lo9Qe-r8WIJyaQeg6QaS8sUqVkEOy1D0pasgDVIe",
+  "prodUrl": "https://script.google.com/macros/s/AKfycby2r--yf4vkm1FywAfYsLDZC2J0a43ce6TKNE0NedQoaHtARUUPG4VVSJ-rWYKsuJbBzg/exec",
+  "currentDeployment": "@14",
+  "notes": [
+    "access: ANYONE_ANONYMOUS — 認証不要（auth.json 不要）",
+    "GAS iframe 構造: page (script.google.com) > iframe[name='userHtmlFrame'] (googleusercontent.com) > GAS コンテンツ",
+    "target=_top ナビゲーション: GAS iframe 内リンクは window.top.location を変更する",
+    "iframe ナビ後の追跡: target=_top クリック後は page.waitForURL() で page レベルの遷移を待つ",
+    "既知制約: iframe 内からのナビゲーション後 waitForSelector がタイムアウトする場合がある（GAS 再レンダリング待ち）",
+    "Phase 10 CLOSED / PROD @14 稼働中（2026-05-07）",
+    "カードキー番号・インボイス番号は運用開始必須ではない（任意・後日対応）",
+    "本番データ変更禁止: seed関数・申込承認・支払い登録などのデータ変更操作はしない"
+  ],
+  "spreadsheetId": "1DGg0XewfaN-aSlcbSrkgrdXifH5WtZmiJW_GABeuL6M",
+  "pages": {
+    "home": "?page=home",
+    "intakeForm": "?page=intake-form",
+    "applicationList": "?page=application-list",
+    "memberList": "?page=member-list",
+    "paymentList": "?page=payment-list",
+    "billing": "?page=billing",
+    "monthlyDashboard": "?page=monthly-dashboard",
+    "applicationDetail": "?page=application-detail&id=",
+    "memberDetail": "?page=member-detail&id=",
+    "printReceipt": "?page=print-receipt&paymentId="
+  },
+  "knownTestData": {
+    "note": "PROD に残存している確認済みテストデータ",
+    "applicationId": "APP-20260506-0001",
+    "applicationStatus": "approved",
+    "memberId": "W-0001",
+    "memberStatus": "withdrawn"
+  },
+  "gasIframeConstraints": {
+    "frameName": "userHtmlFrame",
+    "frameUrlContains": "googleusercontent.com",
+    "gasApiWaitMs": 12000,
+    "frameReadyMinBodyLen": 500,
+    "knownConsoleWarnings": [
+      "Framing '...' violates the following reporting directive",
+      "ERR_BLOCKED_BY_ORB https://csp.withgoogle.com"
+    ]
+  }
+}

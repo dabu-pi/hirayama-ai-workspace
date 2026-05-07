@@ -19,6 +19,7 @@ Playwright を使い、各プロジェクトのページ到達・主要要素の
 | jrec-sf01 | gas-webapp | JREC-SF01 自費カルテ・会計システム |
 | training-platform | nextjs | トレーニングプログラムプラットフォーム |
 | subsidy-grants | docs | 補助金プロジェクト ドキュメント確認 |
+| wildboar | gas-webapp | ワイルドボア会員管理システム（ANYONE_ANONYMOUS・auth.json 不要） |
 
 ---
 
@@ -95,6 +96,22 @@ npm run test:jrec
 ```powershell
 npm run test:training
 ```
+
+### ワイルドボア会員管理システム（PROD・auth.json 不要）
+
+```powershell
+# PROD smoke テスト（ANYONE_ANONYMOUS — ログイン不要）
+npm run test:wildboar:prod
+
+# または全テスト
+npm run test:wildboar
+```
+
+> **wildboar の既知制約:**
+> - GAS iframe (`userHtmlFrame`) の読み込みに最大 60s かかる場合がある
+> - コンソール警告 `Framing violates` / `ERR_BLOCKED_BY_ORB` は GAS 既知・無害（テストで除外済み）
+> - `target=_top` ナビゲーションによる画面遷移テストは各ページを直接 URL アクセスして確認する
+> - 本番データ変更は一切しない（読み取り専用）
 
 ### CLI 経由（将来的に orchestrator から呼ぶ形）
 
