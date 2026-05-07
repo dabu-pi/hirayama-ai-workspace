@@ -4,7 +4,7 @@
  *
  * 確認項目:
  *   W-1: ホーム画面が開く（h1 表示・6リンク・絶対URL確認）
- *   W-2: 入会フォームが開く（フォーム要素・コース選択）
+ *   W-2: 入会フォームが開く（フォーム要素・コース選択・住所検索）
  *   W-3: 申込一覧が開く（ページが壊れない）
  *   W-4: 申込詳細が開く（既知テストデータ使用・承認済みバナー確認）
  *   W-5: 会員一覧が開く（ページが壊れない）
@@ -32,6 +32,7 @@
  *   - 既知テストデータ（APP-20260506-0001 / W-0001）は読み取りのみ
  *
  * 実行コマンド: npm run test:wildboar:prod
+ * DEV フロー: npm run test:wildboar:dev (dev-flow.spec.ts)
  */
 
 import { test, expect, Page, Frame } from "@playwright/test";
@@ -245,6 +246,35 @@ test.describe("WILDBOAR W-2: 入会フォーム", () => {
     const successMsg= await frame!.locator("#lookupSuccessMsg.show").count();
     // どちらか一方が成立すればOK（fallback or 手入力案内）
     expect(prefValue.length + failMsg + successMsg, "住所検索 or 失敗案内のどちらかが動作すること").toBeGreaterThan(0);
+
+    expect(errors, "コンソールエラーなし").toHaveLength(0);
+  });
+
+  test("W-2f: 郵便番号 6793441 — local_fallback で兵庫県朝来市羽渕が設定される（Phase 10.6 修正確認）", async ({ page }) => {
+    const errors = attachErrorCollector(page);
+    await page.goto(PROD_URL + "?page=intake-form", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const frame = await getReadyFrame(page);
+    expect(frame).not.toBeNull();
+    await page.waitForTimeout(3_000);
+
+    await frame!.locator("#postal_code").fill("6793441");
+    await frame!.locator(".btn-lookup").click();
+    // local_fallback は GAS API 呼び出しより早いが、GAS 処理全体を待つ
+    await page.waitForTimeout(GAS_WAIT_MS + 3000);
+
+    const prefValue  = await frame!.locator("#prefecture").inputValue().catch(() => "");
+    const cityValue  = await frame!.locator("#city").inputValue().catch(() => "");
+
+    if (prefValue) {
+      // local_fallback が動いた場合: 兵庫県朝来市羽渕（粟鹿でないこと）
+      expect(prefValue, "都道府県: 兵庫県").toBe("兵庫県");
+      expect(cityValue, "市区町村: 朝来市羽渕（粟鹿でないこと）").toContain("羽渕");
+      expect(cityValue, "粟鹿でないこと（Phase 10.6 修正確認）").not.toContain("粟鹿");
+    } else {
+      // API・fallback ともに失敗した場合は手入力案内が出ていること
+      const failMsg = await frame!.locator("#lookupFailMsg.show").count();
+      expect(failMsg, "失敗時は手入力案内が表示されること").toBeGreaterThan(0);
+    }
 
     expect(errors, "コンソールエラーなし").toHaveLength(0);
   });

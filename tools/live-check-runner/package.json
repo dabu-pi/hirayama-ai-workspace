@@ -28,6 +28,7 @@
     "test:dom-verify": "playwright test projects/desktop-work-status-overlay/dom-verify.spec.ts",
     "test:wildboar": "playwright test projects/wildboar",
     "test:wildboar:prod": "playwright test projects/wildboar/smoke.spec.ts",
+    "test:wildboar:dev": "playwright test projects/wildboar/dev-flow.spec.ts",
     "livecheck": "tsx scripts/run-livecheck.ts",
     "setup-auth": "tsx scripts/setup-auth.ts",
     "save-auth": "tsx scripts/save-auth-from-chrome.ts",

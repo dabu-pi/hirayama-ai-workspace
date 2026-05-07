@@ -1,0 +1,21 @@
+{
+  "name": "WILDBOAR-MEMBER-MGMT-DEV",
+  "type": "gas-webapp",
+  "scriptId": "1htqjLatNbSEqKXqPnvLTu5Vnc-YG0BypBxgWJhc8u4Bfz88-E7jxLB-L",
+  "devUrl": "https://script.google.com/macros/s/AKfycbzdV-MkuHdcXlUebX38K38gTWT-dK9wX259N7-OLSiU_NyzRv1MhVZd_gOKKPacRLvG/exec",
+  "currentDeployment": "@30",
+  "notes": [
+    "DEV 環境 — データ作成・更新を伴うテストはこちらで実施",
+    "PROD URL は使わない（本番データを作成・更新しない）",
+    "テストデータ識別: 姓 LCテスト / 名 Phase106",
+    "cleanup は手動（DEV スプレッドシートから直接削除）",
+    "Phase 10.6 以降の DEV deploy: @30"
+  ],
+  "spreadsheetId": "1yaDDY4dujLqk6ZM-C_-8DDYirqK6cGqkr87XeaBTdtg",
+  "gasIframeConstraints": {
+    "frameName": "userHtmlFrame",
+    "frameUrlContains": "googleusercontent.com",
+    "gasApiWaitMs": 12000,
+    "frameReadyMinBodyLen": 500
+  }
+}
