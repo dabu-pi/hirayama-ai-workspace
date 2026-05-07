@@ -508,22 +508,19 @@ test.describe("WILDBOAR W-10: コース変更画面", () => {
     await page.goto(PROD_URL + "?page=plan-change&memberId=" + MEMBER_ID, { waitUntil: "domcontentloaded", timeout: 60_000 });
     const frame = await getReadyFrame(page);
     expect(frame).not.toBeNull();
-    await page.waitForTimeout(GAS_WAIT_MS);
     // W-0001 は withdrawn なのでエラービューまたは「退会済み」表示になる
     const bodyLen = await frame!.evaluate(() => document.body ? document.body.innerHTML.length : 0);
     expect(bodyLen).toBeGreaterThan(100);
-    // エラービューが表示されていること（loadingViewは非表示）
-    const loadingHidden = await frame!.evaluate(() => {
-      const el = document.getElementById("loadingView");
-      return !el || el.style.display === "none" || el.innerHTML.trim() === "";
-    });
-    // loadingViewが非表示 OR errorViewが表示されていることを確認
-    const hasErrorOrMainView = await frame!.evaluate(() => {
-      const ev = document.getElementById("errorView");
-      const mv = document.getElementById("mainView");
-      return (ev && ev.style.display !== "none") || (mv && mv.style.display !== "none");
-    });
-    expect(hasErrorOrMainView).toBe(true);
+    // GAS API 応答待ち: errorView / mainView が表示されるまでポーリング（最大60秒）
+    // mobile 実行時に GAS が 12秒超えることがあるため waitForTimeout → waitForFunction に変更
+    await frame!.waitForFunction(
+      () => {
+        const ev = document.getElementById("errorView");
+        const mv = document.getElementById("mainView");
+        return (ev != null && ev.style.display !== "none") || (mv != null && mv.style.display !== "none");
+      },
+      { timeout: 60_000 }
+    );
     expect(errors).toHaveLength(0);
   });
 });
