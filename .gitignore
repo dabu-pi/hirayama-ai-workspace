@@ -143,3 +143,7 @@ desktop-work-status-overlay/
 
 # 一時テストファイル（コミット対象外）
 gas-projects/jyu-gas-ver3.1/test_d6.xlsx
+
+# claim-excel 生成物（テンプレートは追跡対象 / 生成物は除外）
+gas-projects/jyu-gas-ver3.1/tools/claim-excel/申請書_*.xlsx
+gas-projects/jyu-gas-ver3.1/tools/claim-excel/申請書_転記データ_*.json
