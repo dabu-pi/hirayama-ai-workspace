@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (NDJSON→Excel 生成・自動検証 COMPLETED)  
+最終更新: 2026-05-07 (申請書生成B案 = Cloud Run 正ルート確認・実行済み)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -86,16 +86,35 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
   - **試験的: Sheets直PDF（generateClaimApplication_V3）**  
     → 施術日カレンダー ○・転帰が未実装のため帳票として不完全  
   - **DEPLOY 保留: Excel 目視確認後に判断**  
-**→ NDJSON→Excel 生成・自動検証 COMPLETED（2026-05-07）**
-  - exportClaimNdjson_V3 実行 → Drive に NDJSON 出力成功（File ID: 1km2r2P5T6lOFNo3i_nzIHLkcLQeqO8b_）
-  - `申請書_転記データ_hirayamaka_2026-04_20260507_1612.json` を tools/claim-excel/ にダウンロード
-  - `write_application.py` 実行 → `申請書_hirayamaka_2026-04.xlsx` 生成（35.8KB）
-  - `verify_application_xlsx.py` 実行 → 負傷名 E26 = `（1）頸部 捻挫` 確認 ✅
-  - カレンダー○・金額は Pillow 画像埋込/1桁分割のため自動検証不可（目視確認が必要）
-  - case2 は初検抑制のため空（1件のみ有効）。visitDays: [1, 19]。請求金額: ¥3,053
+**→ 申請書生成B案 正ルート確認・実行 COMPLETED（2026-05-07）**
+  - 既存メニュー「帳票出力 → 申請書を出力」= `V3TR_menuGenerateApplication_B()` (`Ver3_transferData.js`)
+  - Cloud Run `jrec-appgen-server` 稼働確認 / URL: `https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app`
+  - `/health` → `{"status":"ok"}` ✅ (revision 00026-wv2 / 2026-04-20 デプロイ)
+  - B案実行 (hirayamaka/2026-04): `申請書_hirayamaka_2026-04.xlsx` 生成 (36,694 bytes) ✅
+  - B案 = Cloud Run が内部で `write_application.py` を実行（ローカル実行と同一ロジック）
+  - Sheets直PDF (A案) は停止状態を維持（施術日カレンダー○・転帰が未実装）
+
+**→ NDJSON+Python ローカル実行 COMPLETED（2026-05-07）**
+  - `tools/claim-excel/write_application.py` でも同一 Excel 生成可能（補助ルート）
+  - `verify_application_xlsx.py` 実行 → E26 = `（1）頸部 捻挫` ✅
+
+---
+
+## 申請書出力ルート確定（2026-05-07）
+
+| ルート | 位置づけ |
+|---|---|
+| **B案（Cloud Run → xlsx → Drive）** | ✅ **正ルート** |
+| Sheets直PDF（A案） | ❌ 停止（施術日○・転帰未実装） |
+| NDJSON+Python ローカル | 補助・開発時使用可 |
+
+**GAS設定が必要:**
+- `APPGEN_ENDPOINT` = `https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app`
+- `APPGEN_SECRET` = Secret Manager `JREC_APPGEN_SECRET_KEY` の値
 
 **【残人間タスク】**  
-1. `申請書_hirayamaka_2026-04.xlsx` を Excel で開いて目視確認（負傷名・カレンダー・金額・転帰・1ページ収まり）
+1. GAS スクリプトプロパティに `APPGEN_ENDPOINT` / `APPGEN_SECRET` が設定されているか確認・設定
+2. `申請書_hirayamaka_2026-04.xlsx` を Excel で開いて目視確認（負傷名・カレンダー・金額・転帰・1ページ）
 
 ---
 
