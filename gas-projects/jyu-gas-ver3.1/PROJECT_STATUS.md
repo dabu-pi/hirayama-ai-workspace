@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (WEB-3 月次申請フロー LiveCheck 8 PASS)  
+最終更新: 2026-05-07 (WEB-3.4 申請書PDF生成 LiveCheck 9 PASS / 1 SKIP)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -8,7 +8,7 @@
 
 ## 現在の状態
 
-**稼働中 + WEB-1〜WEB-3 実装完了 + デフォルト URL = page=home**
+**稼働中 + WEB-1〜WEB-3.4 実装完了 + デフォルト URL = page=home**
 
 スプレッドシート運用は継続中。  
 Web UI から来院記録の登録・候補金額算定まで実装済み（needCheck=TRUE / 要確認）。  
@@ -48,12 +48,16 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 
 ### 次のアクション
 
-**→ WEB-3 実装完了・LiveCheck 8 PASS（2026-05-07）**  
-**→ テストデータ削除（人間タスク）:**
-  - `hirayamaka_2998-12-31`（来院ケース・来院ヘッダ・施術明細）
-  - `hirayamaka_2999-12-31`（来院ケース・来院ヘッダ）  
-**→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）**  
-**→ 次候補: WEB-3.4（申請書 PDF 生成）または TC01〜TC10 テスト実施**
+**→ WEB-3.4 実装完了・LiveCheck 9 PASS / 1 SKIP（2026-05-07）**  
+
+**【人間タスク】**  
+1. テストデータ削除: GAS エディタで `devCleanupTestVisitData_V3()` (dry-run) → 確認後 `devCleanupTestVisitData_V3(false)`
+   - `hirayamaka_2998-12-31`（来院ケース・来院ヘッダ・施術明細）
+   - `hirayamaka_2999-12-31`（来院ケース・来院ヘッダ）
+2. 申請書テンプレート（「新 様式第5号」シート）の有無をスプレッドシートで確認
+3. 実患者・実月で PDF 生成の実動作確認
+4. 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）  
+**→ 次候補: TC01〜TC10 テスト実施 または WEB-3.4 本番 deploy**
 
 ---
 
@@ -67,7 +71,7 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 | スマホ実機確認 | 現場スマホでの動作確認 | ✅ Playwright mobile PASS / 実機確認待ち |
 | WEB-2.5.1 | 施術明細自動生成 | ✅ CLOSED（LiveCheck 4 PASS / 2026-05-07） |
 | WEB-3 | 月次申請フロー（一覧・詳細・転記データ生成） | ✅ 完了（LiveCheck 8 PASS / 2026-05-07） |
-| WEB-3.4 | 申請書 PDF 生成（Web UI から） | ⏸ 未着手 |
+| WEB-3.4 | 申請書 PDF 生成（A案：テンプレ書込 + Drive PDF） | ✅ 完了（LiveCheck 9 PASS / 1 SKIP / 2026-05-07） |
 
 ---
 
@@ -311,6 +315,7 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 **スペック:** `tools/live-check-runner/projects/jyu-gas-ver31/`
 
 | `web3.spec.ts`（WEB-3 W3-1〜8） | `npm run test:jyu:web3` | **8 PASS / 0 FAIL / 0 SKIP** | ✅ CLOSED 2026-05-07 |
+| `web34.spec.ts`（WEB-3.4 W3.4-1〜10） | `npm run test:jyu:web34` | **9 PASS / 1 SKIP / 0 FAIL** | ✅ CLOSED 2026-05-07 |
 
 ### 回帰テスト合計（2026-05-07 最新）
 

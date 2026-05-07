@@ -6582,3 +6582,215 @@ function buildMonthlyTransferData_V3(patientId, ym) {
   }
 }
 
+/**
+ * WEB-3.4: 申請書PDF生成（A案：テンプレートシート書き込み + Drive PDF エクスポート）
+ *
+ * 処理フロー:
+ *   1. 転記データ生成（V3TR_buildTransferDataForMonth_ 経由 / upsert 冪等）
+ *   2. 転記データシートから row1/row2 を読み込み
+ *   3. 申請書テンプレート（新 様式第5号）に書き込み
+ *   4. テンプレートシートを PDF でエクスポートして Drive に保存
+ *   5. PDF の Drive URL を返す
+ *
+ * 安全ガード:
+ *   - claimPay = 0 の場合は生成を拒否（保険申請対象外）
+ *   - テンプレートシートが存在しない場合はエラーを返す（転記データ生成は完了）
+ *   - 生成操作はすべて Logger に記録（監査ログ）
+ *
+ * @param {string} patientId
+ * @param {string} ym "YYYY-MM"
+ * @returns {{ ok, pdfUrl, fileId, writtenCells, message, reasonCode }}
+ */
+function generateClaimApplication_V3(patientId, ym) {
+  try {
+    var pid   = String(patientId || "").trim();
+    var ymStr = String(ym || "").trim();
+    if (!pid)                          return { ok: false, reasonCode: "MISSING_PARAM", message: "患者IDが未指定です" };
+    if (!/^\d{4}-\d{2}$/.test(ymStr)) return { ok: false, reasonCode: "INVALID_YM", message: "対象月の形式が不正です（YYYY-MM）" };
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ── 1. 転記データ生成（upsert 冪等） ──────────────────────────────────
+    Logger.log("[generateClaimApplication_V3] action=BUILD_TRANSFER pid=" + pid + " ym=" + ymStr);
+    var buildOut = V3TR_buildTransferDataForMonth_(ss, pid, ymStr);
+
+    // ── Layer 2 安全フィルタ: 保険請求額=0 は申請対象外 ─────────────────
+    var totalClaim = Number(buildOut.claim || 0);
+    if (totalClaim === 0) {
+      Logger.log("[generateClaimApplication_V3] SKIP_ZERO_CLAIM pid=" + pid + " ym=" + ymStr);
+      return {
+        ok:         false,
+        reasonCode: "ZERO_CLAIM",
+        message:    "保険請求額が 0 円のため申請書を生成できません。算定内容をスプレッドシートで確認してください。",
+      };
+    }
+
+    // ── 2. 転記データシートから row1 / row2 を読み込み ───────────────────
+    var shTransfer = ss.getSheetByName(V3TR.CONFIG.sheetNames.transfer);
+    if (!shTransfer || shTransfer.getLastRow() < 2) {
+      return { ok: false, reasonCode: "NO_TRANSFER_DATA", message: "申請書_転記データシートが見つかりません。転記データを先に生成してください。" };
+    }
+
+    var tMap  = V3TR_buildHeaderMap_(shTransfer);
+    var tData = shTransfer.getDataRange().getValues();
+    var cRK   = tMap["recordKey"];
+    if (cRK === undefined) return { ok: false, reasonCode: "SCHEMA_ERROR", message: "転記データシートの recordKey 列が見つかりません" };
+
+    var recordKey1 = pid + "|" + ymStr + "|C1";
+    var recordKey2 = pid + "|" + ymStr + "|C2";
+    var row1 = null, row2 = null;
+    for (var tr = 1; tr < tData.length; tr++) {
+      var k = String(tData[tr][cRK] || "").trim();
+      if (k === recordKey1) row1 = V3TR_rowToObj_(tData[tr], tMap);
+      if (k === recordKey2) row2 = V3TR_rowToObj_(tData[tr], tMap);
+    }
+    if (!row1) return { ok: false, reasonCode: "TRANSFER_ROW_NOT_FOUND", message: "転記データが見つかりません: " + recordKey1 };
+
+    // ── 3. テンプレートシートに書き込み ─────────────────────────────────
+    var templateShName = V3TR.CONFIG.appCellMap.templateSheet;
+    var templateSh = ss.getSheetByName(templateShName);
+    if (!templateSh) {
+      Logger.log("[generateClaimApplication_V3] TEMPLATE_NOT_FOUND sheet=" + templateShName);
+      return {
+        ok:               false,
+        reasonCode:       "TEMPLATE_NOT_FOUND",
+        message:          "申請書テンプレートシート「" + templateShName + "」が見つかりません。テンプレートシートを追加してください。転記データ生成は完了しています。",
+        transferTotal:    Number(buildOut.total || 0),
+        transferCopay:    Number(buildOut.copay || 0),
+        transferClaim:    Number(buildOut.claim || 0),
+      };
+    }
+
+    Logger.log("[generateClaimApplication_V3] action=WRITE_TEMPLATE pid=" + pid + " ym=" + ymStr);
+    var writtenCells = V3TR_writeToApplication_(ss, row1, row2);
+    Logger.log("[generateClaimApplication_V3] written=" + writtenCells + " cells");
+
+    // ── 4. PDF エクスポート → Drive 保存 ─────────────────────────────────
+    var ssId = ss.getId();
+    var gid  = templateSh.getSheetId();
+    var exportUrl = "https://docs.google.com/spreadsheets/d/" + ssId +
+      "/export?format=pdf&id=" + ssId + "&gid=" + gid +
+      "&portrait=true&fitw=true&size=A4" +
+      "&top_margin=0.5&bottom_margin=0.5&left_margin=0.5&right_margin=0.5" +
+      "&sheetnames=false&printtitle=false&gridlines=false";
+
+    var token    = ScriptApp.getOAuthToken();
+    var response = UrlFetchApp.fetch(exportUrl, {
+      headers: { Authorization: "Bearer " + token },
+      muteHttpExceptions: true,
+    });
+
+    if (response.getResponseCode() !== 200) {
+      return {
+        ok:          false,
+        reasonCode:  "PDF_EXPORT_FAILED",
+        message:     "PDF エクスポートに失敗しました（HTTP " + response.getResponseCode() + "）。テンプレートシートへの書き込みは完了しています。",
+        writtenCells: writtenCells,
+      };
+    }
+
+    var timestamp = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmm");
+    var fileName  = "申請書_" + pid + "_" + ymStr + "_" + timestamp + ".pdf";
+    var pdfBlob   = response.getBlob().setName(fileName).setContentType("application/pdf");
+
+    var folder  = V3TR_getApplicationOutputFolder_(ss, ymStr);
+    var pdfFile = folder.createFile(pdfBlob);
+    pdfFile.setDescription("WEB-3.4 生成 / pid=" + pid + " / ym=" + ymStr);
+
+    Logger.log("[generateClaimApplication_V3] action=PDF_CREATED pid=" + pid + " ym=" + ymStr
+      + " fileId=" + pdfFile.getId() + " url=" + pdfFile.getUrl());
+
+    return {
+      ok:          true,
+      pdfUrl:      pdfFile.getUrl(),
+      fileId:      pdfFile.getId(),
+      fileName:    fileName,
+      writtenCells: writtenCells,
+      transferTotal: Number(buildOut.total || 0),
+      transferCopay: Number(buildOut.copay || 0),
+      transferClaim: Number(buildOut.claim || 0),
+      message:     "申請書PDFを生成しました。Drive に保存されています。",
+    };
+
+  } catch (e) {
+    Logger.log("[generateClaimApplication_V3] error=" + e.message);
+    return { ok: false, reasonCode: "SYSTEM_ERROR", message: e.message };
+  }
+}
+
+/* ======================================================================= */
+/* DEV: テストデータ削除ユーティリティ                                        */
+/* ======================================================================= */
+
+/**
+ * DEV ONLY: 未来日テストデータの安全削除
+ *
+ * 対象: visitKey の日付部分が 2990 年以降（テスト用未来日）
+ * 対象シート: 来院ヘッダ・来院ケース・施術明細
+ *
+ * 安全ガード:
+ *   - 年 < 2990 のデータには絶対に触れない
+ *   - デフォルトは dry-run（報告のみ）
+ *   - 実削除は devCleanupTestVisitData_V3(false) を明示的に呼ぶ必要がある
+ *
+ * 使い方（Apps Script エディタから実行）:
+ *   devCleanupTestVisitData_V3()        // dry-run: 削除対象を報告するだけ
+ *   devCleanupTestVisitData_V3(false)   // 実削除（慎重に！）
+ *
+ * @param {boolean} [dryRun=true]
+ * @returns {string} 削除レポート
+ */
+function devCleanupTestVisitData_V3(dryRun) {
+  if (dryRun === undefined || dryRun === null) dryRun = true;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var targetSheets = [SHEETS.header, SHEETS.cases, SHEETS.detail];
+  var report = "[devCleanupTestVisitData_V3] dryRun=" + dryRun + "\n";
+  var totalFound = 0;
+
+  for (var si = 0; si < targetSheets.length; si++) {
+    var shName = targetSheets[si];
+    var sh = ss.getSheetByName(shName);
+    if (!sh || sh.getLastRow() < 2) {
+      report += shName + ": (シートなし or 空)\n";
+      continue;
+    }
+
+    var hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    var vkCol = -1;
+    for (var hc = 0; hc < hdr.length; hc++) {
+      if (String(hdr[hc] || "").trim() === "visitKey") { vkCol = hc; break; }
+    }
+    if (vkCol < 0) {
+      report += shName + ": visitKey 列なし — スキップ\n";
+      continue;
+    }
+
+    var vals = sh.getDataRange().getValues();
+    var targets = [];
+    for (var r = 1; r < vals.length; r++) {
+      var vk = String(vals[r][vkCol] || "").trim();
+      var m  = vk.match(/^.+_(\d{4})-\d{2}-\d{2}$/);
+      if (!m) continue;
+      var year = parseInt(m[1], 10);
+      if (year < 2990) continue;           // 安全ガード: 2989 年以前には絶対に触れない
+      targets.push({ rowIndex: r + 1, visitKey: vk });
+    }
+
+    report += shName + ": 対象 " + targets.length + " 行 → " + targets.map(function(t) { return t.visitKey; }).join(", ") + "\n";
+    totalFound += targets.length;
+
+    if (!dryRun && targets.length > 0) {
+      targets.reverse();                   // 後ろから削除（インデックスずれ防止）
+      for (var di = 0; di < targets.length; di++) {
+        sh.deleteRow(targets[di].rowIndex);
+      }
+      report += "  → 削除完了\n";
+    }
+  }
+
+  report += "合計: " + totalFound + " 行\n";
+  Logger.log(report);
+  return report;
+}
+

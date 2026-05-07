@@ -15,6 +15,7 @@
     "test:jyu:web25": "playwright test projects/jyu-gas-ver31/web25.spec.ts",
     "test:jyu:web251": "playwright test projects/jyu-gas-ver31/web251.spec.ts",
     "test:jyu:web3": "playwright test projects/jyu-gas-ver31/web3.spec.ts",
+    "test:jyu:web34": "playwright test projects/jyu-gas-ver31/web34.spec.ts",
     "test:jyu:mobile-field": "playwright test projects/jyu-gas-ver31/mobile-field.spec.ts",
     "test:training": "playwright test projects/training-platform",
     "test:desktop-overlay": "playwright test projects/desktop-work-status-overlay",
