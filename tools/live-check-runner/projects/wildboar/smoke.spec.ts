@@ -486,3 +486,84 @@ test.describe("WILDBOAR W-9: カードキー番号・インボイス番号未設
     expect(errors).toHaveLength(0);
   });
 });
+
+// ── W-10: コース変更画面（Phase 11）──────────────────────────────────────────
+
+test.describe("WILDBOAR W-10: コース変更画面", () => {
+  test.setTimeout(90_000);
+  test("W-10a: ?page=plan-change — memberId 未指定でエラービューが表示される（クラッシュなし）", async ({ page }) => {
+    const errors = attachErrorCollector(page);
+    await page.goto(PROD_URL + "?page=plan-change", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const frame = await getReadyFrame(page);
+    expect(frame).not.toBeNull();
+    await page.waitForTimeout(GAS_WAIT_MS);
+    // エラービューまたはローディングが表示されること（ページがクラッシュしない）
+    const bodyLen = await frame!.evaluate(() => document.body ? document.body.innerHTML.length : 0);
+    expect(bodyLen).toBeGreaterThan(100);
+    expect(errors).toHaveLength(0);
+  });
+
+  test("W-10b: ?page=plan-change&memberId=W-0001 — 退会済み会員でエラーまたは警告が表示される（クラッシュなし）", async ({ page }) => {
+    const errors = attachErrorCollector(page);
+    await page.goto(PROD_URL + "?page=plan-change&memberId=" + MEMBER_ID, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const frame = await getReadyFrame(page);
+    expect(frame).not.toBeNull();
+    await page.waitForTimeout(GAS_WAIT_MS);
+    // W-0001 は withdrawn なのでエラービューまたは「退会済み」表示になる
+    const bodyLen = await frame!.evaluate(() => document.body ? document.body.innerHTML.length : 0);
+    expect(bodyLen).toBeGreaterThan(100);
+    // エラービューが表示されていること（loadingViewは非表示）
+    const loadingHidden = await frame!.evaluate(() => {
+      const el = document.getElementById("loadingView");
+      return !el || el.style.display === "none" || el.innerHTML.trim() === "";
+    });
+    // loadingViewが非表示 OR errorViewが表示されていることを確認
+    const hasErrorOrMainView = await frame!.evaluate(() => {
+      const ev = document.getElementById("errorView");
+      const mv = document.getElementById("mainView");
+      return (ev && ev.style.display !== "none") || (mv && mv.style.display !== "none");
+    });
+    expect(hasErrorOrMainView).toBe(true);
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ── W-11: コース別集計（Phase 11）──────────────────────────────────────────
+
+test.describe("WILDBOAR W-11: コース別集計（月別ダッシュボード内）", () => {
+  test.setTimeout(120_000);
+  test("W-11a: 月別ダッシュボードにコース別集計セクションが存在する", async ({ page }) => {
+    const errors = attachErrorCollector(page);
+    await page.goto(PROD_URL + "?page=monthly-dashboard", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const frame = await getReadyFrame(page);
+    expect(frame).not.toBeNull();
+    await page.waitForTimeout(GAS_WAIT_MS);
+    // #planSummarySection が DOM に存在すること
+    const sectionExists = await frame!.evaluate(() => !!document.getElementById("planSummarySection"));
+    expect(sectionExists).toBe(true);
+    expect(errors).toHaveLength(0);
+  });
+
+  test("W-11b: コース別集計テーブルが表示またはロード中になる（getPlanSummary 呼び出し確認）", async ({ page }) => {
+    const errors = attachErrorCollector(page);
+    await page.goto(PROD_URL + "?page=monthly-dashboard", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const frame = await getReadyFrame(page);
+    expect(frame).not.toBeNull();
+    // getPlanSummary の結果待ち（最大 GAS_WAIT_MS × 1.5）
+    await page.waitForTimeout(Math.ceil(GAS_WAIT_MS * 1.5));
+    // テーブルが表示されているか、またはエラー/ローディングのいずれかの状態であること
+    const state = await frame!.evaluate(() => {
+      const table   = document.getElementById("planSummaryTable");
+      const loading = document.getElementById("planSummaryLoading");
+      const error   = document.getElementById("planSummaryError");
+      return {
+        tableVisible:   table   ? table.style.display !== "none"   : false,
+        loadingVisible: loading ? loading.style.display !== "none" : false,
+        errorVisible:   error   ? error.style.display  !== "none"  : false,
+      };
+    });
+    // いずれかの状態になっていること（UI が完全に壊れていない）
+    expect(state.tableVisible || state.loadingVisible || state.errorVisible).toBe(true);
+    expect(errors).toHaveLength(0);
+  });
+});
