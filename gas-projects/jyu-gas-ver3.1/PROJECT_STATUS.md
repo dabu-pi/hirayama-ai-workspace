@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (B-3 SPEC.md §14 Web登録仕様追記・新規作成)  
+最終更新: 2026-05-07 (B-3 回帰確認 61 PASS / 2 SKIP / 0 FAIL)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -76,7 +76,8 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 5. WEB-3.4 本番 deploy（月次確認後）
 
 **→ B-3 COMPLETED（2026-05-07）** — SPEC.md 新規作成・§14 に Web 登録フロー仕様追記  
-**→ 次候補: 本番 deploy / B-2 実データ確認（実来院月指定）/ auth 更新後に回帰テスト**
+**→ auth 更新後 回帰テスト CONFIRMED（2026-05-07）** — 61 PASS / 2 SKIP / 0 FAIL  
+**→ 次候補: B-2 実データ確認（実来院月で ?page=b2Results&ym=YYYY-MM）/ 本番 deploy**
 
 ---
 
@@ -344,12 +345,12 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 |---|---|---|
 | smoke | 28 PASS | |
 | web25 | 5 PASS | |
-| web251 | 3 PASS / 1 SKIP | テストデータ再生成で設計通り SKIP（2回目以降）|
+| web251 | 3 PASS / 1 SKIP | W2.5.1-1 がテストデータ再生成 → 2回目以降設計通り SKIP |
 | web3 | 8 PASS | |
-| web34 | 8 PASS / 1 SKIP | W3.4-10 evaluate SKIP（設計通り） |
+| web34 | 9 PASS / 1 SKIP | W3.4-10 inner frame evaluate SKIP（設計通り） |
 | fixtures (B-1) | 2 PASS (57 fixture PASS) | TC01〜TC25b 全件 PASS |
 | b2 transfer | 6 PASS | NO_PATIENTS_THIS_MONTH（2026-05 データなし） |
-| **合計** | **60 PASS / 2 SKIP / 0 FAIL** | |
+| **合計（B-3 auth 更新後確認）** | **61 PASS / 2 SKIP / 0 FAIL** | 2026-05-07 確認済み |
 
 ---
 
