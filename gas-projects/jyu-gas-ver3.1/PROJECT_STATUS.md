@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (WEB-3.4 申請書PDF生成 LiveCheck 9 PASS / 1 SKIP)  
+最終更新: 2026-05-07 (B-1 fixture 57 PASS — テストデータ削除完了)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -50,14 +50,21 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 
 **→ WEB-3.4 実装完了・LiveCheck 9 PASS / 1 SKIP（2026-05-07）**  
 
-**【人間タスク】**  
-1. テストデータ削除: GAS エディタで `devCleanupTestVisitData_V3()` (dry-run) → 確認後 `devCleanupTestVisitData_V3(false)`
-   - `hirayamaka_2998-12-31`（来院ケース・来院ヘッダ・施術明細）
-   - `hirayamaka_2999-12-31`（来院ケース・来院ヘッダ）
-2. 申請書テンプレート（「新 様式第5号」シート）の有無をスプレッドシートで確認
-3. 実患者・実月で PDF 生成の実動作確認
-4. 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）  
-**→ 次候補: TC01〜TC10 テスト実施 または WEB-3.4 本番 deploy**
+**→ テストデータ削除 COMPLETED（2026-05-07）**  
+  - `hirayamaka_2998-12-31`（来院ケース・来院ヘッダ・施術明細）— 削除済み  
+  - `hirayamaka_2999-12-31`（来院ケース・来院ヘッダ）— 削除済み  
+  - devExecuteCleanupTestVisitData_V3 再実行で「合計: 0 行」を確認
+
+**→ B-1 fixture テスト COMPLETED（2026-05-07）**  
+  - TC01〜TC25b 全57ケース PASS（LiveCheck: npm run test:jyu:fixtures）
+
+**【残人間タスク】**  
+1. 申請書テンプレート（「新 様式第5号」シート）の有無をスプレッドシートで確認  
+2. 実患者・実月で PDF 生成の実動作確認  
+3. 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）  
+4. WEB-3.4 本番 deploy（月次確認後）  
+
+**→ 次候補: WEB-3.4 本番 deploy または施術明細→申請書転記データ確認（B-2）**
 
 ---
 
@@ -316,16 +323,19 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 
 | `web3.spec.ts`（WEB-3 W3-1〜8） | `npm run test:jyu:web3` | **8 PASS / 0 FAIL / 0 SKIP** | ✅ CLOSED 2026-05-07 |
 | `web34.spec.ts`（WEB-3.4 W3.4-1〜10） | `npm run test:jyu:web34` | **9 PASS / 1 SKIP / 0 FAIL** | ✅ CLOSED 2026-05-07 |
+| `tc_fixtures.spec.ts`（B-1 TC-ALL/DETAIL） | `npm run test:jyu:fixtures` | **2 PASS / 0 FAIL** (57 fixture PASS) | ✅ CLOSED 2026-05-07 |
 
 ### 回帰テスト合計（2026-05-07 最新）
 
-| suite | 結果 |
-|---|---|
-| smoke | 28 PASS |
-| web25 | 5 PASS |
-| web251 | 3 PASS / 1 SKIP（テストデータ残存） |
-| web3 | 8 PASS |
-| **合計** | **44 PASS / 1 SKIP / 0 FAIL** |
+| suite | 結果 | 備考 |
+|---|---|---|
+| smoke | 28 PASS | |
+| web25 | 5 PASS | |
+| web251 | 3 PASS / 1 SKIP | テストデータ削除済み — 次回 4 PASS 見込み |
+| web3 | 8 PASS | |
+| web34 | 9 PASS / 1 SKIP | |
+| fixtures (B-1) | 2 PASS (57 fixture PASS) | TC01〜TC25b 全件 PASS |
+| **合計** | **55 PASS / 2 SKIP / 0 FAIL** | |
 
 ---
 

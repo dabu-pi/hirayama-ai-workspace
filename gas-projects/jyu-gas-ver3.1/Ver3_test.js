@@ -1701,6 +1701,46 @@ function runFixtureSuite_() {
 }
 
 
+/**
+ * B-1 Web API: 全 fixture テストをスイート実行して JSON で返す
+ * google.script.run 経由で live-check-runner から呼び出し可能。
+ * SpreadsheetApp.getUi() を使わないため Web App コンテキストで動作する。
+ *
+ * @returns {{ ok, passCount, failCount, total, results: Array, summary: string }}
+ */
+function runFixtureSuiteWeb_V3() {
+  try {
+    var ids    = Object.keys(JREC01_FIXTURES_);
+    var pass   = 0, fail = 0;
+    var results = [];
+
+    for (var i = 0; i < ids.length; i++) {
+      var id = ids[i];
+      try {
+        var r = runFixtureTest_(id);
+        if (r.pass) {
+          pass++;
+          results.push({ testId: id, pass: true, diff: "" });
+        } else {
+          fail++;
+          results.push({ testId: id, pass: false, diff: String(r.diff || "") });
+        }
+      } catch (e) {
+        fail++;
+        results.push({ testId: id, pass: false, diff: "ERROR: " + e.message });
+      }
+    }
+
+    var summary = "PASS: " + pass + "  FAIL: " + fail + "  / " + ids.length;
+    Logger.log("[runFixtureSuiteWeb_V3] " + summary);
+    return { ok: true, passCount: pass, failCount: fail, total: ids.length, results: results, summary: summary };
+
+  } catch (e) {
+    Logger.log("[runFixtureSuiteWeb_V3] error=" + e.message);
+    return { ok: false, passCount: 0, failCount: 0, total: 0, results: [], summary: e.message };
+  }
+}
+
 /* =======================================================================
    公開ラッパー関数（Apps Script 実行メニューに表示される）
    末尾アンダースコアなし・引数なし

@@ -5498,6 +5498,15 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
+  // B-1: fixture テスト結果ページ（LiveCheck 専用）
+  if (page === "fixtureResults") {
+    var tmplFx = HtmlService.createTemplateFromFile("web-fixture-results");
+    tmplFx.appBaseUrl = appBaseUrl;
+    return tmplFx.evaluate()
+      .setTitle("Fixture テスト結果 — JREC-01")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   // Phase WEB-3.1: 月次申請対象者一覧
   if (page === "monthlyClaims") {
     var tmplMC = HtmlService.createTemplateFromFile("web-monthly-claims");
@@ -6740,6 +6749,18 @@ function generateClaimApplication_V3(patientId, ym) {
  * @param {boolean} [dryRun=true]
  * @returns {string} 削除レポート
  */
+/**
+ * DEV ONLY: テストデータ実削除 wrapper
+ * GAS エディタの「選択して実行」に対応するため、引数なし関数として実装。
+ * 実行前に必ず devCleanupTestVisitData_V3() (dry-run) で対象を確認すること。
+ * 実行後に dry-run を再実行して「合計: 0 行」を確認すること。
+ */
+function devExecuteCleanupTestVisitData_V3() {
+  var report = devCleanupTestVisitData_V3(false);
+  Logger.log("[devExecuteCleanupTestVisitData_V3] 実削除完了:\n" + report);
+  return report;
+}
+
 function devCleanupTestVisitData_V3(dryRun) {
   if (dryRun === undefined || dryRun === null) dryRun = true;
 
