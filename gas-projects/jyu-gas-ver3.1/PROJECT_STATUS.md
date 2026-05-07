@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (NDJSON→Excel ツール整備完了 / auth更新後に Excel 生成実施)  
+最終更新: 2026-05-07 (NDJSON→Excel 生成・自動検証 COMPLETED)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -68,10 +68,10 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
   - 2 回目以降はデータ再作成で SKIP（設計通り）  
   - 完全 4 PASS 化には `devCleanupTestVisitData_V3(false)` の都度実行が必要
 
-**【残人間タスク】**  
-1. `?page=b2Results&ym=YYYY-MM` で実来院月を指定して B-2 実データ確認  
-2. 申請書テンプレート（「新 様式第5号」シート）の有無をスプレッドシートで確認  
-3. 実患者・実月で PDF 生成の実動作確認  
+**【前フェーズ 残人間タスク（アーカイブ）】**  
+1. ~~`?page=b2Results&ym=YYYY-MM` で実来院月を指定して B-2 実データ確認~~ → COMPLETED  
+2. ~~申請書テンプレート（「新 様式第5号」シート）の有無をスプレッドシートで確認~~ → COMPLETED  
+3. 実患者・実月で Excel 目視確認（上記残人間タスク §1 に移行）  
 4. 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）  
 5. WEB-3.4 本番 deploy（月次確認後）
 
@@ -86,7 +86,16 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
   - **試験的: Sheets直PDF（generateClaimApplication_V3）**  
     → 施術日カレンダー ○・転帰が未実装のため帳票として不完全  
   - **DEPLOY 保留: Excel 目視確認後に判断**  
-**→ 次候補: auth 更新 → NDJSON 取得 → Excel 生成 → 目視確認**
+**→ NDJSON→Excel 生成・自動検証 COMPLETED（2026-05-07）**
+  - exportClaimNdjson_V3 実行 → Drive に NDJSON 出力成功（File ID: 1km2r2P5T6lOFNo3i_nzIHLkcLQeqO8b_）
+  - `申請書_転記データ_hirayamaka_2026-04_20260507_1612.json` を tools/claim-excel/ にダウンロード
+  - `write_application.py` 実行 → `申請書_hirayamaka_2026-04.xlsx` 生成（35.8KB）
+  - `verify_application_xlsx.py` 実行 → 負傷名 E26 = `（1）頸部 捻挫` 確認 ✅
+  - カレンダー○・金額は Pillow 画像埋込/1桁分割のため自動検証不可（目視確認が必要）
+  - case2 は初検抑制のため空（1件のみ有効）。visitDays: [1, 19]。請求金額: ¥3,053
+
+**【残人間タスク】**  
+1. `申請書_hirayamaka_2026-04.xlsx` を Excel で開いて目視確認（負傷名・カレンダー・金額・転帰・1ページ収まり）
 
 ---
 

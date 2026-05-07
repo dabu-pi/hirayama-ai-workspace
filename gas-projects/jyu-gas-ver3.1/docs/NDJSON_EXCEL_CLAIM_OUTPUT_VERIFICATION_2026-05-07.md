@@ -1,7 +1,7 @@
 # NDJSON → Excel 申請書生成フロー 検証記録
 
 作成日: 2026-05-07  
-ステータス: ツール整備完了 / NDJSON 取得・Excel 生成は auth 更新後に実施
+ステータス: NDJSON 取得・Excel 生成 COMPLETED / 目視確認待ち
 
 ---
 
@@ -72,12 +72,45 @@ python verify_application_xlsx.py  # 最新の xlsx を自動検出
 
 ---
 
+## 実行結果（2026-05-07 完了）
+
+### NDJSON 取得
+
+- Drive ファイル: `申請書_転記データ_hirayamaka_2026-04_20260507_1612.json`
+- Drive File ID: `1km2r2P5T6lOFNo3i_nzIHLkcLQeqO8b_`
+- ローカル保存先: `tools/claim-excel/申請書_転記データ_hirayamaka_2026-04_20260507_1612.json`
+
+### NDJSON 内容（実データ）
+
+| 項目 | 値 |
+|---|---|
+| 患者 | hirayamaka（平山克士） |
+| 対象月 | 2026-04 |
+| case1 負傷名1 | 頸部 捻挫 |
+| case2 | 初検抑制（空） |
+| visitDays | [1, 19] |
+| 請求金額 | ¥3,053 |
+| 算定区分 | 再検 |
+
+### Excel 生成
+
+- 出力ファイル: `tools/claim-excel/申請書_hirayamaka_2026-04.xlsx`（35.8KB）
+- 使用 Pillow バージョン: 12.2.0（pip install Pillow で追加）
+
+### 自動検証結果
+
+| チェック項目 | 結果 |
+|---|---|
+| 負傷名欄 E26 | ✅ `（1）頸部 捻挫` |
+| 施術日カレンダー○ | ⚠️ Pillow 画像埋込のため verify では未検出（設計上の制限） |
+| 金額セル DX44/45/46 | ⚠️ 1桁分割セル方式のため None（設計上の制限） |
+
 ## 残タスク
 
 | タスク | 状態 |
 |---|---|
-| auth 更新 | ⏸ 人間タスク |
-| NDJSON 取得（hirayamaka/2026-04） | ⏸ auth 更新後 |
-| Excel 生成（write_application.py 実行） | ⏸ NDJSON 取得後 |
-| 自動確認（verify_application_xlsx.py） | ⏸ Excel 生成後 |
-| 目視確認 | ⏸ 人間タスク |
+| auth 更新 | ✅ 完了 |
+| NDJSON 取得（hirayamaka/2026-04） | ✅ 完了 |
+| Excel 生成（write_application.py 実行） | ✅ 完了 |
+| 自動確認（verify_application_xlsx.py） | ✅ 完了 |
+| 目視確認 | ⏸ 人間タスク（申請書_hirayamaka_2026-04.xlsx を Excel で開いて確認） |
