@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (B-2 インフラ検証完了・60 PASS / 2 SKIP)  
+最終更新: 2026-05-07 (B-3 SPEC.md §14 Web登録仕様追記・新規作成)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -75,7 +75,8 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 4. 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）  
 5. WEB-3.4 本番 deploy（月次確認後）
 
-**→ 次候補: 本番 deploy / B-2 実データ確認（実来院月指定）**
+**→ B-3 COMPLETED（2026-05-07）** — SPEC.md 新規作成・§14 に Web 登録フロー仕様追記  
+**→ 次候補: 本番 deploy / B-2 実データ確認（実来院月指定）/ auth 更新後に回帰テスト**
 
 ---
 
