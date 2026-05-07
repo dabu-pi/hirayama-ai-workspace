@@ -1,7 +1,7 @@
 /**
  * desktop-work-status-overlay livecheck.spec.ts
  *
- * Phase 3-C / Phase 3-D 自動確認テスト
+ * Phase 3-C / Phase 3-D / Phase 3-F 自動確認テスト
  *
  * DWSO-3C-1: Overlay プロセス start.bat で起動確認
  * DWSO-3C-2: claude-monitor がBOMなしUTF-8でruntime JSONを書く
@@ -9,6 +9,9 @@
  * DWSO-3C-4: D2 runtime running → completed 遷移（テストコマンド使用）
  * DWSO-3C-5: launchCommand が正しく記録される
  * DWSO-3D-1: layout state.json が読み取れる
+ * DWSO-3F-1: window_preferences 純粋関数の動作確認
+ * DWSO-3F-2: state.json に alwaysOnTop / opacity が後方互換で補完される
+ * DWSO-3F-3: state.json に windowPosition が保存・復元できる
  *
  * 注意: Tkinterアプリのため Playwright ブラウザは使わない。
  *       Node child_process + PowerShell + Python で確認する。
@@ -475,6 +478,154 @@ print("PASS")
     });
     if (r.stderr) console.error("[DWSO-3E-3]", r.stderr);
     console.log("[DWSO-3E-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  // ── DWSO-3F-1: window_preferences 純粋関数確認 ────────────────────────────
+  test("DWSO-3F-1: window_preferences pure functions work correctly", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+from window_preferences import (
+    clamp_position, default_position, validate_opacity,
+    DEFAULT_OPACITY, DEFAULT_ALWAYS_ON_TOP, OPACITY_PRESETS,
+)
+
+# clamp_position: 範囲内はそのまま
+x, y = clamp_position(100, 200, 1920, 1080)
+assert x == 100 and y == 200, f"clamp within bounds failed: {x},{y}"
+
+# clamp_position: 画面外は補正
+x, y = clamp_position(-10, -5, 1920, 1080)
+assert x == 0 and y == 0, f"clamp negative failed: {x},{y}"
+
+x, y = clamp_position(1900, 1050, 1920, 1080)
+assert x == 1920 - 100 and y == 1080 - 100, f"clamp too-far failed: {x},{y}"
+
+# default_position
+x, y = default_position(1920, 1080)
+assert x >= 0, f"default_position x negative: {x}"
+assert y == 40, f"default_position y unexpected: {y}"
+
+# validate_opacity: 正常値
+assert abs(validate_opacity(0.9) - 0.9) < 1e-9, "validate 0.9 failed"
+assert abs(validate_opacity(1.0) - 1.0) < 1e-9, "validate 1.0 failed"
+
+# validate_opacity: 不正値は補正
+assert validate_opacity(0.0) >= 0.1, "validate 0.0 should clamp to 0.1"
+assert validate_opacity(5.0) <= 1.0, "validate 5.0 should clamp to 1.0"
+assert abs(validate_opacity("bad") - DEFAULT_OPACITY) < 1e-9, "validate string failed"
+assert abs(validate_opacity(None) - DEFAULT_OPACITY) < 1e-9, "validate None failed"
+
+# constants
+assert DEFAULT_ALWAYS_ON_TOP is True, "DEFAULT_ALWAYS_ON_TOP should be True"
+assert len(OPACITY_PRESETS) > 0, "OPACITY_PRESETS should not be empty"
+for label, val in OPACITY_PRESETS:
+    assert 0.0 < val <= 1.0, f"preset value out of range: {val}"
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3F-1]", r.stderr);
+    console.log("[DWSO-3F-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  // ── DWSO-3F-2: state.json 後方互換マイグレーション確認 ───────────────────
+  test("DWSO-3F-2: alwaysOnTop and opacity are back-filled in legacy state.json", () => {
+    const pyScript = String.raw`
+import sys, json, tempfile, pathlib
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+from state_store import StateStore
+
+with tempfile.TemporaryDirectory() as td:
+    path = pathlib.Path(td) / 'state.json'
+
+    # 旧 state.json: window に x/y のみ (alwaysOnTop・opacity なし)
+    path.write_text(json.dumps({
+        "activeDesktop": 1,
+        "window": {"x": 100, "y": 200}
+    }), encoding='utf-8')
+
+    state = StateStore(path).load()
+    assert "alwaysOnTop" in state["window"], "alwaysOnTop not backfilled"
+    assert state["window"]["alwaysOnTop"] is True, "alwaysOnTop default should be True"
+    assert "opacity" in state["window"], "opacity not backfilled"
+    assert abs(state["window"]["opacity"] - 0.92) < 0.01, f"opacity default unexpected: {state['window']['opacity']}"
+    assert state["window"]["x"] == 100, "x should be preserved"
+    assert state["window"]["y"] == 200, "y should be preserved"
+    print("legacy-window PASS")
+
+    # window キー自体がない超古い state.json
+    path.write_text(json.dumps({"activeDesktop": 1}), encoding='utf-8')
+    state2 = StateStore(path).load()
+    assert "window" in state2, "window key should be created"
+    assert "alwaysOnTop" in state2["window"], "alwaysOnTop not added"
+    assert "opacity" in state2["window"], "opacity not added"
+    print("no-window-key PASS")
+
+    # 不正な opacity は補正される
+    path.write_text(json.dumps({"window": {"opacity": 99.0}}), encoding='utf-8')
+    state3 = StateStore(path).load()
+    assert state3["window"]["opacity"] <= 1.0, "opacity should be clamped"
+    print("opacity-clamp PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3F-2]", r.stderr);
+    console.log("[DWSO-3F-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  // ── DWSO-3F-3: state.json 位置・設定の保存・復元確認 ─────────────────────
+  test("DWSO-3F-3: window position and alwaysOnTop roundtrip via state.json", () => {
+    const pyScript = String.raw`
+import sys, json, tempfile, pathlib
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+from state_store import StateStore
+
+with tempfile.TemporaryDirectory() as td:
+    path = pathlib.Path(td) / 'state.json'
+    store = StateStore(path)
+    state = store.load()
+
+    # 位置を変更して保存
+    state["window"]["x"] = 300
+    state["window"]["y"] = 150
+    state["window"]["alwaysOnTop"] = False
+    state["window"]["opacity"] = 0.8
+    store.save(state)
+
+    # 復元して確認
+    loaded = StateStore(path).load()
+    assert loaded["window"]["x"] == 300, f"x mismatch: {loaded['window']['x']}"
+    assert loaded["window"]["y"] == 150, f"y mismatch: {loaded['window']['y']}"
+    assert loaded["window"]["alwaysOnTop"] is False, "alwaysOnTop should be False"
+    assert abs(loaded["window"]["opacity"] - 0.8) < 1e-9, f"opacity mismatch: {loaded['window']['opacity']}"
+    print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3F-3]", r.stderr);
+    console.log("[DWSO-3F-3]", r.stdout);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("PASS");
   });
