@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (B-3 回帰確認 61 PASS / 2 SKIP / 0 FAIL)  
+最終更新: 2026-05-07 (B-2 実データ確認完了 — PDF生成成功 / 63 PASS / 2 SKIP)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -77,7 +77,11 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 
 **→ B-3 COMPLETED（2026-05-07）** — SPEC.md 新規作成・§14 に Web 登録フロー仕様追記  
 **→ auth 更新後 回帰テスト CONFIRMED（2026-05-07）** — 61 PASS / 2 SKIP / 0 FAIL  
-**→ 次候補: B-2 実データ確認（実来院月で ?page=b2Results&ym=YYYY-MM）/ 本番 deploy**
+**→ B-2 実データ確認 COMPLETED（2026-05-07）**  
+  - 2026-04 / 9患者 / INTEGRITY_OK  
+  - PDF生成成功: 申請書_hirayamaka_2026-04（¥3,053 / 84セル）  
+  - 「新 様式第5号」テンプレート存在確認 ✅  
+**→ 次候補: 本番 deploy（clasp deploy -i）/ テストデータクリーンアップ / スマホ実機確認**
 
 ---
 
@@ -338,6 +342,8 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 | `web34.spec.ts`（WEB-3.4 W3.4-1〜10） | `npm run test:jyu:web34` | **9 PASS / 1 SKIP / 0 FAIL** | ✅ CLOSED 2026-05-07 |
 | `tc_fixtures.spec.ts`（B-1 TC-ALL/DETAIL） | `npm run test:jyu:fixtures` | **2 PASS / 0 FAIL** (57 fixture PASS) | ✅ CLOSED 2026-05-07 |
 | `b2_transfer.spec.ts`（B-2 B2-1〜10） | `npm run test:jyu:b2` | **6 PASS / 0 FAIL / 0 SKIP** | ✅ インフラ検証完了 2026-05-07 |
+| `b2_realdata.spec.ts`（B-2 実データ B2R-1〜7） | `npm run test:jyu:b2real` | **2 PASS / 0 FAIL / 0 SKIP** | ✅ 実データ確認完了（2026-04 / PDF生成成功）|
+| `find_months.spec.ts`（月スキャン） | `npm run test:jyu:findmonths` | **1 PASS** | ✅ 2026-04 = 9患者 検出 |
 
 ### 回帰テスト合計（2026-05-07 最新）
 
@@ -350,7 +356,9 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 | web34 | 9 PASS / 1 SKIP | W3.4-10 inner frame evaluate SKIP（設計通り） |
 | fixtures (B-1) | 2 PASS (57 fixture PASS) | TC01〜TC25b 全件 PASS |
 | b2 transfer | 6 PASS | NO_PATIENTS_THIS_MONTH（2026-05 データなし） |
-| **合計（B-3 auth 更新後確認）** | **61 PASS / 2 SKIP / 0 FAIL** | 2026-05-07 確認済み |
+| findmonths | 1 PASS | 2026-04 / 9患者 |
+| b2real | 2 PASS (PDF成功) | 2026-04 / ¥3,053 / 84セル |
+| **合計（B-2 実データ確認後）** | **63 PASS / 2 SKIP / 0 FAIL** | 2026-05-07 確認済み |
 
 ---
 

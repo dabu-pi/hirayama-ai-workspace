@@ -5498,6 +5498,17 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
+  // B-2 補助: 実来院月スキャンページ
+  if (page === "findMonths") {
+    var lookback = String((e && e.parameter && e.parameter.lookback) || "12").trim();
+    var tmplFM = HtmlService.createTemplateFromFile("web-find-months");
+    tmplFM.lookback   = lookback;
+    tmplFM.appBaseUrl = appBaseUrl;
+    return tmplFM.evaluate()
+      .setTitle("実来院月スキャン — JREC-01")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   // B-2: 月次申請データ整合確認ページ（LiveCheck 専用）
   if (page === "b2Results") {
     var b2Ym = String((e && e.parameter && e.parameter.ym) || "").trim();
@@ -6347,6 +6358,37 @@ function getPatientDetail_V3(patientId) {
 /* ======================================================================= */
 /* WEB-3 API: 月次申請                                                       */
 /* ======================================================================= */
+
+/**
+ * B-2 補助: 直近 N か月で保険来院がある月を探す（読み取り専用）
+ * テスト用未来日（年 >= 2990）は自動除外する。
+ * @param {number} [lookback=12] 遡る月数
+ * @returns {{ ok, months: Array<{ym, patientCount}> }}
+ */
+function findRecentMonthsWithClaims_V3(lookback) {
+  try {
+    var n = Number(lookback || 12);
+    var found = [];
+    var now = new Date();
+
+    for (var i = 0; i <= n; i++) {
+      var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      var ym = Utilities.formatDate(d, "Asia/Tokyo", "yyyy-MM");
+      var res = getMonthlyClaimList_V3(ym);
+      if (res.ok && res.total > 0) {
+        found.push({ ym: ym, patientCount: res.total });
+      }
+    }
+
+    Logger.log("[findRecentMonthsWithClaims_V3] found=" + found.length
+      + " months=" + found.map(function(m) { return m.ym; }).join(","));
+    return { ok: true, months: found };
+
+  } catch (e) {
+    Logger.log("[findRecentMonthsWithClaims_V3] error=" + e.message);
+    return { ok: false, months: [], message: e.message };
+  }
+}
 
 /**
  * B-2 検証: 月次申請データの整合確認（読み取り専用）
