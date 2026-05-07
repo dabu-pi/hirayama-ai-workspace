@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (申請書生成B案 = Cloud Run 正ルート **採用確定** / 帳票目視OK)  
+最終更新: 2026-05-07 (B案Cloud Run採用確定・ルート整理完了・本日作業終了)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -120,12 +120,21 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 - Cloud Run: `https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app`
 - GASスクリプトプロパティ: `APPGEN_ENDPOINT` + `APPGEN_SECRET` 設定済み（運用中）
 
-**【残人間確認（目視・印刷）】**
-1. Excel 印刷プレビューで 1 ページに収まるか確認
-2. 転帰欄の丸囲みの見た目確認
-3. 罫線・文字位置の最終確認
+**Web UI からB案を呼ぶ将来構成（次回以降の候補）:**
+```
+Web → google.script.run → GAS wrapper → V3TR_generateApplicationBCore_()
+→ Cloud Run → Drive保存 → WebへURL返却
+```
+APPGEN_SECRET を Web/JS に出さないこと。既存B案ロジックを壊さないこと。
 
-**本番 deploy: 保留**（B案は Sheets直PDF ではなく Cloud Run xlsxのため deploy 対象外）
+**【残人間確認（目視・印刷）】**
+- [ ] 印刷プレビューで 1 ページに収まるか
+- [ ] 転帰欄の丸囲みの見た目
+- [ ] 罫線・文字位置の最終確認
+
+**本番 deploy: 保留**（B案は Cloud Run xlsx のため GAS deploy 対象外）
+
+**本日（2026-05-07）はここで作業終了。新規実装・clasp deploy・本番反映は行わない。**
 
 ---
 

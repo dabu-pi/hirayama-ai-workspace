@@ -130,12 +130,56 @@ GAS スクリプトプロパティに以下を設定すること:
 
 ---
 
+## Cloud Run エンドポイント補足
+
+| パス | 説明 |
+|---|---|
+| `/` | 404 Not Found — **想定内**。ルートは定義されていない |
+| `/health` | `{"status":"ok"}` — 稼働確認用 |
+| `/generate` | POST — xlsx 生成 API（GAS側で `endpoint + "/generate"` を付与） |
+
+**APPGEN_ENDPOINT の設定値:**
+```
+https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app
+```
+末尾に `/generate` は含めない。GAS側の `UrlFetchApp.fetch(endpoint + "/generate", options)` で付与される。
+
+---
+
+## Web UI からB案を呼ぶ将来方針（次回以降の候補）
+
+現時点では、Web UI からB案（Cloud Run xlsx 生成）を呼ぶ導線は未実装。
+技術的には可能。以下の構成で安全に実装できる。
+
+```
+Web monthlyClaimDetail
+→ google.script.run
+→ GAS側 wrapper（既存B案ロジックの呼び出し口）
+→ V3TR_generateApplicationBCore_()
+→ Cloud Run /generate
+→ xlsx 生成・Drive 保存・ログ記録
+→ Web へ Drive URL を返す
+```
+
+**実装上の制約（必ず守ること）:**
+
+| 制約 | 理由 |
+|---|---|
+| Web から直接 Cloud Run を叩かない | APPGEN_SECRET が Web に漏れる |
+| APPGEN_SECRET を HTML/JS に出さない | 秘密情報の漏洩防止 |
+| 既存 B案ロジックを壊さない | スプレッドシートメニューからの運用を維持 |
+| wrapper は既存B案の薄い呼び出し口として追加 | 既存コードの大幅変更は禁止 |
+
+**本日は実装しない。次回以降の実装候補として記録する。**
+
+---
+
 ## 残人間確認
 
 | 確認項目 | 内容 |
 |---|---|
-| GAS設定確認 | APPGEN_ENDPOINT / APPGEN_SECRET の設定状況（スクリプトエディタで確認） |
-| Excel目視確認 | `申請書_hirayamaka_2026-04.xlsx` を開いて目視確認（カレンダー○・転帰・金額・1ページ） |
+| GAS設定確認 | APPGEN_ENDPOINT / APPGEN_SECRET の設定状況（スクリプトエディタで確認） ✅ 設定済み（実行確認済み） |
+| Excel目視確認 | 印刷プレビュー1ページ / 転帰欄の丸囲み / 罫線・文字位置 |
 | Cloud Run再デプロイ判断 | workspace-export の write_application.py に変更があれば再デプロイ検討 |
 
 ---
