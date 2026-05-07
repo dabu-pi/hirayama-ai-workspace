@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (PDF 旧セル clear 修正 — 腰部捻挫重複残存を解消 / 再生成確認中)  
+最終更新: 2026-05-07 (申請書出力方針確定: NDJSON+Python 推奨 / Sheets直PDF試験的)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -78,13 +78,15 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 **→ B-3 COMPLETED（2026-05-07）** — SPEC.md 新規作成・§14 に Web 登録フロー仕様追記  
 **→ auth 更新後 回帰テスト CONFIRMED（2026-05-07）** — 61 PASS / 2 SKIP / 0 FAIL  
 **→ B-2 実データ確認 COMPLETED（2026-05-07）** — PDF生成成功・新様式第5号確認  
-**→ PDF レイアウト修正（修正2）実施中（2026-05-07）**  
-  - 修正2: 書き込み前に負傷名欄 全5行を clearContent（重複残存を解消）  
-  - 修正1（空行詰め validInj filter）は適用済み  
-  - **目視 NG 確認: ラベルなし腰部捻挫が (2) の下に残存 → clear 修正で対応**  
-  - B案（Cloud Run Excel→PDF）は APPGEN_ENDPOINT 未設定のため利用不可 → A案継続  
-  - **DEPLOY 保留: 修正2 PDF 目視確認後に判断**  
-**→ 次候補: 修正2 PDF 目視確認後 → OK なら本番 deploy**
+**→ 申請書出力方式を確定（2026-05-07）**  
+  - **推奨: NDJSON + Python スクリプト（write_application.py）**  
+    → 施術日カレンダー ○・転帰・印刷設定が完全実装済みの旧方式  
+    → Web UI に「NDJSON を Drive に出力」ボタンを追加（exportClaimNdjson_V3）  
+  - **試験的: Sheets直PDF（generateClaimApplication_V3）**  
+    → 施術日カレンダー ○・転帰が未実装のため帳票として不完全  
+    → 将来 A案完成または Cloud Run 設定後に本番化  
+  - **DEPLOY 保留: 申請書出力が帳票として完全な状態になるまで**  
+**→ 次候補: NDJSON + Python で申請書の目視確認 → 問題なければ運用開始**
 
 ---
 

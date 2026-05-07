@@ -271,18 +271,28 @@
       <div id="transfer-result"></div>
     </div>
 
-    <div class="transfer-section" id="pdf-section">
-      <h3>Step 2: 申請書PDF生成</h3>
+    <div class="transfer-section" id="ndjson-section">
+      <h3>Step 2: 申請書 NDJSON 出力（推奨）</h3>
       <div class="info-box">
-        申請書テンプレートシート（新 様式第5号）に転記後、PDFとしてDriveに保存します。<br>
-        <strong>⚠️ 要確認フラグがある場合は、月次申請前にスプレッドシートで内容を確認してください。</strong><br>
-        生成した PDF は Google Drive の「JREC-01_月次出力」フォルダに保存されます。<br>
-        保険請求額が 0 円の場合は生成されません（Layer 2 安全フィルタ）。
+        申請書データを NDJSON 形式で Drive に出力します。<br>
+        ダウンロード後、ローカルで <code>python write_application.py --batch &lt;ファイル名&gt;</code> を実行すると<br>
+        施術日カレンダー○・転帰・金額が正しく入った Excel 申請書が生成されます。<br>
+        <strong>この方式が帳票品質として正確です（施術日カレンダーの○印・転帰処理を含む）。</strong>
+      </div>
+      <button class="btn btn-primary" id="ndjson-btn" onclick="doNdjsonExport()">申請書 NDJSON を Drive に出力</button>
+      <div id="ndjson-result"></div>
+    </div>
+
+    <div class="transfer-section" id="pdf-section" style="opacity:0.6">
+      <h3>Step 3: 申請書PDF直接生成（試験的 / 帳票品質確認中）</h3>
+      <div class="note-box">
+        ⚠️ Sheets直PDF方式は施術日カレンダーの○印・転帰処理が未実装です。<br>
+        帳票として正確な出力には Step 2 の NDJSON + Python スクリプトをお使いください。
       </div>
       <div id="pdf-warn-check" class="note-box" style="display:none">
         ⚠️ 要確認フラグがある来院があります。PDF を生成しても、月次申請前に Sheets で確認が必要です。
       </div>
-      <button class="btn btn-primary" id="pdf-btn" onclick="doPdfGenerate()">申請書PDFを生成</button>
+      <button class="btn btn-primary" id="pdf-btn" onclick="doPdfGenerate()" style="opacity:0.6">申請書PDFを生成（試験的）</button>
       <div id="pdf-result"></div>
     </div>
 
@@ -405,6 +415,58 @@
           el.textContent = "GAS エラー: " + err.message;
         })
         .buildMonthlyTransferData_V3(PATIENT_ID, YM);
+    }
+
+    function doNdjsonExport() {
+      var btn = document.getElementById("ndjson-btn");
+      btn.disabled = true;
+      btn.textContent = "出力中...";
+      document.getElementById("ndjson-result").style.display = "none";
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = "申請書 NDJSON を Drive に出力";
+          var el = document.getElementById("ndjson-result");
+          el.style.display = "block";
+          if (res.ok) {
+            el.className = "ok";
+            el.style.background = "#d4edda";
+            el.style.color = "#155724";
+            el.style.borderRadius = "6px";
+            el.style.padding = "12px";
+            el.style.marginTop = "12px";
+            el.innerHTML =
+              "✅ NDJSON を Drive に出力しました<br>" +
+              "ファイル名: " + esc(res.fileName || "") + "<br>" +
+              "<a href='" + esc(res.ndjsonUrl || "") + "' target='_blank' style='color:#155724;font-weight:bold'>Drive で開く →</a><br><br>" +
+              "<strong>次のステップ:</strong><br>" +
+              "1. 上記リンクから NDJSON ファイルをダウンロード<br>" +
+              "2. ローカルで実行: <code>python write_application.py --batch &lt;ファイル名&gt;</code><br>" +
+              "3. 生成された Excel ファイルで申請書を確認・印刷・PDF 化";
+          } else {
+            el.className = "err";
+            el.style.background = "#f8d7da";
+            el.style.color = "#721c24";
+            el.style.borderRadius = "6px";
+            el.style.padding = "12px";
+            el.style.marginTop = "12px";
+            el.textContent = "❌ " + (res.message || "不明なエラー");
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = "申請書 NDJSON を Drive に出力";
+          var el = document.getElementById("ndjson-result");
+          el.style.display = "block";
+          el.style.background = "#f8d7da";
+          el.style.color = "#721c24";
+          el.style.borderRadius = "6px";
+          el.style.padding = "12px";
+          el.style.marginTop = "12px";
+          el.textContent = "GAS エラー: " + err.message;
+        })
+        .exportClaimNdjson_V3(PATIENT_ID, YM);
     }
 
     function doPdfGenerate() {

@@ -6751,6 +6751,64 @@ function buildMonthlyTransferData_V3(patientId, ym) {
 }
 
 /**
+ * WEB-3.4 代替: 申請書 NDJSON を Drive に出力（Python write_application.py で帳票を生成する）
+ *
+ * 処理フロー:
+ *   1. 転記データ生成（V3TR_buildTransferDataForMonth_ 経由 / upsert 冪等）
+ *   2. NDJSON 形式にエクスポート（visitDays を含む）
+ *   3. Drive の月次フォルダに JSON ファイルを保存
+ *   4. Drive URL を返す
+ *
+ * ユーザー操作（Web UI 後）:
+ *   1. 返却 Drive URL から NDJSON をダウンロード
+ *   2. ローカルで python write_application.py --batch <ndjson_file>
+ *   3. Excel ファイルが生成される（施術日カレンダー○・転帰処理含む）
+ *
+ * @param {string} patientId
+ * @param {string} ym "YYYY-MM"
+ * @returns {{ ok, ndjsonUrl, fileId, fileName, message }}
+ */
+function exportClaimNdjson_V3(patientId, ym) {
+  try {
+    var pid   = String(patientId || "").trim();
+    var ymStr = String(ym || "").trim();
+    if (!pid)                          return { ok: false, message: "患者IDが未指定です" };
+    if (!/^\d{4}-\d{2}$/.test(ymStr)) return { ok: false, message: "対象月の形式が不正です（YYYY-MM）" };
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ① 転記データ生成（upsert 冪等）
+    V3TR_buildTransferDataForMonth_(ss, pid, ymStr);
+
+    // ② NDJSON エクスポート（skipBuild=true: 既に①でビルド済み）
+    var jsonStr = V3TR_exportTransferJson_(ss, pid, ymStr, true);
+
+    // ③ Drive 保存
+    var folder = V3TR_getApplicationOutputFolder_(ss, ymStr);
+    var timestamp = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmm");
+    var fileName = "申請書_転記データ_" + pid + "_" + ymStr + "_" + timestamp + ".json";
+    var jsonBlob = Utilities.newBlob(jsonStr, "application/json", fileName);
+    var file = folder.createFile(jsonBlob);
+    file.setDescription("WEB-3.4 NDJSON出力 / pid=" + pid + " / ym=" + ymStr);
+
+    Logger.log("[exportClaimNdjson_V3] pid=" + pid + " ym=" + ymStr
+      + " fileId=" + file.getId() + " url=" + file.getUrl());
+
+    return {
+      ok:        true,
+      ndjsonUrl: file.getUrl(),
+      fileId:    file.getId(),
+      fileName:  fileName,
+      message:   "NDJSON をDriveに出力しました。write_application.py で申請書Excelを生成してください。",
+    };
+
+  } catch (e) {
+    Logger.log("[exportClaimNdjson_V3] error=" + e.message);
+    return { ok: false, message: e.message };
+  }
+}
+
+/**
  * WEB-3.4: 申請書PDF生成（A案：テンプレートシート書き込み + Drive PDF エクスポート）
  *
  * 処理フロー:
