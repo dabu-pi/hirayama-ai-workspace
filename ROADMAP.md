@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-05-07（申請書出力方針: NDJSON+Python 推奨 / Sheets直PDF試験的）
+作成: 2026-03-05 / 最終更新: 2026-05-07（申請書出力: B案 Cloud Run Excel採用確定 / Sheets直PDF停止）
 
 ---
 
@@ -86,8 +86,8 @@
 
 ### 1. 柔整GASプロジェクト `gas-projects/jyu-gas-ver3.1/`
 
-**現状（2026-05-07）:** Web UI 移行フェーズ WEB-1〜WEB-2.5.1 が完了。
-施術明細自動生成（WEB-2.5.1）の LiveCheck PASS（4/4）。次フェーズは WEB-3（申請書生成）。
+**現状（2026-05-07）:** WEB-1〜WEB-3.4 完了。申請書出力B案（Cloud Run）採用確定・目視確認済み。
+申請書出力正ルート: スプレッドシートメニュー「帳票出力→申請書を出力」= `V3TR_menuGenerateApplication_B()`
 
 #### フェーズ W — Web UI 移行（2026-05-05〜07）
 
@@ -119,6 +119,7 @@
 | B-1 | TC01〜TC25b fixture テスト | runFixtureSuiteWeb_V3 + LiveCheck / 57 PASS / 0 FAIL | ✅ 完了（2026-05-07） |
 | B-2 | 施術明細→申請書転記データ→PDF生成 | 2026-04 / 9患者 / INTEGRITY_OK / PDF ¥3,053 / 新様式第5号 存在確認 | ✅ 完了（2026-05-07） |
 | B-3 | SPEC.md §14 Web登録フロー仕様追記 | SPEC.md 新規作成 / §14.5〜§14.8 新設（saveVisitFromWeb_V3 / WEB-3 / WEB-3.4 仕様化） | ✅ 完了（2026-05-07） |
+| B-4 | 申請書生成B案（Cloud Run）正ルート採用確定 | 帳票出力メニュー → V3TR_menuGenerateApplication_B / hirayamaka/2026-04 目視OK / Drive URL 記録 | ✅ 採用確定（2026-05-07） |
 
 #### 2026-03-16 完了済み追加修正
 

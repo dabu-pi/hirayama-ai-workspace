@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (申請書生成B案 = Cloud Run 正ルート確認・実行済み)  
+最終更新: 2026-05-07 (申請書生成B案 = Cloud Run 正ルート **採用確定** / 帳票目視OK)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -86,12 +86,18 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
   - **試験的: Sheets直PDF（generateClaimApplication_V3）**  
     → 施術日カレンダー ○・転帰が未実装のため帳票として不完全  
   - **DEPLOY 保留: Excel 目視確認後に判断**  
-**→ 申請書生成B案 正ルート確認・実行 COMPLETED（2026-05-07）**
+**→ 申請書生成B案 正ルート採用確定 COMPLETED（2026-05-07）** ★
   - 既存メニュー「帳票出力 → 申請書を出力」= `V3TR_menuGenerateApplication_B()` (`Ver3_transferData.js`)
   - Cloud Run `jrec-appgen-server` 稼働確認 / URL: `https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app`
   - `/health` → `{"status":"ok"}` ✅ (revision 00026-wv2 / 2026-04-20 デプロイ)
   - B案実行 (hirayamaka/2026-04): `申請書_hirayamaka_2026-04.xlsx` 生成 (36,694 bytes) ✅
-  - B案 = Cloud Run が内部で `write_application.py` を実行（ローカル実行と同一ロジック）
+  - **スプレッドシートメニューから実行・Drive保存・申請書生成ログ記録 — 全て正常動作**
+  - **人間目視確認済み（2026-05-07）:**
+    - 負傷名: （1）頸部 捻挫 / （2）腰部 捻挫 — 正しく連続・（3）以降に残存なし ✅
+    - 施術日: ① ⑲（4/1・4/19）が入力されている ✅
+    - 合計 4,363円 / 一部負担金 1,310円 / 請求金額 3,053円 ✅
+    - 申請書生成ログにも本日実行分が記録されている ✅
+  - 生成ファイル Drive URL: https://docs.google.com/spreadsheets/d/1HHv-KH6bmfA-vEZErZ94uZxLutsxGi-C/edit
   - Sheets直PDF (A案) は停止状態を維持（施術日カレンダー○・転帰が未実装）
 
 **→ NDJSON+Python ローカル実行 COMPLETED（2026-05-07）**
@@ -100,21 +106,26 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 
 ---
 
-## 申請書出力ルート確定（2026-05-07）
+## 申請書出力ルート確定（2026-05-07）★ 採用確定
 
 | ルート | 位置づけ |
 |---|---|
-| **B案（Cloud Run → xlsx → Drive）** | ✅ **正ルート** |
-| Sheets直PDF（A案） | ❌ 停止（施術日○・転帰未実装） |
-| NDJSON+Python ローカル | 補助・開発時使用可 |
+| **B案（Cloud Run → xlsx → Drive）** | ✅ **正ルート・採用確定** |
+| Sheets直PDF（A案） | ❌ 停止・本番化しない |
+| NDJSON+Python ローカル | 補助（B案と同一ロジック / 開発時使用可） |
 
-**GAS設定が必要:**
-- `APPGEN_ENDPOINT` = `https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app`
-- `APPGEN_SECRET` = Secret Manager `JREC_APPGEN_SECRET_KEY` の値
+**B案 = スプレッドシートメニュー「帳票出力 → 申請書を出力」**
 
-**【残人間タスク】**  
-1. GAS スクリプトプロパティに `APPGEN_ENDPOINT` / `APPGEN_SECRET` が設定されているか確認・設定
-2. `申請書_hirayamaka_2026-04.xlsx` を Excel で開いて目視確認（負傷名・カレンダー・金額・転帰・1ページ）
+- GAS関数: `V3TR_menuGenerateApplication_B()` (`Ver3_transferData.js`)
+- Cloud Run: `https://jrec-appgen-server-j6vlxdvqaa-an.a.run.app`
+- GASスクリプトプロパティ: `APPGEN_ENDPOINT` + `APPGEN_SECRET` 設定済み（運用中）
+
+**【残人間確認（目視・印刷）】**
+1. Excel 印刷プレビューで 1 ページに収まるか確認
+2. 転帰欄の丸囲みの見た目確認
+3. 罫線・文字位置の最終確認
+
+**本番 deploy: 保留**（B案は Sheets直PDF ではなく Cloud Run xlsxのため deploy 対象外）
 
 ---
 
