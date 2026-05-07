@@ -1729,13 +1729,16 @@ function V3TR_writeToApplication_(ss, row1, row2) {
   }
 
   // ===== 負傷名(1)-(5): case1部位1, case1部位2, case2部位1, case2部位2 =====
+  // ★空行詰め: 名前が空のエントリを除外してから連続行に書き込む（fix: 2026-05-07）
+  // 修正前: continue でスキップしたまま i が進み、injRows[i] = テンプレート行がずれていた
+  // 修正後: 有効データのみを先に抽出し、injRows[0] から詰めて書き込む
   const injRows = CM.負傷名;
-  const injData = V3TR_buildInjuryRows_(row1, row2);
+  const injData    = V3TR_buildInjuryRows_(row1, row2);
+  const validInj   = injData.filter(function(d) { return !!d.name; });
 
-  for (let i = 0; i < injData.length && i < injRows.length; i++) {
-    const d = injData[i];
+  for (let i = 0; i < validInj.length && i < injRows.length; i++) {
+    const d = validInj[i];
     const m = injRows[i];
-    if (!d.name) continue;
 
     // 行26（i=0）→（1）、行27（i=1）→（2）を先頭に付ける
     // 行28以降はテンプレートに (3)(4)(5) が既存のため番号不要

@@ -6836,11 +6836,13 @@ function generateClaimApplication_V3(patientId, ym) {
     // ── 4. PDF エクスポート → Drive 保存 ─────────────────────────────────
     var ssId = ss.getId();
     var gid  = templateSh.getSheetId();
+    // fith=true: 高さ方向にもフィット（1ページに収める）
+    // pagenumbers=false: ページ番号を非表示
     var exportUrl = "https://docs.google.com/spreadsheets/d/" + ssId +
       "/export?format=pdf&id=" + ssId + "&gid=" + gid +
-      "&portrait=true&fitw=true&size=A4" +
-      "&top_margin=0.5&bottom_margin=0.5&left_margin=0.5&right_margin=0.5" +
-      "&sheetnames=false&printtitle=false&gridlines=false";
+      "&portrait=true&fitw=true&fith=true&size=A4" +
+      "&top_margin=0.25&bottom_margin=0.25&left_margin=0.25&right_margin=0.25" +
+      "&sheetnames=false&printtitle=false&gridlines=false&pagenumbers=false";
 
     var token    = ScriptApp.getOAuthToken();
     var response = UrlFetchApp.fetch(exportUrl, {

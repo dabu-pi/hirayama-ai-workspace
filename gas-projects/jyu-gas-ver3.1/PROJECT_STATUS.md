@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (B-2 実データ確認完了 — PDF生成成功 / 63 PASS / 2 SKIP)  
+最終更新: 2026-05-07 (PDF レイアウト修正 — injury row 詰め + 1ページ化 / 再生成 PASS)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -77,11 +77,13 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 
 **→ B-3 COMPLETED（2026-05-07）** — SPEC.md 新規作成・§14 に Web 登録フロー仕様追記  
 **→ auth 更新後 回帰テスト CONFIRMED（2026-05-07）** — 61 PASS / 2 SKIP / 0 FAIL  
-**→ B-2 実データ確認 COMPLETED（2026-05-07）**  
-  - 2026-04 / 9患者 / INTEGRITY_OK  
-  - PDF生成成功: 申請書_hirayamaka_2026-04（¥3,053 / 84セル）  
-  - 「新 様式第5号」テンプレート存在確認 ✅  
-**→ 次候補: 本番 deploy（clasp deploy -i）/ テストデータクリーンアップ / スマホ実機確認**
+**→ B-2 実データ確認 COMPLETED（2026-05-07）** — PDF生成成功・新様式第5号確認  
+**→ PDF レイアウト修正 COMPLETED（2026-05-07）**  
+  - 負傷名欄 空行詰め: V3TR_writeToApplication_ で validInj フィルタ実装  
+  - PDF 1ページ化: export URL に fith=true / pagenumbers=false / 余白縮小  
+  - 修正後 PDF 再生成: 申請書_hirayamaka_2026-04_20260507_1323.pdf（¥3,053 / 84セル）  
+  - **DEPLOY 保留: 修正後 PDF 目視確認後に判断**  
+**→ 次候補: Drive で PDF 目視確認（人間）→ 確認OK後に本番 deploy**
 
 ---
 
