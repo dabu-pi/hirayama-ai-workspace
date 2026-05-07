@@ -5498,6 +5498,29 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
+  // Phase WEB-3.1: 月次申請対象者一覧
+  if (page === "monthlyClaims") {
+    var tmplMC = HtmlService.createTemplateFromFile("web-monthly-claims");
+    tmplMC.appBaseUrl = appBaseUrl;
+    return tmplMC.evaluate()
+      .setTitle("月次申請 — JREC-01")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  // Phase WEB-3.2: 月次申請詳細（患者×月）
+  if (page === "monthlyClaimDetail") {
+    var mcPid = String((e && e.parameter && e.parameter.patientId) || "").trim();
+    var mcYm  = String((e && e.parameter && e.parameter.ym) || "").trim();
+    Logger.log("[doGet] monthlyClaimDetail patientId=" + (mcPid ? "[set]" : "[empty]") + " ym=" + mcYm);
+    var tmplMCD = HtmlService.createTemplateFromFile("web-monthly-claim-detail");
+    tmplMCD.patientId  = mcPid;
+    tmplMCD.ym         = mcYm;
+    tmplMCD.appBaseUrl = appBaseUrl;
+    return tmplMCD.evaluate()
+      .setTitle("月次申請詳細 — JREC-01")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   // デフォルト: 患者検索ページ
   var tmpl2 = HtmlService.createTemplateFromFile("patientSearch");
   tmpl2.appBaseUrl = appBaseUrl;
@@ -6294,6 +6317,268 @@ function getPatientDetail_V3(patientId) {
   } catch (e) {
     Logger.log("[getPatientDetail_V3] エラー: " + e.message);
     return { error: e.message };
+  }
+}
+
+/* ======================================================================= */
+/* WEB-3 API: 月次申請                                                       */
+/* ======================================================================= */
+
+/**
+ * WEB-3.1: 月次申請対象者一覧
+ * 指定月に保険来院がある患者の一覧と集計サマリを返す。
+ * @param {string} ym "YYYY-MM"
+ * @returns {{ ok, ym, patients: Array, total: number }}
+ */
+function getMonthlyClaimList_V3(ym) {
+  try {
+    var ymStr = String(ym || "").trim();
+    if (!/^\d{4}-\d{2}$/.test(ymStr)) {
+      return { ok: false, message: "対象月の形式が不正です（YYYY-MM）" };
+    }
+
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var pids = V3TR_findPatientsForMonth_(ss, ymStr);
+
+    if (pids.length === 0) {
+      return { ok: true, ym: ymStr, patients: [], total: 0 };
+    }
+
+    var masterSh = ss.getSheetByName(SHEETS.master);
+    var headSh   = ss.getSheetByName(SHEETS.header);
+    if (!masterSh || !headSh) {
+      return { ok: false, message: "必要シートが見つかりません（患者マスタ / 来院ヘッダ）" };
+    }
+
+    // 患者マスタから氏名を一括取得
+    var nameByPid = {};
+    if (masterSh.getLastRow() >= 2) {
+      var mVals = masterSh.getDataRange().getValues();
+      var mHdr  = mVals[0];
+      var mPidC = -1, mNameC = -1;
+      for (var mh = 0; mh < mHdr.length; mh++) {
+        var mc = String(mHdr[mh] || "").trim();
+        if (mc === "患者ID") mPidC  = mh;
+        if (mc === "氏名")   mNameC = mh;
+      }
+      for (var mr = 1; mr < mVals.length; mr++) {
+        var mpid = mPidC >= 0 ? String(mVals[mr][mPidC] || "").trim() : "";
+        if (mpid) nameByPid[mpid] = mNameC >= 0 ? String(mVals[mr][mNameC] || "") : "";
+      }
+    }
+
+    // 来院ヘッダから月内の保険来院を患者別に集計
+    var headMap = buildHeaderColMap_(headSh);
+    var hPidC   = headMap[HEADER_COLS.patientId];
+    var hDtC    = headMap[HEADER_COLS.treatDate];
+    var hVtC    = headMap[HEADER_COLS.visitTotal];
+    var hWpC    = headMap[HEADER_COLS.windowPay];
+    var hCpC    = headMap[HEADER_COLS.claimPay];
+    var hNcC    = headMap[HEADER_COLS.needCheck];
+    var hNcrC   = headMap[HEADER_COLS.needCheckReason];
+    var hActC   = headMap[HEADER_COLS.accountingType];
+
+    var month = V3TR_parseYM_(ymStr);
+    var byPid = {};
+
+    if (headSh.getLastRow() >= 2) {
+      var hVals = headSh.getDataRange().getValues();
+      for (var hr = 1; hr < hVals.length; hr++) {
+        var hdt = hVals[hr][hDtC];
+        if (!V3TR_inRange_(hdt, month.start, month.end)) continue;
+        if (hActC !== undefined && String(hVals[hr][hActC] || "").trim() === "自費のみ") continue;
+        var hpid = String(hVals[hr][hPidC] || "").trim();
+        if (!hpid) continue;
+
+        if (!byPid[hpid]) byPid[hpid] = { visitCount: 0, visitTotal: 0, windowPay: 0, claimPay: 0, needCheckCount: 0, reasons: [] };
+        var s = byPid[hpid];
+        s.visitCount++;
+        s.visitTotal += Number(hVals[hr][hVtC] || 0);
+        s.windowPay  += Number(hVals[hr][hWpC] || 0);
+        s.claimPay   += Number(hVals[hr][hCpC] || 0);
+        var nc = hVals[hr][hNcC];
+        if (nc === true || String(nc || "").toUpperCase() === "TRUE") {
+          s.needCheckCount++;
+          if (hNcrC !== undefined) {
+            var reason = String(hVals[hr][hNcrC] || "").trim();
+            if (reason && s.reasons.length < 3) s.reasons.push(reason);
+          }
+        }
+      }
+    }
+
+    var patients = pids.map(function(pid) {
+      var s = byPid[pid] || { visitCount: 0, visitTotal: 0, windowPay: 0, claimPay: 0, needCheckCount: 0, reasons: [] };
+      return {
+        patientId:        pid,
+        patientName:      String(nameByPid[pid] || ""),
+        visitCount:       s.visitCount,
+        visitTotal:       s.visitTotal,
+        windowPay:        s.windowPay,
+        claimPay:         s.claimPay,
+        needCheckCount:   s.needCheckCount,
+        isReadyForClaim:  (s.visitCount > 0 && s.needCheckCount === 0),
+        needCheckReasons: s.reasons
+      };
+    });
+
+    Logger.log("[getMonthlyClaimList_V3] ym=" + ymStr + " patients=" + patients.length);
+    return { ok: true, ym: ymStr, patients: patients, total: patients.length };
+
+  } catch (e) {
+    Logger.log("[getMonthlyClaimList_V3] error=" + e.message);
+    return { ok: false, message: e.message };
+  }
+}
+
+/**
+ * WEB-3.2: 患者×月 来院詳細（プレビュー）
+ * 指定患者・指定月の来院一覧と集計を返す（読み取り専用）。
+ * @param {string} patientId
+ * @param {string} ym "YYYY-MM"
+ * @returns {{ ok, patientId, patientName, ym, visits, summary }}
+ */
+function getMonthlyClaimDetail_V3(patientId, ym) {
+  try {
+    var pid   = String(patientId || "").trim();
+    var ymStr = String(ym || "").trim();
+    if (!pid)                              return { ok: false, message: "患者IDが未指定です" };
+    if (!/^\d{4}-\d{2}$/.test(ymStr))     return { ok: false, message: "対象月の形式が不正です（YYYY-MM）" };
+
+    var ss       = SpreadsheetApp.getActiveSpreadsheet();
+    var masterSh = ss.getSheetByName(SHEETS.master);
+    var headSh   = ss.getSheetByName(SHEETS.header);
+    if (!masterSh || !headSh) return { ok: false, message: "必要シートが見つかりません" };
+
+    // 患者氏名を取得
+    var patientName = "";
+    if (masterSh.getLastRow() >= 2) {
+      var mVals = masterSh.getDataRange().getValues();
+      var mHdr  = mVals[0];
+      var mPidC = -1, mNameC = -1;
+      for (var mh = 0; mh < mHdr.length; mh++) {
+        var mc = String(mHdr[mh] || "").trim();
+        if (mc === "患者ID") mPidC  = mh;
+        if (mc === "氏名")   mNameC = mh;
+      }
+      for (var mr = 1; mr < mVals.length; mr++) {
+        if (String(mVals[mr][mPidC] || "").trim() === pid) {
+          patientName = mNameC >= 0 ? String(mVals[mr][mNameC] || "") : "";
+          break;
+        }
+      }
+    }
+
+    // 月範囲・来院ヘッダ列マップ
+    var month   = V3TR_parseYM_(ymStr);
+    var headMap = buildHeaderColMap_(headSh);
+    var hPidC   = headMap[HEADER_COLS.patientId];
+    var hDtC    = headMap[HEADER_COLS.treatDate];
+    var hVkC    = headMap[HEADER_COLS.visitKey];
+    var hKubC   = headMap[HEADER_COLS.kubun];
+    var hBkC    = headMap[HEADER_COLS.billedKubun];
+    var hIfC    = headMap[HEADER_COLS.initFee];
+    var hRfC    = headMap[HEADER_COLS.reFee];
+    var hVtC    = headMap[HEADER_COLS.visitTotal];
+    var hWpC    = headMap[HEADER_COLS.windowPay];
+    var hCpC    = headMap[HEADER_COLS.claimPay];
+    var hNcC    = headMap[HEADER_COLS.needCheck];
+    var hNcrC   = headMap[HEADER_COLS.needCheckReason];
+    var hActC   = headMap[HEADER_COLS.accountingType];
+
+    var visits = [];
+    var totVt = 0, totWp = 0, totCp = 0, ncCnt = 0;
+
+    if (headSh.getLastRow() >= 2) {
+      var hVals = headSh.getDataRange().getValues();
+      for (var hr = 1; hr < hVals.length; hr++) {
+        if (String(hVals[hr][hPidC] || "").trim() !== pid) continue;
+        var hdt = hVals[hr][hDtC];
+        if (!V3TR_inRange_(hdt, month.start, month.end)) continue;
+        if (hActC !== undefined && String(hVals[hr][hActC] || "").trim() === "自費のみ") continue;
+
+        var nc  = hVals[hr][hNcC];
+        var isNC = (nc === true || String(nc || "").toUpperCase() === "TRUE");
+        var dtStr = (hdt instanceof Date)
+          ? Utilities.formatDate(hdt, "Asia/Tokyo", "yyyy-MM-dd")
+          : String(hdt || "");
+        var vt = Number(hVals[hr][hVtC] || 0);
+        var wp = Number(hVals[hr][hWpC] || 0);
+        var cp = Number(hVals[hr][hCpC] || 0);
+
+        totVt += vt; totWp += wp; totCp += cp;
+        if (isNC) ncCnt++;
+
+        visits.push({
+          visitKey:        String(hVkC  !== undefined ? hVals[hr][hVkC]  || "" : ""),
+          treatDate:       dtStr,
+          kubun:           String(hKubC !== undefined ? hVals[hr][hKubC] || "" : ""),
+          billedKubun:     String(hBkC  !== undefined ? hVals[hr][hBkC]  || "" : ""),
+          initFee:         Number(hIfC  !== undefined ? hVals[hr][hIfC]  || 0  : 0),
+          reFee:           Number(hRfC  !== undefined ? hVals[hr][hRfC]  || 0  : 0),
+          visitTotal:      vt,
+          windowPay:       wp,
+          claimPay:        cp,
+          needCheck:       isNC,
+          needCheckReason: String(hNcrC !== undefined ? hVals[hr][hNcrC] || "" : ""),
+          accountingType:  String(hActC !== undefined ? hVals[hr][hActC] || "" : ""),
+        });
+      }
+    }
+
+    visits.sort(function(a, b) { return a.treatDate < b.treatDate ? -1 : a.treatDate > b.treatDate ? 1 : 0; });
+
+    Logger.log("[getMonthlyClaimDetail_V3] pid=" + pid + " ym=" + ymStr + " visits=" + visits.length + " ncCnt=" + ncCnt);
+    return {
+      ok:            true,
+      patientId:     pid,
+      patientName:   patientName,
+      ym:            ymStr,
+      visits:        visits,
+      visitCount:    visits.length,
+      totalVisitTotal: totVt,
+      totalWindowPay:  totWp,
+      totalClaimPay:   totCp,
+      needCheckCount:  ncCnt,
+      isReadyForClaim: (visits.length > 0 && ncCnt === 0),
+    };
+
+  } catch (e) {
+    Logger.log("[getMonthlyClaimDetail_V3] error=" + e.message);
+    return { ok: false, message: e.message };
+  }
+}
+
+/**
+ * WEB-3.3: 申請書転記データを生成（dry-run 相当）
+ * V3TR_buildTransferDataForMonth_ を呼び出し、申請書_転記データシートへ upsert する。
+ * 冪等（upsert）なので何度実行しても安全。生成後はスプレッドシートで確認する。
+ * @param {string} patientId
+ * @param {string} ym "YYYY-MM"
+ * @returns {{ ok, total, copay, claim, message }}
+ */
+function buildMonthlyTransferData_V3(patientId, ym) {
+  try {
+    var pid   = String(patientId || "").trim();
+    var ymStr = String(ym || "").trim();
+    if (!pid)                          return { ok: false, message: "患者IDが未指定です" };
+    if (!/^\d{4}-\d{2}$/.test(ymStr)) return { ok: false, message: "対象月の形式が不正です（YYYY-MM）" };
+
+    var ss  = SpreadsheetApp.getActiveSpreadsheet();
+    var out = V3TR_buildTransferDataForMonth_(ss, pid, ymStr);
+
+    Logger.log("[buildMonthlyTransferData_V3] pid=" + pid + " ym=" + ymStr
+      + " total=" + out.total + " claim=" + out.claim);
+    return {
+      ok:      true,
+      total:   Number(out.total  || 0),
+      copay:   Number(out.copay  || 0),
+      claim:   Number(out.claim  || 0),
+      message: "申請書転記データを生成しました（「申請書_転記データ」シートを確認してください）",
+    };
+  } catch (e) {
+    Logger.log("[buildMonthlyTransferData_V3] error=" + e.message);
+    return { ok: false, message: e.message };
   }
 }
 

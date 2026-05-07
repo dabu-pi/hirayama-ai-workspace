@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (WEB-2.5.1 施術明細自動生成 LiveCheck 4 PASS・CLOSED)  
+最終更新: 2026-05-07 (WEB-3 月次申請フロー LiveCheck 8 PASS)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -8,7 +8,7 @@
 
 ## 現在の状態
 
-**稼働中 + WEB-1 / WEB-2 / WEB-2.5 / WEB-2.5.1 完了（LiveCheck CLOSED）+ デフォルト URL = page=home**
+**稼働中 + WEB-1〜WEB-3 実装完了 + デフォルト URL = page=home**
 
 スプレッドシート運用は継続中。  
 Web UI から来院記録の登録・候補金額算定まで実装済み（needCheck=TRUE / 要確認）。  
@@ -48,11 +48,12 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 
 ### 次のアクション
 
-**→ WEB-2.5.1 CLOSED（2026-05-07 LiveCheck 4 PASS）**  
-**→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）** — 人間タスク  
-**→ 施術明細シート手動確認 + 削除: visitKey = hirayamaka_2998-12-31（WEB-2.5.1 テストデータ）**  
-**→ WEB-2.5 テストデータ削除: visitKey = hirayamaka_2999-12-31（スプレッドシートで削除）**  
-**→ 次候補: WEB-3（月次申請対象者一覧・申請書プレビュー・生成フロー）**
+**→ WEB-3 実装完了・LiveCheck 8 PASS（2026-05-07）**  
+**→ テストデータ削除（人間タスク）:**
+  - `hirayamaka_2998-12-31`（来院ケース・来院ヘッダ・施術明細）
+  - `hirayamaka_2999-12-31`（来院ケース・来院ヘッダ）  
+**→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）**  
+**→ 次候補: WEB-3.4（申請書 PDF 生成）または TC01〜TC10 テスト実施**
 
 ---
 
@@ -65,7 +66,8 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 | WEB-2.5 | Web UI 来院登録 × 候補金額算定 | ✅ 完了 |
 | スマホ実機確認 | 現場スマホでの動作確認 | ✅ Playwright mobile PASS / 実機確認待ち |
 | WEB-2.5.1 | 施術明細自動生成 | ✅ CLOSED（LiveCheck 4 PASS / 2026-05-07） |
-| WEB-3 | 施術録・申請書生成 | 📋 未着手 |
+| WEB-3 | 月次申請フロー（一覧・詳細・転記データ生成） | ✅ 完了（LiveCheck 8 PASS / 2026-05-07） |
+| WEB-3.4 | 申請書 PDF 生成（Web UI から） | ⏸ 未着手 |
 
 ---
 
@@ -305,6 +307,71 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 ---
 
 ## Playwright LiveCheck 状況（2026-05-06）
+
+**スペック:** `tools/live-check-runner/projects/jyu-gas-ver31/`
+
+| `web3.spec.ts`（WEB-3 W3-1〜8） | `npm run test:jyu:web3` | **8 PASS / 0 FAIL / 0 SKIP** | ✅ CLOSED 2026-05-07 |
+
+### 回帰テスト合計（2026-05-07 最新）
+
+| suite | 結果 |
+|---|---|
+| smoke | 28 PASS |
+| web25 | 5 PASS |
+| web251 | 3 PASS / 1 SKIP（テストデータ残存） |
+| web3 | 8 PASS |
+| **合計** | **44 PASS / 1 SKIP / 0 FAIL** |
+
+---
+
+## Phase WEB-3 実装内容（2026-05-07）
+
+**ステータス: 完了（LiveCheck 8 PASS）**
+
+設計書: `docs/WEB3_MONTHLY_CLAIMS_DESIGN_2026-05-07.md`
+
+### 新規 GAS 関数
+
+| 関数 | 役割 |
+|---|---|
+| `getMonthlyClaimList_V3(ym)` | 月次申請対象者一覧（既存 V3TR_findPatientsForMonth_ 再利用） |
+| `getMonthlyClaimDetail_V3(patientId, ym)` | 患者×月 来院詳細（読み取り専用） |
+| `buildMonthlyTransferData_V3(patientId, ym)` | 転記データ生成（既存 V3TR_buildTransferDataForMonth_ ラップ） |
+
+### 新規 HTML ページ
+
+| ファイル | page= | 内容 |
+|---|---|---|
+| `web-monthly-claims.html` | `monthlyClaims` | 月次申請対象者一覧（年月入力 → テーブル） |
+| `web-monthly-claim-detail.html` | `monthlyClaimDetail` | 詳細・プレビュー・転記データ生成 |
+
+### doGet 変更
+
+| 追加ルート | HTML |
+|---|---|
+| `page=monthlyClaims` | web-monthly-claims.html |
+| `page=monthlyClaimDetail` | web-monthly-claim-detail.html |
+
+### web-home.html 更新
+
+- 「来院記録」カードを disabled → active（?page=visitNew リンク）
+- 「月次申請」カードを新規追加（active / ?page=monthlyClaims リンク）
+
+### 制度準拠
+
+- 算定事実のみ表示（来院ヘッダの確定値）
+- 自費のみ来院を除外（会計区分フィルタ）
+- needCheck=true は「要確認」バッジで明示
+- 請求確定は Sheets UI で人間が行う運用を維持
+- 申請書 PDF 生成は既存メニュー経由（WEB-3.4 で Web 対応予定）
+
+### Dashboard 関連
+
+なし（対象外）
+
+---
+
+## Playwright LiveCheck 状況（最新版）
 
 **スペック:** `tools/live-check-runner/projects/jyu-gas-ver31/`
 
