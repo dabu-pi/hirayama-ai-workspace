@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (WEB-2.5.1 施術明細自動生成 実装完了)  
+最終更新: 2026-05-07 (WEB-2.5.1 施術明細自動生成 LiveCheck 4 PASS・CLOSED)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -8,7 +8,7 @@
 
 ## 現在の状態
 
-**稼働中 + WEB-1 / WEB-2 / WEB-2.5 / WEB-2.5.1 完了 + デフォルト URL = page=home**
+**稼働中 + WEB-1 / WEB-2 / WEB-2.5 / WEB-2.5.1 完了（LiveCheck CLOSED）+ デフォルト URL = page=home**
 
 スプレッドシート運用は継続中。  
 Web UI から来院記録の登録・候補金額算定まで実装済み（needCheck=TRUE / 要確認）。  
@@ -48,10 +48,11 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 
 ### 次のアクション
 
-**→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）**  
-**→ WEB-2.5.1 実装済み。auth 更新後に `npm run test:jyu:web251` で LiveCheck を実施すること**  
-**→ 施術明細シートへの書き込み確認はスプレッドシートで手動確認（visitKey: 任意患者_2998-12-31）**  
-**→ 次候補: WEB-3（施術録・申請書生成）**
+**→ WEB-2.5.1 CLOSED（2026-05-07 LiveCheck 4 PASS）**  
+**→ 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）** — 人間タスク  
+**→ 施術明細シート手動確認 + 削除: visitKey = hirayamaka_2998-12-31（WEB-2.5.1 テストデータ）**  
+**→ WEB-2.5 テストデータ削除: visitKey = hirayamaka_2999-12-31（スプレッドシートで削除）**  
+**→ 次候補: WEB-3（月次申請対象者一覧・申請書プレビュー・生成フロー）**
 
 ---
 
@@ -63,7 +64,7 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 | WEB-2 | Web UI 来院登録（金額=0・要確認） | ✅ 完了 |
 | WEB-2.5 | Web UI 来院登録 × 候補金額算定 | ✅ 完了 |
 | スマホ実機確認 | 現場スマホでの動作確認 | ✅ Playwright mobile PASS / 実機確認待ち |
-| WEB-2.5.1 | 施術明細自動生成 | ✅ 実装完了 / LiveCheck 待ち（auth 期限切れ） |
+| WEB-2.5.1 | 施術明細自動生成 | ✅ CLOSED（LiveCheck 4 PASS / 2026-05-07） |
 | WEB-3 | 施術録・申請書生成 | 📋 未着手 |
 
 ---
@@ -312,7 +313,7 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 | `smoke.spec.ts`（WEB-1 S-1〜S-6） | `npm run test:jyu:smoke` | **26 PASS / 0 FAIL** | 全件 PASS（2026-05-06） |
 | `web2.spec.ts`（WEB-2 W2-1〜W2-8） | `npm run test:jyu:web2` | **16 PASS / 0 FAIL** | 全件 PASS（2026-05-06） |
 | **合計（〜2026-05-06）** | `npm run test:jyu` | **42 PASS / 0 FAIL / 0 SKIP** | ✅ 完了 |
-| `web251.spec.ts`（WEB-2.5.1 W2.5.1-1〜4） | `npm run test:jyu:web251` | **未実施（auth 期限切れ）** | 2026-05-07 auth 更新後に実施 |
+| `web251.spec.ts`（WEB-2.5.1 W2.5.1-1〜4） | `npm run test:jyu:web251` | **4 PASS / 0 FAIL / 0 SKIP** | ✅ CLOSED 2026-05-07 |
 
 ### テスト修正一覧（2026-05-06）
 
@@ -373,7 +374,7 @@ npm run test:jrec:smoke
 
 ## Phase WEB-2.5.1 実装内容（2026-05-07）
 
-**ステータス: 実装完了 / LiveCheck 待ち（auth 期限切れ）**
+**ステータス: CLOSED（LiveCheck 4 PASS / 2026-05-07）**
 
 ### 概要
 
@@ -411,21 +412,30 @@ WEB-2.5 で算定済みの `amounts.details`（部位別明細）を、既存の
 
 ### LiveCheck
 
-| コマンド | 状態 |
-|---|---|
-| `npm run test:jyu:web251` | スペック追加済み / auth 期限切れのため SKIP 中 |
+| コマンド | 結果 | 実施日 |
+|---|---|---|
+| `npm run test:jyu:web251` | **4 PASS / 0 FAIL / 0 SKIP** | 2026-05-07 |
 
-**auth 更新手順（次回確認時）:**
-```powershell
-$dir = "C:\hirayama-ai-workspace\workspace\tools\live-check-runner\.chrome-profile"
-Start-Process "chrome" "--remote-debugging-port=9222 --user-data-dir=`"$dir`""
-# Chrome で pinshanka24@gmail.com でログイン → GAS dev URL を開く
-cd C:\hirayama-ai-workspace\workspace\tools\live-check-runner
-npm run save-auth
-npm run test:jyu:web251
+**W2.5.1-1 保存結果（実測値）:**
 ```
+visitKey:   hirayamaka_2998-12-31
+区分:       初検（自動判定）
+来院合計:   ¥2,410
+窓口負担:   ¥720
+保険請求:   ¥1,690
+要確認理由: Web UI 登録;温罨法 算定不可（初検日特例：捻挫）;初検情報履歴未記録（Web MVP）
+```
+「施術明細未記録」が要確認理由に含まれていない → WEB-2.5.1 の核心が正しく動作している。
 
-テスト後は 来院ケース・来院ヘッダ・施術明細シートの `visitKey = {patientId}_2998-12-31` の行を削除すること。
+**W2.5.1-2〜4:** W2.5.1-1 で保存済み（DUPLICATE_VISIT = 正常動作として PASS）
+
+**テストデータ（要手動削除）:**
+- `hirayamaka_2998-12-31` — 来院ケース・来院ヘッダ・施術明細シートの該当行を削除
+- `hirayamaka_2999-12-31` — WEB-2.5 テストデータが残存。同様に削除
+
+**施術明細シート確認（手動）:**
+W2.5.1-1 の保存により `hirayamaka_2998-12-31` の施術明細行が書き込まれているはず。
+スプレッドシートの「施術明細」シートで visitKey 列を確認すること。
 
 ### 施術明細シートへの書き込み手動確認手順
 

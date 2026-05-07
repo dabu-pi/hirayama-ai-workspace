@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-04-17（/train・Cancel 障害対応完了・本番確認済み）
+作成: 2026-03-05 / 最終更新: 2026-05-07（WEB-2.5.1 施術明細自動生成 LiveCheck PASS・CLOSED）
 
 ---
 
@@ -22,7 +22,7 @@
 2026年3月                    4月                      5月〜
 │
 ├─ 【柔整GAS】───────────────────────────────────────────────────→
-│     施術明細upsert ✅ → テスト通過 → 申請書生成安定稼働
+│     施術明細upsert ✅ → WEB-1/2/2.5/2.5.1 ✅ → WEB-3 申請書生成
 │
 ├─ 【freee自動化】───────────────────────────────────────────────→
 │     OAuth再構築 → フェーズ2完成 → フェーズ3(下書き) → 運用強化
@@ -86,8 +86,19 @@
 
 ### 1. 柔整GASプロジェクト `gas-projects/jyu-gas-ver3.1/`
 
-**現状:** 来院登録・金額計算・来院ヘッダ追記（ステップ①〜③）は稼働中。
-施術明細upsert（ステップ④）実装済み。テスト・本番確認フェーズへ移行。
+**現状（2026-05-07）:** Web UI 移行フェーズ WEB-1〜WEB-2.5.1 が完了。
+施術明細自動生成（WEB-2.5.1）の LiveCheck PASS（4/4）。次フェーズは WEB-3（申請書生成）。
+
+#### フェーズ W — Web UI 移行（2026-05-05〜07）
+
+| # | タスク | 内容 | ステータス |
+|---|---|---|---|
+| W-1 | WEB-1 Web UI 入口・患者詳細・home 画面 | web-home.html / web-patient-detail.html / doGet 拡張 | ✅ 完了（2026-05-05） |
+| W-2 | WEB-2 Web UI 来院登録 | web-visit-new.html / saveVisitFromWeb_V3 / getPrevVisitData_V3 | ✅ 完了（2026-05-06） |
+| W-3 | WEB-2.5 候補金額算定 | saveVisitFromWeb_V3 × calcHeaderAmountsByVisitKey_V3_ / kubun 自動判定 | ✅ 完了（2026-05-06） |
+| W-4 | WEB-2.5.1 施術明細自動生成 | saveVisitFromWeb_V3 に upsertDetailRows_V3_ 追加 / LiveCheck 4 PASS | ✅ 完了（2026-05-07） |
+| W-5 | スマホ実機確認 | Playwright mobile 23 PASS / 現場スマホ実機確認 | 🔄 Playwright PASS / 実機待ち |
+| W-6 | WEB-3 申請書生成 | 月次申請対象者一覧・申請書プレビュー・生成フロー | ⏸ 待機 |
 
 #### フェーズ A — 施術明細upsert完成
 
