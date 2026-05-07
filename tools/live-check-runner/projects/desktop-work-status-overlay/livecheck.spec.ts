@@ -689,5 +689,142 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2b-1: conversation_analysis validation and merge — derived fields only", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import (
+    validate_conversation_analysis_payload,
+    sanitize_conversation_analysis_payload,
+    ALLOWED_ANALYSIS_SOURCE,
+    ALLOWED_ANALYSIS_STATUS,
+    DomPayloadError,
+)
+from dom_runtime_writer import merge_conversation_analysis
+
+# 1. Valid payload validates without error
+valid = {
+    "source": "conversation_analysis",
+    "slot": 2,
+    "app": "claude",
+    "status": "completed",
+    "project": "desktop-work-status-overlay",
+    "phase": "Phase 3-D(DOM)-2b",
+    "shortSummary": "6 passed",
+    "confidence": "high",
+    "analysisSource": "conversation_text",
+}
+result = validate_conversation_analysis_payload(valid)
+assert result is valid, "validate should return payload unchanged"
+print("validate: PASS")
+
+# 2. Forbidden field rejected
+try:
+    validate_conversation_analysis_payload({**valid, "rawConversation": "SECRET"})
+    print("FAIL: forbidden field should have raised")
+    sys.exit(1)
+except DomPayloadError:
+    print("forbidden_field_rejected: PASS")
+
+# 3. Sanitize strips unknown fields
+sanitized = sanitize_conversation_analysis_payload({**valid, "unknownField": "data"})
+assert "unknownField" not in sanitized, "unknown fields must be stripped"
+assert sanitized["source"] == ALLOWED_ANALYSIS_SOURCE
+print("sanitize: PASS")
+
+# 4. merge_conversation_analysis writes only derived fields (no raw text)
+with tempfile.TemporaryDirectory() as tmpdir:
+    tmp = pathlib.Path(tmpdir)
+    path = merge_conversation_analysis(tmp, valid)
+    assert path is not None
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    # Derived fields present
+    assert data["project"] == "desktop-work-status-overlay", f"project missing: {data}"
+    assert data["phase"] == "Phase 3-D(DOM)-2b", f"phase missing: {data}"
+    # Raw text fields absent
+    FORBIDDEN = ["rawConversation", "conversationText", "prompt", "response",
+                 "innerText", "textContent", "cookie", "token"]
+    for field in FORBIDDEN:
+        assert field not in data, f"Forbidden field in output: {field}"
+    print("merge (derived only): PASS -- fields: " + str(list(data.keys())))
+
+# 5. conversationTextAnalysisEnabled defaults to False in bridge config
+from dom_bridge import default_dom_bridge_config
+cfg = default_dom_bridge_config()
+assert cfg["conversationTextAnalysisEnabled"] == False, "must default to False"
+assert cfg["storeRawConversation"] == False, "storeRawConversation must be False"
+print("default_disabled: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2b-1]", r.stderr);
+    console.log("[DWSO-3D-2b-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2b-2: conversation_analysis disabled by default - no raw text in runtime JSON", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import (
+    validate_conversation_analysis_payload,
+    sanitize_conversation_analysis_payload,
+    FORBIDDEN_FIELDS,
+)
+from dom_runtime_writer import merge_conversation_analysis
+
+# Verify that after merge, forbidden fields are never present in output
+with tempfile.TemporaryDirectory() as tmpdir:
+    tmp = pathlib.Path(tmpdir)
+    # Create a pre-existing dom file with a corrupted forbidden field
+    dom_path = tmp / "dom-d2.json"
+    dom_path.write_text(json.dumps({
+        "source": "dom_monitor", "app": "claude",
+        "rawConversation": "should_be_stripped"  # simulated corruption
+    }), encoding="utf-8")
+
+    valid_analysis = {
+        "source": "conversation_analysis",
+        "slot": 2,
+        "app": "claude",
+        "status": "completed",
+        "shortSummary": "no raw text",
+        "confidence": "high",
+    }
+    merge_conversation_analysis(tmp, valid_analysis)
+
+    with open(dom_path, encoding="utf-8") as f:
+        data = json.load(f)
+        content = json.dumps(data)
+
+    # Forbidden field must have been stripped during merge
+    for field in FORBIDDEN_FIELDS:
+        assert field not in data, f"Forbidden field still present: {field!r}"
+    print("forbidden_stripped: PASS -- keys present: " + str(list(data.keys())))
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2b-2]", r.stderr);
+    console.log("[DWSO-3D-2b-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
