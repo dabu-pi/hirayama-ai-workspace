@@ -5498,6 +5498,21 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
+  // B-2: 月次申請データ整合確認ページ（LiveCheck 専用）
+  if (page === "b2Results") {
+    var b2Ym = String((e && e.parameter && e.parameter.ym) || "").trim();
+    if (!b2Ym) {
+      var now2 = new Date();
+      b2Ym = Utilities.formatDate(now2, "Asia/Tokyo", "yyyy-MM");
+    }
+    var tmplB2 = HtmlService.createTemplateFromFile("web-b2-results");
+    tmplB2.ym         = b2Ym;
+    tmplB2.appBaseUrl = appBaseUrl;
+    return tmplB2.evaluate()
+      .setTitle("B-2 月次申請データ整合確認 — JREC-01")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   // B-1: fixture テスト結果ページ（LiveCheck 専用）
   if (page === "fixtureResults") {
     var tmplFx = HtmlService.createTemplateFromFile("web-fixture-results");
@@ -6332,6 +6347,108 @@ function getPatientDetail_V3(patientId) {
 /* ======================================================================= */
 /* WEB-3 API: 月次申請                                                       */
 /* ======================================================================= */
+
+/**
+ * B-2 検証: 月次申請データの整合確認（読み取り専用）
+ *
+ * 施術明細 → 来院ヘッダ → 月次申請対象者一覧 → 患者別詳細 の流れを確認する。
+ * write 操作は一切行わない（buildMonthlyTransferData_ / generateClaimApplication_ は呼ばない）。
+ *
+ * @param {string} ym "YYYY-MM"
+ * @returns {{ ok, ym, listResult, firstPatient, detailResult, integrity }}
+ */
+function verifyMonthlyClaimData_V3(ym) {
+  try {
+    var ymStr = String(ym || "").trim();
+    if (!/^\d{4}-\d{2}$/.test(ymStr)) {
+      return { ok: false, message: "対象月の形式が不正です（YYYY-MM）" };
+    }
+
+    // ① 月次申請対象者一覧（読み取り）
+    var listResult = getMonthlyClaimList_V3(ymStr);
+    if (!listResult.ok) {
+      return { ok: false, ym: ymStr, step: "LIST", message: listResult.message };
+    }
+
+    var firstPatient = (listResult.patients && listResult.patients.length > 0)
+      ? listResult.patients[0] : null;
+
+    var detailResult = null;
+    var integrity    = { hasPatients: listResult.total > 0, checksums: [] };
+
+    if (firstPatient) {
+      // ② 患者別月次詳細（読み取り）
+      detailResult = getMonthlyClaimDetail_V3(firstPatient.patientId, ymStr);
+
+      if (detailResult.ok) {
+        // 整合チェック: visitCount の一致確認
+        var listVC   = firstPatient.visitCount;
+        var detailVC = detailResult.visitCount;
+        integrity.checksums.push({
+          check: "visitCount 一致",
+          listValue:   listVC,
+          detailValue: detailVC,
+          pass:        (listVC === detailVC),
+        });
+
+        // 整合チェック: claimPay の一致確認
+        var listCP   = firstPatient.claimPay;
+        var detailCP = detailResult.totalClaimPay;
+        integrity.checksums.push({
+          check: "claimPay 一致",
+          listValue:   listCP,
+          detailValue: detailCP,
+          pass:        (listCP === detailCP),
+        });
+
+        // 整合チェック: needCheckCount の一致確認
+        var listNC   = firstPatient.needCheckCount;
+        var detailNC = detailResult.needCheckCount;
+        integrity.checksums.push({
+          check: "needCheckCount 一致",
+          listValue:   listNC,
+          detailValue: detailNC,
+          pass:        (listNC === detailNC),
+        });
+      }
+    }
+
+    var allChecksPass = integrity.checksums.every(function(c) { return c.pass; });
+    Logger.log("[verifyMonthlyClaimData_V3] ym=" + ymStr
+      + " patients=" + listResult.total
+      + " firstPid=" + (firstPatient ? firstPatient.patientId : "none")
+      + " checksums=" + JSON.stringify(integrity.checksums));
+
+    return {
+      ok:           true,
+      ym:           ymStr,
+      listResult:   { total: listResult.total, patients: (listResult.patients || []).map(function(p) {
+        return { patientId: p.patientId, visitCount: p.visitCount,
+                 claimPay: p.claimPay, needCheckCount: p.needCheckCount,
+                 isReadyForClaim: p.isReadyForClaim };
+      })},
+      firstPatient: firstPatient ? {
+        patientId: firstPatient.patientId, visitCount: firstPatient.visitCount,
+        claimPay: firstPatient.claimPay, needCheckCount: firstPatient.needCheckCount,
+      } : null,
+      detailResult: detailResult ? {
+        visitCount: detailResult.visitCount,
+        totalClaimPay: detailResult.totalClaimPay,
+        needCheckCount: detailResult.needCheckCount,
+        isReadyForClaim: detailResult.isReadyForClaim,
+        visitSample: (detailResult.visits || []).slice(0, 3).map(function(v) {
+          return { treatDate: v.treatDate, kubun: v.kubun, claimPay: v.claimPay, needCheck: v.needCheck };
+        }),
+      } : null,
+      integrity:    { checksums: integrity.checksums, allPass: allChecksPass },
+      status:       listResult.total === 0 ? "NO_PATIENTS_THIS_MONTH" : (allChecksPass ? "INTEGRITY_OK" : "INTEGRITY_MISMATCH"),
+    };
+
+  } catch (e) {
+    Logger.log("[verifyMonthlyClaimData_V3] error=" + e.message);
+    return { ok: false, message: e.message };
+  }
+}
 
 /**
  * WEB-3.1: 月次申請対象者一覧

@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (B-1 fixture 57 PASS — テストデータ削除完了)  
+最終更新: 2026-05-07 (B-2 インフラ検証完了・60 PASS / 2 SKIP)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -58,13 +58,24 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 **→ B-1 fixture テスト COMPLETED（2026-05-07）**  
   - TC01〜TC25b 全57ケース PASS（LiveCheck: npm run test:jyu:fixtures）
 
-**【残人間タスク】**  
-1. 申請書テンプレート（「新 様式第5号」シート）の有無をスプレッドシートで確認  
-2. 実患者・実月で PDF 生成の実動作確認  
-3. 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）  
-4. WEB-3.4 本番 deploy（月次確認後）  
+**→ B-2 インフラ検証 COMPLETED（2026-05-07）**  
+  - verifyMonthlyClaimData_V3 正常動作 / 6 PASS  
+  - 当月（2026-05）: NO_PATIENTS_THIS_MONTH（実来院データなし）  
+  - 実データ検証は月次来院後に人間が実施
 
-**→ 次候補: WEB-3.4 本番 deploy または施術明細→申請書転記データ確認（B-2）**
+**→ web251 SKIP → 4 PASS 解消確認（2026-05-07）**  
+  - テストデータ削除後 1 回目実行: 4 PASS ✅  
+  - 2 回目以降はデータ再作成で SKIP（設計通り）  
+  - 完全 4 PASS 化には `devCleanupTestVisitData_V3(false)` の都度実行が必要
+
+**【残人間タスク】**  
+1. `?page=b2Results&ym=YYYY-MM` で実来院月を指定して B-2 実データ確認  
+2. 申請書テンプレート（「新 様式第5号」シート）の有無をスプレッドシートで確認  
+3. 実患者・実月で PDF 生成の実動作確認  
+4. 現場スマホ実機確認（チェックリスト: `docs/WEB25_SMARTPHONE_FIELD_CHECK_2026-05-06.md`）  
+5. WEB-3.4 本番 deploy（月次確認後）
+
+**→ 次候補: 本番 deploy / B-2 実データ確認（実来院月指定）**
 
 ---
 
@@ -324,6 +335,7 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 | `web3.spec.ts`（WEB-3 W3-1〜8） | `npm run test:jyu:web3` | **8 PASS / 0 FAIL / 0 SKIP** | ✅ CLOSED 2026-05-07 |
 | `web34.spec.ts`（WEB-3.4 W3.4-1〜10） | `npm run test:jyu:web34` | **9 PASS / 1 SKIP / 0 FAIL** | ✅ CLOSED 2026-05-07 |
 | `tc_fixtures.spec.ts`（B-1 TC-ALL/DETAIL） | `npm run test:jyu:fixtures` | **2 PASS / 0 FAIL** (57 fixture PASS) | ✅ CLOSED 2026-05-07 |
+| `b2_transfer.spec.ts`（B-2 B2-1〜10） | `npm run test:jyu:b2` | **6 PASS / 0 FAIL / 0 SKIP** | ✅ インフラ検証完了 2026-05-07 |
 
 ### 回帰テスト合計（2026-05-07 最新）
 
@@ -331,11 +343,12 @@ W2.5-4 の実行により `(検証用実在ID)_2999-12-31` が再作成されて
 |---|---|---|
 | smoke | 28 PASS | |
 | web25 | 5 PASS | |
-| web251 | 3 PASS / 1 SKIP | テストデータ削除済み — 次回 4 PASS 見込み |
+| web251 | 3 PASS / 1 SKIP | テストデータ再生成で設計通り SKIP（2回目以降）|
 | web3 | 8 PASS | |
-| web34 | 9 PASS / 1 SKIP | |
+| web34 | 8 PASS / 1 SKIP | W3.4-10 evaluate SKIP（設計通り） |
 | fixtures (B-1) | 2 PASS (57 fixture PASS) | TC01〜TC25b 全件 PASS |
-| **合計** | **55 PASS / 2 SKIP / 0 FAIL** | |
+| b2 transfer | 6 PASS | NO_PATIENTS_THIS_MONTH（2026-05 データなし） |
+| **合計** | **60 PASS / 2 SKIP / 0 FAIL** | |
 
 ---
 
