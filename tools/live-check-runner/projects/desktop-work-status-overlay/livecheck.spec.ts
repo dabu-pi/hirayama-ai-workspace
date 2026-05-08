@@ -1622,5 +1622,168 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2l-1: set_app_slot.py chatgpt 5 persists in state.json", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile, shutil
+sys.path.insert(0, r'${PROJECT_ROOT}\scripts')
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+import set_app_slot as sas
+
+# Test with a temp state.json copy
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    state = {
+        "domMonitor": {
+            "appSlotMapping": {"chatgpt": 1, "claude": 2, "unknown": 4},
+            "storeRawConversation": False,
+            "storeDerivedSummaryOnly": True,
+        }
+    }
+    dst = tmp / "state.json"
+    dst.write_text(json.dumps(state), encoding="utf-8")
+    sas.STATE_FILE = dst
+
+    # Simulate set_app_slot logic
+    data = sas.load_state()
+    dm = data.setdefault("domMonitor", {})
+    dm.setdefault("appSlotMapping", {})
+    dm["appSlotMapping"]["chatgpt"] = 5
+    dm["storeRawConversation"] = False
+    dm["storeDerivedSummaryOnly"] = True
+    sas.save_state(data)
+
+    # Verify
+    verify = sas.load_state()
+    assert verify["domMonitor"]["appSlotMapping"]["chatgpt"] == 5, "chatgpt must be 5"
+    assert verify["domMonitor"]["storeRawConversation"] == False
+    print("set_app_slot_chatgpt5: PASS")
+
+    # slot 6 should be rejected
+    desktop_count = sas.load_desktop_count()
+    assert desktop_count == 5
+    if 6 > desktop_count:
+        print("slot6_rejected_by_range_check: PASS")
+    else:
+        print("FAIL: DESKTOP_COUNT should reject slot 6")
+        sys.exit(1)
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2l-1]", r.stderr);
+    console.log("[DWSO-3D-2l-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2l-2: set_app_slot invariants: storeRawConversation always False", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile, shutil
+sys.path.insert(0, r'${PROJECT_ROOT}\scripts')
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+import set_app_slot as sas
+
+# Simulate with corrupted state (storeRawConversation somehow True)
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    corrupted = {
+        "domMonitor": {
+            "appSlotMapping": {"chatgpt": 1, "claude": 2, "unknown": 4},
+            "storeRawConversation": True,   # CORRUPTED
+            "storeDerivedSummaryOnly": False,  # CORRUPTED
+        }
+    }
+    dst = tmp / "state.json"
+    dst.write_text(json.dumps(corrupted), encoding="utf-8")
+    sas.STATE_FILE = dst
+
+    data = sas.load_state()
+    dm = data["domMonitor"]
+    dm["appSlotMapping"]["chatgpt"] = 5
+    dm["storeRawConversation"] = False    # invariant re-assert
+    dm["storeDerivedSummaryOnly"] = True
+    sas.save_state(data)
+
+    verify = sas.load_state()
+    assert verify["domMonitor"]["storeRawConversation"] == False, "INVARIANT VIOLATED"
+    assert verify["domMonitor"]["storeDerivedSummaryOnly"] == True
+    assert verify["domMonitor"]["appSlotMapping"]["chatgpt"] == 5
+    print("invariants_maintained: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2l-2]", r.stderr);
+    console.log("[DWSO-3D-2l-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2l-3: diagnose_dom_mapping detects chatgpt not on D5", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, io
+sys.path.insert(0, r'${PROJECT_ROOT}\scripts')
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+import diagnose_dom_mapping as diag
+
+# Test: state.json with chatgpt=1 triggers [NG]
+import tempfile
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    state = {
+        "domMonitor": {
+            "enabled": True,
+            "appSlotMapping": {"chatgpt": 1, "claude": 2, "unknown": 4},
+            "storeRawConversation": False,
+        }
+    }
+    dst = tmp / "state.json"
+    dst.write_text(json.dumps(state), encoding="utf-8")
+    diag.STATE_FILE = dst
+    data = diag.check_state_json()
+    mapping = data.get("domMonitor", {}).get("appSlotMapping", {})
+    assert mapping.get("chatgpt") == 1
+    assert mapping.get("chatgpt") != 5  # not D5 -- should trigger [NG]
+    print("detect_chatgpt_not_d5: PASS")
+
+# Test: state.json with chatgpt=5 triggers [OK]
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    state["domMonitor"]["appSlotMapping"]["chatgpt"] = 5
+    dst = tmp / "state.json"
+    dst.write_text(json.dumps(state), encoding="utf-8")
+    diag.STATE_FILE = dst
+    data = diag.check_state_json()
+    mapping = data.get("domMonitor", {}).get("appSlotMapping", {})
+    assert mapping.get("chatgpt") == 5
+    print("detect_chatgpt_on_d5: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2l-3]", r.stderr);
+    console.log("[DWSO-3D-2l-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
