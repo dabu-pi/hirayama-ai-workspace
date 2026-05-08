@@ -283,8 +283,23 @@
       <div id="ndjson-result"></div>
     </div>
 
+    <div class="transfer-section" id="appgen-b-section">
+      <h3>Step 3: 申請書Excelを生成（B案 Cloud Run・正ルート）</h3>
+      <div class="info-box">
+        既存B案 Cloud Run ルートで Excel 申請書を生成します。<br>
+        <strong>施術日カレンダーの○・転帰・金額が正しく入った帳票品質の申請書が生成されます。</strong><br>
+        生成ファイルは Drive の月別フォルダに保存され、申請書生成ログに記録されます。<br>
+        請求確定前に内容を確認してください。
+      </div>
+      <div id="appgen-b-warn-check" class="note-box" style="display:none">
+        ⚠️ 要確認フラグがある来院があります。申請書生成前にスプレッドシートで内容を確認してください。
+      </div>
+      <button class="btn btn-primary" id="appgen-b-btn" onclick="doAppgenB()">申請書Excelを生成</button>
+      <div id="appgen-b-result" style="display:none; margin-top:12px; padding:12px; border-radius:6px; font-size:13px; line-height:1.6;"></div>
+    </div>
+
     <div class="transfer-section" id="pdf-section" style="opacity:0.6">
-      <h3>Step 3: 申請書PDF直接生成（試験的 / 帳票品質確認中）</h3>
+      <h3>Step 4: 申請書PDF直接生成（試験的 / 帳票品質確認中）</h3>
       <div class="note-box">
         ⚠️ Sheets直PDF方式は施術日カレンダーの○印・転帰処理が未実装です。<br>
         帳票として正確な出力には Step 2 の NDJSON + Python スクリプトをお使いください。
@@ -469,6 +484,58 @@
         .exportClaimNdjson_V3(PATIENT_ID, YM);
     }
 
+    function doAppgenB() {
+      if (!confirm(YM + " の申請書Excel（B案）を生成します。\n" +
+                   "患者: " + PATIENT_ID + "\n\n" +
+                   "既存B案 Cloud Run ルートで Excel を生成し、Driveに保存します。\n" +
+                   "よろしいですか？")) return;
+
+      var btn = document.getElementById("appgen-b-btn");
+      btn.disabled = true;
+      btn.textContent = "生成中...";
+      document.getElementById("appgen-b-result").style.display = "none";
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = "申請書Excelを生成";
+          var el = document.getElementById("appgen-b-result");
+          el.style.display = "block";
+          if (res.ok) {
+            el.style.background = "#d4edda";
+            el.style.color = "#155724";
+            el.innerHTML =
+              "✅ 申請書Excelを生成しました。Driveで確認してください。<br>" +
+              "ファイル名: " + esc(res.fileName || "") + "<br>" +
+              "<a href='" + esc(res.fileUrl || "") + "' target='_blank' " +
+              "style='display:inline-block;margin-top:8px;padding:6px 14px;" +
+              "background:#155724;color:#fff;border-radius:4px;text-decoration:none;" +
+              "font-weight:700;font-size:13px'>Driveで開く →</a><br>" +
+              "<span style='font-size:11px;color:#3d6b4f;margin-top:6px;display:block'>" +
+              "申請書生成ログに記録されました。</span>";
+          } else {
+            el.style.background = "#f8d7da";
+            el.style.color = "#721c24";
+            el.innerHTML =
+              "❌ 申請書生成に失敗しました。設定または月次データを確認してください。<br>" +
+              (res.errorCode ? "<span style='font-size:11px'>エラーコード: " + esc(res.errorCode) + "</span><br>" : "") +
+              esc(res.message || "不明なエラー") + "<br>" +
+              "<span style='font-size:11px;margin-top:4px;display:block'>" +
+              "問題が続く場合はスプレッドシートメニュー「帳票出力 → 申請書を出力」からも実行できます。</span>";
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = "申請書Excelを生成";
+          var el = document.getElementById("appgen-b-result");
+          el.style.display = "block";
+          el.style.background = "#f8d7da";
+          el.style.color = "#721c24";
+          el.textContent = "GAS エラー: " + err.message;
+        })
+        .generateClaimApplicationBFromWeb_V3(PATIENT_ID, YM);
+    }
+
     function doPdfGenerate() {
       var warnMsg = "申請書PDFを生成します。\n" +
                    "患者: " + PATIENT_ID + " / 月: " + YM + "\n\n" +
@@ -528,12 +595,13 @@
       el.style.display = "block";
     }
 
-    // needCheck あり時に PDF 警告も表示
+    // needCheck あり時に PDF 警告・B案警告も表示
     var _origOnDetail = onDetail;
     onDetail = function(res) {
       _origOnDetail(res);
       if (res.ok && res.needCheckCount > 0) {
         document.getElementById("pdf-warn-check").style.display = "block";
+        document.getElementById("appgen-b-warn-check").style.display = "block";
       }
     };
 

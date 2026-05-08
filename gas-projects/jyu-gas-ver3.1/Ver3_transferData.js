@@ -2873,6 +2873,174 @@ function V3TR_generateApplicationBCore_(patientIds, ym) {
 
 
 /**
+ * Web UI から呼ぶ B案申請書生成 wrapper（WEB-4A）
+ * google.script.run から呼ばれる。APPGEN_SECRET/ENDPOINT は ScriptProperties から読む。
+ * UI ダイアログなし。プリフライト hard error は JSON error として返す。
+ * @param {string} patientId 患者ID
+ * @param {string} ym 対象月（yyyy-MM）
+ * @return {{ok,patientId,ym,fileName,fileUrl,message}|{ok,errorCode,message}}
+ */
+function generateClaimApplicationBFromWeb_V3(patientId, ym) {
+  var pid   = String(patientId || "").trim();
+  var ymStr = String(ym || "").trim();
+
+  if (!pid) {
+    return { ok: false, errorCode: "INVALID_PATIENT_ID", message: "患者IDが未指定です。" };
+  }
+  if (!/^\d{4}-\d{2}$/.test(ymStr)) {
+    return { ok: false, errorCode: "INVALID_YM", message: "対象月の形式が不正です（yyyy-MM）。" };
+  }
+
+  var props     = PropertiesService.getScriptProperties();
+  var endpoint  = props.getProperty("APPGEN_ENDPOINT") || "";
+  var secretKey = props.getProperty("APPGEN_SECRET")   || "";
+
+  if (!endpoint || !secretKey) {
+    return { ok: false, errorCode: "APPGEN_CONFIG_MISSING", message: "申請書生成設定が不足しています。管理者に連絡してください。" };
+  }
+
+  var ss = SpreadsheetApp.getActive();
+
+  // --- NDJSON 生成 ---
+  var genAt        = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
+  var shSettingsB  = ss.getSheetByName(V3TR.CONFIG.sheetNames.settings);
+  var clinicInfoB  = V3TR_loadClinicInfo_(shSettingsB);
+  var metaLine     = JSON.stringify({
+    _meta: true, schemaVersion: "3.0", generatedAt: genAt, month: ymStr,
+    patientCount: 1,
+    prefectureNo:       clinicInfoB.prefectureNo,
+    torokuKigoNo:       clinicInfoB.torokuKigoNo,
+    clinicName:         clinicInfoB.clinicName,
+    clinicAddr:         clinicInfoB.clinicAddr,
+    clinicPractitioner: clinicInfoB.clinicPractitioner,
+  });
+
+  try { V3TR_buildTransferDataForMonth_(ss, pid, ymStr); } catch (e) {
+    Logger.log("[WEB-4A] buildTransferData error pid=" + pid + ": " + e.message);
+    return { ok: false, errorCode: "BUILD_FAILED", message: "転記データ生成に失敗しました。月次データを確認してください。" };
+  }
+
+  var jsonStr;
+  try { jsonStr = V3TR_exportTransferJson_(ss, pid, ymStr, true); } catch (e) {
+    Logger.log("[WEB-4A] exportTransferJson error pid=" + pid + ": " + e.message);
+    return { ok: false, errorCode: "EXPORT_FAILED", message: "転記データのエクスポートに失敗しました。" };
+  }
+
+  var parsed;
+  try { parsed = JSON.parse(jsonStr); } catch (e) {
+    return { ok: false, errorCode: "PARSE_FAILED", message: "転記データの解析に失敗しました。" };
+  }
+
+  // Layer 2 安全フィルタ（保険請求額=0 は申請対象外）
+  var claimC1 = parsed.case1 ? Number(parsed.case1["請求金額"] || 0) : 0;
+  var claimC2 = parsed.case2 ? Number(parsed.case2["請求金額"] || 0) : 0;
+  if (claimC1 === 0 && claimC2 === 0) {
+    Logger.log("[WEB-4A] ZERO_CLAIM pid=" + pid);
+    return { ok: false, errorCode: "ZERO_CLAIM", message: "保険請求額が0円のため申請書を生成できません。" };
+  }
+
+  // プリフライト（hard error のみ — warning は自動続行）
+  var PREFLIGHT_REQUIRED_KEYS = ["患者ID", "対象月", "患者氏名", "当月合計", "窓口負担額", "請求金額"];
+  var c1 = parsed.case1;
+  if (!c1) {
+    return { ok: false, errorCode: "PREFLIGHT_FAILED", message: "転記データが存在しません。転記データ生成を先に実行してください。" };
+  }
+  var missingKeys = PREFLIGHT_REQUIRED_KEYS.filter(function(k) {
+    var v = c1[k];
+    return v === null || v === undefined || String(v).trim() === "";
+  });
+  if (missingKeys.length > 0) {
+    Logger.log("[WEB-4A] preflight missing keys pid=" + pid + ": " + missingKeys.join(", "));
+    return { ok: false, errorCode: "PREFLIGHT_FAILED", message: "転記データに必須項目が不足しています（" + missingKeys.join(", ") + "）。スプレッドシートで確認してください。" };
+  }
+  var c1Month = String(c1["対象月"] || "").trim();
+  if (c1Month && c1Month !== ymStr) {
+    Logger.log("[WEB-4A] preflight month mismatch pid=" + pid + " data=" + c1Month + " exec=" + ymStr);
+    return { ok: false, errorCode: "MONTH_MISMATCH", message: "転記データの対象月（" + c1Month + "）と実行月（" + ymStr + "）が一致しません。" };
+  }
+
+  var patientLine = JSON.stringify({ patientId: pid, case1: parsed.case1, case2: parsed.case2, visitDays: parsed.visitDays || [] });
+  var ndjsonStr   = [metaLine, patientLine].join("\n");
+
+  // --- Cloud Run POST ---
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "X-Secret-Key": secretKey },
+    payload: JSON.stringify({ ndjson: ndjsonStr, month: ymStr }),
+    muteHttpExceptions: true
+  };
+
+  var resp;
+  try { resp = UrlFetchApp.fetch(endpoint + "/generate", options); } catch (e) {
+    Logger.log("[WEB-4A] Cloud Run fetch error: " + e.message);
+    return { ok: false, errorCode: "CLOUDRUN_UNREACHABLE", message: "申請書生成サーバーへの接続に失敗しました。" };
+  }
+
+  var statusCode = resp.getResponseCode();
+  if (statusCode !== 200) {
+    Logger.log("[WEB-4A] Cloud Run HTTP " + statusCode + ": " + resp.getContentText().slice(0, 200));
+    return { ok: false, errorCode: "CLOUDRUN_ERROR", message: "申請書生成サーバーがエラーを返しました (HTTP " + statusCode + ")。" };
+  }
+
+  var result;
+  try { result = JSON.parse(resp.getContentText()); } catch (e) {
+    return { ok: false, errorCode: "RESPONSE_PARSE_FAILED", message: "サーバーレスポンスの解析に失敗しました。" };
+  }
+
+  // --- Drive 保存 ---
+  var monthFolder;
+  try { monthFolder = V3TR_getApplicationOutputFolder_(ss, ymStr); } catch (e) {
+    return { ok: false, errorCode: "DRIVE_FOLDER_FAILED", message: "Drive出力フォルダの取得に失敗しました。" };
+  }
+  var archiveFolder = V3TR_getArchiveOutputFolder_(ss, ymStr);
+  var timestamp     = Utilities.formatDate(new Date(), "Asia/Tokyo", "HHmmss");
+
+  var patients = result.patients || [];
+  if (patients.length === 0) {
+    return { ok: false, errorCode: "NO_OUTPUT", message: "申請書が生成されませんでした（レスポンスが空）。" };
+  }
+  var p = patients[0];
+  if (p.error || !p.content) {
+    Logger.log("[WEB-4A] patient generation error: " + (p.error || "content なし"));
+    return { ok: false, errorCode: "GENERATION_ERROR", message: "申請書生成でエラーが発生しました。設定または月次データを確認してください。" };
+  }
+
+  var savedFile, fileName;
+  try {
+    V3TR_archiveExistingApplicationFiles_(monthFolder, archiveFolder, pid, ymStr);
+    fileName = "申請書_" + pid + "_" + ymStr + "_" + timestamp + ".xlsx";
+    var xlsxBlob = Utilities.newBlob(
+      Utilities.base64Decode(p.content),
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      fileName
+    );
+    savedFile = monthFolder.createFile(xlsxBlob);
+  } catch (e) {
+    Logger.log("[WEB-4A] Drive save error: " + e.message);
+    return { ok: false, errorCode: "DRIVE_SAVE_FAILED", message: "Driveへの保存に失敗しました。" };
+  }
+
+  // --- ログ記録（失敗しても生成成功として返す）---
+  try {
+    V3TR_writeGenerationLog_(ss, ymStr, genAt,
+      [{ patientId: pid, fileName: fileName, url: savedFile.getUrl(), warnings: p.warnings || [] }], []);
+  } catch (e) {
+    Logger.log("[WEB-4A] ログ記録失敗（生成は成功）: " + e.message);
+  }
+
+  return {
+    ok:        true,
+    patientId: pid,
+    ym:        ymStr,
+    fileName:  fileName,
+    fileUrl:   savedFile.getUrl(),
+    message:   "申請書Excelを生成しました。Driveで確認してください。"
+  };
+}
+
+
+/**
  * 月別フォルダを取得または作成する
  * 例: output/2026-03/
  */

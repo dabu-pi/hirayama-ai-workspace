@@ -1,6 +1,6 @@
 # JREC-01 柔整保険申請書 Ver3.1 — プロジェクトステータス
 
-最終更新: 2026-05-07 (B案Cloud Run採用確定・ルート整理完了・本日作業終了)  
+最終更新: 2026-05-08 (WEB-4A: Web UI から B案 Cloud Run Excel 申請書生成入口を追加)  
 担当: dabu-pi  
 ブランチ: `feature/auto-dev-phase3-loop`
 
@@ -8,7 +8,7 @@
 
 ## 現在の状態
 
-**稼働中 + WEB-1〜WEB-3.4 実装完了 + デフォルト URL = page=home**
+**稼働中 + WEB-1〜WEB-4A 実装完了 + デフォルト URL = page=home**
 
 スプレッドシート運用は継続中。  
 Web UI から来院記録の登録・候補金額算定まで実装済み（needCheck=TRUE / 要確認）。  
@@ -47,6 +47,12 @@ npx tsx tools/live-check-runner/scripts/check-exec-home.ts
 ```
 
 ### 次のアクション
+
+**→ WEB-4A 実装完了（2026-05-08）** — Web UI から B案 Cloud Run Excel 申請書生成入口を追加  
+  - `generateClaimApplicationBFromWeb_V3(patientId, ym)` 追加（Ver3_transferData.js）
+  - `web-monthly-claim-detail.html` に Step 3「申請書Excelを生成」ボタン追加
+  - LiveCheck `web4_application_b.spec.ts` 追加（W4A-1〜5 / auth更新後 PASS 見込み）
+  - clasp push 済 / 本番 deploy 未実施
 
 **→ WEB-3.4 実装完了・LiveCheck 9 PASS / 1 SKIP（2026-05-07）**  
 
@@ -149,6 +155,7 @@ APPGEN_SECRET を Web/JS に出さないこと。既存B案ロジックを壊さ
 | WEB-2.5.1 | 施術明細自動生成 | ✅ CLOSED（LiveCheck 4 PASS / 2026-05-07） |
 | WEB-3 | 月次申請フロー（一覧・詳細・転記データ生成） | ✅ 完了（LiveCheck 8 PASS / 2026-05-07） |
 | WEB-3.4 | 申請書 PDF 生成（A案：テンプレ書込 + Drive PDF） | ✅ 完了（LiveCheck 9 PASS / 1 SKIP / 2026-05-07） |
+| WEB-4A | Web UI から B案 Cloud Run Excel 申請書生成入口 | ✅ 完了（clasp push 済 / 2026-05-08） |
 
 ---
 
