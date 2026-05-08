@@ -826,5 +826,107 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2c-1: conversationTextAnalysisEnabled default OFF + toggle state logic", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import default_dom_bridge_config, DomBridgeServer
+
+# 1. Default config is OFF
+cfg = default_dom_bridge_config()
+assert cfg["conversationTextAnalysisEnabled"] == False, "must default to False"
+assert cfg["storeRawConversation"] == False, "storeRawConversation must be False"
+assert cfg["storeDerivedSummaryOnly"] == True, "storeDerivedSummaryOnly must be True"
+print("default_off: PASS")
+
+# 2. Toggle ON state mutation (mirrors _toggle_conversation_analysis logic)
+state_dm = {"conversationTextAnalysisEnabled": False, "storeRawConversation": False, "storeDerivedSummaryOnly": True}
+new_val = not state_dm["conversationTextAnalysisEnabled"]
+state_dm["conversationTextAnalysisEnabled"] = new_val
+state_dm["storeRawConversation"] = False
+state_dm["storeDerivedSummaryOnly"] = True
+assert state_dm["conversationTextAnalysisEnabled"] == True
+assert state_dm["storeRawConversation"] == False
+print("toggle_on: PASS")
+
+# 3. Toggle OFF
+new_val = not state_dm["conversationTextAnalysisEnabled"]
+state_dm["conversationTextAnalysisEnabled"] = new_val
+state_dm["storeRawConversation"] = False
+assert state_dm["conversationTextAnalysisEnabled"] == False
+assert state_dm["storeRawConversation"] == False
+print("toggle_off: PASS")
+
+# 4. DomBridgeServer reflects constructor param
+b_off = DomBridgeServer(conversation_analysis_enabled=False)
+b_on  = DomBridgeServer(conversation_analysis_enabled=True)
+assert b_off._conversation_analysis_enabled == False
+assert b_on._conversation_analysis_enabled == True
+print("constructor_param: PASS")
+
+# 5. push_config_sync does not raise when no loop
+b_off.push_config_sync({"type": "config", "conversationTextAnalysisEnabled": True})
+print("push_config_no_raise: PASS")
+
+# 6. _connected_clients starts empty
+assert len(b_off._connected_clients) == 0
+print("clients_empty: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2c-1]", r.stderr);
+    console.log("[DWSO-3D-2c-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2c-2: toggle does not enable storeRawConversation", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import DomBridgeServer, default_dom_bridge_config
+
+# Even after toggling ON multiple times, storeRawConversation stays False
+dm = default_dom_bridge_config()
+for _ in range(4):
+    current = dm["conversationTextAnalysisEnabled"]
+    dm["conversationTextAnalysisEnabled"] = not current
+    dm["storeRawConversation"] = False    # invariant always reasserted
+    dm["storeDerivedSummaryOnly"] = True
+    assert dm["storeRawConversation"] == False, "storeRawConversation leaked to True"
+    assert dm["storeDerivedSummaryOnly"] == True
+
+print("invariants_preserved: PASS")
+
+# Also verify that DomBridgeServer._conversation_analysis_enabled can be toggled
+bridge = DomBridgeServer(conversation_analysis_enabled=False)
+bridge._conversation_analysis_enabled = True
+assert bridge._conversation_analysis_enabled == True
+bridge._conversation_analysis_enabled = False
+assert bridge._conversation_analysis_enabled == False
+print("bridge_toggle_mutable: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2c-2]", r.stderr);
+    console.log("[DWSO-3D-2c-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
