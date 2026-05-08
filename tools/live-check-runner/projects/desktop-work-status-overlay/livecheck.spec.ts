@@ -1139,5 +1139,155 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2e-1: analysis view model has shortSummary and nextAction, no forbidden keys", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from analysis_display import build_analysis_view_model, format_analysis_card_text, _FORBIDDEN_DISPLAY
+
+# 1. Valid analysis data -> view model
+data = {
+    "shortSummary": "6 passed",
+    "nextAction": "Phase 3-D(DOM)-2e complete",
+    "phase": "Phase 3-D(DOM)-2e",
+    "analysisUpdatedAt": "2026-05-08T12:34:56+09:00",
+}
+vm = build_analysis_view_model(data)
+assert vm["shortSummary"] == "6 passed", f"shortSummary: {vm}"
+assert "Phase 3-D" in vm["nextAction"], f"nextAction: {vm}"
+assert vm["analysisAge"] == "12:34", f"analysisAge: {vm}"
+print("view_model_basic: PASS")
+
+# 2. Formatted card text
+text = format_analysis_card_text(vm)
+assert "6 passed" in text
+assert "complete" in text
+print("format_card_text: PASS")
+
+# 3. Forbidden key present -> view model empty
+for field in list(_FORBIDDEN_DISPLAY)[:5]:
+    bad = dict(data, **{field: "SECRET"})
+    result = build_analysis_view_model(bad)
+    assert result == {}, f"Expected empty for forbidden key {field!r}"
+print("forbidden_keys_blocked: PASS")
+
+# 4. No analysis fields -> empty
+assert build_analysis_view_model({}) == {}
+assert build_analysis_view_model({"source": "dom_monitor", "status": "idle"}) == {}
+print("empty_returns_empty: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2e-1]", r.stderr);
+    console.log("[DWSO-3D-2e-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2e-2: long text is truncated with ellipsis", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from analysis_display import (
+    truncate, build_analysis_view_model,
+    MAX_SUMMARY_CHARS, MAX_ACTION_CHARS
+)
+
+# truncate: short text unchanged
+assert truncate("hello", 50) == "hello"
+print("truncate_short: PASS")
+
+# truncate: long text truncated
+long = "A" * 100
+result = truncate(long, 50)
+assert len(result) == 50, f"Expected 50, got {len(result)}"
+assert result.endswith("…"), "Should end with ellipsis"
+print("truncate_long: PASS")
+
+# view model: long shortSummary truncated
+data = {
+    "shortSummary": "X" * 200,
+    "nextAction": "Y" * 200,
+    "analysisUpdatedAt": "2026-05-08T12:00:00+09:00",
+}
+vm = build_analysis_view_model(data)
+assert len(vm["shortSummary"]) <= MAX_SUMMARY_CHARS, f"Summary too long: {len(vm['shortSummary'])}"
+assert len(vm["nextAction"]) <= MAX_ACTION_CHARS, f"Action too long: {len(vm['nextAction'])}"
+print("view_model_truncates: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2e-2]", r.stderr);
+    console.log("[DWSO-3D-2e-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2e-3: read_dom_analysis_fields returns only derived fields", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from datetime import datetime, timezone, timedelta
+from dom_runtime_reader import read_dom_analysis_fields
+
+jst = timezone(timedelta(hours=9))
+now = datetime.now(jst).isoformat(timespec="seconds")
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    tmp = pathlib.Path(tmpdir)
+
+    # File with analysis + DOM fields + a forbidden field
+    (tmp / "dom-d2.json").write_text(json.dumps({
+        "source": "dom_monitor",
+        "shortSummary": "6 passed",
+        "nextAction": "proceed",
+        "phase": "Phase 3-D",
+        "analysisUpdatedAt": now,
+        "status": "idle",          # DOM field (should not appear in result)
+        "rawConversation": "SECRET",  # forbidden field (should not appear)
+    }), encoding="utf-8")
+
+    result = read_dom_analysis_fields(2, runtime_dir=tmp)
+
+    assert "shortSummary" in result, "shortSummary should be returned"
+    assert "nextAction" in result, "nextAction should be returned"
+    assert "rawConversation" not in result, "forbidden field must not be returned"
+    assert "status" not in result, "DOM status field should not be in analysis result"
+    print("fields_filtered: PASS")
+
+    # No analysis file
+    result_missing = read_dom_analysis_fields(3, runtime_dir=tmp)
+    assert result_missing == {}, "missing file returns empty"
+    print("missing_file_empty: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2e-3]", r.stderr);
+    console.log("[DWSO-3D-2e-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
