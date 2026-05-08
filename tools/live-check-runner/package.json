@@ -17,6 +17,7 @@
     "test:jyu:web3": "playwright test projects/jyu-gas-ver31/web3.spec.ts",
     "test:jyu:web34": "playwright test projects/jyu-gas-ver31/web34.spec.ts",
     "test:jyu:web4": "playwright test projects/jyu-gas-ver31/web4_application_b.spec.ts",
+    "test:jyu:web4b": "playwright test projects/jyu-gas-ver31/web4b_monthly_aggregation.spec.ts",
     "test:jyu:fixtures": "playwright test projects/jyu-gas-ver31/tc_fixtures.spec.ts",
     "test:jyu:b2": "playwright test projects/jyu-gas-ver31/b2_transfer.spec.ts",
     "test:jyu:findmonths": "playwright test projects/jyu-gas-ver31/find_months.spec.ts",
