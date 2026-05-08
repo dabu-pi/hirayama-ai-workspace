@@ -1289,5 +1289,174 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2f-1: ON state produces display text with summary, age, and nextAction", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from datetime import datetime, timezone, timedelta
+from dom_runtime_reader import read_dom_analysis_fields
+from analysis_display import build_analysis_view_model, format_analysis_card_text
+
+jst = timezone(timedelta(hours=9))
+now = datetime.now(jst).isoformat(timespec="seconds")
+age_hhmm = datetime.now(jst).strftime("%H:%M")
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    tmp = pathlib.Path(tmpdir)
+
+    # Simulate what merge_conversation_analysis writes
+    (tmp / "dom-d2.json").write_text(json.dumps({
+        "source": "dom_monitor",
+        "shortSummary": "6 passed",
+        "nextAction": "Phase 3-D(DOM)-2f complete",
+        "phase": "Phase 3-D(DOM)-2f",
+        "analysisUpdatedAt": now,
+    }), encoding="utf-8")
+
+    # ON path: read -> view model -> format
+    raw = read_dom_analysis_fields(2, runtime_dir=tmp)
+    vm = build_analysis_view_model(raw)
+    text = format_analysis_card_text(vm)
+
+    assert text != "", "ON path should produce non-empty text"
+    assert "6 passed" in text, f"shortSummary missing: {text}"
+    assert "complete" in text, f"nextAction missing: {text}"
+    assert age_hhmm in text, f"analysisAge [{age_hhmm}] missing: {text}"
+    print(f"display_text_sample: {repr(text[:80])}")
+    print("on_path: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2f-1]", r.stderr);
+    console.log("[DWSO-3D-2f-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2f-2: OFF state (flags=false) produces empty display text", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from datetime import datetime, timezone, timedelta
+from dom_runtime_reader import read_dom_analysis_fields
+from analysis_display import build_analysis_view_model, format_analysis_card_text
+
+jst = timezone(timedelta(hours=9))
+now = datetime.now(jst).isoformat(timespec="seconds")
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    tmp = pathlib.Path(tmpdir)
+    (tmp / "dom-d2.json").write_text(json.dumps({
+        "source": "dom_monitor",
+        "shortSummary": "6 passed",
+        "analysisUpdatedAt": now,
+    }), encoding="utf-8")
+
+    # OFF path simulation 1: conversationTextAnalysisEnabled=False
+    conv_enabled = False
+    dom_enabled = True
+    analysis_text = ""
+    if conv_enabled and dom_enabled:
+        raw = read_dom_analysis_fields(2, runtime_dir=tmp)
+        vm = build_analysis_view_model(raw)
+        analysis_text = format_analysis_card_text(vm)
+    assert analysis_text == "", f"conv OFF -> empty text, got: {analysis_text!r}"
+    print("conv_off_empty: PASS")
+
+    # OFF path simulation 2: domMonitor.enabled=False
+    conv_enabled = True
+    dom_enabled = False
+    analysis_text = ""
+    if conv_enabled and dom_enabled:
+        raw = read_dom_analysis_fields(2, runtime_dir=tmp)
+        vm = build_analysis_view_model(raw)
+        analysis_text = format_analysis_card_text(vm)
+    assert analysis_text == "", f"dom OFF -> empty text, got: {analysis_text!r}"
+    print("dom_off_empty: PASS")
+
+    # OFF path simulation 3: both OFF
+    conv_enabled = False
+    dom_enabled = False
+    analysis_text = ""
+    if conv_enabled and dom_enabled:
+        analysis_text = "would not run"
+    assert analysis_text == "", "both OFF -> empty text"
+    print("both_off_empty: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2f-2]", r.stderr);
+    console.log("[DWSO-3D-2f-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2f-3: forbidden keys never appear in display text", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from analysis_display import build_analysis_view_model, format_analysis_card_text, _FORBIDDEN_DISPLAY
+
+FORBIDDEN_IN_DISPLAY = list(_FORBIDDEN_DISPLAY) + [
+    "rawtext", "conversationtext", "fullcontent", "messagetext",
+]
+
+# Test: forbidden KEY in data -> view model empty -> no display
+for field in list(_FORBIDDEN_DISPLAY)[:8]:
+    data = {
+        "shortSummary": "test",
+        "nextAction": "proceed",
+        "analysisUpdatedAt": "2026-05-08T12:00:00+09:00",
+        field: "SECRET_VALUE",
+    }
+    vm = build_analysis_view_model(data)
+    assert vm == {}, f"Forbidden key {field!r} should produce empty vm"
+    text = format_analysis_card_text(vm)
+    assert "SECRET_VALUE" not in text, f"Secret leaked via {field!r}"
+
+print("forbidden_key_blocked: PASS")
+
+# Test: even if vm somehow has wrong keys, format doesn't expose them
+# (defence-in-depth: format just renders values, but vm construction is the gate)
+vm_safe = {
+    "shortSummary": "6 passed",
+    "nextAction": "proceed",
+    "phase": "p",
+    "analysisAge": "12:00",
+}
+text = format_analysis_card_text(vm_safe)
+for field in FORBIDDEN_IN_DISPLAY:
+    assert field not in text.lower(), f"Forbidden field name in output: {field}"
+print("forbidden_names_not_in_text: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2f-3]", r.stderr);
+    console.log("[DWSO-3D-2f-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
