@@ -3,7 +3,7 @@
   "type": "gas-webapp",
   "scriptId": "1wWhFryw2Nb1zXFY5lo9Qe-r8WIJyaQeg6QaS8sUqVkEOy1D0pasgDVIe",
   "prodUrl": "https://script.google.com/macros/s/AKfycby2r--yf4vkm1FywAfYsLDZC2J0a43ce6TKNE0NedQoaHtARUUPG4VVSJ-rWYKsuJbBzg/exec",
-  "currentDeployment": "@35",
+  "currentDeployment": "@36",
   "notes": [
     "access: ANYONE_ANONYMOUS — 認証不要（auth.json 不要）",
     "GAS iframe 構造: page (script.google.com) > iframe[name='userHtmlFrame'] (googleusercontent.com) > GAS コンテンツ",
