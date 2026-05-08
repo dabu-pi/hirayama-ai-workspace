@@ -141,6 +141,10 @@ desktop-work-status-overlay/
 # 独立 repo 化済みプロジェクト（2026-05-06）
 /training-trend-analyzer/
 
+# 独立 repo 化済みプロジェクト（2026-05-08）
+# jyu-gas-ver3.1 は https://github.com/dabu-pi/jyu-gas-ver3.1.git で管理
+/gas-projects/jyu-gas-ver3.1/
+
 # 一時テストファイル（コミット対象外）
 gas-projects/jyu-gas-ver3.1/test_d6.xlsx
 
