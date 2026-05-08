@@ -29,7 +29,7 @@
  * データ安全:
  *   - 本番データ作成・更新・削除は一切しない
  *   - seed 系関数・申込承認・支払い登録を呼び出さない
- *   - 既知テストデータ（APP-20260506-0001 / W-0001）は読み取りのみ
+ *   - 既知テストデータ（APP-20260507-0004 / W-0001）は読み取りのみ
  *
  * 実行コマンド: npm run test:wildboar:prod
  * DEV フロー: npm run test:wildboar:dev (dev-flow.spec.ts)
@@ -336,7 +336,7 @@ test.describe("WILDBOAR W-4: 申込詳細", () => {
     expect(mainVisible).toBe(true);
   });
 
-  test("W-4c: 申込詳細 — 承認済みバナーが表示される（APP-20260506-0001 は approved）", async ({ page }) => {
+  test("W-4c: 申込詳細 — 承認済みバナーが表示される（APP-20260507-0004 は approved）", async ({ page }) => {
     await page.goto(
       PROD_URL + "?page=application-detail&id=" + encodeURIComponent(APP_ID),
       { waitUntil: "domcontentloaded", timeout: 60_000 }
