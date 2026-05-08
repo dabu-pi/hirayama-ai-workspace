@@ -784,10 +784,11 @@ from dom_bridge import (
 from dom_runtime_writer import merge_conversation_analysis
 
 # Verify that after merge, forbidden fields are never present in output
+# Phase 3-X: merge_conversation_analysis writes to dom-{app}-d{slot}.json
 with tempfile.TemporaryDirectory() as tmpdir:
     tmp = pathlib.Path(tmpdir)
-    # Create a pre-existing dom file with a corrupted forbidden field
-    dom_path = tmp / "dom-d2.json"
+    # Create a pre-existing dom-claude-d2.json with a corrupted forbidden field
+    dom_path = tmp / "dom-claude-d2.json"
     dom_path.write_text(json.dumps({
         "source": "dom_monitor", "app": "claude",
         "rawConversation": "should_be_stripped"  # simulated corruption
@@ -803,6 +804,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     }
     merge_conversation_analysis(tmp, valid_analysis)
 
+    # Phase 3-X: output is dom-claude-d2.json
     with open(dom_path, encoding="utf-8") as f:
         data = json.load(f)
         content = json.dumps(data)
@@ -1089,7 +1091,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
         "analysisSource": "conversation_text",
     })
 
-    dom_path = tmp / "dom-d1.json"
+    # Phase 3-X: output is dom-chatgpt-d1.json
+    dom_path = tmp / "dom-chatgpt-d1.json"
     with open(dom_path, encoding="utf-8") as f:
         data = json.load(f)
         content = json.dumps(data)
@@ -1495,12 +1498,13 @@ with tempfile.TemporaryDirectory() as td:
     }
     validate_dom_payload(payload)
     path = write_dom_runtime_status(tmp, payload)
-    assert path.name == "dom-d5.json", f"Expected dom-d5.json, got {path.name}"
+    # Phase 3-X: app-specific file name
+    assert path.name == "dom-chatgpt-d5.json", f"Expected dom-chatgpt-d5.json, got {path.name}"
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["slot"] == 5
     assert data["app"] == "chatgpt"
     assert data["source"] == "dom_monitor"
-    print("dom_d5_generated: PASS")
+    print("dom_chatgpt_d5_generated: PASS")
 
 print("PASS")
 `;
@@ -1938,7 +1942,7 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
-  test("DWSO-3D-2n-1: activeDesktop=3 routes chatgpt to dom-d3.json", () => {
+  test("DWSO-3D-2n-1: activeDesktop=3 routes chatgpt to dom-chatgpt-d3.json", () => {
     const pyScript = String.raw`
 import sys, json, pathlib, tempfile
 sys.path.insert(0, r'${PROJECT_ROOT}\src')
@@ -1954,7 +1958,7 @@ assert cfg.get("activeDesktop") == 3, f"Expected activeDesktop=3 in config, got:
 print("config_includes_activeDesktop: PASS")
 
 # 2. Simulate: activeDesktop=3 pushed to extension; background.js routes chatgpt to slot=3
-# Then dom-d3.json should be created
+# Phase 3-X: dom-chatgpt-d3.json should be created
 with tempfile.TemporaryDirectory() as td:
     tmp = pathlib.Path(td)
     payload = {
@@ -1966,11 +1970,11 @@ with tempfile.TemporaryDirectory() as td:
         "detectedAt": "2026-05-08T12:00:00+09:00",
     }
     path = write_dom_runtime_status(tmp, payload)
-    assert path.name == "dom-d3.json", f"Expected dom-d3.json, got {path.name}"
+    assert path.name == "dom-chatgpt-d3.json", f"Expected dom-chatgpt-d3.json, got {path.name}"
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["slot"] == 3
     assert data["app"] == "chatgpt"
-    print("dom_d3_generated_via_activeDesktop: PASS")
+    print("dom_chatgpt_d3_generated_via_activeDesktop: PASS")
 
 print("PASS")
 `;
@@ -2007,7 +2011,8 @@ with tempfile.TemporaryDirectory() as td:
         "status": "idle", "confidence": "high",
         "detectedAt": "2026-05-08T12:00:00+09:00",
     })
-    assert p3.name == "dom-d3.json"
+    # Phase 3-X: dom-chatgpt-d3.json
+    assert p3.name == "dom-chatgpt-d3.json", f"Expected dom-chatgpt-d3.json, got {p3.name}"
     print("d3_chatgpt_written: PASS")
 
     # Simulate VD switch: D5 → chatgpt payload with slot=5
@@ -2018,12 +2023,13 @@ with tempfile.TemporaryDirectory() as td:
         "status": "idle", "confidence": "high",
         "detectedAt": "2026-05-08T12:00:01+09:00",
     })
-    assert p5.name == "dom-d5.json"
+    # Phase 3-X: dom-chatgpt-d5.json
+    assert p5.name == "dom-chatgpt-d5.json", f"Expected dom-chatgpt-d5.json, got {p5.name}"
     print("d5_chatgpt_written: PASS")
 
     # Both files exist independently
-    assert (tmp / "dom-d3.json").exists()
-    assert (tmp / "dom-d5.json").exists()
+    assert (tmp / "dom-chatgpt-d3.json").exists()
+    assert (tmp / "dom-chatgpt-d5.json").exists()
     print("both_slots_independent: PASS")
 
 print("PASS")
@@ -2036,6 +2042,130 @@ print("PASS")
     });
     if (r.stderr) console.error("[DWSO-3D-2n-2]", r.stderr);
     console.log("[DWSO-3D-2n-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  // ── DWSO-3X: Phase 3-X Claude DOM 監視対応 ─────────────────────────────────
+
+  test("DWSO-3X-1: dom_runtime_path_for_app returns app-specific filename", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from pathlib import Path
+from dom_runtime_writer import dom_runtime_path_for_app
+
+p = dom_runtime_path_for_app(Path("/tmp"), "chatgpt", 1)
+assert p.name == "dom-chatgpt-d1.json", f"Expected dom-chatgpt-d1.json, got {p.name}"
+print("chatgpt_d1: PASS")
+
+p = dom_runtime_path_for_app(Path("/tmp"), "claude", 2)
+assert p.name == "dom-claude-d2.json", f"Expected dom-claude-d2.json, got {p.name}"
+print("claude_d2: PASS")
+
+p = dom_runtime_path_for_app(Path("/tmp"), "chatgpt", 5)
+assert p.name == "dom-chatgpt-d5.json", f"Expected dom-chatgpt-d5.json, got {p.name}"
+print("chatgpt_d5: PASS")
+
+print("PASS")
+`;
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8", timeout: 10000, cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3X-1]", r.stderr);
+    console.log("[DWSO-3X-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3X-2: chatgpt and claude write to separate files per slot, read independently", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_runtime_writer import write_dom_runtime_status
+from dom_runtime_reader import dom_runtime_to_tool_status_for_app
+from datetime import datetime, timezone, timedelta
+
+jst = timezone(timedelta(hours=9))
+now = datetime.now(jst).isoformat(timespec="seconds")
+
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+
+    gpt_path = write_dom_runtime_status(tmp, {
+        "source": "dom_monitor", "slot": 3, "app": "chatgpt",
+        "status": "responding", "confidence": "high", "detectedAt": now,
+    })
+    assert gpt_path.name == "dom-chatgpt-d3.json", f"Got: {gpt_path.name}"
+    print("chatgpt_file_created: PASS")
+
+    cl_path = write_dom_runtime_status(tmp, {
+        "source": "dom_monitor", "slot": 3, "app": "claude",
+        "status": "idle", "confidence": "high", "detectedAt": now,
+    })
+    assert cl_path.name == "dom-claude-d3.json", f"Got: {cl_path.name}"
+    print("claude_file_created: PASS")
+
+    assert (tmp / "dom-chatgpt-d3.json").exists()
+    assert (tmp / "dom-claude-d3.json").exists()
+    print("both_files_independent: PASS")
+
+    from runtime_status import ToolStatus
+    gpt_ts = dom_runtime_to_tool_status_for_app("chatgpt", 3, tmp)
+    cl_ts = dom_runtime_to_tool_status_for_app("claude", 3, tmp)
+
+    assert gpt_ts is not None and gpt_ts.tool == "gpt"
+    assert gpt_ts.status == ToolStatus.RESPONDING
+    print("chatgpt_read_responding: PASS")
+
+    assert cl_ts is not None and cl_ts.tool == "claude"
+    assert cl_ts.status == ToolStatus.IDLE
+    print("claude_read_idle: PASS")
+
+print("PASS")
+`;
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8", timeout: 10000, cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3X-2]", r.stderr);
+    console.log("[DWSO-3X-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3X-3: Claude gets activeDesktop-first routing (Phase 3-X logic)", () => {
+    const pyScript = String.raw`
+activeDesktop = 4
+app_slot_mapping = {"chatgpt": 1, "claude": 2, "unknown": 4}
+
+def route_slot(app, original_slot, active_desktop, mapping):
+    if active_desktop is not None and app in ("chatgpt", "claude"):
+        return active_desktop
+    elif mapping and app in mapping:
+        return mapping[app]
+    return original_slot
+
+result = route_slot("chatgpt", 1, activeDesktop, app_slot_mapping)
+assert result == 4, f"chatgpt expected 4, got {result}"
+print("chatgpt_uses_activeDesktop: PASS")
+
+result = route_slot("claude", 2, activeDesktop, app_slot_mapping)
+assert result == 4, f"claude expected 4, got {result}"
+print("claude_uses_activeDesktop: PASS")
+
+result = route_slot("claude", 2, None, app_slot_mapping)
+assert result == 2, f"claude with null activeDesktop expected 2, got {result}"
+print("claude_fallback_to_mapping: PASS")
+
+print("PASS")
+`;
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8", timeout: 10000, cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3X-3]", r.stderr);
+    console.log("[DWSO-3X-3]", r.stdout);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("PASS");
   });
