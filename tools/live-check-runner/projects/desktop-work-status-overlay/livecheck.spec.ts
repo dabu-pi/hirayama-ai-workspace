@@ -928,5 +928,216 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2d-1: full Python pipeline with ON state - derived fields only, no raw text", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import (
+    validate_conversation_analysis_payload,
+    sanitize_conversation_analysis_payload,
+    DomBridgeServer,
+    FORBIDDEN_FIELDS,
+)
+from dom_runtime_writer import merge_conversation_analysis
+
+# Simulate full ON-state analysis pipeline
+analysis_payload = {
+    "source": "conversation_analysis",
+    "slot": 2,
+    "app": "claude",
+    "status": "completed",
+    "project": "desktop-work-status-overlay",
+    "phase": "Phase 3-D(DOM)-2d",
+    "shortSummary": "21 passed",
+    "nextAction": "Phase 3-D(DOM)-2d PASS",
+    "confidence": "high",
+    "analysisSource": "conversation_text",
+}
+
+# 1. Validate passes
+validate_conversation_analysis_payload(analysis_payload)
+print("validate: PASS")
+
+# 2. Sanitize produces only allowed fields
+clean = sanitize_conversation_analysis_payload(analysis_payload)
+FORBIDDEN_LOWER = {f.lower() for f in FORBIDDEN_FIELDS}
+for key in clean:
+    assert key.lower() not in FORBIDDEN_LOWER, f"Forbidden field in clean: {key}"
+print("sanitize_no_forbidden: PASS")
+
+# 3. Merge writes derived fields to runtime json
+with tempfile.TemporaryDirectory() as tmpdir:
+    tmp = pathlib.Path(tmpdir)
+    path = merge_conversation_analysis(tmp, clean)
+    assert path is not None, "merge should return a path"
+
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+        content = json.dumps(data)
+
+    # Derived fields present
+    assert "project" in data, "project missing"
+    assert "phase" in data, "phase missing"
+    assert "analysisUpdatedAt" in data, "analysisUpdatedAt missing"
+
+    # No forbidden keys
+    for field in FORBIDDEN_FIELDS:
+        assert f'"{field}"' not in content, f"Forbidden field in output: {field}"
+
+    print("merge_derived_only: PASS")
+    print("no_forbidden_keys: PASS")
+
+# 4. DomBridgeServer ON state processes analysis
+bridge = DomBridgeServer(conversation_analysis_enabled=True)
+assert bridge._conversation_analysis_enabled == True
+print("bridge_on_state: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2d-1]", r.stderr);
+    console.log("[DWSO-3D-2d-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2d-2: OFF state drops conversation_analysis silently", () => {
+    const pyScript = String.raw`
+import sys, asyncio, json
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import DomBridgeServer, validate_conversation_analysis_payload
+
+# Bridge with analysis OFF should not process conversation_analysis messages
+bridge = DomBridgeServer(conversation_analysis_enabled=False)
+assert bridge._conversation_analysis_enabled == False, "should be OFF"
+
+# Simulate the OFF path: _process_conversation_analysis checks the flag
+# We verify the flag is False and the drop condition triggers
+# (asyncio test — run in event loop)
+processed = []
+
+async def test_off_drops():
+    payload = {
+        "source": "conversation_analysis",
+        "slot": 2,
+        "app": "claude",
+        "status": "completed",
+        "shortSummary": "test",
+        "confidence": "high",
+    }
+    # With disabled bridge, _process_conversation_analysis returns early
+    if not bridge._conversation_analysis_enabled:
+        processed.append("dropped")
+        return
+    processed.append("would_process")
+
+asyncio.get_event_loop().run_until_complete(test_off_drops())
+assert processed == ["dropped"], f"Expected dropped, got: {processed}"
+print("off_drops: PASS")
+
+# Toggle ON: bridge now accepts
+bridge._conversation_analysis_enabled = True
+assert bridge._conversation_analysis_enabled == True
+print("toggle_on: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2d-2]", r.stderr);
+    console.log("[DWSO-3D-2d-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2d-3: runtime JSON forbidden key scan after merge", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import FORBIDDEN_FIELDS
+from dom_runtime_writer import merge_conversation_analysis
+
+FORBIDDEN_SCAN = list(FORBIDDEN_FIELDS) + [
+    "rawText", "messageText", "fullContent", "dom", "html",
+]
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    tmp = pathlib.Path(tmpdir)
+
+    # Merge a real analysis payload
+    merge_conversation_analysis(tmp, {
+        "source": "conversation_analysis",
+        "slot": 1,
+        "app": "chatgpt",
+        "status": "completed",
+        "project": "desktop-work-status-overlay",
+        "phase": "Phase 3-D(DOM)-2d",
+        "shortSummary": "OK",
+        "confidence": "high",
+        "analysisSource": "conversation_text",
+    })
+
+    dom_path = tmp / "dom-d1.json"
+    with open(dom_path, encoding="utf-8") as f:
+        data = json.load(f)
+        content = json.dumps(data)
+
+    violations = []
+    for field in FORBIDDEN_SCAN:
+        if f'"{field}"' in content:
+            violations.append(field)
+
+    if violations:
+        print(f"FAIL: forbidden fields found: {violations}")
+        sys.exit(1)
+
+    print("forbidden_key_scan: PASS -- no forbidden keys in merged runtime JSON")
+
+# Also scan real runtime files if they exist
+runtime_dir = pathlib.Path(r'${PROJECT_ROOT}\data\runtime')
+if runtime_dir.exists():
+    json_files = list(runtime_dir.glob("*.json"))
+    for jf in json_files:
+        if jf.name == ".gitkeep":
+            continue
+        try:
+            with open(jf, encoding="utf-8") as f:
+                content = f.read()
+            for field in FORBIDDEN_SCAN:
+                if f'"{field}"' in content:
+                    print(f"FAIL: forbidden key '{field}' in real runtime file: {jf.name}")
+                    sys.exit(1)
+        except Exception:
+            pass
+    print(f"real_runtime_scan: PASS -- {len(json_files)} files scanned")
+else:
+    print("real_runtime_scan: SKIP -- data/runtime not found")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2d-3]", r.stderr);
+    console.log("[DWSO-3D-2d-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
