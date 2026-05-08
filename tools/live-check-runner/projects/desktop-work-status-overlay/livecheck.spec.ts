@@ -1938,5 +1938,107 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2n-1: activeDesktop=3 routes chatgpt to dom-d3.json", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import DomBridgeServer
+from dom_runtime_writer import write_dom_runtime_status
+
+# 1. build_config_payload includes activeDesktop
+bridge = DomBridgeServer()
+bridge._active_desktop = 3
+cfg = bridge.build_config_payload()
+assert cfg.get("activeDesktop") == 3, f"Expected activeDesktop=3 in config, got: {cfg}"
+print("config_includes_activeDesktop: PASS")
+
+# 2. Simulate: activeDesktop=3 pushed to extension; background.js routes chatgpt to slot=3
+# Then dom-d3.json should be created
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    payload = {
+        "source": "dom_monitor",
+        "slot": 3,  # overridden by activeDesktop=3
+        "app": "chatgpt",
+        "status": "idle",
+        "confidence": "high",
+        "detectedAt": "2026-05-08T12:00:00+09:00",
+    }
+    path = write_dom_runtime_status(tmp, payload)
+    assert path.name == "dom-d3.json", f"Expected dom-d3.json, got {path.name}"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["slot"] == 3
+    assert data["app"] == "chatgpt"
+    print("dom_d3_generated_via_activeDesktop: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2n-1]", r.stderr);
+    console.log("[DWSO-3D-2n-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2n-2: activeDesktop switch D3->D5 routes chatgpt correctly", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import DomBridgeServer
+from dom_runtime_writer import write_dom_runtime_status
+
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+
+    # Simulate VD switch: D3 → chatgpt payload with slot=3
+    bridge = DomBridgeServer()
+    bridge._active_desktop = 3
+    assert bridge.build_config_payload()["activeDesktop"] == 3
+
+    p3 = write_dom_runtime_status(tmp, {
+        "source": "dom_monitor", "slot": 3, "app": "chatgpt",
+        "status": "idle", "confidence": "high",
+        "detectedAt": "2026-05-08T12:00:00+09:00",
+    })
+    assert p3.name == "dom-d3.json"
+    print("d3_chatgpt_written: PASS")
+
+    # Simulate VD switch: D5 → chatgpt payload with slot=5
+    bridge.update_active_desktop(5)
+    assert bridge._active_desktop == 5
+    p5 = write_dom_runtime_status(tmp, {
+        "source": "dom_monitor", "slot": 5, "app": "chatgpt",
+        "status": "idle", "confidence": "high",
+        "detectedAt": "2026-05-08T12:00:01+09:00",
+    })
+    assert p5.name == "dom-d5.json"
+    print("d5_chatgpt_written: PASS")
+
+    # Both files exist independently
+    assert (tmp / "dom-d3.json").exists()
+    assert (tmp / "dom-d5.json").exists()
+    print("both_slots_independent: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2n-2]", r.stderr);
+    console.log("[DWSO-3D-2n-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
