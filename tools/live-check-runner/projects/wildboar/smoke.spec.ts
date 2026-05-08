@@ -324,7 +324,14 @@ test.describe("WILDBOAR W-4: 申込詳細", () => {
     );
     const frame = await getReadyFrame(page);
     expect(frame).not.toBeNull();
-    await page.waitForTimeout(GAS_WAIT_MS);
+    // GAS API 応答待ち（loadingView が非表示になるまでポーリング: 成功・失敗どちらも loadingView を消す）
+    await frame!.waitForFunction(
+      () => {
+        const lv = document.getElementById("loadingView");
+        return !lv || lv.style.display === "none";
+      },
+      { timeout: 60_000 }
+    );
     const mainVisible = await frame!.locator("#mainView").isVisible().catch(() => false);
     expect(mainVisible).toBe(true);
   });
@@ -336,7 +343,14 @@ test.describe("WILDBOAR W-4: 申込詳細", () => {
     );
     const frame = await getReadyFrame(page);
     expect(frame).not.toBeNull();
-    await page.waitForTimeout(GAS_WAIT_MS);
+    // GAS API 応答待ち（loadingView が非表示になるまでポーリング）
+    await frame!.waitForFunction(
+      () => {
+        const lv = document.getElementById("loadingView");
+        return !lv || lv.style.display === "none";
+      },
+      { timeout: 60_000 }
+    );
     const bannerVisible = await frame!.locator("#approvedBanner").isVisible().catch(() => false);
     expect(bannerVisible).toBe(true);
   });
