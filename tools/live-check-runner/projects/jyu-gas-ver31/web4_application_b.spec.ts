@@ -85,9 +85,11 @@ test("W4A-3: ボタンハンドラが generateClaimApplicationBFromWeb_V3 を呼
   await frame.locator("body").waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
 
   // doAppgenB 関数が generateClaimApplicationBFromWeb_V3 を呼ぶことをソースで確認
+  // 注: Step4(PDF) の doPdfGenerate が generateClaimApplication_V3(PATIENT_ID を使うため
+  //     not.toContain チェックは使わず、正の確認のみ行う
   const pageSource = await page.content();
   expect(pageSource).toContain("generateClaimApplicationBFromWeb_V3");
-  expect(pageSource).not.toContain("generateClaimApplication_V3(PATIENT_ID");  // A案PDF関数と混同していない
+  expect(pageSource).toContain("doAppgenB");
 });
 
 // W4A-4: ボタン押下で確認ダイアログ → キャンセルでボタンが有効に戻る
