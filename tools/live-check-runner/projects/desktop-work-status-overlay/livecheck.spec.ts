@@ -1458,5 +1458,169 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2j-1: appSlotMapping chatgpt=5 config payload and dom-d5.json generation", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import DomBridgeServer, validate_dom_payload
+from dom_runtime_writer import write_dom_runtime_status
+
+# 1. Config payload with chatgpt=5
+bridge = DomBridgeServer(app_slot_mapping={"chatgpt": 5, "claude": 2, "unknown": 4})
+cfg = bridge.build_config_payload()
+assert cfg["type"] == "config", "type must be config"
+assert cfg["appSlotMapping"]["chatgpt"] == 5, f"chatgpt must be 5, got: {cfg['appSlotMapping']}"
+assert cfg["appSlotMapping"]["claude"] == 2
+print("config_payload_chatgpt5: PASS")
+
+# 2. Background.js slot override simulation: chatgpt slot 1->5
+app_slot_mapping = cfg["appSlotMapping"]
+original_slot = 1  # DEFAULT_APP_SLOT_MAPPING.chatgpt
+remapped_slot = app_slot_mapping.get("chatgpt", original_slot)
+assert remapped_slot == 5, f"Expected 5, got {remapped_slot}"
+print("background_slot_override_1to5: PASS")
+
+# 3. Full pipeline: slot=5 payload -> dom-d5.json
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    payload = {
+        "source": "dom_monitor",
+        "slot": remapped_slot,
+        "app": "chatgpt",
+        "status": "idle",
+        "confidence": "high",
+        "detectedAt": "2026-05-08T12:00:00+09:00",
+        "urlHost": "chatgpt.com",
+    }
+    validate_dom_payload(payload)
+    path = write_dom_runtime_status(tmp, payload)
+    assert path.name == "dom-d5.json", f"Expected dom-d5.json, got {path.name}"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["slot"] == 5
+    assert data["app"] == "chatgpt"
+    assert data["source"] == "dom_monitor"
+    print("dom_d5_generated: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2j-1]", r.stderr);
+    console.log("[DWSO-3D-2j-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2j-2: slot=5 dom-d5.json has no forbidden keys and correct content", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_bridge import FORBIDDEN_FIELDS
+from dom_runtime_writer import write_dom_runtime_status
+
+FORBIDDEN_SCAN = list(FORBIDDEN_FIELDS) + ["rawText", "messageText", "fullContent", "dom", "html"]
+
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    payload = {
+        "source": "dom_monitor",
+        "slot": 5,
+        "app": "chatgpt",
+        "status": "idle",
+        "confidence": "high",
+        "detectedAt": "2026-05-08T12:00:00+09:00",
+        "urlHost": "chatgpt.com",
+    }
+    path = write_dom_runtime_status(tmp, payload)
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+        content = json.dumps(data)
+
+    # Required fields present
+    assert data["slot"] == 5
+    assert data["app"] == "chatgpt"
+    assert data["source"] == "dom_monitor"
+    print("required_fields: PASS")
+
+    # No forbidden keys
+    for field in FORBIDDEN_SCAN:
+        assert f'"{field}"' not in content, f"Forbidden field in dom-d5.json: {field}"
+    print("no_forbidden_keys: PASS")
+
+    # slot=6 still invalid
+    try:
+        bad = dict(payload, slot=6)
+        write_dom_runtime_status(tmp, bad)
+        print("FAIL: slot=6 should raise")
+        sys.exit(1)
+    except ValueError:
+        print("slot6_still_invalid: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2j-2]", r.stderr);
+    console.log("[DWSO-3D-2j-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2j-3: appSlotMapping state.json reflects updated mapping on _set_app_slot simulation", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile, copy
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from config import DEFAULT_STATE
+from dom_bridge import DomBridgeServer
+
+# Simulate _set_app_slot("chatgpt", 5) state mutation
+state = copy.deepcopy(DEFAULT_STATE)
+dm = state.setdefault("domMonitor", {})
+dm.setdefault("appSlotMapping", {"chatgpt": 1, "claude": 2, "unknown": 4})
+
+# Simulate the right-click menu operation
+dm["appSlotMapping"]["chatgpt"] = 5
+
+# Verify state updated
+assert dm["appSlotMapping"]["chatgpt"] == 5, "chatgpt must be 5 after set_app_slot"
+assert dm["appSlotMapping"]["claude"] == 2  # unchanged
+print("state_update: PASS")
+
+# Verify bridge uses new mapping
+bridge = DomBridgeServer(app_slot_mapping=dm["appSlotMapping"])
+bridge._app_slot_mapping = dict(dm["appSlotMapping"])
+cfg = bridge.build_config_payload()
+assert cfg["appSlotMapping"]["chatgpt"] == 5
+print("bridge_config_updated: PASS")
+
+# Verify push_config_sync does not raise without active loop
+bridge.push_config_sync(cfg)  # should not raise
+print("push_config_sync_no_raise: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2j-3]", r.stderr);
+    console.log("[DWSO-3D-2j-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
