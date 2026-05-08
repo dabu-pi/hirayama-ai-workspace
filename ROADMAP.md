@@ -1,7 +1,7 @@
 # 開発ロードマップ
 
 平山克司ワークスペース — 全プロジェクト統合ロードマップ
-作成: 2026-03-05 / 最終更新: 2026-05-08（WEB-4A: Web UI から B案 Cloud Run Excel 申請書生成入口追加）
+作成: 2026-03-05 / 最終更新: 2026-05-08（WEB-4A〜4D 本番 deploy @12 完了）
 
 ---
 
@@ -22,7 +22,7 @@
 2026年3月                    4月                      5月〜
 │
 ├─ 【柔整GAS】───────────────────────────────────────────────────→
-│     施術明細upsert ✅ → WEB-1〜4A ✅ → B-1 fixture 57/57 ✅ → 本番 deploy
+│     施術明細upsert ✅ → WEB-1〜4D ✅ → 本番 deploy @12 ✅ → B-1 fixture 57/57 ✅
 │
 ├─ 【freee自動化】───────────────────────────────────────────────→
 │     OAuth再構築 → フェーズ2完成 → フェーズ3(下書き) → 運用強化
@@ -86,8 +86,9 @@
 
 ### 1. 柔整GASプロジェクト `gas-projects/jyu-gas-ver3.1/`
 
-**現状（2026-05-08）:** WEB-1〜WEB-4A 完了。申請書出力B案（Cloud Run）採用確定・目視確認済み。  
-申請書出力正ルート: スプレッドシートメニューおよび Web UI（WEB-4A）から `generateClaimApplicationBFromWeb_V3` 経由で実行可能。
+**現状（2026-05-08）:** WEB-1〜WEB-4D 完了・本番 deploy @12 済。  
+申請書出力正ルート: B案 Cloud Run Excel。Web UI から `generateClaimApplicationBFromWeb_V3` 経由でも実行可能。  
+月次申請詳細: Step1後に確定金額（転記データ）で集計欄が統一表示される。
 
 #### フェーズ W — Web UI 移行（2026-05-05〜07）
 
@@ -100,7 +101,9 @@
 | W-5 | スマホ実機確認 | Playwright mobile 23 PASS / 現場スマホ実機確認 | 🔄 Playwright PASS / 実機待ち |
 | W-6 | WEB-3 月次申請フロー | 対象者一覧・詳細プレビュー・転記データ生成 / LiveCheck 8 PASS | ✅ 完了（2026-05-07） |
 | W-7 | WEB-3.4 申請書 PDF 生成 | A案（テンプレ書込 + Drive PDF）/ LiveCheck 9 PASS / 1 SKIP | ✅ 完了（2026-05-07） |
-| W-8 | WEB-4A B案 Web UI 入口 | `generateClaimApplicationBFromWeb_V3` 追加 / clasp push 済 / LiveCheck W4A-1〜5 | ✅ 完了（2026-05-08） |
+| W-8 | WEB-4A B案 Web UI 入口 | `generateClaimApplicationBFromWeb_V3` 追加 / LiveCheck W4A-1〜5 | ✅ 完了（2026-05-08） |
+| W-8b | WEB-4B〜4D 集計修正・金額整合 | 集計0円バグ / 丸め差5円 / tfoot更新バグ の3つ修正 | ✅ 完了（2026-05-08） |
+| W-8c | **本番 deploy @12** | WEB-4A〜4D 本番反映 / /exec 動作確認済み | ✅ **2026-05-08** |
 | W-9 | TC01〜TC10 実機テスト | TESTCASES.md 全10ケースのスプレッドシート実機確認 | ⏸ 待機 |
 
 #### フェーズ A — 施術明細upsert完成
