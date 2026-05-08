@@ -19,3 +19,23 @@
 - 推測と事実を分ける
 - 本人発言はできるだけ原文に近く残す
 - 分析は analysis フォルダーに分ける
+
+---
+
+## プロジェクト正規パス
+
+```
+C:\hirayama-ai-workspace\workspace\life-design-project\
+```
+
+このプロジェクトを開くときは常に上記パスを使用する。
+
+## 復旧記録（2026-05-08）
+
+- `a701e67`（finalize root workspace cleanup）でワークスペースから誤削除された
+- git 履歴から全ファイルを安全に復旧済み
+- 復旧元コミット：`1eda4b6`（docs(life-design): add pre-interview summaries for Nishio Shingo）
+- 復旧コミット：`3665018`（restore: life-design-project — recovered from a701e67 root cleanup）
+
+**保護ルール：**
+削除・移動・root cleanup 系の作業を行う場合、`life-design-project` は**保護対象**として扱い、除外すること。

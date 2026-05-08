@@ -1,5 +1,7 @@
 # Life Design Project
 
+**正規パス：** `C:\hirayama-ai-workspace\workspace\life-design-project\`
+
 このプロジェクトは、個人の人生後半をより良く設計するための再利用可能な人生設計フレームワークです。
 
 ## 目的
