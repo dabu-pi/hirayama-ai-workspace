@@ -28,11 +28,11 @@
     "printReceipt": "?page=print-receipt&paymentId="
   },
   "knownTestData": {
-    "note": "PROD に残存している確認済みテストデータ",
+    "note": "applicationId は W-0006 削除（2026-05-08）により IntakeApplications から消去済み。W-4b/c/d は fixture なし対応済み。memberId も W-0001 削除済み。W-9a/W-10b は errorView で PASS。",
     "applicationId": "APP-20260507-0004",
-    "applicationStatus": "approved",
+    "applicationStatus": "deleted",
     "memberId": "W-0001",
-    "memberStatus": "withdrawn"
+    "memberStatus": "deleted"
   },
   "gasIframeConstraints": {
     "frameName": "userHtmlFrame",
