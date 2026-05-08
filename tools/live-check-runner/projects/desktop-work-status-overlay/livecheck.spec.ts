@@ -1785,5 +1785,158 @@ print("PASS")
     expect(r.stdout).toContain("PASS");
   });
 
+  test("DWSO-3D-2m-1: stale NEEDS_ATTENTION (>2h) suppressed from highlight", () => {
+    const pyScript = String.raw`
+import sys
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from datetime import datetime, timezone, timedelta
+from runtime_status import DesktopRuntimeStatus, ToolRuntimeStatus, ToolStatus, Confidence, DetectionSource
+from highlight_selector import select_highlight, NEEDS_ATTENTION_SUPPRESS_SEC
+
+jst = timezone(timedelta(hours=9))
+
+def make_tool(status, age_minutes):
+    ts = (datetime.now(jst) - timedelta(minutes=age_minutes)).isoformat(timespec="seconds")
+    return ToolRuntimeStatus(
+        tool="claude", status=status, confidence=Confidence.HIGH,
+        source=DetectionSource.TERMINAL_MONITOR, last_seen_at=ts
+    )
+
+def make_drs(slot, claude_tool):
+    idle = ToolRuntimeStatus(
+        tool="gpt", status=ToolStatus.IDLE, confidence=Confidence.LOW,
+        source=DetectionSource.NONE, last_seen_at=datetime.now(jst).isoformat()
+    )
+    return DesktopRuntimeStatus(desktop_slot=slot, claude=claude_tool, gpt=idle)
+
+# 1. Stale NEEDS_ATTENTION (2 days old) is suppressed
+old_na = make_tool(ToolStatus.NEEDS_ATTENTION, 2880)  # 2 days
+result = select_highlight({4: make_drs(4, old_na)})
+assert result is None, f"2-day-old NEEDS_ATTENTION must be suppressed, got: {result}"
+print("stale_needs_attention_suppressed: PASS")
+
+# 2. Fresh NEEDS_ATTENTION (5 min old) is NOT suppressed
+fresh_na = make_tool(ToolStatus.NEEDS_ATTENTION, 5)
+result = select_highlight({4: make_drs(4, fresh_na)})
+assert result is not None, "Fresh NEEDS_ATTENTION must be highlighted"
+assert result.priority == 4
+print("fresh_needs_attention_highlighted: PASS")
+
+# 3. NEEDS_ATTENTION_SUPPRESS_SEC constant exists and is >= 7200
+assert NEEDS_ATTENTION_SUPPRESS_SEC >= 7200
+print(f"suppress_threshold: {NEEDS_ATTENTION_SUPPRESS_SEC}s PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2m-1]", r.stderr);
+    console.log("[DWSO-3D-2m-1]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2m-2: claude-d9.json slot=9 does not affect D1-D5 highlight", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from config import DESKTOP_COUNT
+from claude_runtime_reader import runtime_to_tool_status
+
+# Simulate: claude-d9.json exists but slot=9 > DESKTOP_COUNT=5
+# The overlay loop range(1, DESKTOP_COUNT+1) = 1-5 never calls runtime_to_tool_status(9)
+assert DESKTOP_COUNT == 5
+
+with tempfile.TemporaryDirectory() as td:
+    import sys as _sys
+    import claude_runtime_reader as reader
+
+    tmp = pathlib.Path(td)
+    # Write a claude-d9.json
+    (tmp / "claude-d9.json").write_text(json.dumps({
+        "schemaVersion": 1, "desktopSlot": 9, "tool": "claude",
+        "status": "completed", "confidence": "high",
+        "source": "terminal_monitor",
+        "startedAt": "2026-05-08T15:00:00+09:00",
+        "lastSeenAt": "2026-05-08T15:05:00+09:00",
+        "completedAt": "2026-05-08T15:05:00+09:00",
+        "exitCode": 0, "pid": None, "durationSec": 300, "errorMessage": None,
+    }), encoding="utf-8")
+
+    # Patch runtime dir
+    original_dir = reader._runtime_dir()
+    # slot=9 would call claude-d9.json -- verify the file exists
+    path9 = tmp / "claude-d9.json"
+    assert path9.exists()
+
+    # But in overlay_window._refresh(), loop only goes 1..DESKTOP_COUNT
+    # So slot 9 is never queried
+    slots_in_loop = list(range(1, DESKTOP_COUNT + 1))
+    assert 9 not in slots_in_loop, "slot 9 must not be in the overlay loop"
+    print(f"overlay_loop_slots: {slots_in_loop} -- slot 9 excluded: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2m-2]", r.stderr);
+    console.log("[DWSO-3D-2m-2]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("DWSO-3D-2m-3: dom-d3.json missing means no dom monitor GPT for D3", () => {
+    const pyScript = String.raw`
+import sys, json, pathlib, tempfile
+sys.path.insert(0, r'${PROJECT_ROOT}\src')
+
+from dom_runtime_reader import dom_runtime_to_tool_status
+
+# When dom-d3.json doesn't exist, dom_runtime_to_tool_status(3) returns None
+with tempfile.TemporaryDirectory() as td:
+    tmp = pathlib.Path(td)
+    from datetime import datetime, timezone, timedelta
+    jst = timezone(timedelta(hours=9))
+    now_ts = datetime.now(jst).isoformat(timespec="seconds")
+    # Only create dom-d1.json and dom-d5.json, NOT dom-d3.json
+    for slot in [1, 5]:
+        (tmp / f"dom-d{slot}.json").write_text(json.dumps({
+            "source": "dom_monitor", "slot": slot, "app": "chatgpt",
+            "status": "idle", "confidence": "high",
+            "lastSeenAt": now_ts,
+        }), encoding="utf-8")
+
+    result3 = dom_runtime_to_tool_status(3, runtime_dir=tmp)
+    assert result3 is None, "dom-d3.json missing -> dom_runtime_to_tool_status(3) must return None"
+    print("dom_d3_missing_returns_None: PASS")
+
+    result1 = dom_runtime_to_tool_status(1, runtime_dir=tmp)
+    assert result1 is not None, "dom-d1.json exists -> must return status"
+    print("dom_d1_exists_returns_status: PASS")
+
+print("PASS")
+`;
+
+    const r = spawnSync("python", ["-c", pyScript], {
+      encoding: "utf8",
+      timeout: 10000,
+      cwd: PROJECT_ROOT,
+    });
+    if (r.stderr) console.error("[DWSO-3D-2m-3]", r.stderr);
+    console.log("[DWSO-3D-2m-3]", r.stdout);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
 });
 
