@@ -148,6 +148,11 @@ desktop-work-status-overlay/
 # life-design-project は https://github.com/dabu-pi/life-design-project.git で管理（private）
 /life-design-project/
 
+# 独立 repo 化済みプロジェクト（2026-05-11）
+# JBIZ-04 / hirayama-jyusei-strategy は workspace 配下のまま nested 独立 repo 化
+# remote: https://github.com/dabu-pi/hirayama-jyusei-strategy.git (private), branch: main
+/hirayama-jyusei-strategy/
+
 # 一時テストファイル（コミット対象外）
 gas-projects/jyu-gas-ver3.1/test_d6.xlsx
 
