@@ -336,9 +336,10 @@ window.onerror = function(message, source, lineno) {
     document.getElementById('nextAppointment').value    = EDIT_VISIT.nextAppointment    || '';
     // 編集モード: visitKey 確定済みのため AI評価補助ボタンを有効化 + 保存済みAI評価を自動読み込み
     enableAiAssist(EDIT_VISIT.selfPayVisitKey);
-    loadSavedAIAssessment(EDIT_VISIT.selfPayVisitKey);
+    loadSavedAIAssessment(EDIT_VISIT.selfPayVisitKey, PATIENT_ID);
   } else {
-    // 新規モード: 来院日のデフォルトを今日に設定
+    // 新規モード: 来院日のデフォルトを今日に設定。同一患者の直近AI評価を参考読み込み
+    loadSavedAIAssessment('', PATIENT_ID);
     var today = new Date();
     var yyyy  = today.getFullYear();
     var mm    = String(today.getMonth() + 1).padStart(2, '0');
@@ -704,20 +705,33 @@ function formatDateJP(d) {
 }
 
 /**
- * 保存済みAI評価を非同期で取得して表示する（編集モード起動時に自動呼び出し）。
+ * 保存済みAI評価を非同期で取得して表示する。
+ * visitKey → patientId の順で検索する。両方空なら何もしない。
  */
-function loadSavedAIAssessment(visitKey) {
-  if (!visitKey) return;
+function loadSavedAIAssessment(visitKey, patientId) {
+  if (!visitKey && !patientId) return;
   if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+
+  console.log('[AI45] loadSavedAIAssessment start', {
+    hasVisitKey: !!visitKey, hasPatientId: !!patientId
+  });
 
   google.script.run
     .withSuccessHandler(function(res) {
+      console.log('[AI45] getLatestAIAssessmentForVisitOrPatient result', {
+        found:        !!(res && res.ok && res.assessment),
+        assessmentId: res && res.assessment ? res.assessment.assessmentId : null,
+        sourceType:   res && res.assessment ? res.assessment.sourceType : null,
+        promptVersion: res && res.assessment ? res.assessment.promptVersion : null
+      });
       if (res && res.ok && res.assessment) {
         displaySavedAssessment(res.assessment);
       }
     })
-    .withFailureHandler(function() { /* silent */ })
-    .getLatestAIAssessmentForVisit(visitKey);
+    .withFailureHandler(function(err) {
+      console.log('[AI45] loadSavedAIAssessment GAS error', String(err && err.message || err));
+    })
+    .getLatestAIAssessmentForVisitOrPatient(visitKey || '', patientId || '');
 }
 
 /**
@@ -742,9 +756,14 @@ function displaySavedAssessment(assessment) {
     ? '<span style="font-size:11px;padding:1px 7px;border-radius:10px;background:#fff3e0;color:#e37400;font-weight:600;">レビュー未確認</span>'
     : '<span style="font-size:11px;padding:1px 7px;border-radius:10px;background:#e8f0fe;color:#1a73e8;font-weight:600;">' + escapeAi(assessment.reviewStatus) + '</span>';
 
+  var sourceLabel = assessment.sourceType === 'visitKey'  ? '同一カルテ'
+                  : assessment.sourceType === 'patientId' ? '同一患者の直近カルテ（参考）'
+                  : '';
+
   var html =
     '<div id="aiLoadedBanner" style="padding:8px 12px;background:#e8f0fe;border-left:3px solid #4285f4;border-radius:4px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
     '<span style="font-size:12px;color:#1a73e8;font-weight:600;">📂 保存済みAI評価補助を読み込みました</span>' +
+    (sourceLabel ? '<span style="font-size:11px;color:#5f6368;">取得元: ' + escapeAi(sourceLabel) + '</span>' : '') +
     '<span style="font-size:11px;color:#5f6368;">ID: ' + escapeAi(assessment.assessmentId) + '</span>' +
     '<span style="font-size:11px;color:#5f6368;">作成: ' + escapeAi(formatDateJP(assessment.createdAt)) + '</span>' +
     statusBadge +

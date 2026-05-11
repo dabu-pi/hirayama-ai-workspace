@@ -568,19 +568,23 @@ function getAIAssessmentsByVisitKey(visitKey) {
 }
 
 /**
- * visitKey に紐づく最新の AI_Assessments レコードを1件返す。
- * UI の保存済みAI評価再読込に使用する。PII は返さない。
+ * visitKey → patientId の順で AI_Assessments から最新レコードを取得する。
+ * PII は返さない。visitKey が空または未ヒットの場合は patientId で fallback する。
  *
- * @param {string} visitKey
+ * @param {string} visitKey  来院キー（空文字の場合は patientId で検索）
+ * @param {string} patientId 内部患者キー（例: P0001）
  * @returns {{ ok: boolean, assessment: Object|null }}
+ *   assessment.sourceType: "visitKey" | "patientId" | null
  */
-function getLatestAIAssessmentForVisit(visitKey) {
+function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
   var AI_SHEET_NAME = "AI_Assessments"; // ハードコード（SHEET_NAMES参照を避ける）
   try {
-    if (!visitKey) return { ok: true, assessment: null };
     var ss = getTargetSpreadsheet_();
     var sh = ss.getSheetByName(AI_SHEET_NAME);
-    if (!sh || sh.getLastRow() < 2) return { ok: true, assessment: null };
+    if (!sh || sh.getLastRow() < 2) {
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] sheet not found or empty");
+      return { ok: true, assessment: null };
+    }
 
     var data = sh.getDataRange().getValues();
     if (data.length < 2) return { ok: true, assessment: null };
@@ -588,36 +592,62 @@ function getLatestAIAssessmentForVisit(visitKey) {
     var h         = data[0];
     var idxId     = h.indexOf("assessmentId");
     var idxVk     = h.indexOf("visitKey");
+    var idxPid    = h.indexOf("patientId");
     var idxAt     = h.indexOf("createdAt");
     var idxOut    = h.indexOf("outputJson");
     var idxStatus = h.indexOf("reviewStatus");
     var idxModel  = h.indexOf("model");
     var idxPv     = h.indexOf("promptVersion");
 
-    var latest    = null;
-    var latestMs  = 0;
+    var byVk   = null; var byVkMs   = 0;
+    var byPid  = null; var byPidMs  = 0;
+
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
-      if (!row[idxId] || row[idxVk] !== visitKey) continue;
+      if (!row[idxId]) continue; // 空行スキップ
       var t = row[idxAt] ? new Date(row[idxAt]).getTime() : 0;
-      if (t >= latestMs) {
-        latestMs = t;
-        latest = {
-          assessmentId:  String(row[idxId]),
-          createdAt:     row[idxAt],
-          outputJson:    String(row[idxOut] || ""),
-          reviewStatus:  String(row[idxStatus] || ""),
-          model:         String(row[idxModel] || ""),
-          promptVersion: String(row[idxPv] || "")
-        };
+
+      // Priority 1: visitKey 一致
+      if (visitKey && String(row[idxVk]) === String(visitKey) && t >= byVkMs) {
+        byVkMs = t;
+        byVk   = row;
+      }
+      // Priority 2 (fallback): patientId 一致
+      if (patientId && String(row[idxPid]) === String(patientId) && t >= byPidMs) {
+        byPidMs = t;
+        byPid   = row;
       }
     }
-    Logger.log("[getLatestAIAssessmentForVisit] visitKey=" + visitKey + " found=" + (latest ? latest.assessmentId : "none"));
-    return { ok: true, assessment: latest };
+
+    var target     = byVk  || byPid;
+    var sourceType = byVk  ? "visitKey" : (byPid ? "patientId" : null);
+
+    if (!target) {
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] visitKey=" + visitKey + " patientId=" + patientId + " found=none");
+      return { ok: true, assessment: null };
+    }
+
+    var assessment = {
+      assessmentId:  String(target[idxId]),
+      visitKey:      String(target[idxVk]  || ""),
+      createdAt:     target[idxAt],
+      outputJson:    String(target[idxOut] || ""),
+      reviewStatus:  String(target[idxStatus] || ""),
+      model:         String(target[idxModel]  || ""),
+      promptVersion: String(target[idxPv]     || ""),
+      sourceType:    sourceType
+    };
+    Logger.log("[getLatestAIAssessmentForVisitOrPatient] found=" + assessment.assessmentId + " source=" + sourceType);
+    return { ok: true, assessment: assessment };
   } catch (e) {
-    Logger.log("[getLatestAIAssessmentForVisit] ERROR: " + e.message);
+    Logger.log("[getLatestAIAssessmentForVisitOrPatient] ERROR: " + e.message);
     return { ok: true, assessment: null }; // fail-safe
   }
+}
+
+// 旧関数（後方互換 — 内部から getLatestAIAssessmentForVisitOrPatient に委譲）
+function getLatestAIAssessmentForVisit(visitKey) {
+  return getLatestAIAssessmentForVisitOrPatient(visitKey, "");
 }
 
 /** 年齢層を返す */

@@ -104,11 +104,20 @@
   - `visit-form.html`: `displayAiResult()` に `aiImpression` レンダリング追加 / `dataset.freshResult='1'` フラグ（再読み込み上書き防止）
   - `tools/live-check-runner/projects/jrec-sf01/ai45.spec.ts` 新規 / `package.json` に `test:jrec:ai45` 追加
   - clasp push: ✅ 2026-05-11
-  - LiveCheck ai45: ✅ 5 passed / 5 skipped / 0 failed
+  - LiveCheck ai45: ✅ 5 passed / 5 skipped / 0 failed（修正後も維持）
   - LiveCheck ai4（回帰）: ✅ 4 passed / 0 failed
   - LiveCheck ai3（回帰）: ✅ 3 passed / 0 failed
   - AI参考見立て UI: 表示禁止事項（診断確定・保険請求・必ず〜）を含めない設計で実装
-  - PII除外: ✅ コードレビュー確認済み（getLatestAIAssessmentForVisit は outputJson のみ返却）
+  - PII除外: ✅ コードレビュー確認済み
+
+  **デバッグ修正（2回目 clasp push）:**
+  - 初回 FAIL 原因: 新規モード（EDIT_VISIT=null）では loadSavedAIAssessment が呼ばれなかった可能性 OR visitKey検索がヒットしなかった
+  - 修正: `getLatestAIAssessmentForVisitOrPatient(visitKey, patientId)` を追加（visitKey→patientId の fallback 検索）
+  - 修正: `loadSavedAIAssessment(visitKey, patientId)` に patientId パラメータ追加
+  - 修正: 新規モードでも `loadSavedAIAssessment('', PATIENT_ID)` を呼び出し（同一患者の直近AI評価を参考表示）
+  - 修正: バナーに取得元表示（同一カルテ / 同一患者の直近カルテ）追加
+  - 修正: console.log によるクライアント側診断ログ追加
+  - 修正: `withFailureHandler` にエラーログ追加
 
 **Phase AI-4.5 残作業（実機確認）:**
   - ⏸ 実機確認（AI45-H1〜H5）: 青バナー / AI参考見立て表示 / 再実行切り替え / v2記録確認
