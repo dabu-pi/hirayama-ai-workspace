@@ -390,7 +390,7 @@
 
 ---
 
-### Phase AI-4: AI補助判定保存・レビュー 🔄（実装完了・migrate/実機確認待ち 2026-05-11）
+### Phase AI-4: AI補助判定保存・レビュー ✅（CLOSED 2026-05-11 @38）
 
 **目的:** AI判定を AI_Assessments シートに保存し、施術者がレビューできるようにする
 
@@ -417,10 +417,14 @@ adoptedToChart / errorCode / errorMessage / updatedAt
 ```
 
 **clasp push:** ✅ 2026-05-11
+**migrate:** ✅ `runMigrateAddAIAssessmentsSheet()` 実行済み
+**実機確認:** ✅ 緑バナー（assessmentId + レビュー未確認）表示 PASS（2026-05-11）
 **LiveCheck ai4:** ✅ 4 passed / 4 skipped / 0 failed
 **LiveCheck ai3（回帰）:** ✅ 3 passed / 3 skipped / 0 failed
-**人間作業:** GAS エディタで `runMigrateAddAIAssessmentsSheet()` を1回実行 → 実機確認
-**versioned deployment @38:** ⏸ 未実施（実機確認 PASS 後に任意タイミング）
+**PII除外:** ✅ コードレビュー確認済み
+**デバッグ:** 初期実装で `SHEET_NAMES.AI_ASSESSMENTS` が webapp 実行時に未解決 → シート名ハードコード + エラー伝播で解消
+**versioned deployment @38:** ✅ 本番反映済み（2026-05-11）
+  - deploymentId: AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA
 
 **変更ファイル:** Setup.gs / Main.gs / visit-form.html / ai4.spec.ts / package.json
 **既存会計・集計への影響:** なし（AI_Assessments は独立した新規シート）

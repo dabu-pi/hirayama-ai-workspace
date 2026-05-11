@@ -450,9 +450,9 @@ function runAIAssessment(visitKey) {
       return { ok: false, error: "AI 応答の JSON 解析に失敗しました" };
     }
 
-    var assessmentId = saveAIAssessment_(visitKey, patient.patientId, result, null, null, respJson.model);
-    Logger.log("[runAIAssessment] visitKey=" + visitKey + " ok=true model=" + respJson.model + " assessmentId=" + assessmentId);
-    return { ok: true, result: result, assessmentId: assessmentId };
+    var saveResult = saveAIAssessment_(visitKey, patient.patientId, result, null, null, respJson.model);
+    Logger.log("[runAIAssessment] visitKey=" + visitKey + " ok=true model=" + respJson.model + " saveOk=" + saveResult.ok + " assessmentId=" + saveResult.id);
+    return { ok: true, result: result, assessmentId: saveResult.id || "", saveOk: saveResult.ok, saveDetail: saveResult.detail || "" };
 
   } catch (err) {
     var m = err && err.message ? err.message : String(err);
@@ -463,53 +463,64 @@ function runAIAssessment(visitKey) {
 
 /**
  * AI評価補助結果を AI_Assessments シートに保存する。
- * 保存失敗は警告ログのみで呼び出し元には影響させない。
  * 個人情報（氏名・住所・電話・生年月日）は保存しない。
  *
- * @param {string} visitKey
- * @param {string} patientId  内部キー（例: P0001）
- * @param {Object|null} outputObj  AI 出力 JSON（成功時）
- * @param {string|null} errorCode  エラーコード（失敗時）
- * @param {string|null} errorMessage  エラーメッセージ（失敗時）
- * @param {string} [model]  使用モデル名
- * @returns {string} assessmentId（保存失敗時は空文字）
+ * @returns {{ ok: boolean, id: string, detail: string }}
  */
 function saveAIAssessment_(visitKey, patientId, outputObj, errorCode, errorMessage, model) {
+  var AI_SHEET_NAME = "AI_Assessments"; // SHEET_NAMES参照を避けハードコード
   try {
     var ss = getTargetSpreadsheet_();
-    var sh = ss.getSheetByName(SHEET_NAMES.AI_ASSESSMENTS);
+    var sh = ss.getSheetByName(AI_SHEET_NAME);
     if (!sh) {
-      Logger.log("[saveAIAssessment_] AI_Assessments シートが見つかりません。runMigrateAddAIAssessmentsSheet を実行してください。");
-      return "";
+      var diagMsg = "AI_Assessments シートが見つかりません（SpreadsheetId先頭: " + ss.getId().substring(0, 8) + "）。runMigrateAddAIAssessmentsSheet を実行してください。";
+      Logger.log("[saveAIAssessment_] " + diagMsg);
+      return { ok: false, id: "", detail: diagMsg };
     }
 
     var now = new Date();
-    var ts = Utilities.formatDate(now, "Asia/Tokyo", "yyyyMMddHHmmssSSS");
+    var ts;
+    try {
+      ts = Utilities.formatDate(now, "Asia/Tokyo", "yyyyMMddHHmmssSSS");
+    } catch (fe) {
+      ts = String(now.getTime());
+    }
     var assessmentId = "ASMNT_" + ts;
+
+    var outputStr = "";
+    if (outputObj) {
+      try {
+        outputStr = JSON.stringify(outputObj);
+        if (outputStr.length > 40000) outputStr = outputStr.substring(0, 40000) + "...(truncated)";
+      } catch (je) {
+        outputStr = "(serialize error: " + je.message + ")";
+      }
+    }
 
     sh.appendRow([
       assessmentId,
-      visitKey      || "",
-      patientId     || "",
+      visitKey     || "",
+      patientId    || "",
       now,
-      model         || "gpt-4o-mini",
+      model        || "gpt-4o-mini",
       "v1",
-      outputObj     ? JSON.stringify(outputObj) : "",
+      outputStr,
       "unreviewed",
       "",
       "",
       "",
       false,
-      errorCode     || "",
-      errorMessage  || "",
+      errorCode    || "",
+      errorMessage || "",
       now
     ]);
 
-    Logger.log("[saveAIAssessment_] saved assessmentId=" + assessmentId);
-    return assessmentId;
+    Logger.log("[saveAIAssessment_] saved: " + assessmentId);
+    return { ok: true, id: assessmentId, detail: "" };
   } catch (e) {
-    Logger.log("[saveAIAssessment_] 保存失敗（スキップ）: " + e.message);
-    return "";
+    var errMsg = e && e.message ? e.message.substring(0, 300) : String(e).substring(0, 300);
+    Logger.log("[saveAIAssessment_] 保存失敗: " + errMsg);
+    return { ok: false, id: "", detail: errMsg };
   }
 }
 

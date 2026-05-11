@@ -15,13 +15,13 @@ AIは参考情報であり、診断の確定ではない。最終判断は施術
 |---|---|
 | 実施日 | 2026-05-11 |
 | フェーズ | Phase AI-4: AI補助判定保存・レビュー |
-| ステータス | 🔄 実装完了 / migrate + 実機確認待ち |
-| clasp push | ✅ 2026-05-11 |
+| ステータス | ✅ CLOSED |
+| clasp push | ✅ 2026-05-11（最終: デバッグ修正後）|
+| migrate 実行 | ✅ `runMigrateAddAIAssessmentsSheet()` 完了 |
+| 実機確認 | ✅ 緑バナー表示 PASS（AI4-H2 2026-05-11） |
 | LiveCheck ai4 | ✅ 4 passed / 4 skipped / 0 failed |
 | LiveCheck ai3（回帰） | ✅ 3 passed / 3 skipped / 0 failed |
-| migrate 実行 | ⏸ 人間作業（GAS エディタで `runMigrateAddAIAssessmentsSheet()` を1回実行） |
-| 実機確認 | ⏸ migrate 後に実施 |
-| @38 deploy | ⏸ 実機確認 PASS 後 |
+| @38 deploy | ✅ 本番反映済み（2026-05-11） |
 
 ---
 
@@ -134,9 +134,44 @@ AIは参考情報であり、診断の確定ではない。最終判断は施術
 
 ---
 
+## デバッグ経緯（初回実機確認 FAIL → 修正 → PASS）
+
+### 症状
+- AI評価補助の結果表示: PASS
+- 保存バナー: 表示されない
+- AI_Assessments シート: 記録なし
+
+### 原因
+`saveAIAssessment_()` 内で `SHEET_NAMES.AI_ASSESSMENTS` を参照していたが、
+GAS webapp 実行コンテキストでは `SHEET_NAMES` グローバル変数が未解決となり、
+`getSheetByName(undefined)` → null → 早期 return "" が発生していた。
+
+### 修正
+1. `SHEET_NAMES.AI_ASSESSMENTS` → `"AI_Assessments"` にハードコード（定数参照排除）
+2. `saveAIAssessment_()` の戻り値を `string` → `{ ok, id, detail }` に変更（エラー伝播）
+3. `runAIAssessment()` に `saveOk` / `saveDetail` を追加
+4. `visit-form.html` に保存失敗時の黄色警告バナー追加（エラー詳細表示）
+
+### 再確認結果
+修正後の実機テストで緑バナー表示 PASS。AI_Assessments シートに記録確認。
+
+---
+
+## Versioned Deployment @38
+
+| 項目 | 内容 |
+|---|---|
+| version | @38 |
+| deploymentId | AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA |
+| /exec URL | https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec |
+| 説明 | @38 - Phase AI-4: AI_Assessments 保存・レビューバナー |
+| 実施日 | 2026-05-11 |
+| 既存URL | 維持（@37/@36 と同一 deploymentId） |
+
+---
+
 ## 次回作業
 
-1. GAS エディタで `runMigrateAddAIAssessmentsSheet()` を実行（シート作成）
-2. 実機確認（AI4-H1〜H4）
-3. 確認 PASS 後 versioned deployment @38
-4. Phase AI-5 または Phase 6-M を検討
+1. Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
+2. Phase 6-M: CSV / 印刷 / 監査レポート
+3. AI4-H3/H4 運用中確認（AI_Assessments シート内容・PII除外を目視確認）

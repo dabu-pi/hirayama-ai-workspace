@@ -561,7 +561,7 @@ function runAiAssist() {
   google.script.run
     .withSuccessHandler(function(res) {
       if (res && res.ok && res.result) {
-        displayAiResult(res.result, res.assessmentId || '');
+        displayAiResult(res.result, res.assessmentId || '', res.saveOk, res.saveDetail || '');
         if (placeholder) placeholder.style.display = 'none';
         btn.disabled    = false;
         btn.textContent = 'AI評価補助を再実行する';
@@ -579,7 +579,7 @@ function runAiAssist() {
     .runAIAssessment(SAVED_VISIT_KEY);
 }
 
-function displayAiResult(r, assessmentId) {
+function displayAiResult(r, assessmentId, saveOk, saveDetail) {
   var result = document.getElementById('aiAssistResult');
   if (!result) return;
 
@@ -612,6 +612,11 @@ function displayAiResult(r, assessmentId) {
       '<span style="font-size:11px;color:#5f6368;">ID: ' + escapeAi(assessmentId) + '</span>' +
       '<span style="font-size:11px;padding:1px 7px;border-radius:10px;background:#fff3e0;color:#e37400;font-weight:600;">レビュー未確認</span>' +
       '</div>';
+  } else {
+    var warnMsg = saveDetail ? escapeAi(saveDetail) : 'AI_Assessments シートへの保存に失敗しました';
+    savedBanner =
+      '<div id="aiSavedBanner" style="padding:8px 12px;background:#fff8e1;border-left:3px solid #f9ab00;border-radius:4px;margin-bottom:10px;font-size:12px;color:#7a4f00;">' +
+      '⚠ 結果は表示できましたが保存に失敗しました: ' + warnMsg + '</div>';
   }
 
   var html = savedBanner;
