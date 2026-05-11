@@ -324,6 +324,7 @@ function getAppUrl_() {
 // API key は ScriptProperties の OPENAI_API_KEY から取得する。
 // ──────────────────────────────────────────────────────────────
 
+
 /**
  * AI評価補助を実行する。
  * visitKey に対応する visit + chart + patient データを取得し、

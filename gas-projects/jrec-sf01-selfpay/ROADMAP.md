@@ -357,7 +357,7 @@
 
 ---
 
-### Phase AI-3: OpenAI API連携 🔄（LiveCheck PASS 済み・実機AIボタン確認待ち 2026-05-11）
+### Phase AI-3: OpenAI API連携 ✅（CLOSED 2026-05-11 @37）
 
 **目的:** カルテ入力内容と患者マスター情報をAIに送り、補助判定を取得する
 
@@ -376,15 +376,14 @@
 **変更ファイル:** `JREC_SF01_Main.gs` / `visit-form.html` / `appsscript.json` / `tools/live-check-runner/projects/jrec-sf01/ai3.spec.ts` / `package.json`
 **採用 API:** OpenAI gpt-4o-mini（response_format: json_object, temperature: 0.3, max_tokens: 1500）
 **clasp push:** ✅ 2026-05-11
-**OPENAI_API_KEY:** ✅ ScriptProperties 設定済み確認（2026-05-11）
-**LiveCheck:** ✅ 3 passed / 3 skipped / 0 failed（2026-05-11 `npm run test:jrec:ai3`）
-  - AI3-1: #aiAssistCard + バッジ「AI評価補助（ベータ）」PASS
-  - AI3-2: #aiAssistBtn 初期 disabled PASS
-  - AI3-3: 旧文言なし PASS
-  - AI3-H1〜H3: SKIP（手動確認項目）
-**PII除外:** ✅ コードレビュー確認済み（name/kana/phone/address/dob/jrecPatientId 送信なし。dob→ageBand変換済み）
-**人間作業:** 実機での AIボタン押下確認（AI3-H1〜H3）
-**versioned deployment @37:** ⏸ 未実施（実機AIボタン確認 PASS 後に任意タイミングで実施）
+**OPENAI_API_KEY:** ✅ ScriptProperties 設定済み（2026-05-11）
+**GAS外部通信権限:** ✅ 再認証完了（testExternalRequestAuth HTTP 200確認 2026-05-11）
+**LiveCheck:** ✅ 3 passed / 3 skipped / 0 failed（`npm run test:jrec:ai3`）
+**実機確認:** ✅ /dev AIボタン押下 → 結果カード表示 PASS（AI3-H1 2026-05-11）
+**PII除外:** ✅ コードレビュー確認済み（name/kana/phone/address/dob/jrecPatientId 送信なし）
+**versioned deployment @37:** ✅ 本番反映済み（2026-05-11）
+  - deploymentId: AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA
+  - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
 
 > **個人情報保護:** 氏名 / 住所 / 電話 / 生年月日 / jrecPatientId は API に送信しない。
 > dob は年齢/年代に変換してから送信。

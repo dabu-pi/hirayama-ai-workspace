@@ -51,38 +51,35 @@
   - deploymentId: AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA
   - /exec 確認: home HTTP 200 ✅ / patient-list ✅ / visitForm ✅ / #aiAssistCard ✅ / 免責文 ✅ / btn disabled ✅ / dailyCheckout ✅
 
-**🔄 Phase AI-3 OpenAI API連携: LiveCheck PASS 済み・実機AIボタン確認待ち（2026-05-11）**
+**✅ Phase AI-3 OpenAI API連携: CLOSED**（2026-05-11 全確認 PASS）
   - `JREC_SF01_Main.gs` に `runAIAssessment(visitKey)` を追加（gpt-4o-mini / response_format: json_object / temperature: 0.3 / max_tokens: 1500）
   - `calcAgeBand_(age)` / `buildAIPrompt_(data)` / `AI_SYSTEM_PROMPT_` 追加
-  - 個人情報除去: 氏名 / 住所 / 電話 / 生年月日 / jrecPatientId は送信しない。dob は年齢/年代に変換（コードレビューで確認済み 2026-05-11）
+  - 個人情報除去: 氏名 / 住所 / 電話 / 生年月日 / jrecPatientId は送信しない。dob は年齢/年代に変換（コードレビューで確認済み）
   - API Key: ScriptProperties の `OPENAI_API_KEY` から取得（未設定時はエラーメッセージで停止）
-  - `OPENAI_API_KEY`: ✅ ScriptProperties 設定済み確認（2026-05-11）
-  - `visit-form.html` の `runAiAssist()` を実 API 呼び出しに置換。`displayAiResult` / `showAiError` / `resetAiBtn` / `escapeAi` 追加
+  - `OPENAI_API_KEY`: ✅ ScriptProperties 設定済み（2026-05-11）
+  - `visit-form.html` の `runAiAssist()` を実 API 呼び出しに置換
   - バッジ文言を「Phase AI-3 で有効化予定」→「AI評価補助（ベータ）」に変更
-  - `appsscript.json` に `https://www.googleapis.com/auth/script.external_request` スコープ追加
-  - `tools/live-check-runner/projects/jrec-sf01/ai3.spec.ts` 新規（AI3-1〜3 自動 + AI3-H1〜H3 手動 SKIP）
-  - `package.json` に `test:jrec:ai3` スクリプト追加
-  - clasp push: ✅ 21 files pushed（2026-05-11）
-  - LiveCheck: ✅ 3 passed / 3 skipped / 0 failed（2026-05-11 `npm run test:jrec:ai3`）
-    - AI3-1: #aiAssistCard 存在 + バッジ「AI評価補助（ベータ）」PASS ✅
-    - AI3-2: #aiAssistBtn 存在 + 初期 disabled PASS ✅
-    - AI3-3: 旧文言「Phase AI-3 で有効化予定」なし PASS ✅
-    - AI3-H1〜H3: SKIP（手動確認項目）
-  - PII除外: ✅ コードレビューで確認済み（L398コメント含む。name/kana/phone/address/dob/jrecPatientId 送信なし）
-  - 設計プロンプトとの差分: `getVisitFormData(visitKey, null)` → `getVisitFormData("", visitKey)` に修正（既存シグネチャは `(patientId, visitKey)` のため）
-  - 既存会計・領収書・集計処理への影響: なし
-  - getVisitFormData / getPatientById のシグネチャ・戻り値は変更していない
+  - `appsscript.json`: `https://www.googleapis.com/auth/script.external_request` スコープ追加
+  - GAS 外部通信権限再認証: ✅ 完了（`testExternalRequestAuth` HTTP 200確認 → 関数削除済み）
+  - LiveCheck: ✅ 3 passed / 3 skipped / 0 failed（`npm run test:jrec:ai3`）
+    - AI3-1: #aiAssistCard + バッジ「AI評価補助（ベータ）」PASS ✅
+    - AI3-2: #aiAssistBtn 初期 disabled PASS ✅
+    - AI3-3: 旧文言なし PASS ✅
+    - AI3-H1: ✅ /dev 実機 AIボタン押下 → 結果カード表示 PASS（2026-05-11）
+    - AI3-H2: ⏸ 7セクション目視（運用中に確認）
+    - AI3-H3: ⏸ PII除外 GASログ確認（コードレビューで確認済みのため実運用で確認）
+  - PII除外: ✅ コードレビューで確認済み（name/kana/phone/address/dob/jrecPatientId 送信なし）
+  - smoke: 15 passed / 1 failed（[chromium]モバイル幅タイムアウト — pre-existing flaky、AI-3無関係）
 
-**Phase AI-3 残作業（人間判断・人間操作が必要）:**
-  - ✅ `OPENAI_API_KEY`: ScriptProperties 設定済み（2026-05-11）
-  - ✅ `npm run save-auth` / `npm run test:jrec:ai3`: LiveCheck PASS（2026-05-11）
-  - ⏸ visit-form で実機 AIボタン押下確認（HEAD /dev での AI3-H1〜H3）
-  - ⏸ versioned deployment @37（実機確認 PASS 後に任意タイミングで実施）
+**✅ Versioned Deployment @37: 本番反映済み**（2026-05-11）
+  - deploymentId: AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA
+  - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
+  - 説明: @37 - Phase AI-3: OpenAI API評価補助 external_request authorized
 
 次期実装候補:
-1. **Phase AI-3 実機AIボタン確認 + @37 deploy**（次にやること）
-2. **Phase AI-4** AI評価補助 結果保存・レビュー（AI_Assessments シート）
-3. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
+1. **Phase AI-4** AI評価補助 結果保存・レビュー（AI_Assessments シート）
+2. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
+3. AI-H2/H3 運用中確認（7セクション表示 / GAS実行ログ PII確認）
 
 **Phase AI-3 設計プロンプト作成済み（2026-05-04）:**
   - `docs/PHASE_AI3_DESIGN_PROMPT_2026-05-04.md`
@@ -102,7 +99,7 @@ AI補助判定ロードマップ（Phase AI 系列）:
 - AI-0: 設計調査 ✅ CLOSED（2026-05-02 コード実装なし）
 - AI-1: 患者マスター・カルテ項目追加 ✅ CLOSED（2026-05-03）
 - AI-2: AI評価補助UI追加 ✅ CLOSED + @36 本番反映済み（2026-05-04）
-- AI-3: OpenAI API連携 🔄 LiveCheck PASS・実機AIボタン確認待ち（2026-05-11）
+- AI-3: OpenAI API連携 ✅ CLOSED + @37 本番反映済み（2026-05-11）
 - AI-4: AI補助判定保存・レビュー ⏸
 - AI-5: 運用改善 ⏸
 

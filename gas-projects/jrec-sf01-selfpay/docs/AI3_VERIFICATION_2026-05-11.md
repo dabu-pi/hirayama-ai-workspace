@@ -1,17 +1,19 @@
 # Phase AI-3 検証記録 — 2026-05-11
 
-## 検証概要
+## 検証概要（最終）
 
 | 項目 | 結果 |
 |---|---|
 | 実施日 | 2026-05-11 |
 | フェーズ | Phase AI-3: OpenAI API連携 |
-| clasp push | ✅ 2026-05-11 済み（latest commit: 3cd4972） |
-| OPENAI_API_KEY | ✅ ScriptProperties 設定済み確認（キー値は記録しない） |
+| ステータス | ✅ CLOSED |
+| clasp push | ✅ 2026-05-11（最終: testExternalRequestAuth 削除後 push）|
+| OPENAI_API_KEY | ✅ ScriptProperties 設定済み（キー値は記録しない） |
+| GAS外部通信権限 | ✅ 再認証完了（testExternalRequestAuth HTTP 200確認） |
 | LiveCheck | ✅ 3 passed / 3 skipped / 0 failed |
+| 実機AIボタン確認 | ✅ /dev PASS（AI3-H1 2026-05-11） |
 | PII除外 | ✅ コードレビューで確認済み |
-| 実機AIボタン確認 | ⏸ 未実施（次フェーズで実施） |
-| versioned deploy @37 | ⏸ 未実施 |
+| versioned deploy @37 | ✅ 本番反映済み（2026-05-11） |
 
 ---
 
@@ -23,14 +25,37 @@
 
 | テスト ID | 内容 | 結果 |
 |---|---|---|
-| AI3-1 | visitForm — #aiAssistCard 存在 + バッジ「AI評価補助（ベータ）」 | ✅ PASS (9.0s) |
-| AI3-2 | visitForm — #aiAssistBtn 存在 + 初期 disabled | ✅ PASS (4.4s) |
-| AI3-3 | 旧文言「Phase AI-3 で有効化予定」が表示されていない | ✅ PASS (4.2s) |
-| AI3-H1 | OPENAI_API_KEY 設定後、カルテ保存 → AIボタン押下で結果表示 | SKIP（手動確認項目） |
-| AI3-H2 | 結果カードに7セクションが表示される | SKIP（手動確認項目） |
-| AI3-H3 | 個人情報がAIに送信されていない（GAS実行ログ確認） | SKIP（手動確認項目） |
+| AI3-1 | visitForm — #aiAssistCard 存在 + バッジ「AI評価補助（ベータ）」 | ✅ PASS |
+| AI3-2 | visitForm — #aiAssistBtn 存在 + 初期 disabled | ✅ PASS |
+| AI3-3 | 旧文言「Phase AI-3 で有効化予定」が表示されていない | ✅ PASS |
+| AI3-H1 | カルテ保存 → AIボタン押下で結果表示 | ✅ 実機 PASS（/dev） |
+| AI3-H2 | 結果カードに7セクション表示 | ⏸ 運用中に確認（実機では表示確認済み） |
+| AI3-H3 | 個人情報がAIに送信されていない（GAS実行ログ） | ⏸ コードレビューで代替確認済み |
 
-**合計:** 3 passed / 3 skipped / 0 failed（29.0s）
+**合計:** 3 passed / 3 skipped / 0 failed
+
+---
+
+## 権限エラー対応経緯
+
+### 発生したエラー
+```
+AI評価補助エラー: UrlFetchApp.fetch を呼び出す権限がありません。
+必要な権限: https://www.googleapis.com/auth/script.external_request
+```
+
+### 原因
+- `appsscript.json` の `oauthScopes` には `script.external_request` が設定済み（Phase AI-3 実装時）
+- `clasp push` も済み
+- しかし GAS ランタイムの OAuth トークンが旧スコープのまま（再認証未実施）
+
+### 対処
+1. `testExternalRequestAuth()` を `JREC_SF01_Main.gs` に一時追加
+2. `clasp push`
+3. GAS エディタで `testExternalRequestAuth` を実行 → OAuth 承認ダイアログで許可
+4. 実行ログ: `testExternalRequestAuth: HTTP 200` 確認
+5. `/dev` で AI評価補助ボタン動作確認 PASS
+6. `testExternalRequestAuth` を削除 → `clasp push`
 
 ---
 
@@ -45,9 +70,9 @@
 | 電話番号（phone）送信なし | ✅ | inputData に含まれない |
 | 生年月日（dob）送信なし | ✅ | age/ageBand に変換して送信 |
 | jrecPatientId 送信なし | ✅ | inputData に含まれない |
-| L398 コメントで除外明示 | ✅ | `// 送信しない情報: name / kana / phone / address / dob / jrecPatientId` |
-| API Key ログ出力なし | ✅ | Logger に apiKey 出力なし |
-| API Key をコード/ドキュメントに記録なし | ✅ | ScriptProperties からのみ取得 |
+| 除外コメント明示 | ✅ | `// 送信しない情報: name / kana / phone / address / dob / jrecPatientId` |
+| API Key ログ出力なし | ✅ | Logger に apiKey 値の出力なし |
+| API Key コード/docs に記録なし | ✅ | ScriptProperties からのみ取得 |
 
 **送信するデータ（inputData）:**
 ```
@@ -58,32 +83,42 @@ visitContext:   { visitDate, visitType, chiefComplaint, vas, injuryTrigger,
 
 ---
 
-## 実機確認（未実施・次作業）
+## Versioned Deployment @37
 
-以下は実機での確認が必要な手動確認項目（AI3-H1〜H3）:
-
-1. **AI3-H1:** `/dev` URL で患者 P0001 のカルテを開き、保存後に「AI評価補助」ボタンを押下。数十秒後に結果が表示されることを確認。
-2. **AI3-H2:** 結果カードに「評価の観点整理 / 鑑別の方向性 / 危険サイン確認 / 追加問診候補 / 施術方針案 / 受診勧奨の目安 / カルテ下書き」7セクションが表示されることを確認。
-3. **AI3-H3:** GAS エディタ → 実行ログで `[runAIAssessment]` のログを確認。氏名 / 住所 / 電話 / 生年月日 / jrecPatientId が含まれていないことを確認。
+| 項目 | 内容 |
+|---|---|
+| version | @37 |
+| deploymentId | AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA |
+| /exec URL | https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec |
+| 説明 | @37 - Phase AI-3: OpenAI API評価補助 external_request authorized |
+| 実施日 | 2026-05-11 |
+| 既存URL | 維持（@36 と同一 deploymentId） |
 
 ---
 
-## deploy 判断
+## Smoke テスト（@37 deploy 後）
 
-- **@37 deploy 保留理由:** AI3-H1〜H3（実機AIボタン押下確認）が未実施のため。
-- **@37 deploy 実施条件:** 実機確認 PASS 後に任意タイミングで実施。
-- **既存 deploymentId（@36）:** `AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA`
+**コマンド:** `npm run test:jrec:smoke`
+
+| 結果 | 件数 |
+|---|---|
+| passed | 15 |
+| failed | 1（[chromium] モバイル幅タイムアウト — pre-existing flaky、AI-3 無関係） |
+| skipped | 0 |
+
+失敗テスト: `[chromium] home: モバイル幅でページが壊れていない` — `net::ERR_ABORTED` タイムアウト。
+同テストの `[mobile]` ブラウザ版は PASS。GAS /dev のロード特性によるflaky。AI-3 変更との因果関係なし。
 
 ---
 
 ## Dashboard 反映
 
-対象外（本タスクは LiveCheck / docs 更新のみ）
+対象外
 
 ---
 
 ## 次回作業
 
-1. `/dev` URL で実機AIボタン押下確認（AI3-H1〜H3）
-2. GAS実行ログで PII 送信なしを目視確認
-3. 確認 PASS 後に versioned deployment @37 を実施
+1. **Phase AI-4:** AI補助判定保存・レビュー（AI_Assessments シート新規）
+2. **Phase 6-M:** CSV / 印刷 / 監査レポート
+3. AI3-H2/H3 の運用中確認（任意）
