@@ -94,7 +94,11 @@
   - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
   - 説明: @38 - Phase AI-4: AI_Assessments 保存・レビューバナー
 
-**✅ Phase AI-4.5 保存済みAI評価再読込 + AI参考見立て: CLOSED（2026-05-12 @39 本番反映）**
+**🔄 Phase AI-4.5 保存済みAI評価再読込 + AI参考見立て: @39 deploy 後に追加不具合あり → 修正実装中（2026-05-12）**
+（注: 当初 @39 で CLOSED と記録したが、本番再確認で「保存データはあるが visitForm で再表示されない」追加不具合を検出。
+header lookup 修正 + 診断強化 push 済み、/dev 再確認待ち → 必要なら @40 deploy）
+
+**前回 CLOSED 記録（参考保持）:** @39 - Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て（2026-05-12 一旦 CLOSED）
   - `JREC_SF01_Main.gs`: `getLatestAIAssessmentForVisit(visitKey)` 追加（ハードコードシート名・fail-safe）
   - `JREC_SF01_Main.gs`: `AI_SYSTEM_PROMPT_` に `aiImpression` フィールド追加（promptVersion v2）
   - `JREC_SF01_Main.gs`: `saveAIAssessment_()` に `promptVer` パラメータ追加 / `runAIAssessment()` で "v2" を渡す
@@ -127,6 +131,24 @@
   - 修正: `displaySavedAssessment` の entry / skip / render 各段階にログ追加（banner 未表示時の経路を可視化）
   - 既存の保存・新規実行ロジックは変更なし（diagnostic 層のみ追加）
   - 詳細: `docs/AI45_SAVED_ASSESSMENT_RELOAD_AND_IMPRESSION_2026-05-11.md` の 2026-05-12 追記参照
+
+  **追加修正（4回目 clasp push, 2026-05-12 / @39 deploy 後）:**
+  - 観測: 本番 @39 で再確認したところ Console は `[AI45] no saved assessment for this visitKey/patientId`
+        ただし AI_Assessments には対象行（visitKey=SPV_20260511_P0001_001 / patientId=P0001）が複数実在
+  - 真因（推定）: `getLatestAIAssessmentForVisitOrPatient` の header lookup が `data[0].indexOf("visitKey")` 等の完全一致依存
+        → シートのヘッダー側に前後空白・大文字小文字差・不可視文字（BOM 等）があると idx=-1 になり全行 silent skip
+        保存（`appendRow` の positional 書き込み）は header 名に依存しないため気づかれない構造的バグ
+  - 修正: `getLatestAIAssessmentForVisitOrPatient`
+        - header lookup を `trim + lowercase` 正規化に変更（前後空白・大小文字差を吸収）
+        - 比較値も `String(v||'').trim()` で正規化
+        - 必須ヘッダー（assessmentId / visitKey / patientId）が見つからない場合は raw headers をログに出して即 return
+        - 各ループで `vkMatches / pidMatches / totalScanned` を集計し no-match 時に出力
+        - found 時に `outputLen` もログ出力
+  - 追加: `debugAIAssessmentsRead()` を GAS エディタから1コマンドで実行できる診断関数として追加
+        Logger に raw headers / 文字長 / 先頭 hex / 行数 / 固定ターゲットでの取得結果を出す
+  - 既存の save / runAIAssessment ロジックには変更なし
+  - 影響範囲: `JREC_SF01_Main.gs` のみ（visit-form.html は変更なし）
+  - 次工程: /dev で再確認 → PASS なら versioned deploy @40 → 改めて CLOSED 化
 
 **Phase AI-4.5 実機確認結果（2026-05-12 PASS）:**
   - ✅ AI_Assessments v2保存: PASS

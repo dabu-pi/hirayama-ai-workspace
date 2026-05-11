@@ -571,6 +571,9 @@ function getAIAssessmentsByVisitKey(visitKey) {
  * visitKey → patientId の順で AI_Assessments から最新レコードを取得する。
  * PII は返さない。visitKey が空または未ヒットの場合は patientId で fallback する。
  *
+ * ヘッダー lookup は trim + lowercase で行うため、保存と読み取りで列名表記が
+ * 微妙に違っても（前後空白・大文字小文字差）取り違えない。比較値も trim する。
+ *
  * @param {string} visitKey  来院キー（空文字の場合は patientId で検索）
  * @param {string} patientId 内部患者キー（例: P0001）
  * @returns {{ ok: boolean, assessment: Object|null }}
@@ -589,33 +592,55 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
     var data = sh.getDataRange().getValues();
     if (data.length < 2) return { ok: true, assessment: null };
 
-    var h         = data[0];
-    var idxId     = h.indexOf("assessmentId");
-    var idxVk     = h.indexOf("visitKey");
-    var idxPid    = h.indexOf("patientId");
-    var idxAt     = h.indexOf("createdAt");
-    var idxOut    = h.indexOf("outputJson");
-    var idxStatus = h.indexOf("reviewStatus");
-    var idxModel  = h.indexOf("model");
-    var idxPv     = h.indexOf("promptVersion");
+    // ヘッダーを trim + lowercase で正規化して引く
+    var rawHeaders = data[0];
+    var idxMap = {};
+    for (var hi = 0; hi < rawHeaders.length; hi++) {
+      var key = String(rawHeaders[hi] || '').trim().toLowerCase();
+      if (key) idxMap[key] = hi;
+    }
+    var idxId     = idxMap["assessmentid"];
+    var idxVk     = idxMap["visitkey"];
+    var idxPid    = idxMap["patientid"];
+    var idxAt     = idxMap["createdat"];
+    var idxOut    = idxMap["outputjson"];
+    var idxStatus = idxMap["reviewstatus"];
+    var idxModel  = idxMap["model"];
+    var idxPv     = idxMap["promptversion"];
+
+    if (idxId === undefined || idxVk === undefined || idxPid === undefined) {
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] required headers missing — idxId=" + idxId +
+                 " idxVk=" + idxVk + " idxPid=" + idxPid +
+                 " rawHeaders=" + JSON.stringify(rawHeaders));
+      return { ok: true, assessment: null };
+    }
+
+    var needleVk  = String(visitKey  || '').trim();
+    var needlePid = String(patientId || '').trim();
 
     var byVk   = null; var byVkMs   = 0;
     var byPid  = null; var byPidMs  = 0;
+    var vkMatches    = 0;
+    var pidMatches   = 0;
+    var totalScanned = 0;
 
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
       if (!row[idxId]) continue; // 空行スキップ
-      var t = row[idxAt] ? new Date(row[idxAt]).getTime() : 0;
+      totalScanned++;
 
-      // Priority 1: visitKey 一致
-      if (visitKey && String(row[idxVk]) === String(visitKey) && t >= byVkMs) {
-        byVkMs = t;
-        byVk   = row;
+      var rowVk  = String(row[idxVk]  || '').trim();
+      var rowPid = String(row[idxPid] || '').trim();
+      var t = (idxAt !== undefined && row[idxAt]) ? new Date(row[idxAt]).getTime() : 0;
+      if (isNaN(t)) t = 0;
+
+      if (needleVk && rowVk === needleVk) {
+        vkMatches++;
+        if (t >= byVkMs) { byVkMs = t; byVk = row; }
       }
-      // Priority 2 (fallback): patientId 一致
-      if (patientId && String(row[idxPid]) === String(patientId) && t >= byPidMs) {
-        byPidMs = t;
-        byPid   = row;
+      if (needlePid && rowPid === needlePid) {
+        pidMatches++;
+        if (t >= byPidMs) { byPidMs = t; byPid = row; }
       }
     }
 
@@ -623,26 +648,81 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
     var sourceType = byVk  ? "visitKey" : (byPid ? "patientId" : null);
 
     if (!target) {
-      Logger.log("[getLatestAIAssessmentForVisitOrPatient] visitKey=" + visitKey + " patientId=" + patientId + " found=none");
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] no match — " +
+                 "needleVk=" + needleVk + " needlePid=" + needlePid +
+                 " scanned=" + totalScanned +
+                 " vkMatches=" + vkMatches + " pidMatches=" + pidMatches);
       return { ok: true, assessment: null };
     }
 
     var assessment = {
       assessmentId:  String(target[idxId]),
-      visitKey:      String(target[idxVk]  || ""),
-      createdAt:     target[idxAt],
-      outputJson:    String(target[idxOut] || ""),
-      reviewStatus:  String(target[idxStatus] || ""),
-      model:         String(target[idxModel]  || ""),
-      promptVersion: String(target[idxPv]     || ""),
+      visitKey:      String(target[idxVk]  || "").trim(),
+      createdAt:     idxAt !== undefined ? target[idxAt] : null,
+      outputJson:    idxOut    !== undefined ? String(target[idxOut]    || "") : "",
+      reviewStatus:  idxStatus !== undefined ? String(target[idxStatus] || "") : "",
+      model:         idxModel  !== undefined ? String(target[idxModel]  || "") : "",
+      promptVersion: idxPv     !== undefined ? String(target[idxPv]     || "") : "",
       sourceType:    sourceType
     };
-    Logger.log("[getLatestAIAssessmentForVisitOrPatient] found=" + assessment.assessmentId + " source=" + sourceType);
+    Logger.log("[getLatestAIAssessmentForVisitOrPatient] found=" + assessment.assessmentId +
+               " source=" + sourceType +
+               " scanned=" + totalScanned +
+               " vkMatches=" + vkMatches + " pidMatches=" + pidMatches +
+               " outputLen=" + assessment.outputJson.length);
     return { ok: true, assessment: assessment };
   } catch (e) {
     Logger.log("[getLatestAIAssessmentForVisitOrPatient] ERROR: " + e.message);
     return { ok: true, assessment: null }; // fail-safe
   }
+}
+
+/**
+ * GAS エディタから直接実行して AI_Assessments の読み取り状況を確認するための診断関数。
+ * AI-4.5 で「保存はあるのに再読込が found:false」のケースを切り分けるために使う。
+ *
+ * GAS エディタで `debugAIAssessmentsRead` を選んで実行 → Logger で:
+ *   - 検出された raw ヘッダー
+ *   - ヘッダー文字長（前後空白の検知）
+ *   - ヘッダー先頭5文字の hex（不可視文字の検知）
+ *   - 行数
+ *   - 固定ターゲット (SPV_20260511_P0001_001 / P0001) での取得結果
+ * を確認できる。
+ */
+function debugAIAssessmentsRead() {
+  var ss = getTargetSpreadsheet_();
+  var sh = ss.getSheetByName("AI_Assessments");
+  if (!sh) {
+    Logger.log("[debugAIAssessmentsRead] AI_Assessments sheet not found");
+    return { ok: false, error: "sheet not found" };
+  }
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  Logger.log("[debugAIAssessmentsRead] headers raw: " + JSON.stringify(headers));
+  Logger.log("[debugAIAssessmentsRead] header lengths: " +
+             headers.map(function(h) { return String(h).length; }).join(','));
+  Logger.log("[debugAIAssessmentsRead] header hex preview (first 8 chars): " +
+             headers.map(function(h) {
+               var s = String(h);
+               var hex = '';
+               for (var i = 0; i < Math.min(s.length, 8); i++) {
+                 hex += s.charCodeAt(i).toString(16) + ' ';
+               }
+               return '[' + hex.trim() + ']';
+             }).join(' '));
+  Logger.log("[debugAIAssessmentsRead] row count (incl header): " + sh.getLastRow());
+
+  var visitKey  = 'SPV_20260511_P0001_001';
+  var patientId = 'P0001';
+  var result = getLatestAIAssessmentForVisitOrPatient(visitKey, patientId);
+  Logger.log("[debugAIAssessmentsRead] target visitKey=" + visitKey + " patientId=" + patientId);
+  Logger.log("[debugAIAssessmentsRead] result.ok=" + result.ok +
+             " found=" + !!(result.assessment) +
+             (result.assessment ? " assessmentId=" + result.assessment.assessmentId +
+                                  " sourceType=" + result.assessment.sourceType +
+                                  " promptVersion=" + result.assessment.promptVersion +
+                                  " outputJsonLen=" + result.assessment.outputJson.length
+                                : ""));
+  return result;
 }
 
 // 旧関数（後方互換 — 内部から getLatestAIAssessmentForVisitOrPatient に委譲）

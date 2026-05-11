@@ -285,3 +285,64 @@
 
 - Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
 - Phase 6-M: CSV / 印刷 / 監査レポート ⏸
+
+---
+
+## 2026-05-12 追記（その2） — @39 deploy 後の追加不具合と修正
+
+### 観測
+
+@39 deploy 後、本番 URL で再確認したところ:
+
+| 項目 | 結果 |
+|---|---|
+| 対象URL | `?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001` |
+| AI_Assessments の対象行 | ✅ 実在（複数行、outputJson も埋まっている） |
+| Console 系列 | called → start → result → `no saved assessment for this visitKey/patientId` |
+| 画面 | 青バナー出ず・カルテ下書き出ず・AI参考見立て出ず |
+
+つまり、フロント側の到達ログは正常で、サーバー側 `getLatestAIAssessmentForVisitOrPatient`
+が「実在する行を見つけられない」状態だった。
+
+### 真因（推定）
+
+`getLatestAIAssessmentForVisitOrPatient` の header lookup が `data[0].indexOf("visitKey")` の **完全一致依存**。
+
+| 経路 | 列名依存 | 影響 |
+|---|---|---|
+| 保存（`saveAIAssessment_` → `appendRow`） | **positional**（配列順で書き込む） | header 名がズレていても無関係に保存できる |
+| 読み取り（`getLatestAIAssessmentForVisitOrPatient`） | **名前 lookup** | header 側に前後空白 / 大小文字差 / 不可視文字があると `indexOf = -1` → `row[-1] = undefined` → 全行 silent skip |
+
+保存はずっと positional で動いていたため、シートのヘッダーに微妙な差異があっても気づかれず、
+AI-4.5 で初めて読み取り側に名前 lookup を入れた瞬間に表面化した、という構造的バグ。
+
+### 修正内容（4回目 clasp push, 2026-05-12 / JREC_SF01_Main.gs のみ）
+
+| 修正 | 目的 |
+|---|---|
+| header lookup を `trim + lowercase` 正規化に変更 | 前後空白・大小文字差を吸収 |
+| 比較値も `String(v\|\|'').trim()` で正規化 | セル値側の前後空白も吸収 |
+| 必須ヘッダー（assessmentId / visitKey / patientId）が見つからない場合は raw headers をログ出力して即 return | ヘッダー異常をすぐ可視化 |
+| `vkMatches / pidMatches / totalScanned` を集計してログ出力 | no-match 時に「読んだ行はあるが needle と一致なし」を判定できる |
+| found 時に `outputLen` も出力 | outputJson が空でない確認 |
+| `debugAIAssessmentsRead()` を追加 | GAS エディタから固定ターゲットで1コマンド診断（headers / 文字長 / 先頭 hex / 行数 / 取得結果）|
+
+既存の save / runAIAssessment ロジックには変更なし。
+
+### 検証手順
+
+1. /dev (HEAD 反映) で `?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001` を開く
+2. F12 → Console:
+   - 期待: `[AI45] getLatestAIAssessmentForVisitOrPatient result { ok: true, found: true, ... }`
+   - 続いて `[AI45] displaySavedAssessment rendered banner`
+3. 画面: 青バナー + AI参考見立て + カルテ下書き 再表示
+4. もし依然 `found: false` の場合 → GAS エディタで `debugAIAssessmentsRead` を実行 → Logger.log で:
+   - raw headers の JSON
+   - 各 header の文字長（trailing space があれば判明）
+   - 先頭 hex（不可視 BOM などがあれば判明）
+   この情報から次の手を決める
+
+### deploy 判断
+
+- /dev で PASS → versioned deploy @40 を作成 → docs を改めて CLOSED 化
+- /dev で FAIL → `debugAIAssessmentsRead` の Logger 出力を持って再診

@@ -390,7 +390,7 @@
 
 ---
 
-### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て ✅（CLOSED 2026-05-12 @39）
+### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て 🔄（@39 deploy 後に追加不具合 — 修正実装中 2026-05-12）
 
 **目的:** 保存済みAI評価を編集画面で自動再表示 + AI参考見立て（aiImpression）を追加する
 
@@ -404,6 +404,7 @@
 | AI-4.5-6 | `visit-form.html`: 新規AI実行後は新結果が青バナーを上書き（freshResult フラグ） | ✅ |
 | AI-4.5-7 | `ai45.spec.ts` 追加（5自動 + 5手動 SKIP） | ✅ |
 | AI-4.5-8 | 診断ログ強化 + `google.script.run` 未準備時リトライ（3回目 clasp push 2026-05-12） | ✅ |
+| AI-4.5-9 | `getLatestAIAssessmentForVisitOrPatient` header lookup を trim+lowercase 化 + 比較値も trim + `debugAIAssessmentsRead` 追加（4回目 clasp push 2026-05-12 / @39 deploy 後の追加不具合対応） | ✅ |
 
 **UI表現方針:**
 - 表示名: 「AI参考見立て」
