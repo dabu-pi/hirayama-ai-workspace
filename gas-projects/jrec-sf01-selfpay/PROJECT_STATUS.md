@@ -119,12 +119,25 @@
   - 修正: console.log によるクライアント側診断ログ追加
   - 修正: `withFailureHandler` にエラーログ追加
 
-**Phase AI-4.5 残作業（実機確認）:**
-  - ⏸ 実機確認（AI45-H1〜H5）: 青バナー / AI参考見立て表示 / 再実行切り替え / v2記録確認
-  - ⏸ versioned deploy @39（実機確認 PASS 後）
+**Phase AI-4.5 実機確認結果（2026-05-11 PARTIAL）:**
+  - ✅ AI_Assessments v2保存: PASS
+  - ✅ outputJson.aiImpression保存: PASS
+  - ✅ promptVersion=v2: PASS
+  - ❌ 青バナー表示: FAIL（2回の実機確認いずれも未表示）
+  - ❌ 保存済みAI評価自動再読込: FAIL
+  - ❌ カルテ下書き再表示: FAIL
+  - ❌ AI参考見立て再表示: FAIL
+  - ⏸ versioned deploy @39: 未実施（実機確認 PASS 待ち）
+
+**次回再開時の最優先確認手順（Console診断）:**
+  1. /dev でF12→Console を開き `[AI45]` ログを確認する
+  2. `loadSavedAIAssessment が呼ばれているか（start ログが出るか）
+  3. `getLatestAIAssessmentForVisitOrPatient` の返却値（found / assessmentId / sourceType）を確認
+  4. PATIENT_ID・visitKey の値が期待どおりか確認
+  5. `displaySavedAssessment` が呼ばれているか、freshResultフラグでブロックされていないか確認
 
 次期実装候補:
-1. **Phase AI-4.5 実機確認 + @39 deploy**（次にやること）
+1. **Phase AI-4.5 再読込デバッグ + @39 deploy**（次にやること・Console確認から再開）
 2. **Phase AI-5** 運用改善（プロンプト調整・過去判定比較）
 3. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 

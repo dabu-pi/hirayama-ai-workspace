@@ -409,12 +409,18 @@
 - 必須注意文: 「この内容はAIによる参考情報です。診断確定ではありません。最終判断は施術者が行ってください。」
 - 禁止: AI診断 / 確定診断 / 保険請求上の判断 / 医師判断不要 / 必ず〜
 
-**clasp push:** ✅ 2026-05-11
+**clasp push:** ✅ 2026-05-11（2回 — 初期実装 + fallback修正）
 **LiveCheck ai45:** ✅ 5 passed / 5 skipped / 0 failed
 **LiveCheck ai4（回帰）:** ✅ 4 passed / 0 failed
 **LiveCheck ai3（回帰）:** ✅ 3 passed / 0 failed
-**人間作業:** 実機確認（AI45-H1〜H5）
+**v2保存 / aiImpression保存:** ✅ スプレッドシートで目視確認 PASS
+**実機確認 ステータス:** ❌ PARTIAL（青バナー2回 FAIL）
 **versioned deployment @39:** ⏸ 未実施（実機確認 PASS 後）
+
+**実機確認 FAIL の状況（2026-05-11 中断）:**
+- visitKey / patientId fallback 検索 → console.log 診断ログ追加済み
+- 次回再開時: F12→Console で `[AI45]` ログを確認して原因を特定する
+- `loadSavedAIAssessment` 呼び出し / GAS返却値 / displaySavedAssessment 到達 を順に確認
 
 **変更ファイル:** Main.gs / visit-form.html / ai45.spec.ts / package.json
 

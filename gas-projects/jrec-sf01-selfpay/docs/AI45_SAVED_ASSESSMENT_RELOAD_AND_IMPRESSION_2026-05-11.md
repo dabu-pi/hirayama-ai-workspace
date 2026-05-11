@@ -19,7 +19,7 @@
 | LiveCheck ai45 | ✅ 5 passed / 5 skipped / 0 failed |
 | LiveCheck ai4（回帰） | ✅ 4 passed / 0 failed |
 | LiveCheck ai3（回帰） | ✅ 3 passed / 0 failed |
-| 実機確認 | ⏸ 未実施 |
+| 実機確認 | ❌ PARTIAL（青バナー2回FAIL / 2026-05-11 中断） |
 | @39 deploy | ⏸ 実機確認 PASS 後 |
 
 ---
@@ -134,8 +134,57 @@
 
 ---
 
+## 実機確認結果（2026-05-11 PARTIAL）
+
+| 確認項目 | 結果 |
+|---|---|
+| AI_Assessments v2保存 | ✅ PASS |
+| outputJson に aiImpression | ✅ PASS |
+| promptVersion = v2 | ✅ PASS |
+| 青バナー表示（同一カルテ / 同一患者fallback） | ❌ FAIL × 2回 |
+| 保存済みAI評価自動再読込 | ❌ FAIL |
+| カルテ下書き再表示 | ❌ FAIL |
+| AI参考見立て再表示 | ❌ FAIL |
+| @39 deploy | ⏸ 未実施 |
+
+**中断理由:** 青バナー表示が2回の実機確認でいずれも出ず。本日は記録して中断。
+
+---
+
+## 実装済み状態（中断時点）
+
+| コンポーネント | 状態 |
+|---|---|
+| `getLatestAIAssessmentForVisitOrPatient(visitKey, patientId)` | ✅ 実装済み |
+| visitKey → patientId fallback 検索 | ✅ 実装済み |
+| 新規モードでも `loadSavedAIAssessment('', PATIENT_ID)` 呼び出し | ✅ 実装済み |
+| バナーに `sourceType`（同一カルテ / 同一患者の直近カルテ）表示 | ✅ 実装済み |
+| `[AI45]` console.log 診断ログ | ✅ 実装済み（loadSavedAIAssessment start / result / error） |
+| `withFailureHandler` にログ追加 | ✅ 実装済み |
+| v2 promptVersion 保存 | ✅ 動作確認済み |
+
+---
+
+## 次回再開手順（最優先）
+
+1. `/dev` でF12→Console を開き `[AI45]` ログを確認する
+2. `loadSavedAIAssessment start` ログが出るか確認 → 出ない場合は呼び出し側のバグ
+3. `getLatestAIAssessmentForVisitOrPatient result` ログで `found` / `assessmentId` / `sourceType` を確認
+4. `found: true` なのに青バナーが出ない場合は `displaySavedAssessment` のバグ
+5. `found: false` の場合は GAS の検索ロジックまたは PATIENT_ID の不一致
+6. `start` ログが出ない場合は `loadSavedAIAssessment` が呼ばれていない（PATIENT_ID / google.script.run の問題）
+
+**確認できること:**
+- `hasPatientId: true/false` → PATIENT_ID が取れているか
+- `found: true/false` → GAS が記録を見つけたか
+- `sourceType: "visitKey"/"patientId"/null` → どの検索でヒットしたか
+- エラーログ → GAS 呼び出し自体が失敗していないか
+
+---
+
 ## 次回作業
 
-1. 実機確認（AI45-H1〜H5）PASS 後に versioned deployment @39
-2. Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
-3. Phase 6-M: CSV / 印刷 / 監査レポート
+1. Console `[AI45]` ログ確認 → 原因特定 → 修正
+2. 実機確認 PASS 後に versioned deployment @39
+3. Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
+4. Phase 6-M: CSV / 印刷 / 監査レポート
