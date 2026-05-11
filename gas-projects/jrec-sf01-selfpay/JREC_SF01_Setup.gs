@@ -51,6 +51,7 @@ var SHEET_NAMES = {
   MENU_MASTER    : "MenuMaster",
   DAILY_SALES    : "DailySales",
   RUN_LOG        : "Run_Log",
+  AI_ASSESSMENTS : "AI_Assessments",
 };
 
 // ヘッダー色
@@ -131,6 +132,7 @@ function setupAll_() {
   setupMenuMaster_(ss);
   setupDailySales_(ss);
   setupRunLog_(ss);
+  setupAIAssessments_(ss);
 
   log_("setupAll_ 完了", "", "", now);
 
@@ -139,7 +141,7 @@ function setupAll_() {
     "作成・更新したシート:\n" +
     "  Settings / Patients / SelfPayVisits / SelfPayChart\n" +
     "  SelfPayItems / Payments / Receipts / MenuMaster\n" +
-    "  DailySales / Run_Log\n\n" +
+    "  DailySales / Run_Log / AI_Assessments\n\n" +
     "次のステップ:\n" +
     "・Settings シートの各値を確認する\n" +
     "・MenuMaster の評価入口3メニューの有効フラグを院長に確認する\n" +
@@ -398,6 +400,57 @@ function setupRunLog_(ss) {
   setHeaders_(sh, headers, [160, 160, 200, 80, 80, 400, 90]);
 
   sh.setFrozenRows(1);
+}
+
+// ============================================================
+// AI_Assessments (Phase AI-4)
+// ============================================================
+
+/**
+ * AI_Assessments シートをセットアップする。
+ * 既存シートが存在する場合はヘッダーのみ更新し、データ行は保持する。
+ * 個人情報（氏名・住所・電話・生年月日）は保存しない。visitKey / patientId（内部キー）のみ使用。
+ */
+function setupAIAssessments_(ss) {
+  var sh = getOrCreateSheet_(ss, SHEET_NAMES.AI_ASSESSMENTS);
+
+  var headers = [[
+    "assessmentId", "visitKey", "patientId", "createdAt",
+    "model", "promptVersion", "outputJson",
+    "reviewStatus", "reviewedAt", "reviewedBy", "reviewNote", "adoptedToChart",
+    "errorCode", "errorMessage", "updatedAt"
+  ]];
+  setHeaders_(sh, headers, [200, 200, 80, 160, 120, 100, 400, 100, 160, 120, 260, 100, 100, 260, 160]);
+
+  // reviewStatus ドロップダウン
+  applyDropdown_(sh, 2, 8, 500, ["unreviewed", "reviewed", "adopted", "dismissed"]);
+
+  // adoptedToChart チェックボックス
+  sh.getRange(2, 12, 500, 1).insertCheckboxes();
+
+  sh.setFrozenRows(1);
+}
+
+/**
+ * AI_Assessments シートを冪等に追加するマイグレーション関数。
+ * 既存の運用中スプレッドシートに Phase AI-4 を適用するために GAS エディタから1回実行する。
+ * @returns {{ ok: boolean, message: string }}
+ */
+function runMigrateAddAIAssessmentsSheet() {
+  try {
+    var ss = getTargetSpreadsheet_();
+    var existing = ss.getSheetByName(SHEET_NAMES.AI_ASSESSMENTS);
+    if (existing) {
+      Logger.log("[runMigrateAddAIAssessmentsSheet] AI_Assessments シートは既に存在します。スキップ。");
+      return { ok: true, message: "AI_Assessments シートは既に存在します。スキップしました。" };
+    }
+    setupAIAssessments_(ss);
+    Logger.log("[runMigrateAddAIAssessmentsSheet] AI_Assessments シートを作成しました。");
+    return { ok: true, message: "AI_Assessments シートを作成しました。" };
+  } catch (e) {
+    Logger.log("[runMigrateAddAIAssessmentsSheet] エラー: " + e.message);
+    return { ok: false, message: e.message };
+  }
 }
 
 // ============================================================

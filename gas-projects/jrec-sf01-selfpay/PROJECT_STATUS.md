@@ -76,10 +76,26 @@
   - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
   - 説明: @37 - Phase AI-3: OpenAI API評価補助 external_request authorized
 
+**🔄 Phase AI-4 AI補助判定保存・レビュー: 実装完了・migrate/実機確認待ち（2026-05-11）**
+  - `JREC_SF01_Setup.gs`: `SHEET_NAMES.AI_ASSESSMENTS` 追加 / `setupAIAssessments_()` / `runMigrateAddAIAssessmentsSheet()`
+  - `JREC_SF01_Main.gs`: `saveAIAssessment_()` / `getAIAssessmentsByVisitKey()` / `runAIAssessment()` に保存呼び出し追加
+  - `visit-form.html`: 保存確認バナー（#aiSavedBanner: assessmentId + reviewStatus「レビュー未確認」）
+  - `tools/live-check-runner/projects/jrec-sf01/ai4.spec.ts` 新規 / `package.json` に `test:jrec:ai4` 追加
+  - clasp push: ✅ 2026-05-11
+  - LiveCheck ai4: ✅ 4 passed / 4 skipped / 0 failed
+  - LiveCheck ai3（回帰）: ✅ 3 passed / 3 skipped / 0 failed
+  - PII保存除外: ✅ コードレビュー確認済み（outputJson = AI出力のみ。name/phone/address/dob/jrecPatientId 非保存）
+  - AI_Assessments 保存カラム: assessmentId / visitKey / patientId / createdAt / model / promptVersion / outputJson / reviewStatus / reviewedAt / reviewedBy / reviewNote / adoptedToChart / errorCode / errorMessage / updatedAt
+
+**Phase AI-4 残作業（人間操作が必要）:**
+  - ⏸ GAS エディタで `runMigrateAddAIAssessmentsSheet()` を実行（AI_Assessments シートを作成）
+  - ⏸ 実機確認（AI4-H1〜H4）: AIボタン押下 → 保存バナー表示 → AI_Assessments シート確認
+  - ⏸ versioned deploy @38（実機確認 PASS 後に任意タイミングで実施）
+
 次期実装候補:
-1. **Phase AI-4** AI評価補助 結果保存・レビュー（AI_Assessments シート）
-2. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
-3. AI-H2/H3 運用中確認（7セクション表示 / GAS実行ログ PII確認）
+1. **Phase AI-4 migrate + 実機確認 + @38 deploy**（次にやること）
+2. **Phase AI-5** 運用改善（プロンプト調整・過去判定比較）
+3. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 
 **Phase AI-3 設計プロンプト作成済み（2026-05-04）:**
   - `docs/PHASE_AI3_DESIGN_PROMPT_2026-05-04.md`

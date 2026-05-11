@@ -390,20 +390,39 @@
 
 ---
 
-### Phase AI-4: AI補助判定保存・レビュー ⏸
+### Phase AI-4: AI補助判定保存・レビュー 🔄（実装完了・migrate/実機確認待ち 2026-05-11）
 
-**目的:** AI判定を AI_Assessments シートに保存し、先生がレビューできるようにする
+**目的:** AI判定を AI_Assessments シートに保存し、施術者がレビューできるようにする
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| AI-4-1 | JREC_SF01_Setup.gs: AI_Assessments シート新規追加 | ⏸ |
-| AI-4-2 | JREC_SF01_Main.gs: `saveAIAssessment(visitKey, inputSnapshot, aiOutput)` 追加 | ⏸ |
-| AI-4-3 | JREC_SF01_Main.gs: `getAIAssessmentsByVisitKey(visitKey)` 追加 | ⏸ |
-| AI-4-4 | visit-form.html: 「この判定を保存する」ボタン + reviewStatus select 追加 | ⏸ |
-| AI-4-5 | visit-form.html: adoptedMemo テキストエリア追加 | ⏸ |
-| AI-4-6 | visit-form.html: カルテ再編集時に過去のAI判定を表示 | ⏸ |
+| AI-4-1 | JREC_SF01_Setup.gs: AI_Assessments シート定義 + `setupAIAssessments_()` + `runMigrateAddAIAssessmentsSheet()` | ✅ |
+| AI-4-2 | JREC_SF01_Main.gs: `saveAIAssessment_()` 内部関数（AI実行後に自動保存） | ✅ |
+| AI-4-3 | JREC_SF01_Main.gs: `getAIAssessmentsByVisitKey(visitKey)` 追加 | ✅ |
+| AI-4-4 | visit-form.html: 保存バナー（#aiSavedBanner: assessmentId + reviewStatus「レビュー未確認」） | ✅ |
+| AI-4-5 | visit-form.html: adoptedMemo テキストエリア | ⏸ Phase AI-5 で検討 |
+| AI-4-6 | visit-form.html: 過去AI判定表示 | ⏸ Phase AI-5 で検討 |
 
-**変更ファイル候補:** JREC_SF01_Setup.gs / JREC_SF01_Main.gs / visit-form.html
+**実装方針（確定）:**
+- AI実行成功時に自動で `AI_Assessments` に保存（手動保存ボタンは不要）
+- 初期 reviewStatus は `unreviewed`
+- 保存失敗時は UI を壊さずログのみ（fail-safe）
+- PII 非保存: outputJson = AI出力のみ。name/phone/address/dob/jrecPatientId は記録しない
+
+**AI_Assessments カラム:**
+```
+assessmentId / visitKey / patientId / createdAt / model / promptVersion /
+outputJson / reviewStatus / reviewedAt / reviewedBy / reviewNote /
+adoptedToChart / errorCode / errorMessage / updatedAt
+```
+
+**clasp push:** ✅ 2026-05-11
+**LiveCheck ai4:** ✅ 4 passed / 4 skipped / 0 failed
+**LiveCheck ai3（回帰）:** ✅ 3 passed / 3 skipped / 0 failed
+**人間作業:** GAS エディタで `runMigrateAddAIAssessmentsSheet()` を1回実行 → 実機確認
+**versioned deployment @38:** ⏸ 未実施（実機確認 PASS 後に任意タイミング）
+
+**変更ファイル:** Setup.gs / Main.gs / visit-form.html / ai4.spec.ts / package.json
 **既存会計・集計への影響:** なし（AI_Assessments は独立した新規シート）
 
 ---

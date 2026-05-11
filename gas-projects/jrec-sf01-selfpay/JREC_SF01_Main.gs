@@ -450,13 +450,109 @@ function runAIAssessment(visitKey) {
       return { ok: false, error: "AI 応答の JSON 解析に失敗しました" };
     }
 
-    Logger.log("[runAIAssessment] visitKey=" + visitKey + " ok=true model=" + respJson.model);
-    return { ok: true, result: result };
+    var assessmentId = saveAIAssessment_(visitKey, patient.patientId, result, null, null, respJson.model);
+    Logger.log("[runAIAssessment] visitKey=" + visitKey + " ok=true model=" + respJson.model + " assessmentId=" + assessmentId);
+    return { ok: true, result: result, assessmentId: assessmentId };
 
   } catch (err) {
     var m = err && err.message ? err.message : String(err);
     Logger.log("[runAIAssessment] ERROR: " + m);
     return { ok: false, error: m };
+  }
+}
+
+/**
+ * AI評価補助結果を AI_Assessments シートに保存する。
+ * 保存失敗は警告ログのみで呼び出し元には影響させない。
+ * 個人情報（氏名・住所・電話・生年月日）は保存しない。
+ *
+ * @param {string} visitKey
+ * @param {string} patientId  内部キー（例: P0001）
+ * @param {Object|null} outputObj  AI 出力 JSON（成功時）
+ * @param {string|null} errorCode  エラーコード（失敗時）
+ * @param {string|null} errorMessage  エラーメッセージ（失敗時）
+ * @param {string} [model]  使用モデル名
+ * @returns {string} assessmentId（保存失敗時は空文字）
+ */
+function saveAIAssessment_(visitKey, patientId, outputObj, errorCode, errorMessage, model) {
+  try {
+    var ss = getTargetSpreadsheet_();
+    var sh = ss.getSheetByName(SHEET_NAMES.AI_ASSESSMENTS);
+    if (!sh) {
+      Logger.log("[saveAIAssessment_] AI_Assessments シートが見つかりません。runMigrateAddAIAssessmentsSheet を実行してください。");
+      return "";
+    }
+
+    var now = new Date();
+    var ts = Utilities.formatDate(now, "Asia/Tokyo", "yyyyMMddHHmmssSSS");
+    var assessmentId = "ASMNT_" + ts;
+
+    sh.appendRow([
+      assessmentId,
+      visitKey      || "",
+      patientId     || "",
+      now,
+      model         || "gpt-4o-mini",
+      "v1",
+      outputObj     ? JSON.stringify(outputObj) : "",
+      "unreviewed",
+      "",
+      "",
+      "",
+      false,
+      errorCode     || "",
+      errorMessage  || "",
+      now
+    ]);
+
+    Logger.log("[saveAIAssessment_] saved assessmentId=" + assessmentId);
+    return assessmentId;
+  } catch (e) {
+    Logger.log("[saveAIAssessment_] 保存失敗（スキップ）: " + e.message);
+    return "";
+  }
+}
+
+/**
+ * visitKey に紐づく AI_Assessments レコードを新着順で返す。
+ * 個人特定情報は含まない（outputJson / reviewStatus のみ返す）。
+ *
+ * @param {string} visitKey
+ * @returns {{ ok: boolean, records?: Array, error?: string }}
+ */
+function getAIAssessmentsByVisitKey(visitKey) {
+  try {
+    if (!visitKey) return { ok: false, error: "visitKey が指定されていません" };
+
+    var ss = getTargetSpreadsheet_();
+    var sh = ss.getSheetByName(SHEET_NAMES.AI_ASSESSMENTS);
+    if (!sh) return { ok: true, records: [] };
+
+    var data = sh.getDataRange().getValues();
+    if (data.length < 2) return { ok: true, records: [] };
+
+    var headers = data[0];
+    var idxId      = headers.indexOf("assessmentId");
+    var idxVk      = headers.indexOf("visitKey");
+    var idxAt      = headers.indexOf("createdAt");
+    var idxOut     = headers.indexOf("outputJson");
+    var idxStatus  = headers.indexOf("reviewStatus");
+
+    var records = [];
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (data[i][idxVk] === visitKey) {
+        records.push({
+          assessmentId:  data[i][idxId],
+          createdAt:     data[i][idxAt],
+          outputJson:    data[i][idxOut],
+          reviewStatus:  data[i][idxStatus]
+        });
+      }
+    }
+    return { ok: true, records: records };
+  } catch (e) {
+    Logger.log("[getAIAssessmentsByVisitKey] ERROR: " + e.message);
+    return { ok: false, error: e.message };
   }
 }
 
