@@ -188,3 +188,65 @@
 2. 実機確認 PASS 後に versioned deployment @39
 3. Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
 4. Phase 6-M: CSV / 印刷 / 監査レポート
+
+---
+
+## 2026-05-12 追記 — 診断強化 + google.script.run 未準備リトライ
+
+### 推定原因（静的解析）
+
+実機 FAIL × 2回かつ Console に `[AI45] loadSavedAIAssessment start` ログが残っていない場合、
+最も可能性が高いのは **ページロード直後の IIFE 実行時点で `google.script.run` がまだ準備できていない**こと。
+従来コードは未準備時に silent return していたため Console には何も残らず「関数が呼ばれていない」と誤判定されやすい構造だった。
+
+判断根拠:
+- `runAIAssessment`（ボタンクリック起点）の `google.script.run` 経由保存は PASS（v2 / aiImpression）
+- 違いは「ユーザー操作後」vs「ページロード即時」のタイミングのみ
+- 即時実行は IFRAME 初期化と競合する可能性がある
+
+### 修正内容（visit-form.html）
+
+| 修正 | 目的 |
+|---|---|
+| `loadSavedAIAssessment` の entry ログをガード前に移動 | 関数が呼ばれたかを必ず Console に残す |
+| silent return 各経路（empty / google not ready / no assessment / parse fail）に理由ログ追加 | どこで止まったかを Console から特定できるようにする |
+| `google.script.run` 未準備時のみ 300ms 後にリトライ（最大3回） | ページロード即時呼び出しの timing 競合に対する保険 |
+| `displaySavedAssessment` の entry / skip / render 各段階にログ追加 | banner 未表示時の判定経路を可視化 |
+
+すべて diagnostic レイヤーの追加であり、既存の保存・新規実行ロジックは変更していない。
+
+### Console で確認すべきログ系列
+
+期待される正常フロー:
+```
+[AI45] loadSavedAIAssessment called  { visitKey, patientId, retryCount: 0, googleReady: true }
+[AI45] loadSavedAIAssessment start   { hasVisitKey, hasPatientId }
+[AI45] getLatestAIAssessmentForVisitOrPatient result  { ok: true, found: true, assessmentId, sourceType }
+[AI45] displaySavedAssessment called  { assessmentId, hasOutputJson, outputJsonLen }
+[AI45] displaySavedAssessment rendered banner  { assessmentId, sourceType }
+```
+
+各 silent return パターンの観測ガイド:
+
+| Console に見える最後のログ | 意味 |
+|---|---|
+| `called` のみ（その後何も出ない）+ `googleReady: false` + `retrying...` | google.script.run timing 競合（リトライで救済される想定）|
+| `called` + `googleReady: false` + `giving up` | リトライ後も未準備（深刻 — 別調査必要）|
+| `start` の後何も出ない | GAS 関数がタイムアウトまたはエラー（withFailureHandler すら来ない）|
+| `result` で `found: false` | 検索ロジックまたは visitKey / patientId 不一致 |
+| `displaySavedAssessment called` 後 `freshResult flag is set` | 別箇所で freshResult が立っている（新規実行と再読込の競合）|
+| `displaySavedAssessment called` 後 `outputObj is null` | outputJson の JSON.parse 失敗（おそらく 40000 文字 truncate）|
+
+### 実機再確認手順（2026-05-12 以降）
+
+1. /dev で対象患者の保存済み visitKey を持つカルテを開く
+2. F12 → Console を開く
+3. 上記ログ系列がどこで止まるか確認
+4. `result { ok: true, found: true }` まで到達すれば青バナー表示まで連動するはず
+5. PASS なら @39 deploy へ進む / FAIL なら停止位置に応じて次の修正
+
+### LiveCheck
+
+- 2026-05-12: `npm run test:jrec:ai45` 実行 → 10 件すべて skip（auth.json 期限切れ）
+- 自動テストは構造のみ確認・本件の本質（実機 timing）はカバーできないため、auth 再作成優先度は低い
+- 必要時のみ `npm run save-auth` で再作成

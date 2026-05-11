@@ -119,6 +119,15 @@
   - 修正: console.log によるクライアント側診断ログ追加
   - 修正: `withFailureHandler` にエラーログ追加
 
+  **追加修正（3回目 clasp push, 2026-05-12）:**
+  - 推定原因: ページロード即時 IIFE 実行時点で `google.script.run` 未準備 → silent return → Console に何も残らず誤判定（v2 保存は PASS, 即時呼び出しのみ FAIL の症状と整合）
+  - 修正: `loadSavedAIAssessment` の entry ログを **ガードより前**に移動（関数が呼ばれたか必ず Console に残るようにする）
+  - 修正: silent return 各経路（empty key / google not ready / no record / JSON.parse fail）に理由ログ追加
+  - 修正: `google.script.run` 未準備時のみ 300ms 後にリトライ（最大3回）— timing 競合に対する保険
+  - 修正: `displaySavedAssessment` の entry / skip / render 各段階にログ追加（banner 未表示時の経路を可視化）
+  - 既存の保存・新規実行ロジックは変更なし（diagnostic 層のみ追加）
+  - 詳細: `docs/AI45_SAVED_ASSESSMENT_RELOAD_AND_IMPRESSION_2026-05-11.md` の 2026-05-12 追記参照
+
 **Phase AI-4.5 実機確認結果（2026-05-11 PARTIAL）:**
   - ✅ AI_Assessments v2保存: PASS
   - ✅ outputJson.aiImpression保存: PASS

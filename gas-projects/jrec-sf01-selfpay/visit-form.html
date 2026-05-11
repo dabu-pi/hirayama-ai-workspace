@@ -707,10 +707,31 @@ function formatDateJP(d) {
 /**
  * 保存済みAI評価を非同期で取得して表示する。
  * visitKey → patientId の順で検索する。両方空なら何もしない。
+ * google.script.run 未準備時は最大3回までリトライ（ページロード即時呼び出し対策）。
  */
-function loadSavedAIAssessment(visitKey, patientId) {
-  if (!visitKey && !patientId) return;
-  if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+function loadSavedAIAssessment(visitKey, patientId, retryCount) {
+  retryCount = retryCount || 0;
+  var googleReady = !!(typeof google !== 'undefined' && google.script && google.script.run);
+  console.log('[AI45] loadSavedAIAssessment called', {
+    visitKey:    visitKey  || '(empty)',
+    patientId:   patientId || '(empty)',
+    retryCount:  retryCount,
+    googleReady: googleReady
+  });
+
+  if (!visitKey && !patientId) {
+    console.log('[AI45] skipped: both visitKey and patientId are empty');
+    return;
+  }
+  if (!googleReady) {
+    if (retryCount < 3) {
+      console.log('[AI45] google.script.run not ready — retrying in 300ms (attempt ' + (retryCount + 1) + '/3)');
+      setTimeout(function() { loadSavedAIAssessment(visitKey, patientId, retryCount + 1); }, 300);
+    } else {
+      console.log('[AI45] google.script.run not ready after 3 retries — giving up');
+    }
+    return;
+  }
 
   console.log('[AI45] loadSavedAIAssessment start', {
     hasVisitKey: !!visitKey, hasPatientId: !!patientId
@@ -719,13 +740,16 @@ function loadSavedAIAssessment(visitKey, patientId) {
   google.script.run
     .withSuccessHandler(function(res) {
       console.log('[AI45] getLatestAIAssessmentForVisitOrPatient result', {
-        found:        !!(res && res.ok && res.assessment),
-        assessmentId: res && res.assessment ? res.assessment.assessmentId : null,
-        sourceType:   res && res.assessment ? res.assessment.sourceType : null,
+        ok:            !!(res && res.ok),
+        found:         !!(res && res.ok && res.assessment),
+        assessmentId:  res && res.assessment ? res.assessment.assessmentId  : null,
+        sourceType:    res && res.assessment ? res.assessment.sourceType    : null,
         promptVersion: res && res.assessment ? res.assessment.promptVersion : null
       });
       if (res && res.ok && res.assessment) {
         displaySavedAssessment(res.assessment);
+      } else {
+        console.log('[AI45] no saved assessment for this visitKey/patientId');
       }
     })
     .withFailureHandler(function(err) {
@@ -739,15 +763,33 @@ function loadSavedAIAssessment(visitKey, patientId) {
  * 新規AI実行後の表示（displayAiResult）を上書きしない。
  */
 function displaySavedAssessment(assessment) {
-  // 新規AI実行で既に表示されていたら上書きしない
+  console.log('[AI45] displaySavedAssessment called', {
+    assessmentId:  assessment && assessment.assessmentId,
+    hasOutputJson: !!(assessment && assessment.outputJson),
+    outputJsonLen: assessment && assessment.outputJson ? assessment.outputJson.length : 0
+  });
+
   var result = document.getElementById('aiAssistResult');
-  if (!result || result.dataset.freshResult === '1') return;
+  if (!result) {
+    console.log('[AI45] displaySavedAssessment skipped: #aiAssistResult element not found');
+    return;
+  }
+  if (result.dataset.freshResult === '1') {
+    console.log('[AI45] displaySavedAssessment skipped: freshResult flag is set (new AI result already shown)');
+    return;
+  }
 
   var outputObj = null;
   if (assessment.outputJson) {
-    try { outputObj = JSON.parse(assessment.outputJson); } catch (e) {}
+    try { outputObj = JSON.parse(assessment.outputJson); }
+    catch (e) {
+      console.log('[AI45] outputJson parse error', String(e && e.message || e));
+    }
   }
-  if (!outputObj) return;
+  if (!outputObj) {
+    console.log('[AI45] displaySavedAssessment skipped: outputObj is null (parse failed or empty)');
+    return;
+  }
 
   var placeholder = document.getElementById('aiAssistPlaceholder');
   if (placeholder) placeholder.style.display = 'none';
@@ -805,6 +847,10 @@ function displaySavedAssessment(assessment) {
 
   result.innerHTML = html;
   result.style.display = 'block';
+  console.log('[AI45] displaySavedAssessment rendered banner', {
+    assessmentId: assessment.assessmentId,
+    sourceType:   assessment.sourceType
+  });
 }
 </script>
 </body>
