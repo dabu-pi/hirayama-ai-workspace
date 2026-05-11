@@ -1,14 +1,27 @@
 # PROJECT_STATUS.md
 
-最終更新: 2026-05-11（JBIZ-04 独立 repo 化 — 親 workspace の整理に巻き込まれない構成へ）
+最終更新: 2026-05-11（JBIZ-04 正本確定 — workspace 側に一本化、standalone ローカル削除）
 
-> **【2026-05-11 3rd 注記 / 方針再判断保留中】**
-> 下記「2026-05-11 - 2nd」追記には「standalone を正本とする」と書かれているが、
-> 同日に「workspace 側を正本に一本化する」候補も並行検討されている。
-> 現時点では **workspace / standalone 両方を残置** し、方針確定までいずれも削除しない。
-> 差分の事実記録のみ standalone 側 commit `5783be6` から取り込み済み。
+## ⚑ 最新更新（2026-05-11 - 4th / 確定） — JBIZ-04 正本を workspace に一本化
 
-## ⚑ 最新更新（2026-05-11 - 2nd） — JBIZ-04 独立 repo 化
+- **確定方針:** JBIZ-04 / hirayama-jyusei-strategy の **正本（single source of truth）は
+  workspace 側** に確定する。
+  - 正本パス: `C:\hirayama-ai-workspace\workspace\hirayama-jyusei-strategy`
+  - 正本 remote: `https://github.com/dabu-pi/hirayama-ai-workspace.git`
+  - 正本 branch: `feature/auto-dev-phase3-loop`
+- **standalone ローカル:** `C:\hirayama-ai-workspace\standalone-repos\hirayama-jyusei-strategy`
+  は重複・混乱防止のため **2026-05-11 に削除済み**。
+  - 親フォルダ `standalone-repos\` 自体は他用途のため残置。
+- **private remote:** `hirayama-jyusei-strategy.git` (private) は当面 **削除せず保全**。
+  参照・バックアップ用途として残す。今後の更新は流入させない（push しない）。
+- **方針反転の理由:** 並行管理（workspace + standalone）が混乱の原因になっていたため。
+  下記「2026-05-11 - 2nd」で記録された standalone 正本化方針は本セクションで反転される。
+- **今後の作業場所:** `workspace/hirayama-jyusei-strategy/` のみ。standalone 側にコミットしない。
+- **Dashboard:** Dashboard 専用ファイル（Projects / Task_Queue / Run_Log）は本リポジトリ内
+  に存在しない。`de -ProjectId JBIZ-04 ...` 実行時に Dashboard 側の `次アクション` /
+  `最終更新日` / `補足` 3 列が同期される（環境変数設定済み端末でのみ）。
+
+## ⚑ 最新更新（2026-05-11 - 2nd） — JBIZ-04 独立 repo 化（※ 4th で反転済み）
 
 - **背景:** 2026-05-02 commit `54add16` による親 workspace 側の誤削除（→ 同日復旧）を受けて、
   再発防止のため `hirayama-jyusei-strategy/` を独立 private repo に分離した。
