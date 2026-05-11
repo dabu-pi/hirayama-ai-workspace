@@ -450,7 +450,7 @@ function runAIAssessment(visitKey) {
       return { ok: false, error: "AI 応答の JSON 解析に失敗しました" };
     }
 
-    var saveResult = saveAIAssessment_(visitKey, patient.patientId, result, null, null, respJson.model);
+    var saveResult = saveAIAssessment_(visitKey, patient.patientId, result, null, null, respJson.model, "v2");
     Logger.log("[runAIAssessment] visitKey=" + visitKey + " ok=true model=" + respJson.model + " saveOk=" + saveResult.ok + " assessmentId=" + saveResult.id);
     return { ok: true, result: result, assessmentId: saveResult.id || "", saveOk: saveResult.ok, saveDetail: saveResult.detail || "" };
 
@@ -467,7 +467,7 @@ function runAIAssessment(visitKey) {
  *
  * @returns {{ ok: boolean, id: string, detail: string }}
  */
-function saveAIAssessment_(visitKey, patientId, outputObj, errorCode, errorMessage, model) {
+function saveAIAssessment_(visitKey, patientId, outputObj, errorCode, errorMessage, model, promptVer) {
   var AI_SHEET_NAME = "AI_Assessments"; // SHEET_NAMES参照を避けハードコード
   try {
     var ss = getTargetSpreadsheet_();
@@ -503,7 +503,7 @@ function saveAIAssessment_(visitKey, patientId, outputObj, errorCode, errorMessa
       patientId    || "",
       now,
       model        || "gpt-4o-mini",
-      "v1",
+      promptVer    || "v1",
       outputStr,
       "unreviewed",
       "",
@@ -567,6 +567,59 @@ function getAIAssessmentsByVisitKey(visitKey) {
   }
 }
 
+/**
+ * visitKey に紐づく最新の AI_Assessments レコードを1件返す。
+ * UI の保存済みAI評価再読込に使用する。PII は返さない。
+ *
+ * @param {string} visitKey
+ * @returns {{ ok: boolean, assessment: Object|null }}
+ */
+function getLatestAIAssessmentForVisit(visitKey) {
+  var AI_SHEET_NAME = "AI_Assessments"; // ハードコード（SHEET_NAMES参照を避ける）
+  try {
+    if (!visitKey) return { ok: true, assessment: null };
+    var ss = getTargetSpreadsheet_();
+    var sh = ss.getSheetByName(AI_SHEET_NAME);
+    if (!sh || sh.getLastRow() < 2) return { ok: true, assessment: null };
+
+    var data = sh.getDataRange().getValues();
+    if (data.length < 2) return { ok: true, assessment: null };
+
+    var h         = data[0];
+    var idxId     = h.indexOf("assessmentId");
+    var idxVk     = h.indexOf("visitKey");
+    var idxAt     = h.indexOf("createdAt");
+    var idxOut    = h.indexOf("outputJson");
+    var idxStatus = h.indexOf("reviewStatus");
+    var idxModel  = h.indexOf("model");
+    var idxPv     = h.indexOf("promptVersion");
+
+    var latest    = null;
+    var latestMs  = 0;
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      if (!row[idxId] || row[idxVk] !== visitKey) continue;
+      var t = row[idxAt] ? new Date(row[idxAt]).getTime() : 0;
+      if (t >= latestMs) {
+        latestMs = t;
+        latest = {
+          assessmentId:  String(row[idxId]),
+          createdAt:     row[idxAt],
+          outputJson:    String(row[idxOut] || ""),
+          reviewStatus:  String(row[idxStatus] || ""),
+          model:         String(row[idxModel] || ""),
+          promptVersion: String(row[idxPv] || "")
+        };
+      }
+    }
+    Logger.log("[getLatestAIAssessmentForVisit] visitKey=" + visitKey + " found=" + (latest ? latest.assessmentId : "none"));
+    return { ok: true, assessment: latest };
+  } catch (e) {
+    Logger.log("[getLatestAIAssessmentForVisit] ERROR: " + e.message);
+    return { ok: true, assessment: null }; // fail-safe
+  }
+}
+
 /** 年齢層を返す */
 function calcAgeBand_(age) {
   if (age <= 5)  return "幼児";
@@ -610,7 +663,7 @@ function buildAIPrompt_(data) {
   return lines.join("\n");
 }
 
-/** AI システムプロンプト */
+/** AI システムプロンプト (promptVersion: v2 — aiImpression 追加) */
 var AI_SYSTEM_PROMPT_ =
   "あなたは接骨院・整骨院の施術者（柔道整復師）を補助するAIアシスタントです。\n" +
   "提供された患者情報と来院情報をもとに、以下の観点で補助情報を日本語で返してください。\n" +
@@ -624,9 +677,14 @@ var AI_SYSTEM_PROMPT_ =
   '  "additionalQuestions":   ["追加問診候補1", "追加問診候補2", ...],\n' +
   '  "treatmentApproach":     ["施術方針案1", "施術方針案2", ...],\n' +
   '  "referralIndication":    "医療機関受診勧奨の目安（不要なら空文字）",\n' +
-  '  "chartDraft":            "カルテ下書き（評価・所見・施術内容の文章化案）"\n' +
+  '  "chartDraft":            "カルテ下書き（評価・所見・施術内容の文章化案）",\n' +
+  '  "aiImpression": {\n' +
+  '    "summary":              "主訴・症状・所見から見た参考的な全体像（断定しない）",\n' +
+  '    "therapistCheckpoints": ["施術者が確認すべきポイント1", "ポイント2", ...]\n' +
+  '  }\n' +
   "}\n" +
   "\n" +
   "redFlags は該当なしでも空配列ではなく [\"特記すべき危険サインは確認されませんでした\"] としてください。\n" +
   "各配列の要素は2〜5件が目安です。\n" +
-  "断定表現（「〜です」「〜に違いない」等）は使用しないでください。";
+  "断定表現（「〜です」「〜に違いない」等）は使用しないでください。\n" +
+  "aiImpression は参考情報として記述し、診断の確定表現は使用しないでください。";

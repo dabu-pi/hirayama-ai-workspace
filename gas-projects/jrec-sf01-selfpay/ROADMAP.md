@@ -390,6 +390,36 @@
 
 ---
 
+### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て 🔄（実装完了・実機確認待ち 2026-05-11）
+
+**目的:** 保存済みAI評価を編集画面で自動再表示 + AI参考見立て（aiImpression）を追加する
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| AI-4.5-1 | `getLatestAIAssessmentForVisit(visitKey)` 追加（最新レコード1件返却） | ✅ |
+| AI-4.5-2 | `AI_SYSTEM_PROMPT_` に `aiImpression` 追加 / promptVersion "v2" | ✅ |
+| AI-4.5-3 | `visit-form.html`: 編集モード起動時に保存済みAI評価を自動読み込み | ✅ |
+| AI-4.5-4 | `visit-form.html`: 青バナー「📂 保存済みAI評価補助を読み込みました」+ AI参考見立て表示 | ✅ |
+| AI-4.5-5 | `visit-form.html`: AI参考見立てセクション（🧠）+ 免責注意文 | ✅ |
+| AI-4.5-6 | `visit-form.html`: 新規AI実行後は新結果が青バナーを上書き（freshResult フラグ） | ✅ |
+| AI-4.5-7 | `ai45.spec.ts` 追加（5自動 + 5手動 SKIP） | ✅ |
+
+**UI表現方針:**
+- 表示名: 「AI参考見立て」
+- 必須注意文: 「この内容はAIによる参考情報です。診断確定ではありません。最終判断は施術者が行ってください。」
+- 禁止: AI診断 / 確定診断 / 保険請求上の判断 / 医師判断不要 / 必ず〜
+
+**clasp push:** ✅ 2026-05-11
+**LiveCheck ai45:** ✅ 5 passed / 5 skipped / 0 failed
+**LiveCheck ai4（回帰）:** ✅ 4 passed / 0 failed
+**LiveCheck ai3（回帰）:** ✅ 3 passed / 0 failed
+**人間作業:** 実機確認（AI45-H1〜H5）
+**versioned deployment @39:** ⏸ 未実施（実機確認 PASS 後）
+
+**変更ファイル:** Main.gs / visit-form.html / ai45.spec.ts / package.json
+
+---
+
 ### Phase AI-4: AI補助判定保存・レビュー ✅（CLOSED 2026-05-11 @38）
 
 **目的:** AI判定を AI_Assessments シートに保存し、施術者がレビューできるようにする

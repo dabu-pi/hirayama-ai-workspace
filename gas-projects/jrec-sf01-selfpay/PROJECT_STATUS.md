@@ -94,10 +94,30 @@
   - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
   - 説明: @38 - Phase AI-4: AI_Assessments 保存・レビューバナー
 
+**🔄 Phase AI-4.5 保存済みAI評価再読込 + AI参考見立て: 実装完了・実機確認待ち（2026-05-11）**
+  - `JREC_SF01_Main.gs`: `getLatestAIAssessmentForVisit(visitKey)` 追加（ハードコードシート名・fail-safe）
+  - `JREC_SF01_Main.gs`: `AI_SYSTEM_PROMPT_` に `aiImpression` フィールド追加（promptVersion v2）
+  - `JREC_SF01_Main.gs`: `saveAIAssessment_()` に `promptVer` パラメータ追加 / `runAIAssessment()` で "v2" を渡す
+  - `visit-form.html`: 編集モード起動時に `loadSavedAIAssessment(visitKey)` を自動呼び出し
+  - `visit-form.html`: `loadSavedAIAssessment()` → `displaySavedAssessment()` → 青バナー + AI評価全セクション + aiImpression
+  - `visit-form.html`: `buildAiImpressionHtml()` / `formatDateJP()` ヘルパー追加
+  - `visit-form.html`: `displayAiResult()` に `aiImpression` レンダリング追加 / `dataset.freshResult='1'` フラグ（再読み込み上書き防止）
+  - `tools/live-check-runner/projects/jrec-sf01/ai45.spec.ts` 新規 / `package.json` に `test:jrec:ai45` 追加
+  - clasp push: ✅ 2026-05-11
+  - LiveCheck ai45: ✅ 5 passed / 5 skipped / 0 failed
+  - LiveCheck ai4（回帰）: ✅ 4 passed / 0 failed
+  - LiveCheck ai3（回帰）: ✅ 3 passed / 0 failed
+  - AI参考見立て UI: 表示禁止事項（診断確定・保険請求・必ず〜）を含めない設計で実装
+  - PII除外: ✅ コードレビュー確認済み（getLatestAIAssessmentForVisit は outputJson のみ返却）
+
+**Phase AI-4.5 残作業（実機確認）:**
+  - ⏸ 実機確認（AI45-H1〜H5）: 青バナー / AI参考見立て表示 / 再実行切り替え / v2記録確認
+  - ⏸ versioned deploy @39（実機確認 PASS 後）
+
 次期実装候補:
-1. **Phase AI-5** 運用改善（プロンプト調整・過去判定比較）
-2. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
-3. AI4-H3/H4 運用中確認（シート記録内容・PII確認）
+1. **Phase AI-4.5 実機確認 + @39 deploy**（次にやること）
+2. **Phase AI-5** 運用改善（プロンプト調整・過去判定比較）
+3. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 
 **Phase AI-3 設計プロンプト作成済み（2026-05-04）:**
   - `docs/PHASE_AI3_DESIGN_PROMPT_2026-05-04.md`

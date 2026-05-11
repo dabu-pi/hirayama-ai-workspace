@@ -334,8 +334,9 @@ window.onerror = function(message, source, lineno) {
     document.getElementById('contraindication').value   = EDIT_VISIT.contraindication   || '';
     document.getElementById('lifestyle').value          = EDIT_VISIT.lifestyle          || '';
     document.getElementById('nextAppointment').value    = EDIT_VISIT.nextAppointment    || '';
-    // 編集モード: visitKey 確定済みのため AI評価補助ボタンを有効化
+    // 編集モード: visitKey 確定済みのため AI評価補助ボタンを有効化 + 保存済みAI評価を自動読み込み
     enableAiAssist(EDIT_VISIT.selfPayVisitKey);
+    loadSavedAIAssessment(EDIT_VISIT.selfPayVisitKey);
   } else {
     // 新規モード: 来院日のデフォルトを今日に設定
     var today = new Date();
@@ -631,11 +632,15 @@ function displayAiResult(r, assessmentId, saveOk, saveDetail) {
   if (r.chartDraft) {
     html += textSection('📝', 'カルテ下書き', r.chartDraft, '#e8f0fe', '#aecbfa');
   }
+  if (r.aiImpression) {
+    html += buildAiImpressionHtml(r.aiImpression);
+  }
   html += '<p style="font-size:11px;color:#9aa0a6;margin-top:8px;line-height:1.5;">' +
     '⚠️ 上記はAIによる参考情報です。診断の確定ではありません。施術者が確認・判断してください。</p>';
 
   result.innerHTML = html;
   result.style.display = 'block';
+  result.dataset.freshResult = '1'; // 新規実行済みフラグ（保存済み読み込みで上書きしない）
 }
 
 function showAiError(msg) {
@@ -659,6 +664,128 @@ function resetAiBtn() {
       '対象カルテ: <code style="font-size:11px;background:#f1f3f4;padding:1px 5px;border-radius:3px;">' +
       escapeAi(SAVED_VISIT_KEY || '—') + '</code>';
   }
+}
+
+// ── AI参考見立て レンダリング ────────────────────────────
+
+function buildAiImpressionHtml(imp) {
+  if (!imp) return '';
+  var html =
+    '<div style="padding:10px;background:#f3e8fd;border-radius:6px;border:1px solid #d7aefb;margin-bottom:8px;">' +
+    '<div style="font-weight:600;color:#6200ea;font-size:12px;margin-bottom:4px;">🧠 AI参考見立て</div>' +
+    '<div style="font-size:11px;color:#c5221f;background:#fce8e6;border-radius:3px;padding:3px 7px;margin-bottom:6px;">' +
+    'この内容はAIによる参考情報です。診断確定ではありません。最終判断は施術者が行ってください。</div>';
+  if (imp.summary) {
+    html += '<p style="font-size:12px;color:#3c4043;margin:0 0 6px 0;">' + escapeAi(imp.summary) + '</p>';
+  }
+  if (Array.isArray(imp.therapistCheckpoints) && imp.therapistCheckpoints.length) {
+    html += '<ul style="margin:0;padding-left:16px;font-size:12px;color:#5f6368;line-height:1.8;">' +
+      imp.therapistCheckpoints.map(function(c) { return '<li>' + escapeAi(c) + '</li>'; }).join('') +
+      '</ul>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ── 保存済みAI評価 自動読み込み（Phase AI-4.5）────────────
+
+function formatDateJP(d) {
+  if (!d) return '';
+  try {
+    var dt = new Date(d);
+    if (isNaN(dt.getTime())) return String(d);
+    var y = dt.getFullYear();
+    var m = String(dt.getMonth() + 1).padStart(2, '0');
+    var day = String(dt.getDate()).padStart(2, '0');
+    var h = String(dt.getHours()).padStart(2, '0');
+    var min = String(dt.getMinutes()).padStart(2, '0');
+    return y + '/' + m + '/' + day + ' ' + h + ':' + min;
+  } catch (e) { return String(d); }
+}
+
+/**
+ * 保存済みAI評価を非同期で取得して表示する（編集モード起動時に自動呼び出し）。
+ */
+function loadSavedAIAssessment(visitKey) {
+  if (!visitKey) return;
+  if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.ok && res.assessment) {
+        displaySavedAssessment(res.assessment);
+      }
+    })
+    .withFailureHandler(function() { /* silent */ })
+    .getLatestAIAssessmentForVisit(visitKey);
+}
+
+/**
+ * 保存済みAI評価を AI評価補助エリアに表示する。
+ * 新規AI実行後の表示（displayAiResult）を上書きしない。
+ */
+function displaySavedAssessment(assessment) {
+  // 新規AI実行で既に表示されていたら上書きしない
+  var result = document.getElementById('aiAssistResult');
+  if (!result || result.dataset.freshResult === '1') return;
+
+  var outputObj = null;
+  if (assessment.outputJson) {
+    try { outputObj = JSON.parse(assessment.outputJson); } catch (e) {}
+  }
+  if (!outputObj) return;
+
+  var placeholder = document.getElementById('aiAssistPlaceholder');
+  if (placeholder) placeholder.style.display = 'none';
+
+  var statusBadge = assessment.reviewStatus === 'unreviewed'
+    ? '<span style="font-size:11px;padding:1px 7px;border-radius:10px;background:#fff3e0;color:#e37400;font-weight:600;">レビュー未確認</span>'
+    : '<span style="font-size:11px;padding:1px 7px;border-radius:10px;background:#e8f0fe;color:#1a73e8;font-weight:600;">' + escapeAi(assessment.reviewStatus) + '</span>';
+
+  var html =
+    '<div id="aiLoadedBanner" style="padding:8px 12px;background:#e8f0fe;border-left:3px solid #4285f4;border-radius:4px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+    '<span style="font-size:12px;color:#1a73e8;font-weight:600;">📂 保存済みAI評価補助を読み込みました</span>' +
+    '<span style="font-size:11px;color:#5f6368;">ID: ' + escapeAi(assessment.assessmentId) + '</span>' +
+    '<span style="font-size:11px;color:#5f6368;">作成: ' + escapeAi(formatDateJP(assessment.createdAt)) + '</span>' +
+    statusBadge +
+    '</div>';
+
+  // AI出力セクション
+  function sec(icon, title, items, bg, border, tc) {
+    bg = bg || '#f8f9fa'; border = border || '#e8eaed'; tc = tc || '#3c4043';
+    var li = Array.isArray(items) && items.length
+      ? '<ul style="margin:4px 0 0 0;padding-left:16px;font-size:12px;color:#5f6368;line-height:1.8;">' +
+          items.map(function(i) { return '<li>' + escapeAi(i) + '</li>'; }).join('') + '</ul>'
+      : '<p style="font-size:12px;color:#9aa0a6;margin:4px 0 0 0;">—</p>';
+    return '<div style="padding:10px;background:' + bg + ';border-radius:6px;border:1px solid ' + border + ';margin-bottom:8px;">' +
+      '<div style="font-weight:600;color:' + tc + ';font-size:12px;margin-bottom:2px;">' + icon + ' ' + title + '</div>' + li + '</div>';
+  }
+  function textSec(icon, title, text, bg, border) {
+    bg = bg || '#f8f9fa'; border = border || '#e8eaed';
+    return '<div style="padding:10px;background:' + bg + ';border-radius:6px;border:1px solid ' + border + ';margin-bottom:8px;">' +
+      '<div style="font-weight:600;color:#3c4043;font-size:12px;margin-bottom:4px;">' + icon + ' ' + title + '</div>' +
+      '<p style="font-size:12px;color:#5f6368;white-space:pre-wrap;margin:0;">' + escapeAi(text || '—') + '</p></div>';
+  }
+
+  html += sec('📋', '評価の観点整理', outputObj.assessmentPoints);
+  html += sec('🔍', '鑑別の方向性',   outputObj.differentialDirection);
+  html += sec('⚠️', '危険サイン確認', outputObj.redFlags, '#fff8e1', '#fce8b2', '#c4770b');
+  html += sec('💬', '追加問診候補',   outputObj.additionalQuestions);
+  html += sec('🎯', '施術方針案',     outputObj.treatmentApproach);
+  if (outputObj.referralIndication) {
+    html += textSec('🏥', '受診勧奨の目安', outputObj.referralIndication, '#fce8e6', '#f28b82');
+  }
+  if (outputObj.chartDraft) {
+    html += textSec('📝', 'カルテ下書き', outputObj.chartDraft, '#e8f0fe', '#aecbfa');
+  }
+  if (outputObj.aiImpression) {
+    html += buildAiImpressionHtml(outputObj.aiImpression);
+  }
+  html += '<p style="font-size:11px;color:#9aa0a6;margin-top:8px;line-height:1.5;">' +
+    '⚠️ 上記はAIによる参考情報です。診断の確定ではありません。施術者が確認・判断してください。</p>';
+
+  result.innerHTML = html;
+  result.style.display = 'block';
 }
 </script>
 </body>
