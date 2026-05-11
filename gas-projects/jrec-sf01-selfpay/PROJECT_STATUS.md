@@ -86,6 +86,8 @@
   - LiveCheck ai3（回帰）: ✅ 3 passed / 3 skipped / 0 failed
   - PII保存除外: ✅ コードレビュー確認済み（outputJson = AI出力のみ。name/phone/address/dob/jrecPatientId 非保存）
   - デバッグ経緯: 初期実装で `SHEET_NAMES.AI_ASSESSMENTS` 参照が webapp 実行時に失敗→シート未発見で "" 返却。シート名ハードコード + エラー伝播で解消
+  - 人間目視確認（2026-05-11）: AI_Assessments シートに記録 PASS。assessmentId=`ASMNT_...` / visitKey=`SPV_20260511_P0001_001` / patientId=`P0001` / model=`gpt-4o-mini-2024-07-18` / promptVersion=`v1` / reviewStatus=`unreviewed` 確認済み
+  - 空行補足: 記録は 502行目以降。`setupAIAssessments_()` で行 2〜501 にチェックボックス・入力規則を事前設定したため GAS の `appendRow` が 502 行目を最終行の次と判断。機能上の問題なし。将来 cleanup 候補（空行削除 or `setValues` 方式へ変更）
 
 **✅ Versioned Deployment @38: 本番反映済み**（2026-05-11）
   - deploymentId: AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA

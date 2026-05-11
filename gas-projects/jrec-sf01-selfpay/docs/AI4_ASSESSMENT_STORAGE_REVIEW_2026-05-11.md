@@ -170,8 +170,36 @@ GAS webapp 実行コンテキストでは `SHEET_NAMES` グローバル変数が
 
 ---
 
+## 人間目視確認結果（2026-05-11）
+
+| 確認項目 | 結果 |
+|---|---|
+| AI_Assessments シートに記録あり | ✅ PASS |
+| assessmentId が `ASMNT_...` 形式 | ✅ PASS |
+| visitKey: `SPV_20260511_P0001_001` | ✅ PASS |
+| patientId: `P0001`（内部キーのみ） | ✅ PASS |
+| createdAt 記録あり | ✅ PASS |
+| model: `gpt-4o-mini-2024-07-18` | ✅ PASS |
+| promptVersion: `v1` | ✅ PASS |
+| 氏名・住所・電話・生年月日 非保存 | ✅（内部キーのみ確認） |
+
+### 補足: 空行について
+
+記録は 502行目以降に入っていた。
+
+**原因:** `setupAIAssessments_()` 内で `applyDropdown_()` と `insertCheckboxes()` を行 2〜501（500行分）に事前適用。GAS の `appendRow` は入力規則・チェックボックスが設定された行も「データあり」とカウントするため、502行目が最初のデータ行になった。
+
+**機能上の影響:** なし（記録は正常に行われる）。
+
+**将来 cleanup 候補:**
+- 事前検証・チェックボックス行数を削減（例: 50行）
+- または `appendRow` → `setValues` 方式に変更
+- 既存 500 空行は手動削除またはスクリプトで一括削除可能
+
+---
+
 ## 次回作業
 
 1. Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
 2. Phase 6-M: CSV / 印刷 / 監査レポート
-3. AI4-H3/H4 運用中確認（AI_Assessments シート内容・PII除外を目視確認）
+3. AI_Assessments 空行 cleanup（任意タイミング・@38 後の cleanup 候補）

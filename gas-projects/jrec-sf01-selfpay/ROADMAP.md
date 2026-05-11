@@ -419,6 +419,10 @@ adoptedToChart / errorCode / errorMessage / updatedAt
 **clasp push:** ✅ 2026-05-11
 **migrate:** ✅ `runMigrateAddAIAssessmentsSheet()` 実行済み
 **実機確認:** ✅ 緑バナー（assessmentId + レビュー未確認）表示 PASS（2026-05-11）
+**シート記録目視確認:** ✅ AI_Assessments に記録確認 PASS（2026-05-11）
+  - assessmentId=`ASMNT_...` / visitKey=`SPV_20260511_P0001_001` / patientId=`P0001` / model=`gpt-4o-mini-2024-07-18` 確認済み
+  - 記録は 502行目以降（事前設定した検証・チェックボックス 500行分の影響。機能上問題なし）
+  - cleanup 候補: 将来 `appendRow` → `setValues` 方式に変更して空行を解消
 **LiveCheck ai4:** ✅ 4 passed / 4 skipped / 0 failed
 **LiveCheck ai3（回帰）:** ✅ 3 passed / 3 skipped / 0 failed
 **PII除外:** ✅ コードレビュー確認済み
