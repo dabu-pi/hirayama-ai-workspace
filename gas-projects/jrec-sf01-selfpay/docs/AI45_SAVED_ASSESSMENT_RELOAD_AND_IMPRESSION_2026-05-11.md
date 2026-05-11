@@ -12,15 +12,15 @@
 
 | 項目 | 結果 |
 |---|---|
-| 実施日 | 2026-05-11 |
+| 実施日 | 2026-05-11 → 2026-05-12 (CLOSED) |
 | フェーズ | Phase AI-4.5 |
-| ステータス | 🔄 実装完了 / 実機確認待ち |
-| clasp push | ✅ 2026-05-11 |
+| ステータス | ✅ CLOSED |
+| clasp push | ✅ 2026-05-11（2回）+ 2026-05-12（診断強化）= 計3回 |
 | LiveCheck ai45 | ✅ 5 passed / 5 skipped / 0 failed |
 | LiveCheck ai4（回帰） | ✅ 4 passed / 0 failed |
 | LiveCheck ai3（回帰） | ✅ 3 passed / 0 failed |
-| 実機確認 | ❌ PARTIAL（青バナー2回FAIL / 2026-05-11 中断） |
-| @39 deploy | ⏸ 実機確認 PASS 後 |
+| 実機確認 | ✅ PASS（2026-05-12 /dev 5項目すべて） |
+| @39 deploy | ✅ 本番反映済み（2026-05-12） |
 
 ---
 
@@ -250,3 +250,38 @@
 - 2026-05-12: `npm run test:jrec:ai45` 実行 → 10 件すべて skip（auth.json 期限切れ）
 - 自動テストは構造のみ確認・本件の本質（実機 timing）はカバーできないため、auth 再作成優先度は低い
 - 必要時のみ `npm run save-auth` で再作成
+
+---
+
+## 2026-05-12 追記 — 実機確認 PASS + @39 deploy CLOSED
+
+### 実機確認結果（/dev）
+
+診断強化 3回目 clasp push 後に /dev で再検証：
+
+| 確認項目 | 結果 |
+|---|---|
+| 保存済みAI評価の再読み込み | ✅ PASS |
+| 青バナー「📂 保存済みAI評価補助を読み込みました」表示 | ✅ PASS |
+| AI参考見立て（🧠）再表示 | ✅ PASS |
+| カルテ下書き再表示 | ✅ PASS |
+| 新規AI実行（緑バナー / freshResult 上書き） | ✅ PASS |
+
+推定原因（page-load 時点で `google.script.run` 未準備 → silent return）は
+2026-05-12 のリトライ実装で救済された見込み。
+診断ログは今後の障害切り分け用にそのまま残置。
+
+### versioned deployment @39
+
+| 項目 | 値 |
+|---|---|
+| version | @39 |
+| deploymentId | `AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw` |
+| exec URL | `https://script.google.com/macros/s/AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw/exec` |
+| description | `@39 - Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て` |
+| 実施日 | 2026-05-12 |
+
+### 次フェーズ
+
+- Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
+- Phase 6-M: CSV / 印刷 / 監査レポート ⏸

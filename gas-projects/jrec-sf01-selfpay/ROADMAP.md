@@ -390,7 +390,7 @@
 
 ---
 
-### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て 🔄（実装完了・実機確認待ち 2026-05-11）
+### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て ✅（CLOSED 2026-05-12 @39）
 
 **目的:** 保存済みAI評価を編集画面で自動再表示 + AI参考見立て（aiImpression）を追加する
 
@@ -403,24 +403,31 @@
 | AI-4.5-5 | `visit-form.html`: AI参考見立てセクション（🧠）+ 免責注意文 | ✅ |
 | AI-4.5-6 | `visit-form.html`: 新規AI実行後は新結果が青バナーを上書き（freshResult フラグ） | ✅ |
 | AI-4.5-7 | `ai45.spec.ts` 追加（5自動 + 5手動 SKIP） | ✅ |
+| AI-4.5-8 | 診断ログ強化 + `google.script.run` 未準備時リトライ（3回目 clasp push 2026-05-12） | ✅ |
 
 **UI表現方針:**
 - 表示名: 「AI参考見立て」
 - 必須注意文: 「この内容はAIによる参考情報です。診断確定ではありません。最終判断は施術者が行ってください。」
 - 禁止: AI診断 / 確定診断 / 保険請求上の判断 / 医師判断不要 / 必ず〜
 
-**clasp push:** ✅ 2026-05-11（2回 — 初期実装 + fallback修正）
-**LiveCheck ai45:** ✅ 5 passed / 5 skipped / 0 failed
+**clasp push:** ✅ 2026-05-11（2回）+ 2026-05-12（診断強化 1回 = 計3回）
+**LiveCheck ai45:** ✅ 5 passed / 5 skipped / 0 failed（2026-05-12 は auth 期限切れで skip）
 **LiveCheck ai4（回帰）:** ✅ 4 passed / 0 failed
 **LiveCheck ai3（回帰）:** ✅ 3 passed / 0 failed
 **v2保存 / aiImpression保存:** ✅ スプレッドシートで目視確認 PASS
-**実機確認 ステータス:** ❌ PARTIAL（青バナー2回 FAIL）
-**versioned deployment @39:** ⏸ 未実施（実機確認 PASS 後）
+**実機確認 ステータス:** ✅ PASS（2026-05-12 /dev で 5項目すべて PASS）
 
-**実機確認 FAIL の状況（2026-05-11 中断）:**
-- visitKey / patientId fallback 検索 → console.log 診断ログ追加済み
-- 次回再開時: F12→Console で `[AI45]` ログを確認して原因を特定する
-- `loadSavedAIAssessment` 呼び出し / GAS返却値 / displaySavedAssessment 到達 を順に確認
+**versioned deployment @39:** ✅ 本番反映済み（2026-05-12）
+- deploymentId: `AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw`
+- exec URL: `https://script.google.com/macros/s/AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw/exec`
+- description: `@39 - Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て`
+
+**実機確認 PASS 内訳（2026-05-12 /dev）:**
+- ✅ 保存済みAI評価の再読み込み
+- ✅ 青バナー「📂 保存済みAI評価補助を読み込みました」表示
+- ✅ AI参考見立てセクション再表示
+- ✅ カルテ下書きセクション再表示
+- ✅ 新規AI実行（緑バナー・新結果上書き）も問題なし
 
 **変更ファイル:** Main.gs / visit-form.html / ai45.spec.ts / package.json
 

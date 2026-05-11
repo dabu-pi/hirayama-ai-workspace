@@ -94,7 +94,7 @@
   - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
   - 説明: @38 - Phase AI-4: AI_Assessments 保存・レビューバナー
 
-**🔄 Phase AI-4.5 保存済みAI評価再読込 + AI参考見立て: 実装完了・実機確認待ち（2026-05-11）**
+**✅ Phase AI-4.5 保存済みAI評価再読込 + AI参考見立て: CLOSED（2026-05-12 @39 本番反映）**
   - `JREC_SF01_Main.gs`: `getLatestAIAssessmentForVisit(visitKey)` 追加（ハードコードシート名・fail-safe）
   - `JREC_SF01_Main.gs`: `AI_SYSTEM_PROMPT_` に `aiImpression` フィールド追加（promptVersion v2）
   - `JREC_SF01_Main.gs`: `saveAIAssessment_()` に `promptVer` パラメータ追加 / `runAIAssessment()` で "v2" を渡す
@@ -128,27 +128,23 @@
   - 既存の保存・新規実行ロジックは変更なし（diagnostic 層のみ追加）
   - 詳細: `docs/AI45_SAVED_ASSESSMENT_RELOAD_AND_IMPRESSION_2026-05-11.md` の 2026-05-12 追記参照
 
-**Phase AI-4.5 実機確認結果（2026-05-11 PARTIAL）:**
+**Phase AI-4.5 実機確認結果（2026-05-12 PASS）:**
   - ✅ AI_Assessments v2保存: PASS
   - ✅ outputJson.aiImpression保存: PASS
   - ✅ promptVersion=v2: PASS
-  - ❌ 青バナー表示: FAIL（2回の実機確認いずれも未表示）
-  - ❌ 保存済みAI評価自動再読込: FAIL
-  - ❌ カルテ下書き再表示: FAIL
-  - ❌ AI参考見立て再表示: FAIL
-  - ⏸ versioned deploy @39: 未実施（実機確認 PASS 待ち）
-
-**次回再開時の最優先確認手順（Console診断）:**
-  1. /dev でF12→Console を開き `[AI45]` ログを確認する
-  2. `loadSavedAIAssessment が呼ばれているか（start ログが出るか）
-  3. `getLatestAIAssessmentForVisitOrPatient` の返却値（found / assessmentId / sourceType）を確認
-  4. PATIENT_ID・visitKey の値が期待どおりか確認
-  5. `displaySavedAssessment` が呼ばれているか、freshResultフラグでブロックされていないか確認
+  - ✅ 青バナー表示: PASS（診断強化 3回目 push 後の /dev 検証で復旧）
+  - ✅ 保存済みAI評価自動再読込: PASS
+  - ✅ カルテ下書き再表示: PASS
+  - ✅ AI参考見立て再表示: PASS
+  - ✅ 新規AI実行: PASS（緑バナー・freshResult 上書き正常）
+  - ✅ versioned deploy @39: 本番反映済み（2026-05-12）
+    - deploymentId: `AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw`
+    - exec URL: `https://script.google.com/macros/s/AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw/exec`
+    - description: `@39 - Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て`
 
 次期実装候補:
-1. **Phase AI-4.5 再読込デバッグ + @39 deploy**（次にやること・Console確認から再開）
-2. **Phase AI-5** 運用改善（プロンプト調整・過去判定比較）
-3. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
+1. **Phase AI-5** 運用改善（プロンプト調整・過去判定比較）
+2. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 
 **Phase AI-3 設計プロンプト作成済み（2026-05-04）:**
   - `docs/PHASE_AI3_DESIGN_PROMPT_2026-05-04.md`
