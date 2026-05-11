@@ -232,12 +232,12 @@
     </form>
   </div>
 
-  <!-- ── AI評価補助セクション（Phase AI-2: UI枠のみ / API連携は Phase AI-3）── -->
+  <!-- ── AI評価補助セクション（Phase AI-3: OpenAI API連携）── -->
   <div class="card" id="aiAssistCard">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
       <h2 style="font-size:15px;font-weight:700;margin:0;">AI評価補助</h2>
       <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:#fce8b2;color:#7a4f00;">
-        Phase AI-3 で有効化予定
+        AI評価補助（ベータ）
       </span>
     </div>
 
@@ -267,7 +267,7 @@
 
     <div id="aiAssistPlaceholder">
       <div style="font-size:11px;color:#bdc1c6;margin-bottom:8px;text-align:center;letter-spacing:0.5px;font-weight:600;">
-        PHASE AI-3 で以下の補助情報が生成されます（現在は未連携）
+        実行すると以下の補助情報が生成されます（未実行）
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
         <div style="flex:1;min-width:140px;padding:10px;background:#f8f9fa;border-radius:6px;border:1px solid #e8eaed;font-size:12px;">
@@ -503,11 +503,10 @@ function appendField(fieldId, text) {
   el.focus();
 }
 
-// ── AI評価補助（Phase AI-2: UI枠のみ / API連携は Phase AI-3）──────
+// ── AI評価補助（Phase AI-3: OpenAI API連携）──────
 
 /**
  * カルテ保存後にAI評価補助ボタンを有効化する。
- * Phase AI-3 で実際の API 呼び出しに切り替える。
  */
 function enableAiAssist(visitKey) {
   var btn    = document.getElementById('aiAssistBtn');
@@ -520,27 +519,131 @@ function enableAiAssist(visitKey) {
   if (status) {
     status.innerHTML =
       '対象カルテ: <code style="font-size:11px;background:#f1f3f4;padding:1px 5px;border-radius:3px;">' +
-      visitKey + '</code>';
+      escapeAi(visitKey) + '</code>';
   }
 }
 
+function escapeAi(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 /**
- * AI評価補助の実行ハンドラ。
- * Phase AI-2 では API 呼び出しを行わず、Phase AI-3 未実装の旨を表示する。
+ * AI評価補助を実行する。
+ * SAVED_VISIT_KEY が確定済みカルテに対して runAIAssessment を呼ぶ。
  */
 function runAiAssist() {
+  var btn         = document.getElementById('aiAssistBtn');
+  var result      = document.getElementById('aiAssistResult');
+  var placeholder = document.getElementById('aiAssistPlaceholder');
+  var status      = document.getElementById('aiStatusMsg');
+  if (!btn || !result) return;
+
+  if (!SAVED_VISIT_KEY) {
+    result.style.display = 'block';
+    result.innerHTML =
+      '<div style="padding:10px 14px;background:#fce8e6;border-left:3px solid #f28b82;border-radius:4px;font-size:13px;color:#c5221f;">' +
+      '❌ カルテが未保存です。先にカルテを保存してから AI評価補助を実行してください。</div>';
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = '実行中...';
+  if (status) status.textContent = 'AI評価補助を実行中です（10〜30秒かかる場合があります）';
+  result.style.display = 'none';
+
+  if (typeof google === 'undefined' || !google.script || !google.script.run) {
+    showAiError('google.script.run が使用できません。WebApp URL として開いているか確認してください。');
+    resetAiBtn();
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.ok && res.result) {
+        displayAiResult(res.result);
+        if (placeholder) placeholder.style.display = 'none';
+        btn.disabled    = false;
+        btn.textContent = 'AI評価補助を再実行する';
+        if (status) status.textContent = 'AI評価補助の結果を表示しています';
+      } else {
+        var msg = (res && res.error) ? res.error : 'AI評価補助の取得に失敗しました';
+        showAiError(msg);
+        resetAiBtn();
+      }
+    })
+    .withFailureHandler(function(err) {
+      showAiError('GAS実行エラー: ' + (err ? (err.message || String(err)) : '不明なエラー'));
+      resetAiBtn();
+    })
+    .runAIAssessment(SAVED_VISIT_KEY);
+}
+
+function displayAiResult(r) {
   var result = document.getElementById('aiAssistResult');
   if (!result) return;
+
+  function section(icon, title, items, bgColor, borderColor, textColor) {
+    bgColor     = bgColor     || '#f8f9fa';
+    borderColor = borderColor || '#e8eaed';
+    textColor   = textColor   || '#3c4043';
+    var itemsHtml = Array.isArray(items) && items.length
+      ? '<ul style="margin:4px 0 0 0;padding-left:16px;font-size:12px;color:#5f6368;line-height:1.8;">' +
+          items.map(function(i) { return '<li>' + escapeAi(i) + '</li>'; }).join('') + '</ul>'
+      : '<p style="font-size:12px;color:#9aa0a6;margin:4px 0 0 0;">—</p>';
+    return '<div style="padding:10px;background:' + bgColor + ';border-radius:6px;border:1px solid ' + borderColor + ';margin-bottom:8px;">' +
+      '<div style="font-weight:600;color:' + textColor + ';font-size:12px;margin-bottom:2px;">' + icon + ' ' + title + '</div>' +
+      itemsHtml + '</div>';
+  }
+
+  function textSection(icon, title, text, bgColor, borderColor) {
+    bgColor     = bgColor     || '#f8f9fa';
+    borderColor = borderColor || '#e8eaed';
+    return '<div style="padding:10px;background:' + bgColor + ';border-radius:6px;border:1px solid ' + borderColor + ';margin-bottom:8px;">' +
+      '<div style="font-weight:600;color:#3c4043;font-size:12px;margin-bottom:4px;">' + icon + ' ' + title + '</div>' +
+      '<p style="font-size:12px;color:#5f6368;white-space:pre-wrap;margin:0;">' + escapeAi(text || '—') + '</p></div>';
+  }
+
+  var html = '';
+  html += section('📋', '評価の観点整理', r.assessmentPoints);
+  html += section('🔍', '鑑別の方向性',   r.differentialDirection);
+  html += section('⚠️', '危険サイン確認', r.redFlags, '#fff8e1', '#fce8b2', '#c4770b');
+  html += section('💬', '追加問診候補',   r.additionalQuestions);
+  html += section('🎯', '施術方針案',     r.treatmentApproach);
+  if (r.referralIndication) {
+    html += textSection('🏥', '受診勧奨の目安', r.referralIndication, '#fce8e6', '#f28b82');
+  }
+  if (r.chartDraft) {
+    html += textSection('📝', 'カルテ下書き', r.chartDraft, '#e8f0fe', '#aecbfa');
+  }
+  html += '<p style="font-size:11px;color:#9aa0a6;margin-top:8px;line-height:1.5;">' +
+    '⚠️ 上記はAIによる参考情報です。診断の確定ではありません。施術者が確認・判断してください。</p>';
+
+  result.innerHTML = html;
   result.style.display = 'block';
+}
+
+function showAiError(msg) {
+  var result = document.getElementById('aiAssistResult');
+  if (!result) return;
   result.innerHTML =
-    '<div style="padding:10px 14px;background:#e8f0fe;border-left:3px solid #1a73e8;' +
-    'border-radius:4px;font-size:13px;color:#1565c0;line-height:1.6;">' +
-    '🔄 <strong>Phase AI-3 で有効化予定</strong><br>' +
-    '<span style="font-size:12px;color:#5f6368;">' +
-    'OpenAI API と連携する実装は Phase AI-3 で追加されます。<br>' +
-    '現在はUI枠のみで、外部API への通信は行っていません。' +
-    '</span>' +
-    '</div>';
+    '<div style="padding:10px 14px;background:#fce8e6;border-left:3px solid #f28b82;border-radius:4px;font-size:13px;color:#c5221f;">' +
+    '❌ AI評価補助エラー: ' + escapeAi(msg) + '</div>';
+  result.style.display = 'block';
+}
+
+function resetAiBtn() {
+  var btn = document.getElementById('aiAssistBtn');
+  if (btn) {
+    btn.disabled    = false;
+    btn.textContent = 'AI評価補助を実行する';
+  }
+  var status = document.getElementById('aiStatusMsg');
+  if (status) {
+    status.innerHTML =
+      '対象カルテ: <code style="font-size:11px;background:#f1f3f4;padding:1px 5px;border-radius:3px;">' +
+      escapeAi(SAVED_VISIT_KEY || '—') + '</code>';
+  }
 }
 </script>
 </body>

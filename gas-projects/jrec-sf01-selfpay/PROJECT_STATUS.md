@@ -51,9 +51,33 @@
   - deploymentId: AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA
   - /exec 確認: home HTTP 200 ✅ / patient-list ✅ / visitForm ✅ / #aiAssistCard ✅ / 免責文 ✅ / btn disabled ✅ / dailyCheckout ✅
 
+**🔄 Phase AI-3 OpenAI API連携: 実装完了・clasp push 済み（2026-05-11）**
+  - `JREC_SF01_Main.gs` に `runAIAssessment(visitKey)` を追加（gpt-4o-mini / response_format: json_object / temperature: 0.3 / max_tokens: 1500）
+  - `calcAgeBand_(age)` / `buildAIPrompt_(data)` / `AI_SYSTEM_PROMPT_` 追加
+  - 個人情報除去: 氏名 / 住所 / 電話 / 生年月日 / jrecPatientId は送信しない。dob は年齢/年代に変換
+  - API Key: ScriptProperties の `OPENAI_API_KEY` から取得（未設定時はエラーメッセージで停止）
+  - `visit-form.html` の `runAiAssist()` を実 API 呼び出しに置換。`displayAiResult` / `showAiError` / `resetAiBtn` / `escapeAi` 追加
+  - バッジ文言を「Phase AI-3 で有効化予定」→「AI評価補助（ベータ）」に変更
+  - `appsscript.json` に `https://www.googleapis.com/auth/script.external_request` スコープ追加
+  - `tools/live-check-runner/projects/jrec-sf01/ai3.spec.ts` 新規（AI3-1〜3 自動 + AI3-H1〜H3 手動 SKIP）
+  - `package.json` に `test:jrec:ai3` スクリプト追加
+  - clasp push: ✅ 21 files pushed（2026-05-11）
+  - LiveCheck: ⏸ 未実行（auth.json セッション期限切れのため自動実行不可。`npm run save-auth` 後に再実行）
+  - 設計プロンプトとの差分: `getVisitFormData(visitKey, null)` → `getVisitFormData("", visitKey)` に修正（既存シグネチャは `(patientId, visitKey)` のため）
+  - 既存会計・領収書・集計処理への影響: なし
+  - getVisitFormData / getPatientById のシグネチャ・戻り値は変更していない
+
+**Phase AI-3 残作業（人間判断・人間操作が必要）:**
+  - GAS エディタ → プロジェクトのプロパティ → スクリプトプロパティで `OPENAI_API_KEY` を設定
+  - GAS エディタで `runAIAssessment('SPV_...')` を手動実行してレスポンス確認
+  - visit-form で実機の AIボタン押下確認（HEAD /dev）
+  - `npm run save-auth` で auth.json 更新 → `npm run test:jrec:ai3` で AI3-1〜3 自動確認
+  - 上記 PASS 後に versioned deployment @37 を任意タイミングで実施
+
 次期実装候補:
-1. **Phase AI-3** OpenAI API 連携（AI評価補助の本実装）← **次はここ**
-2. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
+1. **Phase AI-3 実機確認 + @37 deploy**（次にやること）
+2. **Phase AI-4** AI評価補助 結果保存・レビュー（AI_Assessments シート）
+3. **Phase 6-M** CSV / 印刷 / 監査レポート ⏸
 
 **Phase AI-3 設計プロンプト作成済み（2026-05-04）:**
   - `docs/PHASE_AI3_DESIGN_PROMPT_2026-05-04.md`
@@ -73,7 +97,7 @@ AI補助判定ロードマップ（Phase AI 系列）:
 - AI-0: 設計調査 ✅ CLOSED（2026-05-02 コード実装なし）
 - AI-1: 患者マスター・カルテ項目追加 ✅ CLOSED（2026-05-03）
 - AI-2: AI評価補助UI追加 ✅ CLOSED + @36 本番反映済み（2026-05-04）
-- AI-3: OpenAI API連携 ⏸
+- AI-3: OpenAI API連携 🔄 実装完了・clasp push 済み・LiveCheck/手動確認待ち（2026-05-11）
 - AI-4: AI補助判定保存・レビュー ⏸
 - AI-5: 運用改善 ⏸
 

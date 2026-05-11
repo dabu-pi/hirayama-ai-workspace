@@ -357,22 +357,31 @@
 
 ---
 
-### Phase AI-3: OpenAI API連携 ⏸
+### Phase AI-3: OpenAI API連携 🔄（clasp push 済み・LiveCheck/手動確認待ち 2026-05-11）
 
 **目的:** カルテ入力内容と患者マスター情報をAIに送り、補助判定を取得する
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| AI-3-1 | JREC_SF01_Main.gs: `runAIAssessment(visitKey)` 関数追加 | ⏸ |
-| AI-3-2 | JREC_SF01_Main.gs: API Key は ScriptProperties から取得 | ⏸ |
-| AI-3-3 | JREC_SF01_Main.gs: 入力データ収集（visit + chart + patient 結合） | ⏸ |
-| AI-3-4 | JREC_SF01_Main.gs: 年齢層変換（dob → ageBand）・個人情報除去 | ⏸ |
-| AI-3-5 | JREC_SF01_Main.gs: UrlFetchApp で OpenAI Chat Completion API 呼び出し | ⏸ |
-| AI-3-6 | visit-form.html: `google.script.run.runAIAssessment(visitKey)` 呼び出し | ⏸ |
-| AI-3-7 | visit-form.html: AI出力を各セクションに表示する JS 実装 | ⏸ |
+| AI-3-1 | JREC_SF01_Main.gs: `runAIAssessment(visitKey)` 関数追加 | ✅ |
+| AI-3-2 | JREC_SF01_Main.gs: API Key は ScriptProperties から取得 | ✅ |
+| AI-3-3 | JREC_SF01_Main.gs: 入力データ収集（visit + chart + patient 結合） | ✅ |
+| AI-3-4 | JREC_SF01_Main.gs: 年齢層変換（dob → ageBand）・個人情報除去 | ✅ |
+| AI-3-5 | JREC_SF01_Main.gs: UrlFetchApp で OpenAI Chat Completion API 呼び出し | ✅ |
+| AI-3-6 | visit-form.html: `google.script.run.runAIAssessment(visitKey)` 呼び出し | ✅ |
+| AI-3-7 | visit-form.html: AI出力を各セクションに表示する JS 実装 | ✅ |
+| AI-3-8 | appsscript.json: `script.external_request` スコープ追加 | ✅ |
+| AI-3-9 | live-check-runner: ai3.spec.ts 追加（AI3-1〜3 自動 + AI3-H1〜H3 手動 SKIP） | ✅ |
 
-**変更ファイル候補:** JREC_SF01_Main.gs / visit-form.html
-**API候補:** OpenAI gpt-4o-mini（初期推奨）/ gpt-4o / Claude API（要ユーザー確認）
+**変更ファイル:** `JREC_SF01_Main.gs` / `visit-form.html` / `appsscript.json` / `tools/live-check-runner/projects/jrec-sf01/ai3.spec.ts` / `package.json`
+**採用 API:** OpenAI gpt-4o-mini（response_format: json_object, temperature: 0.3, max_tokens: 1500）
+**clasp push:** ✅ 2026-05-11
+**LiveCheck:** ⏸ 未実行（auth.json セッション期限切れのため自動実行不可。`npm run save-auth` 後に `npm run test:jrec:ai3` を実行）
+**人間作業:** OPENAI_API_KEY を ScriptProperties に設定 + 実機での AIボタン押下確認
+**versioned deployment @37:** ⏸ 未実施（手動確認 PASS 後に任意タイミングで実施）
+
+> **個人情報保護:** 氏名 / 住所 / 電話 / 生年月日 / jrecPatientId は API に送信しない。
+> dob は年齢/年代に変換してから送信。
 
 ---
 
