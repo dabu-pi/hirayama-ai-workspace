@@ -1,6 +1,34 @@
 # PROJECT_STATUS.md
 
-最終更新: 2026-05-11（JBIZフォルダ誤削除復旧 — `54add16^` から 44 files 復元）
+最終更新: 2026-05-11（JBIZ-04 独立 repo 化 — 親 workspace の整理に巻き込まれない構成へ）
+
+> **【2026-05-11 3rd 注記 / 方針再判断保留中】**
+> 下記「2026-05-11 - 2nd」追記には「standalone を正本とする」と書かれているが、
+> 同日に「workspace 側を正本に一本化する」候補も並行検討されている。
+> 現時点では **workspace / standalone 両方を残置** し、方針確定までいずれも削除しない。
+> 差分の事実記録のみ standalone 側 commit `5783be6` から取り込み済み。
+
+## ⚑ 最新更新（2026-05-11 - 2nd） — JBIZ-04 独立 repo 化
+
+- **背景:** 2026-05-02 commit `54add16` による親 workspace 側の誤削除（→ 同日復旧）を受けて、
+  再発防止のため `hirayama-jyusei-strategy/` を独立 private repo に分離した。
+- **復旧元 commit:** `54add16^` (= `c39fa3d`)
+- **復旧 commit (親 workspace 上):** `b422786 restore(JBIZ-04): recover hirayama-jyusei-strategy from 54add16 parent`
+- **履歴維持方法:** `git subtree split --prefix=hirayama-jyusei-strategy -b split/jbiz-hirayama-jyusei-strategy`
+  - subtree split により 1346 commit の履歴を保持したまま分離（`git revert 54add16` は禁止・使用していない）
+  - `git filter-repo` や `workspace-export` / `.claude/worktrees` からのコピーは不使用
+- **独立 repo local path:** `C:\hirayama-ai-workspace\standalone-repos\hirayama-jyusei-strategy`
+- **独立 repo remote:** `https://github.com/dabu-pi/hirayama-jyusei-strategy.git` (private)
+- **ブランチ:** `main` (tracks `origin/main`)
+- **ファイル数:** 44 files (root 直下に展開、`hirayama-jyusei-strategy/` 一階層の余分なし)
+- **今後の作業場所:** 本独立 repo を **正本（single source of truth）** とする
+- **親 workspace 側の扱い:** 当面 `workspace/hirayama-jyusei-strategy/` は残置。削除は独立 repo
+  の安定確認後に **別 commit / 別作業** で実施する。今回は親側 clean を維持する。
+- **Dashboard 影響:** Dashboard 専用ファイル（Projects / Task_Queue / Run_Log）は本リポジトリ
+  内に存在しない。Dashboard を文字列参照する md（PROJECT_STATUS.md / JBIZ04_JREC01_INTEGRATION_REVIEW.md
+  / menu/pricing-v2-update-2026-04-25.md / docs/JBIZ-04_session_close_2026-04-21.md /
+  strategy/gym-lead-design.md）は履歴付きで分離済み。Dashboard 直接更新対象なし。
+- **次回作業前に必ず確認:** 本 `PROJECT_STATUS.md` および `NEXT_ACTIONS.md`
 
 ## ⚑ 最新更新（2026-05-11） — JBIZフォルダ誤削除復旧
 
