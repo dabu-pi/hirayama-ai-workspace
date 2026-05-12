@@ -595,21 +595,67 @@ function getAIAssessmentsByVisitKey(visitKey) {
  * @returns {{ ok: boolean, found: boolean, assessment: Object|null, debug: Object }}
  *   assessment.sourceType: "visitKey" | "patientId" | null
  */
+/**
+ * RPC-safe な plain object に正規化する。
+ * undefined → null、Date → ISO string、Error → stack文字列、その他 → そのまま。
+ * Apps Script の HtmlService RPC は Date / undefined / Error などを含む object を
+ * silent に null 化することがあるため、return 直前に必ずこれを通す。
+ */
+function toRpcSafeObject_(obj) {
+  try {
+    return JSON.parse(JSON.stringify(obj, function(key, value) {
+      if (value === undefined)         return null;
+      if (value instanceof Date)       return value.toISOString();
+      if (value instanceof Error)      return String(value.stack || value.message || value);
+      return value;
+    }));
+  } catch (e) {
+    // fail-safe: any serialization failure surfaces as a structured error
+    return { ok: true, found: false, assessment: null, debug: {
+      reason: "rpc safe wrap failed",
+      error:  String(e && e.message || e),
+      sheetName: "AI_Assessments",
+      spreadsheetId: "", headerCount: 0, rowCount: 0,
+      rawHeaders: [], normalizedHeaders: [], missingHeaders: [],
+      needleVk: "", needlePid: "",
+      totalScanned: 0, vkMatches: 0, pidMatches: 0
+    }};
+  }
+}
+
+/**
+ * 受け取った行配列を RPC 安全な文字列配列に変換する。
+ * data[0] (getValues の生 array) は Date / number / null が混入する可能性があるため。
+ */
+function _rpcSafeStringArray_(arr) {
+  if (!arr) return [];
+  var out = [];
+  for (var i = 0; i < arr.length; i++) {
+    var v = arr[i];
+    if (v === null || v === undefined) { out.push(""); continue; }
+    if (v instanceof Date) { out.push(v.toISOString()); continue; }
+    out.push(String(v));
+  }
+  return out;
+}
+
 function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
   var AI_SHEET_NAME = "AI_Assessments"; // ハードコード（SHEET_NAMES参照を避ける）
   var debug = {
-    reason:         "",
-    sheetName:      AI_SHEET_NAME,
-    spreadsheetId:  "",
-    headerCount:    0,
-    rowCount:       0,
-    rawHeaders:     [],
-    missingHeaders: [],
-    needleVk:       String(visitKey  || '').trim(),
-    needlePid:      String(patientId || '').trim(),
-    totalScanned:   0,
-    vkMatches:      0,
-    pidMatches:     0
+    reason:            "",
+    sheetName:         AI_SHEET_NAME,
+    spreadsheetId:     "",
+    headerCount:       0,
+    rowCount:          0,
+    rawHeaders:        [],
+    normalizedHeaders: [],
+    missingHeaders:    [],
+    needleVk:          String(visitKey  || '').trim(),
+    needlePid:         String(patientId || '').trim(),
+    totalScanned:      0,
+    vkMatches:         0,
+    pidMatches:        0,
+    error:             ""
   };
 
   try {
@@ -620,18 +666,19 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
     if (!sh) {
       debug.reason = "sheet not found";
       Logger.log("[getLatestAIAssessmentForVisitOrPatient] sheet not found ssIdPrefix=" + debug.spreadsheetId);
-      return { ok: true, found: false, assessment: null, debug: debug };
+      return toRpcSafeObject_({ ok: true, found: false, assessment: null, debug: debug });
     }
     debug.rowCount = sh.getLastRow();
     if (debug.rowCount < 2) {
       debug.reason = "sheet empty";
       Logger.log("[getLatestAIAssessmentForVisitOrPatient] sheet empty rowCount=" + debug.rowCount);
-      return { ok: true, found: false, assessment: null, debug: debug };
+      return toRpcSafeObject_({ ok: true, found: false, assessment: null, debug: debug });
     }
 
     var data = sh.getDataRange().getValues();
-    debug.rawHeaders  = data[0];
-    debug.headerCount = data[0].length;
+    debug.rawHeaders        = _rpcSafeStringArray_(data[0]);
+    debug.headerCount       = data[0].length;
+    debug.normalizedHeaders = debug.rawHeaders.map(function(h) { return String(h || '').trim().toLowerCase(); });
 
     // ヘッダーを trim + lowercase で正規化して引く
     var idxMap = {};
@@ -656,7 +703,7 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
       debug.reason = "header missing";
       Logger.log("[getLatestAIAssessmentForVisitOrPatient] header missing — missing=" + JSON.stringify(debug.missingHeaders) +
                  " rawHeaders=" + JSON.stringify(debug.rawHeaders));
-      return { ok: true, found: false, assessment: null, debug: debug };
+      return toRpcSafeObject_({ ok: true, found: false, assessment: null, debug: debug });
     }
 
     var byVk  = null; var byVkMs  = 0;
@@ -691,18 +738,27 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
                  " needlePid=" + debug.needlePid +
                  " scanned=" + debug.totalScanned +
                  " vkMatches=" + debug.vkMatches + " pidMatches=" + debug.pidMatches);
-      return { ok: true, found: false, assessment: null, debug: debug };
+      return toRpcSafeObject_({ ok: true, found: false, assessment: null, debug: debug });
+    }
+
+    // 受け取り側 NULL 化を防ぐため Date は全て ISO string、その他も String 化する
+    var createdAtVal = idxAt !== undefined ? target[idxAt] : null;
+    var createdAtIso = "";
+    if (createdAtVal) {
+      try { createdAtIso = (createdAtVal instanceof Date) ? createdAtVal.toISOString() : String(createdAtVal); }
+      catch (ce) { createdAtIso = ""; }
     }
 
     var assessment = {
-      assessmentId:  String(target[idxId]),
+      assessmentId:  String(target[idxId] || ""),
       visitKey:      String(target[idxVk]  || "").trim(),
-      createdAt:     idxAt !== undefined ? target[idxAt] : null,
+      patientId:     String(target[idxPid] || "").trim(),
+      createdAt:     createdAtIso,
       outputJson:    idxOut    !== undefined ? String(target[idxOut]    || "") : "",
       reviewStatus:  idxStatus !== undefined ? String(target[idxStatus] || "") : "",
       model:         idxModel  !== undefined ? String(target[idxModel]  || "") : "",
       promptVersion: idxPv     !== undefined ? String(target[idxPv]     || "") : "",
-      sourceType:    sourceType
+      sourceType:    sourceType || ""
     };
     debug.reason = "match found";
     Logger.log("[getLatestAIAssessmentForVisitOrPatient] found=" + assessment.assessmentId +
@@ -710,12 +766,57 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
                " scanned=" + debug.totalScanned +
                " vkMatches=" + debug.vkMatches + " pidMatches=" + debug.pidMatches +
                " outputLen=" + assessment.outputJson.length);
-    return { ok: true, found: true, assessment: assessment, debug: debug };
+    return toRpcSafeObject_({ ok: true, found: true, assessment: assessment, debug: debug });
   } catch (e) {
     debug.reason = "exception";
     debug.error  = e && e.message ? String(e.message) : String(e);
     Logger.log("[getLatestAIAssessmentForVisitOrPatient] ERROR: " + debug.error);
-    return { ok: true, found: false, assessment: null, debug: debug };
+    return toRpcSafeObject_({ ok: true, found: false, assessment: null, debug: debug });
+  }
+}
+
+/**
+ * 診断 ping — RPC 経路が plain object を返せるか単独で確認するためのテスト関数。
+ * 入力なし・シート参照なし・固定 object のみ返す。
+ * これが client で null になるなら、AI 関数とは無関係に RPC 層自体に問題がある。
+ */
+function debugAI45RpcPing() {
+  return toRpcSafeObject_({
+    ok: true,
+    found: false,
+    assessment: null,
+    debug: {
+      reason: "rpc ping",
+      sheetName: "AI_Assessments",
+      spreadsheetId: "",
+      headerCount: 0,
+      rowCount: 0,
+      rawHeaders: [],
+      normalizedHeaders: [],
+      missingHeaders: [],
+      needleVk: "",
+      needlePid: "",
+      totalScanned: 0,
+      vkMatches: 0,
+      pidMatches: 0,
+      error: ""
+    }
+  });
+}
+
+/**
+ * RPC 層が object を null 化するケースを切り分けるため、本体取得結果を
+ * JSON 文字列として返す診断ラッパー。string なら確実に serializable。
+ */
+function getLatestAIAssessmentForVisitOrPatientJson(visitKey, patientId) {
+  try {
+    var result = getLatestAIAssessmentForVisitOrPatient(visitKey, patientId);
+    return JSON.stringify(result);
+  } catch (e) {
+    return JSON.stringify({ ok: false, found: false, assessment: null, debug: {
+      reason: "json wrapper exception",
+      error:  String(e && e.message || e)
+    }});
   }
 }
 

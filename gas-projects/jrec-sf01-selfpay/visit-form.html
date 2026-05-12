@@ -737,6 +737,44 @@ function loadSavedAIAssessment(visitKey, patientId, retryCount) {
     hasVisitKey: !!visitKey, hasPatientId: !!patientId
   });
 
+  // [診断 1] RPC ping — 引数なし・シート参照なし・固定 object 返却。
+  // これが null/undefined になるなら RPC 層自体が壊れている。
+  try {
+    google.script.run
+      .withSuccessHandler(function(pingRes) {
+        console.log('[AI45] rpc ping response object', pingRes);
+        try { console.log('[AI45] rpc ping JSON', JSON.stringify(pingRes)); } catch (e) {}
+      })
+      .withFailureHandler(function(err) {
+        console.log('[AI45] rpc ping error', String(err && err.message || err));
+      })
+      .debugAI45RpcPing();
+  } catch (e) {
+    console.log('[AI45] rpc ping invocation threw', String(e && e.message || e));
+  }
+
+  // [診断 2] 本体取得を JSON 文字列で取る fallback — 文字列は確実に RPC 安全。
+  // 本体 object が null になっても string なら原因を区別できる。
+  try {
+    google.script.run
+      .withSuccessHandler(function(jsonStr) {
+        console.log('[AI45] JSON-string fallback raw', jsonStr);
+        try {
+          var parsed = jsonStr ? JSON.parse(jsonStr) : null;
+          console.log('[AI45] JSON-string fallback parsed', parsed);
+        } catch (pe) {
+          console.log('[AI45] JSON-string fallback parse error', String(pe && pe.message || pe));
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.log('[AI45] JSON-string fallback error', String(err && err.message || err));
+      })
+      .getLatestAIAssessmentForVisitOrPatientJson(visitKey || '', patientId || '');
+  } catch (e) {
+    console.log('[AI45] JSON-string fallback invocation threw', String(e && e.message || e));
+  }
+
+  // [本体] 通常の object 返却版
   google.script.run
     .withSuccessHandler(function(res) {
       // res 全体を Object 形式と文字列形式の両方で出す（取りこぼし防止）
@@ -745,30 +783,33 @@ function loadSavedAIAssessment(visitKey, patientId, retryCount) {
 
       var dbg = res && res.debug ? res.debug : {};
       console.log('[AI45] getLatestAIAssessmentForVisitOrPatient summary', {
-        ok:             !!(res && res.ok),
-        found:          !!(res && res.found),
-        hasAssessment:  !!(res && res.assessment),
-        reason:         dbg.reason         || null,
-        sheetName:      dbg.sheetName      || null,
-        spreadsheetId:  dbg.spreadsheetId  || null,
-        rowCount:       dbg.rowCount       || 0,
-        headerCount:    dbg.headerCount    || 0,
-        missingHeaders: dbg.missingHeaders || [],
-        needleVk:       dbg.needleVk       || null,
-        needlePid:      dbg.needlePid      || null,
-        totalScanned:   dbg.totalScanned   || 0,
-        vkMatches:      dbg.vkMatches      || 0,
-        pidMatches:     dbg.pidMatches     || 0,
-        error:          dbg.error          || null,
-        assessmentId:   res && res.assessment ? res.assessment.assessmentId  : null,
-        sourceType:     res && res.assessment ? res.assessment.sourceType    : null,
-        promptVersion:  res && res.assessment ? res.assessment.promptVersion : null
+        ok:                !!(res && res.ok),
+        found:             !!(res && res.found),
+        hasAssessment:     !!(res && res.assessment),
+        resIsNull:         res === null,
+        reason:            dbg.reason            || null,
+        sheetName:         dbg.sheetName         || null,
+        spreadsheetId:     dbg.spreadsheetId     || null,
+        rowCount:          dbg.rowCount          || 0,
+        headerCount:       dbg.headerCount       || 0,
+        rawHeaders:        dbg.rawHeaders        || [],
+        normalizedHeaders: dbg.normalizedHeaders || [],
+        missingHeaders:    dbg.missingHeaders    || [],
+        needleVk:          dbg.needleVk          || null,
+        needlePid:         dbg.needlePid         || null,
+        totalScanned:      dbg.totalScanned      || 0,
+        vkMatches:         dbg.vkMatches         || 0,
+        pidMatches:        dbg.pidMatches        || 0,
+        error:             dbg.error             || null,
+        assessmentId:      res && res.assessment ? res.assessment.assessmentId  : null,
+        sourceType:        res && res.assessment ? res.assessment.sourceType    : null,
+        promptVersion:     res && res.assessment ? res.assessment.promptVersion : null
       });
 
       if (res && res.found && res.assessment) {
         displaySavedAssessment(res.assessment);
       } else {
-        console.log('[AI45] no saved assessment — reason=' + (dbg.reason || 'unknown'));
+        console.log('[AI45] no saved assessment — reason=' + (dbg.reason || (res === null ? 'object response is null (RPC issue)' : 'unknown')));
       }
     })
     .withFailureHandler(function(err) {
