@@ -324,24 +324,43 @@ test("GAS WebApp URL に到達できる（auth 承認後のみ PASS）", async (
     test.skip(true, "auth.json がないため WebApp 確認をスキップします");
     return;
   }
-  await page.goto(webAppUrl, { timeout: 15000 });
+  await page.goto(webAppUrl, { timeout: 30000, waitUntil: "domcontentloaded" });
   const url   = page.url();
   const title = await page.title().catch(() => "");
 
-  if (url.includes("accounts.google.com") || title.includes("Sign in")) {
+  // ログイン未済: accounts.google.com にリダイレクト
+  if (url.includes("accounts.google.com") || url.includes("ServiceLogin") || title.includes("Sign in")) {
     test.skip(true, "auth.json 期限切れ: ログイン画面");
     return;
   }
-  if (title.includes("Authorization needed") || url.includes("script.google.com/macros/s")) {
+  // 初回承認待ち
+  if (title.includes("Authorization needed")) {
     test.skip(true, "GAS 承認待ち: ブラウザで setupUrl を開き Review Permissions を承認してください");
     return;
   }
-  // 承認済みの場合: ポータル画面を確認
-  const isPortal =
+
+  // 承認済みの場合: 外側ページ or iframe 内のいずれかに "ビジネスポータル" が含まれることを確認
+  const outerHasPortal =
     title.includes("平山ビジネスポータル") ||
-    title.includes("Hirayama Business Portal") ||
-    (await page.locator("h1").textContent().catch(() => "")).includes("ビジネスポータル");
-  expect(isPortal, `Portal 画面が表示されません: ${title}`).toBe(true);
+    title.includes("Hirayama Business Portal");
+
+  let frameHasPortal = false;
+  if (!outerHasPortal) {
+    try {
+      const frame = page.frameLocator("iframe").first().frameLocator("iframe").first();
+      const bodyText = await frame.locator("body").innerText({ timeout: 20000 }).catch(() => "");
+      frameHasPortal = bodyText.includes("平山ビジネスポータル");
+    } catch {
+      // iframe 取得に失敗した場合はトップフレームの h1 を確認
+      const h1Text = await page.locator("h1").first().textContent().catch(() => "") || "";
+      frameHasPortal = h1Text.includes("ビジネスポータル");
+    }
+  }
+
+  expect(
+    outerHasPortal || frameHasPortal,
+    `Portal 画面が表示されません: title="${title}" url="${url}"`
+  ).toBe(true);
 });
 
 // ── Sheets URL 到達確認（認証あり時のみ）────────────────────
