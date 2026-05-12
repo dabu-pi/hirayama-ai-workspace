@@ -598,3 +598,66 @@ return toRpcSafeObject_({ ok: true, found: false, assessment: null, debug: debug
 
 - HEAD /dev で `raw response object` が `{ found: true, ... }` なら → versioned deploy @40 → CLOSED 化
 - それまでは @40 deploy しない
+
+---
+
+## 2026-05-12 追記（その5・最終） — HEAD /dev PASS + @40 deploy → CLOSED
+
+### HEAD /dev 最終確認結果
+
+URL: `https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001`
+
+| 確認項目 | 結果 |
+|---|---|
+| `[AI45] rpc ping response object` | ✅ PASS（RPC 層健全） |
+| `[AI45] JSON-string fallback raw / parsed` | ✅ PASS（文字列経路健全）|
+| `[AI45] raw response object` | ✅ `ok: true, found: true`（object 経路 PASS）|
+| `[AI45] summary` | `reason: "match found"` / `vkMatches: 5` / `pidMatches: 5` / `sourceType: "visitKey"` |
+| `assessmentId` | `ASMNT_20260512081820313` |
+| `[AI45] displaySavedAssessment called` | ✅ PASS |
+| `[AI45] displaySavedAssessment rendered banner` | ✅ PASS |
+| 画面: 青バナー / AI参考見立て / カルテ下書き | ✅ 再表示 PASS |
+
+3系列（ping / JSON fallback / 本体 object）すべて PASS。
+RPC 安全化（`toRpcSafeObject_`）が効いた状態で本体 object が正常返却される。
+
+### versioned deployment @40（本命・現運用版）
+
+| 項目 | 値 |
+|---|---|
+| version | @40 |
+| deploymentId | `AKfycbxyvyOGA6GRDMwA6mS35Q5xLypdfz_wtFo8XEKSnMcmlZAct6BrPyk8oJlj8td29M6M9g` |
+| exec URL | `https://script.google.com/macros/s/AKfycbxyvyOGA6GRDMwA6mS35Q5xLypdfz_wtFo8XEKSnMcmlZAct6BrPyk8oJlj8td29M6M9g/exec` |
+| description | `@40 - Phase AI-4.5: header tolerant read + debug payload` |
+| 実施日 | 2026-05-12 |
+
+### deploy 履歴サマリ
+
+| 版 | 状態 | 取り扱い |
+|---|---|---|
+| @39 | superseded（header lookup / RPC null 問題あり）| URL は残置（既存共有の互換性）。新規共有は @40 を使う |
+| @40 | **本命・現運用版** | header tolerant + 診断 payload + RPC 安全化 |
+
+### Phase AI-4.5 最終状態: ✅ CLOSED
+
+実装〜本番反映までの合計工程:
+- 設計・実装
+- clasp push: 6回（初期実装 / fallback修正 / google.script.run timing diag / header tolerant / 構造化 debug / RPC 安全化）
+- versioned deploy: 2回（@39 → @40）
+- 本命 deployment: **@40**
+- 解決した本質的不具合: header lookup の完全一致依存 + HtmlService RPC が非安全型を含む応答を null 化する挙動
+
+### 次フェーズ
+
+- Phase AI-5: 運用改善（プロンプト調整・過去判定比較）
+- Phase 6-M: CSV / 印刷 / 監査レポート ⏸
+
+### 残置の診断ログ（運用注意）
+
+以下は今後の障害切り分け用にそのまま残置:
+- フロント: `[AI45] rpc ping response`, `[AI45] JSON-string fallback raw/parsed`, `[AI45] raw response`
+- サーバー: `Logger.log("[getLatestAIAssessmentForVisitOrPatient] ...")`
+- 診断関数: `debugAIAssessmentsRead()`, `debugAI45RpcPing()`, `getLatestAIAssessmentForVisitOrPatientJson()`
+
+Console ノイズが気になる場合は将来 level-gate 化を別タスクで検討。
+個人情報は一切ログに出していないことを確認済み（visitKey / patientId / assessmentId のみ）。

@@ -390,7 +390,7 @@
 
 ---
 
-### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て 🔄（@39 deploy 後に追加不具合 — 修正実装中 2026-05-12）
+### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て ✅（CLOSED 2026-05-12 @40）
 
 **目的:** 保存済みAI評価を編集画面で自動再表示 + AI参考見立て（aiImpression）を追加する
 
@@ -420,17 +420,22 @@
 **v2保存 / aiImpression保存:** ✅ スプレッドシートで目視確認 PASS
 **実機確認 ステータス:** ✅ PASS（2026-05-12 /dev で 5項目すべて PASS）
 
-**versioned deployment @39:** ✅ 本番反映済み（2026-05-12）
-- deploymentId: `AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw`
-- exec URL: `https://script.google.com/macros/s/AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw/exec`
-- description: `@39 - Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て`
+**versioned deployment（最終・本命）@40:** ✅ 本番反映済み（2026-05-12）
+- deploymentId: `AKfycbxyvyOGA6GRDMwA6mS35Q5xLypdfz_wtFo8XEKSnMcmlZAct6BrPyk8oJlj8td29M6M9g`
+- exec URL: `https://script.google.com/macros/s/AKfycbxyvyOGA6GRDMwA6mS35Q5xLypdfz_wtFo8XEKSnMcmlZAct6BrPyk8oJlj8td29M6M9g/exec`
+- description: `@40 - Phase AI-4.5: header tolerant read + debug payload`
 
-**実機確認 PASS 内訳（2026-05-12 /dev）:**
-- ✅ 保存済みAI評価の再読み込み
+**前 deployment（参考保持・superseded）@39:**
+- deploymentId: `AKfycbxdngcgHbq4q52xPV3-ukDlun3s29Kbk8gy_oA11RGrwe4oPDBr4ocbeRyGUys8oxMCpw`
+- header lookup / RPC null 問題があり @40 で置き換え
+
+**実機確認 PASS 内訳（HEAD /dev 2026-05-12 / @40 deploy 直前）:**
+- ✅ 保存済みAI評価の再読み込み（reason: "match found" / vkMatches: 5 / sourceType: visitKey）
 - ✅ 青バナー「📂 保存済みAI評価補助を読み込みました」表示
 - ✅ AI参考見立てセクション再表示
 - ✅ カルテ下書きセクション再表示
 - ✅ 新規AI実行（緑バナー・新結果上書き）も問題なし
+- ✅ 診断 ping / JSON-string fallback / 本体 object の3系列すべて PASS
 
 **変更ファイル:** Main.gs / visit-form.html / ai45.spec.ts / package.json
 
