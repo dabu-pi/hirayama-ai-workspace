@@ -390,7 +390,7 @@
 
 ---
 
-### Phase Chart-Ref-1: 初回・前回カルテ参照パネル 🔄（実装完了・HEAD /dev 実機確認待ち 2026-05-12）
+### Phase Chart-Ref-1: 初回・前回カルテ参照パネル ✅（CLOSED 2026-05-12 @41）
 
 **目的:** 2回目以降の来院カルテ入力時に、施術者が初回 / 前回 カルテを read-only で参照しながら当日入力できるようにする。AI-5 で「過去判定比較」に進む前の土台。
 
@@ -417,8 +417,16 @@
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001
 ```
 
-**versioned deploy @41:** ⏸ 未実施（HEAD /dev PASS 後）
-- 予定 description: `@41 - Phase Chart-Ref-1: first and previous chart reference panel`
+**versioned deploy @41:** ✅ 本番反映済み（2026-05-12）
+- deploymentId: `AKfycbz_igUXXGGd68GyHSmpmGOUBrKxDisFOMfOpwZK7fgwb3r-DsWarfmWuWmfiSwQYf9h`
+- exec URL: `https://script.google.com/macros/s/AKfycbz_igUXXGGd68GyHSmpmGOUBrKxDisFOMfOpwZK7fgwb3r-DsWarfmWuWmfiSwQYf9h/exec`
+- description: `@41 - Phase Chart-Ref-1: first and previous chart reference panel`
+
+**HEAD /dev 実機確認 PASS（2026-05-12 / @41 deploy 直前）:**
+- ✅ 初回 visit: 「過去カルテ参照」カード表示・「初回来院のため参照なし」表示・自動コピーなし
+- ✅ 2回目以降 visit: 「過去カルテ参照」カード表示・初回カルテの visitKey / 主訴 / 評価 / 所見 / 施術内容 / 説明内容が表示
+- ✅ read-only / 当日の入力欄は自動コピーされない
+- ✅ AI-4.5 保存済みAI評価再表示への影響なし
 
 ---
 
