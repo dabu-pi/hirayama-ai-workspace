@@ -390,6 +390,38 @@
 
 ---
 
+### Phase Chart-Ref-1: 初回・前回カルテ参照パネル 🔄（実装完了・HEAD /dev 実機確認待ち 2026-05-12）
+
+**目的:** 2回目以降の来院カルテ入力時に、施術者が初回 / 前回 カルテを read-only で参照しながら当日入力できるようにする。AI-5 で「過去判定比較」に進む前の土台。
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| CR1-1 | `getChartReferencesForVisit(currentVisitKey, patientId)` 追加（visit/chart join + RPC-safe）| ✅ |
+| CR1-2 | `buildPage_` visitForm case に `t.chartRefs = ...` を追加 | ✅ |
+| CR1-3 | `visit-form.html` 患者サマリー直後に「過去カルテ参照」カードを scriptlet で描画 | ✅ |
+| CR1-4 | 初回 visit のみの患者には「初回来院のため参照なし」黄色注意カード | ✅ |
+| CR1-5 | first==previous の collapse / 編集モード当該=初回のとき first=null | ✅ |
+
+**設計方針:**
+- 自動コピーしない（参照表示のみ）
+- 既存保存・会計・AI-4.5 を壊さない
+- サーバー側レンダリング（追加 RPC なし）
+- `toRpcSafeObject_` 再利用で Date / undefined を安全化
+
+**clasp push:** ✅ 2026-05-12（`clasp pull` で server=local 完全一致を verify 済み）
+
+**変更ファイル:** `JREC_SF01_Visit.gs` / `JREC_SF01_Main.gs` / `visit-form.html` / `docs/CHART_REFERENCE_PANEL_DESIGN_2026-05-12.md`（新規）
+
+**実機確認 URL（HEAD /dev）:**
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001
+```
+
+**versioned deploy @41:** ⏸ 未実施（HEAD /dev PASS 後）
+- 予定 description: `@41 - Phase Chart-Ref-1: first and previous chart reference panel`
+
+---
+
 ### Phase AI-4.5: 保存済みAI評価再読込 + AI参考見立て ✅（CLOSED 2026-05-12 @40）
 
 **目的:** 保存済みAI評価を編集画面で自動再表示 + AI参考見立て（aiImpression）を追加する

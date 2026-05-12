@@ -465,6 +465,190 @@ function getVisitFormData(patientId, visitKey) {
 }
 
 /**
+ * Phase Chart-Ref-1: 当該来院に対する 初回カルテ / 前回カルテ の参照データを返す。
+ * 自動コピーはしない。read-only 表示用。
+ *
+ * - 初回: 同一 patientId / isDeleted=false の中で visitDate 最古
+ * - 前回: 当該 currentVisitKey より前の最新（編集モード）/ 全体の最新（新規モード）
+ * - 編集モードで当該 visit が初回そのものの場合は firstVisit = null（自分自身を参照しない）
+ * - first と previous が同一 visit になる場合は previous = null に collapse
+ *
+ * 返却は RPC-safe（toRpcSafeObject_ 経由・Date は文字列化）。
+ *
+ * @param {string} currentVisitKey 現在編集中の visitKey（新規モードは空文字）
+ * @param {string} patientId       内部患者キー
+ * @returns {{ ok: boolean, patientId: string, currentVisitKey: string,
+ *            firstVisit: Object|null, previousVisit: Object|null, debug: Object }}
+ */
+function getChartReferencesForVisit(currentVisitKey, patientId) {
+  var debug = {
+    reason:                "",
+    totalVisitsForPatient: 0,
+    sortedVisitKeys:       [],
+    isCurrentVisitInList:  false,
+    error:                 ""
+  };
+  try {
+    var pidStr = String(patientId      || '').trim();
+    var curStr = String(currentVisitKey || '').trim();
+    if (!pidStr) {
+      debug.reason = "no patientId";
+      return toRpcSafeObject_({ ok: true, patientId: "", currentVisitKey: curStr, firstVisit: null, previousVisit: null, debug: debug });
+    }
+
+    var ss = getTargetSpreadsheet_();
+    var visitSh = ss.getSheetByName(SHEET_NAMES.VISITS);
+    if (!visitSh || visitSh.getLastRow() < 2) {
+      debug.reason = "visits sheet not found or empty";
+      return toRpcSafeObject_({ ok: true, patientId: pidStr, currentVisitKey: curStr, firstVisit: null, previousVisit: null, debug: debug });
+    }
+
+    var numCols = Math.min(visitSh.getLastColumn(), 16);
+    var visitRows = visitSh.getRange(2, 1, visitSh.getLastRow() - 1, numCols).getValues();
+
+    // 同一 patientId / 非削除のみ抽出
+    var pv = [];
+    for (var i = 0; i < visitRows.length; i++) {
+      var r = visitRows[i];
+      if (String(r[1] || '').trim() !== pidStr) continue;
+      var isDeleted = r[11] === true || r[11] === "TRUE";
+      if (isDeleted) continue;
+      pv.push({
+        visitKey:           String(r[0] || ""),
+        patientId:          pidStr,
+        visitDateRaw:       r[2],
+        visitType:          String(r[3] || ""),
+        chiefComplaint:     String(r[5] || ""),
+        vas:                (r[6] === "" || r[6] === null) ? "" : String(r[6]),
+        nextPlan:           String(r[7] || ""),
+        injuryTrigger:      String(r[14] || ""),
+        relatedHistoryNote: String(r[15] || "")
+      });
+    }
+    debug.totalVisitsForPatient = pv.length;
+
+    if (pv.length === 0) {
+      debug.reason = "no visits for patient";
+      return toRpcSafeObject_({ ok: true, patientId: pidStr, currentVisitKey: curStr, firstVisit: null, previousVisit: null, debug: debug });
+    }
+
+    // visitDate 昇順、同一日は visitKey 昇順
+    pv.sort(function(a, b) {
+      var aMs = a.visitDateRaw ? new Date(a.visitDateRaw).getTime() : 0;
+      var bMs = b.visitDateRaw ? new Date(b.visitDateRaw).getTime() : 0;
+      if (aMs !== bMs) return aMs - bMs;
+      return a.visitKey < b.visitKey ? -1 : (a.visitKey > b.visitKey ? 1 : 0);
+    });
+    debug.sortedVisitKeys = pv.map(function(v) { return v.visitKey; });
+
+    var first = pv[0];
+    var previous = null;
+
+    if (curStr) {
+      var curIdx = -1;
+      for (var j = 0; j < pv.length; j++) {
+        if (pv[j].visitKey === curStr) { curIdx = j; break; }
+      }
+      debug.isCurrentVisitInList = curIdx >= 0;
+      // 編集モード: 当該より前の最新
+      if (curIdx > 0) previous = pv[curIdx - 1];
+      // 編集モードで当該が初回そのもの → firstVisit を出さない
+      if (curIdx === 0) first = null;
+    } else {
+      // 新規モード: 過去 visit 全体の最新
+      previous = pv[pv.length - 1];
+    }
+
+    // first と previous が同一なら previous を畳む（重複表示防止）
+    if (first && previous && first.visitKey === previous.visitKey) previous = null;
+
+    // SelfPayChart を visitKey でマップ化（必要な visit 分だけ後で引く）
+    var chartSh = ss.getSheetByName(SHEET_NAMES.CHART);
+    var chartMap = {};
+    if (chartSh && chartSh.getLastRow() >= 2) {
+      var chartRows = chartSh.getRange(2, 1, chartSh.getLastRow() - 1, 12).getValues();
+      for (var ci = 0; ci < chartRows.length; ci++) {
+        var cvk = String(chartRows[ci][1] || "").trim();
+        if (!cvk) continue;
+        chartMap[cvk] = {
+          assessment:       String(chartRows[ci][2]  || ""),
+          findings:         String(chartRows[ci][3]  || ""),
+          treatment:        String(chartRows[ci][4]  || ""),
+          equipment:        String(chartRows[ci][5]  || ""),
+          explanation:      String(chartRows[ci][6]  || ""),
+          contraindication: String(chartRows[ci][7]  || ""),
+          lifestyle:        String(chartRows[ci][8]  || ""),
+          nextAppointment:  String(chartRows[ci][9]  || "")
+        };
+      }
+    }
+
+    function _toIsoDate(d) {
+      if (!d) return "";
+      try {
+        if (d instanceof Date) return Utilities.formatDate(d, "Asia/Tokyo", "yyyy-MM-dd");
+        return String(d);
+      } catch (e) { return ""; }
+    }
+
+    function _attach(v) {
+      if (!v) return null;
+      var c = chartMap[v.visitKey] || {};
+      return {
+        visitKey:           v.visitKey,
+        visitDate:          _toIsoDate(v.visitDateRaw),
+        visitType:          v.visitType,
+        chiefComplaint:     v.chiefComplaint,
+        vas:                v.vas,
+        nextPlan:           v.nextPlan,
+        injuryTrigger:      v.injuryTrigger,
+        relatedHistoryNote: v.relatedHistoryNote,
+        chart: {
+          assessment:       c.assessment       || "",
+          findings:         c.findings         || "",
+          treatment:        c.treatment        || "",
+          equipment:        c.equipment        || "",
+          explanation:      c.explanation      || "",
+          contraindication: c.contraindication || "",
+          lifestyle:        c.lifestyle        || "",
+          nextAppointment:  c.nextAppointment  || ""
+        }
+      };
+    }
+
+    var firstOut    = _attach(first);
+    var previousOut = _attach(previous);
+
+    debug.reason = "ok";
+    Logger.log("[getChartReferencesForVisit] patient=" + pidStr +
+               " current=" + curStr +
+               " total=" + debug.totalVisitsForPatient +
+               " first=" + (firstOut ? firstOut.visitKey : "none") +
+               " previous=" + (previousOut ? previousOut.visitKey : "none"));
+    return toRpcSafeObject_({
+      ok: true,
+      patientId: pidStr,
+      currentVisitKey: curStr,
+      firstVisit: firstOut,
+      previousVisit: previousOut,
+      debug: debug
+    });
+  } catch (e) {
+    debug.reason = "exception";
+    debug.error  = e && e.message ? String(e.message) : String(e);
+    Logger.log("[getChartReferencesForVisit] ERROR: " + debug.error);
+    return toRpcSafeObject_({
+      ok: true,
+      patientId: String(patientId || ""),
+      currentVisitKey: String(currentVisitKey || ""),
+      firstVisit: null,
+      previousVisit: null,
+      debug: debug
+    });
+  }
+}
+
+/**
  * selfPayVisitKey を採番する: SPV_YYYYMMDD_patientId_001
  */
 function generateSelfPayVisitKey_(patientId, visitDate) {

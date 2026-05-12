@@ -94,6 +94,26 @@
   - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
   - 説明: @38 - Phase AI-4: AI_Assessments 保存・レビューバナー
 
+**🔄 Phase Chart-Ref-1 初回・前回カルテ参照パネル: 実装完了・HEAD /dev 実機確認待ち（2026-05-12）**
+  - 目的: 2回目以降の来院カルテ入力時に初回 / 前回 カルテを read-only で参照
+  - 方針: 自動コピーしない / 既存保存・会計・AI-4.5 を壊さない
+  - 実装:
+    - `JREC_SF01_Visit.gs`: `getChartReferencesForVisit(currentVisitKey, patientId)` 追加
+      - 同一 patientId・isDeleted=false から first / previous を判定
+      - first==previous は collapse / 編集モードで当該が初回そのものなら first=null
+      - SelfPayChart を visitKey でマップ化して join
+      - 返却は AI-4.5 で作った `toRpcSafeObject_` で RPC-safe 化（Date は ISO 文字列）
+    - `JREC_SF01_Main.gs`: `buildPage_` visitForm case に `t.chartRefs = ...` 1行追加
+    - `visit-form.html`: 患者サマリー直後に「過去カルテ参照」カードを scriptlet で描画
+      - 初回[青] / 前回[緑] のバッジ
+      - 表示項目: 主訴・受傷起点・評価・所見・施術内容・説明内容・生活指導・次回予定
+      - 初回 visit のみの患者は「初回来院のため参照なし」黄色注意カード
+  - サーバー側レンダリング採用（追加 RPC なし・page load 1回で完結）
+  - clasp push: ✅ 2026-05-12（`clasp pull` で server=local 完全一致を verify 済み）
+  - 検証 URL: `https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001`
+  - 詳細: `docs/CHART_REFERENCE_PANEL_DESIGN_2026-05-12.md`
+  - 次工程: HEAD /dev で人間検証 → PASS なら @41 deploy → CLOSED 化
+
 **✅ Phase AI-4.5 保存済みAI評価再読込 + AI参考見立て: CLOSED（2026-05-12 @40 本番反映）**
 （経緯: @39 deploy 後に「保存データはあるが visitForm で再表示されない」追加不具合を検出。
 header lookup 修正 → RPC null 問題対応（toRpcSafeObject_ / 診断 ping / JSON-string fallback）を経て

@@ -88,6 +88,8 @@ function buildPage_(page, idParam, q, vkParam, dateParam, yearParam, monthParam)
           }
           t.editVisit = evData.data;
         }
+        // Phase Chart-Ref-1: 初回/前回カルテ参照（read-only パネル用データ）
+        t.chartRefs = getChartReferencesForVisit(vkParam || "", idParam);
         return evalTemplate_(t);
       }
 
