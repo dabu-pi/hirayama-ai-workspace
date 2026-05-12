@@ -38,6 +38,8 @@
   "localDocs": {
     "portal0": "docs/HIRAYAMA_BUSINESS_PORTAL_CONCEPT_2026-05-13.md",
     "portal1": "docs/PORTAL_1_DESIGN_2026-05-13.md",
+    "portal2": "docs/PORTAL_2_SHEET_READ_PROTOTYPE_2026-05-13.md",
+    "portalGateway": "scripts/portal-gateway-v1.gs",
     "projectStatus": "PROJECT_STATUS.md",
     "nextActions": "NEXT_ACTIONS.md",
     "roadmap": "ROADMAP.md"

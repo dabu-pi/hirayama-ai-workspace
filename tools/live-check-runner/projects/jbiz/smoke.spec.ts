@@ -2,11 +2,14 @@
  * jbiz smoke.spec.ts
  * JBIZ 平山ビジネスポータル 基本確認
  *
- * Portal-1 フェーズの確認対象:
+ * Portal-2 フェーズの確認対象:
  *   1. Portal-0 構想書が存在する（ローカル fs チェック）
  *   2. Portal-1 設計書が存在する（ローカル fs チェック）
- *   3. PROJECT_STATUS.md に Portal-1 記録がある（テキスト検索）
- *   4. 管理表 URL に到達できる（認証あり時のみ）
+ *   3. Portal-2 設計書が存在する（ローカル fs チェック）
+ *   4. PROJECT_STATUS.md に Portal-2 記録がある（テキスト検索）
+ *   5. GAS スクリプト portal-gateway-v1.gs が存在する（ローカル fs チェック）
+ *   6. config.json の spreadsheetId が正本 ID（整合確認）
+ *   7. 管理表 URL に到達できる（認証あり時のみ）
  *
  * 認証状態による動作:
  *   auth.json あり → Google ログイン済みセッションで Sheets URL を確認 → PASS 期待
@@ -66,6 +69,39 @@ test("NEXT_ACTIONS.md が存在する", async () => {
     fs.existsSync(filePath),
     `NEXT_ACTIONS.md が見つかりません: ${filePath}`
   ).toBe(true);
+});
+
+test("Portal-2 設計書が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portal2);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-2 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-2 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(
+    content.includes("Portal-2"),
+    "PROJECT_STATUS.md に Portal-2 の記録がありません"
+  ).toBe(true);
+});
+
+test("GAS gateway スクリプトが存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portalGateway);
+  expect(
+    fs.existsSync(filePath),
+    `portal-gateway-v1.gs が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("config の spreadsheetId が正本 ID", async () => {
+  const CORRECT_ID = "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc";
+  expect(
+    config.spreadsheetId,
+    `spreadsheetId が正本 ID ではありません: ${config.spreadsheetId}`
+  ).toBe(CORRECT_ID);
 });
 
 // ── Sheets URL 到達確認（認証あり時のみ）────────────────────
