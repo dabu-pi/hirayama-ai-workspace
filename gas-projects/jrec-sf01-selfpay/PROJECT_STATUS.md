@@ -94,22 +94,38 @@
   - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
   - 説明: @38 - Phase AI-4: AI_Assessments 保存・レビューバナー
 
-**🔄 Phase Chart-Ref-2 過去カルテ参照からの手動引用ボタン: 実装完了・HEAD /dev 実機確認待ち（2026-05-12）**
+**✅ Phase Chart-Ref-2 過去カルテ参照からの手動引用ボタン: CLOSED（2026-05-12 @42 本番反映）**
   - 目的: Chart-Ref-1 の read-only 参照パネルを拡張し、施術者が必要項目だけを当日カルテ入力欄へ手動引用できるようにする
   - 方針: 自動コピーしない / 上書きしない（空行挟んで末尾追記）/ 引用元ラベル付き / 既存機能を壊さない
   - 実装（`visit-form.html` のみ・GAS 不変）:
-    - `<style>` に `.qbtn` 系 CSS 追加（小型ボタン・hover 青・done 緑）
-    - Chart-Ref-1 パネル各項目の下に `📋 ...へ引用` ボタン（9項目: 主訴 / 受傷起点 / 評価 / 所見 / 施術内容 / 説明内容 / 生活指導 / 次回予定 / 次回方針）
-    - 引用テキストは `data-quote-text` 属性で運搬（HtmlService の attribute escaping 利用）
+    - `.qbtn` CSS（小型ピル型・hover 青・done 緑）
+    - Chart-Ref-1 パネル各項目下に `📋 …へ引用` ボタン（9項目）
     - `quoteToField(btn)` 関数: 既存入力ありなら `\n\n` 区切りで末尾追記 / 空ならそのまま代入
-    - 引用ラベル: `【<📌 初回 / 🔁 前回> <項目名>より引用】\n<text>`
-    - フィードバック: ボタンが 1.5 秒間「✓ 引用済み」（緑）に変化
-    - フォーカス移動なし（編集中の他箇所を邪魔しないため）
-  - サーバー側変更: なし（Chart-Ref-1 の `getChartReferencesForVisit` の返却データをそのまま data 属性で利用）
-  - clasp push: ✅ 2026-05-12（`clasp pull` で server=local 完全一致を verify 済み）
-  - 検証 URL: `https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001`
-  - 詳細: `docs/CHART_REFERENCE_QUOTE_BUTTONS_2026-05-12.md`
-  - 次工程: HEAD /dev で人間検証 → PASS なら @42 deploy → CLOSED 化
+    - 引用ラベル: `【📌 初回 / 🔁 前回 <項目名>より引用】\n<text>`
+    - 1.5 秒「✓ 引用済み」緑バッジでフィードバック・フォーカス移動なし
+  - サーバー側変更: なし
+
+  **HEAD /dev 実機確認 PASS（2026-05-12）:**
+    - ✅ 過去カルテ参照カード内に引用ボタン表示
+    - ✅ ボタン押下で当日入力欄へ追記
+    - ✅ 既存入力は上書きされない
+    - ✅ 引用元ラベル付き
+    - ✅「✓ 引用済み」フィードバックあり
+    - ✅ 自動コピーなし
+    - ✅ 保存処理正常
+    - ✅ AI-4.5 青バナー正常
+    - ✅ Chart-Ref-1 read-only 表示正常
+
+  **versioned deploy @42: 本番反映済み（2026-05-12）:**
+    - deploymentId: `AKfycbyOtef10SuH7R1SaDVMBZS7L9yZIBYpEIVmNdS_fhz3hUtc1b0PSKvtzwRxQ6I43YObEA`
+    - exec URL: `https://script.google.com/macros/s/AKfycbyOtef10SuH7R1SaDVMBZS7L9yZIBYpEIVmNdS_fhz3hUtc1b0PSKvtzwRxQ6I43YObEA/exec`
+    - description: `@42 - Phase Chart-Ref-2: manual quote buttons for chart references`
+
+  **詳細:** `docs/CHART_REFERENCE_QUOTE_BUTTONS_2026-05-12.md`
+
+  **次フェーズ候補（優先度順）:**
+    1. Phase AI-5 — 過去判定比較（Chart-Ref-1/2 の土台ができたので AI で初回・前回差分・改善 / 悪化傾向を扱える）
+    2. Phase 6-M — CSV / 印刷 / 監査レポート ⏸
 
 **✅ Phase Chart-Ref-1 初回・前回カルテ参照パネル: CLOSED（2026-05-12 @41 本番反映）**
   - 目的: 2回目以降の来院カルテ入力時に初回 / 前回 カルテを read-only で参照

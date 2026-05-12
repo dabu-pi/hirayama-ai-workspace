@@ -390,7 +390,7 @@
 
 ---
 
-### Phase Chart-Ref-2: 過去カルテ参照からの手動引用ボタン 🔄（実装完了・HEAD /dev 実機確認待ち 2026-05-12）
+### Phase Chart-Ref-2: 過去カルテ参照からの手動引用ボタン ✅（CLOSED 2026-05-12 @42）
 
 **目的:** Chart-Ref-1 の read-only 参照パネルを拡張し、施術者が必要項目だけを当日カルテ入力欄へ手動引用できるようにする。
 
@@ -418,8 +418,18 @@
 https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001
 ```
 
-**versioned deploy @42:** ⏸ 未実施（HEAD /dev PASS 後）
-- 予定 description: `@42 - Phase Chart-Ref-2: manual quote buttons for chart references`
+**versioned deploy @42:** ✅ 本番反映済み（2026-05-12）
+- deploymentId: `AKfycbyOtef10SuH7R1SaDVMBZS7L9yZIBYpEIVmNdS_fhz3hUtc1b0PSKvtzwRxQ6I43YObEA`
+- exec URL: `https://script.google.com/macros/s/AKfycbyOtef10SuH7R1SaDVMBZS7L9yZIBYpEIVmNdS_fhz3hUtc1b0PSKvtzwRxQ6I43YObEA/exec`
+- description: `@42 - Phase Chart-Ref-2: manual quote buttons for chart references`
+
+**HEAD /dev 実機確認 PASS（2026-05-12 / @42 deploy 直前）:**
+- ✅ 過去カルテ参照カード内に引用ボタン表示
+- ✅ ボタン押下で当日入力欄へ追記
+- ✅ 既存入力は上書きされない / 引用元ラベル付き
+- ✅「✓ 引用済み」フィードバックあり
+- ✅ 自動コピーなし / 保存処理正常
+- ✅ AI-4.5 青バナー / Chart-Ref-1 read-only 表示は不変
 
 ---
 
