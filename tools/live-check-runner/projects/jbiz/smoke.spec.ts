@@ -104,6 +104,41 @@ test("config の spreadsheetId が正本 ID", async () => {
   ).toBe(CORRECT_ID);
 });
 
+test("Portal-3 設計書が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portal3);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-3 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("GAS スクリプトに doGet が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portalGateway);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(
+    content.includes("function doGet("),
+    "portal-gateway-v1.gs に doGet 関数がありません"
+  ).toBe(true);
+});
+
+test("GAS スクリプトに appendPortal2ToRunLog が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portalGateway);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(
+    content.includes("function appendPortal2ToRunLog("),
+    "portal-gateway-v1.gs に appendPortal2ToRunLog 関数がありません"
+  ).toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-3 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(
+    content.includes("Portal-3"),
+    "PROJECT_STATUS.md に Portal-3 の記録がありません"
+  ).toBe(true);
+});
+
 // ── Sheets URL 到達確認（認証あり時のみ）────────────────────
 
 test("管理表 URL に到達できる（auth ありの場合のみ）", async ({ page }) => {
