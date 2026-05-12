@@ -6,17 +6,18 @@
   "description": "平山接骨院 慢性疼痛強化プロジェクト 管理表（稼働中正本）",
   "oldSpreadsheetId": "1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc",
   "oldSpreadsheetNote": "2026-03-10 古いバージョン。Dashboard_Minimum_KPI 等なし。参照不可。",
-  "currentPhase": "Portal-3",
+  "currentPhase": "Portal-6",
   "gasScript": {
     "scriptId": "1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J",
     "scriptUrl": "https://script.google.com/d/1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J/edit",
     "deploymentId": "AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ",
     "webAppUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec",
     "webAppSetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setup",
+    "webAppPortal6SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal6",
     "devUrl": "https://script.google.com/macros/s/AKfycbwI5optbFNifws1Wz0tfmAomi_Xc-iMDDd8P06bfE_/dev",
     "authStatus": "APPROVED",
-    "currentPhaseDeployment": "@3 (Portal-4 KPI card improvement)",
-    "authNote": "承認済み（2026-05-13）。Run_Log 4行確認済み。"
+    "currentPhaseDeployment": "@6 (Portal-6 navigation + detail view)",
+    "authNote": "承認済み（2026-05-13）。Run_Log 5行確認済み。Portal-6 デプロイ後は setupPortal6 で TASK-PORTAL-6-001 を done に更新。"
   },
   "driveVerification": {
     "verified": true,
@@ -53,7 +54,9 @@
     "portal3": "docs/PORTAL_3_GAS_WEBAPP_DEPLOY_2026-05-13.md",
     "portal4": "docs/PORTAL_4_KPI_CARD_IMPROVEMENT_2026-05-13.md",
     "portal5": "docs/PORTAL_5_RUN_LOG_TASK_QUEUE_VIEW_2026-05-13.md",
+    "portal6": "docs/PORTAL_6_NAVIGATION_DETAIL_VIEW_2026-05-13.md",
     "portalGateway": "scripts/portal-gateway-v1.gs",
+    "portalGatewayClasp": "gas/portal-gateway-v1.gs",
     "projectStatus": "PROJECT_STATUS.md",
     "nextActions": "NEXT_ACTIONS.md",
     "roadmap": "ROADMAP.md"

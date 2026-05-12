@@ -200,6 +200,106 @@ test("PROJECT_STATUS.md に Portal-5 記録がある", async () => {
   expect(content.includes("Portal-5"), "PROJECT_STATUS.md に Portal-5 がありません").toBe(true);
 });
 
+// ── Portal-6 チェック ──────────────────────────────────────
+
+test("Portal-6 設計書が存在する", async () => {
+  const filePath = jbizPath((config as any).localDocs.portal6);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-6 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("GAS スクリプトに buildNavigation_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildNavigation_"), "buildNavigation_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに readAllRunLog_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function readAllRunLog_"), "readAllRunLog_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに readAllTaskQueue_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function readAllTaskQueue_"), "readAllTaskQueue_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに readKpiDetail_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function readKpiDetail_"), "readKpiDetail_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに readRoadmapDetail_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function readRoadmapDetail_"), "readRoadmapDetail_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildHomeView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildHomeView_"), "buildHomeView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildRunLogView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildRunLogView_"), "buildRunLogView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildTaskQueueView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildTaskQueueView_"), "buildTaskQueueView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildKpiView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildKpiView_"), "buildKpiView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildRoadmapView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildRoadmapView_"), "buildRoadmapView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal6 が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function setupPortal6("), "setupPortal6 がありません").toBe(true);
+});
+
+test("GAS スクリプトに appendPortal6ToRunLog が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function appendPortal6ToRunLog("), "appendPortal6ToRunLog がありません").toBe(true);
+});
+
+test("GAS スクリプトに updateTask action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'updateTask'"), "updateTask アクションがありません").toBe(true);
+});
+
+test("GAS スクリプトに view 切替が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("case 'runlog'"), "view=runlog 切替がありません").toBe(true);
+  expect(content.includes("case 'tasks'"), "view=tasks 切替がありません").toBe(true);
+  expect(content.includes("case 'kpi'"), "view=kpi 切替がありません").toBe(true);
+  expect(content.includes("case 'roadmap'"), "view=roadmap 切替がありません").toBe(true);
+});
+
+test("gas/ と scripts/ の portal-gateway-v1.gs が同一", async () => {
+  const gasPath = jbizPath((config as any).localDocs.portalGatewayClasp);
+  const scriptsPath = jbizPath(config.localDocs.portalGateway);
+  const gasContent = fs.readFileSync(gasPath, "utf-8");
+  const scriptsContent = fs.readFileSync(scriptsPath, "utf-8");
+  expect(
+    gasContent === scriptsContent,
+    "gas/portal-gateway-v1.gs と scripts/portal-gateway-v1.gs の内容が異なります"
+  ).toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-6 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-6"), "PROJECT_STATUS.md に Portal-6 がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,
