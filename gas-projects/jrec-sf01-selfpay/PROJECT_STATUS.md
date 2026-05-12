@@ -94,6 +94,23 @@
   - /exec URL: https://script.google.com/macros/s/AKfycbxP9beCl8tZ4t41irDgFa-fg54KyDjt8-xM4ogefuwMaZ9Pmkx5-D7JvkLS_nn1G5utYA/exec
   - 説明: @38 - Phase AI-4: AI_Assessments 保存・レビューバナー
 
+**🔄 Phase Chart-Ref-2 過去カルテ参照からの手動引用ボタン: 実装完了・HEAD /dev 実機確認待ち（2026-05-12）**
+  - 目的: Chart-Ref-1 の read-only 参照パネルを拡張し、施術者が必要項目だけを当日カルテ入力欄へ手動引用できるようにする
+  - 方針: 自動コピーしない / 上書きしない（空行挟んで末尾追記）/ 引用元ラベル付き / 既存機能を壊さない
+  - 実装（`visit-form.html` のみ・GAS 不変）:
+    - `<style>` に `.qbtn` 系 CSS 追加（小型ボタン・hover 青・done 緑）
+    - Chart-Ref-1 パネル各項目の下に `📋 ...へ引用` ボタン（9項目: 主訴 / 受傷起点 / 評価 / 所見 / 施術内容 / 説明内容 / 生活指導 / 次回予定 / 次回方針）
+    - 引用テキストは `data-quote-text` 属性で運搬（HtmlService の attribute escaping 利用）
+    - `quoteToField(btn)` 関数: 既存入力ありなら `\n\n` 区切りで末尾追記 / 空ならそのまま代入
+    - 引用ラベル: `【<📌 初回 / 🔁 前回> <項目名>より引用】\n<text>`
+    - フィードバック: ボタンが 1.5 秒間「✓ 引用済み」（緑）に変化
+    - フォーカス移動なし（編集中の他箇所を邪魔しないため）
+  - サーバー側変更: なし（Chart-Ref-1 の `getChartReferencesForVisit` の返却データをそのまま data 属性で利用）
+  - clasp push: ✅ 2026-05-12（`clasp pull` で server=local 完全一致を verify 済み）
+  - 検証 URL: `https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001`
+  - 詳細: `docs/CHART_REFERENCE_QUOTE_BUTTONS_2026-05-12.md`
+  - 次工程: HEAD /dev で人間検証 → PASS なら @42 deploy → CLOSED 化
+
 **✅ Phase Chart-Ref-1 初回・前回カルテ参照パネル: CLOSED（2026-05-12 @41 本番反映）**
   - 目的: 2回目以降の来院カルテ入力時に初回 / 前回 カルテを read-only で参照
   - 方針: 自動コピーしない / 既存保存・会計・AI-4.5 を壊さない

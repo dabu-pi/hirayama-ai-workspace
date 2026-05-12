@@ -14,6 +14,12 @@
     .vas-wrap { display:flex; align-items:center; gap:10px; }
     .vas-wrap input { width:80px; }
     .vas-wrap .vas-hint { font-size:12px; color:#9aa0a6; }
+    /* Phase Chart-Ref-2: 引用ボタン */
+    .qbtn { padding:1px 8px; font-size:11px; border:1px solid #dadce0;
+            border-radius:10px; background:#fff; cursor:pointer; color:#5f6368;
+            margin-top:4px; transition:background 0.15s ease; }
+    .qbtn:hover { background:#e8f0fe; border-color:#1a73e8; color:#1a73e8; }
+    .qbtn.done  { background:#e6f4ea; border-color:#0d8043; color:#0d8043; }
   </style>
 </head>
 <body>
@@ -113,38 +119,65 @@
       <div style="display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:12px;line-height:1.7;color:#3c4043;">
         <? if (_v.chiefComplaint) { ?>
         <div style="color:#9aa0a6;">主訴・症状</div>
-        <div style="white-space:pre-wrap;"><?= _v.chiefComplaint ?><? if (_v.vas) { ?> <span style="color:#9aa0a6;">/ VAS:</span> <?= _v.vas ?>/10<? } ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _v.chiefComplaint ?><? if (_v.vas) { ?> <span style="color:#9aa0a6;">/ VAS:</span> <?= _v.vas ?>/10<? } ?></div>
+          <button type="button" class="qbtn" data-target="chiefComplaint" data-source-label="<?= _ref.label ?> 主訴・症状" data-quote-text="<?= _v.chiefComplaint ?>" onclick="quoteToField(this)">📋 主訴へ引用</button>
+        </div>
         <? } ?>
         <? if (_v.injuryTrigger) { ?>
         <div style="color:#9aa0a6;">受傷起点</div>
-        <div style="white-space:pre-wrap;"><?= _v.injuryTrigger ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _v.injuryTrigger ?></div>
+          <button type="button" class="qbtn" data-target="injuryTrigger" data-source-label="<?= _ref.label ?> 受傷起点" data-quote-text="<?= _v.injuryTrigger ?>" onclick="quoteToField(this)">📋 受傷起点へ引用</button>
+        </div>
         <? } ?>
         <? if (_ch.assessment) { ?>
         <div style="color:#9aa0a6;">評価</div>
-        <div style="white-space:pre-wrap;"><?= _ch.assessment ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _ch.assessment ?></div>
+          <button type="button" class="qbtn" data-target="assessment" data-source-label="<?= _ref.label ?> 評価" data-quote-text="<?= _ch.assessment ?>" onclick="quoteToField(this)">📋 評価へ引用</button>
+        </div>
         <? } ?>
         <? if (_ch.findings) { ?>
         <div style="color:#9aa0a6;">所見</div>
-        <div style="white-space:pre-wrap;"><?= _ch.findings ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _ch.findings ?></div>
+          <button type="button" class="qbtn" data-target="findings" data-source-label="<?= _ref.label ?> 所見" data-quote-text="<?= _ch.findings ?>" onclick="quoteToField(this)">📋 所見へ引用</button>
+        </div>
         <? } ?>
         <? if (_ch.treatment) { ?>
         <div style="color:#9aa0a6;">施術内容</div>
-        <div style="white-space:pre-wrap;"><?= _ch.treatment ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _ch.treatment ?></div>
+          <button type="button" class="qbtn" data-target="treatment" data-source-label="<?= _ref.label ?> 施術内容" data-quote-text="<?= _ch.treatment ?>" onclick="quoteToField(this)">📋 施術内容へ引用</button>
+        </div>
         <? } ?>
         <? if (_ch.explanation) { ?>
         <div style="color:#9aa0a6;">説明内容</div>
-        <div style="white-space:pre-wrap;"><?= _ch.explanation ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _ch.explanation ?></div>
+          <button type="button" class="qbtn" data-target="explanation" data-source-label="<?= _ref.label ?> 説明内容" data-quote-text="<?= _ch.explanation ?>" onclick="quoteToField(this)">📋 説明内容へ引用</button>
+        </div>
         <? } ?>
         <? if (_ch.lifestyle) { ?>
         <div style="color:#9aa0a6;">生活指導</div>
-        <div style="white-space:pre-wrap;"><?= _ch.lifestyle ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _ch.lifestyle ?></div>
+          <button type="button" class="qbtn" data-target="lifestyle" data-source-label="<?= _ref.label ?> 生活指導" data-quote-text="<?= _ch.lifestyle ?>" onclick="quoteToField(this)">📋 生活指導へ引用</button>
+        </div>
         <? } ?>
         <? if (_ch.nextAppointment) { ?>
         <div style="color:#9aa0a6;">次回予定</div>
-        <div style="white-space:pre-wrap;"><?= _ch.nextAppointment ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _ch.nextAppointment ?></div>
+          <button type="button" class="qbtn" data-target="nextAppointment" data-source-label="<?= _ref.label ?> 次回予定" data-quote-text="<?= _ch.nextAppointment ?>" onclick="quoteToField(this)">📋 次回予定へ引用</button>
+        </div>
         <? } else if (_v.nextPlan) { ?>
         <div style="color:#9aa0a6;">次回方針</div>
-        <div style="white-space:pre-wrap;"><?= _v.nextPlan ?></div>
+        <div>
+          <div style="white-space:pre-wrap;"><?= _v.nextPlan ?></div>
+          <button type="button" class="qbtn" data-target="nextPlan" data-source-label="<?= _ref.label ?> 次回方針" data-quote-text="<?= _v.nextPlan ?>" onclick="quoteToField(this)">📋 次回方針へ引用</button>
+        </div>
         <? } ?>
       </div>
     </div>
@@ -587,6 +620,51 @@ function appendField(fieldId, text) {
   var el = document.getElementById(fieldId);
   el.value = el.value ? el.value + '・' + text : text;
   el.focus();
+}
+
+// ── Phase Chart-Ref-2: 過去カルテ参照からの手動引用 ──────
+/**
+ * 引用ボタンの onclick から呼ばれる。
+ * 対象入力欄に過去カルテのテキストを「【<label>より引用】\n<text>」形式で追記する。
+ * 既存入力は上書きせず、空でなければ空行を挟んで末尾に追記する。
+ */
+function quoteToField(btn) {
+  if (!btn) return;
+  var targetId    = btn.getAttribute('data-target');
+  var quoteText   = btn.getAttribute('data-quote-text');
+  var sourceLabel = btn.getAttribute('data-source-label');
+  if (!targetId || !quoteText) return;
+
+  var el = document.getElementById(targetId);
+  if (!el) {
+    console.log('[CR2] quoteToField: target element not found', targetId);
+    return;
+  }
+
+  var quoted = sourceLabel
+    ? '【' + sourceLabel + 'より引用】\n' + quoteText
+    : quoteText;
+
+  if (el.value && el.value.replace(/\s+$/, '').length > 0) {
+    el.value = el.value.replace(/\s+$/, '') + '\n\n' + quoted;
+  } else {
+    el.value = quoted;
+  }
+
+  // input イベントを発火（将来の autosave 等のために任意で）
+  try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+
+  // 短時間のフィードバック表示
+  var originalText = btn.textContent;
+  btn.textContent  = '✓ 引用済み';
+  btn.classList.add('done');
+  setTimeout(function() {
+    btn.textContent = originalText;
+    btn.classList.remove('done');
+  }, 1500);
+
+  // 引用先にフォーカスは当てない（編集の途中を邪魔しないため）
+  console.log('[CR2] quoted to', targetId, 'from', sourceLabel, '(len=' + (quoteText && quoteText.length) + ')');
 }
 
 // ── AI評価補助（Phase AI-3: OpenAI API連携）──────

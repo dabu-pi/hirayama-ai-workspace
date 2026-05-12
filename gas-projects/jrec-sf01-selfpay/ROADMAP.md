@@ -390,6 +390,39 @@
 
 ---
 
+### Phase Chart-Ref-2: 過去カルテ参照からの手動引用ボタン 🔄（実装完了・HEAD /dev 実機確認待ち 2026-05-12）
+
+**目的:** Chart-Ref-1 の read-only 参照パネルを拡張し、施術者が必要項目だけを当日カルテ入力欄へ手動引用できるようにする。
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| CR2-1 | `.qbtn` CSS 追加（小型ボタン / hover 青 / done 緑）| ✅ |
+| CR2-2 | Chart-Ref-1 パネル各項目下に `📋 …へ引用` ボタン追加（9項目）| ✅ |
+| CR2-3 | `quoteToField(btn)` 関数: 既存入力ありなら `\n\n` 区切りで末尾追記 / 引用元ラベル付き | ✅ |
+| CR2-4 | フィードバック: 1.5 秒「✓ 引用済み」緑バッジ表示 | ✅ |
+| CR2-5 | data 属性ベース運搬（`data-target` / `data-source-label` / `data-quote-text`）| ✅ |
+
+**設計方針:**
+- 自動コピーしない（施術者が押したときだけ反映）
+- 上書きしない（既存入力には空行挟んで末尾追記）
+- 引用元ラベル: `【📌 初回 主訴・症状より引用】\n<text>` 形式
+- Chart-Ref-1 / AI-4.5 / 保存・会計はすべて不変
+- サーバー側変更なし（フロントのみで完結）
+
+**clasp push:** ✅ 2026-05-12（`clasp pull` で server=local 完全一致を verify 済み）
+
+**変更ファイル:** `visit-form.html` のみ / 新規 `docs/CHART_REFERENCE_QUOTE_BUTTONS_2026-05-12.md`
+
+**実機確認 URL（HEAD /dev）:**
+```
+https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev?page=visitForm&id=P0001&visitKey=SPV_20260511_P0001_001
+```
+
+**versioned deploy @42:** ⏸ 未実施（HEAD /dev PASS 後）
+- 予定 description: `@42 - Phase Chart-Ref-2: manual quote buttons for chart references`
+
+---
+
 ### Phase Chart-Ref-1: 初回・前回カルテ参照パネル ✅（CLOSED 2026-05-12 @41）
 
 **目的:** 2回目以降の来院カルテ入力時に、施術者が初回 / 前回 カルテを read-only で参照しながら当日入力できるようにする。AI-5 で「過去判定比較」に進む前の土台。
