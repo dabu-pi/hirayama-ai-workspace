@@ -333,11 +333,11 @@ test.describe("WILDBOAR W-IM3B: ImportMembers full ~84 dry-run", () => {
     expect(res.total, "total matches seed").toBe(importableRows.length);
   });
 
-  test("W-IM3B-6: WARNING 内訳取得（個人情報非開示）", async ({ page }) => {
+  test("W-IM3B-6: WARNING 内訳取得 + birth_date 形式 WARNING == 0（I-1 修正後）", async ({ page }) => {
     expect(validateServer, "validate result captured").not.toBeNull();
 
-    // validate の rows[] から validation_status / validation_errors の集計を作る。
-    // errors テキストには個人情報を含めないため、ラベルごとの「該当件数」だけ集計する。
+    // validate の rows[] から validation_status / validation_warnings の集計を作る。
+    // 個人情報を含めないため、ラベルごとの「該当件数」だけ集計する。
     const labelCounts: Record<string, number> = {};
     for (const r of (validateServer.rows || [])) {
       const status = String(r.validation_status || "").toUpperCase();
@@ -381,6 +381,14 @@ test.describe("WILDBOAR W-IM3B: ImportMembers full ~84 dry-run", () => {
       type: "warning-error-breakdown",
       description: JSON.stringify(labelCounts),
     });
+
+    // I-1 fix assertion: birth_date 形式 WARNING は 0 件であるべき
+    // （Sheets の自動 Date 変換は seed 側の setNumberFormat('@') + 読み取り側の
+    //   _normalizeDateField() で抑止されたはず）
+    const birthFormatCount = labelCounts["warn:birth_date の形式"] || 0;
+    const joinFormatCount  = labelCounts["warn:join_date の形式"] || 0;
+    expect(birthFormatCount, "I-1: birth_date 形式 WARNING is 0").toBe(0);
+    expect(joinFormatCount, "join_date 形式 WARNING is 0").toBe(0);
   });
 
   test("W-IM3B-7: dry-run（ERROR=BLOCKED=0 のときのみ）", async ({ page }) => {
