@@ -739,17 +739,36 @@ function loadSavedAIAssessment(visitKey, patientId, retryCount) {
 
   google.script.run
     .withSuccessHandler(function(res) {
-      console.log('[AI45] getLatestAIAssessmentForVisitOrPatient result', {
-        ok:            !!(res && res.ok),
-        found:         !!(res && res.ok && res.assessment),
-        assessmentId:  res && res.assessment ? res.assessment.assessmentId  : null,
-        sourceType:    res && res.assessment ? res.assessment.sourceType    : null,
-        promptVersion: res && res.assessment ? res.assessment.promptVersion : null
+      // res 全体を Object 形式と文字列形式の両方で出す（取りこぼし防止）
+      console.log('[AI45] raw response object', res);
+      try { console.log('[AI45] raw response JSON', JSON.stringify(res)); } catch (e) {}
+
+      var dbg = res && res.debug ? res.debug : {};
+      console.log('[AI45] getLatestAIAssessmentForVisitOrPatient summary', {
+        ok:             !!(res && res.ok),
+        found:          !!(res && res.found),
+        hasAssessment:  !!(res && res.assessment),
+        reason:         dbg.reason         || null,
+        sheetName:      dbg.sheetName      || null,
+        spreadsheetId:  dbg.spreadsheetId  || null,
+        rowCount:       dbg.rowCount       || 0,
+        headerCount:    dbg.headerCount    || 0,
+        missingHeaders: dbg.missingHeaders || [],
+        needleVk:       dbg.needleVk       || null,
+        needlePid:      dbg.needlePid      || null,
+        totalScanned:   dbg.totalScanned   || 0,
+        vkMatches:      dbg.vkMatches      || 0,
+        pidMatches:     dbg.pidMatches     || 0,
+        error:          dbg.error          || null,
+        assessmentId:   res && res.assessment ? res.assessment.assessmentId  : null,
+        sourceType:     res && res.assessment ? res.assessment.sourceType    : null,
+        promptVersion:  res && res.assessment ? res.assessment.promptVersion : null
       });
-      if (res && res.ok && res.assessment) {
+
+      if (res && res.found && res.assessment) {
         displaySavedAssessment(res.assessment);
       } else {
-        console.log('[AI45] no saved assessment for this visitKey/patientId');
+        console.log('[AI45] no saved assessment — reason=' + (dbg.reason || 'unknown'));
       }
     })
     .withFailureHandler(function(err) {

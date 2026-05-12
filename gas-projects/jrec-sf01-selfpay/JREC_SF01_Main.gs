@@ -574,29 +574,69 @@ function getAIAssessmentsByVisitKey(visitKey) {
  * ヘッダー lookup は trim + lowercase で行うため、保存と読み取りで列名表記が
  * 微妙に違っても（前後空白・大文字小文字差）取り違えない。比較値も trim する。
  *
+ * 失敗時もフロントが原因を判別できるように、常に `debug` payload を返す:
+ *   debug.reason            "match found" | "no match" | "header missing" |
+ *                           "sheet not found" | "sheet empty" | "exception"
+ *   debug.sheetName         参照したシート名
+ *   debug.spreadsheetId     参照したスプレッドシートID（先頭8文字のみ）
+ *   debug.headerCount       検出されたヘッダー数
+ *   debug.rowCount          最終行（ヘッダー込み）
+ *   debug.rawHeaders        raw ヘッダー配列
+ *   debug.missingHeaders    必須ヘッダーで欠落しているもの
+ *   debug.needleVk          検索 visitKey（trim 後）
+ *   debug.needlePid         検索 patientId（trim 後）
+ *   debug.totalScanned      非空行スキャン件数
+ *   debug.vkMatches         visitKey で一致した件数
+ *   debug.pidMatches        patientId で一致した件数
+ *   debug.error             例外時のメッセージ
+ *
  * @param {string} visitKey  来院キー（空文字の場合は patientId で検索）
  * @param {string} patientId 内部患者キー（例: P0001）
- * @returns {{ ok: boolean, assessment: Object|null }}
+ * @returns {{ ok: boolean, found: boolean, assessment: Object|null, debug: Object }}
  *   assessment.sourceType: "visitKey" | "patientId" | null
  */
 function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
   var AI_SHEET_NAME = "AI_Assessments"; // ハードコード（SHEET_NAMES参照を避ける）
+  var debug = {
+    reason:         "",
+    sheetName:      AI_SHEET_NAME,
+    spreadsheetId:  "",
+    headerCount:    0,
+    rowCount:       0,
+    rawHeaders:     [],
+    missingHeaders: [],
+    needleVk:       String(visitKey  || '').trim(),
+    needlePid:      String(patientId || '').trim(),
+    totalScanned:   0,
+    vkMatches:      0,
+    pidMatches:     0
+  };
+
   try {
     var ss = getTargetSpreadsheet_();
+    debug.spreadsheetId = ss ? String(ss.getId() || "").substring(0, 8) : "";
+
     var sh = ss.getSheetByName(AI_SHEET_NAME);
-    if (!sh || sh.getLastRow() < 2) {
-      Logger.log("[getLatestAIAssessmentForVisitOrPatient] sheet not found or empty");
-      return { ok: true, assessment: null };
+    if (!sh) {
+      debug.reason = "sheet not found";
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] sheet not found ssIdPrefix=" + debug.spreadsheetId);
+      return { ok: true, found: false, assessment: null, debug: debug };
+    }
+    debug.rowCount = sh.getLastRow();
+    if (debug.rowCount < 2) {
+      debug.reason = "sheet empty";
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] sheet empty rowCount=" + debug.rowCount);
+      return { ok: true, found: false, assessment: null, debug: debug };
     }
 
     var data = sh.getDataRange().getValues();
-    if (data.length < 2) return { ok: true, assessment: null };
+    debug.rawHeaders  = data[0];
+    debug.headerCount = data[0].length;
 
     // ヘッダーを trim + lowercase で正規化して引く
-    var rawHeaders = data[0];
     var idxMap = {};
-    for (var hi = 0; hi < rawHeaders.length; hi++) {
-      var key = String(rawHeaders[hi] || '').trim().toLowerCase();
+    for (var hi = 0; hi < data[0].length; hi++) {
+      var key = String(data[0][hi] || '').trim().toLowerCase();
       if (key) idxMap[key] = hi;
     }
     var idxId     = idxMap["assessmentid"];
@@ -608,51 +648,50 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
     var idxModel  = idxMap["model"];
     var idxPv     = idxMap["promptversion"];
 
-    if (idxId === undefined || idxVk === undefined || idxPid === undefined) {
-      Logger.log("[getLatestAIAssessmentForVisitOrPatient] required headers missing — idxId=" + idxId +
-                 " idxVk=" + idxVk + " idxPid=" + idxPid +
-                 " rawHeaders=" + JSON.stringify(rawHeaders));
-      return { ok: true, assessment: null };
+    var required = { "assessmentId": idxId, "visitKey": idxVk, "patientId": idxPid };
+    for (var rk in required) {
+      if (required[rk] === undefined) debug.missingHeaders.push(rk);
+    }
+    if (debug.missingHeaders.length) {
+      debug.reason = "header missing";
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] header missing — missing=" + JSON.stringify(debug.missingHeaders) +
+                 " rawHeaders=" + JSON.stringify(debug.rawHeaders));
+      return { ok: true, found: false, assessment: null, debug: debug };
     }
 
-    var needleVk  = String(visitKey  || '').trim();
-    var needlePid = String(patientId || '').trim();
-
-    var byVk   = null; var byVkMs   = 0;
-    var byPid  = null; var byPidMs  = 0;
-    var vkMatches    = 0;
-    var pidMatches   = 0;
-    var totalScanned = 0;
+    var byVk  = null; var byVkMs  = 0;
+    var byPid = null; var byPidMs = 0;
 
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
       if (!row[idxId]) continue; // 空行スキップ
-      totalScanned++;
+      debug.totalScanned++;
 
       var rowVk  = String(row[idxVk]  || '').trim();
       var rowPid = String(row[idxPid] || '').trim();
       var t = (idxAt !== undefined && row[idxAt]) ? new Date(row[idxAt]).getTime() : 0;
       if (isNaN(t)) t = 0;
 
-      if (needleVk && rowVk === needleVk) {
-        vkMatches++;
+      if (debug.needleVk && rowVk === debug.needleVk) {
+        debug.vkMatches++;
         if (t >= byVkMs) { byVkMs = t; byVk = row; }
       }
-      if (needlePid && rowPid === needlePid) {
-        pidMatches++;
+      if (debug.needlePid && rowPid === debug.needlePid) {
+        debug.pidMatches++;
         if (t >= byPidMs) { byPidMs = t; byPid = row; }
       }
     }
 
-    var target     = byVk  || byPid;
-    var sourceType = byVk  ? "visitKey" : (byPid ? "patientId" : null);
+    var target     = byVk || byPid;
+    var sourceType = byVk ? "visitKey" : (byPid ? "patientId" : null);
 
     if (!target) {
-      Logger.log("[getLatestAIAssessmentForVisitOrPatient] no match — " +
-                 "needleVk=" + needleVk + " needlePid=" + needlePid +
-                 " scanned=" + totalScanned +
-                 " vkMatches=" + vkMatches + " pidMatches=" + pidMatches);
-      return { ok: true, assessment: null };
+      debug.reason = "no match";
+      Logger.log("[getLatestAIAssessmentForVisitOrPatient] no match — needleVk=" + debug.needleVk +
+                 " needlePid=" + debug.needlePid +
+                 " scanned=" + debug.totalScanned +
+                 " vkMatches=" + debug.vkMatches + " pidMatches=" + debug.pidMatches);
+      return { ok: true, found: false, assessment: null, debug: debug };
     }
 
     var assessment = {
@@ -665,15 +704,18 @@ function getLatestAIAssessmentForVisitOrPatient(visitKey, patientId) {
       promptVersion: idxPv     !== undefined ? String(target[idxPv]     || "") : "",
       sourceType:    sourceType
     };
+    debug.reason = "match found";
     Logger.log("[getLatestAIAssessmentForVisitOrPatient] found=" + assessment.assessmentId +
                " source=" + sourceType +
-               " scanned=" + totalScanned +
-               " vkMatches=" + vkMatches + " pidMatches=" + pidMatches +
+               " scanned=" + debug.totalScanned +
+               " vkMatches=" + debug.vkMatches + " pidMatches=" + debug.pidMatches +
                " outputLen=" + assessment.outputJson.length);
-    return { ok: true, assessment: assessment };
+    return { ok: true, found: true, assessment: assessment, debug: debug };
   } catch (e) {
-    Logger.log("[getLatestAIAssessmentForVisitOrPatient] ERROR: " + e.message);
-    return { ok: true, assessment: null }; // fail-safe
+    debug.reason = "exception";
+    debug.error  = e && e.message ? String(e.message) : String(e);
+    Logger.log("[getLatestAIAssessmentForVisitOrPatient] ERROR: " + debug.error);
+    return { ok: true, found: false, assessment: null, debug: debug };
   }
 }
 

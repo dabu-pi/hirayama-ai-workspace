@@ -405,6 +405,7 @@
 | AI-4.5-7 | `ai45.spec.ts` 追加（5自動 + 5手動 SKIP） | ✅ |
 | AI-4.5-8 | 診断ログ強化 + `google.script.run` 未準備時リトライ（3回目 clasp push 2026-05-12） | ✅ |
 | AI-4.5-9 | `getLatestAIAssessmentForVisitOrPatient` header lookup を trim+lowercase 化 + 比較値も trim + `debugAIAssessmentsRead` 追加（4回目 clasp push 2026-05-12 / @39 deploy 後の追加不具合対応） | ✅ |
+| AI-4.5-10 | 返却 schema を `{ ok, found, assessment, debug }` に変更（reason / sheetName / spreadsheetId / rowCount / rawHeaders / missingHeaders / needleVk / needlePid / totalScanned / vkMatches / pidMatches / error）+ visit-form.html で raw response + summary を Console に出力（5回目 clasp push 2026-05-12 / `clasp pull` で server=local 完全一致を確認） | ✅ |
 
 **UI表現方針:**
 - 表示名: 「AI参考見立て」
