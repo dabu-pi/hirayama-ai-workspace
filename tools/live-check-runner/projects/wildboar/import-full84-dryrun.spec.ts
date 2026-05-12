@@ -207,21 +207,68 @@ function selectImportable(rows: string[][]): { rows: string[]; raw: string[][] }
   return { rows: [], raw: [] } as any;
 }
 
-function pickActiveAndPaused(dataRows: string[][]): { keep: string[][]; skipped: number } {
+type SkipReason =
+  | "empty_or_nonnumeric_member_id"
+  | "empty_plan"
+  | "plan_not_active_set"
+  | "empty_name";
+
+// Phase 14-3C-Prep: 取り込み対象外行を理由別に集計する。
+// 個人情報は記録せず、件数とプラン名（plan_name_raw の値域）のみ集計する。
+function pickActiveAndPausedWithBreakdown(
+  dataRows: string[][],
+): {
+  keep: string[][];
+  skipBreakdown: Record<SkipReason, number>;
+  skippedPlanCounts: Record<string, number>;
+  totalSkipped: number;
+} {
   const keep: string[][] = [];
-  let skipped = 0;
+  const skipBreakdown: Record<SkipReason, number> = {
+    empty_or_nonnumeric_member_id: 0,
+    empty_plan: 0,
+    plan_not_active_set: 0,
+    empty_name: 0,
+  };
+  const skippedPlanCounts: Record<string, number> = {};
+
   for (const r of dataRows) {
     const memberId = (r[2] || "").trim();
-    if (!memberId || !/^\d+$/.test(memberId)) { skipped++; continue; }
+    if (!memberId || !/^\d+$/.test(memberId)) {
+      skipBreakdown.empty_or_nonnumeric_member_id++;
+      continue;
+    }
     const planFromMonth = (r[TARGET_MONTH_IDX] || "").trim();
     const planFromF     = (r[PLAN_F_IDX] || "").trim();
     const plan = planFromMonth || planFromF;
-    if (!plan) { skipped++; continue; }
-    if (!ACTIVE_PLAN_SET.has(plan)) { skipped++; continue; }
-    if (!(r[3] || "").trim()) { skipped++; continue; }
+    if (!plan) {
+      skipBreakdown.empty_plan++;
+      continue;
+    }
+    if (!ACTIVE_PLAN_SET.has(plan)) {
+      skipBreakdown.plan_not_active_set++;
+      skippedPlanCounts[plan] = (skippedPlanCounts[plan] || 0) + 1;
+      continue;
+    }
+    if (!(r[3] || "").trim()) {
+      skipBreakdown.empty_name++;
+      continue;
+    }
     keep.push(r);
   }
-  return { keep, skipped };
+
+  const totalSkipped =
+    skipBreakdown.empty_or_nonnumeric_member_id +
+    skipBreakdown.empty_plan +
+    skipBreakdown.plan_not_active_set +
+    skipBreakdown.empty_name;
+  return { keep, skipBreakdown, skippedPlanCounts, totalSkipped };
+}
+
+// Back-compat wrapper for any older callers
+function pickActiveAndPaused(dataRows: string[][]): { keep: string[][]; skipped: number } {
+  const r = pickActiveAndPausedWithBreakdown(dataRows);
+  return { keep: r.keep, skipped: r.totalSkipped };
 }
 
 // ── テスト本体 ───────────────────────────────────────────────────────────
@@ -236,7 +283,7 @@ test.describe("WILDBOAR W-IM3B: ImportMembers full ~84 dry-run", () => {
   let baselineMembersCount = -1;
   let validateServer: any = null;
 
-  test("W-IM3B-1: source CSV 取得", async ({ context }) => {
+  test("W-IM3B-1: source CSV 取得 + 取込候補/skip 内訳集計", async ({ context }) => {
     const res = await context.request.get(CSV_URL);
     expect(res.status(), "CSV HTTP status").toBeLessThan(400);
     const csv = await res.text();
@@ -245,7 +292,8 @@ test.describe("WILDBOAR W-IM3B: ImportMembers full ~84 dry-run", () => {
     const dataRows = parsed.slice(2).filter(r => r.length > 2);
     csvDataRowCount = dataRows.length;
 
-    const { keep, skipped } = pickActiveAndPaused(dataRows);
+    const { keep, skipBreakdown, skippedPlanCounts, totalSkipped } =
+      pickActiveAndPausedWithBreakdown(dataRows);
     importableRows = keep.map((r, i) => rowToImport(r, i + 1));
 
     const planCounts: Record<string, number> = {};
@@ -259,14 +307,25 @@ test.describe("WILDBOAR W-IM3B: ImportMembers full ~84 dry-run", () => {
       description: JSON.stringify({
         csvDataRows: csvDataRowCount,
         importableRows: importableRows.length,
-        skippedRows: skipped,
+        skippedRows: totalSkipped,
         planCounts,
         statusCounts,
+      }),
+    });
+    // Phase 14-3C-Prep: skip 内訳を理由別に annotate（個人情報なし）
+    test.info().annotations.push({
+      type: "skip-breakdown",
+      description: JSON.stringify({
+        totalSkipped,
+        byReason: skipBreakdown,
+        skippedPlanCounts, // plan_not_active_set の内訳（例: "15時": N, "退会": M）
       }),
     });
     expect(csvDataRowCount, "CSV data rows >= 50").toBeGreaterThanOrEqual(50);
     expect(importableRows.length, "importable rows >= 50").toBeGreaterThanOrEqual(50);
     expect(importableRows.length, "importable rows <= 100").toBeLessThanOrEqual(100);
+    // 合計が CSV 全行数と一致することの整合チェック
+    expect(importableRows.length + totalSkipped, "kept + skipped = total").toBe(csvDataRowCount);
   });
 
   test("W-IM3B-2: ImportMembers 0 件確認 + Members baseline", async ({ page }) => {
