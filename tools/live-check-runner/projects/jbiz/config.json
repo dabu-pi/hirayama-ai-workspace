@@ -14,8 +14,9 @@
     "webAppUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec",
     "webAppSetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setup",
     "devUrl": "https://script.google.com/macros/s/AKfycbwI5optbFNifws1Wz0tfmAomi_Xc-iMDDd8P06bfE_/dev",
-    "authStatus": "PENDING_USER_APPROVAL",
-    "authNote": "初回アクセス時に spreadsheets スコープの承認が必要。setupUrl をブラウザで開いて Review Permissions → 承認すること。"
+    "authStatus": "APPROVED",
+    "currentPhaseDeployment": "@3 (Portal-4 KPI card improvement)",
+    "authNote": "承認済み（2026-05-13）。Run_Log 4行確認済み。"
   },
   "driveVerification": {
     "verified": true,
@@ -50,6 +51,7 @@
     "portal1": "docs/PORTAL_1_DESIGN_2026-05-13.md",
     "portal2": "docs/PORTAL_2_SHEET_READ_PROTOTYPE_2026-05-13.md",
     "portal3": "docs/PORTAL_3_GAS_WEBAPP_DEPLOY_2026-05-13.md",
+    "portal4": "docs/PORTAL_4_KPI_CARD_IMPROVEMENT_2026-05-13.md",
     "portalGateway": "scripts/portal-gateway-v1.gs",
     "projectStatus": "PROJECT_STATUS.md",
     "nextActions": "NEXT_ACTIONS.md",

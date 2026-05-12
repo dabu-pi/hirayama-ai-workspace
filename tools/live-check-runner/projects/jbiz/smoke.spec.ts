@@ -139,6 +139,38 @@ test("PROJECT_STATUS.md に Portal-3 記録がある", async () => {
   ).toBe(true);
 });
 
+test("Portal-4 設計書が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portal4);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-4 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("GAS スクリプトに isSheetError_ が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portalGateway);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("function isSheetError_"), "isSheetError_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに safeValue_ が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portalGateway);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("function safeValue_"), "safeValue_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに appendPortal4ToRunLog が存在する", async () => {
+  const filePath = jbizPath(config.localDocs.portalGateway);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("function appendPortal4ToRunLog("), "appendPortal4ToRunLog がありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-4 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-4"), "PROJECT_STATUS.md に Portal-4 がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,
