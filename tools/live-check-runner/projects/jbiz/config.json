@@ -1,0 +1,32 @@
+{
+  "name": "JBIZ",
+  "type": "google-sheets",
+  "sheetsUrl": "https://docs.google.com/spreadsheets/d/1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc/edit",
+  "spreadsheetId": "1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc",
+  "description": "平山接骨院 慢性疼痛強化プロジェクト 管理表",
+  "currentPhase": "Portal-1",
+  "notes": [
+    "Portal-0 CLOSED / Portal-1 設計書作成済み（2026-05-13）",
+    "管理表への直接書込には Sheets API または GAS が必要",
+    "Playwright での Sheets 確認は auth.json があるときのみ実施",
+    "Phase 1-C gym_referral が次の実装候補"
+  ],
+  "requiredSheets": [
+    "全体ダッシュボード",
+    "ロードマップ進捗",
+    "数値前提",
+    "価格設定",
+    "KPI目標",
+    "未確定項目",
+    "JBIZ_Selfpay_Visit_Facts_Input",
+    "Dashboard_Config",
+    "Dashboard_Minimum_KPI"
+  ],
+  "localDocs": {
+    "portal0": "docs/HIRAYAMA_BUSINESS_PORTAL_CONCEPT_2026-05-13.md",
+    "portal1": "docs/PORTAL_1_DESIGN_2026-05-13.md",
+    "projectStatus": "PROJECT_STATUS.md",
+    "nextActions": "NEXT_ACTIONS.md",
+    "roadmap": "ROADMAP.md"
+  }
+}
