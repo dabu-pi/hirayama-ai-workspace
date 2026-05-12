@@ -1,15 +1,28 @@
 {
   "name": "JBIZ",
   "type": "google-sheets",
-  "sheetsUrl": "https://docs.google.com/spreadsheets/d/1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc/edit",
-  "spreadsheetId": "1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc",
-  "description": "平山接骨院 慢性疼痛強化プロジェクト 管理表",
+  "sheetsUrl": "https://docs.google.com/spreadsheets/d/1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc/edit",
+  "spreadsheetId": "1FnJdALwFSv48WiD6NWr0DzG78kwB692R2pFeiTcZlCc",
+  "description": "平山接骨院 慢性疼痛強化プロジェクト 管理表（稼働中正本）",
+  "oldSpreadsheetId": "1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc",
+  "oldSpreadsheetNote": "2026-03-10 古いバージョン。Dashboard_Minimum_KPI 等なし。参照不可。",
   "currentPhase": "Portal-1",
+  "driveVerification": {
+    "verified": true,
+    "verifiedAt": "2026-05-13",
+    "method": "Google Drive MCP (get_file_metadata)",
+    "result": "PASS",
+    "title": "平山接骨院 慢性疼痛強化プロジェクト 管理表",
+    "owner": "pinshanka24@gmail.com",
+    "modifiedTime": "2026-05-12T13:43:49.507Z"
+  },
   "notes": [
     "Portal-0 CLOSED / Portal-1 設計書作成済み（2026-05-13）",
     "管理表への直接書込には Sheets API または GAS が必要",
     "Playwright での Sheets 確認は auth.json があるときのみ実施",
-    "Phase 1-C gym_referral が次の実装候補"
+    "Phase 1-C gym_referral が次の実装候補",
+    "Drive MCP で管理表到達確認済み（2026-05-13）",
+    "Run_Log シートは未作成。appendPortal1ToRunLog() GAS で追加可能"
   ],
   "requiredSheets": [
     "全体ダッシュボード",
