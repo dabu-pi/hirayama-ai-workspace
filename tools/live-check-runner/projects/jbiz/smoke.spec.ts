@@ -139,6 +139,50 @@ test("PROJECT_STATUS.md に Portal-3 記録がある", async () => {
   ).toBe(true);
 });
 
+test("config に WebApp URL が記録されている", async () => {
+  expect(
+    config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,
+    "config.gasScript.webAppUrl が設定されていません"
+  ).toBe(true);
+});
+
+test("config に GAS script ID が記録されている", async () => {
+  expect(
+    config.gasScript && config.gasScript.scriptId && config.gasScript.scriptId.length > 0,
+    "config.gasScript.scriptId が設定されていません"
+  ).toBe(true);
+});
+
+test("GAS WebApp URL に到達できる（auth 承認後のみ PASS）", async ({ page }) => {
+  const webAppUrl = config.gasScript && config.gasScript.webAppUrl;
+  if (!webAppUrl) {
+    test.skip(true, "WebApp URL が config に設定されていません");
+    return;
+  }
+  if (!HAS_AUTH) {
+    test.skip(true, "auth.json がないため WebApp 確認をスキップします");
+    return;
+  }
+  await page.goto(webAppUrl, { timeout: 15000 });
+  const url   = page.url();
+  const title = await page.title().catch(() => "");
+
+  if (url.includes("accounts.google.com") || title.includes("Sign in")) {
+    test.skip(true, "auth.json 期限切れ: ログイン画面");
+    return;
+  }
+  if (title.includes("Authorization needed") || url.includes("script.google.com/macros/s")) {
+    test.skip(true, "GAS 承認待ち: ブラウザで setupUrl を開き Review Permissions を承認してください");
+    return;
+  }
+  // 承認済みの場合: ポータル画面を確認
+  const isPortal =
+    title.includes("平山ビジネスポータル") ||
+    title.includes("Hirayama Business Portal") ||
+    (await page.locator("h1").textContent().catch(() => "")).includes("ビジネスポータル");
+  expect(isPortal, `Portal 画面が表示されません: ${title}`).toBe(true);
+});
+
 // ── Sheets URL 到達確認（認証あり時のみ）────────────────────
 
 test("管理表 URL に到達できる（auth ありの場合のみ）", async ({ page }) => {

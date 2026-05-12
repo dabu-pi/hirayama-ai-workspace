@@ -6,7 +6,17 @@
   "description": "平山接骨院 慢性疼痛強化プロジェクト 管理表（稼働中正本）",
   "oldSpreadsheetId": "1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc",
   "oldSpreadsheetNote": "2026-03-10 古いバージョン。Dashboard_Minimum_KPI 等なし。参照不可。",
-  "currentPhase": "Portal-1",
+  "currentPhase": "Portal-3",
+  "gasScript": {
+    "scriptId": "1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J",
+    "scriptUrl": "https://script.google.com/d/1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J/edit",
+    "deploymentId": "AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ",
+    "webAppUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec",
+    "webAppSetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setup",
+    "devUrl": "https://script.google.com/macros/s/AKfycbwI5optbFNifws1Wz0tfmAomi_Xc-iMDDd8P06bfE_/dev",
+    "authStatus": "PENDING_USER_APPROVAL",
+    "authNote": "初回アクセス時に spreadsheets スコープの承認が必要。setupUrl をブラウザで開いて Review Permissions → 承認すること。"
+  },
   "driveVerification": {
     "verified": true,
     "verifiedAt": "2026-05-13",
