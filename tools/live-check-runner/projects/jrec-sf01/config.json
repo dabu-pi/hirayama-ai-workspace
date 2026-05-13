@@ -2,8 +2,8 @@
   "name": "JREC-SF01",
   "type": "gas-webapp",
   "devUrl": "https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev",
-  "prodUrl": "https://script.google.com/macros/s/AKfycbyOtef10SuH7R1SaDVMBZS7L9yZIBYpEIVmNdS_fhz3hUtc1b0PSKvtzwRxQ6I43YObEA/exec",
-  "currentDeployment": "@42",
+  "prodUrl": "https://script.google.com/macros/s/AKfycbztP7WrNDmAnjydE9JutYcLXGV2KFN0Z1ry9kuRBsnqz7EXGBEqToWuVDvKlNnw6Lkm8w/exec",
+  "currentDeployment": "@43",
   "notes": [
     "Googleログイン済みブラウザプロファイルが必要な場合がある",
     "初回権限承認・Google警告画面は人間対応が必要",
