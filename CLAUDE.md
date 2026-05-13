@@ -163,6 +163,103 @@ $repo = "C:\hirayama-ai-workspace\workspace"
 
 Bash ツールを使う場合は毎回 workspace パスを指定してから作業する。
 
+### Multi-Claude / Single Writer Rule（2026-05-13 追加）
+
+> 2026-05-13 Portal-12 仕上げ作業で、複数 Claude セッションが同じ JBIZ repo / Apps Script project / live-check-runner / auth.json に並行で書き込み、`gas/portal-gateway-v1.gs` と `scripts/portal-gateway-v1.gs` の 45 行 SHA mismatch が発生。詳細・採用ルール: [`hirayama-jyusei-strategy/docs/MULTI_CLAUDE_OPERATION_2026-05-13.md`](./hirayama-jyusei-strategy/docs/MULTI_CLAUDE_OPERATION_2026-05-13.md)
+
+**JBIZ Portal / GAS deploy / live-check-runner / Apps Script 認可 / 共通管理表書き込みは single writer 運用**。複数 Claude を起動する場合、作業開始前に必ず以下を確認し、競合が見つかれば編集・commit・push・deploy を開始しない。
+
+#### 作業開始時チェック（必須・スキップしない）
+
+```powershell
+# 並行 Claude / 関連プロセス
+Get-Process | Where-Object {
+  $_.ProcessName -match 'claude|node|npm|npx|tsx|playwright|chrome|clasp|git'
+} | Select-Object Id, ProcessName, StartTime | Sort-Object StartTime | Format-Table -AutoSize
+
+# 3 repo の git status
+foreach ($r in @(
+  'C:\hirayama-ai-workspace\workspace',
+  'C:\hirayama-ai-workspace\workspace\hirayama-jyusei-strategy',
+  'C:\hirayama-ai-workspace\workspace\gas-projects\jrec-sf01-selfpay'
+)) {
+  Write-Host "--- $r ---"
+  git -C $r status -sb
+}
+
+# Chrome CDP 9222
+Test-NetConnection localhost -Port 9222 -InformationLevel Quiet
+```
+
+#### 並行禁止項目（必ず直列）
+
+| 項目 | 理由 |
+|---|---|
+| 同一 Apps Script project への `clasp push` / `clasp deploy` | last-writer-wins。deployment 順序が壊れる |
+| Apps Script editor からの scope 認可（人間操作含む）| 認可中の clasp / verify はタイミング次第で失敗 |
+| `tools/live-check-runner/` の編集（spec / scripts / package.json / config.json）| playwright 共有資源 |
+| `tools/live-check-runner/auth.json` 更新 | storageState の上書きで他セッションの verify が即 fail |
+| Chrome CDP port 9222 使用 / `.chrome-cdp-profile` | OS リソース / 同時 1 プロセス占有 |
+| `gas/portal-gateway-v1.gs` ↔ `scripts/portal-gateway-v1.gs` のミラー編集 | 同一 commit で同期しないと SHA mismatch |
+| 共通管理表（Run_Log / Task_Queue / Business_Links / Dashboard）への書き込み | 同時 `setupPortalN` で重複行や順序不整合 |
+| 大型 Markdown（`PROJECT_STATUS.md` / `ROADMAP.md` / `NEXT_ACTIONS.md`）への並行追記 | merge 不可能 |
+
+#### gas/ / scripts/ ミラー運用（JBIZ 限定）
+
+JBIZ の `hirayama-jyusei-strategy/gas/portal-gateway-v1.gs` は clasp 正本。`scripts/portal-gateway-v1.gs` は参照ミラー。
+
+- 編集は `gas/` 側のみ
+- 編集したら必ず同セッション内で `Copy-Item gas\portal-gateway-v1.gs scripts\portal-gateway-v1.gs -Force`
+- `Get-FileHash` で SHA256 一致を確認してから commit
+- 両方を同一 commit に含める
+
+#### clasp deploy ルール
+
+- 1 セッション内で `clasp push --force` → `clasp deploy` を完結
+- bookmark URL を維持する場合は `clasp deploy --deploymentId <既存ID>`
+- 並行 Claude が同一 scriptId に deploy していないことを確認してから開始
+- `clasp deploy` 実行後は `clasp deployments` で実際の version / deploymentId を確認（想定値で記録しない）
+
+#### Apps Script scope 認可運用
+
+- 新 scope 追加時は try/catch なしの専用 grant 関数を 1 個追加（例: `grantPortal12ExternalRequest`）
+- ユーザーに GAS エディタで 1 回実行を依頼 → スコープ同意ダイアログで「許可」
+- 認可中は他 Claude の clasp / verify を全停止
+- 認可後は新規 `clasp deploy` で deployment auth bundle に scope を反映
+
+#### live-check-runner 運用
+
+- `auth.json` 更新は workspace single writer
+- 更新中は他 Claude の `npm run test:*` を全停止
+- Chrome CDP は `Get-Process chrome | Stop-Process -Force` → flag 付きで 1 個起動 → save-auth の順
+- Chrome を完全終了せず flag 付きで起動しても、既存セッションが flag を上書きしないので CDP は無効になる
+
+#### 完了条件（CLOSED とは）
+
+JBIZ Portal / GAS / Dashboard / live-check-runner 作業は以下を全て満たすまで完了としない。
+
+- 実装完了
+- live-check-runner 検証完了（PASS / FAIL / BLOCKED を正確に記録）
+- Markdown 記録完了（PROJECT_STATUS / NEXT_ACTIONS / ROADMAP / docs）
+- Dashboard / Task_Queue / Run_Log 反映完了
+- gas/ ↔ scripts/ SHA256 一致
+- commit / push 完了
+- 3 repo すべて clean（`git status -sb` で 0 ahead / 0 behind / dirty なし）
+- handoff 報告完了
+
+中途半端な dirty / 未 push / auth 期限切れ / SHA mismatch のまま完了報告しない。
+
+#### 並行可能 / 不可の早見表
+
+| 状況 | 並行可否 |
+|---|---|
+| 別 repo の独立タスク（wildboar / training-platform 等で deploy target / Spreadsheet / live-check-runner 完全分離）| ✅ 並行可 |
+| 完全 read-only 調査 | ✅ 並行可 |
+| 同じ Markdown に追記しない docs 専用作業 | △ 条件付き |
+| 同一 Apps Script project への push/deploy / 同一 GAS ファイル編集 | ❌ 直列のみ |
+| JREC-SF01 endpoint 修正 + JBIZ Portal 接続 | ❌ 直列のみ（連携時のみ） |
+| 同じ Spreadsheet を編集する setup action | ❌ 直列のみ |
+
 ### workspace（本番）で行うこと
 
 - プロジェクトのソースコード実装・修正
