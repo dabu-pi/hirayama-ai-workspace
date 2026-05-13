@@ -139,7 +139,8 @@ test.describe(`JYU-GAS S-2: page=home 到達確認 [auth: ${HAS_AUTH ? "あり" 
     await handleAuthRedirect(page);
 
     const frame = gasAppFrame(page);
-    await expect(frame.getByText("患者検索", { exact: false })).toBeVisible({ timeout: LOAD_TIMEOUT });
+    // 「患者検索」は nav + card title の 2 箇所に出現するため .first() で厳格モード違反を回避
+    await expect(frame.getByText("患者検索", { exact: false }).first()).toBeVisible({ timeout: LOAD_TIMEOUT });
   });
 });
 
@@ -192,10 +193,11 @@ test.describe(`JYU-GAS S-3b: 往復ナビゲーション確認 [auth: ${HAS_AUTH
     const titleAfterSearch = await page.title().catch(() => "");
     expect(titleAfterSearch).toContain("患者検索");
 
-    // 3. 「← Web ホームへ」をクリック
+    // 3. ナビゲーションの「HOME」リンクをクリック
+    // patientSearch.html の nav リンクは「🏠 HOME」テキスト（「Web ホームへ」ではない）
     const homeLink = page.frameLocator("iframe").first()
       .frameLocator("iframe").first()
-      .locator("a").filter({ hasText: "Web ホームへ" }).first();
+      .locator("a[href*='page=home']").first();
     await homeLink.click();
     await page.waitForLoadState("domcontentloaded");
 
