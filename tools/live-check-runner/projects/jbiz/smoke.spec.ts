@@ -553,6 +553,71 @@ test("PROJECT_STATUS.md に Portal-12 記録がある", async () => {
   expect(content.includes("Portal-12"), "PROJECT_STATUS.md に Portal-12 がありません").toBe(true);
 });
 
+// ── Portal-15 チェック ─────────────────────────────────────
+
+test("Portal-15 設計書が存在する", async () => {
+  const filePath = jbizPath((config as any).localDocs.portal15);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-15 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("GAS スクリプトに fetchChronicPainKpiSummary_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function fetchChronicPainKpiSummary_"), "fetchChronicPainKpiSummary_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildChronicPainView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildChronicPainView_"), "buildChronicPainView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal15 が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function setupPortal15("), "setupPortal15 がありません").toBe(true);
+});
+
+test("GAS スクリプトに appendPortal15ToRunLog が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function appendPortal15ToRunLog("), "appendPortal15ToRunLog がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal15 action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal15'"), "setupPortal15 action ハンドラがありません").toBe(true);
+});
+
+test("GAS スクリプトに fetchChronicPainKpi action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'fetchChronicPainKpi'"), "fetchChronicPainKpi action ハンドラがありません").toBe(true);
+});
+
+test("GAS スクリプトに view=chronicpain 切替がある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("case 'chronicpain'"), "case 'chronicpain' 切替がありません").toBe(true);
+});
+
+test("ナビゲーションに 慢性疼痛 リンクがある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("?view=chronicpain"), "navigation の chronicpain リンクがありません").toBe(true);
+  expect(content.includes("慢性疼痛"), "navigation ラベル「慢性疼痛」がありません").toBe(true);
+});
+
+test("Portal-15: 既存 endpoint 再利用方針が記録されている", async () => {
+  const filePath = jbizPath((config as any).localDocs.portal15);
+  const content = fs.readFileSync(filePath, "utf-8");
+  // JREC-SF01 変更なし & 既存 endpoint 再利用が docs に明記されていること
+  expect(content.includes("既存 endpoint"), "Portal-15 設計書に既存 endpoint 再利用方針がありません").toBe(true);
+  expect(content.includes("chronicPainKpiSummary"), "Portal-15 設計書に次フェーズ candidate endpoint がありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-15 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-15"), "PROJECT_STATUS.md に Portal-15 がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,

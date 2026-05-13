@@ -68,6 +68,7 @@
     "portal8": "docs/PORTAL_8_BUSINESS_DETAIL_KPI_2026-05-13.md",
     "portal9": "docs/PORTAL_9_CROSS_BUSINESS_KPI_2026-05-13.md",
     "portal12": "docs/PORTAL_12_JREC_SF01_LIVE_KPI_CONNECTION_2026-05-13.md",
+    "portal15": "docs/PORTAL_15_CHRONIC_PAIN_KPI_2026-05-14.md",
     "portalGateway": "scripts/portal-gateway-v1.gs",
     "portalGatewayClasp": "gas/portal-gateway-v1.gs",
     "projectStatus": "PROJECT_STATUS.md",
