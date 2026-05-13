@@ -432,6 +432,62 @@ test("PROJECT_STATUS.md に Portal-8 記録がある", async () => {
   expect(content.includes("Portal-8"), "PROJECT_STATUS.md に Portal-8 がありません").toBe(true);
 });
 
+// ── Portal-9 チェック ──────────────────────────────────────
+
+test("Portal-9 設計書が存在する", async () => {
+  const filePath = jbizPath((config as any).localDocs.portal9);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-9 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("GAS スクリプトに buildCrossBusinessKpiView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildCrossBusinessKpiView_"), "buildCrossBusinessKpiView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに readCrossBusinessKpi_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function readCrossBusinessKpi_"), "readCrossBusinessKpi_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに BUSINESS_CONNECTION_MAP 定義がある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("BUSINESS_CONNECTION_MAP"), "BUSINESS_CONNECTION_MAP がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal9 が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function setupPortal9("), "setupPortal9 がありません").toBe(true);
+});
+
+test("GAS スクリプトに appendPortal9ToRunLog が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function appendPortal9ToRunLog("), "appendPortal9ToRunLog がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal9 action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal9'"), "setupPortal9 action ハンドラがありません").toBe(true);
+});
+
+test("GAS スクリプトに view=crosskpi 切替が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("case 'crosskpi'"), "view=crosskpi 切替がありません").toBe(true);
+});
+
+test("ナビゲーションに 横断KPI リンクがある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("横断KPI"), "横断KPI ナビゲーションがありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-9 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-9"), "PROJECT_STATUS.md に Portal-9 がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,

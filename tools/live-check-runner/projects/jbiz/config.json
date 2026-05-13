@@ -6,7 +6,7 @@
   "description": "平山接骨院 慢性疼痛強化プロジェクト 管理表（稼働中正本）",
   "oldSpreadsheetId": "1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc",
   "oldSpreadsheetNote": "2026-03-10 古いバージョン。Dashboard_Minimum_KPI 等なし。参照不可。",
-  "currentPhase": "Portal-8",
+  "currentPhase": "Portal-9",
   "gasScript": {
     "scriptId": "1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J",
     "scriptUrl": "https://script.google.com/d/1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J/edit",
@@ -16,13 +16,15 @@
     "webAppPortal6SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal6",
     "webAppPortal7SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal7",
     "webAppPortal8SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal8",
+    "webAppPortal9SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal9",
     "webAppBusinessesViewUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=businesses",
     "webAppBusinessDetailSelfpayUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=business&id=selfpay",
     "webAppBusinessDetailInsuranceUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=business&id=insurance",
+    "webAppCrossKpiViewUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=crosskpi",
     "devUrl": "https://script.google.com/macros/s/AKfycbwI5optbFNifws1Wz0tfmAomi_Xc-iMDDd8P06bfE_/dev",
     "authStatus": "APPROVED",
-    "currentPhaseDeployment": "@8 (Portal-8 Business Detail KPI)",
-    "authNote": "承認済み（2026-05-13）。Run_Log 7行確認済み。Portal-8 デプロイ後は setupPortal8 で TASK-PORTAL-8-001 を done に更新。selfpay/insurance に詳細 KPI ページあり。"
+    "currentPhaseDeployment": "@9 (Portal-9 Cross-Business KPI Dashboard)",
+    "authNote": "承認済み（2026-05-13）。Run_Log 8行確認済み。Portal-9 デプロイ後は setupPortal9 で TASK-PORTAL-9-001 を done に更新。?view=crosskpi で事業横断 KPI を 1 画面で確認可能。"
   },
   "driveVerification": {
     "verified": true,
@@ -62,6 +64,7 @@
     "portal6": "docs/PORTAL_6_NAVIGATION_DETAIL_VIEW_2026-05-13.md",
     "portal7": "docs/PORTAL_7_BUSINESS_HUB_2026-05-13.md",
     "portal8": "docs/PORTAL_8_BUSINESS_DETAIL_KPI_2026-05-13.md",
+    "portal9": "docs/PORTAL_9_CROSS_BUSINESS_KPI_2026-05-13.md",
     "portalGateway": "scripts/portal-gateway-v1.gs",
     "portalGatewayClasp": "gas/portal-gateway-v1.gs",
     "projectStatus": "PROJECT_STATUS.md",
