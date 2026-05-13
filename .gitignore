@@ -158,6 +158,14 @@ desktop-work-status-overlay/
 # remote: https://github.com/dabu-pi/jrec-sf01-selfpay.git (未作成 → HUMAN ACTION 要)
 /gas-projects/jrec-sf01-selfpay/
 
+# 独立 repo 化済みプロジェクト（2026-05-13）
+# treadmill-motor-crusher-project: 廃トレッドミルモーターを粉砕機に再利用
+# remote: https://github.com/dabu-pi/treadmill-motor-crusher-project.git (private), branch: main
+/treadmill-motor-crusher-project/
+# 初期セットアップ時に harness CWD の影響でローカルフォルダ名末尾にバッククォートが
+# 混入したため、rename 前のフォルダ名も明示的に無視する（rename 後は不要）
+/treadmill-motor-crusher-project`/
+
 # 一時テストファイル（コミット対象外）
 gas-projects/jyu-gas-ver3.1/test_d6.xlsx
 
