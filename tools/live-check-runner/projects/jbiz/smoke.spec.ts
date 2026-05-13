@@ -536,7 +536,8 @@ test("GAS スクリプトに fetchSelfpayGymKpi action が存在する", async (
 test("GAS スクリプトに JREC SF01 endpoint URL が定義されている", async () => {
   const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
   expect(content.includes("JREC_SF01_GYM_REFERRAL_URL_DEFAULT"), "JREC_SF01_GYM_REFERRAL_URL_DEFAULT がありません").toBe(true);
-  expect(content.includes("AKfycbz0EqGZOXWrKokzFN2x4SMo17cJojaHnWvmR2FAHXyQ1OLIdnWGwBSHIyylDAMqb8oACA"), "JREC-SF01 prod deployment ID への参照がありません").toBe(true);
+  // @50 ANYONE_ANONYMOUS deployment (2026-05-13 Portal-12 live接続完了)
+  expect(content.includes("AKfycbw0aWYY0hPySJeAAcoJFg82zXFOzmBAaOVwQk5gVM3tlAGWJR37v2uflUr2qnxKpAb0og"), "JREC-SF01 prod deployment ID (@50) への参照がありません").toBe(true);
 });
 
 test("appsscript.json に UrlFetch 用 oauthScope が追加されている", async () => {

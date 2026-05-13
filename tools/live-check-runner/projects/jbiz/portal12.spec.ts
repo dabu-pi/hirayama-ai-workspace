@@ -69,17 +69,19 @@ test.describe(`JBIZ Portal-12: JREC-SF01 gym referral live connection [auth: ${H
     await page.goto(`${JBIZ_PROD_URL}?view=business&id=selfpay`, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasFrame(page);
-    await expect(frame.getByText("ジム紹介候補", { exact: false })).toBeVisible();
-    await expect(frame.getByText("紹介率（案内", { exact: false })).toBeVisible();
-    await expect(frame.getByText("データ品質警告", { exact: false })).toBeVisible();
+    await expect(frame.getByText("ジム紹介候補", { exact: false }).first()).toBeVisible();
+    await expect(frame.getByText("紹介率（案内", { exact: false }).first()).toBeVisible();
+    // データ品質警告は selfpay section と crosskpi table の両方に出るため .first() で selfpay section を対象にする
+    await expect(frame.getByText("データ品質警告", { exact: false }).first()).toBeVisible();
   });
 
   test("P12-3: selfpay 詳細に Source / Fetched at が表示される", async ({ page }) => {
     await page.goto(`${JBIZ_PROD_URL}?view=business&id=selfpay`, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasFrame(page);
-    await expect(frame.getByText("gymReferralKpiSummary", { exact: false })).toBeVisible();
-    await expect(frame.getByText("Fetched at", { exact: false })).toBeVisible();
+    // gymReferralKpiSummary は selfpay section と crosskpi table 両方に出るため .first() で selfpay section を対象にする
+    await expect(frame.getByText("gymReferralKpiSummary", { exact: false }).first()).toBeVisible();
+    await expect(frame.getByText("Fetched at", { exact: false }).first()).toBeVisible();
   });
 
   test("P12-4: crosskpi に「Portal-12（live 接続）」紹介文が表示される", async ({ page }) => {
