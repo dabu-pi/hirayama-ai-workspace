@@ -366,6 +366,72 @@ test("PROJECT_STATUS.md に Portal-7 記録がある", async () => {
   expect(content.includes("Portal-7"), "PROJECT_STATUS.md に Portal-7 がありません").toBe(true);
 });
 
+// ── Portal-8 チェック ──────────────────────────────────────
+
+test("Portal-8 設計書が存在する", async () => {
+  const filePath = jbizPath((config as any).localDocs.portal8);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-8 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("GAS スクリプトに buildBusinessDetailView_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildBusinessDetailView_"), "buildBusinessDetailView_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildSelfpayBusinessDetail_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildSelfpayBusinessDetail_"), "buildSelfpayBusinessDetail_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildInsuranceBusinessDetail_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildInsuranceBusinessDetail_"), "buildInsuranceBusinessDetail_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildGenericBusinessDetail_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildGenericBusinessDetail_"), "buildGenericBusinessDetail_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildCommonBusinessDetail_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildCommonBusinessDetail_"), "buildCommonBusinessDetail_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal8 が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function setupPortal8("), "setupPortal8 がありません").toBe(true);
+});
+
+test("GAS スクリプトに appendPortal8ToRunLog が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function appendPortal8ToRunLog("), "appendPortal8ToRunLog がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal8 action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal8'"), "setupPortal8 action ハンドラがありません").toBe(true);
+});
+
+test("GAS スクリプトに view=business 切替が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("case 'business'"), "view=business 切替がありません").toBe(true);
+});
+
+test("Business Hub カードに「詳細を見る」リンクがある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("詳細を見る"), "「詳細を見る」リンクがありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-8 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-8"), "PROJECT_STATUS.md に Portal-8 がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,
