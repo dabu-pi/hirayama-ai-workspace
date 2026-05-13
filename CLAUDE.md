@@ -260,6 +260,71 @@ JBIZ Portal / GAS / Dashboard / live-check-runner 作業は以下を全て満た
 | JREC-SF01 endpoint 修正 + JBIZ Portal 接続 | ❌ 直列のみ（連携時のみ） |
 | 同じ Spreadsheet を編集する setup action | ❌ 直列のみ |
 
+### Git dirty / missing tracked files 防止ルール（2026-05-14 追加）
+
+> 2026-05-14 / workspace 11 repo の同期作業で、`gas-projects/jyu-gas-ver3.1` と `hirayama-jyusei-strategy` の計 24 ファイルが
+> **HEAD には tracked だが disk から欠損** という状態で長期間放置されていたことが判明（毎日 `git status` が dirty を返す原因）。
+> JYU-GAS 側は `clasp push` 実行で GAS production code を削除する危険状態だった。
+> 詳細・根本原因分析: [`docs/GIT_DIRTY_ROOT_CAUSE_2026-05-14.md`](./docs/GIT_DIRTY_ROOT_CAUSE_2026-05-14.md)
+
+**Git の clean 判定は 2 系統チェック必須**。`git status --porcelain=v1` だけで判断しない。
+必ず `git ls-files -d`（HEAD に tracked だが disk に存在しないファイル）も 0 件であることを確認する。
+
+#### 作業開始時・commit 前・clasp push/deploy 前・PC 切替前に必ず実行
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace
+.\tools\git-health-check.ps1
+```
+
+非破壊（branch checkout なし）に 11 repo を `update-index --refresh` → `status --porcelain=v1` → `ls-files -d` → ahead/behind の順で監査する。
+1 件でも issue があれば exit 1。
+
+#### missing tracked が出た場合の手順
+
+1. **即 `git reset --hard` / `git clean -fd` をしない**（原因不明のまま消すのは禁止）
+2. `git ls-files -d` で対象ファイルを確認し、HEAD の内容と現行コードの参照を `git show HEAD:<file>` / `git grep` で調査
+3. 以下のいずれかを判断:
+   - **現行運用に必要** → `git checkout -- <file>` で復元
+   - **明確に不要（旧構造）** → `docs/legacy/<phase>/` へ `git mv` で退避（**即 `git rm` 禁止**。経営戦略・KPI・コード本体は再参照価値あり）
+   - **完全に不要かつ履歴も残らない** → `git rm` + commit
+4. 判断根拠・対応内容を Markdown に記録してから commit / push
+
+#### ファイル削除の運用ルール
+
+| シナリオ | 正しい手順 |
+|---|---|
+| 不要ファイルを削除する | `git rm <file>` + commit + push まで完結。disk 削除のみで止めない |
+| 旧バージョン文書を整理する | `git mv` で `docs/legacy/<phase>/` へ退避（履歴保持） |
+| ファイルが既に disk から消えていて HEAD に残っている | 上記「missing tracked が出た場合の手順」に従う |
+
+#### clasp push / clasp deploy 前の必須ゲート
+
+```powershell
+cd C:\hirayama-ai-workspace\workspace\gas-projects\jyu-gas-ver3.1  # または対象 repo
+git update-index -q --refresh
+git ls-files -d
+```
+
+`git ls-files -d` が 1 行でも出力した場合、**clasp push / clasp deploy を絶対に実行しない**。
+clasp は disk 上のファイルを正本として GAS に同期するため、disk から欠損したファイルは GAS 上の対応ファイルを削除する。
+
+#### branch sync の運用
+
+- 通常の sync / audit では他 branch を checkout しない（現 branch の pull のみ）
+- 他 branch の中身を見たい場合は `git worktree add` または一時 clone で別ディレクトリに展開
+- `tools/git-health-check.ps1` は branch checkout を行わない設計（11 repo の現 branch のみを監査）
+
+#### Source of truth ルール
+
+| repo | 正本 |
+|---|---|
+| すべて | GitHub `dabu-pi/<repo>` の current branch |
+| JYU-GAS（`gas-projects/jyu-gas-ver3.1`）| GitHub main。clasp deploy（`@N`）は派生物 |
+| JBIZ（`hirayama-jyusei-strategy`）| GitHub main。Apps Script project は派生物。`gas/portal-gateway-v1.gs` ↔ `scripts/portal-gateway-v1.gs` は **同一 commit で同期** |
+
+clasp / GAS editor の現状とローカル disk / GitHub が乖離した場合は **GitHub を信用** する。
+
 ### workspace（本番）で行うこと
 
 - プロジェクトのソースコード実装・修正
