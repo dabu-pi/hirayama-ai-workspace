@@ -13,6 +13,7 @@
     "test:jrec:ai4": "playwright test projects/jrec-sf01/ai4.spec.ts",
     "test:jrec:ai45": "playwright test projects/jrec-sf01/ai45.spec.ts",
     "test:jrec:ai5": "playwright test projects/jrec-sf01/ai5.spec.ts",
+    "test:jrec:gym-referral": "playwright test projects/jrec-sf01/gym-referral.spec.ts",
     "test:jyu": "playwright test projects/jyu-gas-ver31",
     "test:jyu:smoke": "playwright test projects/jyu-gas-ver31/smoke.spec.ts",
     "test:jyu:web2": "playwright test projects/jyu-gas-ver31/web2.spec.ts",
