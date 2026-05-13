@@ -6,7 +6,7 @@
   "description": "平山接骨院 慢性疼痛強化プロジェクト 管理表（稼働中正本）",
   "oldSpreadsheetId": "1I7X8tv9MpsUHKPN7F8SeTwd04u7gdk2SY2BJZgWxbNc",
   "oldSpreadsheetNote": "2026-03-10 古いバージョン。Dashboard_Minimum_KPI 等なし。参照不可。",
-  "currentPhase": "Portal-9",
+  "currentPhase": "Portal-12",
   "gasScript": {
     "scriptId": "1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J",
     "scriptUrl": "https://script.google.com/d/1PI7kNNs3UTJOT-zXcakvM1LjF3Cu5SyhGPQ5iCjMDik5fILKdPd8P62J/edit",
@@ -17,14 +17,16 @@
     "webAppPortal7SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal7",
     "webAppPortal8SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal8",
     "webAppPortal9SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal9",
+    "webAppPortal12SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal12",
+    "webAppFetchSelfpayGymKpiUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=fetchSelfpayGymKpi",
     "webAppBusinessesViewUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=businesses",
     "webAppBusinessDetailSelfpayUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=business&id=selfpay",
     "webAppBusinessDetailInsuranceUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=business&id=insurance",
     "webAppCrossKpiViewUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=crosskpi",
     "devUrl": "https://script.google.com/macros/s/AKfycbwI5optbFNifws1Wz0tfmAomi_Xc-iMDDd8P06bfE_/dev",
     "authStatus": "APPROVED",
-    "currentPhaseDeployment": "@9 (Portal-9 Cross-Business KPI Dashboard)",
-    "authNote": "承認済み（2026-05-13）。Run_Log 8行確認済み。Portal-9 デプロイ後は setupPortal9 で TASK-PORTAL-9-001 を done に更新。?view=crosskpi で事業横断 KPI を 1 画面で確認可能。"
+    "currentPhaseDeployment": "@10 (Portal-12 JREC-SF01 live KPI connection)",
+    "authNote": "承認済み（2026-05-13）。Portal-12 で UrlFetchApp 用 oauthScopes（spreadsheets / script.external_request / script.scriptapp）追加 → 初回呼び出し時に再認可が必要な場合あり。"
   },
   "driveVerification": {
     "verified": true,
@@ -65,6 +67,7 @@
     "portal7": "docs/PORTAL_7_BUSINESS_HUB_2026-05-13.md",
     "portal8": "docs/PORTAL_8_BUSINESS_DETAIL_KPI_2026-05-13.md",
     "portal9": "docs/PORTAL_9_CROSS_BUSINESS_KPI_2026-05-13.md",
+    "portal12": "docs/PORTAL_12_JREC_SF01_LIVE_KPI_CONNECTION_2026-05-13.md",
     "portalGateway": "scripts/portal-gateway-v1.gs",
     "portalGatewayClasp": "gas/portal-gateway-v1.gs",
     "projectStatus": "PROJECT_STATUS.md",

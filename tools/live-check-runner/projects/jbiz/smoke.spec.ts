@@ -488,6 +488,70 @@ test("PROJECT_STATUS.md に Portal-9 記録がある", async () => {
   expect(content.includes("Portal-9"), "PROJECT_STATUS.md に Portal-9 がありません").toBe(true);
 });
 
+// ── Portal-12 チェック ─────────────────────────────────────
+
+test("Portal-12 設計書が存在する", async () => {
+  const filePath = jbizPath((config as any).localDocs.portal12);
+  expect(
+    fs.existsSync(filePath),
+    `Portal-12 設計書が見つかりません: ${filePath}`
+  ).toBe(true);
+});
+
+test("GAS スクリプトに fetchSelfpayGymReferralKpi_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function fetchSelfpayGymReferralKpi_"), "fetchSelfpayGymReferralKpi_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildSelfpayGymReferralKpiHtml_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildSelfpayGymReferralKpiHtml_"), "buildSelfpayGymReferralKpiHtml_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに getSelfpayConnectionWithPortal12_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function getSelfpayConnectionWithPortal12_"), "getSelfpayConnectionWithPortal12_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal12 が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function setupPortal12("), "setupPortal12 がありません").toBe(true);
+});
+
+test("GAS スクリプトに appendPortal12ToRunLog が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function appendPortal12ToRunLog("), "appendPortal12ToRunLog がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal12 action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal12'"), "setupPortal12 action ハンドラがありません").toBe(true);
+});
+
+test("GAS スクリプトに fetchSelfpayGymKpi action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'fetchSelfpayGymKpi'"), "fetchSelfpayGymKpi action ハンドラがありません").toBe(true);
+});
+
+test("GAS スクリプトに JREC SF01 endpoint URL が定義されている", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("JREC_SF01_GYM_REFERRAL_URL_DEFAULT"), "JREC_SF01_GYM_REFERRAL_URL_DEFAULT がありません").toBe(true);
+  expect(content.includes("AKfycbz0EqGZOXWrKokzFN2x4SMo17cJojaHnWvmR2FAHXyQ1OLIdnWGwBSHIyylDAMqb8oACA"), "JREC-SF01 prod deployment ID への参照がありません").toBe(true);
+});
+
+test("appsscript.json に UrlFetch 用 oauthScope が追加されている", async () => {
+  // gas/appsscript.json は localDocs に登録されていないので path 計算
+  const filePath = jbizPath("gas/appsscript.json");
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("script.external_request"), "script.external_request scope がありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-12 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-12"), "PROJECT_STATUS.md に Portal-12 がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,
