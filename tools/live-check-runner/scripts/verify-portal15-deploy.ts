@@ -102,9 +102,27 @@ async function readInnerBody(page: any, timeoutMs = 25000): Promise<string> {
       const hits: Record<string, boolean> = {};
       for (const k of keywords) hits[k] = body.includes(k);
       console.log('keyword_hits:', JSON.stringify(hits));
-      console.log('--- body snippet (first 2200) ---');
-      console.log(body.substring(0, 2200));
-      viewOk = keywords.filter((k) => hits[k]).length >= 6;
+
+      // Portal-16-D: §3 connected 判定
+      const section3Connected =
+        body.includes('Portal-16-D 接続済') ||
+        (body.includes('chronicPainKpiSummary') && body.includes('endpoint (@51)')) ||
+        body.includes('✅ 接続済:');
+      const section3Unconnected =
+        body.includes('未接続:') &&
+        body.includes('chronicPainKpiSummary endpoint 未接続');
+      console.log(`section3_connected: ${section3Connected}`);
+      console.log(`section3_unconnected: ${section3Unconnected}`);
+
+      // 「未接続」灰色カード（"—"）が § 3 ではなく § 1 慢性症状患者にのみ残るべき
+      const section1HasMdash = body.includes('① 慢性症状患者') && body.includes('—');
+      console.log(`section1_unconnected_card (expected true): ${section1HasMdash}`);
+
+      console.log('--- body snippet (first 3000) ---');
+      console.log(body.substring(0, 3000));
+
+      const kwScore = keywords.filter((k) => hits[k]).length;
+      viewOk = kwScore >= 6 && section3Connected && !section3Unconnected;
     }
   } catch (err: any) {
     console.error('ERROR:', err && err.message ? err.message : err);

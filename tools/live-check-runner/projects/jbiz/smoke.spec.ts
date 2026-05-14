@@ -618,6 +618,58 @@ test("PROJECT_STATUS.md に Portal-15 記録がある", async () => {
   expect(content.includes("Portal-15"), "PROJECT_STATUS.md に Portal-15 がありません").toBe(true);
 });
 
+// ── Portal-16-D チェック ─────────────────────────────────────
+
+test("GAS スクリプトに fetchChronicPainSymptomSummary_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function fetchChronicPainSymptomSummary_"), "fetchChronicPainSymptomSummary_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに getJrecSf01ChronicPainUrl_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function getJrecSf01ChronicPainUrl_"), "getJrecSf01ChronicPainUrl_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに JREC_SF01_CHRONIC_PAIN_URL_DEFAULT が定義されている", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("JREC_SF01_CHRONIC_PAIN_URL_DEFAULT"), "JREC_SF01_CHRONIC_PAIN_URL_DEFAULT がありません").toBe(true);
+  // @51 deploymentId への参照（Portal-12 と同じ ANYONE_ANONYMOUS）
+  expect(content.includes("AKfycbw0aWYY0hPySJeAAcoJFg82zXFOzmBAaOVwQk5gVM3tlAGWJR37v2uflUr2qnxKpAb0og"), "JREC-SF01 @51 deployment ID への参照がありません").toBe(true);
+  expect(content.includes("chronicPainKpiSummary"), "chronicPainKpiSummary action 文字列がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal16D が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function setupPortal16D("), "setupPortal16D がありません").toBe(true);
+});
+
+test("GAS スクリプトに appendPortal16DToRunLog が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function appendPortal16DToRunLog("), "appendPortal16DToRunLog がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal16D action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal16D'"), "setupPortal16D action ハンドラがありません").toBe(true);
+});
+
+test("GAS スクリプトに fetchChronicPainSymptomKpi action が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'fetchChronicPainSymptomKpi'"), "fetchChronicPainSymptomKpi action ハンドラがありません").toBe(true);
+});
+
+test("buildChronicPainSymptomSection_ が probe 引数を取り connected 表示分岐がある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildChronicPainSymptomSection_(probe)"), "buildChronicPainSymptomSection_ が probe を取っていません").toBe(true);
+  expect(content.includes("symptom_breakdown_state"), "symptom_breakdown_state 判定がありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-16-D 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-16-D"), "PROJECT_STATUS.md に Portal-16-D がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,

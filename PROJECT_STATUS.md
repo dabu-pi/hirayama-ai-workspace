@@ -1,6 +1,35 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-16-B ✅ CLOSED / JREC-SF01 @51 deploy + live-check 13/13 PASS）
+最終更新: 2026-05-14（Portal-16 シリーズ end-to-end ✅ CLOSED / JBIZ @19 / Portal-15 §3 connected）
+
+## 2026-05-14: JBIZ Portal-16-D / 16-E ✅ CLOSED（Portal-15 §3 connected 化完了）
+
+Portal-16-B（JREC-SF01 endpoint）の上に JBIZ portal-gateway を接続し、
+Portal-15 `?view=chronicpain` の §3「症状別件数」を **unconnected → connected** へ切替。
+
+| 項目 | 値 |
+|---|---|
+| JBIZ deploy | `@19` on `AKfycbw20...`（bookmark URL 維持）|
+| JBIZ smoke | **216 PASS / 0 FAIL / 0 SKIP**（前 194、+22）|
+| `verify-portal15-deploy.ts` | **PASS**（setupPortal15 + ?view=chronicpain §3 connected）|
+| gas/ ↔ scripts/ SHA | `175A1648...` 一致 |
+| Multi-Claude | 競合なし（JBIZ + workspace のみ書き込み、JREC は read-only 確認のみ）|
+
+詳細: `hirayama-jyusei-strategy/docs/PORTAL_16D_JBIZ_CHRONIC_PAIN_CONNECTION_2026-05-14.md`
+
+### Portal-16 シリーズ 全 Phase
+
+| Phase | 内容 | 状態 |
+|---|---|---|
+| 16-A 設計 | ✅ CLOSED |
+| 16-B JREC endpoint | ✅ CLOSED（`@51`）|
+| 16-C JREC live-check | ✅ CLOSED |
+| 16-D JBIZ 接続 | ✅ CLOSED（`@19`）|
+| 16-E Portal-15 §3 connected 本番確認 | ✅ CLOSED |
+
+経営導線「自費患者増加 → **腰痛・首こり・肩こり** 施術増 → 自費継続 → 再発予防 → ジム誘導 → 月+20万円」のうち、太字部分が **production で測定可能** になった。
+
+---
 
 ## 2026-05-14: JBIZ Portal-16-B ✅ CLOSED（JREC-SF01 endpoint live + 自動 verify PASS）
 
