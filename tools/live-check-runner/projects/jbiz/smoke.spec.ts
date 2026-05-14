@@ -670,6 +670,55 @@ test("PROJECT_STATUS.md に Portal-16-D 記録がある", async () => {
   expect(content.includes("Portal-16-D"), "PROJECT_STATUS.md に Portal-16-D がありません").toBe(true);
 });
 
+// ── Portal-15-B チェック ─────────────────────────────────────
+
+test("GAS スクリプトに PORTAL15B_SHEET_NAME / PORTAL15B_SHEET_HEADERS が定義されている", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("PORTAL15B_SHEET_NAME"), "PORTAL15B_SHEET_NAME がありません").toBe(true);
+  expect(content.includes("JBIZ_ChronicPain_Monthly_History"), "シート名 JBIZ_ChronicPain_Monthly_History がありません").toBe(true);
+  expect(content.includes("PORTAL15B_SHEET_HEADERS"), "PORTAL15B_SHEET_HEADERS がありません").toBe(true);
+});
+
+test("GAS スクリプトに ensureChronicPainMonthlyHistorySheet_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function ensureChronicPainMonthlyHistorySheet_"), "ensureChronicPainMonthlyHistorySheet_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに snapshotChronicPainMonthlyKpi_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function snapshotChronicPainMonthlyKpi_"), "snapshotChronicPainMonthlyKpi_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに getChronicPainPreviousMonthSnapshot_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function getChronicPainPreviousMonthSnapshot_"), "getChronicPainPreviousMonthSnapshot_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal15B / appendPortal15BToRunLog が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function setupPortal15B("), "setupPortal15B がありません").toBe(true);
+  expect(content.includes("function appendPortal15BToRunLog("), "appendPortal15BToRunLog がありません").toBe(true);
+});
+
+test("GAS スクリプトに setupPortal15B / snapshotChronicPainMonthlyKpi action route がある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal15B'"), "setupPortal15B action ハンドラがありません").toBe(true);
+  expect(content.includes("action === 'snapshotChronicPainMonthlyKpi'"), "snapshotChronicPainMonthlyKpi action ハンドラがありません").toBe(true);
+});
+
+test("buildChronicPainGoalSection_ が probe 引数を取り 前月比表示分岐がある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildChronicPainGoalSection_(summary, probe)"), "buildChronicPainGoalSection_ が probe を取っていません").toBe(true);
+  expect(content.includes("getChronicPainPreviousMonthSnapshot_"), "前月行取得呼び出しがありません").toBe(true);
+  expect(content.includes("前月比"), "前月比カード描画がありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-15-B 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-15-B"), "PROJECT_STATUS.md に Portal-15-B がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,

@@ -39,6 +39,7 @@ async function readInnerBody(page: any, timeoutMs = 25000): Promise<string> {
 
   let setupOk = false;
   let viewOk = false;
+  let setup15BOk = false;
 
   try {
     // 1. setupPortal15
@@ -69,6 +70,37 @@ async function readInnerBody(page: any, timeoutMs = 25000): Promise<string> {
       console.log('--- body snippet (first 1200) ---');
       console.log(body.substring(0, 1200));
       setupOk = found.portal15 && (found.status_ok || found.setup_complete_label);
+    }
+
+    // 1b. setupPortal15B (Portal-15-B 月次履歴 snapshot)
+    console.log('\n=== setupPortal15B ===');
+    const setup15BUrl = `${BASE_EXEC}?action=setupPortal15B`;
+    await page.goto(setup15BUrl, { timeout: 60000, waitUntil: 'domcontentloaded' });
+    const setup15BFinal = page.url();
+    const setup15BTitle = await page.title().catch(() => '');
+    console.log(`final_url: ${setup15BFinal}`);
+    console.log(`title: ${setup15BTitle}`);
+
+    if (
+      setup15BFinal.includes('accounts.google.com') ||
+      setup15BFinal.includes('ServiceLogin') ||
+      setup15BTitle.includes('Sign in')
+    ) {
+      console.log('AUTH EXPIRED: redirected to Google login');
+    } else {
+      const body15B = await readInnerBody(page);
+      console.log(`body_len: ${body15B.length}`);
+      const found15B = {
+        portal15B: body15B.includes('Portal-15-B'),
+        setup_complete_label: body15B.includes('Portal-15-B セットアップ完了'),
+        task_id: body15B.includes('TASK-PORTAL-15-B-001'),
+        sheet_name: body15B.includes('JBIZ_ChronicPain_Monthly_History') || body15B.includes('"month"'),
+        action_inserted_or_updated: body15B.includes('"inserted"') || body15B.includes('"updated"'),
+      };
+      console.log('found:', JSON.stringify(found15B));
+      console.log('--- body snippet (first 1400) ---');
+      console.log(body15B.substring(0, 1400));
+      setup15BOk = found15B.portal15B && found15B.setup_complete_label && found15B.task_id;
     }
 
     // 2. view=chronicpain
@@ -118,11 +150,28 @@ async function readInnerBody(page: any, timeoutMs = 25000): Promise<string> {
       const section1HasMdash = body.includes('① 慢性症状患者') && body.includes('—');
       console.log(`section1_unconnected_card (expected true): ${section1HasMdash}`);
 
-      console.log('--- body snippet (first 3000) ---');
-      console.log(body.substring(0, 3000));
+      // Portal-15-B: §2 に前月比カードが描画されているか
+      const section2HasPrevMonth =
+        body.includes('前月比 売上') &&
+        body.includes('前月比 達成率') &&
+        body.includes('前月比 自費来院') &&
+        body.includes('前月比 再発予防未対応') &&
+        body.includes('前月比 慢性疼痛延べ');
+      // 初回 snapshot 直後は前月行がないので「履歴不足」表示か、
+      // または前月行ありなら delta（+/−/±）表示
+      const section2PrevMonthHandled =
+        body.includes('履歴不足') ||
+        body.includes('JBIZ_ChronicPain_Monthly_History シート由来') ||
+        /[+−±]/.test(body);
+      console.log(`section2_has_prev_month_cards: ${section2HasPrevMonth}`);
+      console.log(`section2_prev_month_handled: ${section2PrevMonthHandled}`);
+
+      console.log('--- body snippet (first 3500) ---');
+      console.log(body.substring(0, 3500));
 
       const kwScore = keywords.filter((k) => hits[k]).length;
-      viewOk = kwScore >= 6 && section3Connected && !section3Unconnected;
+      viewOk = kwScore >= 6 && section3Connected && !section3Unconnected &&
+               section2HasPrevMonth && section2PrevMonthHandled;
     }
   } catch (err: any) {
     console.error('ERROR:', err && err.message ? err.message : err);
@@ -131,7 +180,8 @@ async function readInnerBody(page: any, timeoutMs = 25000): Promise<string> {
   }
 
   console.log('\n=== RESULT ===');
-  console.log(`setupPortal15: ${setupOk ? 'PASS' : 'FAIL/SKIP'}`);
-  console.log(`?view=chronicpain: ${viewOk ? 'PASS' : 'FAIL/SKIP'}`);
-  process.exit(setupOk && viewOk ? 0 : 1);
+  console.log(`setupPortal15:   ${setupOk ? 'PASS' : 'FAIL/SKIP'}`);
+  console.log(`setupPortal15B:  ${setup15BOk ? 'PASS' : 'FAIL/SKIP'}`);
+  console.log(`?view=chronicpain (sec2 prev-month + sec3 connected): ${viewOk ? 'PASS' : 'FAIL/SKIP'}`);
+  process.exit(setupOk && setup15BOk && viewOk ? 0 : 1);
 })();

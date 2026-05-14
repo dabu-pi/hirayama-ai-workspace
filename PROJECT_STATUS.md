@@ -1,6 +1,28 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-16 シリーズ end-to-end ✅ CLOSED / JBIZ @19 / Portal-15 §3 connected）
+最終更新: 2026-05-14（Portal-15-B ✅ CLOSED / JBIZ @20 / 月次履歴 + §2 前月比 enable）
+
+## 2026-05-14: JBIZ Portal-15-B ✅ CLOSED（月次履歴 / 前月比 enable / @20）
+
+`?view=chronicpain` §2 に前月比カード 5 枚を追加。`JBIZ_ChronicPain_Monthly_History` シート（20 列）で月次 snapshot を upsert する仕組み。
+
+| 項目 | 値 |
+|---|---|
+| JBIZ deploy | `@20` on `AKfycbw20...`（bookmark URL 維持）|
+| JBIZ smoke | **232 PASS / 0 FAIL / 0 SKIP**（前 216、+16）|
+| 新規シート | `JBIZ_ChronicPain_Monthly_History`（20 列）|
+| 初回 snapshot | 2026-05 inserted（row 2）|
+| `verify-portal15-deploy.ts` | **PASS**（setupPortal15 / setupPortal15B / ?view=chronicpain 前月比表示）|
+| gas/ ↔ scripts/ SHA | `65A38D05E...` 一致（3263 行）|
+
+詳細: `hirayama-jyusei-strategy/docs/PORTAL_15B_CHRONIC_PAIN_MONTHLY_HISTORY_2026-05-14.md`
+
+### 経営判断的意義
+
+Portal-15 は「今月の状態」だけでなく **「前月との比較で増えているか / 改善しているか」** が production で見えるようになった。
+6 月以降の蓄積で慢性疼痛戦略の効果を時系列で判定可能。
+
+---
 
 ## 2026-05-14: JBIZ Portal-16-D / 16-E ✅ CLOSED（Portal-15 §3 connected 化完了）
 
