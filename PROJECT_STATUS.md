@@ -1,6 +1,25 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（紙資料 Drive upload + Portal 導線/速度改善 設計 ✅ CLOSED）
+最終更新: 2026-05-14（Portal-18-A / 18-C 実装 ✅ CLOSED / Portal-18-B 撤回）
+
+## 2026-05-14: Portal-18-A / 18-C 実装 ✅ CLOSED / Portal-18-B 撤回（JBIZ `@25`）
+
+平山ポータルの **view 別 lazy load**（18-A）と **navigation 2 段化 + 外部事業ポータル直リンク**（18-C）を JBIZ `@25` に deploy。
+
+**Portal-18-B（chronicpain view 3 fetch を fetchAll 並列化）は @22/@23/@24 で「全 endpoint が gym data を返す」現象が再現し撤回**。個別 fetcher 直列 + cache key `_v3:` bump で正常応答に復旧。
+
+| Portal-18 | 状態 |
+|---|---|
+| 18-A: `getPortalSummary_(view)` view 別 lazy load | ✅ CLOSED `@25` |
+| 18-B: `fetchAll` 並列化 | ⚠️ 撤回 / 次フェーズで再設計 |
+| 18-C: navigation 2 段化 + 外部事業ポータル直リンク | ✅ CLOSED `@25` |
+| 18-D: 各事業 portal 側「戻る」追加 | ⏸ 別 single writer セッション |
+
+**自動 verify**: JBIZ smoke 256 PASS / verify-portal15-deploy.ts setupPortal15 / setupPortal15B / `?view=chronicpain` (sec2 prev-month + sec3 connected) すべて PASS / `?action=fetchChronicPainKpi` symptom & ic 正常応答。
+
+詳細: `hirayama-jyusei-strategy/docs/PORTAL_18_HUB_NAV_PERFORMANCE_IMPLEMENTATION_2026-05-14.md`
+
+---
 
 ## 2026-05-14: 紙資料 Drive Upload + Portal Hub 改善 設計 ✅ CLOSED（docs-only）
 
