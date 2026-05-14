@@ -140,7 +140,8 @@ test.describe(
         const body = (await noAuthPage.locator("body").textContent({ timeout: LOAD_TIMEOUT })) || "";
         // Should show error page, NOT Google login redirect
         expect(body, "should not require Google login").not.toContain("Sign in");
-        expect(body, "should show error about invalid token").toMatch(/エラー|無効/);
+        // Q-2C 以降の renderPublicError_ 文言と整合: 「問診票リンクを確認できませんでした」
+        expect(body, "should show link error page (missing token)").toMatch(/エラー|無効|確認できませんでした|URL.*確認/);
       } finally {
         await noAuthCtx.close();
       }
@@ -158,7 +159,8 @@ test.describe(
         );
         const body = (await noAuthPage.locator("body").textContent({ timeout: LOAD_TIMEOUT })) || "";
         expect(body, "should not require Google login").not.toContain("Sign in");
-        expect(body, "should show invalid token error").toMatch(/エラー|無効/);
+        // Q-2C 以降の renderPublicError_ 文言と整合: invalid_token は「問診票リンクを確認できませんでした」
+        expect(body, "should show link error page (invalid token)").toMatch(/エラー|無効|確認できませんでした|URL.*確認/);
       } finally {
         await noAuthCtx.close();
       }
