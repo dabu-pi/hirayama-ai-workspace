@@ -1,6 +1,25 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-15-C ✅ CLOSED / JREC @52 + JBIZ @21 / 自費 初回/継続 connected / Multi-Claude 競合 recovery 完了）
+最終更新: 2026-05-14（継続化運用設計 docs CLOSED / Portal-15-C 数字を起点に現場運用設計）
+
+## 2026-05-14: JBIZ 継続化運用設計 ✅ CLOSED（docs-only / システム deploy なし）
+
+Portal-15-C の数字（初診 1 / 再診 0 / 継続不足アラート active）を起点に、現場で使う言葉と導線を設計。
+
+| 成果物 | 場所 |
+|---|---|
+| 運用設計 docs | `hirayama-jyusei-strategy/docs/CONTINUATION_DESIGN_AFTER_PORTAL15C_2026-05-14.md`（15 章 / 約 600 行 / 2 回目提案トーク + 症状別 + 施術計画 3 パターン + LINE-SMS リコール + 継続しない理由 + ジム誘導 + 運用フロー）|
+
+設計思想を明文化: 「**数字（Portal-15-C） → 言葉（本書） → 運用 → 翌月数字で検証 → v1.1 微調整**」の順を Portal-15 全体の核として定義。
+
+### システム実装なし
+
+- clasp push / deploy なし
+- JREC-SF01 触らず（並行 Claude active のため）
+- Portal / Sheet 変更なし
+- Dashboard 反映なし（運用が回り始めてから設計）
+
+---
 
 ## 2026-05-14: JBIZ Portal-15-C ✅ CLOSED（自費 初回 / 継続 区分 connected / @21）
 
