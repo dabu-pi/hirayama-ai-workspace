@@ -34,7 +34,7 @@ import config from "./config.json";
 // 通常の prodUrl (@48 USER_ACCESSING) とは別の URL なので kpiEndpointUrl を使う。
 const KPI_BASE_URL = (config as any).kpiEndpointUrl as string | undefined;
 const PROD_URL = (config as any).prodUrl as string | undefined;
-const FETCH_TIMEOUT_MS = 20_000;
+const FETCH_TIMEOUT_MS = 35_000;  // Portal-17: L3 questionnaire read が追加されたため延長
 
 // Portal-16-B endpoint が deploy されたら false に切り替える。
 // または config.json に portal16BReady フラグを足してそこから読む形に変える。
