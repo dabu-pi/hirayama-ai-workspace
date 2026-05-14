@@ -20,6 +20,7 @@
     "test:jrec:questionnaire-transfer": "playwright test projects/jrec-sf01/questionnaire-transfer-patient.spec.ts",
     "test:jrec:questionnaire-chart-transfer": "playwright test projects/jrec-sf01/questionnaire-transfer-chart.spec.ts",
     "test:jrec:questionnaire-public": "playwright test projects/jrec-sf01/questionnaire-public.spec.ts",
+    "test:jrec:questionnaire-issue": "playwright test projects/jrec-sf01/questionnaire-issue.spec.ts",
     "test:jbiz": "playwright test projects/jbiz",
     "test:jbiz:smoke": "playwright test projects/jbiz/smoke.spec.ts",
     "test:jbiz:portal12": "playwright test projects/jbiz/portal12.spec.ts",
