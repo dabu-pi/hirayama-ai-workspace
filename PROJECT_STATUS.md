@@ -26,6 +26,21 @@ auth.json が JBIZ domain で期限切れのため、以下は人間がブラウ
 
 詳細は `hirayama-jyusei-strategy/PROJECT_STATUS.md` 参照。
 
+### 別 Claude セッション handoff note
+
+本セッション開始時に **別 Claude プロセス PID 2448（09:12 起動）** を検出した。
+ユーザ判断（「その Claude を停めて進める」）に従って **`Stop-Process -Id 2448 -Force` で停止**。git index.lock なし → 安全停止。
+
+停止前にその Claude が行った作業の痕跡:
+- workspace に commit `d0fd6dd docs(workspace): record shadow copy cleanup for JREC-SF01` を push 済み（履歴に残存・無害）
+- **`life-design-project`** に 4 ファイル未 commit の変更を残置:
+  - `logs/check-log.md` / `logs/completed-tasks.md` / `logs/pending-items.md` / `logs/work-log.md`
+  - 内容は Nishio 初回面談関連の log 追記（最新 commit `8be2f8d` 等と整合）
+  - **私（本セッション）は触らず原状保存**（破棄回避）
+
+→ 本セッションでは life-design-project の作業に介入していない。
+→ 次セッションで人間が中身を確認し、必要なら commit / 破棄判断してください。
+
 ---
 
 
