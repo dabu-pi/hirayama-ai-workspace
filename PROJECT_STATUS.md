@@ -2,29 +2,32 @@
 
 最終更新: 2026-05-14（Portal-15 production deploy @18 / Git dirty 根本原因解消）
 
-## 2026-05-14: JBIZ Portal-15 production deploy @18
+## 2026-05-14: JBIZ Portal-15 ✅ CLOSED（deploy @18 + setup + view 自動 verify PASS）
 
-JBIZ `gas/portal-gateway-v1.gs` を `clasp push --force` で push、既存 deploymentId に `@18 - Portal-15: chronic-pain self-pay conversion funnel KPI view` で deploy 完了（bookmark URL 維持）。
+JBIZ `gas/portal-gateway-v1.gs` を `clasp push --force` で push、既存 deploymentId に `@18 - Portal-15: chronic-pain self-pay conversion funnel KPI view` で deploy（bookmark URL 維持）。
+その後、Chrome CDP 9222 + `.chrome-profile` 経由で auth.json を 14.2 KB に再取得し（既存 Google セッション生存・login 不要）、
+`tools/live-check-runner/scripts/verify-portal15-deploy.ts` を実行して **setupPortal15 / ?view=chronicpain の両方を Playwright で自動 verify** → **両 PASS**。
 
 | 項目 | 値 |
 |---|---|
 | version | `@18` |
 | deploymentId | `AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ` |
-| JBIZ head | `bb1a099`（前セッション commit）|
-| JBIZ smoke (post-deploy) | 194 PASS / 4 skipped / 0 FAIL — regression なし |
+| JBIZ head | （本セッション末で再 commit）|
+| JBIZ smoke (post-deploy・静的) | 194 PASS / 4 skipped / 0 FAIL — regression なし |
+| setupPortal15 自動 verify | ✅ PASS（status:ok / TASK-PORTAL-15-001 → done / Run_Log row 13 / probe.state=connected）|
+| ?view=chronicpain 自動 verify | ✅ PASS（4 セクション / 全 8 keyword hit / navigation 🩺 慢性疼痛 active）|
+| production data（May 2026）| selfpay=1 件 / 自費売上 ¥3,850 / 達成率 1.9% / 再発予防未対応 1 件 / 症状別 unconnected |
 
 ### tools/live-check-runner 側 追加
 
-- `scripts/verify-portal15-deploy.ts` 新規追加（次回 auth 復元後の自動 verify 用）
-- `projects/jbiz/config.json` の `currentPhaseDeployment` を `@18` に更新、`webAppPortal15SetupUrl` / `webAppChronicPainViewUrl` を追加
+- `scripts/verify-portal15-deploy.ts`（前 commit 済）— **本日実行 PASS**。今後の Portal deploy 後に再利用可
+- `projects/jbiz/config.json` の `currentPhaseDeployment` を `@18` に更新、`webAppPortal15SetupUrl` / `webAppChronicPainViewUrl` を追加（前 commit 済）
 
-### 残作業（manual TODO）
+### auth 運用 note
 
-auth.json が JBIZ domain で期限切れのため、以下は人間がブラウザで実行:
-1. `.../exec?action=setupPortal15` を Google ログイン済みブラウザで 1 回開く
-2. `.../exec?view=chronicpain` を開いて 4 セクション正常表示確認
-
-詳細は `hirayama-jyusei-strategy/PROJECT_STATUS.md` 参照。
+- `.chrome-profile` 配下の Google セッションは（少なくとも今回）有効期限 19h を超えても **session refresh が効いており login 不要だった**
+- 再取得手順: chrome 全停止 → `chrome --remote-debugging-port=9222 --user-data-dir=.chrome-profile <JBIZ exec URL>` で 1 個起動 → CDP 9222 ready 待機 → `npm run save-auth` の順
+- 14.2 KB の auth.json で setup + view ともに verify 通過
 
 ### 別 Claude セッション handoff note
 
