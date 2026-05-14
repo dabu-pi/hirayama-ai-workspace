@@ -30,14 +30,18 @@ import fs from "fs";
 import path from "path";
 import config from "./config.json";
 
+// chronicPainKpiSummary は ANYONE_ANONYMOUS deploymentId (@50/@51) で公開。
+// 通常の prodUrl (@48 USER_ACCESSING) とは別の URL なので kpiEndpointUrl を使う。
+const KPI_BASE_URL = (config as any).kpiEndpointUrl as string | undefined;
 const PROD_URL = (config as any).prodUrl as string | undefined;
 const FETCH_TIMEOUT_MS = 20_000;
 
 // Portal-16-B endpoint が deploy されたら false に切り替える。
 // または config.json に portal16BReady フラグを足してそこから読む形に変える。
-const PORTAL16B_NOT_YET_DEPLOYED = true;
+// 2026-05-14: @51 deploy 済（deploymentId AKfycbw0aWYY0... の Portal-12 ANYONE_ANONYMOUS と共有）。
+const PORTAL16B_NOT_YET_DEPLOYED = false;
 
-const ENDPOINT_URL = PROD_URL ? `${PROD_URL}?action=chronicPainKpiSummary` : "";
+const ENDPOINT_URL = KPI_BASE_URL ? `${KPI_BASE_URL}?action=chronicPainKpiSummary` : "";
 
 interface FetchResult {
   status: number;
@@ -104,8 +108,8 @@ function skipIfNotDeployed() {
         "When deployed, flip PORTAL16B_NOT_YET_DEPLOYED to false (or add a config flag)."
     );
   }
-  if (!PROD_URL) {
-    test.skip(true, "config.json に prodUrl が設定されていません。");
+  if (!KPI_BASE_URL) {
+    test.skip(true, "config.json に kpiEndpointUrl が設定されていません（@50/@51 ANYONE_ANONYMOUS deployment）。");
   }
 }
 
@@ -193,7 +197,8 @@ test.describe(
 
     test("CP-REG-1: 回帰 — gymReferralKpiSummary が依然として ok=true を返す", async () => {
       skipIfNotDeployed();
-      const r = await fetchEndpoint(`${PROD_URL}?action=gymReferralKpiSummary`);
+      // 同 deploymentId（KPI_BASE_URL）上で gymReferralKpiSummary も regression していないこと
+      const r = await fetchEndpoint(`${KPI_BASE_URL}?action=gymReferralKpiSummary`);
       expect(r.error, `fetch error: ${r.error}`).toBeUndefined();
       expect(r.status).toBe(200);
       expect(r.json?.ok).toBe(true);

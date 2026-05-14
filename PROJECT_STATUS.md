@@ -1,8 +1,44 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-16-B prep: workspace 側 spec template + 実装手順確定 / endpoint は JREC-SF01 並行 Claude 完了待ち）
+最終更新: 2026-05-14（Portal-16-B ✅ CLOSED / JREC-SF01 @51 deploy + live-check 13/13 PASS）
 
-## 2026-05-14: JBIZ Portal-16-B WAITING（workspace 側 prep のみ実施）
+## 2026-05-14: JBIZ Portal-16-B ✅ CLOSED（JREC-SF01 endpoint live + 自動 verify PASS）
+
+並行 Claude（PID 3136）の Phase Q-1A 作業完了 + JREC-SF01 clean 状態を確認後、Portal-16-B 本実装に着手:
+
+| 項目 | 値 |
+|---|---|
+| JREC-SF01 head | `b70f258 → 0a36ff8`（chronicPainKpi 実装 + Main route 追加）|
+| JREC-SF01 deploy | **`@51`** on existing deploymentId `AKfycbw0aWYY0...`（Portal-12 と同じ ANYONE_ANONYMOUS）|
+| 新規ファイル | `JREC_SF01_ChronicPainKpi.gs`（約 200 行 / `CHRONIC_PAIN_KEYWORDS` + `getChronicPainKpiSummary`）|
+| `JREC_SF01_Main.gs` 変更 | doGet に route 1 ブロック（21 行）追加のみ |
+| live-check (`npm run test:jrec:chronic-pain-kpi`) | **13 / 13 PASS / 0 FAIL / 37.4s** |
+| 本番動作 | 2026-05 → ok=true / visit_count_in_month=1 / 3 症状すべて 0（当該主訴は腰痛・首こり・肩こり辞書に該当せず）/ data_quality_warnings.empty_chiefcomplaint_count=0 |
+| PII 不在 | spec CP-7 PASS（14 PII keyword すべて grep で 0 hit）|
+| regression | gymReferralKpiSummary 不変（selfpay_visit_count=1 維持）|
+
+### 詳細
+
+- 設計: `hirayama-jyusei-strategy/docs/PORTAL_16_CHRONIC_PAIN_KPI_SUMMARY_DESIGN_2026-05-14.md`
+- 実装記録: `gas-projects/jrec-sf01-selfpay/docs/PORTAL_16_CHRONIC_PAIN_KPI_SUMMARY_IMPLEMENTATION_2026-05-14.md`
+
+### 並行 Claude 競合回避（実績）
+
+| 戦略 | 結果 |
+|---|---|
+| 新規ファイル `JREC_SF01_ChronicPainKpi.gs` に集計 logic を隔離 | ✅ 競合面ゼロ |
+| `JREC_SF01_Main.gs` 編集は route 1 ブロックのみ | ✅ |
+| 着手時に Phase Q-1A の最新 commit (`b70f258`) が landed していることを確認 | ✅ |
+| 実装〜deploy〜verify 中に並行 Claude の新規編集発生なし | ✅ |
+
+### 次タスク
+
+Portal-16-D（JBIZ portal-gateway 接続）→ Portal-16-E（Portal-15 §3 connected 化動作確認）。
+JBIZ 側で `fetchChronicPainSymptomSummary_` 追加 + `buildChronicPainSymptomSection_` 書き換え + JBIZ deploy `@19`。
+
+---
+
+## 2026-05-14: JBIZ Portal-16-B WAITING（workspace 側 prep のみ実施・上記により解消）
 
 並行 Claude（PID 3136）が JREC-SF01 で Phase Q-1A 後続を active 編集中のため、JREC-SF01 への書き込みは見送り。
 代わりに workspace 側で **next session が即座に着手できる準備** を完了。
