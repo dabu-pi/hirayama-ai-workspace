@@ -4,7 +4,8 @@
   "devUrl": "https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev",
   "prodUrl": "https://script.google.com/macros/s/AKfycbz0EqGZOXWrKokzFN2x4SMo17cJojaHnWvmR2FAHXyQ1OLIdnWGwBSHIyylDAMqb8oACA/exec",
   "kpiEndpointUrl": "https://script.google.com/macros/s/AKfycbw0aWYY0hPySJeAAcoJFg82zXFOzmBAaOVwQk5gVM3tlAGWJR37v2uflUr2qnxKpAb0og/exec",
-  "currentDeployment": "@51",
+  "currentDeployment": "@54",
+  "q2aPublicExecUrl": "https://script.google.com/macros/s/AKfycbw0aWYY0hPySJeAAcoJFg82zXFOzmBAaOVwQk5gVM3tlAGWJR37v2uflUr2qnxKpAb0og/exec",
   "notes": [
     "access: ANYONE_ANONYMOUS — 2026-05-13 @50 で MYSELF から変更。GAS UrlFetchApp スクリプト間呼び出しには ANYONE_ANONYMOUS が必要。",
     "JBIZ Portal-12 KPI endpoint: @50 exec URL (ANYONE_ANONYMOUS)",
