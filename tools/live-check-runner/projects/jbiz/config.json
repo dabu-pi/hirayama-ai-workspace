@@ -25,8 +25,10 @@
     "webAppCrossKpiViewUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=crosskpi",
     "devUrl": "https://script.google.com/macros/s/AKfycbwI5optbFNifws1Wz0tfmAomi_Xc-iMDDd8P06bfE_/dev",
     "authStatus": "APPROVED",
-    "currentPhaseDeployment": "@10 (Portal-12 JREC-SF01 live KPI connection)",
-    "authNote": "承認済み（2026-05-13）。Portal-12 で UrlFetchApp 用 oauthScopes（spreadsheets / script.external_request / script.scriptapp）追加 → 初回呼び出し時に再認可が必要な場合あり。"
+    "currentPhaseDeployment": "@18 (Portal-15 chronic-pain self-pay conversion funnel KPI view)",
+    "authNote": "承認済み（2026-05-13）。Portal-12 で UrlFetchApp 用 oauthScopes（spreadsheets / script.external_request / script.scriptapp）追加 → 初回呼び出し時に再認可が必要な場合あり。",
+    "webAppPortal15SetupUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?action=setupPortal15",
+    "webAppChronicPainViewUrl": "https://script.google.com/macros/s/AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ/exec?view=chronicpain"
   },
   "driveVerification": {
     "verified": true,

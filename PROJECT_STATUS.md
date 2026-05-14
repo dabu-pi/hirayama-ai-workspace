@@ -1,6 +1,34 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Git dirty 根本原因解消 + repo health check 整備）
+最終更新: 2026-05-14（Portal-15 production deploy @18 / Git dirty 根本原因解消）
+
+## 2026-05-14: JBIZ Portal-15 production deploy @18
+
+JBIZ `gas/portal-gateway-v1.gs` を `clasp push --force` で push、既存 deploymentId に `@18 - Portal-15: chronic-pain self-pay conversion funnel KPI view` で deploy 完了（bookmark URL 維持）。
+
+| 項目 | 値 |
+|---|---|
+| version | `@18` |
+| deploymentId | `AKfycbw20tWvhR5nnRzCiUAMybtfrebRg-BK-EgDamvZYt-clSwf4TK9FGTKNZRmsO3wj7QSiQ` |
+| JBIZ head | `bb1a099`（前セッション commit）|
+| JBIZ smoke (post-deploy) | 194 PASS / 4 skipped / 0 FAIL — regression なし |
+
+### tools/live-check-runner 側 追加
+
+- `scripts/verify-portal15-deploy.ts` 新規追加（次回 auth 復元後の自動 verify 用）
+- `projects/jbiz/config.json` の `currentPhaseDeployment` を `@18` に更新、`webAppPortal15SetupUrl` / `webAppChronicPainViewUrl` を追加
+
+### 残作業（manual TODO）
+
+auth.json が JBIZ domain で期限切れのため、以下は人間がブラウザで実行:
+1. `.../exec?action=setupPortal15` を Google ログイン済みブラウザで 1 回開く
+2. `.../exec?view=chronicpain` を開いて 4 セクション正常表示確認
+
+詳細は `hirayama-jyusei-strategy/PROJECT_STATUS.md` 参照。
+
+---
+
+
 
 このファイルは workspace 全体の最新セッション状態を 1 ページで把握するためのもの。
 各プロジェクトの詳細状態は配下 repo の `PROJECT_STATUS.md` を参照する。
