@@ -1,6 +1,36 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-16-A 設計 CLOSED / Portal-15 ✅ CLOSED / Git dirty 根本原因解消）
+最終更新: 2026-05-14（Portal-16-B prep: workspace 側 spec template + 実装手順確定 / endpoint は JREC-SF01 並行 Claude 完了待ち）
+
+## 2026-05-14: JBIZ Portal-16-B WAITING（workspace 側 prep のみ実施）
+
+並行 Claude（PID 3136）が JREC-SF01 で Phase Q-1A 後続を active 編集中のため、JREC-SF01 への書き込みは見送り。
+代わりに workspace 側で **next session が即座に着手できる準備** を完了。
+
+| 成果物 | 場所 | 状態 |
+|---|---|---|
+| Portal-16-B live-check spec template | `tools/live-check-runner/projects/jrec-sf01/chronic-pain-kpi.spec.ts` | 新規 / 全 spec `test.skip()` / `PORTAL16B_NOT_YET_DEPLOYED = true` を `false` に変えれば ENABLE |
+| npm script alias | `tools/live-check-runner/package.json` | `test:jrec:chronic-pain-kpi` 追加 |
+| 実装手順チェックリスト + PII grep keyword + 完了条件 | JBIZ `docs/PORTAL_16_CHRONIC_PAIN_KPI_SUMMARY_DESIGN_2026-05-14.md` § 12-13 | 追記済 |
+
+### Multi-Claude observation（本セッション中）
+
+| PID | 起動 | 推定作業 | 影響 |
+|---|---|---|---|
+| 20472 | 06:28 | 本セッション（Portal-16-B prep）| — |
+| 6968 | 09:22 | life-design-project（独立）| 範囲分離 |
+| 3136 | 09:57 | JREC-SF01 Phase Q-1A 系の active 編集（`JREC_SF01_Main.gs` 10:34 modified, uncommitted）| **Portal-16-B 実装待機の直接理由** |
+
+### user 指示で守った範囲
+
+- **JREC-SF01 repo の編集なし**（read-only で構造確認のみ）
+- **`JREC_SF01_Main.gs` への route 追加なし**
+- **`JREC_SF01_ChronicPainKpi.gs` の作成なし**（次セッションで実装）
+- **clasp push / deploy なし**
+- **PID 3136 の停止なし**
+- **PID 3136 の未 commit 作業への介入なし**
+
+---
 
 ## 2026-05-14: JBIZ Portal-16-A design CLOSED（endpoint spec を JBIZ 側に確定）
 
