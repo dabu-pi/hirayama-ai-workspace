@@ -166,6 +166,10 @@ desktop-work-status-overlay/
 # 混入したため、rename 前のフォルダ名も明示的に無視する（rename 後は不要）
 /treadmill-motor-crusher-project`/
 
+# Multi-Claude / 緊急時 WIP 保全フォルダ（追跡しない）
+# 競合検出時に git diff / file copy をここに保管する。再開後はレビューして削除。
+_handoff/
+
 # 一時テストファイル（コミット対象外）
 gas-projects/jyu-gas-ver3.1/test_d6.xlsx
 
