@@ -7,7 +7,7 @@
 | 発生日 | 2026-05-14 |
 | 誤って開いたフォルダ | `C:\hirayama-ai-workspace\gas-projects\jrec-sf01-selfpay` |
 | 正本フォルダ | `C:\hirayama-ai-workspace\workspace\gas-projects\jrec-sf01-selfpay` |
-| 結果 | 中身（6 ファイル）削除済み。ディレクトリ本体は Claude Code 再起動後に削除予定 |
+| 結果 | 中身（6 ファイル）削除済み + 空ディレクトリ・親ディレクトリ削除完了（2026-05-14 同日中） |
 
 ## 原因
 
@@ -34,32 +34,31 @@ Claude Code を root 直下の `C:\hirayama-ai-workspace\gas-projects\jrec-sf01-
 |---|---|
 | shadow 内 6 ファイル削除 | 完了 |
 | `.git` 等メタファイル削除 | 完了（shadow 直下は空） |
-| shadow ディレクトリ本体 | **未削除**（Claude Code 親プロセスが cwd として保持しているため Windows のファイルロックで削除不可） |
-| 親フォルダ `gas-projects` 削除 | **保留**（shadow が残っているため） |
+| shadow ディレクトリ本体 | **削除完了**（2026-05-14 同日中。Claude Code を `workspace` から再起動後に実施） |
+| 親フォルダ `gas-projects` 削除 | **削除完了**（同上。空になっていたため一緒に削除） |
 
-`Remove-Item -Recurse -Force` / `cmd /c rmdir /S /Q` / `MoveFileEx(MOVEFILE_DELAY_UNTIL_REBOOT)` のいずれも、Claude Code が同フォルダを cwd として開いている間は失敗する（Windows の動作仕様）。
+> 当初は Claude Code 親プロセスが cwd として保持していたため Windows のファイルロックで削除できなかった。
+> Claude Code を `C:\hirayama-ai-workspace\workspace` から再起動し、cwd が shadow を保持しない状態にした上で削除を実施した。
 
-## 残り作業（Claude Code 再起動後に人間が実施）
+## 空ディレクトリ削除実行ログ（2026-05-14）
 
-新しいターミナルを **`C:\hirayama-ai-workspace\workspace`** で開き、以下を実行する。
+```
+Canonical exists: True
+Shadow exists:    True
+Shadow parent:    True
 
-```powershell
-$shadow = "C:\hirayama-ai-workspace\gas-projects\jrec-sf01-selfpay"
-$shadowParent = "C:\hirayama-ai-workspace\gas-projects"
+Shadow is empty (no children)
 
-# 中身は空のはずなので、ディレクトリだけ削除
-Remove-Item -LiteralPath $shadow -Force
+Shadow deleted. Exists after: False
+Parent deleted: C:\hirayama-ai-workspace\gas-projects. Exists after: False
 
-# 親フォルダが空になったか確認し、空なら削除
-if ((Get-ChildItem $shadowParent -Force).Count -eq 0) {
-  Remove-Item -LiteralPath $shadowParent -Force
-}
-
-Test-Path $shadow
-Test-Path $shadowParent
+=== Final state ===
+Canonical still exists: True
+Shadow exists:          False
+Shadow parent exists:   False
 ```
 
-両方 `False` になれば cleanup 完了。
+正本（`workspace/gas-projects/jrec-sf01-selfpay`）28 項目（`.git` + `docs` + 26 ファイル）を保持。
 
 ## 正本の安全性確認
 
