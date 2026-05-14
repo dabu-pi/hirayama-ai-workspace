@@ -157,8 +157,6 @@ async function readInnerBody(page: any, timeoutMs = 25000): Promise<string> {
         body.includes('前月比 自費来院') &&
         body.includes('前月比 再発予防未対応') &&
         body.includes('前月比 慢性疼痛延べ');
-      // 初回 snapshot 直後は前月行がないので「履歴不足」表示か、
-      // または前月行ありなら delta（+/−/±）表示
       const section2PrevMonthHandled =
         body.includes('履歴不足') ||
         body.includes('JBIZ_ChronicPain_Monthly_History シート由来') ||
@@ -166,12 +164,27 @@ async function readInnerBody(page: any, timeoutMs = 25000): Promise<string> {
       console.log(`section2_has_prev_month_cards: ${section2HasPrevMonth}`);
       console.log(`section2_prev_month_handled: ${section2PrevMonthHandled}`);
 
+      // Portal-15-C: §2-B 初回/継続 区分
+      const section2BHasInitialContinuation =
+        body.includes('§ 2-B 自費 初回 / 継続 区分') &&
+        body.includes('初回件数') &&
+        body.includes('継続件数') &&
+        body.includes('初回比率') &&
+        body.includes('継続比率');
+      const section2BConnected =
+        body.includes('selfpayInitialContinuationSummary') ||
+        body.includes('endpoint (@52)') ||
+        body.includes('✅ 接続済');
+      console.log(`section2B_has_initial_continuation_cards: ${section2BHasInitialContinuation}`);
+      console.log(`section2B_connected: ${section2BConnected}`);
+
       console.log('--- body snippet (first 3500) ---');
       console.log(body.substring(0, 3500));
 
       const kwScore = keywords.filter((k) => hits[k]).length;
       viewOk = kwScore >= 6 && section3Connected && !section3Unconnected &&
-               section2HasPrevMonth && section2PrevMonthHandled;
+               section2HasPrevMonth && section2PrevMonthHandled &&
+               section2BHasInitialContinuation && section2BConnected;
     }
   } catch (err: any) {
     console.error('ERROR:', err && err.message ? err.message : err);

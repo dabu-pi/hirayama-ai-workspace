@@ -1,6 +1,45 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-15-B ✅ CLOSED / JBIZ @20 / 月次履歴 + §2 前月比 enable）
+最終更新: 2026-05-14（Portal-15-C ✅ CLOSED / JREC @52 + JBIZ @21 / 自費 初回/継続 connected / Multi-Claude 競合 recovery 完了）
+
+## 2026-05-14: JBIZ Portal-15-C ✅ CLOSED（自費 初回 / 継続 区分 connected / @21）
+
+JREC-SF01 `selfpayInitialContinuationSummary` 新規 endpoint（@52）と JBIZ portal-gateway 接続（@21）。
+Portal-15 `?view=chronicpain` § 2-B に「自費 初回 / 継続 区分」 6 カードを追加。
+
+| 項目 | 値 |
+|---|---|
+| JREC deploy | `@52` on `AKfycbw0aWYY0...`（@51 上書き） |
+| JBIZ deploy | `@21` on `AKfycbw20...`（@20 上書き、bookmark URL 維持） |
+| JREC live-check | chronic-pain-kpi **13/13 PASS** + initial-continuation-kpi **14/14 PASS** |
+| JBIZ smoke | **246 PASS / 0 FAIL / 2 skipped**（前 232、+14） |
+| verify-portal15 | **PASS**（§2-B initial/continuation connected 確認）|
+
+### 経営判断的観察（5月実データ）
+
+```
+1 自費来院 = 100% 初診 / 0 継続
+継続不足アラート: active
+推奨アクション: リコール声かけ / 施術プラン提案 / 通院動機 review
+```
+
+### Multi-Claude 競合 recovery
+
+実装中に並行 Claude（PID 6968 / 3136）が JREC `Main.gs` を編集し、私の Portal-15-C コードを上書き / 削除する競合発生。WIP 保全 → 並行 Claude 停止 → repo 復旧 → GAS HEAD 同期で復旧完了。
+
+詳細: `docs/MULTI_CLAUDE_PORTAL15C_CONFLICT_RECOVERY_2026-05-14.md`
+
+WIP 保全 backup:
+- `_handoff/jrec-conflict-20260514-134621/` — 停止した Claude の WIP
+- `_handoff/portal15c-jbiz-workspace-20260514-134621/` — 本セッションの uncommitted 変更
+
+### 再発防止候補（CLAUDE.md 補強案）
+
+- JREC-SF01 編集前: ファイル mtime が 5 分以内なら active 判定（30 分前判定は危険）
+- 重要 endpoint deploy 直後に local commit を入れる
+- 競合検出時の WIP 保全 standard procedure を `tools/` に script 化
+
+---
 
 ## 2026-05-14: JBIZ Portal-15-B ✅ CLOSED（月次履歴 / 前月比 enable / @20）
 

@@ -719,6 +719,54 @@ test("PROJECT_STATUS.md に Portal-15-B 記録がある", async () => {
   expect(content.includes("Portal-15-B"), "PROJECT_STATUS.md に Portal-15-B がありません").toBe(true);
 });
 
+// ── Portal-15-C チェック ─────────────────────────────────────
+
+test("GAS スクリプトに JREC_SF01_INITIAL_CONTINUATION_URL_DEFAULT が定義されている", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("JREC_SF01_INITIAL_CONTINUATION_URL_DEFAULT"), "JREC_SF01_INITIAL_CONTINUATION_URL_DEFAULT がありません").toBe(true);
+  expect(content.includes("selfpayInitialContinuationSummary"), "selfpayInitialContinuationSummary action 文字列がありません").toBe(true);
+});
+
+test("GAS スクリプトに getJrecSf01InitialContinuationUrl_ / fetchSelfpayInitialContinuationSummary_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function getJrecSf01InitialContinuationUrl_"), "getJrecSf01InitialContinuationUrl_ がありません").toBe(true);
+  expect(content.includes("function fetchSelfpayInitialContinuationSummary_"), "fetchSelfpayInitialContinuationSummary_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに buildChronicPainInitialContinuationSection_ が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("function buildChronicPainInitialContinuationSection_"), "buildChronicPainInitialContinuationSection_ がありません").toBe(true);
+  expect(content.includes("§ 2-B 自費 初回 / 継続 区分"), "§ 2-B section title がありません").toBe(true);
+});
+
+test("GAS スクリプトに ?action=fetchSelfpayInitialContinuationKpi route が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'fetchSelfpayInitialContinuationKpi'"), "fetchSelfpayInitialContinuationKpi action ハンドラがありません").toBe(true);
+});
+
+test("buildChronicPainView_ から buildChronicPainInitialContinuationSection_ が呼ばれる", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("buildChronicPainInitialContinuationSection_(probe)"), "view から §2-B が呼ばれていません").toBe(true);
+});
+
+test("PORTAL15B_SHEET_HEADERS に first_visit_count / repeat_visit_count が追加されている", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("'first_visit_count'"), "first_visit_count ヘッダーがありません").toBe(true);
+  expect(content.includes("'repeat_visit_count'"), "repeat_visit_count ヘッダーがありません").toBe(true);
+});
+
+test("ensureChronicPainMonthlyHistorySheet_ に列追加マイグレーションがある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  // 既存 sheet の列数が不足している場合に header を追加するロジック
+  expect(content.includes("currentCols < PORTAL15B_SHEET_HEADERS.length"), "列追加 migration ロジックがありません").toBe(true);
+});
+
+test("PROJECT_STATUS.md に Portal-15-C 記録がある", async () => {
+  const filePath = jbizPath(config.localDocs.projectStatus);
+  const content = fs.readFileSync(filePath, "utf-8");
+  expect(content.includes("Portal-15-C"), "PROJECT_STATUS.md に Portal-15-C がありません").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,
