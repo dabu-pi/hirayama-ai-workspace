@@ -1,6 +1,31 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-15 production deploy @18 / Git dirty 根本原因解消）
+最終更新: 2026-05-14（Portal-16-A 設計 CLOSED / Portal-15 ✅ CLOSED / Git dirty 根本原因解消）
+
+## 2026-05-14: JBIZ Portal-16-A design CLOSED（endpoint spec を JBIZ 側に確定）
+
+JREC-SF01 への `chronicPainKpiSummary` endpoint 新設で Portal-15 § 3 を connected 化するための設計 docs を JBIZ 側に確定。
+**実装は Phase Q-1A 完了待ち**（並行 Claude PID 3136 が JREC-SF01 で active）。
+
+詳細: [`hirayama-jyusei-strategy/docs/PORTAL_16_CHRONIC_PAIN_KPI_SUMMARY_DESIGN_2026-05-14.md`](./hirayama-jyusei-strategy/docs/PORTAL_16_CHRONIC_PAIN_KPI_SUMMARY_DESIGN_2026-05-14.md)
+
+### Portal-16 Phase 分割
+
+| Phase | 状態 | 担当範囲 |
+|---|---|---|
+| 16-A 設計 docs | ✅ CLOSED | JBIZ docs のみ（本セッション） |
+| 16-B endpoint 実装 | ⏳ | JREC-SF01（Phase Q-1A 後）|
+| 16-C JREC deploy + verify | ⏳ | JREC-SF01 + workspace |
+| 16-D JBIZ 接続 + deploy @19 | ⏳ | JBIZ + workspace |
+| 16-E Portal-15 § 3 connected 確認 | ⏳ | JBIZ |
+
+### Multi-Claude 観測
+
+本セッション中も 3 つの Claude プロセスが共存（PID 20472=本セッション / 6968=life-design / 3136=JREC-SF01 Phase Q-1A）。
+本セッションは **JBIZ 側 docs のみ**に scope を絞り single-writer 違反を回避。
+JREC-SF01 / life-design-project には書き込んでいない。
+
+---
 
 ## 2026-05-14: JBIZ Portal-15 ✅ CLOSED（deploy @18 + setup + view 自動 verify PASS）
 
