@@ -1,6 +1,18 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-18-D 各事業 portal 戻りリンク ✅ CLOSED）
+最終更新: 2026-05-14（6月初 月次レビュー準備 ✅ CLOSED / Drive 印刷物 院長 OK）
+
+## 2026-05-14: 6月初 月次レビュー準備 ✅ CLOSED（docs-only）
+
+Drive 印刷物 4 ファイルは院長確認 OK。6月 1 日のレビューを `?view=chronicpain` 1 画面 + 本 doc で完結できる状態に整備。
+
+- 5月 KPI snapshot: 自費 3,850 円 / 1.9% 達成 / 継続 0 件 / continuation_shortage_alert=TRUE / 慢性疼痛 3 症状 0 件
+- 6月最低ライン: 継続自費 1 件以上 / alert FALSE / recall 記録 / 非継続理由記録 / 慢性疼痛 1 件以上
+- live-check: chronic pain KPI fetch 正常応答（debug-fetch-chronic-pain-action.ts）
+
+詳細: `hirayama-jyusei-strategy/docs/MONTHLY_REVIEW_PREP_2026-06.md`
+
+---
 
 ## 2026-05-14: Portal-18-D 各事業ポータル「平山ポータルへ戻る」リンク ✅ CLOSED
 
