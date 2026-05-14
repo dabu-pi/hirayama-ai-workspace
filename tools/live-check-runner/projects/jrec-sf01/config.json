@@ -23,7 +23,9 @@
     "reports": "?page=reports",
     "monthlyReport": "?page=monthlyReport",
     "menuSalesReport": "?page=menuSalesReport",
-    "outstandingReport": "?page=outstandingReport"
+    "outstandingReport": "?page=outstandingReport",
+    "questionnaireAdmin": "?page=questionnaireAdmin&filter=all",
+    "questionnaireDetail": "?page=questionnaireDetail&id=<questionnaireId>"
   },
   "testData": {
     "patientIdForVisitForm": "P0001",
