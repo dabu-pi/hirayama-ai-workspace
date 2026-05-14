@@ -1,6 +1,22 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（Portal-18-A / 18-C 実装 ✅ CLOSED / Portal-18-B 撤回）
+最終更新: 2026-05-14（Portal-18-D 各事業 portal 戻りリンク ✅ CLOSED）
+
+## 2026-05-14: Portal-18-D 各事業ポータル「平山ポータルへ戻る」リンク ✅ CLOSED
+
+3 事業 portal（JREC-SF01 `@53` / JYU-GAS `@16` / Wildboar PROD `@42`）の home に戻りリンクを追加。JBIZ Portal-18-C の JYU-GAS / Wildboar URL fallback default も設定（JBIZ `@26`）。
+
+| 検証 | 結果 |
+|---|---|
+| verify-portal18d-return-links.ts | 3/3 PASS（visible + correctHref）|
+| JREC-SF01 smoke | 16 PASS |
+| JYU-GAS smoke | 28 PASS |
+| Wildboar smoke | 64 PASS |
+| JBIZ smoke | 256 PASS |
+
+詳細: `hirayama-jyusei-strategy/docs/PORTAL_18_D_RETURN_LINKS_IMPLEMENTATION_2026-05-14.md`
+
+---
 
 ## 2026-05-14: Portal-18-A / 18-C 実装 ✅ CLOSED / Portal-18-B 撤回（JBIZ `@25`）
 
