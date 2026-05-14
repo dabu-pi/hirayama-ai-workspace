@@ -1,6 +1,41 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（継続化運用設計 docs CLOSED / Portal-15-C 数字を起点に現場運用設計）
+最終更新: 2026-05-14（紙資料 Drive upload + Portal 導線/速度改善 設計 ✅ CLOSED）
+
+## 2026-05-14: 紙資料 Drive Upload + Portal Hub 改善 設計 ✅ CLOSED（docs-only）
+
+院長がスタッフに紙で渡す 4 資料を Google Drive にアップロード + Portal 導線・速度改善 設計を docs 化。
+**システム実装 / clasp deploy なし**。次フェーズ「Portal-18-A〜F」として実装候補に積む。
+
+### Drive Upload
+
+| フォルダ | URL |
+|---|---|
+| `2026-05_Portal15C後_運用資料` | https://drive.google.com/drive/folders/1ozjgIB9bgB2XADTv7KjSr4GdDrvWrY7Y |
+
+4 ファイル（Google Doc 形式 / Markdown 正本は git 管理）:
+1. スタッフ用 1 枚
+2. 継続しない理由 チェック表
+3. LINE/SMS リコール文 集
+4. 10 分 読み合わせ台本
+
+### Portal 改善 設計（実装は Portal-18 シリーズで次フェーズ）
+
+| 改善 | 効果 |
+|---|---|
+| A: view 別 lazy load（11 sheet → 必要分のみ）| 1〜2 秒短縮 |
+| B: chronicpain 3 fetch を `fetchAll` 並列化 | cold start 2 秒短縮 |
+| C: navigation 2 段化（内部 + 外部事業ポータル）| UX 向上 |
+| D: 各事業 portal に「平山へ戻る」追加 | UX 向上 |
+
+→ 全部実施で cold start 6s → 2s 見込み。
+
+### 詳細
+
+- 紙資料記録: `hirayama-jyusei-strategy/docs/PRINT_MATERIALS_DRIVE_EXPORT_2026-05-14.md`
+- 導線/速度設計: `hirayama-jyusei-strategy/docs/PORTAL_HUB_NAVIGATION_AND_PERFORMANCE_2026-05-14.md`
+
+---
 
 ## 2026-05-14: JBIZ 継続化運用設計 ✅ CLOSED（docs-only / システム deploy なし）
 
