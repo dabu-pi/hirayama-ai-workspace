@@ -1,6 +1,29 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（6月初 月次レビュー準備 ✅ CLOSED / Drive 印刷物 院長 OK）
+最終更新: 2026-05-14（JREC-SF01 問診票ライフサイクル完成 / Portal-17 questionnaire_layer_connected 動的化 CLOSED）
+
+## 2026-05-14: 問診票ライフサイクル完成 ✅ CLOSED（JREC-SF01 + JBIZ）
+
+本日で JREC-SF01 問診票機能 Q-1A〜Q-2C + Q-4 がすべて CLOSED。JBIZ Portal-17 で問診票由来 KPI 接続も完了。
+
+```text
+token 発行（QR / LINE テンプレ）
+  → Google ログイン不要の公開問診票（@57）
+  → SelfPayQuestionnaires 保存
+  → 患者登録転記（Q-1B）
+  → 来院カルテ転記（Q-1C）
+  → JBIZ Portal 慢性痛 KPI に painLocation 接続（Portal-17 / @27）
+```
+
+| Phase | commit | live-check |
+|---|---|---|
+| Q-1A〜Q-1C | jrec-sf01 main | 39/39 PASS |
+| Q-2A/Q-2B + Portal-17 | db1e6a7 / 5e8791c | 16/16 PASS |
+| Q-2C + Q-4 | c6a2f70 | 14/14 + 11/11 PASS |
+
+次候補: 実患者想定の通し運用確認 → Q-5 AI評価補助連動
+
+---
 
 ## 2026-05-14: 6月初 月次レビュー準備 ✅ CLOSED（docs-only）
 
