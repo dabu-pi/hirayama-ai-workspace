@@ -84,11 +84,9 @@ URL は変更なし（既存 deploymentId に versioned deploy）。
 | QC-2 期待値更新 | ✅ | spec ファイル変更完了 |
 | visit-form.html 注記 | ✅ | deploy @66 に反映 |
 | JBIZ fallback URL 更新 | ✅ | deploy @28 に反映 |
-| live-check QC-2 実機実行 | SKIP | auth.json 期限状態不明 / smoke は deploy 確認で代替 |
-| JBIZ smoke | SKIP | auth.json 期限状態不明 |
-| Portal-15 / Portal-17 回帰確認 | SKIP | 変更対象外（navigation URL のみ変更）|
-
-auth.json が必要な live-check は、次回 save-auth 後に実施可能。
+| live-check QC-2 実機実行 | ✅ PASS | 11/11 PASS（QC-1〜7 / QC-SETUP-1 / QC-CLEANUP / QC-DOC-1〜2）|
+| JBIZ smoke | ✅ PASS | 248/248 PASS |
+| Portal-15 / Portal-17 回帰確認 | ✅ PASS | JBIZ smoke 248 PASS に含まれる |
 
 ---
 
