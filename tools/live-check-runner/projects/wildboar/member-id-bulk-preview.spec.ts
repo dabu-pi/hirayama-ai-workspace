@@ -90,24 +90,30 @@ test.describe("WILDBOAR W-MBP: 会員番号一括補正 プレビュー (Phase 1
     expect(titleText || "").toContain("会員番号一括補正プレビュー");
 
     const subText = await frame.locator(".page-sub").textContent();
-    expect(subText || "").toContain("Phase 14-4C");
-    expect(subText || "").toContain("read-only");
+    expect(subText || "").toContain("Phase 14-4");
 
     expect(errors, "console errors").toEqual([]);
   });
 
-  test("W-MBP-2: 実行系ボタンが DOM に存在しない（誤操作防止）", async ({ page }) => {
+  test("W-MBP-2: admin-section 外（mainView top-level）には実行系ボタンが存在しない（誤操作防止）", async ({ page }) => {
     const frame = await openPreviewPage(page);
 
-    // 本ページ全体で「実行」「補正実行」「変換実行」などのボタンが存在しないこと
+    // admin-section（一括実行）の中身を除いた、mainView の top-level ボタンのみ走査。
+    // Phase 14-4D で admin-section 内には「N 件を一括補正実行」ボタンが追加されたが、
+    // それは details に閉じ込められているため誤操作リスクが低い設計。
     const buttonTexts: string[] = await frame.evaluate(() => {
-      const btns = document.querySelectorAll("button");
-      return Array.from(btns).map(b => (b.textContent || "").trim());
+      const main = document.getElementById("mainView");
+      if (!main) return [];
+      const adminSec = document.getElementById("adminBulkExecSection");
+      const btns = main.querySelectorAll("button");
+      return Array.from(btns)
+        .filter(b => !(adminSec && adminSec.contains(b)))
+        .map(b => (b.textContent || "").trim());
     });
     const forbiddenPatterns = [/実行$/, /補正実行/, /変換実行/, /一括.*実行/, /Execute/i, /Run/i];
     buttonTexts.forEach(t => {
       forbiddenPatterns.forEach(p => {
-        expect(t.match(p), `button "${t}" must not match execute pattern ${p}`).toBeNull();
+        expect(t.match(p), `top-level button "${t}" must not match execute pattern ${p}`).toBeNull();
       });
     });
   });
