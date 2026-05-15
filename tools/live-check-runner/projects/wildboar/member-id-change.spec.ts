@@ -175,6 +175,18 @@ test.describe("WILDBOAR W-MIC: 会員番号修正 read-only validation (2026-05-
     expect(successPanelExists, "mid_step3_success panel should exist").toBe(true);
     expect(failedPanelExists,  "mid_step3_failed panel should exist").toBe(true);
 
+    // fix-3: 処理中表示要素 (mid_processing) が step2 内に DOM 定義されていること
+    const processingExists = await frame.evaluate(() => !!document.getElementById("mid_processing"));
+    expect(processingExists, "mid_processing element should exist (fix-3)").toBe(true);
+    // 初期状態では display:none で隠れている
+    const processingInitiallyHidden = await frame.evaluate(() => {
+      const el = document.getElementById("mid_processing");
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      return style.display === "none";
+    });
+    expect(processingInitiallyHidden, "mid_processing should be hidden initially").toBe(true);
+
     const oldIdShown = await frame.locator("#mid_oldId").textContent();
     expect((oldIdShown || "").trim()).toBe(first);
   });
