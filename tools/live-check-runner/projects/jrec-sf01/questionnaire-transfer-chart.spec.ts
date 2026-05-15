@@ -136,11 +136,14 @@ test.describe(
       });
       expect(res.ok).toBe(true);
       const c = res.candidateChart;
-      // chiefComplaint
+      // chiefComplaint: 主訴 + painLocation が集約される（@65 仕様）
       expect(c.chiefComplaint, "chiefComplaint should be filled").toBeTruthy();
       expect(c.chiefComplaint).toContain("肩こり");
-      // findings から painLocation を確認
-      expect(c.findings, "findings should contain painLocation").toContain("頸部");
+      expect(c.chiefComplaint, "painLocation は chiefComplaint に集約される（@65）").toContain("頸部");
+      // findings は空（施術者記入欄 / 問診票から自動転記しない）
+      expect(c.findings, "findings は施術者記入欄のため空（@65）").toBe("");
+      // explanation は空（施術者説明記録欄 / 問診票から自動転記しない）
+      expect(c.explanation, "explanation は施術者説明記録欄のため空（@65）").toBe("");
       // injuryTrigger から onsetDate を確認
       expect(c.injuryTrigger, "injuryTrigger should contain onsetDate").toContain("2026-05-01");
       // visitType
