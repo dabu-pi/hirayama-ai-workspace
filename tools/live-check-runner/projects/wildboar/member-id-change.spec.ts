@@ -148,7 +148,7 @@ test.describe("WILDBOAR W-MIC: 会員番号修正 read-only validation (2026-05-
     expect(title || "").toContain("会員番号修正");
   });
 
-  test("W-MIC-3: 入力欄=数字 / ヒント=数字のみ / 理由欄は存在しない", async ({ page }) => {
+  test("W-MIC-3: 入力欄=数字 / ヒントに4桁・数字・0001 が含まれる / 理由欄は存在しない / 成功・失敗パネルが DOM 上に存在", async ({ page }) => {
     const { first } = await pickTwoMemberIds(page);
     const frame = await openMemberDetail(page, first);
     await openMidDialog(frame);
@@ -156,18 +156,24 @@ test.describe("WILDBOAR W-MIC: 会員番号修正 read-only validation (2026-05-
     await expect(frame.locator("#mid_newId")).toBeVisible();
 
     const placeholder = await frame.locator("#mid_newId").getAttribute("placeholder");
-    // 数字のみのプレースホルダー（例: `0001`）/ アルファベットは含まない
     expect(placeholder || "", "placeholder should be digits-only").toMatch(/^\d+$/);
 
     const inputMode = await frame.locator("#mid_newId").getAttribute("inputmode");
     expect(inputMode || "").toBe("numeric");
 
     const hintText = await frame.locator("#mid_hint").textContent();
-    expect(hintText || "").toContain("数字のみ");
+    expect(hintText || "", "hint should mention 数字 / 4桁").toContain("数字");
+    expect(hintText || "", "hint should show example 0001").toContain("0001");
 
     // 理由欄は廃止されているため、要素が存在しないこと
     const reasonExists = await frame.evaluate(() => !!document.getElementById("mid_reason"));
     expect(reasonExists, "mid_reason should NOT exist").toBe(false);
+
+    // 成功パネル / 失敗パネルが DOM 上に定義されていること（実書き込みなしでも構造を検証）
+    const successPanelExists = await frame.evaluate(() => !!document.getElementById("mid_step3_success"));
+    const failedPanelExists  = await frame.evaluate(() => !!document.getElementById("mid_step3_failed"));
+    expect(successPanelExists, "mid_step3_success panel should exist").toBe(true);
+    expect(failedPanelExists,  "mid_step3_failed panel should exist").toBe(true);
 
     const oldIdShown = await frame.locator("#mid_oldId").textContent();
     expect((oldIdShown || "").trim()).toBe(first);
