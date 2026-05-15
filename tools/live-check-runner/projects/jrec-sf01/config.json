@@ -2,9 +2,11 @@
   "name": "JREC-SF01",
   "type": "gas-webapp",
   "devUrl": "https://script.google.com/macros/s/AKfycbzJWJAKCxStP82lfFl8eEHei98dWh7f6cgtEM33r3M5/dev",
-  "prodUrl": "https://script.google.com/macros/s/AKfycbz0EqGZOXWrKokzFN2x4SMo17cJojaHnWvmR2FAHXyQ1OLIdnWGwBSHIyylDAMqb8oACA/exec",
+  "prodUrl": "https://script.google.com/macros/s/AKfycbyOtef10SuH7R1SaDVMBZS7L9yZIBYpEIVmNdS_fhz3hUtc1b0PSKvtzwRxQ6I43YObEA/exec",
+  "legacyProdUrl_DO_NOT_USE": "https://script.google.com/macros/s/AKfycbz0EqGZOXWrKokzFN2x4SMo17cJojaHnWvmR2FAHXyQ1OLIdnWGwBSHIyylDAMqb8oACA/exec",
+  "legacyProdUrlNote": "@48 Portal-12 ANYONE deployment (Q-1A 実装前). 当時は questionnaireAdmin case がなく `?page=questionnaireAdmin` で `calMonth is not defined` を発生させる. staff UI には絶対使わない. 2026-05-15 に prodUrl を @53 staff UI に正本化",
   "kpiEndpointUrl": "https://script.google.com/macros/s/AKfycbw0aWYY0hPySJeAAcoJFg82zXFOzmBAaOVwQk5gVM3tlAGWJR37v2uflUr2qnxKpAb0og/exec",
-  "currentDeployment": "@54",
+  "currentDeployment": "@53 (staff UI: Portal-18-D return link) / @57 (public Q-2C)",
   "q2aPublicExecUrl": "https://script.google.com/macros/s/AKfycbw0aWYY0hPySJeAAcoJFg82zXFOzmBAaOVwQk5gVM3tlAGWJR37v2uflUr2qnxKpAb0og/exec",
   "notes": [
     "access: ANYONE_ANONYMOUS — 2026-05-13 @50 で MYSELF から変更。GAS UrlFetchApp スクリプト間呼び出しには ANYONE_ANONYMOUS が必要。",
