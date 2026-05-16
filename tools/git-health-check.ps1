@@ -29,6 +29,10 @@ $repos = @(
   "gas-projects\jyu-gas-ver3.1",
   "hirayama-jyusei-strategy",
   "life-design-project",
+  # 2026-05-16 追加: parent workspace の .gitignore 対象だが GitHub 正本化済の独立 repo。
+  # 監査輪外で見落とすリスクを排除するため明示的に対象に含める。
+  # 詳細: docs/PROJECT_VISIBILITY_AUDIT_2026-05-16.md
+  "machine-yasan-management",
   "subsidy-grants-projects",
   "training-program-platform-jp",
   "training-trend-analyzer",

@@ -77,11 +77,11 @@
 | 📋 | JBIZ Business_Links 登録準備 | Phase 4 を待たず meta 登録は可能 |
 | 🧊 | Phase 2 以降（買取案件 / freee 連携 / Drive / HP 問い合わせ / 過去データ）| ROADMAP 順次 |
 
-### machine-yasan を git-health-check 監査輪に入れる
+### machine-yasan を git-health-check 監査輪に入れる ✅ CLOSED 2026-05-16
 
 | 優先度 | 項目 | 補足 |
 |---|---|---|
-| ⚡ | `tools/git-health-check.ps1` を拡張して parent gitignore 対象の独立 repo も監査 | 現状 machine-yasan が監査外 / 同様の repo が増えるリスクへの先手 |
+| ✅ | ~~`tools/git-health-check.ps1` を拡張して parent gitignore 対象の独立 repo も監査~~ | **CLOSED 2026-05-16** — `$repos` 配列に `machine-yasan-management` 追加、12 repo 監査化、health check で clean 確認 |
 
 ---
 

@@ -1,6 +1,38 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-16（プロジェクト可視化 監査実施 / 12 repo 棚卸し / `docs/PROJECT_VISIBILITY_AUDIT_2026-05-16.md`）
+最終更新: 2026-05-16（git-health-check に machine-yasan-management 追加 → 12 repo 監査化）
+
+## 2026-05-16: git-health-check 監査輪に machine-yasan-management 追加 ✅ CLOSED
+
+可視化監査 2026-05-16 で発見した重大事項 (3) を解消。
+
+### 変更内容
+
+- `tools/git-health-check.ps1` の `$repos` 配列に `machine-yasan-management` を追加（life-design と subsidy の間 / アルファ順）
+- コメントで「parent gitignore 対象だが独立 repo として明示的に対象に含める」理由を追記
+
+### 拡張後 health check 実行結果
+
+| 項目 | 値 |
+|---|---|
+| 監査対象 repo 数 | **11 → 12** |
+| 新規追加 | `machine-yasan-management` (branch: `feature/phase1-google-sheet` / HEAD `52e5246` / clean / 0-0 / missing 0) |
+| unexpected dirty | なし |
+| 既知 scope-out | `gas-projects/jrec-sf01-selfpay/.claude/` untracked のみ |
+| missing tracked files (全 12 repo) | 0 |
+
+### 副次発見
+
+- `treadmill-motor-crusher-project` の HEAD が 22e8998 → d272c9a に進行（別セッション or 個別作業で更新）。本作業の対象外。
+
+### 影響
+
+- workspace 親 `.gitignore` で除外されている独立 repo も「ヘルスチェック対象」として明示できる仕組みが整った
+- 将来 machine-yasan-management 系で missing tracked / dirty が発生したら、`tools/git-health-check.ps1` 1 回で検知できる
+
+詳細: [`docs/PROJECT_VISIBILITY_AUDIT_2026-05-16.md`](./docs/PROJECT_VISIBILITY_AUDIT_2026-05-16.md) §「監査後フォローアップ」
+
+---
 
 ## 2026-05-16: プロジェクト可視化 監査 ✅ docs-only
 

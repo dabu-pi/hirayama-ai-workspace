@@ -310,3 +310,27 @@
 - 実装変更: なし
 - clasp push / deploy: なし
 - 触ったファイル: このレポート 1 ファイル + workspace 側 STATUS / NEXT_ACTIONS 追記（commit 時）
+
+---
+
+## 監査後フォローアップ
+
+### 2026-05-16: 重大事項 (3) を解消 ✅
+
+「machine-yasan-management が `tools/git-health-check.ps1` の監査輪から外れている」を解消した。
+
+| 変更内容 | 状態 |
+|---|---|
+| `tools/git-health-check.ps1` `$repos` 配列に `machine-yasan-management` を追加（life-design ↔ subsidy の間） | ✅ |
+| 12 repo health check 実行で `machine-yasan-management` が clean / 0-0 / missing 0 確認 | ✅ |
+| PROJECT_STATUS.md / NEXT_ACTIONS.md 反映 | ✅ |
+
+実行結果（2026-05-16 11:34）:
+
+- 監査対象 repo 数: **11 → 12**
+- `machine-yasan-management`: branch `feature/phase1-google-sheet` / HEAD `52e5246` / clean / 0-0 / missing 0
+- 全 12 repo の missing tracked files: 0
+- 既知 scope-out: `gas-projects/jrec-sf01-selfpay/.claude/` untracked のみ
+- 副次発見: `treadmill-motor-crusher-project` HEAD が 22e8998 → d272c9a に進行（別作業・本タスク対象外）
+
+これで「全 repo clean 確認」が信頼可能になった。残りの重大事項（1: workspace 集約 docs / 2: NEXT_ACTIONS 不在）は本監査セッション内で既に解消済み（commit `eddd243`）。
