@@ -46,8 +46,8 @@
 | 優先度 | 項目 | 補足 |
 |---|---|---|
 | ✅ | ~~NEXT_ACTIONS.md に @67〜@70 / machine-yasan Phase 1 進展を追記~~ | **CLOSED 2026-05-16** — JBIZ NEXT_ACTIONS / PROJECT_STATUS に Markdown 反映済み |
-| ✅ | ~~machine-yasan を Business_Links に追加 + Portal Hub 入口（実書き込み）~~ | **CLOSED 2026-05-16 (コード反映 + @29 deploy 完了)** — `setupPortal7b()` 実装 / JBIZ @29 deploy / `setupPortal7b` 実行は院長手動依頼（auth.json 期限切れ）|
-| 🔥👤 | **`setupPortal7b` 実行**（院長手動）| `https://script.google.com/macros/s/AKfycbw20tW.../exec?action=setupPortal7b` をブラウザで開く / または GAS editor から実行 |
+| ✅ | ~~machine-yasan を Business_Links に追加 + Portal Hub 入口（実書き込み）~~ | **CLOSED 2026-05-16 (コード反映 + @29 deploy + 院長手動 setupPortal7b 実行 + 実 UI PASS)** — `?view=businesses` で「マシン販売管理」カード表示確認済 |
+| ✅ | ~~`setupPortal7b` 実行（院長手動）~~ | **CLOSED 2026-05-16** — 院長手動実行 + Portal Hub 表示 PASS |
 | 📋 | Portal-15-C-v2: Billing 結合で `first_visit_sales` / `repeat_visit_sales` 実値化 | 現状 "未計測" |
 | 📋 | Portal-15-B-i: 月初自動 snapshot（`ScriptApp.newTrigger`）| 現状手動 |
 | 📋 | Portal-18-E/F: home view 軽量化 / 表示時間計測 spec | A/C 完了済 |

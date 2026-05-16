@@ -1,6 +1,14 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-16（Portal-7b: machine-yasan を Business_Links + Portal Hub に追加 / JBIZ @29 deploy / setupPortal7b 実行は院長手動依頼）
+最終更新: 2026-05-16（Portal-7b 院長実 UI 確認 PASS / machine-yasan カード Portal Hub 表示完了）
+
+## ✅ 2026-05-16: Portal-7b machine-yasan 実 UI 確認 PASS（院長確認）
+
+JBIZ @29 deploy 後、院長が `setupPortal7b` を手動実行し、`?view=businesses` で「マシン販売管理」カード表示を確認。既存 7 事業カードは不変。Portal-7b は **完了扱い**。コード変更なし、deploy 追加なし。
+
+詳細: `hirayama-jyusei-strategy/PROJECT_STATUS.md`
+
+---
 
 ## 2026-05-16: Portal-7b: machine-yasan を Business_Links + Portal Hub に追加 ✅ JBIZ @29 deploy
 
