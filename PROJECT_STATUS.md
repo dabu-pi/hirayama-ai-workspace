@@ -1,6 +1,34 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-16（git-health-check に machine-yasan-management 追加 → 12 repo 監査化）
+最終更新: 2026-05-16（JBIZ 可視化更新: JREC @67〜@70 + machine-yasan Phase 1 を Markdown 反映 / Sheet 実書き込みは次セッション）
+
+## 2026-05-16: JBIZ / 平山ビジネスポータル 可視化更新（Markdown 反映） ✅
+
+可視化監査 (2026-05-16) で発見した「JBIZ NEXT_ACTIONS が @28 / Portal-17 で停止、@67〜@70 と machine-yasan Phase 1 未反映」を Markdown レベルで解消。
+
+### 反映内容（JBIZ 側）
+
+- `hirayama-jyusei-strategy/NEXT_ACTIONS.md`: 平山ビジネスポータル 可視化伝播ルール（7 チェック）追加 + JREC @67〜@70 / machine-yasan Phase 1 完了の進捗反映 + 反映保留項目を理由付きで記録
+- `hirayama-jyusei-strategy/PROJECT_STATUS.md`: 冒頭セクション追加（反映済 / 反映保留 / 7 チェック適用結果）
+- `hirayama-jyusei-strategy/docs/PORTAL_BUSINESS_LINKS_REVIEW_2026-05-16.md` 新規: machine-yasan を `Business_Links` に追加する設計メモ（business_id / category / sort_order / 反映タイミング案 / 次セッション user 確認事項）
+
+### 反映保留 / 別タスク扱い（理由付き）
+
+| 項目 | 保留理由 |
+|---|---|
+| `Business_Links` シート 8 行目 seed | `setupPortalN` 実行は deploy 同等のリスク。設計合意後に別タスクで実施 |
+| Portal Hub UI で machine-yasan カード表示 | `gas/portal-gateway-v1.gs` 編集 + clasp deploy。今回 deploy なし |
+| `Run_Log` への JREC @63〜@70 一括追記 | 経営判断 KPI に影響なし。次回 `setupPortalN` 系を回すタイミングで判断 |
+| `Dashboard` への machine-yasan KPI | Phase 1 完了直後で KPI 集計未確立。Phase 2 以降の販売案件データが出てから |
+| `Task_Queue` への新規タスク登録 | 妥当だが別タスク扱い |
+
+### 永続運用ルールとして memory 保存
+
+「workspace で棚卸し → JBIZ (平山ビジネスポータル) で平山が見える形に反映」を永続運用ルールとして memory に保存（`feedback_jbiz_visibility_propagation.md`）。各作業完了時に 7 チェックを習慣化する。
+
+詳細: `hirayama-jyusei-strategy/docs/PORTAL_BUSINESS_LINKS_REVIEW_2026-05-16.md`
+
+---
 
 ## 2026-05-16: git-health-check 監査輪に machine-yasan-management 追加 ✅ CLOSED
 

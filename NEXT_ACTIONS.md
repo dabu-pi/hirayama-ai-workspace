@@ -45,8 +45,8 @@
 
 | 優先度 | 項目 | 補足 |
 |---|---|---|
-| ⚡ | NEXT_ACTIONS.md に @67〜@70 / machine-yasan Phase 1 進展を追記 | Portal を経営判断の集約点として維持 |
-| 📋 | machine-yasan を Business_Links に追加 + Portal Hub 入口 | 事業ハブの完成度向上 |
+| ✅ | ~~NEXT_ACTIONS.md に @67〜@70 / machine-yasan Phase 1 進展を追記~~ | **CLOSED 2026-05-16** — JBIZ NEXT_ACTIONS / PROJECT_STATUS に Markdown 反映済み |
+| 📋 | machine-yasan を Business_Links に追加 + Portal Hub 入口（実書き込み）| 設計メモは `hirayama-jyusei-strategy/docs/PORTAL_BUSINESS_LINKS_REVIEW_2026-05-16.md` に整備済み。次セッションで user 確認後に `setupPortal7b` 系で実行 |
 | 📋 | Portal-15-C-v2: Billing 結合で `first_visit_sales` / `repeat_visit_sales` 実値化 | 現状 "未計測" |
 | 📋 | Portal-15-B-i: 月初自動 snapshot（`ScriptApp.newTrigger`）| 現状手動 |
 | 📋 | Portal-18-E/F: home view 軽量化 / 表示時間計測 spec | A/C 完了済 |
