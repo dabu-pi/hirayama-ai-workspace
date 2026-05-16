@@ -1,6 +1,42 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-14（JREC-SF01 問診票ライフサイクル完成 / Portal-17 questionnaire_layer_connected 動的化 CLOSED）
+最終更新: 2026-05-16（プロジェクト可視化 監査実施 / 12 repo 棚卸し / `docs/PROJECT_VISIBILITY_AUDIT_2026-05-16.md`）
+
+## 2026-05-16: プロジェクト可視化 監査 ✅ docs-only
+
+workspace 配下 12 repo の進捗・成果物・次アクションが「平山が見て分かる状態」かを棚卸し。実装・deploy なし。
+
+### 主な発見
+
+- 11 repo すべて **clean / 0-0 / missing tracked 0**（既知 scope-out: jrec-sf01 の `.claude/` のみ）
+- workspace 親の **`PROJECT_STATUS.md` / `PROJECTS.md` / `ROADMAP.md` が 5/8〜5/14 で停滞**、@66〜@70 反映なし
+- workspace に **`NEXT_ACTIONS.md` が存在しない**（一元管理ゼロ）
+- **machine-yasan-management** が parent gitignore 対象で `tools/git-health-check.ps1` の監査輪から外れている（Phase 1 Sheet 完了済みにもかかわらず可視化漏れ）
+- JBIZ NEXT_ACTIONS.md は @28 / Portal-17 で停止、JREC-SF01 @67〜@70 と machine-yasan Phase 1 完了が未反映
+
+### 直近の動向（5/14〜5/16 で起きたこと）
+
+| repo | 最新動向 |
+|---|---|
+| JREC-SF01 | @66/@67/@68/@69/@70 deploy + 院長実 UI 通し動作 PASS（説明同意削除 / 既存来院候補ボタン化 / 次回方針移動 / 受付待ちバッジ）|
+| JBIZ | Portal-15/16/17 + 18-A/C/D CLOSED, 6 月レビュー準備 docs 完成, JREC fallback URL @28 正本化 |
+| Wildboar | Phase 14-4D CLOSED @49（Members 65 名 4 桁ゼロ埋め統一）|
+| machine-yasan | Phase 1 Google Sheet 正本作成完了（7 シート / 54 メーカー / 44 ドロップダウンルール / 試験 3 件投入）|
+| JYU-GAS | Git dirty 緊急復元（6 中核ファイル）|
+
+### 次にやるべき優先順位（抜粋）
+
+1. workspace `NEXT_ACTIONS.md` 新規作成 → 本セッションで実施
+2. machine-yasan を git-health-check 監査輪に入れる
+3. JBIZ NEXT_ACTIONS.md に @67〜@70 + machine-yasan Phase 1 完了を追記
+4. **6 月 1 日 月次レビュー実施**（経営アクション・最優先）
+5. machine-yasan 試験案件削除 → 手入力運用開始（人間アクション）
+
+詳細レポート: [`docs/PROJECT_VISIBILITY_AUDIT_2026-05-16.md`](./docs/PROJECT_VISIBILITY_AUDIT_2026-05-16.md)
+
+---
+
+## 2026-05-14: 問診票ライフサイクル完成 ✅ CLOSED（JREC-SF01 + JBIZ）
 
 ## 2026-05-14: 問診票ライフサイクル完成 ✅ CLOSED（JREC-SF01 + JBIZ）
 
