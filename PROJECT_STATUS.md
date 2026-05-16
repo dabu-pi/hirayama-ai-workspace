@@ -1,6 +1,39 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-16（JBIZ 可視化更新: JREC @67〜@70 + machine-yasan Phase 1 を Markdown 反映 / Sheet 実書き込みは次セッション）
+最終更新: 2026-05-16（Portal-7b: machine-yasan を Business_Links + Portal Hub に追加 / JBIZ @29 deploy / setupPortal7b 実行は院長手動依頼）
+
+## 2026-05-16: Portal-7b: machine-yasan を Business_Links + Portal Hub に追加 ✅ JBIZ @29 deploy
+
+平山ビジネスポータルの事業ハブに `machine_yasan`（マシン販売管理）カードを追加。`gas/portal-gateway-v1.gs` で `seedBusinessLinks_` に 1 行追加 + 新規 `setupPortal7b()` + `appendPortal7bToRunLog()` + `doGet` action 分岐追加。既存 7 事業カードは不変。
+
+### Deploy
+
+| target | deploymentId | version |
+|---|---|---|
+| JBIZ Portal | `AKfycbw20tW...` | **@29**（URL 維持） |
+
+### 追加内容（sort_order=25 / category=sales / status=building）
+
+| 項目 | 値 |
+|---|---|
+| business_id | `machine_yasan` |
+| 表示名 | マシン販売管理 |
+| primary_url | Phase 1 Sheet `1Jj5D6su...` |
+
+### setupPortal7b 実行（⚠️ 院長手動）
+
+auth.json 期限切れで自動実行は FAIL。`hirayama-jyusei-strategy/PROJECT_STATUS.md` の手動実行手順（A: ブラウザ / B: GAS editor / C: auth 再取得 + verify script）を参照。
+
+### Multi-Claude single writer rule 準拠
+
+- 並行 Claude / node / clasp / playwright プロセスなし確認
+- 3 repo git status clean 確認
+- gas/ ↔ scripts/ SHA256 一致確認（`1593A9F7...`）
+- clasp deployments で既存 @28 deploymentId 確認 → 同一 ID に @29 で URL 維持
+
+詳細: `hirayama-jyusei-strategy/PROJECT_STATUS.md` および `hirayama-jyusei-strategy/docs/PORTAL_BUSINESS_LINKS_REVIEW_2026-05-16.md`
+
+---
 
 ## 2026-05-16: JBIZ / 平山ビジネスポータル 可視化更新（Markdown 反映） ✅
 
