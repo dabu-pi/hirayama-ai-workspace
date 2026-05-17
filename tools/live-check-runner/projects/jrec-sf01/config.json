@@ -28,7 +28,8 @@
     "menuSalesReport": "?page=menuSalesReport",
     "outstandingReport": "?page=outstandingReport",
     "questionnaireAdmin": "?page=questionnaireAdmin&filter=all",
-    "questionnaireDetail": "?page=questionnaireDetail&id=<questionnaireId>"
+    "questionnaireDetail": "?page=questionnaireDetail&id=<questionnaireId>",
+    "reservationPublic": "?page=reservationPublic"
   },
   "testData": {
     "patientIdForVisitForm": "P0001",
