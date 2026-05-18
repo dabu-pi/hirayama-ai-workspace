@@ -376,8 +376,10 @@ test.describe(
         ).toBeVisible({ timeout: GAS_TIMEOUT });
       });
 
-      // ── RAA-E2E-3.5: 患者検索リンク確認 ───────────────────
-      test("RAA-E2E-3.5: 「患者検索」リンクが ?page=list&q=09014861348 を指す", async ({ page }) => {
+      // ── RAA-E2E-3.5: 患者紐づけボタン確認（R-2B-2 対応）──────────
+      // R-2B-2 で「患者検索」リンク（a.act-link-search）→「患者紐づけ」モーダルボタン
+      // （button.act-link-patient）に変更された。
+      test("RAA-E2E-3.5: 未紐づけ予約に「患者紐づけ」ボタンが表示される", async ({ page }) => {
         if (!TEST_NAME) test.skip(true, "RAA-E2E-1 未完了");
 
         await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
@@ -394,32 +396,11 @@ test.describe(
         const card = frame.locator(".res-card", { hasText: TEST_NAME });
         await expect(card).toBeVisible({ timeout: GAS_TIMEOUT });
 
-        // 未紐づけ予約なので「患者検索」アンカーが出る
-        const searchLink = card.locator("a.act-link-search").first();
-        await expect(searchLink).toBeVisible({ timeout: 5_000 });
-
-        const href = await searchLink.getAttribute("href");
-        expect(href, "patient search href が取得できない").toBeTruthy();
-        expect(href!, "list ページに遷移する href").toContain("page=list");
-
-        // 電話番号 prefill 検証。
-        // phone 列 setNumberFormat("@") は c8b1782 (2026-05-18) で修正済み。
-        // ただし既存シートへの反映は runFixPhoneColumnFormatV1() (GAS エディタ手動実行) が必要。
-        // migration 未実施の間は leading-0 落ちが発生しうるため、spec は両形式を受け入れる。
-        // migration 完了後に workaround を削除し、okFull のみを expect すること。
-        const phoneStripped = TEST_PHONE.replace(/^0+/, ""); // "9014861348"
-        const okFull    = href!.includes("q=" + TEST_PHONE);
-        const okStripped = href!.includes("q=" + phoneStripped);
-        expect(okFull || okStripped, "q= に電話番号（leading 0 有 / 無 いずれか）が prefill される")
-          .toBe(true);
-        if (okStripped && !okFull) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            "[RAA-E2E-3.5] ⚠ Sheets leading-0 落ち検出: TEST_PHONE=" + TEST_PHONE +
-            " が href=" + href + " では先頭 0 が落ちている。" +
-            "JREC-SF01 setupReservations_ の phone 列に setNumberFormat(\"@\") を migration で適用する別 PR が必要。"
-          );
-        }
+        // 未紐づけ予約なので「患者紐づけ」ボタン（button.act-link-patient）が出る
+        const linkBtn = card.locator("button.act-link-patient").first();
+        await expect(linkBtn).toBeVisible({ timeout: 5_000 });
+        await expect(linkBtn).toBeEnabled();
+        expect(await linkBtn.textContent()).toContain("患者紐づけ");
       });
 
       // ── RAA-E2E-4: キャンセル → メッセージ確認 ──────────────
