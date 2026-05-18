@@ -23,6 +23,7 @@
     "test:jrec:questionnaire-issue": "playwright test projects/jrec-sf01/questionnaire-issue.spec.ts",
     "test:jrec:questionnaire-public-ux": "playwright test projects/jrec-sf01/questionnaire-public-ux.spec.ts",
     "test:jrec:reservation-public": "playwright test projects/jrec-sf01/reservation-public.spec.ts",
+    "test:jrec:reservation-admin": "playwright test projects/jrec-sf01/reservation-admin.spec.ts",
     "test:jbiz": "playwright test projects/jbiz",
     "test:jbiz:smoke": "playwright test projects/jbiz/smoke.spec.ts",
     "test:jbiz:portal12": "playwright test projects/jbiz/portal12.spec.ts",
