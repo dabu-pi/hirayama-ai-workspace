@@ -31,11 +31,11 @@
  *   - Reservation_Slots に空き枠あり（無ければ E2E は SKIP）
  *
  * 既知の制約（spec 修正 v2）:
- *   - JREC-SF01 setupReservations_ で `phone` 列に setNumberFormat("@") が未設定。
- *     `09003270818` のような leading-0 電話番号は Sheets が数値 9003270818 として
- *     保存し、admin の electron 番号検索（`hasText: TEST_PHONE`）で leading 0 が
- *     ヒットしない。本 spec では検索キーに **TEST_NAME（LiveCheck太郎_<ts>）** を
- *     主に使うことで回避。phone 列 setNumberFormat 修正は別 PR で対応推奨。
+ *   - phone 列 setNumberFormat("@") 修正: c8b1782 (2026-05-18) で適用済み。
+ *     既存シートへの反映は runFixPhoneColumnFormatV1() を GAS エディタで 1 回実行する必要あり（migration 待ち）。
+ *     migration 完了後は RAA-E2E-3.5 の leading-0 workaround を削除可能。
+ *     現状は migration 未実施のため workaround を維持する。
+ *     本 spec では検索キーに **TEST_NAME（LiveCheck太郎_<ts>）** を主に使うことで回避。
  *   - admin の reload() は ST.loading ガードを持つため、連続クリックは 2 回目が
  *     no-op になる。本 spec では `waitForListReload` で #loading 表示→非表示の
  *     1 サイクルを毎回挟んで race を防ぐ。
@@ -403,14 +403,10 @@ test.describe(
         expect(href!, "list ページに遷移する href").toContain("page=list");
 
         // 電話番号 prefill 検証。
-        // ★★ 既知バグ: JREC-SF01 setupReservations_ で phone 列に setNumberFormat("@") が
-        // 未設定のため、Sheets が "09014861348" を数値 9014861348 として保存し leading 0 を
-        // 落とす。患者検索の q= に正しく "09014861348" が入らず "9014861348" となる。
-        // 既存患者の電話が "09014861348" 形式で保存されているなら、この q では一致しない。
-        //
-        // 暫定: spec は両形式を受け入れて test を通す（cleanup E2E-4 を実行可能にするため）。
-        // 検出した場合は console.warn で警告を残し、最終的に JREC-SF01 側で
-        // phone 列の setNumberFormat("@") を migration で適用するのが本修正。
+        // phone 列 setNumberFormat("@") は c8b1782 (2026-05-18) で修正済み。
+        // ただし既存シートへの反映は runFixPhoneColumnFormatV1() (GAS エディタ手動実行) が必要。
+        // migration 未実施の間は leading-0 落ちが発生しうるため、spec は両形式を受け入れる。
+        // migration 完了後に workaround を削除し、okFull のみを expect すること。
         const phoneStripped = TEST_PHONE.replace(/^0+/, ""); // "9014861348"
         const okFull    = href!.includes("q=" + TEST_PHONE);
         const okStripped = href!.includes("q=" + phoneStripped);
