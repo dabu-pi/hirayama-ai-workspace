@@ -2,6 +2,8 @@
  * jrec-sf01 reservation-admin.spec.ts
  *
  * Phase R-2B-1 受付管理 UI 実機確認スペック
+ * Phase R-2B-2 患者紐づけモーダル 検証拡張
+ * Phase R-2B-3 カルテ作成 / 新規患者作成 ボタン 検証拡張
  *
  * 検証内容:
  *   RAA-1: /dev?page=reservationAdmin に到達でき、フィルタバーが表示される
@@ -9,19 +11,26 @@
  *   RAA-3: status プリセットボタン 7 個（受付中 / requested / confirmed / cancelled / no_show / completed / すべて）
  *   RAA-4: 一覧領域に予約カード or 「該当する予約はありません」が表示
  *
- *   E2E flow (RAA-E2E-0 〜 RAA-E2E-4): 残骸 cleanup → 公開予約 → 管理画面検索 → 確定 → 患者検索リンク確認 → キャンセル
+ *   E2E flow (RAA-E2E-0 〜 RAA-E2E-4): 残骸 cleanup → 公開予約 → 管理画面検索 → 確定 → ボタン確認 → キャンセル
  *   RAA-E2E-0: LiveCheck太郎 プレフィックスの過去残骸を best-effort で cleanup
  *             （院長指定の固定電話番号 09014861348 を使う関係上、24h 3 件の rate_limit_phone を避けるため必須）
  *   RAA-E2E-1: reservationPublic で 1 件テスト予約を作成
  *             電話番号 = 09014861348（既存患者用・固定）/ 氏名 = LiveCheck太郎_<ts>（一意）
  *   RAA-E2E-2: reservationAdmin で氏名検索 → 該当予約が requested で表示
  *   RAA-E2E-3: 「✓ 確定」で status=confirmed に遷移
- *   RAA-E2E-3.5: 「患者検索」リンクが ?page=list&q=09014861348 を指す（自費カルテ既存患者導線検証）
+ *   RAA-E2E-3.5: 未紐づけ予約に「既存患者を紐づけ」ボタン（button.act-link-patient）が表示される (R-2B-2)
+ *   RAA-E2E-3.6: 未紐づけ予約に「新規患者を作成」ボタン（button.act-new-patient）が表示される (R-2B-3)
+ *   RAA-E2E-3.7: 「新規患者を作成」をクリックすると新規患者モーダルが開き、予約情報が初期値にセットされる (R-2B-3)
  *   RAA-E2E-4: 「× キャンセル」で warn-banner に
  *     - "更新完了: confirmed → cancelled"
  *     - "slot解放: OK"
  *     - "Calendar削除: OK" または "Calendar削除: SKIP（calendarEventId なし）"
  *     が表示される
+ *
+ * R-2B-3 で自動化しないこと:
+ *   - 実際の「新規患者を作成」submit（Patients シートにテストデータが残るため）
+ *   - 「カルテ作成」ボタンクリックでの visit 起票（SelfPayVisits / SelfPayChart にテストデータが残るため）
+ *   これらは /dev 院長確認で人間が実施する。本 spec はモーダル UI までで止める。
  *
  * 実行コマンド: npm run test:jrec:reservation-admin
  *
@@ -376,10 +385,10 @@ test.describe(
         ).toBeVisible({ timeout: GAS_TIMEOUT });
       });
 
-      // ── RAA-E2E-3.5: 患者紐づけボタン確認（R-2B-2 対応）──────────
+      // ── RAA-E2E-3.5: 既存患者を紐づけ ボタン確認（R-2B-2 対応 / R-2B-3 で文言更新）──────────
       // R-2B-2 で「患者検索」リンク（a.act-link-search）→「患者紐づけ」モーダルボタン
-      // （button.act-link-patient）に変更された。
-      test("RAA-E2E-3.5: 未紐づけ予約に「患者紐づけ」ボタンが表示される", async ({ page }) => {
+      // （button.act-link-patient）に変更。R-2B-3 でラベルが「🔍 既存患者を紐づけ」になった。
+      test("RAA-E2E-3.5: 未紐づけ予約に「既存患者を紐づけ」ボタンが表示される", async ({ page }) => {
         if (!TEST_NAME) test.skip(true, "RAA-E2E-1 未完了");
 
         await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
@@ -396,11 +405,78 @@ test.describe(
         const card = frame.locator(".res-card", { hasText: TEST_NAME });
         await expect(card).toBeVisible({ timeout: GAS_TIMEOUT });
 
-        // 未紐づけ予約なので「患者紐づけ」ボタン（button.act-link-patient）が出る
+        // 未紐づけ予約なので「既存患者を紐づけ」ボタン（button.act-link-patient）が出る
         const linkBtn = card.locator("button.act-link-patient").first();
         await expect(linkBtn).toBeVisible({ timeout: 5_000 });
         await expect(linkBtn).toBeEnabled();
-        expect(await linkBtn.textContent()).toContain("患者紐づけ");
+        // ラベルは R-2B-3 で "🔍 既存患者を紐づけ" に更新。"紐づけ" 部分一致で互換性確保
+        expect(await linkBtn.textContent()).toContain("紐づけ");
+      });
+
+      // ── RAA-E2E-3.6: 新規患者を作成 ボタン確認 (R-2B-3) ──────────
+      test("RAA-E2E-3.6: 未紐づけ予約に「新規患者を作成」ボタンが表示される", async ({ page }) => {
+        if (!TEST_NAME) test.skip(true, "RAA-E2E-1 未完了");
+
+        await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
+        await handleAuthRedirect(page);
+        const frame = gasAppFrame(page);
+
+        await waitForListReload(frame, page);
+        await applyAdminFilters(frame, page, {
+          statusBtn: "active",
+          daysAhead: 14,
+          query:     TEST_NAME
+        });
+
+        const card = frame.locator(".res-card", { hasText: TEST_NAME });
+        await expect(card).toBeVisible({ timeout: GAS_TIMEOUT });
+
+        const newPatientBtn = card.locator("button.act-new-patient").first();
+        await expect(newPatientBtn).toBeVisible({ timeout: 5_000 });
+        await expect(newPatientBtn).toBeEnabled();
+        expect(await newPatientBtn.textContent()).toContain("新規患者");
+      });
+
+      // ── RAA-E2E-3.7: 新規患者モーダル open + 初期値セット確認 (R-2B-3) ──────────
+      // モーダル open までで止め、実際の submit はしない（Patients テストデータ残留を防ぐ）。
+      test("RAA-E2E-3.7: 「新規患者を作成」クリックでモーダルが開き、氏名・電話が初期セットされる", async ({ page }) => {
+        if (!TEST_NAME) test.skip(true, "RAA-E2E-1 未完了");
+
+        await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
+        await handleAuthRedirect(page);
+        const frame = gasAppFrame(page);
+
+        await waitForListReload(frame, page);
+        await applyAdminFilters(frame, page, {
+          statusBtn: "active",
+          daysAhead: 14,
+          query:     TEST_NAME
+        });
+
+        const card = frame.locator(".res-card", { hasText: TEST_NAME });
+        await expect(card).toBeVisible({ timeout: GAS_TIMEOUT });
+
+        await card.locator("button.act-new-patient").first().click();
+
+        // モーダル overlay が open class を持つ
+        const overlay = frame.locator("#np-modal-overlay");
+        await expect(overlay).toHaveClass(/open/, { timeout: 3_000 });
+
+        // 氏名が予約の patientName（TEST_NAME）でセット
+        const nameInput = frame.locator("#np-name");
+        await expect(nameInput).toBeVisible();
+        const nameValue = await nameInput.inputValue();
+        expect(nameValue).toBe(TEST_NAME);
+
+        // 電話番号がセット（TEST_PHONE）
+        // Sheets の leading-0 落ちで先頭 0 が落ちる可能性があるため部分一致で許容
+        const phoneInput = frame.locator("#np-phone");
+        const phoneValue = await phoneInput.inputValue();
+        expect(phoneValue.length).toBeGreaterThan(0);
+
+        // 閉じてテスト終了（submit はしない）
+        await frame.locator(".np-cancel-btn").click();
+        await expect(overlay).not.toHaveClass(/open/, { timeout: 3_000 });
       });
 
       // ── RAA-E2E-4: キャンセル → メッセージ確認 ──────────────
