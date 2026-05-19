@@ -1,16 +1,19 @@
 /**
  * jrec-r2c-gmail-prod-smoke.ts
  *
- * Phase R-2C-gmail @79 production smoke.
+ * Phase R-2C-gmail* production smoke (R-2C-gmail @79 and R-2C-gmail-enable
+ * thereafter).
  *
  * Read-only checks against prod /exec:
- *   - SCOPE_PROBE: r2cGmailAuthorizeSendMail returns quota (script.send_mail scope live in prod)
- *   - CONFIG_GUARD: mode=dry_run + recipient=pinshanka24@gmail.com (production guard rail intact)
- *   - CRON_PRESERVED: triggers count=1 / handler matches (cron untouched by deploy)
+ *   - SCOPE_PROBE: r2cGmailAuthorizeSendMail returns quota (script.send_mail
+ *     scope live in prod)
+ *   - CONFIG_STATE: mode ∈ {dry_run, gmail} + recipient=pinshanka24@gmail.com.
+ *     Prints the active mode so operators can see whether production is
+ *     currently auto-mailing or silent.
+ *   - CRON_PRESERVED: triggers count=1 / handler matches
  *
- * Does NOT call MailApp.sendEmail to avoid spam. The dev-time gmail-verify
- * already sent + received one email; this smoke just confirms the
- * production-side state is correct after deploy.
+ * Does NOT call MailApp.sendEmail. The dev-time gmail-verify already sent +
+ * received one email; this smoke just inspects state.
  */
 import { chromium, type Page, type FrameLocator } from "@playwright/test";
 
@@ -73,15 +76,20 @@ async function main() {
     record("SCOPE_PROBE", !!r?.ok && typeof r.quota === "number", `quota=${r?.quota}`);
   } catch (e) { record("SCOPE_PROBE", false, "exception: " + (e as Error).message); }
 
-  // 2) config guard
+  // 2) config state — mode is one of {dry_run, gmail}, recipient is the configured clinic address
   try {
     const r = (await Promise.race([
       callRpc(frame, "runDebugNotificationConfigV1", []),
       timeoutAfter(RPC_TIMEOUT, "config timeout"),
     ])) as { ok: boolean; mode: string; recipient: string };
-    const ok = !!r?.ok && r.mode === "dry_run" && r.recipient === EXPECTED_RECIPIENT;
-    record("CONFIG_GUARD", ok, `mode=${r?.mode} recipient=${r?.recipient}`);
-  } catch (e) { record("CONFIG_GUARD", false, "exception: " + (e as Error).message); }
+    const modeOk = r?.mode === "dry_run" || r?.mode === "gmail";
+    const ok = !!r?.ok && modeOk && r.recipient === EXPECTED_RECIPIENT;
+    record(
+      "CONFIG_STATE",
+      ok,
+      `mode=${r?.mode} (auto-send=${r?.mode === "gmail" ? "YES" : "no"})  recipient=${r?.recipient}`
+    );
+  } catch (e) { record("CONFIG_STATE", false, "exception: " + (e as Error).message); }
 
   // 3) cron preserved
   try {
@@ -101,7 +109,7 @@ async function main() {
     console.log("\n❌ FAIL — R-2C-gmail prod state uncertain.");
     process.exit(1);
   }
-  console.log("\n✅ ALL PASS — @79 prod: send_mail scope live, mode=dry_run guard intact, cron count=1 preserved");
+  console.log("\n✅ ALL PASS — prod: send_mail scope live, mode + recipient valid, cron count=1 preserved");
   process.exit(0);
 }
 
