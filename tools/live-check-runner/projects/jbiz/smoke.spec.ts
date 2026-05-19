@@ -767,6 +767,23 @@ test("PROJECT_STATUS.md に Portal-15-C 記録がある", async () => {
   expect(content.includes("Portal-15-C"), "PROJECT_STATUS.md に Portal-15-C がありません").toBe(true);
 });
 
+test("GAS スクリプトに Portal-8B freshnessBadge_ 関数が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("freshnessBadge_"), "freshnessBadge_ がありません").toBe(true);
+  expect(content.includes("fb-fresh"), "fb-fresh クラスがありません").toBe(true);
+  expect(content.includes("fb-stale"), "fb-stale クラスがありません").toBe(true);
+  expect(content.includes("fb-manual"), "fb-manual クラスがありません").toBe(true);
+});
+
+test("GAS スクリプトに Portal-8B stale 判定ロジックがある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("🟢 最新"), "🟢 最新バッジがありません").toBe(true);
+  expect(content.includes("🟡 要確認"), "🟡 要確認バッジがありません").toBe(true);
+  expect(content.includes("🔴 古い可能性"), "🔴 古い可能性バッジがありません").toBe(true);
+  expect(content.includes("🔵 手動更新"), "🔵 手動更新バッジがありません").toBe(true);
+  expect(content.includes("⚫ 自動計算"), "⚫ 自動計算バッジがありません").toBe(true);
+});
+
 test("GAS スクリプトに Portal-8D 月初 snapshot トリガ関数が存在する", async () => {
   const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
   expect(content.includes("portal8DMonthlySnapshotRun_"), "portal8DMonthlySnapshotRun_ がありません").toBe(true);
