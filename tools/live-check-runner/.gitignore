@@ -22,6 +22,8 @@ auth-*.json
 # 専用 Chrome プロファイルディレクトリ
 .chrome-profile/
 .chrome-profile-*/
+.chrome-cdp-profile/
+.chrome-cdp-profile-*/
 
 # storageState 系ディレクトリ
 .auth/
