@@ -767,6 +767,20 @@ test("PROJECT_STATUS.md に Portal-15-C 記録がある", async () => {
   expect(content.includes("Portal-15-C"), "PROJECT_STATUS.md に Portal-15-C がありません").toBe(true);
 });
 
+test("GAS スクリプトに Portal-8C Business_Links metadata 関数が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("setupPortal8C"), "setupPortal8C がありません").toBe(true);
+  expect(content.includes("PORTAL8C_NEW_COLS"), "PORTAL8C_NEW_COLS がありません").toBe(true);
+  expect(content.includes("PORTAL8C_METADATA"), "PORTAL8C_METADATA がありません").toBe(true);
+  expect(content.includes("addPortal8CMetadataColumns_"), "addPortal8CMetadataColumns_ がありません").toBe(true);
+  expect(content.includes("seedPortal8CMetadata_"), "seedPortal8CMetadata_ がありません").toBe(true);
+});
+
+test("GAS スクリプトに Portal-8C setupPortal8C action route がある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal8C'"), "setupPortal8C action route がありません").toBe(true);
+});
+
 test("GAS スクリプトに Portal-8B freshnessBadge_ 関数が存在する", async () => {
   const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
   expect(content.includes("freshnessBadge_"), "freshnessBadge_ がありません").toBe(true);
