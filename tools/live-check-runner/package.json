@@ -24,6 +24,8 @@
     "test:jrec:questionnaire-public-ux": "playwright test projects/jrec-sf01/questionnaire-public-ux.spec.ts",
     "test:jrec:reservation-public": "playwright test projects/jrec-sf01/reservation-public.spec.ts",
     "test:jrec:reservation-admin": "playwright test projects/jrec-sf01/reservation-admin.spec.ts",
+    "test:jrec:reservation-admin:safe": "tsx scripts/jrec-with-gmail-dry-run.ts test:jrec:reservation-admin",
+    "test:jrec:with-gmail-dry-run": "tsx scripts/jrec-with-gmail-dry-run.ts",
     "test:jrec:public-reservation-link": "playwright test projects/jrec-sf01/public-reservation-link.spec.ts",
     "test:jrec:public-reservation-ux": "playwright test projects/jrec-sf01/public-reservation-ux.spec.ts",
     "test:jrec:public-reservation-calendar-sync": "playwright test projects/jrec-sf01/public-reservation-calendar-sync.spec.ts",
