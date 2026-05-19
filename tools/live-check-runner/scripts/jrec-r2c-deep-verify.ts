@@ -201,6 +201,10 @@ async function main() {
   let scopePending = false;
   let installedId1 = "";
 
+  // production cron 保全フラグ: pre-state が count>=1 ならテスト終了時に必ず復元する。
+  // R-2C-cron-enable 後の本番では cron が常時 1 個 active なので、verify が破壊しないようにする。
+  let preStateCount = 0;
+
   // Pre-list
   try {
     const res = (await Promise.race([
@@ -211,7 +215,8 @@ async function main() {
       scopePending = true;
       recordPending("TRIGGER_LIST_PRE", "script.scriptapp scope 未追加（R-2C-B 別フェーズで対応）");
     } else {
-      record("TRIGGER_LIST_PRE", !!res?.ok, `count=${res?.count}  handler=${res?.handler}` + (res?.error ? `  err=${res.error}` : ""));
+      preStateCount = res?.count ?? 0;
+      record("TRIGGER_LIST_PRE", !!res?.ok, `count=${preStateCount}  handler=${res?.handler}` + (res?.error ? `  err=${res.error}` : ""));
     }
   } catch (err) {
     const msg = (err as Error).message;
@@ -277,6 +282,33 @@ async function main() {
       const lst = (await callRpc(frame, "listSlotsRegenTriggers", [])) as { ok: boolean; count: number };
       record("TRIGGER_LIST_FINAL", !!lst?.ok && lst.count === 0, `count=${lst?.count}`);
     } catch (err) { record("TRIGGER_UNINSTALL", false, "exception: " + (err as Error).message); }
+
+    // Step 9: production cron 保全 — pre-state が active だったら復元する。
+    // これがないと R-2C-cron-enable で起動された本番 cron を verify が破壊してしまう。
+    if (preStateCount >= 1) {
+      try {
+        const res = (await Promise.race([
+          callRpc(frame, "installSlotsRegenTrigger", [{ hour: 2 }]),
+          timeoutAfter(RPC_TIMEOUT, "restore install timeout"),
+        ])) as { ok: boolean; installed: boolean; triggerId?: string; hour: number; removed: number };
+        const restoredOk = !!res?.ok && res.installed === true && !!res.triggerId;
+        record(
+          "TRIGGER_RESTORE_PROD",
+          restoredOk,
+          `pre-state had cron active; restored at hour=${res?.hour} triggerId=${res?.triggerId}`
+        );
+        // post-check
+        const lst = (await callRpc(frame, "listSlotsRegenTriggers", [])) as { ok: boolean; count: number };
+        record(
+          "TRIGGER_FINAL_PROD_PRESERVED",
+          !!lst?.ok && lst.count === 1,
+          `count=${lst?.count}（本番 cron 維持確認）`
+        );
+      } catch (err) { record("TRIGGER_RESTORE_PROD", false, "exception: " + (err as Error).message); }
+    } else {
+      // pre-state was clean (count=0). Leave clean.
+      console.log("⏭  [TRIGGER_RESTORE_PROD] pre-state count=0 だったので復元しない（クリーン状態維持）");
+    }
   }
 
   // Summary
@@ -299,7 +331,7 @@ async function main() {
     console.log("    deploy 可否は、scope 追加方針を含めて呼出元で判断してください。");
     process.exit(0);
   }
-  console.log("\n✅ ALL PASS — @77 deploy 可");
+  console.log("\n✅ ALL PASS — R-2C 全要素 healthy（dry_run dispatch + trigger ops idempotency）");
   process.exit(0);
 }
 
