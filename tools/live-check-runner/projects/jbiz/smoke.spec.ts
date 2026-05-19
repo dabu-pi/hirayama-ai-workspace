@@ -767,6 +767,25 @@ test("PROJECT_STATUS.md に Portal-15-C 記録がある", async () => {
   expect(content.includes("Portal-15-C"), "PROJECT_STATUS.md に Portal-15-C がありません").toBe(true);
 });
 
+test("GAS スクリプトに Portal-8D 月初 snapshot トリガ関数が存在する", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("portal8DMonthlySnapshotRun_"), "portal8DMonthlySnapshotRun_ がありません").toBe(true);
+  expect(content.includes("ensurePortal8DMonthlySnapshotTrigger_"), "ensurePortal8DMonthlySnapshotTrigger_ がありません").toBe(true);
+  expect(content.includes("setupPortal8D"), "setupPortal8D がありません").toBe(true);
+});
+
+test("GAS スクリプトに Portal-8D setupPortal8D action route がある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("action === 'setupPortal8D'"), "setupPortal8D action route がありません").toBe(true);
+});
+
+test("GAS スクリプトに Portal-8D 重複防止ロジックがある", async () => {
+  const content = fs.readFileSync(jbizPath(config.localDocs.portalGateway), "utf-8");
+  expect(content.includes("getProjectTriggers"), "getProjectTriggers がありません（重複防止ロジック欠如）").toBe(true);
+  expect(content.includes("deleteTrigger"), "deleteTrigger がありません（重複防止ロジック欠如）").toBe(true);
+  expect(content.includes("onMonthDay(1)"), "onMonthDay(1) がありません（月初トリガ設定欠如）").toBe(true);
+});
+
 test("config に WebApp URL が記録されている", async () => {
   expect(
     config.gasScript && config.gasScript.webAppUrl && config.gasScript.webAppUrl.length > 0,
