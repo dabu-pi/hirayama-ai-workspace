@@ -30,6 +30,7 @@
     "test:jrec:public-reservation-ux": "playwright test projects/jrec-sf01/public-reservation-ux.spec.ts",
     "test:jrec:public-reservation-calendar-sync": "playwright test projects/jrec-sf01/public-reservation-calendar-sync.spec.ts",
     "test:jrec:public-reservation-business-hours": "playwright test projects/jrec-sf01/public-reservation-business-hours.spec.ts",
+    "test:jrec:phase6m1": "playwright test projects/jrec-sf01/phase6m1-csv.spec.ts",
     "test:jbiz": "playwright test projects/jbiz",
     "test:jbiz:smoke": "playwright test projects/jbiz/smoke.spec.ts",
     "test:jbiz:portal12": "playwright test projects/jbiz/portal12.spec.ts",
