@@ -65,6 +65,52 @@ test.describe("Phase 6-M-2 — design docs / source presence (always runs)", () 
     expect(block).toContain("display: none");
   });
 
+  // Phase 6-M-2a 回帰: 日別内訳テーブルの日付列が印刷時に非表示にならないこと
+  test("6M2A-CSS-1: @media print で .day-link-btn / .patient-name-btn が display:none セレクタリストに含まれていない", () => {
+    const c = fs.readFileSync(STYLES, "utf-8");
+    // CSS コメントを除去（コメント内のクラス名は対象外）
+    const stripped = c.replace(/\/\*[\s\S]*?\*\//g, "");
+    const printBlockMatch = stripped.match(/@media\s+print\s*\{[\s\S]*?\}\s*\n\s*\}/);
+    expect(printBlockMatch).not.toBeNull();
+    const block = printBlockMatch![0];
+    const hideGroup = block.match(/[^}]*\{\s*display:\s*none\s*!important;\s*\}/);
+    if (hideGroup) {
+      expect(hideGroup[0]).not.toContain(".day-link-btn");
+      expect(hideGroup[0]).not.toContain(".patient-name-btn");
+    }
+  });
+
+  test("6M2A-CSS-2: @media print で .day-link-btn / .patient-name-btn は装飾を消すスタイルがある", () => {
+    const c = fs.readFileSync(STYLES, "utf-8");
+    const printBlockMatch = c.match(/@media\s+print\s*\{[\s\S]*?\}\s*\n\s*\}/);
+    expect(printBlockMatch).not.toBeNull();
+    const block = printBlockMatch![0];
+    // .day-link-btn と .patient-name-btn をまとめたルールがあり、
+    // text-decoration: none と color: #000 を含むこと
+    expect(block).toMatch(/\.day-link-btn[\s\S]*?\.patient-name-btn\s*\{[\s\S]*?text-decoration:\s*none/);
+    expect(block).toMatch(/\.day-link-btn[\s\S]*?\.patient-name-btn\s*\{[\s\S]*?color:\s*#000/);
+  });
+
+  test("6M2A-CSS-3: .screen-only / .print-date 出し分けクラスが定義されている", () => {
+    const c = fs.readFileSync(STYLES, "utf-8");
+    // デフォルト
+    expect(c).toMatch(/\.screen-only\s*\{\s*display:\s*inline;?\s*\}/);
+    expect(c).toMatch(/\.print-date\s*\{\s*display:\s*none;?\s*\}/);
+    // @media print 内
+    const printBlockMatch = c.match(/@media\s+print\s*\{[\s\S]*?\}\s*\n\s*\}/);
+    expect(printBlockMatch).not.toBeNull();
+    const block = printBlockMatch![0];
+    expect(block).toMatch(/\.screen-only\s*\{\s*display:\s*none/);
+    expect(block).toMatch(/\.print-date\s*\{\s*display:\s*inline/);
+  });
+
+  test("6M2A-HTML-1: monthly-report.html の日付セルに screen-only と print-date 二重表示がある", () => {
+    const c = fs.readFileSync(HTML_MONTH, "utf-8");
+    // 日付セル内に screen-only ("05-01" = _dt.slice(5)) と print-date ("2026-05-01" = _dt) が並ぶこと
+    expect(c).toMatch(/class="screen-only"[^>]*>\s*<\?=\s*_dt\.slice\(5\)/);
+    expect(c).toMatch(/class="print-date"[^>]*>\s*<\?=\s*_dt\s*\?>/);
+  });
+
   test("6M2-CSS-4: .print-only クラスはデフォルトで display:none / @media print 内で display:block", () => {
     const c = fs.readFileSync(STYLES, "utf-8");
     // デフォルト
