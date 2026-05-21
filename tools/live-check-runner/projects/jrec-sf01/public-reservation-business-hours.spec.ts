@@ -1,15 +1,20 @@
 /**
  * jrec-sf01 public-reservation-business-hours.spec.ts
  *
- * Phase R-2I: read-only assertions confirming the v2.2 business hours
- * are reflected in getPublicAvailableWeek.
+ * Phase R-2J (2026-05-21): read-only assertions confirming the v2.3 business
+ * hours / 45-minute treatment / 60-minute slot interval are reflected in
+ * getPublicAvailableWeek.
  *
- * Expected (treatment_minutes=60, slot_step_minutes=60):
- *   Weekday and Saturday share the same windows now:
- *     morning   09:00 / 10:00 / 11:00 (11:00 last)
- *     afternoon 15:30 / 16:30 / 17:30 (17:30 last)
- *     never:    11:30+, 15:00, 18:00+
+ * Expected (treatment_minutes=45, slot_step_minutes=60):
+ *   Weekday:
+ *     morning   09:00-09:45 / 10:00-10:45 / 11:00-11:45
+ *     afternoon 15:30-16:15 / 16:30-17:15 / 17:30-18:15
+ *   Saturday (午前のみ):
+ *     morning   09:00-09:45 / 10:00-10:45 / 11:00-11:45
+ *     afternoon: なし
  *   Sunday / holiday: closed
+ *   Forbidden starts (どの曜日でも出ない): 09:45 / 10:45 / 11:30 / 12:00 / 18:30
+ *   Saturday forbidden: 15:30 / 16:30 / 17:30
  *
  * Strictly READ-ONLY (calls getPublicAvailableWeek, no reservation submit).
  * Safe to run while notification_mode=gmail is LIVE.
@@ -135,7 +140,27 @@ const isWeekday = (dow: number) => dow >= 1 && dow <= 5;
 const isSaturday = (dow: number) => dow === 6;
 const isWeekdayOrSat = (dow: number) => dow >= 1 && dow <= 6;
 
-test.describe(`JREC-SF01 R-2I 営業時間 v2.2 [auth: ${HAS_AUTH ? "あり" : "なし"}]`, () => {
+function anyDaySlotEndMinutesAfterStart(
+  weeks: SlotsRes[],
+  dowFilter: (dow: number) => boolean,
+  slotStart: string,
+  expectedMinutes: number
+): { found: boolean; actualEnd?: string; date?: string } {
+  for (const d of allDays(weeks)) {
+    if (d.isPast) continue;
+    if (!dowFilter(d.dow)) continue;
+    const hit = (d.slots || []).find((s) => s.slotStart === slotStart);
+    if (!hit) continue;
+    const [sH, sM] = slotStart.split(":").map((n) => parseInt(n, 10));
+    const [eH, eM] = hit.slotEnd.split(":").map((n) => parseInt(n, 10));
+    const diff = (eH * 60 + eM) - (sH * 60 + sM);
+    if (diff === expectedMinutes) return { found: true, actualEnd: hit.slotEnd, date: d.date };
+    return { found: false, actualEnd: hit.slotEnd, date: d.date };
+  }
+  return { found: false };
+}
+
+test.describe(`JREC-SF01 R-2J 予約枠 v2.3（45分枠・土曜午前のみ）[auth: ${HAS_AUTH ? "あり" : "なし"}]`, () => {
   test.beforeEach(async ({ page }) => { page.setDefaultTimeout(LOAD_TIMEOUT); });
 
   test("BH-1: 公開予約ページが /dev で表示される", async ({ page }) => {
@@ -147,82 +172,113 @@ test.describe(`JREC-SF01 R-2I 営業時間 v2.2 [auth: ${HAS_AUTH ? "あり" : "
     await frame.locator("#week-grid").waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
   });
 
-  test("BH-2: 平日に 11:00 開始枠が存在（少なくとも 1 日）", async ({ page }) => {
+  test("BH-2: 平日に 09:00 / 10:00 / 11:00 開始枠が存在", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
     await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const weeks = await fetchTwoWeeks(frame);
-    const found = anyDayHasSlot(weeks, isWeekday, "11:00");
-    expect(found, "平日のいずれかに 11:00 開始枠が必要").toBe(true);
+    for (const t of ["09:00", "10:00", "11:00"]) {
+      expect(anyDayHasSlot(weeks, isWeekday, t), `平日のいずれかに ${t} 開始枠が必要`).toBe(true);
+    }
   });
 
-  test("BH-3: 土曜日に 11:00 開始枠が存在", async ({ page }) => {
+  test("BH-3: 土曜日に 09:00 / 10:00 / 11:00 開始枠が存在", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
     await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const weeks = await fetchTwoWeeks(frame);
-    const found = anyDayHasSlot(weeks, isSaturday, "11:00");
-    expect(found, "土曜日に 11:00 開始枠が必要").toBe(true);
+    for (const t of ["09:00", "10:00", "11:00"]) {
+      expect(anyDayHasSlot(weeks, isSaturday, t), `土曜のいずれかに ${t} 開始枠が必要`).toBe(true);
+    }
   });
 
-  test("BH-4: 11:30 以降の午前枠は平日・土曜どこにも存在しない", async ({ page }) => {
+  test("BH-4: 09:45 / 10:45 / 11:30 / 12:00 / 12:30 / 13:00 〜 15:00 の枠は平日・土曜どこにも存在しない", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
     await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const weeks = await fetchTwoWeeks(frame);
-    const offending = ["11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"];
+    const offending = ["09:45", "10:45", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"];
     for (const slot of offending) {
       const day = anyDayHasForbiddenSlot(weeks, isWeekdayOrSat, slot);
       expect(day, slot + " の枠は出現してはならない（出現した日: " + day + "）").toBeNull();
     }
   });
 
-  test("BH-5: 平日・土曜に 15:30 開始枠が存在", async ({ page }) => {
+  test("BH-5: 平日に 15:30 / 16:30 / 17:30 開始枠が存在", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
     await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const weeks = await fetchTwoWeeks(frame);
-    expect(anyDayHasSlot(weeks, isWeekday, "15:30"), "平日のいずれかに 15:30 開始枠が必要").toBe(true);
-    expect(anyDayHasSlot(weeks, isSaturday, "15:30"), "土曜のいずれかに 15:30 開始枠が必要").toBe(true);
+    for (const t of ["15:30", "16:30", "17:30"]) {
+      expect(anyDayHasSlot(weeks, isWeekday, t), `平日のいずれかに ${t} 開始枠が必要`).toBe(true);
+    }
   });
 
-  test("BH-6: 15:00 開始枠は存在しない（平日・土曜とも）", async ({ page }) => {
+  test("BH-6: 土曜午後（15:30 / 16:30 / 17:30）は存在しない（土曜は午前のみ営業）", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
     await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const weeks = await fetchTwoWeeks(frame);
-    const day = anyDayHasForbiddenSlot(weeks, isWeekdayOrSat, "15:00");
-    expect(day, "15:00 枠は出現してはならない（出現した日: " + day + "）").toBeNull();
+    for (const slot of ["15:30", "16:30", "17:30", "16:15", "17:15", "18:15"]) {
+      const day = anyDayHasForbiddenSlot(weeks, isSaturday, slot);
+      expect(day, `土曜に ${slot} の枠は出現してはならない（出現した日: ${day}）`).toBeNull();
+    }
   });
 
-  test("BH-7: 平日・土曜に 17:30 開始枠が存在", async ({ page }) => {
+  test("BH-7: 平日 18:30 以降の枠は存在しない（18:30 / 19:00 / 19:30）", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
     await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const weeks = await fetchTwoWeeks(frame);
-    expect(anyDayHasSlot(weeks, isWeekday, "17:30"), "平日のいずれかに 17:30 開始枠が必要").toBe(true);
-    expect(anyDayHasSlot(weeks, isSaturday, "17:30"), "土曜のいずれかに 17:30 開始枠が必要").toBe(true);
-  });
-
-  test("BH-8: 18:00 以降の枠は存在しない（18:00 / 18:30 / 19:00）", async ({ page }) => {
-    await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
-    await handleAuthRedirect(page);
-    const frame = gasAppFrame(page);
-    await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
-    const weeks = await fetchTwoWeeks(frame);
-    for (const slot of ["18:00", "18:30", "19:00", "19:30"]) {
+    for (const slot of ["18:30", "19:00", "19:30"]) {
       const day = anyDayHasForbiddenSlot(weeks, isWeekdayOrSat, slot);
       expect(day, slot + " の枠は出現してはならない（出現した日: " + day + "）").toBeNull();
     }
   });
 
-  test("BH-9: R-2F overlay の calendarOverlay メタが返る（live overlay 維持）", async ({ page }) => {
+  test("BH-8: slotEnd は slotStart の 45 分後（平日 09:00 / 11:00 / 15:30 / 17:30 を抽出して検証）", async ({ page }) => {
+    await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    const weeks = await fetchTwoWeeks(frame);
+    const cases: Array<[string, string]> = [
+      ["09:00", "09:45"],
+      ["11:00", "11:45"],
+      ["15:30", "16:15"],
+      ["17:30", "18:15"],
+    ];
+    for (const [start, expectedEnd] of cases) {
+      const r = anyDaySlotEndMinutesAfterStart(weeks, isWeekday, start, 45);
+      expect(r.found, `平日 ${start} の slotEnd は ${expectedEnd}（45分後）であるべき（実際: ${r.actualEnd}, 日付: ${r.date}）`).toBe(true);
+      if (r.found) expect(r.actualEnd).toBe(expectedEnd);
+    }
+  });
+
+  test("BH-9: 土曜 09:00 / 11:00 の slotEnd も 45 分後（09:45 / 11:45）", async ({ page }) => {
+    await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator(".filter-bar").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    const weeks = await fetchTwoWeeks(frame);
+    const cases: Array<[string, string]> = [
+      ["09:00", "09:45"],
+      ["11:00", "11:45"],
+    ];
+    for (const [start, expectedEnd] of cases) {
+      const r = anyDaySlotEndMinutesAfterStart(weeks, isSaturday, start, 45);
+      expect(r.found, `土曜 ${start} の slotEnd は ${expectedEnd}（45分後）であるべき（実際: ${r.actualEnd}, 日付: ${r.date}）`).toBe(true);
+      if (r.found) expect(r.actualEnd).toBe(expectedEnd);
+    }
+  });
+
+  test("BH-10: R-2F overlay の calendarOverlay メタが返る（live overlay 維持）", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
@@ -238,7 +294,7 @@ test.describe(`JREC-SF01 R-2I 営業時間 v2.2 [auth: ${HAS_AUTH ? "あり" : "
     expect(r.calendarOverlay?.attempted).toBe(true);
   });
 
-  test("BH-10: getPublicAvailableWeek レスポンスは PII 不透過（event 詳細なし）", async ({ page }) => {
+  test("BH-11: getPublicAvailableWeek レスポンスは PII 不透過（event 詳細なし）", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
@@ -256,7 +312,7 @@ test.describe(`JREC-SF01 R-2I 営業時間 v2.2 [auth: ${HAS_AUTH ? "あり" : "
     expect(json).not.toMatch(/attendees/i);
   });
 
-  test("BH-11: Gmail mode + cron count=1 維持", async ({ page }) => {
+  test("BH-12: Gmail mode + cron count=1 維持", async ({ page }) => {
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded" });
     await handleAuthRedirect(page);
     const frame = gasAppFrame(page);
