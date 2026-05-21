@@ -277,6 +277,13 @@ JREC-SF01 / JBIZ / Wildboar / JYU-GAS / その他関連事業アプリを **depl
 | `?page=reservationAdmin` | 予約管理（カレンダー表示・Cal再作成 / R-2R・R-2M）|
 | `?page=reservationQrNotice` | 院内QR掲示印刷（R-2T）|
 
+**ScriptProperty / シート値の重要な注意（2026-05-21 追加）:**
+
+> GAS コードの fallback URL 変更や `seedXxx_` 関数の seed データ変更は、  
+> すでに設定済みの **ScriptProperty** と **シート既存行** には自動で反映されない。  
+> 変更を実際に反映するには `?action=updateXxx` 等の Runtime 実行が必要。  
+> deploy 後に `?action=diagnoseXxx` で現在値を確認し、必要なら `?action=updateXxx` を実行すること。
+
 **deploy 後の完了条件にこれを追加する:**
 
 1. 対象アプリの clasp push / deploy 完了
