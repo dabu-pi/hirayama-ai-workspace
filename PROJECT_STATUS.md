@@ -1,6 +1,18 @@
 # workspace PROJECT_STATUS.md
 
-最終更新: 2026-05-16（Portal-7b 院長実 UI 確認 PASS / machine-yasan カード Portal Hub 表示完了）
+最終更新: 2026-05-21（JREC-SF01 R-2R / R-2S live-check **全 PASS**: RR-1〜RR-8 8/8・RS-1〜RS-13 13/13 / auth.json 更新後 Playwright 実機検証完了）
+
+## ✅ 2026-05-21: JREC-SF01 R-2R / R-2S live-check 全 PASS（auth 更新後 Playwright 実機検証）
+
+| spec | テスト数 | PASS | FAIL | SKIP |
+|---|---|---|---|---|
+| R-2R `calendar-event-recovery-r2r.spec.ts` | 8 | **8** | 0 | 0 |
+| R-2S `public-reservation-guidance-r2s.spec.ts` | 13 | **13** | 0 | 0 |
+
+auth.json を 2026-05-21 22:04 に更新（Chrome CDP 経由）。全 21 テスト PASS。
+R-2R @98 / R-2S @99 の実装が Playwright 実機検証で確認済みになった。
+
+---
 
 ## ✅ 2026-05-16: Portal-7b machine-yasan 実 UI 確認 PASS（院長確認）
 
