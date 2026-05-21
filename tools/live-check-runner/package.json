@@ -32,6 +32,7 @@
     "test:jrec:public-reservation-business-hours": "playwright test projects/jrec-sf01/public-reservation-business-hours.spec.ts",
     "test:jrec:public-reservation-rescue-r2k": "playwright test projects/jrec-sf01/public-reservation-rescue-r2k.spec.ts",
     "test:jrec:public-reservation-booking-horizon-r2l": "playwright test projects/jrec-sf01/public-reservation-booking-horizon-r2l.spec.ts",
+    "test:jrec:admin-reservation-calendar-r2m": "playwright test projects/jrec-sf01/admin-reservation-calendar-r2m.spec.ts",
     "test:jrec:phase6m1": "playwright test projects/jrec-sf01/phase6m1-csv.spec.ts",
     "test:jrec:phase6m2": "playwright test projects/jrec-sf01/phase6m2-print.spec.ts",
     "test:jbiz": "playwright test projects/jbiz",
