@@ -38,6 +38,7 @@
     "test:jrec:calendar-event-missing-reservation-alert-r2q": "playwright test projects/jrec-sf01/calendar-event-missing-reservation-alert-r2q.spec.ts",
     "test:jrec:r2r-calendar-event-recovery": "playwright test projects/jrec-sf01/calendar-event-recovery-r2r.spec.ts",
     "test:jrec:r2s-public-reservation-guidance": "playwright test projects/jrec-sf01/public-reservation-guidance-r2s.spec.ts",
+    "test:jrec:r2t-public-reservation-qr-notice": "playwright test projects/jrec-sf01/public-reservation-qr-notice-r2t.spec.ts",
     "test:jrec:phase6m1": "playwright test projects/jrec-sf01/phase6m1-csv.spec.ts",
     "test:jrec:phase6m2": "playwright test projects/jrec-sf01/phase6m2-print.spec.ts",
     "test:jbiz": "playwright test projects/jbiz",
