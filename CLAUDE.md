@@ -249,6 +249,43 @@ JBIZ Portal / GAS / Dashboard / live-check-runner 作業は以下を全て満た
 
 中途半端な dirty / 未 push / auth 期限切れ / SHA mismatch のまま完了報告しない。
 
+#### Portal Link Audit ルール（2026-05-21 追加）
+
+> **背景**: 2026-05-21 の棚卸しで、JBIZ Portal の JREC-SF01 リンクが旧 deploymentId (@83) を向いており、
+> R-2M〜R-2T の修正済み機能が Portal から開けない状態が長期放置されていた。
+> 詳細: [`hirayama-jyusei-strategy/docs/PORTAL_LINK_AUDIT_JREC_2026-05-21.md`](./hirayama-jyusei-strategy/docs/PORTAL_LINK_AUDIT_JREC_2026-05-21.md)
+
+**平山ビジネスポータルは各事業アプリへの正本入口である。**
+
+JREC-SF01 / JBIZ / Wildboar / JYU-GAS / その他関連事業アプリを **deploy した場合は、deploy だけで完了としない**。必ず同一フェーズ内で以下を確認・更新すること。
+
+| 確認項目 | 確認方法 |
+|---|---|
+| 平山ビジネスポータルの nav リンクが最新 deploymentId を向いているか | JBIZ Portal `gas/portal-gateway-v1.gs` `buildNavigation_` 内の fallback URL を確認 |
+| `Business_Links` の `primary_url` が最新か | `seedBusinessLinks_` 関数内の URL を確認 |
+| 各事業詳細ページのクイックリンクが最新か | `buildSelfpayBusinessDetail_` 等の関数内を確認 |
+| 古い deploymentId が本番導線に残っていないか | `grep -r "AKfycb" gas/` で全 URL を列挙して確認 |
+| `/dev` URL が本番リンクに混入していないか | 同上 |
+| 古い `page` parameter を開いていないか | 最新の page parameter 一覧と照合 |
+
+**JREC-SF01 で確認対象にする page parameter（2026-05-21 @100 時点）:**
+
+| page | 機能 |
+|---|---|
+| `?page=home` | ホーム（予約状況カード付き / R-2M）|
+| `?page=reservation` | 公開予約ページ（院名・案内文 / R-2S）|
+| `?page=reservationAdmin` | 予約管理（カレンダー表示・Cal再作成 / R-2R・R-2M）|
+| `?page=reservationQrNotice` | 院内QR掲示印刷（R-2T）|
+
+**deploy 後の完了条件にこれを追加する:**
+
+1. 対象アプリの clasp push / deploy 完了
+2. JBIZ Portal の関連リンク確認（上表）
+3. 必要なリンク更新 + gas/ ↔ scripts/ SHA256 一致 + deploy
+4. curl smoke / live-check-runner / Playwright で確認
+5. Markdown 記録（docs / PROJECT_STATUS / ROADMAP）
+6. commit / push / clean / ahead-behind 0/0
+
 #### 並行可能 / 不可の早見表
 
 | 状況 | 並行可否 |
