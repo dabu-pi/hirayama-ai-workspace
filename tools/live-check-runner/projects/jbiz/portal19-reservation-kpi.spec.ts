@@ -246,18 +246,18 @@ test.describe(`JBIZ Portal-19 / R-2N reservation KPI [auth: ${HAS_AUTH ? "あり
     expect(piiHit, "pending_requested 経由でも PII 漏れなし").toEqual([]);
   });
 
-  // ── P19-17 (R-2N-2): code-presence — 24h+ 未対応カード ───────────────────
-  test("P19-17: code に 24h+ 未対応カード / pending_requested 参照が存在", () => {
+  // ── P19-17 (R-2N-2): code-presence — 24h+ 未確定カード ───────────────────
+  test("P19-17: code に 24h+ 未確定カード / pending_requested 参照が存在", () => {
     const src = gasSrc();
     expect(src.includes("pending_requested")).toBe(true);
     expect(src.includes("count_24h_plus")).toBe(true);
     expect(src.includes("count_48h_plus")).toBe(true);
     expect(src.includes("oldest_hours")).toBe(true);
-    expect(src.includes("24h+ 未対応")).toBe(true);
+    expect(src.includes("24h+ 未確定")).toBe(true);
   });
 
-  // ── P19-18 (R-2N-2): live — selfpay 詳細に 24h+ 未対応カード ──────────
-  test("P19-18: selfpay 詳細に「24h+ 未対応予約」カードが表示される", async ({ page }) => {
+  // ── P19-18 (R-2N-2): live — selfpay 詳細に 24h+ 未確定カード ──────────
+  test("P19-18: selfpay 詳細に「24h+ 未確定予約」カードが表示される", async ({ page }) => {
     await page.goto(WEBAPP_URL + "?view=business&id=selfpay", {
       waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
     });
@@ -265,12 +265,12 @@ test.describe(`JBIZ Portal-19 / R-2N reservation KPI [auth: ${HAS_AUTH ? "あり
     const frame = gasAppFrame(page);
     await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const bodyText = await frame.locator("body").innerText({ timeout: LOAD_TIMEOUT }).catch(() => "");
-    expect(bodyText, "24h+ 未対応予約 ラベル").toContain("24h+ 未対応予約");
+    expect(bodyText, "24h+ 未確定予約 ラベル").toContain("24h+ 未確定予約");
     expect(bodyText, "全 requested の総数表記").toContain("全 requested");
   });
 
-  // ── P19-19 (R-2N-2): live — Home に 24h+ 未対応カード ────────────────
-  test("P19-19: Home に「JREC-SF01 24h+ 未対応予約」カードが表示される", async ({ page }) => {
+  // ── P19-19 (R-2N-2): live — Home に 24h+ 未確定カード ────────────────
+  test("P19-19: Home に「JREC-SF01 24h+ 未確定予約」カードが表示される", async ({ page }) => {
     await page.goto(WEBAPP_URL + "?view=home", {
       waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
     });
@@ -278,7 +278,82 @@ test.describe(`JBIZ Portal-19 / R-2N reservation KPI [auth: ${HAS_AUTH ? "あり
     const frame = gasAppFrame(page);
     await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
     const bodyText = await frame.locator("body").innerText({ timeout: LOAD_TIMEOUT }).catch(() => "");
-    expect(bodyText, "JREC-SF01 24h+ 未対応予約 カードラベル").toContain("JREC-SF01 24h+ 未対応予約");
+    expect(bodyText, "JREC-SF01 24h+ 未確定予約 カードラベル").toContain("JREC-SF01 24h+ 未確定予約");
+  });
+
+  // ── P19-20 (R-2N-2-fix): detailCardRich_ helper 存在確認 ──────
+  test("P19-20: detailCardRich_ helper が定義されている（structured lines / kind whitelist / escapeHtml_ 経由）", () => {
+    const src = gasSrc();
+    expect(src.includes("function detailCardRich_"), "detailCardRich_ 関数").toBe(true);
+    expect(src.includes("allowedKinds"), "kind whitelist 実装").toBe(true);
+    expect(src.includes("primary-alert"), "primary-alert kind").toBe(true);
+    expect(src.includes("primary-ok"), "primary-ok kind").toBe(true);
+    // Portal-19 セクションが detailCardRich_ を実際に使っている
+    expect(src.includes("detailCardRich_('🚨 24h+ 未確定予約'"), "24h+ 未確定カードは detailCardRich_ 経由").toBe(true);
+    expect(src.includes("pendingLines"), "structured lines 変数").toBe(true);
+  });
+
+  // ── P19-21 (R-2N-2-fix): 文言「未対応」→「未確定」変更 ────────────
+  test("P19-21: コード内の「24h+ 未対応」表記は撲滅、「24h+ 未確定」に統一されている", () => {
+    const src = gasSrc();
+    // 「24h+ 未対応」を含む箇所が無いこと（残っていたら誤認しやすい）
+    const hasObsolete = src.includes("24h+ 未対応");
+    expect(hasObsolete, "「24h+ 未対応」表記は撲滅されているべき").toBe(false);
+    // 新表記が存在
+    expect(src.includes("24h+ 未確定予約"), "Home card / selfpay 詳細 card のラベル").toBe(true);
+    expect(src.includes("24h+ 未確定"), "attention note の表記").toBe(true);
+  });
+
+  // ── P19-22 (R-2N-2-fix): Home から selfpay 詳細への「詳細を見る」リンク ──
+  test("P19-22: Home の予約カード note に selfpayDetailUrl + 「詳細を見る」リンクが入っている", () => {
+    const src = gasSrc();
+    expect(src.includes("selfpayDetailUrl"), "selfpayDetailUrl 変数").toBe(true);
+    expect(src.includes("?view=business&id=selfpay"), "selfpay 詳細 URL").toBe(true);
+    expect(src.includes("詳細を見る →"), "詳細を見る リンク文言").toBe(true);
+    // 既存「予約管理を開く」(JREC reservationAdmin) は維持
+    expect(src.includes("予約管理を開く →"), "予約管理を開く リンクは維持").toBe(true);
+  });
+
+  // ── P19-23 (R-2N-2-fix): live — selfpay 詳細に raw HTML 文字列が出ていない ──
+  test("P19-23: selfpay 詳細の本文に raw `<div style=` などのリテラル HTML 文字列が表示されていない", async ({ page }) => {
+    await page.goto(WEBAPP_URL + "?view=business&id=selfpay", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    // innerText は表示テキスト（HTML タグはレンダリングされていれば innerText には現れない）
+    const bodyText = await frame.locator("body").innerText({ timeout: LOAD_TIMEOUT }).catch(() => "");
+    // 過去バグの目印 — これが innerText に現れていたら detailCard_ で escape されている = レンダリングされていない
+    const leakPatterns = [
+      "<div style=",
+      "<div class=",
+      "&lt;div",
+      "</div>"
+    ];
+    const leaked = leakPatterns.filter(p => bodyText.includes(p));
+    if (leaked.length > 0) {
+      test.info().annotations.push({ type: "warn", description: "HTML literal leak: " + leaked.join(", ") });
+    }
+    expect(leaked, "selfpay 詳細の表示テキストに raw HTML 文字列が出ていない").toEqual([]);
+  });
+
+  // ── P19-24 (R-2N-2-fix): live — Home に「詳細を見る」リンクが表示される ─
+  test("P19-24: Home の予約カードに「詳細を見る」リンクが表示される", async ({ page }) => {
+    await page.goto(WEBAPP_URL + "?view=home", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    const linkCount = await frame.locator("a:has-text('詳細を見る')").count();
+    expect(linkCount, "「詳細を見る」リンクが少なくとも 1 つ").toBeGreaterThan(0);
+    // selfpay 詳細を指していること
+    const hrefs = await frame.locator("a:has-text('詳細を見る')").evaluateAll(
+      (els: Element[]) => els.map(el => (el as HTMLAnchorElement).href)
+    );
+    const hasSelfpayLink = hrefs.some(h => h.includes("view=business") && h.includes("id=selfpay"));
+    expect(hasSelfpayLink, "詳細を見るリンクが ?view=business&id=selfpay を含む").toBe(true);
   });
 
   // ── P19-15: PII 非露出 (Home + selfpay 詳細) ─────────────────
