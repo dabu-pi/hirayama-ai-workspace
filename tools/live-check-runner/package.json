@@ -46,6 +46,7 @@
     "test:jbiz:portal12": "playwright test projects/jbiz/portal12.spec.ts",
     "test:jbiz:portal8": "playwright test projects/jbiz/portal8.spec.ts",
     "test:jbiz:portal18f": "playwright test projects/jbiz/portal18f-coldstart.spec.ts",
+    "test:jbiz:portal19": "playwright test projects/jbiz/portal19-reservation-kpi.spec.ts",
     "setup:jbiz:portal8e": "tsx scripts/jbiz-portal8e-setup.ts",
     "test:jyu": "playwright test projects/jyu-gas-ver31",
     "test:jyu:smoke": "playwright test projects/jyu-gas-ver31/smoke.spec.ts",
