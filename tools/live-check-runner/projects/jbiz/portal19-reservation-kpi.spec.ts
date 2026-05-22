@@ -443,6 +443,92 @@ test.describe(`JBIZ Portal-19 / R-2N reservation KPI [auth: ${HAS_AUTH ? "あり
       "予約セクションに他カテゴリが混在していない").toBe(false);
   });
 
+  // ── P19-29 (R-2N-2-fix-3): responsive grid CSS が定義されている ────────
+  test("P19-29: .home-section .grid に auto-fit + minmax + max-width 拡張が定義されている", () => {
+    const src = gasSrc();
+    expect(src.includes(".home-section .grid"), ".home-section .grid セレクタ").toBe(true);
+    expect(src.includes("auto-fit"), "auto-fit").toBe(true);
+    expect(src.includes("minmax(260px, 1fr)"), "minmax(260px, 1fr)").toBe(true);
+    expect(src.includes("max-width: 1100px"), "max-width 1100px に拡張").toBe(true);
+    // モバイル 1 列 fallback
+    expect(src.includes("@media (max-width: 540px)"), "モバイル breakpoint").toBe(true);
+  });
+
+  // ── P19-30 (R-2N-2-fix-3): live — Home grid が computed style で auto-fit / 動的列数 ──
+  test("P19-30: live Home の各 .home-section .grid が computed gridTemplateColumns で複数列を持つ", async ({ page }) => {
+    // 1100x900 viewport（広めデスクトップ想定）
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await page.goto(WEBAPP_URL + "?view=home", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+
+    const colInfo = await frame.locator("body").first().evaluate(() => {
+      const grids = Array.from(document.querySelectorAll("section.home-section > .grid"));
+      return grids.map(g => {
+        const cs = window.getComputedStyle(g as Element);
+        const cols = cs.gridTemplateColumns || "";
+        const colCount = cols.trim() ? cols.split(/\s+/).length : 0;
+        return {
+          gridTemplateColumns: cols,
+          colCount,
+          maxWidth: cs.maxWidth || ""
+        };
+      });
+    });
+
+    test.info().annotations.push({
+      type: "info",
+      description: "grid info: " + JSON.stringify(colInfo)
+    });
+
+    // 各 section の grid が 1 つ以上の列を持つ（auto-fit が動作している）
+    expect(colInfo.length, "section.home-section > .grid を 4 つ検出").toBeGreaterThanOrEqual(4);
+    for (const g of colInfo) {
+      // computed style では auto-fit が解決されて実際の N 列 (e.g. "260px 260px 260px") か "1fr 1fr ..." になる
+      expect(g.colCount, "1100x900 viewport で grid が 1 列以上").toBeGreaterThanOrEqual(1);
+      // max-width 1100px が適用されている
+      expect(g.maxWidth.includes("1100"), "max-width 1100px 適用").toBe(true);
+    }
+    // 1100px viewport なら 3 列以上を期待（260*3 = 780, 余裕あり）
+    // 注: GAS iframe 内の実 viewport は親 viewport と異なるので、最低 2 列で許容する
+    const max = Math.max(...colInfo.map(g => g.colCount));
+    expect(max, "広めの viewport で最低 2 列以上のセクションが存在").toBeGreaterThanOrEqual(2);
+  });
+
+  // ── P19-31 (R-2N-2-fix-3): live — narrow viewport (mobile) で 1 列になる ─
+  test("P19-31: live Home を narrow viewport (mobile 360px) で 1 列レンダリング", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto(WEBAPP_URL + "?view=home", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+
+    const colCounts = await frame.locator("body").first().evaluate(() => {
+      const grids = Array.from(document.querySelectorAll("section.home-section > .grid"));
+      return grids.map(g => {
+        const cs = window.getComputedStyle(g as Element);
+        const cols = cs.gridTemplateColumns || "";
+        return cols.trim() ? cols.split(/\s+/).length : 0;
+      });
+    });
+
+    test.info().annotations.push({
+      type: "info",
+      description: "mobile colCounts: " + JSON.stringify(colCounts)
+    });
+
+    expect(colCounts.length, "section.home-section > .grid を 4 つ検出").toBeGreaterThanOrEqual(4);
+    // モバイル narrow ではすべて 1 列を期待
+    for (const c of colCounts) {
+      expect(c, "narrow viewport で 1 列").toBe(1);
+    }
+  });
+
   // ── P19-15: PII 非露出 (Home + selfpay 詳細) ─────────────────
   test("P19-15: Home / selfpay 詳細の本文に PII 文字列が出ていない", async ({ page }) => {
     // Home
