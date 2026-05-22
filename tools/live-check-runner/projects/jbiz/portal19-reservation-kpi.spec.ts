@@ -356,6 +356,93 @@ test.describe(`JBIZ Portal-19 / R-2N reservation KPI [auth: ${HAS_AUTH ? "あり
     expect(hasSelfpayLink, "詳細を見るリンクが ?view=business&id=selfpay を含む").toBe(true);
   });
 
+  // ── P19-25 (R-2N-2-fix-2): home-section CSS 存在 ─────────────────
+  test("P19-25: commonStyle_ に .home-section / .home-section-title (reservation/gym/sales/data) 定義あり", () => {
+    const src = gasSrc();
+    expect(src.includes(".home-section "), ".home-section 基本クラス").toBe(true);
+    expect(src.includes(".home-section-title"), ".home-section-title 見出しクラス").toBe(true);
+    expect(src.includes(".home-section-title.reservation"), "予約セクション色付け").toBe(true);
+    expect(src.includes(".home-section-title.gym"),         "ジムセクション色付け").toBe(true);
+    expect(src.includes(".home-section-title.sales"),       "売上セクション色付け").toBe(true);
+    expect(src.includes(".home-section-title.data"),        "データセクション色付け").toBe(true);
+  });
+
+  // ── P19-26 (R-2N-2-fix-2): home cards が 4 セクションに分割されている ──
+  test("P19-26: buildHomeView_ で reservationCards / gymCards / salesCards / dataCards に分割されている", () => {
+    const src = gasSrc();
+    expect(src.includes("reservationCards"), "reservationCards 配列").toBe(true);
+    expect(src.includes("gymCards"),         "gymCards 配列").toBe(true);
+    expect(src.includes("salesCards"),       "salesCards 配列").toBe(true);
+    expect(src.includes("dataCards"),        "dataCards 配列").toBe(true);
+    expect(src.includes("homeSectionsHtml"), "homeSectionsHtml 出力").toBe(true);
+    // セクション見出し文言
+    expect(src.includes("📅 JREC-SF01 予約・受付"),        "予約見出し").toBe(true);
+    expect(src.includes("🏋️ ジム・Wildboar"),             "ジム見出し").toBe(true);
+    expect(src.includes("💴 売上・経営KPI"),               "売上見出し").toBe(true);
+    expect(src.includes("📊 データ品質・Portal運用"),      "データ見出し").toBe(true);
+  });
+
+  // ── P19-27 (R-2N-2-fix-2): live — Home に 4 セクション見出しが表示される ──
+  test("P19-27: live Home の DOM に 4 セクション見出しが表示される（予約 / ジム / 売上 / データ）", async ({ page }) => {
+    await page.goto(WEBAPP_URL + "?view=home", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    const bodyText = await frame.locator("body").innerText({ timeout: LOAD_TIMEOUT }).catch(() => "");
+    expect(bodyText, "JREC-SF01 予約・受付 セクション").toContain("JREC-SF01 予約・受付");
+    expect(bodyText, "ジム・Wildboar セクション").toContain("ジム・Wildboar");
+    expect(bodyText, "売上・経営KPI セクション").toContain("売上・経営KPI");
+    expect(bodyText, "データ品質・Portal運用 セクション").toContain("データ品質・Portal運用");
+  });
+
+  // ── P19-28 (R-2N-2-fix-2): live — 各セクションに想定カードが配置されている ──
+  test("P19-28: live Home の各セクションに想定カードが含まれる（混在していない）", async ({ page }) => {
+    await page.goto(WEBAPP_URL + "?view=home", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    // 各 section 要素を取得して該当カードラベルが含まれるか確認（FrameLocator -> body -> evaluate）
+    const sectionAssignments = await frame.locator("body").first().evaluate(() => {
+      const sections = Array.from(document.querySelectorAll("section.home-section"));
+      return sections.map((sec) => {
+        const titleEl = sec.querySelector(".home-section-title");
+        const cards = Array.from(sec.querySelectorAll(".card .label")).map(el => (el.textContent || "").trim());
+        return { title: (titleEl && titleEl.textContent || "").trim(), cards };
+      });
+    });
+    expect(sectionAssignments.length, "4 セクション").toBeGreaterThanOrEqual(4);
+    // 予約セクション: JREC-SF01 4 カード
+    const resSec = sectionAssignments.find(s => s.title.includes("予約・受付"));
+    expect(resSec, "予約セクション存在").toBeTruthy();
+    expect(resSec!.cards.some(c => c.includes("JREC-SF01 今日の予約")), "今日カード").toBe(true);
+    expect(resSec!.cards.some(c => c.includes("JREC-SF01 明日の予約")), "明日カード").toBe(true);
+    expect(resSec!.cards.some(c => c.includes("JREC-SF01 今週の予約")), "今週カード").toBe(true);
+    expect(resSec!.cards.some(c => c.includes("JREC-SF01 24h+ 未確定予約")), "24h+ カード").toBe(true);
+    // ジムセクション: Wildboar 3 カード
+    const gymSec = sectionAssignments.find(s => s.title.includes("ジム"));
+    expect(gymSec, "ジムセクション存在").toBeTruthy();
+    expect(gymSec!.cards.some(c => c.includes("ジム有効会員数")), "ジム会員カード").toBe(true);
+    expect(gymSec!.cards.some(c => c.includes("ジム月会費見込み")), "ジム月会費カード").toBe(true);
+    expect(gymSec!.cards.some(c => c.includes("ジム未入金件数")), "ジム未入金カード").toBe(true);
+    // 売上セクション
+    const salesSec = sectionAssignments.find(s => s.title.includes("売上") || s.title.includes("経営"));
+    expect(salesSec, "売上セクション存在").toBeTruthy();
+    expect(salesSec!.cards.some(c => c.includes("今月の自費売上") || c.includes("自費売上（実績）")), "自費売上カード").toBe(true);
+    expect(salesSec!.cards.some(c => c.includes("現在フェーズ")), "現在フェーズカード").toBe(true);
+    // データセクション
+    const dataSec = sectionAssignments.find(s => s.title.includes("データ品質") || s.title.includes("Portal運用"));
+    expect(dataSec, "データセクション存在").toBeTruthy();
+    expect(dataSec!.cards.some(c => c.includes("データ品質警告")), "データ品質警告カード").toBe(true);
+    expect(dataSec!.cards.some(c => c.includes("Portal フェーズ")), "Portal フェーズカード").toBe(true);
+    // 混在チェック: 予約セクションに ジム/売上/データ系が混入していない
+    expect(resSec!.cards.some(c => c.includes("ジム") || c.includes("自費売上") || c.includes("データ品質警告")),
+      "予約セクションに他カテゴリが混在していない").toBe(false);
+  });
+
   // ── P19-15: PII 非露出 (Home + selfpay 詳細) ─────────────────
   test("P19-15: Home / selfpay 詳細の本文に PII 文字列が出ていない", async ({ page }) => {
     // Home
