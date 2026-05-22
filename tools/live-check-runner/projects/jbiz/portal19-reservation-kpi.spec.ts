@@ -227,6 +227,60 @@ test.describe(`JBIZ Portal-19 / R-2N reservation KPI [auth: ${HAS_AUTH ? "あり
     expect(linkCount, "「予約管理を開く」リンクが少なくとも 1 つ").toBeGreaterThan(0);
   });
 
+  // ── P19-16 (R-2N-2): pending_requested aggregate field 存在 ─────────────
+  test("P19-16: endpoint レスポンスに pending_requested.count_24h_plus / count_48h_plus / oldest_hours が含まれる", async ({ page }) => {
+    await page.goto(WEBAPP_URL + "?action=fetchSelfpayReservationKpi", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const bodyText = await page.locator("body").textContent({ timeout: LOAD_TIMEOUT }).catch(() => "");
+    expect(bodyText, "pending_requested オブジェクト").toContain('"pending_requested"');
+    expect(bodyText, "count_total").toContain('"count_total"');
+    expect(bodyText, "count_24h_plus").toContain('"count_24h_plus"');
+    expect(bodyText, "count_48h_plus").toContain('"count_48h_plus"');
+    expect(bodyText, "oldest_hours").toContain('"oldest_hours"');
+    // PII フィールド再確認（新 field 経由でも漏れていない）
+    const piiHit = ["patientName", "linkedPatientId", "reservationId"].filter(k =>
+      bodyText.includes('"' + k + '"')
+    );
+    expect(piiHit, "pending_requested 経由でも PII 漏れなし").toEqual([]);
+  });
+
+  // ── P19-17 (R-2N-2): code-presence — 24h+ 未対応カード ───────────────────
+  test("P19-17: code に 24h+ 未対応カード / pending_requested 参照が存在", () => {
+    const src = gasSrc();
+    expect(src.includes("pending_requested")).toBe(true);
+    expect(src.includes("count_24h_plus")).toBe(true);
+    expect(src.includes("count_48h_plus")).toBe(true);
+    expect(src.includes("oldest_hours")).toBe(true);
+    expect(src.includes("24h+ 未対応")).toBe(true);
+  });
+
+  // ── P19-18 (R-2N-2): live — selfpay 詳細に 24h+ 未対応カード ──────────
+  test("P19-18: selfpay 詳細に「24h+ 未対応予約」カードが表示される", async ({ page }) => {
+    await page.goto(WEBAPP_URL + "?view=business&id=selfpay", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    const bodyText = await frame.locator("body").innerText({ timeout: LOAD_TIMEOUT }).catch(() => "");
+    expect(bodyText, "24h+ 未対応予約 ラベル").toContain("24h+ 未対応予約");
+    expect(bodyText, "全 requested の総数表記").toContain("全 requested");
+  });
+
+  // ── P19-19 (R-2N-2): live — Home に 24h+ 未対応カード ────────────────
+  test("P19-19: Home に「JREC-SF01 24h+ 未対応予約」カードが表示される", async ({ page }) => {
+    await page.goto(WEBAPP_URL + "?view=home", {
+      waitUntil: "domcontentloaded", timeout: LOAD_TIMEOUT
+    });
+    await handleAuthRedirect(page);
+    const frame = gasAppFrame(page);
+    await frame.locator("h1").first().waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+    const bodyText = await frame.locator("body").innerText({ timeout: LOAD_TIMEOUT }).catch(() => "");
+    expect(bodyText, "JREC-SF01 24h+ 未対応予約 カードラベル").toContain("JREC-SF01 24h+ 未対応予約");
+  });
+
   // ── P19-15: PII 非露出 (Home + selfpay 詳細) ─────────────────
   test("P19-15: Home / selfpay 詳細の本文に PII 文字列が出ていない", async ({ page }) => {
     // Home
